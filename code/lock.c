@@ -42,8 +42,7 @@ int lockchk(char *fname)
                 mlwrite("Cannot lock, out of memory");
                 return ABORT;
         }
-        strncpy(tmpname, fname, NFILEN - 1);
-        *(tmpname + NFILEN - 1) = '\0';
+        strcpy(tmpname, fname);
 #if EXPAND_TILDE
         expand_tilde(tmpname);
 #endif
