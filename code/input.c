@@ -582,7 +582,7 @@ loop:
         sp = lp->l_text;
 /* NSTRING-1, as we need to add a trailing NUL */
         if (lp->l_used < NSTRING-1) {
-            strncpy(tstring, sp, lp->l_used);
+            memcpy(tstring, sp, lp->l_used);
             tstring[lp->l_used] = '\0';
             if (bufexpand) {
                 expanded = comp_buffer(tstring, choices);
@@ -730,11 +730,11 @@ submit:     /* Tidy up */
 
     int retlen = size;          /* Without terminating NUL */
     if (retlen >= nbuf) retlen = nbuf - 1;
-    strncpy(buf, sp, retlen);   /* No NUL sent here */
+    memcpy(buf, sp, retlen);   /* No NUL sent here */
     buf[retlen] = '\0';         /* Here it is... */
     if (retlen) {
         if (retlen >= NSTRING) retlen = NSTRING - 1;
-        strncpy(lastmb, sp, retlen);
+        memcpy(lastmb, sp, retlen);
         lastmb[retlen] = '\0';
     }
     else status = FALSE;        /* Empty input... */

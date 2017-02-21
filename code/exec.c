@@ -551,7 +551,7 @@ int dobuf(struct buffer *bp)
                         freewhile(whlist);
                         return FALSE;
                 }
-                strncpy(eline, lp->l_text, linlen);
+                memcpy(eline, lp->l_text, linlen);
                 eline[linlen] = 0;      /* make sure it ends */
 
                 /* trim leading whitespace */

@@ -825,7 +825,7 @@ char *getval(char *token)
                 blen = bp->b_dotp->l_used - bp->b_doto;
                 if (blen >= NSTRING)        /* GGR >= to allow for NUL */
                         blen = NSTRING - 1;
-                strncpy(buf, bp->b_dotp->l_text + bp->b_doto, blen);
+                memcpy(buf, bp->b_dotp->l_text + bp->b_doto, blen);
                 buf[blen] = 0;
 
                 /* and step the buffer's line ptr ahead a line */
