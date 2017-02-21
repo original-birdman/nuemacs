@@ -303,7 +303,7 @@ int backhunt(int f, int n)
  */
 int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end)
 {
-	struct line *curline;		/* current line during scan */
+	struct line *curline;   /* current line during scan */
 	int curoff;		/* position within current line */
 
 	/* If we are going in reverse, then the 'end' is actually
@@ -339,7 +339,7 @@ int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end)
 			/* A SUCCESSFULL MATCH!!!
 			 * reset the global "." pointers.
 			 */
-			if (beg_or_end == PTEND) {	/* at end of string */
+			if (beg_or_end == PTEND) {  /* at end of string */
 				curwp->w_dotp = curline;
 				curwp->w_doto = curoff;
 			} else {	/* at beginning of string */
@@ -348,7 +348,7 @@ int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end)
 				curwp->w_doto = matchoff;
 			}
 
-			curwp->w_flag |= WFMOVE;	/* flag that we have moved */
+			curwp->w_flag |= WFMOVE;    /* flag that we've moved */
 			return TRUE;
 		}
 
@@ -372,9 +372,9 @@ int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end)
  */
 static int amatch(struct magic *mcptr, int direct, struct line **pcwline, int *pcwoff)
 {
-	int c;		/* character at current position */
+	int c;		                /* character at current position */
 	struct line *curline;		/* current line during scan */
-	int curoff;		/* position within current line */
+	int curoff;		        /* position within current line */
 	int nchars;
 
 	/* Set up local scan pointers to ".", and get
@@ -512,12 +512,12 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline, int *p
  */
 int scanner(const char *patrn, int direct, int beg_or_end)
 {
-	int c;		/* character at current position */
-	const char *patptr;	/* pointer into pattern */
+	int c;		                /* character at current position */
+	const char *patptr;	        /* pointer into pattern */
 	struct line *curline;		/* current line during scan */
-	int curoff;		/* position within current line */
+	int curoff;		        /* position within current line */
 	struct line *scanline;		/* current line during scanning */
-	int scanoff;		/* position in scanned line */
+	int scanoff;		        /* position in scanned line */
 
 	/* If we are going in reverse, then the 'end' is actually
 	 * the beginning of the pattern.  Toggle it.
@@ -562,7 +562,7 @@ int scanner(const char *patrn, int direct, int beg_or_end)
 			/* A SUCCESSFULL MATCH!!!
 			 * reset the global "." pointers
 			 */
-			if (beg_or_end == PTEND) {	/* at end of string */
+			if (beg_or_end == PTEND) {  /* at end of string */
 				curwp->w_dotp = scanline;
 				curwp->w_doto = scanoff;
 			} else {	/* at beginning of string */
@@ -571,7 +571,7 @@ int scanner(const char *patrn, int direct, int beg_or_end)
 				curwp->w_doto = matchoff;
 			}
 
-			curwp->w_flag |= WFMOVE;	/* Flag that we have moved. */
+			curwp->w_flag |= WFMOVE;    /* Flag that we've moved. */
 			return TRUE;
 
 		}
@@ -607,16 +607,19 @@ int eq(unsigned char bc, unsigned char pc)
  *	an error.  Display the old pattern, in the style of Jeff Lomicka.
  *	There is some do-it-yourself control expansion.  Change to using
  *	<META> to delimit the end-of-pattern to allow <NL>s in the search
- *	string. 
+ *	string.
  */
 static int readpattern(char *prompt, char *apat, int srch)
 {
 	int status;
 	char tpat[NPAT + 20];
 
-	strcpy(tpat, prompt);	/* copy prompt to output string */
-	strcat(tpat, " " MLpre);	/* build new prompt string */
-	expandp(&apat[0], &tpat[strlen(tpat)], NPAT / 2);	/* add old pattern */
+	strcpy(tpat, prompt);	    /* copy prompt to output string */
+	strcat(tpat, " " MLpre);    /* build new prompt string */
+	expandp(&apat[0], &tpat[strlen(tpat)], NPAT / 2); /* add old pattern */
+/* GGR
+ * Our mlreplyt returns only on CR
+ * 	strcat(tpat, MLpost "<Meta>: "); */
 	strcat(tpat, MLpost ": ");
 
 	/* Read a pattern.  Either we get one,
@@ -655,10 +658,10 @@ static int readpattern(char *prompt, char *apat, int srch)
  */
 void savematch(void)
 {
-	char *ptr;	/* pointer to last match string */
+	char *ptr;              	/* pointer to last match string */
 	int j;
-	struct line *curline;		/* line of last match */
-	int curoff;		/* offset "      "    */
+	struct line *curline;           /* line of last match */
+	int curoff;		        /* offset "      "    */
 
 	/* Free any existing match string, then
 	 * attempt to allocate a new one.
@@ -713,8 +716,7 @@ int sreplace(int f, int n)
  */
 int qreplace(int f, int n)
 {
-/* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())           /* GGR - disallow in minibuffer */
                 return(FALSE);
 	return replaces(TRUE, f, n);
 }
@@ -729,20 +731,20 @@ int qreplace(int f, int n)
  */
 static int replaces(int kind, int f, int n)
 {
-	int status;	/* success flag on pattern inputs */
-	int rlength;	/* length of replacement string */
-	int numsub;	/* number of substitutions */
-	int nummatch;	/* number of found matches */
+	int status;	        /* success flag on pattern inputs */
+	int rlength;	        /* length of replacement string */
+	int numsub;	        /* number of substitutions */
+	int nummatch;	        /* number of found matches */
 	int nlflag;		/* last char of search string a <NL>? */
 	int nlrepl;		/* was a replace done on the last line? */
 	char c;			/* input char for query */
 	char tpat[NPAT];	/* temporary to hold search pattern */
-	struct line *origline;		/* original "." position */
+	struct line *origline;  /* original "." position */
 	int origoff;		/* and offset (for . query option) */
-	struct line *lastline;		/* position of last replace and */
+	struct line *lastline;  /* position of last replace and */
 	int lastoff;		/* offset (for 'u' query option) */
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 
 	/* Check for negative repetitions.
@@ -832,7 +834,7 @@ static int replaces(int kind, int f, int n)
 
 			/* And respond appropriately.
 			 */
-/* IMD - make case-insensitive */
+/* GGR - make case-insensitive */
                         if ('A' <= c && c <= 'Z')
                              c -= 'A' - 'a';
 			switch (c) {
@@ -917,7 +919,7 @@ static int replaces(int kind, int f, int n)
 
 		/* end of "if kind" */
 #if     MAGIC
-/* IMD  fix */   
+/* GGR fix */
                 else if ((rmagical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
                         savematch();
 #endif
@@ -1005,7 +1007,7 @@ int expandp(char *srcstr, char *deststr, int maxlength)
 			maxlength -= 4;
 		}
 #if	PKCODE
-		else if ((c > 0 && c < 0x20) || c == 0x7f)	/* control character */
+		else if ((c > 0 && c < 0x20) || c == 0x7f)  /* control character */
 #else
 		else if (c < 0x20 || c == 0x7f)	/* control character */
 #endif
@@ -1073,13 +1075,13 @@ static int nextch(struct line **pcurline, int *pcuroff, int dir)
 	curoff = *pcuroff;
 
 	if (dir == FORWARD) {
-		if (curoff == llength(curline)) {	/* if at EOL */
-			curline = lforw(curline);	/* skip to next line */
+		if (curoff == llength(curline)) {   /* if at EOL */
+			curline = lforw(curline);   /* skip to next line */
 			curoff = 0;
-			c = '\n';	/* and return a <NL> */
+			c = '\n';	            /* and return a <NL> */
 		} else
-			c = lgetc(curline, curoff++);	/* get the char */
-	} else {		/* Reverse. */
+			c = lgetc(curline, curoff++);   /* get the char  */
+	} else {		                    /* Reverse. */
 
 		if (curoff == 0) {
 			curline = lback(curline);

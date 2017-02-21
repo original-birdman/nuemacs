@@ -55,15 +55,15 @@ int copyregion(int f, int n)
 	if ((lastflag & CFKILL) == 0)	/* Kill type command.   */
 		kdelete();
 	thisflag |= CFKILL;
-	linep = region.r_linep;	/* Current line.        */
+	linep = region.r_linep;	        /* Current line.        */
 	loffs = region.r_offset;	/* Current offset.      */
 	while (region.r_size--) {
-		if (loffs == llength(linep)) {	/* End of line.         */
+		if (loffs == llength(linep)) {	/* End of line. */
 			if ((s = kinsert('\n')) != TRUE)
 				return s;
 			linep = lforw(linep);
 			loffs = 0;
-		} else {	/* Middle of line.      */
+		} else {	        /* Middle of line.      */
 			if ((s = kinsert(lgetc(linep, loffs))) != TRUE)
 				return s;
 			++loffs;
@@ -89,7 +89,7 @@ int lowerregion(int f, int n)
 	int s;
 	struct region region;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if ((s = getregion(&region)) != TRUE)
 		return s;
@@ -126,7 +126,7 @@ int upperregion(int f, int n)
 	int s;
 	struct region region;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if ((s = getregion(&region)) != TRUE)
 		return s;
@@ -212,6 +212,8 @@ int getregion(struct region *rp)
 	return FALSE;
 }
 
+/* GGR extensions to regions */
+
 /*      Narrow-to-region (^X-<) makes all but the current region in
         the current buffer invisable and unchangable
 */
@@ -227,7 +229,7 @@ int narrow(int f, int n)
                 return(FALSE);
 
         /* find the proper buffer and make sure we aren't already narrow */
-        bp = curwp->w_bufp;             /* find the right buffer */
+        bp = curwp->w_bufp;     /* find the right buffer */
         if (bp->b_flag&BFNAROW) {
                 mlwrite("This buffer is already narrowed");
                 return(FALSE);
@@ -298,7 +300,7 @@ int widen(int f, int n)
         struct window *wp;     /* windows to fix up pointers in as well */
 
         /* find the proper buffer and make sure we are narrow */
-        bp = curwp->w_bufp;             /* find the right buffer */
+        bp = curwp->w_bufp;     /* find the right buffer */
         if ((bp->b_flag&BFNAROW) == 0) {
                 mlwrite("This buffer is not narrowed");
                 return(FALSE);
@@ -339,4 +341,4 @@ int widen(int f, int n)
         bp->b_flag &= (~BFNAROW);
         mlwrite(MLpre "Buffer is widened" MLpost);
         return(TRUE);
-}    
+}

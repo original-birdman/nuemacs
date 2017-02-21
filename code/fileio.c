@@ -29,8 +29,7 @@ int ffropen(char *fn)
 #endif
 	if ((ffp = fopen(fn, "r")) == NULL)
 		return FIOFNF;
-/* IMD */
-        if (pathexpand) {
+        if (pathexpand) {       /* GGR */
                 strcpy(curbp->b_fname, fn);
         }
 	eofflag = FALSE;
@@ -62,8 +61,7 @@ int ffwopen(char *fn)
 		mlwrite("Cannot open file for writing");
 		return FIOERR;
 	}
-/* IMD */
-        if (pathexpand) {
+        if (pathexpand) {       /* GGR */
                 strcpy(curbp->b_fname, fn);
         }	
         return FIOSUC;
@@ -142,7 +140,6 @@ int ffgetline(void)
 {
 	int c;		/* current character read */
 	int i;		/* current index into fline */
-//GML	char *tmpline;	/* temp storage for expanding line */
 
 	/* if we are at the end...return it */
 	if (eofflag)
@@ -188,15 +185,6 @@ int ffgetline(void)
 			fline[i++] = c;
 			/* if it's longer, get more room */
 			if (i >= flen) {
-/* GML - realloc seems to be simpler....
-				if ((tmpline =
-				     malloc(flen + NSTRING)) == NULL)
-					return FIOMEM;
-				strncpy(tmpline, fline, flen);
-				flen += NSTRING;
-				free(fline);
-				fline = tmpline;
- */
 				flen += NSTRING;
 				fline = realloc(fline, flen);
 			}
@@ -221,7 +209,7 @@ int ffgetline(void)
 
 	/* terminate and decrypt the string */
 	fline[i] = 0;
-/* IMD */
+/* GGR - record the real size of the line */
         ftrulen = i;
 
 #if	CRYPT

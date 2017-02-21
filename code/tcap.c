@@ -169,12 +169,12 @@ static void tcapopen(void)
 		if (SO != NULL)
 			revexist = TRUE;
 #if	PKCODE
-		if (tgetnum("sg") > 0) {	/* can reverse be used? P.K. */
+		if (tgetnum("sg") > 0) {    /* can reverse be used? P.K. */
 			revexist = FALSE;
 			SE = NULL;
 			SO = NULL;
 		}
-		TI = tgetstr("ti", &p);	/* terminal init and exit */
+		TI = tgetstr("ti", &p);	    /* terminal init and exit */
 		TE = tgetstr("te", &p);
 #endif
 

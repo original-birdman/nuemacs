@@ -1,10 +1,10 @@
-/*      ANSI.C
+/*	ANSI.C
  *
  * The routines in this file provide support for ANSI style terminals
  * over a serial line. The serial I/O services are provided by routines in
  * "termio.c". It compiles into nothing if not an ANSI device.
  *
- *      modified by Petri Kutvonen
+ *	modified by Petri Kutvonen
  */
 
 #define termdef 1               /* don't define "term" external */
@@ -91,10 +91,11 @@ struct terminal term = {
 };
 
 #if     COLOR
-ansifcol(color)
-    /* set the current output color */
-int color;                      /* color to set */
-
+/*
+ * Set the current output color
+ * color: color to set.
+ */
+void ansifcol(int color)
 {
         if (color == cfcolor)
                 return;
@@ -103,6 +104,7 @@ int color;                      /* color to set */
         ansiparm(color + 30);
         ttputc('m');
         cfcolor = color;
+	return;
 }
 
 /* Set the current background color.
@@ -120,7 +122,7 @@ void ansibcol(int color)
 }
 #endif
 
-ansimove(row, col)
+ansimove(int row, int col)
 {
         ttputc(ESC);
         ttputc('[');
@@ -174,7 +176,7 @@ void ansirev(int state)
 }
 
 /* Change screen resolution. */
-int ansicres()
+int ansicres(void)
 {
         return TRUE;
 }

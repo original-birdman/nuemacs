@@ -112,12 +112,12 @@ struct name_bind names[] = {
 	{"exit-emacs", quit},
 #if	WORDPRO
 	{"fill-paragraph", fillpara},
-        {"fill-all-paragraphs", fillwhole}, /* IMD */
+        {"fill-all-paragraphs", fillwhole}, /* GGR */
 #endif
 	{"filter-buffer", filter_buffer},
 	{"find-file", filefind},
 	{"forward-character", forwchar},
-	{"ggr-mode", ggr_mode},             /* GML */
+	{"ggr-mode", ggr_mode},             /* GGR */
 	{"goto-line", gotoline},
 #if	CFENCE
 	{"goto-matching-fence", getfence},
@@ -142,13 +142,13 @@ struct name_bind names[] = {
 #endif
 	{"kill-region", killregion},
 	{"kill-to-end-of-line", killtext},
-        {"leave-one-white", leaveone},          /* IMD */
+        {"leave-one-white", leaveone},      /* GGR */
 	{"list-buffers", listbuffers},
 	{"meta-prefix", metafn},
 	{"move-window-down", mvdnwind},
 	{"move-window-up", mvupwind},
 	{"name-buffer", namebuffer},
-	{"narrow-to-region", narrow},           /* IMD */
+	{"narrow-to-region", narrow},       /* GGR */
 	{"newline", insert_newline},
 	{"newline-and-indent", indent},
 	{"next-buffer", nextbuffer},
@@ -173,10 +173,10 @@ struct name_bind names[] = {
 	{"query-replace-string", qreplace},
 	{"quick-exit", quickexit},
 	{"quote-character", quote},
-        {"quoted-count", quotedcount},  /* IMD */
+        {"quoted-count", quotedcount},      /* GGR */
 	{"read-file", fileread},
 	{"redraw-display", reposition},
-        {"reexecute", reexecute},       /* IMD */
+        {"reexecute", reexecute},           /* GGR */
 	{"resize-window", resize},
 	{"restore-window", restwnd},
 	{"replace-string", sreplace},
@@ -213,19 +213,19 @@ struct name_bind names[] = {
 #if	AEDIT
 	{"trim-line", trim},
 #endif
-        {"type-tab", typetab},          /* IMD */
+        {"type-tab", typetab},              /* GGR */
 	{"unbind-key", unbindkey},
 	{"universal-argument", unarg},
 	{"unmark-buffer", unmark},
 	{"update-screen", upscreen},
 	{"view-file", viewfile},
-        {"white-delete", whitedelete},  /* IMD */
-        {"widen-from-region", widen},   /* IMD */
+        {"white-delete", whitedelete},      /* GGR */
+        {"widen-from-region", widen},       /* GGR */
 	{"wrap-word", wrapword},
 	{"write-file", filewrite},
 	{"write-message", writemsg},
 	{"yank", yank},
-        {"yank-minibuffer", yankmb},    /* IMD */
+        {"yank-minibuffer", yankmb},        /* GGR */
 
 	{"", NULL}
 };

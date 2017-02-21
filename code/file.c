@@ -34,20 +34,18 @@ int fileread(int f, int n)
 
 	if (restflag)		/* don't allow this command if restricted */
 		return resterr();
-/* IMD	if ((s = mlreply("Read file: ", fname, NFILEN)) != TRUE)
-		return s; */
+/* GGR - return any current filename for the buffer on <CR>.
+ *      Useful for ^X^R <CR> to re-read current file on erroneous change
+ */
         s = mlreply("Read file: ", fname, NFILEN);
         if (s == ABORT)
                 return(s);
         else if (s == FALSE) {
                 if (strlen(curbp->b_fname) == 0)
                         return(s);
-                else   
+                else
                         strcpy(fname, curbp->b_fname);
         }
-/* IMD end */
-
-
 	return readin(fname, TRUE);
 }
 
@@ -121,7 +119,7 @@ int viewfile(int f, int n)
 
 #if	CRYPT
 static int resetkey(void)
-{				/* reset the encryption key if needed */
+{			/* reset the encryption key if needed */
 	int s;		/* return status */
 
 	/* turn off the encryption flag */
@@ -205,8 +203,7 @@ int getfile(char *fname, int lockfl)
 		curbp->b_markp = curwp->w_markp;
 		curbp->b_marko = curwp->w_marko;
 	}
-/* IMD */
-        if (!inmb)
+        if (!inmb)  /* GGR - remember last buffer */
                 strcpy(savnam, curbp->b_bname);
 
 	curbp = bp;		/* Switch to it.        */
@@ -236,7 +233,6 @@ int readin(char *fname, int lockfl)
 	struct window *wp;
 	struct buffer *bp;
 	int s;
-/* IMD	int nbytes; */
 	int nline;
 	char mesg[NSTRING];
 
@@ -258,8 +254,8 @@ int readin(char *fname, int lockfl)
 	if (s != TRUE)
 		return s;
 #endif
-	bp = curbp;		/* Cheap.               */
-	if ((s = bclear(bp)) != TRUE)	/* Might be old.        */
+	bp = curbp;		            /* Cheap.        */
+	if ((s = bclear(bp)) != TRUE)	    /* Might be old. */
 		return s;
 	bp->b_flag &= ~(BFINVS | BFCHG);
 	strcpy(bp->b_fname, fname);
@@ -267,25 +263,23 @@ int readin(char *fname, int lockfl)
 	/* let a user macro get hold of things...if he wants */
 	execute(META | SPEC | 'R', FALSE, 1);
 
-	if ((s = ffropen(fname)) == FIOERR)	/* Hard file open.      */
+	if ((s = ffropen(fname)) == FIOERR) /* Hard file open. */
 		goto out;
 
-	if (s == FIOFNF) {	/* File not found.      */
+	if (s == FIOFNF) {	            /* File not found. */
 		mlwrite(MLpre "New file" MLpost);
 		goto out;
 	}
 
 	/* read the file in */
-/* IMD	mlwrite("(Reading file)"); */
-        if (!silent)
+        if (!silent)    /* GGR */
                 mlwrite(MLpre "Reading file" MLpost);
 	nline = 0;
 	while ((s = ffgetline()) == FIOSUC) {
-/* IMD		nbytes = strlen(fline); *
-		if ((lp1 = lalloc(nbytes)) == NULL) { */
+/* GGR - ftrulen to handle encrypted files(?) */
 		if ((lp1 = lalloc(ftrulen)) == NULL) {
-			s = FIOMEM;	/* Keep message on the  */
-			break;	/* display.             */
+			s = FIOMEM;	/* Keep message on */
+			break;	        /* the display.    */
 		}
 #if	PKCODE
 		if (nline > MAXNLINE) {
@@ -298,13 +292,13 @@ int readin(char *fname, int lockfl)
 		lp1->l_fp = curbp->b_linep;
 		lp1->l_bp = lp2;
 		curbp->b_linep->l_bp = lp1;
-/* IMD 		for (i = 0; i < nbytes; ++i) */
+/* GGR - ftrulen to handle encrypted files(?) */
 		for (i = 0; i < ftrulen; ++i)
 			lputc(lp1, i, fline[i]);
 		++nline;
-/* IMD - progress report */
-                if (!(nline % 300) && !silent)
-                        mlwrite(MLpre "Reading file" MLpost " : %d lines",nline);
+                if (!(nline % 300) && !silent)  /* GGR */
+                        mlwrite(MLpre "Reading file" MLpost " : %d lines",
+                             nline);
 
 	}
 	ffclose();		/* Ignore errors.       */
@@ -321,11 +315,10 @@ int readin(char *fname, int lockfl)
 	if (nline != 1)
 		strcat(mesg, "s");
 	strcat(mesg, MLpost);
-/* IMD	mlwrite(mesg); */
-        if (!silent) {
+        if (!silent) {          /* GGR */
               mlwrite(mesg);
               if (s == FIOMEM)
-                    sleep(1);
+                    sleep(1);   /* Let it be seen */
         }
 
       out:
@@ -401,16 +394,9 @@ void unqname(char *name)
 		while (*sp)
 			++sp;
 
-/* GML - This is wrong! It can add a character (*sp++).
- *       It needs to check whether the it is already at the max length
- *       first
-                if (sp == name || (*(sp-1) <'0' || *(sp-1) > '8')) {
-                        *sp++ = '0';
-                        *sp = 0;
-                } else
-                        *(--sp) += 1;
- */
-/* First append a number (if there is free space) and let that go up
+/* GGR - Use an algorithm that doesn't easily add characters outside of
+ * the defined buffer size.
+ * First append a number (if there is free space) and let that go up
  * to 9. Iff we run out of numbers and length, increment the last
  * non-numeric character...
  */
@@ -484,11 +470,11 @@ int filesave(int f, int n)
 	struct window *wp;
 	int s;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if ((curbp->b_flag & BFCHG) == 0)	/* Return, no changes.  */
 		return TRUE;
-	if (curbp->b_fname[0] == 0) {	/* Must have a name.    */
+	if (curbp->b_fname[0] == 0) {	/* Must have a name. */
 		mlwrite("No file name");
 		return FALSE;
 	}
@@ -503,7 +489,7 @@ int filesave(int f, int n)
 
 	if ((s = writeout(curbp->b_fname)) == TRUE) {
 		curbp->b_flag &= ~BFCHG;
-		wp = wheadp;	/* Update mode lines.   */
+		wp = wheadp;	/* Update mode lines. */
 		while (wp != NULL) {
 			if (wp->w_bufp == curbp)
 				wp->w_flag |= WFMODE;
@@ -543,9 +529,8 @@ int writeout(char *fn)
 		if ((s = ffputline(&lp->l_text[0], llength(lp))) != FIOSUC)
 			break;
 		++nline;
-/* IMD - progress report */
-                if (!(nline % 300) && !silent)
-                        mlwrite(MLpre "Writing..." MLpre " : %d lines",nline);
+                if (!(nline % 300) && !silent)  /* GGR */
+                        mlwrite(MLpre "Writing..." MLpost " : %d lines",nline);
 		lp = lforw(lp);
 	}
 	if (s == FIOSUC) {	/* No write error.      */
@@ -609,15 +594,14 @@ int ifile(char *fname)
 	int i;
 	struct buffer *bp;
 	int s;
-/* IMD 	int nbytes; */
 	int nline;
 	char mesg[NSTRING];
 
 	bp = curbp;		/* Cheap.               */
 	bp->b_flag |= BFCHG;	/* we have changed      */
 	bp->b_flag &= ~BFINVS;	/* and are not temporary */
-/* IMD */
-        pathexpand = FALSE;
+
+        pathexpand = FALSE;     /* GGR */
 
 	if ((s = ffropen(fname)) == FIOERR)	/* Hard file open.      */
 		goto out;
@@ -640,8 +624,7 @@ int ifile(char *fname)
 
 	nline = 0;
 	while ((s = ffgetline()) == FIOSUC) {
-/* IMD		nbytes = strlen(fline);
-		if ((lp1 = lalloc(nbytes)) == NULL) { */
+/* GGR - ftrulen to handle encrypted files(?) */
 		if ((lp1 = lalloc(ftrulen)) == NULL) {
 			s = FIOMEM;	/* Keep message on the  */
 			break;	/* display.             */
@@ -657,16 +640,15 @@ int ifile(char *fname)
 
 		/* and advance and write out the current line */
 		curwp->w_dotp = lp1;
-/* IMD 		for (i = 0; i < nbytes; ++i) */
+/* GGR - ftrulen to handle encrypted files(?) */
 		for (i = 0; i < ftrulen; ++i)
 			lputc(lp1, i, fline[i]);
 		++nline;
-/* IMD - progress report */
-                if (!(nline % 300) && !silent)
-                        mlwrite(MLpre "Inserting file" MLpost " : %d lines",nline);
+                if (!(nline % 300) && !silent)      /* GGR */
+                        mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
 
 	}
-	ffclose();		/* Ignore errors.       */
+	ffclose();		/* Ignore errors. */
 	curwp->w_markp = lforw(curwp->w_markp);
 	strcpy(mesg, MLpre);
 	if (s == FIOERR) {

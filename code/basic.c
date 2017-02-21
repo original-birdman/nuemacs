@@ -17,7 +17,7 @@
 #include "line.h"
 #include "utf8.h"
 
-/* IMD */
+/* GGR - A consistent "real" line length - without PKcode justflag.  */
 static int ctrulen(void)
 {
     int end;
@@ -32,8 +32,7 @@ static int ctrulen(void)
 #if    PKCODE
 			)
 #endif
-
-         --end;
+          --end;
     return(end);
 }
 
@@ -315,7 +314,7 @@ int gotobop(int f, int n)
 		/* and scan back until we hit a <NL><NL> or <NL><TAB>
 		   or a <NL><SPACE>                                     */
 		while (lback(curwp->w_dotp) != curbp->b_linep)
-                        if (ctrulen() != 0)
+                        if (ctrulen() != 0)     /* GGR */
 				curwp->w_dotp = lback(curwp->w_dotp);
 			else
 				break;
@@ -355,7 +354,7 @@ int gotoeop(int f, int n)
 		/* and scan forword until we hit a <NL><NL> or <NL><TAB>
 		   or a <NL><SPACE>                                     */
 		while (curwp->w_dotp != curbp->b_linep) {
-                        if (ctrulen() != 0)
+                        if (ctrulen() != 0)     /* GGR */
 				curwp->w_dotp = lforw(curwp->w_dotp);
 			else
 				break;
@@ -403,12 +402,11 @@ int forwpage(int f, int n)
 #endif
 	lp = curwp->w_linep;
 
-/* GML - FIX2
- * Stop *before* loop round from end to start of file buffer, so
- * we always leave a line on screen (but it may be empty)
-        while (n-- && lp!=curbp->b_linep)
+/* GGR - FIX2
+ * Add a check to stop *before* we loop round from end to start of file
+ * buffer, so we always leave a line on screen (but it may be empty...)
  */
-        if (lp==curbp->b_linep) return (TRUE);
+        if (lp == curbp->b_linep) return (TRUE);
 	while (n-- && lp != curbp->b_linep)
 		lp = lforw(lp);
 	curwp->w_linep = lp;

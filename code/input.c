@@ -14,7 +14,7 @@
 #include "efunc.h"
 #include "wrapper.h"
 
-/* GML - External and forward declarations */
+/* GGR - some needed things for minibuffer handling */
 #include "line.h"
 
 static int mbdepth = 0;
@@ -124,9 +124,9 @@ int ctoec(int c)
  */
 fn_t getname(void)
 {
-	int cpos;	/* current column on screen output */
+	int cpos;	        /* current column on screen output */
 	int c;
-	char *sp;	/* pointer to string for output */
+	char *sp;	        /* pointer to string for output */
 	struct name_bind *ffp;	/* first ptr to entry in name binding table */
 	struct name_bind *cffp;	/* current ptr to entry in name binding table */
 	struct name_bind *lffp;	/* last ptr to entry in name binding table */
@@ -451,7 +451,9 @@ handle_CSI:
 	return c;
 }
 
-/* IMD version of getstring; minibuffer is a true buffer! */
+/* GGR
+ * A version of getstring in which the  minibuffer is a true buffer!
+ */
 
 int getstring(char *prompt, char *buf, int nbuf, int eolchar)
 {
@@ -483,9 +485,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     int depth;
     int r, i, dummy;
 #endif
-/* GML - HAS to be more than max likely window width
-    char choices[NFILEN]; */
-    char choices[1000];       
+    char choices[1000];       /* MUST be > max likely window width */
     short savdoto;
     int prolen;
     int status;
@@ -499,266 +499,272 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     short bufexpand, expanded;
 
 #if MSDOS
-        if (mbdepth >= MAXDEPTH) {
-                TTbeep();
-                return(ABORT);
-        }
+    if (mbdepth >= MAXDEPTH) {
+        TTbeep();
+        return(ABORT);
+    }
 #endif
-        /* expansion commands leave junk in mb */
+/* Expansion commands leave junk in mb */
 
-        mlerase();
-        mbnameptr = tmpnam(NULL);
+    mlerase();
+    mbnameptr = tmpnam(NULL);
 #if VMS
-        strcpy(mbname, "CC$");
-        strcat(mbname, mbnameptr);
+    strcpy(mbname, "CC$");
+    strcat(mbname, mbnameptr);
 #else
-        strcpy(mbname, mbnameptr);
+    strcpy(mbname, mbnameptr);
 #endif
-        cb = curbp;
-        inmb = TRUE;
-        if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
-            inmb = FALSE;
-            return(FALSE);
-        }
-        bufexpand = (nbuf == NBUFN);
-        /* save real reexecution history */
-        savclast = clast;
-        savflast = flast;
-        savnlast = nlast;
+    cb = curbp;
+    inmb = TRUE;
+    if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
+        inmb = FALSE;
+        return(FALSE);
+    }
+    bufexpand = (nbuf == NBUFN);
+/* save real reexecution history */
+    savclast = clast;
+    savflast = flast;
+    savnlast = nlast;
 
-        wsave = *curwp;     /* Structure copy */
-        swbuffer(bp);
+    wsave = *curwp;             /* Structure copy - save */
+    swbuffer(bp);
 
-        curwp->w_toprow = term.t_nrow;
-        curwp->w_ntrows = 1;
-        curbp->b_mode = MDEXACT;   /* start-up just with EXACT mode */
+    curwp->w_toprow = term.t_nrow;
+    curwp->w_ntrows = 1;
+    curbp->b_mode = MDEXACT;    /* start-up just with EXACT mode */
 
-        mbdepth++;
-        if (mbdepth > 1) {
-                strcpy(procopy, itoa(mbdepth));
-                strcat(procopy, prompt);
-        }
-        else
-                strcpy(procopy, prompt);
-        prolen = strlen(procopy);
+    mbdepth++;
+    if (mbdepth > 1) {
+        strcpy(procopy, itoa(mbdepth));
+        strcat(procopy, prompt);
+    }
+    else
+        strcpy(procopy, prompt);
+    prolen = strlen(procopy);
 
-        if (mpresf)
-                mlerase();
-        mberase();
+    if (mpresf)
+        mlerase();
+    mberase();
 
-/* Copy of the main.c command loop, things are a *little* different here.. */
+/* A copy of the main.c command loop from 3.9e, but things are a
+ *  *little* different here..
+ */
 loop:
 
-        /* execute the "command" macro...normally null */
-        saveflag = lastflag;    /* preserve lastflag through this */
-        execute(META|SPEC|'C', FALSE, 1);
-        lastflag = saveflag;
+/* Execute the "command" macro...normally null */
+    saveflag = lastflag;        /* preserve lastflag through this */
+    execute(META|SPEC|'C', FALSE, 1);
+    lastflag = saveflag;
 
-        savdoto = curwp->w_doto;
-        curwp->w_doto  = 0;
-        linstr(procopy);
-        curwp->w_doto = savdoto + prolen;
+    savdoto = curwp->w_doto;
+    curwp->w_doto  = 0;
+    linstr(procopy);
+    curwp->w_doto = savdoto + prolen;
 
-        /* Fix up the screen */
-        update(FALSE);
-        if (typahead()) {
-                mbupdate();
-	}
+/* Fix up the screen */
+    update(FALSE);
+    if (typahead()) {
+            mbupdate();
+    }
 
-        curwp->w_doto  = 0;
-        ldelete((long)prolen, FALSE);
-        curwp->w_doto = savdoto;
+    curwp->w_doto  = 0;
+    ldelete((long)prolen, FALSE);
+    curwp->w_doto = savdoto;
 
-        /* get the next command from the keyboard */
-        c = getcmd();
+/* Get the next command (character) from the keyboard */
+    c = getcmd();
 
-/* Experimental filename expansion code */
-
-        if ((c == (CONTROL|'I'))) {
-            lp = curwp->w_dotp;
-            sp = lp->l_text;
-/* NSTRING-1, as we need to add a trailing NUL */
-            if (lp->l_used < NSTRING-1) {
-                strncpy(tstring, sp, lp->l_used);
-                tstring[lp->l_used] = '\0';
-                if (bufexpand)
-                    expanded = comp_buffer(tstring, choices);
-                else {
-                    expanded = comp_file(tstring, choices);
-                }
-                if (expanded) {
-                    savdoto = curwp->w_doto;
-                    curwp->w_doto = 0;
-                    ldelete((long) lp->l_used, FALSE);
-                    linstr(tstring);
-                    if (choices[0]) {
-                        mlwrite(choices);
-                        size = (strlen(choices) < 42) ? 1 : 2;
-                        sleep(size);
-                        mlerase();
-                        mberase();
-                    }
-                }
-                else
-                    TTbeep();
-                goto loop;
-            }
-            else {
-                TTbeep();
-                goto loop;
-            }
-        }
-
-/* End of experimental code */
-
-
-        f = FALSE;
-        n = 1;
-
-        /* do META-# processing if needed */
-
-        basec = c & ~META;              /* strip meta char off if there */
-        if ((c & META) && ((basec >= '0' && basec <= '9') || basec == '-')) {
-                f = TRUE;               /* there is a # arg */
-                n = 0;                  /* start with a zero default */
-                mflag = 1;              /* current minus flag */
-                c = basec;              /* strip the META */
-                while ((c >= '0' && c <= '9') || (c == '-')) {
-                        if (c == '-') {
-                                /* already hit a minus or digit? */
-                                if ((mflag == -1) || (n != 0))
-                                        break;
-                                mflag = -1;
-                        } else {
-                                n = n * 10 + (c - '0');
-                        }
-                        if ((n == 0) && (mflag == -1))  /* lonely - */
-                                mlwrite("Arg:");
-                        else
-                                mlwrite("Arg: %d",n * mflag);
-
-                        c = getcmd();   /* get the next key */
-                }
-                n = n * mflag;  /* figure in the sign */
-        }
-
-        /* do ^U repeat argument processing */
-
-        if (c == reptc) {                  /* ^U, start argument   */
-                f = TRUE;
-                n = 4;                          /* with argument of 4 */
-                mflag = 0;                      /* that can be discarded. */
-                mlwrite("Arg: 4");
-                while (((c=getcmd()) >='0' && c<='9') || c==reptc || c=='-'){
-                        if (c == reptc)
-                                if ((n > 0) == ((n*4) > 0))
-                                        n = n*4;
-                                else
-                                        n = 1;
-                        /*
-                         * If dash, and start of argument string, set arg.
-                         * to -1.  Otherwise, insert it.
-                         */
-                        else if (c == '-') {
-                                if (mflag)
-                                        break;
-                                n = 0;
-                                mflag = -1;
-                        }
-                        /*
-                         * If first digit entered, replace previous argument
-                         * with digit and set sign.  Otherwise, append to arg.
-                         */
-                        else {
-                                if (!mflag) {
-                                        n = 0;
-                                        mflag = 1;
-                                }
-                                n = 10*n + c - '0';
-                        }
-                        mlwrite("Arg: %d", (mflag >=0) ? n : (n ? -n : -1));
-                }
-                /*
-                 * Make arguments preceded by a minus sign negative and change
-                 * the special argument "^U -" to an effective "^U -1".
-                 */
-                if (mflag == -1) {
-                        if (n == 0)
-                                n++;
-                        n = -n;
-                }
-        }
-
-        /* intercept minibuffer specials.. <NL> and ^G */
-        if ((c == (CONTROL|'M')) || (c == (CTLX|CONTROL|'C')))
-                goto submit;
-        else if (c == (CONTROL|'G')) {
-                status = ABORT;
-                buf = "";   /* GML - Don't return garbage */
-                goto abort;
-        }
-
-        /* and execute the command */
-        execute(c, f, n);
-        if (mpresf) {
-                sleep(1);
-                mlerase();
-                mberase();
-                /* update(TRUE) */
-        }
-        /* whatever dumb modes, they've put on, allow only the sensible... */
-        curbp->b_mode &= (MDEXACT|MDOVER|MDMAGIC);
-        goto loop;
-
-submit:
-        /* tidy up */
-        status = TRUE;
-        /* find the contents of the current line and its length */
+/* Filename expansion code:
+ * a list of matches is temporarily displayed in the minibuffer.
+ */
+    if ((c == (CONTROL|'I'))) {
         lp = curwp->w_dotp;
         sp = lp->l_text;
-        size = lp->l_used;
+/* NSTRING-1, as we need to add a trailing NUL */
+        if (lp->l_used < NSTRING-1) {
+            strncpy(tstring, sp, lp->l_used);
+            tstring[lp->l_used] = '\0';
+            if (bufexpand) {
+                expanded = comp_buffer(tstring, choices);
+            }
+            else {
+                expanded = comp_file(tstring, choices);
+            }
+            if (expanded) {
+                savdoto = curwp->w_doto;
+                curwp->w_doto = 0;
+                ldelete((long) lp->l_used, FALSE);
+                linstr(tstring);
+                if (choices[0]) {
+                    mlwrite(choices);
+                    size = (strlen(choices) < 42) ? 1 : 2;
+                    sleep(size);
+                    mlerase();
+                    mberase();
+                }
+            }
+            else
+                TTbeep();
+            goto loop;
+        }
+        else {
+            TTbeep();
+            goto loop;
+        }
+    }
+/* End of filename expansion code */
+
+    f = FALSE;
+    n = 1;
+
+/* Do META-# processing if needed */
+
+    basec = c & ~META;          /* strip meta char off if there */
+    if ((c & META) && ((basec >= '0' && basec <= '9') || basec == '-')) {
+        f = TRUE;               /* there is a # arg */
+        n = 0;                  /* start with a zero default */
+        mflag = 1;              /* current minus flag */
+        c = basec;              /* strip the META */
+        while ((c >= '0' && c <= '9') || (c == '-')) {
+            if (c == '-') {     /* already hit a minus or digit? */
+                if ((mflag == -1) || (n != 0))
+                    break;
+                mflag = -1;
+            }
+            else {
+                n = n * 10 + (c - '0');
+            }
+            if ((n == 0) && (mflag == -1))  /* lonely - */
+                mlwrite("Arg:");
+            else
+                mlwrite("Arg: %d",n * mflag);
+
+            c = getcmd();       /* get the next key */
+        }
+        n = n * mflag;          /* figure in the sign */
+    }
+
+/* Do ^U repeat argument processing */
+
+    if (c == reptc) {           /* ^U, start argument   */
+        f = TRUE;
+        n = 4;                  /* with argument of 4 */
+        mflag = 0;              /* that can be discarded. */
+        mlwrite("Arg: 4");
+        while (((c=getcmd()) >='0' && c<='9') || c==reptc || c=='-'){
+            if (c == reptc)
+                if ((n > 0) == ((n*4) > 0))
+                    n = n*4;
+                else
+                    n = 1;
+/*
+ * If dash, and start of argument string, set arg.
+ * to -1.  Otherwise, insert it.
+ */
+            else if (c == '-') {
+                if (mflag)
+                    break;
+                n = 0;
+                mflag = -1;
+            }
+/*
+ * If first digit entered, replace previous argument
+ * with digit and set sign.  Otherwise, append to arg.
+ */
+            else {
+                if (!mflag) {
+                    n = 0;
+                    mflag = 1;
+                }
+                n = 10*n + c - '0';
+            }
+            mlwrite("Arg: %d", (mflag >=0) ? n : (n ? -n : -1));
+        }
+/*
+ * Make arguments preceded by a minus sign negative and change
+ * the special argument "^U -" to an effective "^U -1".
+ */
+        if (mflag == -1) {
+            if (n == 0)
+                n++;
+            n = -n;
+        }
+    }
+
+/* Intercept minibuffer specials.. <NL> and ^G */
+
+    if ((c == (CONTROL|'M')) || (c == (CTLX|CONTROL|'C')))
+        goto submit;
+    else if (c == (CONTROL|'G')) {
+        status = ABORT;
+        buf = "";               /* Don't return garbage */
+        goto abort;
+    }
+
+/* ...and execute the command */
+
+    execute(c, f, n);
+    if (mpresf) {
+        sleep(1);
+        mlerase();
+        mberase();
+    }
+
+/* Whatever dumb modes, they've put on, allow only the sensible... */
+
+    curbp->b_mode &= (MDEXACT|MDOVER|MDMAGIC);
+    goto loop;
+
+submit:     /* Tidy up */
+    status = TRUE;
+
+/* Find the contents of the current line and its length */
+
+    lp = curwp->w_dotp;
+    sp = lp->l_text;
+    size = lp->l_used;
 
 /* Need to copy to return buffer and, if not empty, 
  * to save as last minibuffer.
  */
 
-        int retlen = size;          /* Without terminating NUL */
-        if (retlen >= nbuf) retlen = nbuf - 1;
-        strncpy(buf, sp, retlen);   /* No NUL sent here */
-        buf[retlen] = '\0';         /* Here it is... */
-        if (retlen) {
-                if (retlen >= NSTRING) retlen = NSTRING - 1;
-                strncpy(lastmb, sp, retlen);
-                lastmb[retlen] = '\0';
-        }
-        else status = FALSE;        /* Empty input... */
+    int retlen = size;          /* Without terminating NUL */
+    if (retlen >= nbuf) retlen = nbuf - 1;
+    strncpy(buf, sp, retlen);   /* No NUL sent here */
+    buf[retlen] = '\0';         /* Here it is... */
+    if (retlen) {
+        if (retlen >= NSTRING) retlen = NSTRING - 1;
+        strncpy(lastmb, sp, retlen);
+        lastmb[retlen] = '\0';
+    }
+    else status = FALSE;        /* Empty input... */
 
-abort:
-        /* make sure we're still in our minibuffer */
-        swbuffer(bp);
-        unmark(TRUE, 1);
-        mbdepth--;
+abort:  /* Make sure we're still in our minibuffer */
+    swbuffer(bp);
+    unmark(TRUE, 1);
+    mbdepth--;
 
-        swbuffer(cb);
-        *curwp = wsave;     /* Structure copy */
+    swbuffer(cb);
+    *curwp = wsave;             /* Structure copy - restore */
 
-        if (!mbdepth)
-                inmb = FALSE;
+    if (!mbdepth) inmb = FALSE;
+
 #if (MSDOS & (LATTICE | MSC)) | BSD | USG
-        /* free the space */
-        free(mbnameptr);
+    free(mbnameptr);            /* free the space */
 #endif
-         zotbuf(bp);
-        /* restore real reexecution history */
-        clast = savclast;
-        flast = savflast;
-        nlast = savnlast;
-        mberase();
-        if (status == ABORT) {
-                ctrlg(FALSE, 0);
-                TTflush();
-        }
-        return(status);
+     zotbuf(bp);
+
+/* Restore real reexecution history */
+
+    clast = savclast;
+    flast = savflast;
+    nlast = savnlast;
+    mberase();
+    if (status == ABORT) {
+        ctrlg(FALSE, 0);
+        TTflush();
+    }
+    return(status);
 }
 
 /* Yank back last minibuffer */
@@ -837,7 +843,7 @@ int n;
 }
 #endif
 
-/* GML - Back to original code... */
+/* GGR - Back to original code... */
 
 /*
  * output a string of characters

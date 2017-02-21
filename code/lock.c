@@ -33,12 +33,14 @@ int lockchk(char *fname)
 {
 	int i;		/* loop indexes */
 	int status;	/* return status */
-/* MLA */
+/* GGR
+ * Need a copy of the filename, to allow possible tilde and shell
+ * expansion on the passsed-in name.
+ */
 	char *tmpname = (char *) malloc(NFILEN);
-        if (tmpname == NULL)
-        {
-          mlwrite("Cannot lock, out of memory");
-          return ABORT;
+        if (tmpname == NULL) {
+                mlwrite("Cannot lock, out of memory");
+                return ABORT;
         }
         strncpy(tmpname, fname, NFILEN - 1);
         *(tmpname + NFILEN - 1) = '\0';
@@ -63,15 +65,15 @@ int lockchk(char *fname)
 
 	/* next, try to lock it */
 	status = lock(tmpname);
-	if (status == ABORT)	/* file is locked, no override */
+	if (status == ABORT)    /* file is locked, no override */
 		return ABORT;
-	if (status == FALSE)	/* locked, overriden, dont add to table */
+	if (status == FALSE)    /* locked, overriden, dont add to table */
 		return TRUE;
 
 	/* we have now locked it, add it to our table */
 	lname[++numlocks - 1] = (char *) malloc(strlen(tmpname) + 1);
-	if (lname[numlocks - 1] == NULL) {	/* malloc failure */
-		undolock(tmpname);	/* free the lock */
+	if (lname[numlocks - 1] == NULL) {  /* malloc failure */
+		undolock(tmpname);          /* free the lock */
 		mlwrite("Cannot lock, out of memory");
 		--numlocks;
 		return ABORT;
@@ -114,9 +116,9 @@ int lockrel(void)
  */
 int lock(char *fname)
 {
-	char *locker;	/* lock error message */
-	int status;	/* return status */
-	char msg[NSTRING];	/* message string */
+	char *locker;	    /* lock error message */
+	int status;	    /* return status      */
+	char msg[NSTRING];  /* message string     */
 
 	/* attempt to lock the file */
 	locker = dolock(fname);

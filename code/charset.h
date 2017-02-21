@@ -1,4 +1,6 @@
-/* Character set - IMD */
+/* Character set - GGR */
+
+/* A description of control charactes for the status command */
 
 static char *charset[] =
 

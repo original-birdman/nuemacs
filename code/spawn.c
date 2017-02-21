@@ -2,7 +2,7 @@
  *
  *	Various operating system access commands.
  *
- *	<odified by Petri Kutvonen
+ *	Modified by Petri Kutvonen
  */
 
 #include <stdio.h>
@@ -36,7 +36,7 @@ extern int chg_width, chg_height;
 #include	<process.h>
 #endif
 
-static int dnc __attribute__ ((unused));   /* GML */
+static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
 
 /*
  * Create a subjob with a copy of the command intrepreter in it. When the
@@ -57,7 +57,7 @@ int spawncli(int f, int n)
 #if     VMS
 	movecursor(term.t_nrow, 0);	/* In last line.        */
 	mlputs(MLpre "Starting DCL" MLpost "\r\n");
-	TTflush();		/* Ignore "ttcol".      */
+	TTflush();      		/* Ignore "ttcol".      */
 	sgarbf = TRUE;
 	sys(NULL);
 	sleep(1);
@@ -78,8 +78,8 @@ int spawncli(int f, int n)
 #if     V7 | USG | BSD
 	movecursor(term.t_nrow, 0);	/* Seek to last line.   */
 	TTflush();
-	TTclose();		/* stty to old settings */
-	TTkclose();		/* Close "keyboard" */
+	TTclose();	         	/* stty to old settings */
+	TTkclose();		        /* Close "keyboard" */
 	if ((cp = getenv("SHELL")) != NULL && *cp != '\0')
 		dnc = system(cp);
 	else
@@ -148,7 +148,7 @@ int spawn(int f, int n)
 		return s;
 	movecursor(term.t_nrow, 0);
 	TTflush();
-	s = sys(line);		/* Run the command.     */
+	s = sys(line);		        /* Run the command.     */
 	if (clexec == FALSE) {
 		mlputs("\r\n\n(End)");	/* Pause.               */
 		TTflush();
@@ -247,7 +247,7 @@ int execprg(int f, int n)
 	dnc = system(line);
 	fflush(stdout);		/* to be sure P.K.      */
 	TTopen();
-	mlputs(MLpre "Press <return> to continue" MLpost); /* Pause */
+        mlputs(MLpre "Press <return> to continue" MLpost); /* Pause */
 	TTflush();
 	while ((s = tgetc()) != '\r' && s != ' ');
 	sgarbf = TRUE;
@@ -261,7 +261,7 @@ int execprg(int f, int n)
  */
 int pipecmd(int f, int n)
 {
-	int s;		/* return status from CLI */
+	int s;		        /* return status from CLI */
 	struct window *wp;	/* pointer to new window */
 	struct buffer *bp;	/* pointer to buffer to zot */
 	char line[NLINE];	/* command line send to shell */
@@ -385,7 +385,7 @@ int pipecmd(int f, int n)
  */
 int filter_buffer(int f, int n)
 {
-	int s;		/* return status from CLI */
+	int s;		        /* return status from CLI */
 	struct buffer *bp;	/* pointer to buffer to zot */
 	char line[NLINE];	/* command line send to shell */
 	char tmpnam[NFILEN];	/* place to store real file name */
@@ -398,7 +398,7 @@ int filter_buffer(int f, int n)
 	if (restflag)
 		return resterr();
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 
 #if     VMS
@@ -456,7 +456,7 @@ int filter_buffer(int f, int n)
 
 	/* reset file name */
 	strcpy(bp->b_fname, tmpnam);	/* restore name */
-	bp->b_flag |= BFCHG;	/* flag it as changed */
+	bp->b_flag |= BFCHG;	        /* flag it as changed */
 
 	/* and get rid of the temporary file */
 	unlink(filnam1);
@@ -531,7 +531,7 @@ int shellprog(char *cmd)
 	}
 
 	/* trim leading whitespace off the command */
-	while (*cmd == ' ' || *cmd == '\t')	/*  find out if null command */
+	while (*cmd == ' ' || *cmd == '\t') /*  find out if null command */
 		cmd++;
 
 	/**  If the command line is not empty, bring up the shell  **/

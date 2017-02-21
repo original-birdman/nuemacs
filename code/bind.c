@@ -24,13 +24,11 @@ int help(int f, int n)
 	struct buffer *bp;	/* buffer pointer to help */
 	char *fname = NULL;	/* ptr to file returned by flook() */
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())           /* GGR - disallow in minibuffer */
                 return(FALSE);
-                                
+
 	/* first check if we are already here */
-/* IMD	bp = bfind("emacs.hlp", FALSE, BFINVS); */
-	bp = bfind(pathname[1], FALSE, BFINVS);
+	bp = bfind(pathname[1], FALSE, BFINVS); /* GGR - epath.h setting */
 
 	if (bp == NULL) {
 		fname = flook(pathname[1], FALSE);
@@ -46,8 +44,7 @@ int help(int f, int n)
 
 	if (bp == NULL) {
 		/* and read the stuff in */
-/* IMD		if (getfile(fname, FALSE) == FALSE)
-			return FALSE; */
+		/* GGR - unset pathexpand around call */
                 pathexpand = FALSE;
 		int res = getfile(fname, FALSE);
                 pathexpand = TRUE;
@@ -89,8 +86,8 @@ int deskey(int f, int n)
 
 	/* output the command sequence */
 	ostring(ptr);
-        /* IMD */
-        mpresf = TRUE;
+
+        mpresf = TRUE;      /* GGR */
         return TRUE;
 }
 
@@ -102,17 +99,16 @@ int deskey(int f, int n)
  */
 int bindtokey(int f, int n)
 {
-	unsigned int c;	     /* command key to bind */
-	fn_t kfunc;	     /* ptr to the requested function to bind to */
-	struct key_tab *ktp; /* pointer into the command table */
-	int found;	     /* matched command flag */
-	char outseq[80];     /* output buffer for keystroke sequence */
+	unsigned int c;	        /* command key to bind */
+	fn_t kfunc;	        /* ptr to the requested function to bind to */
+	struct key_tab *ktp;    /* pointer into the command table */
+	int found;	        /* matched command flag */
+	char outseq[80];        /* output buffer for keystroke sequence */
 
 	/* prompt the user to type in a key to bind */
 	mlwrite(": bind-to-key ");
 
-        /* IMD */
-        mpresf = TRUE;
+        mpresf = TRUE;          /* GGR */
 
 	/* get the function name to bind it to */
 	kfunc = getname();
@@ -176,14 +172,13 @@ int bindtokey(int f, int n)
 			return FALSE;
 		}
 
-		ktp->k_code = c;	/* add keycode */
-		ktp->k_fp = kfunc;	/* and the function pointer */
-		++ktp;		/* and make sure the next is null */
+		ktp->k_code = c;    /* add keycode */
+		ktp->k_fp = kfunc;  /* and the function pointer */
+		++ktp;		    /* and make sure the next is null */
 		ktp->k_code = 0;
 		ktp->k_fp = NULL;
 	}
-        /* IMD */
-        mpresf = TRUE;
+        mpresf = TRUE;              /* GGR */
         TTflush();
 
 	return TRUE;
@@ -197,14 +192,13 @@ int bindtokey(int f, int n)
  */
 int unbindkey(int f, int n)
 {
-	int c;		/* command key to unbind */
+	int c;		        /* command key to unbind */
 	char outseq[80];	/* output buffer for keystroke sequence */
 
 	/* prompt the user to type in a key to unbind */
 	mlwrite(": unbind-key ");
 
-        /* IMD */
-        mpresf = TRUE;
+        mpresf = TRUE;          /* GGR */
 
 	/* get the command sequence to unbind */
 	c = getckey(FALSE);	/* get a command sequence */
@@ -220,8 +214,7 @@ int unbindkey(int f, int n)
 		mlwrite(MLpre "Key not bound" MLpost);
 		return FALSE;
 	}
-        /* IMD */
-        TTflush();
+        TTflush();              /* GGR */
 
 	return TRUE;
 }
@@ -285,8 +278,7 @@ int apro(int f, int n)
 	char mstring[NSTRING];	/* string to match cmd names to */
 	int status;		/* status return */
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())           /* GGR - disallow in minibuffer */
                 return(FALSE);
 
 	status = mlreply("Apropos string: ", mstring, NSTRING - 1);
@@ -306,14 +298,13 @@ int buildlist(int type, char *mstring)
 #endif
 {
 	struct window *wp;         /* scanning pointer to windows */
-	struct key_tab *ktp;  /* pointer into the command table */
-	struct name_bind *nptr;          /* pointer into the name binding table */
-	struct buffer *bp;    /* buffer to put binding list into */
-	int cpos;             /* current position to use in outseq */
-	char outseq[80];      /* output buffer for keystroke sequence */
+	struct key_tab *ktp;       /* pointer into the command table */
+	struct name_bind *nptr;    /* pointer into the name binding table */
+	struct buffer *bp;         /* buffer to put binding list into */
+	int cpos;                  /* current position to use in outseq */
+	char outseq[80];           /* output buffer for keystroke sequence */
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())              /* GGR - disallow in minibuffer */
                 return(FALSE);
 
 	/* split the current window to make room for the binding list */
@@ -399,16 +390,16 @@ int buildlist(int type, char *mstring)
 		++nptr;
 	}
 
-	curwp->w_bufp->b_mode |= MDVIEW;	/* put this buffer view mode */
-	curbp->b_flag &= ~BFCHG;	/* don't flag this as a change */
-	wp->w_dotp = lforw(bp->b_linep);	/* back to the beginning */
+	curwp->w_bufp->b_mode |= MDVIEW;    /* put this buffer view mode */
+	curbp->b_flag &= ~BFCHG;	    /* don't flag this as a change */
+	wp->w_dotp = lforw(bp->b_linep);    /* back to the beginning */
 	wp->w_doto = 0;
-	wp = wheadp;		/* and update ALL mode lines */
+	wp = wheadp;	                    /* and update ALL mode lines */
 	while (wp != NULL) {
 		wp->w_flag |= WFMODE;
 		wp = wp->w_wndp;
 	}
-	mlwrite("");		/* clear the mode line */
+	mlwrite("");                        /* clear the mode line */
 	return TRUE;
 }
 
@@ -458,12 +449,12 @@ int strinc(char *source, char *sub)
  */
 unsigned int getckey(int mflag)
 {
-	unsigned int c;	/* character fetched */
-	char tok[NSTRING];	/* command incoming */
+	unsigned int c;         /* character fetched */
+	char tok[NSTRING];      /* command incoming */
 
 	/* check to see if we are executing a command line */
 	if (clexec) {
-		macarg(tok);	/* get the next token */
+		macarg(tok);    /* get the next token */
 		return stock(tok);
 	}
 
@@ -498,7 +489,7 @@ int startup(char *sfname)
 	return dofile(fname);
 }
 
-/* GML - Helper functions for flook
+/* GGR - Helper function for flook
  */
 #if	ENVFUNC
 static int along_path(char *fname, char *fspec) {
@@ -544,12 +535,11 @@ static int along_path(char *fname, char *fspec) {
  */
 char *flook(char *fname, int hflag)
 {
-	char *home;	/* path to home directory */
-	int i;		/* index */
+	char *home;	                /* path to home directory */
+	int i;		                /* index */
 	static char fspec[NSTRING];	/* full path spec to search */
 
-/* IMD */
-        pathexpand = FALSE;
+        pathexpand = FALSE;             /* GGR */
 
 #if	ENVFUNC
 
@@ -564,7 +554,7 @@ char *flook(char *fname, int hflag)
 			/* and try it out */
 			if (ffropen(fspec) == FIOSUC) {
 				ffclose();
-                                pathexpand = TRUE;  /* IMD */
+                                pathexpand = TRUE;  /* GGR */
 				return fspec;
 			}
 		}
@@ -574,13 +564,13 @@ char *flook(char *fname, int hflag)
 	/* always try the current directory first */
 	if (ffropen(fname) == FIOSUC) {
 		ffclose();
-                pathexpand = TRUE;  /* IMD */
+                pathexpand = TRUE;                  /* GGR */
 		return fname;
 	}
 
 #if	ENVFUNC & PATH_THEN_TABLE
         if (along_path(fname, fspec) == TRUE) {
-	        pathexpand = TRUE;  /* IMD */
+	        pathexpand = TRUE;                  /* GGR */
 		return fspec;
 	}
 #endif
@@ -593,19 +583,19 @@ char *flook(char *fname, int hflag)
 		/* and try it out */
 		if (ffropen(fspec) == FIOSUC) {
 			ffclose();
-                        pathexpand = TRUE;  /* IMD */
+                        pathexpand = TRUE;          /* GGR */
 			return fspec;
 		}
 	}
 
 #if	ENVFUNC & TABLE_THEN_PATH
         if (along_path(fname, fspec) == TRUE) {
-	        pathexpand = TRUE;  /* IMD */
+	        pathexpand = TRUE;                  /* GGR */
 		return fspec;
 	}
 #endif
 
-        pathexpand = TRUE;      /* IMD */
+        pathexpand = TRUE;                          /* GGR */
 	return NULL;		/* no such luck */
 }
 
@@ -617,7 +607,7 @@ char *flook(char *fname, int hflag)
  */
 void cmdstr(int c, char *seq)
 {
-	char *ptr;		/* pointer into current position in sequence */
+	char *ptr;      /* pointer into current position in sequence */
 
 	ptr = seq;
 
@@ -654,7 +644,7 @@ void cmdstr(int c, char *seq)
 	else
 		*ptr++ = c & 255;   /* strip the prefixes */
 
-	*ptr = 0;		/* terminate the string */
+	*ptr = 0;		    /* terminate the string */
 }
 
 /*
@@ -726,9 +716,8 @@ unsigned int stock(char *keyname)
 {
 	unsigned int c;	/* key sequence to return */
 
-/* IMD */
-        int noupper;
-        noupper = (strlen(keyname) == 1);
+        /* GGR - allow different bindings for 1char UPPER and lower */
+        int noupper = (strlen(keyname) == 1);
 
 	/* parse it up */
 	c = 0;
@@ -760,7 +749,7 @@ unsigned int stock(char *keyname)
 		c |= CONTROL;
 		*keyname += 'A';
 	}
-	/* GML - allow SP for space by putting it there... */
+	/* GGR - allow SP for space by putting it there... */
 	if (*keyname == 'S' && *(keyname + 1) == 'P') {
 		++keyname;
 		*keyname = ' ';
@@ -768,8 +757,8 @@ unsigned int stock(char *keyname)
 
 
 	/* make sure we are not lower case (not with function keys) */
-/* IMD 	if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC)) */
-	if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC) && !(noupper))
+	if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC)
+              && !(noupper))            /* GGR */
 		*keyname -= 32;
 
 	/* the final sequence... */

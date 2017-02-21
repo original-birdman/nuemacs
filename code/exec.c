@@ -44,7 +44,7 @@ int namedcmd(int f, int n)
  */
 int execcmd(int f, int n)
 {
-	int status;	/* status return */
+	int status;	        /* status return */
 	char cmdstr[NSTRING];	/* string holding command to execute */
 
 	/* get the line wanted */
@@ -70,8 +70,8 @@ int execcmd(int f, int n)
  */
 int docmd(char *cline)
 {
-	int f;		/* default argument flag */
-	int n;		/* numeric repeat value */
+	int f;		        /* default argument flag */
+	int n;		        /* numeric repeat value */
 	fn_t fnc;		/* function to execute */
 	int status;		/* return status of function */
 	int oldcle;		/* old contents of clexec flag */
@@ -99,7 +99,8 @@ int docmd(char *cline)
 	/* process leadin argument */
 	if (gettyp(tkn) != TKCMD) {
 		f = TRUE;
-/* GML - Possible illegal overlap of args.  Must do in two stages   
+/* GGR - There is the possibility of an illegal overlap of args here.
+ *       So it must be done via a temporary buffer.
  *              strcpy(tkn, getval(tkn));
  */
                 strcpy(tbuf, getval(tkn));
@@ -241,8 +242,9 @@ int nextarg(char *prompt, char *buffer, int size, int terminator)
 	execstr = token(execstr, buffer, size);
 
 	/* evaluate it */
-/* GML - Possible illegal overlap of args.  Must do in two stages   
- *      strcpy(buffer, getval(buffer));  
+/* GGR - There is the possibility of an illegal overlap of args here.
+ *       So it must be done via a temporary buffer.
+ *      strcpy(buffer, getval(buffer));
  */
         strcpy(tbuf, getval(buffer));
         strcpy(buffer, tbuf);
@@ -426,11 +428,11 @@ int execbuf(int f, int n)
  */
 int dobuf(struct buffer *bp)
 {
-	int status;	/* status return */
+	int status;	        /* status return */
 	struct line *lp;	/* pointer to line to execute */
 	struct line *hlp;	/* pointer to line header */
 	struct line *glp;	/* line to goto */
-	struct line *mp;		/* Macro line storage temp */
+	struct line *mp;	/* Macro line storage temp */
 	int dirnum;		/* directive index */
 	int linlen;		/* length of line to execute */
 	int i;			/* index */
@@ -447,7 +449,7 @@ int dobuf(struct buffer *bp)
 
 #if	DEBUGM
 	char *sp;		/* temp for building debug string */
-	char *ep;	/* ptr to end of outline */
+	char *ep;	        /* ptr to end of outline */
 #endif
 
 	/* clear IF level flags/while ptr */
@@ -577,7 +579,7 @@ int dobuf(struct buffer *bp)
 			strcat(outline, ":");
 
 			/* and lastly the line */
-                        /* IMD - if line > 80 chars, chop it */
+                        /* GGR - if line > 80 chars, chop it */
                         if (strlen(eline) > 80)
                                 strncat(outline, eline, 80);
                         else
@@ -799,7 +801,7 @@ int dobuf(struct buffer *bp)
 
 			case DFORCE:	/* FORCE directive */
 				force = TRUE;
-                                break; /* GML: Must drop down!! */
+                                break;  /* GGR: Must drop down!! */
 
                         case DFINISH:   /* FINISH directive */
                                 if (execlevel == 0) {
@@ -916,15 +918,15 @@ int dofile(char *fname)
 	bp->b_mode = MDVIEW;	/* mark the buffer as read only */
 	cb = curbp;		/* save the old buffer */
 	curbp = bp;		/* make this one current */
-        if (silent)             /* IMD */
+        if (silent)                 /* GGR */
                 pathexpand = FALSE;
 	/* and try to read in the file to execute */
 	if ((status = readin(fname, FALSE)) != TRUE) {
 		curbp = cb;	/* restore the current buffer */
-                pathexpand = TRUE;    /* IMD */
+                pathexpand = TRUE;  /* GGR */
 		return status;
 	}
-        pathexpand = TRUE;            /* IMD */
+        pathexpand = TRUE;          /* GGR */
 
 	/* go execute it! */
 	curbp = cb;		/* restore the current buffer */

@@ -25,7 +25,7 @@ static char *pathname[] =
 #if	V7 | BSD | USG
 {
 #ifdef GGR_MODE
-        "uemacs.rc",
+        "nuemacs.rc",
         "uemacs.hlp",
         "/local/etc/",
         "/opt/local/etc/",

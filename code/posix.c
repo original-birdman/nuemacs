@@ -96,7 +96,7 @@ void ttopen(void)
  */
 void ttclose(void)
 {
-	tcsetattr(0, TCSADRAIN, &otermios);	/* restore terminal settings */
+	tcsetattr(0, TCSADRAIN, &otermios); /* restore terminal settings */
 }
 
 /*

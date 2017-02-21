@@ -1,3 +1,9 @@
+/*      complet.c
+ *
+ *      A set of functions having to do with filename completion.
+ *      Partof thre GGR additions.
+ */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -69,19 +75,18 @@ int comp_file(char *name, char *choices)
     strcpy(supplied, name);
     match_length = strlen(so_far);
 /* Restrict length of returned string to number of columns, so that we
- * don't end up wrapping in teh minibuffer line.
+ * don't end up wrapping in the minibuffer line.
  */
     max = term.t_ncol;
 #if BSD | (MSDOS & MSC)
     max--;
 #endif
     l = (match_length < max) ? match_length : max;
-/* GML - Also need to check we are not going to overflow the
+/* We also need to check we are not going to overflow the
  * destination buffer, and we have to allow for the final NUL
  */
     if (l >= NFILEN) l = NFILEN - 1;
     strncpy(choices, so_far, l);
-    choices[l] = '\0';
     max -= l;
     unique = TRUE;
     while ((next = getnfile())) {
@@ -155,11 +160,11 @@ int comp_file(char *name, char *choices)
     return(TRUE);
 }
 /*
-Here is what getffile() should do.  Parse out any directory part and
-and file part.  Open that directory, if necessary.  Build a wildcard
-from the file part.  Call getnfile() to return the first match.  If
-the system is not case-sensitive, force lower case.
-*/
+ * Here is what getffile() should do.  Parse out any directory part and
+ * and file part.  Open that directory, if necessary.  Build a wildcard
+ * from the file part.  Call getnfile() to return the first match.  If
+ * the system is not case-sensitive, force lower case.
+ */
 #if MSDOS
 char *getffile(char *fspec)
 {
@@ -223,8 +228,8 @@ char *getffile(char *fspec)
 }
 
 /*
-Should work out if it's a directory.. if so return with a trailing \
-*/
+ * Should work out if it's a directory.. if so return with a trailing \
+ */
 char *getnfile(void)
 {
 #if MSC
@@ -259,7 +264,6 @@ static void close_dir(void)
 
 static struct dsc$descriptor spec, *specptr, result, *resultptr;
 static long context;                   /* Context for repeated calls to lib$f_f */
-/* char suggestion[255+1]; */
 static char suggestion[NFILEN];
 static int versions;                   /* Do we want to know about versions? */
 static int expand;                     /* expand directory component         */
@@ -371,7 +375,6 @@ char *getffile(char *fspec)
         specptr = &spec;
 
         result.dsc$a_pointer = &suggestion[0];
-/*        result.dsc$w_length  = 255; */
         result.dsc$w_length  = NFILEN;
         result.dsc$b_dtype   = DSC$K_DTYPE_T;
         result.dsc$b_class   = DSC$K_CLASS_S;
@@ -384,8 +387,8 @@ char *getffile(char *fspec)
 }
 
 /*
-Should work out if it's a directory.. if so return with a trailing \
-*/
+ * Should work out if it's a directory.. if so return with a trailing \
+ */
 char *getnfile(void)
 {
     char *p;
@@ -465,7 +468,6 @@ static char *getffile(char *fspec)
 
         /* Initialise things */
         dirptr = NULL;
-/*       ljust(fspec); */
 
 #if EXPAND_TILDE
         expand_tilde(fspec);
@@ -529,9 +531,9 @@ static char *getnfile(void)
             strcpy(nameptr, dp->d_name);
             stat(fullname, &statbuf);
             type = (statbuf.st_mode & S_IFMT);
-            if ((type == S_IFREG) 
+            if ((type == S_IFREG)
 #ifdef S_IFLNK
-            || (type == S_IFLNK) 
+            || (type == S_IFLNK)
 #endif
             || (type == S_IFDIR)) {
                 strcpy(suggestion, dp->d_name);
@@ -596,7 +598,7 @@ int comp_buffer(char *name, char *choices)
     max--;
 #endif
     l = (match_length < max) ? match_length : max;
-/* GML - Also need to check we are not going to overflow the
+/* We also need to check we are not going to overflow the
  *  destination buffer, and we have to allow for the final NUL
  */
     if (l >= NFILEN) l = NFILEN - 1;
@@ -752,7 +754,6 @@ int expand_logical(char *target, char *source, int depth)
 
     list.index_len = 4;
     list.index_att = LNM$_INDEX;
-/*    list.string_len = 255; */
     list.string_len = NFILEN;
     list.string_att = LNM$_STRING;
     list.terminate = 0;
@@ -813,7 +814,7 @@ char *r;    /* remnant after removing log:, if any    */
 }
 
 
-/* As strcat(t, s) -> xy, so strtac(t, s) -> st */
+/* As strcat(t, s) -> ts, so strtac(t, s) -> st */
 /* we also handle ][ -> . */
 char *strtac(char *t, char *s)
 {
@@ -913,4 +914,3 @@ int do_expansion(int key, int level, char *copyout, char *raw, int *depth)
     return(status);
 }
 #endif
-

@@ -416,8 +416,6 @@ int fillwhole(int f, int n)
         return(status);
 }
 
-
-
 /*
  * Fill the current paragraph according to the current
  * fill column
@@ -626,18 +624,18 @@ if (nspaces) {
  */
 int justpara(int f, int n)
 {
-	unicode_t c;		/* current char durring scan    */
-	unicode_t wbuf[NSTRING];/* buffer for current word      */
-	int wordlen;	/* length of current word       */
-	int clength;	/* position on line during fill */
-	int i;		/* index during word copy       */
-	int newlength;	/* tentative new line length    */
-	int eopflag;	/* Are we at the End-Of-Paragraph? */
-	int firstflag;	/* first word? (needs no space) */
-	struct line *eopline;	/* pointer to line just past EOP */
-	int leftmarg;		/* left marginal */
+	unicode_t c;		    /* current char durring scan    */
+	unicode_t wbuf[NSTRING];    /* buffer for current word      */
+	int wordlen;	            /* length of current word       */
+	int clength;	            /* position on line during fill */
+	int i;		            /* index during word copy       */
+	int newlength;	            /* tentative new line length    */
+	int eopflag;	            /* Are we at the End-Of-Paragraph? */
+	int firstflag;	            /* first word? (needs no space) */
+	struct line *eopline;	    /* pointer to line just past EOP */
+	int leftmarg;		    /* left marginal */
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (fillcol == 0) {	/* no fill column set */
 		mlwrite("No fill column set");
@@ -696,7 +694,7 @@ int justpara(int f, int n)
 			if (newlength <= fillcol) {
 				/* add word to current line */
 				if (!firstflag) {
-					linsert(1, ' ');	/* the space */
+					linsert(1, ' ');    /* the space */
 					++clength;
 				}
 				firstflag = FALSE;
@@ -729,7 +727,7 @@ int justpara(int f, int n)
 	return TRUE;
 }
 #endif
-    
+
 /*
  * delete n paragraphs starting with the current one
  *

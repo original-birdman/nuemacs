@@ -61,8 +61,8 @@ extern int abortc;		/* current abort command char   */
 extern int quotec;		/* quote char during mlreply() */
 extern int tabmask;
 extern char *cname[];		/* names of colors              */
-extern struct kill *kbufp;		/* current kill buffer chunk pointer */
-extern struct kill *kbufh;		/* kill buffer header pointer   */
+extern struct kill *kbufp;	/* current kill buffer chunk pointer */
+extern struct kill *kbufh;	/* kill buffer header pointer   */
 extern int kused;		/* # of bytes used in KB        */
 extern struct window *swindow;	/* saved window pointer         */
 extern int cryptflag;		/* currently encrypting?        */
@@ -90,8 +90,6 @@ extern int justflag;		/* justify, don't fill */
 #endif
 extern int overlap;		/* line overlap in forw/back page */
 extern int scrollcount;		/* number of lines to scroll */
-/* IMD */
-extern int pathexpand;
 
 /* Uninitialized global external declarations. */
 
@@ -100,16 +98,16 @@ extern int curcol;		/* Cursor column                */
 extern int thisflag;		/* Flags, this command          */
 extern int lastflag;		/* Flags, last command          */
 extern int curgoal;		/* Goal for C-P, C-N            */
-extern struct window *curwp;		/* Current window               */
-extern struct buffer *curbp;		/* Current buffer               */
-extern struct window *wheadp;                /* Head of list of windows      */
-extern struct buffer *bheadp;		/* Head of list of buffers      */
-extern struct buffer *blistp;		/* Buffer for C-X C-B           */
+extern struct window *curwp;	/* Current window               */
+extern struct buffer *curbp;	/* Current buffer               */
+extern struct window *wheadp;   /* Head of list of windows      */
+extern struct buffer *bheadp;	/* Head of list of buffers      */
+extern struct buffer *blistp;	/* Buffer for C-X C-B           */
 
-extern char sres[NBUFN];	        /* Current screen resolution.   */
-extern char pat[];		        /* Search pattern.              */
-extern char tap[];		        /* Reversed pattern array.      */
-extern char rpat[];		        /* Replacement pattern.         */
+extern char sres[NBUFN];	/* Current screen resolution.   */
+extern char pat[];		/* Search pattern.              */
+extern char tap[];		/* Reversed pattern array.      */
+extern char rpat[];		/* Replacement pattern.         */
 
 extern unsigned int matchlen;
 extern unsigned int mlenold;
@@ -129,15 +127,16 @@ extern struct terminal term;
 
 #endif  /* EDEF_H_ */
 
-//GML added
-extern  int inmb;
-extern  int clast;
-extern  int flast;
-extern  int nlast;
-extern  int silent;
-extern  int inreex;
-extern  int ftrulen;    /* current real length of fline */
-extern  char lastmb[];
-extern  char savnam[];
-extern  int using_ggr_mode;
+/* GGR - Additional declarations */
+extern int clast;               /* Last command (for re-execute) */
+extern int flast;               /* "f" option to last command */
+extern int nlast;               /* "n" option to last command */
+extern int inreex;              /* Set when re-executing */
 
+extern int ftrulen;             /* current real length of fline */
+extern int inmb;                /* Set when in minibuffer */
+extern char lastmb[];           /* Contents of last minibuffer */
+extern int pathexpand;          /* GGR - whether to expand paths */
+extern int silent;              /* Set for "no message line info" */
+extern char savnam[];           /* Saved buffer name */
+extern int using_ggr_mode;      /* Macro-settable options flag */

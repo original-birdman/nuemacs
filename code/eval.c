@@ -36,9 +36,9 @@ void varinit(void)
  */
 char *gtfun(char *fname)
 {
-	int fnum;	/* index to function to eval */
-	int status;	/* return status */
-	char *tsp;	/* temporary string pointer */
+	int fnum;	        /* index to function to eval */
+	int status;	        /* return status */
+	char *tsp;	        /* temporary string pointer */
 	char arg1[NSTRING];	/* value of first argument */
 	char arg2[NSTRING];	/* value of second argument */
 	char arg3[NSTRING];	/* value of third argument */
@@ -358,21 +358,21 @@ char *getkill(void)
  */
 int setvar(int f, int n)
 {
-	int status;	/* status return */
+	int status;	                /* status return */
 #if	DEBUGM
-	char *sp;	/* temp string pointer */
-	char *ep;	/* ptr to end of outline */
+	char *sp;	                /* temp string pointer */
+	char *ep;	                /* ptr to end of outline */
 #endif
-	struct variable_description vd;		/* variable num/type */
-	char var[NVSIZE + 1];	/* name of variable to fetch */
-	char value[NSTRING];	/* value to set variable to */
+	struct variable_description vd; /* variable num/type */
+	char var[NVSIZE + 1];	        /* name of variable to fetch */
+	char value[NSTRING];	        /* value to set variable to */
 
 	/* first get the variable to set.. */
 	if (clexec == FALSE) {
 		status = mlreply("Variable to set: ", &var[0], NVSIZE);
 		if (status != TRUE)
 			return status;
-	} else {		/* macro line argument */
+	} else {		        /* macro line argument */
 		/* grab token and skip it */
 		execstr = token(execstr, var, NVSIZE + 1);
 	}
@@ -536,7 +536,7 @@ int svar(struct variable_description *var, char *value)
 		sp = malloc(strlen(value) + 1);
 		if (sp == NULL)
 		{
-			uv[vnum].u_value = NULL;    /* GML */
+			uv[vnum].u_value = NULL;    /* GGR */
 			return FALSE;
 		}
 		strcpy(sp, value);
@@ -772,23 +772,24 @@ int gettyp(char *token)
  */
 char *getval(char *token)
 {
-	int status;	        /* error return */
-	struct buffer *bp;	/* temp buffer pointer */
-	int blen;	        /* length of buffer argument */
-	int distmp;	        /* temporary discmd flag */
-	static char buf[NSTRING]; /* string buffer for some returns */
-        char tbuf[NSTRING];     /* string buffer for some workings */
+	int status;	            /* error return */
+	struct buffer *bp;	    /* temp buffer pointer */
+	int blen;	            /* length of buffer argument */
+	int distmp;	            /* temporary discmd flag */
+	static char buf[NSTRING];   /* string buffer for some returns */
+        char tbuf[NSTRING];         /* string buffer for some workings */
 	switch (gettyp(token)) {
 	case TKNUL:
 		return "";
 
-	case TKARG:		/* interactive argument */
-/* GML - Possible illegal overlap of args.  Must do in two stages
- *                              strcpy(token, getval(&token[1]));
+	case TKARG:		    /* interactive argument */
+/* GGR - There is the possibility of an illegal overlap of args here.
+ *       So it must be done via a temporary buffer.
+ *              strcpy(token, getval(&token[1]));
  */
                 strcpy(tbuf, getval(&token[1]));
                 strcpy(token, tbuf);
-		distmp = discmd;	/* echo it always! */
+		distmp = discmd;    /* echo it always! */
 		discmd = TRUE;
 		status = getstring(token, buf, NSTRING, ctoec('\n'));
 		discmd = distmp;
@@ -799,8 +800,9 @@ char *getval(char *token)
 	case TKBUF:		/* buffer contents fetch */
 
 		/* grab the right buffer */
-/* GML - Possible illegal overlap of args.  Must do in two stages
- *                              strcpy(token, getval(&token[1]));
+/* GGR - There is the possibility of an illegal overlap of args here.
+ *       So it must be done via a temporary buffer.
+ *              strcpy(token, getval(&token[1]));
  */
                 strcpy(tbuf, getval(&token[1]));
                 strcpy(token, tbuf);
@@ -821,11 +823,7 @@ char *getval(char *token)
 
 		/* grab the line as an argument */
 		blen = bp->b_dotp->l_used - bp->b_doto;
-/* GML - have to allow for trailing NUL!
- *		if (blen > NSTRING)
- *			blen = NSTRING;
- */
-		if (blen >= NSTRING)
+		if (blen >= NSTRING)        /* GGR >= to allow for NUL */
 			blen = NSTRING - 1;
 		strncpy(buf, bp->b_dotp->l_text + bp->b_doto, blen);
 		buf[blen] = 0;

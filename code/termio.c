@@ -158,9 +158,9 @@ void ttopen(void)
 
 #if	USG
 	ioctl(0, TCGETA, &otermio);	/* save old settings */
-	ntermio.c_iflag = 0;	/* setup new settings */
+	ntermio.c_iflag = 0;	        /* setup new settings */
 #if	XONXOFF
-	ntermio.c_iflag = otermio.c_iflag & XXMASK;	/* save XON/XOFF P.K. */
+	ntermio.c_iflag = otermio.c_iflag & XXMASK; /* save XON/XOFF P.K. */
 #endif
 	ntermio.c_oflag = 0;
 	ntermio.c_cflag = otermio.c_cflag;
@@ -185,20 +185,20 @@ void ttopen(void)
 #else
 	nstate.sg_flags |= RAW;
 #endif
-	nstate.sg_flags &= ~(ECHO | CRMOD);	/* no echo for now... */
-	stty(0, &nstate);	/* set mode */
-	ioctl(0, TIOCGETC, &otchars);	/* Save old characters */
-	ioctl(0, TIOCSETC, &ntchars);	/* Place new character into K */
+	nstate.sg_flags &= ~(ECHO | CRMOD); /* no echo for now... */
+	stty(0, &nstate);	            /* set mode */
+	ioctl(0, TIOCGETC, &otchars);	    /* Save old characters */
+	ioctl(0, TIOCSETC, &ntchars);       /* Place new character into K */
 #if	BSD & PKCODE
-	ioctl(0, TIOCGLTC, &oltchars);	/* Save old local characters */
-	ioctl(0, TIOCSLTC, &nltchars);	/* New local characters */
+	ioctl(0, TIOCGLTC, &oltchars);	    /* Save old local characters */
+	ioctl(0, TIOCSLTC, &nltchars);	    /* New local characters */
 #endif
 #if	BSD
 	/* provide a smaller terminal output buffer so that
 	   the type ahead detection works better (more often) */
 	setbuffer(stdout, &tobuf[0], TBUFSIZ);
-	signal(SIGTSTP, SIG_DFL);	/* set signals so that we can */
-	signal(SIGCONT, rtfrmshell);	/* suspend & restart emacs */
+	signal(SIGTSTP, SIG_DFL);	    /* set signals so that we can */
+	signal(SIGCONT, rtfrmshell);	    /* suspend & restart emacs */
 #endif
 #endif
 
@@ -206,8 +206,8 @@ void ttopen(void)
 	/* provide a smaller terminal output buffer so that
 	   the type ahead detection works better (more often) */
 	setvbuf(stdout, &tobuf[0], _IOFBF, TBUFSIZ);
-	signal(SIGTSTP, SIG_DFL);	/* set signals so that we can */
-	signal(SIGCONT, rtfrmshell);	/* suspend & restart emacs */
+	signal(SIGTSTP, SIG_DFL);	    /* set signals so that we can */
+	signal(SIGCONT, rtfrmshell);	    /* suspend & restart emacs */
 	TTflush();
 #endif				/* __hpux */
 

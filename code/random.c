@@ -20,7 +20,7 @@ int tabsize; /* Tab size (0: use real tabs) */
  */
 int setfillcol(int f, int n)
 {
-/* GML - default to 72 on no arg or an invalid one */
+/* GGR - default to 72 on no arg or an invalid one */
         if (f && (n > 0))
             fillcol = n;
         else
@@ -40,12 +40,11 @@ int setfillcol(int f, int n)
 int showcpos(int f, int n)
 {
 	struct line *lp;	/* current line */
-	long numchars;	/* # of chars in file */
-	int numlines;	/* # of lines in file */
-	long predchars;	/* # chars preceding point */
-	int predlines;	/* # lines preceding point */
-//GML	int curchar;	/* character under cursor */
-	unicode_t curchar;	/* character under cursor */
+	long numchars;	        /* # of chars in file */
+	int numlines;	        /* # of lines in file */
+	long predchars;	        /* # chars preceding point */
+	int predlines;	        /* # lines preceding point */
+	unicode_t curchar;	/* char under cursor (GGR unicode) */
 	int ratio;
 	int col;
 	int savepos;		/* temp save for current offset */
@@ -68,8 +67,7 @@ int showcpos(int f, int n)
 			if ((curwp->w_doto) == llength(lp))
 				curchar = '\n';
 			else
-//GML				curchar = lgetc(lp, curwp->w_doto);
-				lgetchar(&curchar);
+				lgetchar(&curchar); /* GGR */
 		}
 		/* on to the next line */
 		++numlines;
@@ -82,9 +80,7 @@ int showcpos(int f, int n)
 		predlines = numlines;
 		predchars = numchars;
 #if	PKCODE
-/* GML - 0 is a valid character...
-		curchar = 0; */
-		curchar = 0x0FFFFFFF;   /* Top 4 bits special */
+		curchar = 0x0FFFFFFF;   /* GGR - NoChar. Top 4 bits special */
 #endif
 	}
 
@@ -100,41 +96,37 @@ int showcpos(int f, int n)
 		ratio = (100L * predchars) / numchars;
 
 	/* summarize and report the info */
-/* IMD mod
-	mlwrite("Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x",
-		predlines + 1, numlines + 1, col, ecol,
-		predchars, numchars, ratio, curchar);
- */
-   if (curchar == 0x0FFFFFFF)
+        if (curchar == 0x0FFFFFFF)
         mlwrite("Line %d/%d Col %d/%d Byte %D/%D (%d%%) at end of buffer",
                 predlines+1, numlines+1, col, ecol,
                 predchars, numchars, ratio);
-   else {
+        else {
 #include "charset.h"
-        char temp[8];
-        if (curchar > 127) {        /* utf8!? */
-            int blen = unicode_to_utf8(curchar, temp);
-            temp[blen] = '\0';
-        }
-        else if (curchar <= ' ') {    /* non-printing */
-            strcpy(temp, charset[curchar]);
-        }
-        else {                      /* printable ASCII */
-            temp[0] = curchar;
-            temp[1] = '\0';
-        }
-        mlwrite("Line %d/%d Col %d/%d Byte %D/%D (%d%%) char = %o, 0x%x (%s)",
+            char temp[8];
+            if (curchar > 127) {        /* utf8!? */
+                int blen = unicode_to_utf8(curchar, temp);
+                temp[blen] = '\0';
+            }
+            else if (curchar <= ' ') {  /* non-printing - lookup descr */
+                strcpy(temp, charset[curchar]);
+            }
+            else {                      /* printable ASCII */
+                temp[0] = curchar;
+                temp[1] = '\0';
+            }
+            mlwrite(
+            "Line %d/%d Col %d/%d Byte %D/%D (%d%%) char = %o, 0x%x (%s)",
                 predlines+1, numlines+1, col, ecol,
                 predchars, numchars, ratio, curchar, curchar,
                 temp);
-   }
-	return TRUE;
+        }
+        return TRUE;
 }
 
 int getcline(void)
 {				/* get the current line number */
 	struct line *lp;	/* current line */
-	int numlines;	/* # of lines before point */
+	int numlines;	        /* # of lines before point */
 
 	/* starting at the beginning of the buffer */
 	lp = lforw(curbp->b_linep);
@@ -236,7 +228,13 @@ int twiddle(int f, int n)
 		return rdonly();	/* we are in read only mode     */
 	dotp = curwp->w_dotp;
 	doto = curwp->w_doto;
-/* GML - handle according to ggr_mode state */
+/* GGR
+ * twiddle now (e.g. bash) seems to act on the chars before and after point.
+ * Except when you are at the end of a line....
+ * This inconsistency seems odd. Prime emacs always acted on the two chars
+ * preceding point, which was great for fixing typos as you made them.
+ * If the ggr-mode is set then twiddle will act on the two preceding chars.
+ */
 	if (using_ggr_mode) {
 	        if (--doto < 0)
 	                return (FALSE);
@@ -286,7 +284,7 @@ int quote(int f, int n)
 	return linsert(n, c);
 }
 
-/* IMD version of tab */
+/* GGR version of tab */
 int typetab(int f, int n)
 {
         int nextstop;
@@ -390,7 +388,7 @@ int entab(int f, int n)
 	int ccol;	/* current cursor column */
 	char cchar;	/* current character */
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 
 	if (f == FALSE)
@@ -410,8 +408,9 @@ int entab(int f, int n)
 				if (ccol - fspace < 2)
 					fspace = -1;
 				else {
-					/* there is a bug here dealing with mixed space/tabed
-					   lines.......it will get fixed                */
+					/* there is a bug here dealing with
+                                           mixed space/tabed lines.......
+                                           it will get fixed                */
 					backchar(TRUE, ccol - fspace);
 					ldelete((long) (ccol - fspace),
 						FALSE);
@@ -460,11 +459,11 @@ int entab(int f, int n)
 int trim(int f, int n)
 {
 	struct line *lp;	/* current line pointer */
-	int offset;	/* original line offset position */
-	int length;	/* current length */
-	int inc;	/* increment to next line [sgn(n)] */
+	int offset;	        /* original line offset position */
+	int length;	        /* current length */
+	int inc;	        /* increment to next line [sgn(n)] */
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 
 	if (f == FALSE)
@@ -506,17 +505,17 @@ int openline(int f, int n)
 	int i;
 	int s;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return FALSE;
 	if (n == 0)
 		return TRUE;
-	i = n;			/* Insert newlines.     */
+	i = n;			        /* Insert newlines.     */
 	do {
 		s = lnewline();
 	} while (s == TRUE && --i);
-	if (s == TRUE)		/* Then back up overtop */
+	if (s == TRUE)		        /* Then back up overtop */
 		s = backchar(f, n);	/* of them all.         */
 	return s;
 }
@@ -529,7 +528,7 @@ int insert_newline(int f, int n)
 {
 	int s;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return FALSE;
@@ -561,14 +560,15 @@ int insert_newline(int f, int n)
 }
 
 int cinsert(void)
-{				/* insert a newline and indentation for C */
+/* insert a newline and indentation for C */
+{
 	char *cptr;	/* string pointer into text to copy */
 	int tptr;	/* index to scan into line */
 	int bracef;	/* was there a brace at the end of line? */
 	int i;
 	char ichar[NSTRING];	/* buffer to hold indent of last line */
 
-/* IMD fix - nothing fancy if we're at left hand edge */
+/* GGR fix - nothing fancy if we're at left hand edge */
         if (curwp->w_doto == 0)
                 return(lnewline());
 
@@ -614,10 +614,10 @@ int cinsert(void)
  */
 int insbrace(int n, int c)
 {
-	int ch;	/* last character before input */
-	int oc;	/* caractere oppose a c */
+	int ch;	                /* last character before input */
+	int oc;	                /* caractere oppose a c */
 	int i, count;
-	int target;	/* column brace should go after */
+	int target;	        /* column brace should go after */
 	struct line *oldlp;
 	int oldoff;
 
@@ -681,12 +681,12 @@ int insbrace(int n, int c)
 		forwchar(FALSE, 1);
 
 	/* delete back first */
-	target = getccol(FALSE);	/* c'est l'indent que l'on doit avoir */
+	target = getccol(FALSE);    /* c'est l'indent que l'on doit avoir */
 	curwp->w_dotp = oldlp;
 	curwp->w_doto = oldoff;
 
 	while (target != getccol(FALSE)) {
-		if (target < getccol(FALSE))	/* on doit detruire des caracteres */
+		if (target < getccol(FALSE)) /* on doit detruire des caracteres */
 			while (getccol(FALSE) > target)
 				backdel(FALSE, 1);
 		else {		/* on doit en inserer */
@@ -710,9 +710,9 @@ int insbrace(int n, int c)
  */
 int insbrace(int n, int c)
 {
-	int ch;	/* last character before input */
+	int ch;	                /* last character before input */
 	int i;
-	int target;	/* column brace should go after */
+	int target;	        /* column brace should go after */
 
 	/* if we are at the beginning of the line, no go */
 	if (curwp->w_doto == 0)
@@ -726,7 +726,7 @@ int insbrace(int n, int c)
 	}
 
 	/* delete back first */
-	target = getccol(FALSE);	/* calc where we will delete to */
+	target = getccol(FALSE);    /* calc where we will delete to */
 	target -= 1;
 	target -= target % (tabsize == 0 ? 8 : tabsize);
 	while (getccol(FALSE) > target)
@@ -738,7 +738,8 @@ int insbrace(int n, int c)
 #endif
 
 int inspound(void)
-{				/* insert a # into the text here...we are in CMODE */
+/* insert a # into the text here...we are in CMODE */
+{
 	int ch;	/* last character before input */
 	int i;
 
@@ -805,7 +806,7 @@ int indent(int f, int n)
 	int c;
 	int i;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return FALSE;
@@ -835,11 +836,11 @@ int indent(int f, int n)
  */
 int forwdel(int f, int n)
 {
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return backdel(f, -n);
-	if (f != FALSE) {	/* Really a kill.       */
+	if (f != FALSE) {	        /* Really a kill.       */
 		if ((lastflag & CFKILL) == 0)
 			kdelete();
 		thisflag |= CFKILL;
@@ -857,11 +858,11 @@ int backdel(int f, int n)
 {
 	int s;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return forwdel(f, -n);
-	if (f != FALSE) {	/* Really a kill.       */
+	if (f != FALSE) {	        /* Really a kill.       */
 		if ((lastflag & CFKILL) == 0)
 			kdelete();
 		thisflag |= CFKILL;
@@ -884,10 +885,10 @@ int killtext(int f, int n)
 	struct line *nextp;
 	long chunk;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if ((lastflag & CFKILL) == 0)	/* Clear kill buffer if */
-		kdelete();	/* last wasn't a kill.  */
+		kdelete();	        /* last wasn't a kill.  */
 	thisflag |= CFKILL;
 	if (f == FALSE) {
 		chunk = llength(curwp->w_dotp) - curwp->w_doto;
@@ -1092,19 +1093,15 @@ int clrmes(int f, int n)
  */
 int writemsg(int f, int n)
 {
-	char *sp;	/* pointer into buf to expand %s */
-	char *np;	/* ptr into nbuf */
+	char *sp;	        /* pointer into buf to expand %s */
+	char *np;	        /* ptr into nbuf */
 	int status;
 	char buf[NPAT];		/* buffer to recieve message into */
 	char nbuf[NPAT * 2];	/* buffer to expand string into */
 
-/* GML
 	if ((status =
 	     mlreply("Message to write: ", buf, NPAT - 1)) != TRUE)
 		return status;
- */
-	status = mlreply("Message to write: ", buf, NPAT - 1);
-	if (status != TRUE) return status;
 
 	/* expand all '%' to "%%" so mlwrite won't expect arguments */
 	sp = buf;
@@ -1130,12 +1127,12 @@ int writemsg(int f, int n)
 int getfence(int f, int n)
 {
 	struct line *oldlp;	/* original line pointer */
-	int oldoff;	/* and offset */
-	int sdir;	/* direction of search (1/-1) */
-	int count;	/* current fence level count */
-	char ch;	/* fence type to match against */
-	char ofence;	/* open fence */
-	char c;	/* current character in scan */
+	int oldoff;	        /* and offset */
+	int sdir;	        /* direction of search (1/-1) */
+	int count;	        /* current fence level count */
+	char ch;	        /* fence type to match against */
+	char ofence;	        /* open fence */
+	char c;	                /* current character in scan */
 
 	/* save the original cursor position */
 	oldlp = curwp->w_dotp;
@@ -1230,11 +1227,11 @@ int getfence(int f, int n)
 int fmatch(int ch)
 {
 	struct line *oldlp;	/* original line pointer */
-	int oldoff;	/* and offset */
+	int oldoff;	        /* and offset */
 	struct line *toplp;	/* top line in current window */
-	int count;	/* current fence level count */
-	char opench;	/* open fence */
-	char c;	/* current character in scan */
+	int count;	        /* current fence level count */
+	char opench;	        /* open fence */
+	char c;	                /* current character in scan */
 	int i;
 
 	/* first get the display update out there */
@@ -1296,12 +1293,15 @@ int fmatch(int ch)
  */
 int istring(int f, int n)
 {
-	int status;	/* status return code */
-	char tstring[NPAT + 1];	/* string to add */
+	int status;	                /* status return code */
+	char tstring[NPAT + 1];	        /* string to add */
 
 	/* ask for string to insert */
 	status =
-/* IMD	    mlreplyt("String to insert<META>: ", tstring, NPAT, metac); */
+/* GGR
+ * Our mlreplyt returns only on CR
+ *	    mlreplyt("String to insert<META>: ", tstring, NPAT, metac);
+ */
 	    mlreplyt("String to insert: ", tstring, NPAT, metac);
 	if (status != TRUE)
 		return status;
@@ -1330,7 +1330,10 @@ int ovstring(int f, int n)
 
 	/* ask for string to insert */
 	status =
-/* IMD	    mlreplyt("String to overwrite<META>: ", tstring, NPAT, metac); */
+/* GGR
+ * Our mlreplyt returns only on CR
+ *	    mlreplyt("String to overwrite<META>: ", tstring, NPAT, metac);
+ */
 	    mlreplyt("String to overwrite: ", tstring, NPAT, metac);
 	if (status != TRUE)
 		return status;
@@ -1346,7 +1349,7 @@ int ovstring(int f, int n)
 	return status;
 }
 
-/* IMD extras follow */
+/* GGR - extras follow */
 int leaveone(int f, int n)  /* delete all but one white around cursor */
 {
     if (whitedelete(f, n))
@@ -1385,7 +1388,7 @@ int count;
 int doubles;
 
     if (curbp->b_mode&MDVIEW)       /* don't allow this command if  */
-         return(rdonly());       /* we are in read only mode     */
+         return(rdonly());          /* we are in read only mode     */
     doubles = 0;
     savedpos = curwp->w_doto;
     while (curwp->w_doto > 0) {
@@ -1420,4 +1423,3 @@ int ggr_mode(int f, int n)
         using_ggr_mode = (n > 1);
 	return TRUE;
 }
-

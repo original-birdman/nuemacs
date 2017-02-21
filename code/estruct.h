@@ -11,10 +11,10 @@
 #define MAXCOL	500
 #define MAXROW	500
 
-#ifdef GGR_MODE   
+#ifdef GGR_MODE
 #define MLpre  "["
 #define MLpost "]"
-#else   
+#else
 #define MLpre  "("
 #define MLpost ")"
 #endif
@@ -230,7 +230,7 @@
 #define	ENVFUNC	0
 #endif
 
-/* GML - whether we want PATH to be searched before table lookup */
+/* GGR - whether we want PATH to be searched before table lookup */
 #if GGR_MODE
 #define TABLE_THEN_PATH 1
 #else 
@@ -244,7 +244,7 @@
 
 /* Internal constants. */
 
-/* GML - Increase NFILEN(80), NLINE(256) and NSTRING(128) to 513 each */
+/* GGR - Increase NFILEN(80), NLINE(256) and NSTRING(128) to 513 each */
 #define	NBINDS	256		/* max # of bound keys          */
 #define NFILEN  513		/* # of bytes, file name        */
 #define NBUFN   16		/* # of bytes, buffer name      */
@@ -290,9 +290,9 @@
 #define	DENDWHILE	7
 #define	DBREAK		8
 #define DFORCE		9
-#define DFINISH        10       /* GML */
+#define DFINISH        10       /* GGR */
 
-#define NUMDIRS		11      /* GML */
+#define NUMDIRS		11      /* GGR */
 
 /*
  * PTBEG, PTEND, FORWARD, and REVERSE are all toggle-able values for
@@ -493,10 +493,10 @@ struct buffer {
 #define BFINVS  0x01		/* Internal invisable buffer    */
 #define BFCHG   0x02		/* Changed since last write     */
 #define	BFTRUNC	0x04		/* buffer was truncated when read */
-#define BFNAROW 0x08            /* buffer has been narrowed - GML */
+#define BFNAROW 0x08            /* buffer has been narrowed - GGR */
 
 /*	mode flags	*/
-//GML ?? #define	NUMMODES	10	/* # of defined modes           */
+//GGR ?? #define	NUMMODES	10	/* # of defined modes           */
 #define	NUMMODES	9	/* # of defined modes           */
 
 #define	MDWRAP	0x0001		/* word wrap                    */

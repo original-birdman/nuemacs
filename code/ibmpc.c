@@ -303,7 +303,7 @@ void ibmclose(void)
 	ibmfcol(7);
 	ibmbcol(0);
 #endif
-/* IMD attempted fix.. */
+/* GGR attempted fix.. */
         ibmeeol();
                 
 	/* if we had the EGA open... close it */

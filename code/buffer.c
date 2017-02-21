@@ -28,10 +28,8 @@ int usebuffer(int f, int n)
 	int s;
 	char bufn[NBUFN];
 
-/* IMD	if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE)
-		return s; */
+/* GGR - handle saved buffer name in minibuffer */
         if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
-                /* IMD */
                 if (!inmb)
                         strcpy(bufn, savnam);
                 else
@@ -104,8 +102,8 @@ int swbuffer(struct buffer *bp)
 		curbp->b_doto = 0;
 		curbp->b_active = TRUE;
 		curbp->b_mode |= gmode;	/* P.K. */
-/* IMD - handle file-hooks */
-		struct buffer *sb;  
+/* GGR - handle file-hooks */
+		struct buffer *sb;
                 if ((sb=bfind("*file-hooks*", FALSE, 0)) != NULL)
                         dobuf(sb);
 	}
@@ -151,10 +149,10 @@ int killbuffer(int f, int n)
 
 	if ((s = mlreply("Kill buffer: ", bufn, NBUFN)) != TRUE)
 		return s;
-	if ((bp = bfind(bufn, FALSE, 0)) == NULL)	/* Easy if unknown.     */
+	if ((bp = bfind(bufn, FALSE, 0)) == NULL)   /* Easy if unknown. */
 		return TRUE;
-	if (bp->b_flag & BFINVS)	/* Deal with special buffers        */
-		return TRUE;	/* by doing nothing.    */
+	if (bp->b_flag & BFINVS)    /* Deal with special buffers */
+		return TRUE;        /* by doing nothing.    */
 	return zotbuf(bp);
 }
 
@@ -167,25 +165,25 @@ int zotbuf(struct buffer *bp)
 	struct buffer *bp2;
 	int s;
 
-	if (bp->b_nwnd != 0) {	/* Error if on screen.  */
+	if (bp->b_nwnd != 0) {          /* Error if on screen.  */
 		mlwrite("Buffer is being displayed");
 		return FALSE;
 	}
-	if ((s = bclear(bp)) != TRUE)	/* Blow text away.      */
+	if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
 		return s;
-	free((char *) bp->b_linep);	/* Release header line. */
-	bp1 = NULL;		/* Find the header.     */
+	free((char *) bp->b_linep);     /* Release header line. */
+	bp1 = NULL;		        /* Find the header.     */
 	bp2 = bheadp;
 	while (bp2 != bp) {
 		bp1 = bp2;
 		bp2 = bp2->b_bufp;
 	}
-	bp2 = bp2->b_bufp;	/* Next one in chain.   */
-	if (bp1 == NULL)	/* Unlink it.           */
+	bp2 = bp2->b_bufp;	        /* Next one in chain.   */
+	if (bp1 == NULL)	        /* Unlink it.           */
 		bheadp = bp2;
 	else
 		bp1->b_bufp = bp2;
-	free((char *) bp);	/* Release buffer block */
+	free((char *) bp);	        /* Release buffer block */
 	return TRUE;
 }
 
@@ -226,7 +224,7 @@ int namebuffer(int f, int n)
  * buffer that holds the list.  Next make sure at least 1
  * window is displaying the buffer list, splitting the screen
  * if this is what it takes.  Lastly, repaint all of the
- * windows that are displaying the list.  Bound to "C-X C-B". 
+ * windows that are displaying the list.  Bound to "C-X C-B".
  *
  * A numeric argument forces it to list invisible buffers as
  * well.
@@ -237,8 +235,7 @@ int listbuffers(int f, int n)
 	struct buffer *bp;
 	int s;
 
-/* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())   /* GGR - disallow in minibuffer */
                 return(FALSE);
 
 	if ((s = makelist(f)) != TRUE)
@@ -466,7 +463,7 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
 	struct buffer *bp;
 	struct buffer *sb;	/* buffer to insert after */
 	struct line *lp;
-	
+
 	bp = bheadp;
 	while (bp != NULL) {
 		if (strcmp(bname, bp->b_bname) == 0)
@@ -499,8 +496,8 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
 		}
 
 		/* and set up the other buffer fields */
-		bp->b_topline = NULL;   /* GML */
-		bp->b_botline = NULL;   /* GML */
+		bp->b_topline = NULL;   /* GGR - for widen and  */
+		bp->b_botline = NULL;   /* GGR - shrink windows */
 		bp->b_active = TRUE;
 		bp->b_dotp = lp;
 		bp->b_doto = 0;
@@ -518,9 +515,10 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
 		lp->l_fp = lp;
 		lp->l_bp = lp;
 
-/* IMD - file-hooks 
+/* GGR - file-hooks
  * find the pointer to that buffer.  If it's not there, forget it.
- * If it *is*, run it; ignore errors here... */
+ * If it *is*, run it; ignore errors here...
+ */
                 if (!inmb && ((sb=bfind("*file-hooks*", FALSE, 0)) != NULL)) {
                         struct buffer *savbp = curbp;
                         curbp = bp;

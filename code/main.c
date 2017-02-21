@@ -49,6 +49,8 @@
  *
  * 4.0	Petri Kutvonen, 1-Sep-91
  *
+ * 4.1  Ian Dunkin, Mike Arnautov and Gordon Lack ~1988->2017
+ *      GGR tags...
  */
 
 #include <stdio.h>
@@ -173,7 +175,7 @@ int main(int argc, char **argv)
 #endif
 		if (argv[carg][0] == '-') {
 			switch (argv[carg][1]) {
-				/* Process Startup macroes */
+		        		/* Process Startup macroes */
 			case 'a':	/* process error file */
 			case 'A':
 				errflag = TRUE;
@@ -190,7 +192,7 @@ int main(int argc, char **argv)
 #if	CRYPT
 			case 'k':	/* -k<key> for code key */
 			case 'K':
-                                /* IMD only if given a key.. */
+                                /* GGR only if given a key.. */
                                 if (strlen(&argv[carg][2]) > 0) {
                                     cryptflag = TRUE;
                                     strcpy(ekey, &argv[carg][2]);
@@ -211,10 +213,9 @@ int main(int argc, char **argv)
 			case 'S':
 				searchflag = TRUE;
 				strncpy(pat, &argv[carg][2], NPAT);
-                       /* IMD */
+                       /* GGR - set-up some more things */
                                 rvstrcpy(tap, pat);
                                 mlenold = matchlen = strlen(pat);
-                       /* end */
 				break;
 			case 'v':	/* -v for View File */
 			case 'V':
@@ -226,19 +227,16 @@ int main(int argc, char **argv)
 			}
 
 		} else if (argv[carg][0] == '@') {
-
-                        /* IMD */
-                        silent = TRUE;
+                        silent = TRUE;      /* GGR */
 			/* Process Startup macroes */
 			if (startup(&argv[carg][1]) == TRUE)
 				/* don't execute emacs.rc */
 				startflag = TRUE;
-                        /* IMD */
-                        silent = FALSE;
+                        silent = FALSE;     /* GGR */
 		} else {
 
 			/* Process an input file */
-/* GML - Sanity check */
+/* GGR - Sanity check */
                         if (strlen(argv[carg]) >= NFILEN) {
                             fprintf(stderr, "filename too long!!\n");
                             sleep(2);
@@ -287,11 +285,10 @@ int main(int argc, char **argv)
 	/* if invoked with no other startup files,
 	   run the system startup file here */
 	if (startflag == FALSE) {
-/* IMD */
-                silent = TRUE;
+                silent = TRUE;  /* GGR */
 		startup("");
 		startflag = TRUE;
-                silent = FALSE;
+                silent = FALSE; /* GGR */
 	}
 	discmd = TRUE;		/* P.K. */
 
@@ -455,9 +452,9 @@ void edinit(char *bname)
 	struct buffer *bp;
 	struct window *wp;
 
-	bp = bfind(bname, TRUE, 0);	/* First buffer         */
+	bp = bfind(bname, TRUE, 0);	        /* First buffer         */
 	blistp = bfind("*List*", TRUE, BFINVS);	/* Buffer list buffer   */
-	wp = (struct window *)malloc(sizeof(struct window));	/* First window         */
+	wp = (struct window *)malloc(sizeof(struct window)); /* First window */
 	if (bp == NULL || wp == NULL || blistp == NULL)
 		exit(1);
 	curbp = bp;		/* Make this current    */
@@ -497,7 +494,7 @@ int execute(int c, int f, int n)
 	execfunc = getbind(c);
 	if (execfunc != NULL) {
 		thisflag = 0;
-/* IMD(?) implement ctl-C as re-exec */
+/* GGR - implement re-execute */
                 if (inreex) {
                         if ((execfunc == fisearch) || (execfunc == forwsearch))
                              execfunc = forwhunt;
@@ -512,9 +509,9 @@ int execute(int c, int f, int n)
                 }
 		status = (*execfunc) (f, n);
 		lastflag = thisflag;
-/* IMD - abort keyboard macro at point of error */
+/* GGR - abort keyboard macro at point of error */
                 if ((kbdmode == PLAY) & !status) kbdmode = STOP;
- 
+
 		return status;
         }
 
@@ -586,7 +583,7 @@ int execute(int c, int f, int n)
 	}
 	TTbeep();
 	mlwrite(MLpre "Key not bound" MLpost);	/* complain             */
-	lastflag = 0;		/* Fake last flags.     */
+	lastflag = 0;		                /* Fake last flags.     */
 	return FALSE;
 }
 
@@ -600,18 +597,17 @@ int quickexit(int f, int n)
 	struct buffer *oldcb;	/* original current buffer */
 	int status;
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())           /* GGR - disallow in minibuffer */
                 return(FALSE);
 
 	oldcb = curbp;		/* save in case we fail */
 
 	bp = bheadp;
 	while (bp != NULL) {
-		if ((bp->b_flag & BFCHG) != 0	/* Changed.             */
-		    && (bp->b_flag & BFTRUNC) == 0	/* Not truncated P.K.   */
-		    && (bp->b_flag & BFINVS) == 0) {	/* Real.                */
-			curbp = bp;	/* make that buffer cur */
+		if ((bp->b_flag & BFCHG) != 0	        /* Changed.           */
+		    && (bp->b_flag & BFTRUNC) == 0      /* Not truncated P.K. */
+		    && (bp->b_flag & BFINVS) == 0) {	/* Real.              */
+			curbp = bp;	            /* make that buffer cur   */
 			mlwrite(MLpre "Saving %s" MLpost, bp->b_fname);
 #if	PKCODE
 #else
@@ -624,7 +620,7 @@ int quickexit(int f, int n)
 		}
 		bp = bp->b_bufp;	/* on to the next buffer */
 	}
-	quit(f, n);		/* conditionally quit   */
+	quit(f, n);		        /* conditionally quit   */
 	return TRUE;
 }
 
@@ -644,8 +640,7 @@ int quit(int f, int n)
 
 	if (f != FALSE		/* Argument forces it.  */
 	    || anycb() == FALSE	/* All buffers clean.   */
-	    /* User says it's OK.   */
-	    || (s =
+	    || (s =	        /* User says it's OK.   */
 		mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
 #if	FILOCK && (BSD || SVR4)
 		if (lockrel() != TRUE) {
@@ -790,10 +785,8 @@ int unarg(int f, int n)
 #undef	malloc
 #undef	free
 
-char *allocate(nbytes)
-			    /* allocate nbytes and track */
-unsigned nbytes;		/* # of bytes to allocate */
-
+char *allocate(unsigned nbytes)
+/* allocate nbytes and track */
 {
 	char *mp;		/* ptr returned from malloc */
 	char *malloc();
@@ -809,15 +802,12 @@ unsigned nbytes;		/* # of bytes to allocate */
 	return mp;
 }
 
-release(mp)
-    /* release malloced memory and track */
-char *mp;			/* chunk of RAM to release */
-
+void release(char *mp)
+/* release malloced memory and track */
 {
 	unsigned *lp;		/* ptr to the long containing the block size */
 
-	if (mp) {
-		/* update amount of ram currently malloced */
+	if (mp) {		/* update amount of ram currently malloced */
 		lp = ((unsigned *) mp) - 1;
 		envram -= (long) *lp - 2;
 		free(mp);
@@ -828,8 +818,9 @@ char *mp;			/* chunk of RAM to release */
 }
 
 #if	RAMSHOW
-dspram()
-{				/* display the amount of RAM currently malloced */
+void dspram(void)
+/* display the amount of RAM currently malloced */
+{
 	char mbuf[20];
 	char *sp;
 
@@ -895,11 +886,13 @@ int cexit(int status)
 }
 #endif
 
-/* IMD */
+/* GGR
+ * Function to implement re-execute last command
+ */
 int reexecute(int f, int n)
 {
         int reloop;
-  
+
         inreex = TRUE;
         /* We can't just multiply n's. Must loop. */
         for (reloop = 1; reloop<=n; ++reloop) {

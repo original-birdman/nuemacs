@@ -21,8 +21,7 @@
 #include "wrapper.h"
 #include "utf8.h"
 
-/* IMD */
-static int mbonly = FALSE;
+static int mbonly = FALSE;      /* GGR - minibuffer only */
 
 struct video {
 	int v_flag;		/* Flags */
@@ -99,15 +98,12 @@ void vtinit(void)
 		vp = xmalloc(sizeof(struct video) + term.t_mcol*4);
 		vp->v_flag = 0;
 #if	COLOR
-/* ??? GML 
-		vp->v_rfcolor = 7;
-		vp->v_rbcolor = 0;
- */
+/* GGR - use defined colors */
 		vp->v_rfcolor = gfcolor;
 		vp->v_rbcolor = gbcolor;
 #endif
 		vscreen[i] = vp;
-/* IMD */
+/* GGR - clear things out at the start */
         int j = 0;
         while (j < term.t_ncol)
                 vp->v_text[j++] = ' ';
@@ -118,8 +114,7 @@ void vtinit(void)
 		pscreen[i] = vp;
 #endif
 	}
-        /* IMD */
-        mberase();
+        mberase();              /* GGR */
 }
 
 #if	CLEAN
@@ -223,7 +218,7 @@ static void vtputc(int c)
 		vtputc(hex[c & 15]);
 		return;
 	}
-	
+
 	if (vtcol >= 0)
 		vp->v_text[vtcol] = c;
 	++vtcol;
@@ -305,8 +300,7 @@ int update(int force)
 #endif
 
 	/* update any windows that need refreshing */
-//IMD	wp = wheadp;
-        if (mbonly)  
+        if (mbonly)         /* GGR - get the correct window */
                 wp = curwp;
         else
                 wp = wheadp;
@@ -335,8 +329,7 @@ int update(int force)
 			wp->w_force = 0;
 		}
 		/* on to the next window */
-//IMD		wp = wp->w_wndp;
-                if (mbonly)
+                if (mbonly)     /* GGR - stop if in minibuffer */
                         wp = NULL;
                 else
                         wp = wp->w_wndp;
@@ -422,13 +415,13 @@ static int reframe(struct window *wp)
 		}
 	}
 #if SCROLLCODE
-	if (i == -1) {		/* we're just above the window */
+	if (i == -1) {		        /* we're just above the window */
 		i = scrollcount;	/* put dot at first line */
 		scrflags |= WFINS;
 	} else if (i == wp->w_ntrows) {	/* we're just below the window */
 		i = -scrollcount;	/* put dot at last line */
 		scrflags |= WFKILLS;
-	} else			/* put dot where requested */
+	} else			        /* put dot where requested */
 #endif
 		i = wp->w_force;	/* (is 0, unless reposition() was called) */
 
@@ -478,7 +471,7 @@ static void show_line(struct line *lp)
 static void updone(struct window *wp)
 {
 	struct line *lp;	/* line to update */
-	int sline;	/* physical screen line to update */
+	int sline;	        /* physical screen line to update */
 
 	/* search down the line we want */
 	lp = wp->w_linep;
@@ -509,7 +502,7 @@ static void updone(struct window *wp)
 static void updall(struct window *wp)
 {
 	struct line *lp;	/* line to update */
-	int sline;	/* physical screen line to update */
+	int sline;	        /* physical screen line to update */
 
 	/* search down the lines, updating them */
 	lp = wp->w_linep;
@@ -593,10 +586,10 @@ void upddex(void)
 		lp = wp->w_linep;
 		i = wp->w_toprow;
 
-/* GML - FIX1 (version 2)
- * Check for reaching end-of-buffer (== loop back to start) too
+/* GGR - FIX1 (version 2)
+ * Add check for reaching end-of-buffer (== loop back to start) too
  * otherwise we process lines at start of file as if they are
- * beyond the end of it.
+ * beyond the end of it. (the "lp != " part).
  */
 		while ((i < wp->w_toprow + wp->w_ntrows) &&
 		       (lp != wp->w_bufp->b_linep)) {
@@ -633,8 +626,7 @@ void updgar(void)
 	unicode_t *txt;
 	int i, j;
 
-//GML - we need to include the last row (mini-buffer)!!!
-//	for (i = 0; i < term.t_nrow; ++i) {
+/* GGR - include the last row, so <=, (for mini-buffer) */
 	for (i = 0; i <= term.t_nrow; ++i) {
 		vscreen[i]->v_flag |= VFCHG;
 #if	REVSTA
@@ -678,8 +670,7 @@ int updupd(int force)
 	scrflags = 0;
 #endif
 
-//GML - we need to include the last row (mini-buffer)!!!
-//	for (i = 0; i < term.t_nrow; ++i) {
+/* GGR - include the last row, so <=, (for mini-buffer) */
 	for (i = 0; i <= term.t_nrow; ++i) {
 		vp1 = vscreen[i];
 
@@ -873,8 +864,8 @@ static int endofline(unicode_t *s, int n)
  */
 static void updext(void)
 {
-	int rcursor;	/* real cursor location */
-	struct line *lp;	/* pointer to current line */
+	int rcursor;	            /* real cursor location */
+	struct line *lp;            /* pointer to current line */
 
 	/* calculate what column the real cursor will end up in */
 	rcursor = ((curcol - term.t_ncol) % term.t_scrsiz) + term.t_margin;
@@ -882,8 +873,8 @@ static void updext(void)
 
 	/* scan through the line outputing characters to the virtual screen */
 	/* once we reach the left edge                                  */
-	vtmove(currow, -lbound);	/* start scanning offscreen */
-	lp = curwp->w_dotp;	/* line to output */
+	vtmove(currow, -lbound);    /* start scanning offscreen */
+	lp = curwp->w_dotp;	    /* line to output */
 	show_line(lp);
 
 	/* truncate the virtual line, restore tab offset */
@@ -975,7 +966,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 	unicode_t *cp3;
 	unicode_t *cp4;
 	unicode_t *cp5;
-	int nbflag;	/* non-blanks to the right flag? */
+	int nbflag;	        /* non-blanks to the right flag? */
 	int rev;		/* reverse video flag */
 	int req;		/* reverse video request flag */
 
@@ -1117,9 +1108,8 @@ static void modeline(struct window *wp)
 	n = wp->w_toprow + wp->w_ntrows;	/* Location. */
 	vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;	/* Redraw next time. */
 #if	COLOR
-//GML	vscreen[n]->v_rfcolor = 0;	/* black on */
-//GML	vscreen[n]->v_rbcolor = 7;	/* white..... */
-	vscreen[n]->v_rfcolor = gbcolor;    /* chosen  on */
+/* GGR - use configured colors, not 0 and 7 */
+	vscreen[n]->v_rfcolor = gbcolor;    /* chosen for on */
 	vscreen[n]->v_rbcolor = gfcolor;    /* chosen..... */
 #endif
 	vtmove(n, 0);		/* Seek to right line. */
@@ -1156,10 +1146,10 @@ static void modeline(struct window *wp)
 	strcat(tline, PROGRAM_NAME_LONG);
 	strcat(tline, " ");
 
-/* IMD 	strcat(tline, VERSION); */
+/* GGR - only of no filename (space issue) */
         if (bp->b_fname[0] == 0) {
                 strcat(tline, " ");
-                strcat(tline, VERSION); 
+                strcat(tline, VERSION);
         }
 	strcat(tline, ": ");
 	cp = &tline[0];
@@ -1327,8 +1317,7 @@ void mlerase(void)
 		return;
 
 #if	COLOR
-//GML   TTforg(7);
-//GML   TTbacg(0);
+/* GGR - use configured colors, not 7 and 0 */
         TTforg(gfcolor);
         TTbacg(gbcolor);
 #endif
@@ -1350,13 +1339,13 @@ void mlerase(void)
  * stack grows down; this assumption is made by the "++" in the argument scan
  * loop. Set the "message line" flag TRUE.
  *
+ * GGR modified to handle utf8 strings.
+ *
  * char *fmt;		format string for output
  * char *arg;		pointer to first argument to print
  */
-//GML - modified to handle utf8 strings.
 void mlwrite(const char *fmt, ...)
 {
-//GML	int c;		/* current char in format string */
 	unicode_t c;		/* current char in format string */
 	va_list ap;
 
@@ -1367,8 +1356,7 @@ void mlwrite(const char *fmt, ...)
 	}
 #if	COLOR
 	/* set up the proper colors for the command line */
-//GML	TTforg(7);
-//GML	TTbacg(0);
+/* GGR - use configured colors, not 7 and 0 */
 	TTforg(gfcolor);
 	TTbacg(gbcolor);
 #endif
@@ -1381,13 +1369,12 @@ void mlwrite(const char *fmt, ...)
 	movecursor(term.t_nrow, 0);
 	va_start(ap, fmt);
 
-/* GML 	while ((c = *fmt++) != 0) { */
+/* GGR - loop through the bytes getting any utf8 sequence as unicode */
         int bytes_togo = strlen(fmt);
         while (bytes_togo > 0) {
             int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
             bytes_togo -= used;
             fmt += used;
-            
 		if (c != '%') {
 			TTputc(c);
 			++ttcol;
@@ -1457,14 +1444,12 @@ void mlforce(char *s)
  * Write out a string. Update the physical cursor position. This assumes that
  * the characters in the string all have width "1"; if this is not the case
  * things will get screwed up a little.
+ *
+ * GGR - modified to handle utf8 strings.
  */
-//GML modified to handle utf8 strings.
 void mlputs(char *s)
 {
-//GML	int c;
 	unicode_t c;
-
-//GML	while ((c = *s++) != 0) {
 
         int bytes_togo = strlen(s);
         while (bytes_togo > 0) {
@@ -1605,11 +1590,11 @@ static int newscreensize(int h, int w)
 	if (w < term.t_mcol)
 		newwidth(TRUE, w);
 
-//GML - we have to clear the last line, as we display it and it
-//      probably won't be empty if we are shrinking the window.
-//      Needs to run before the update.
+/* GGR - We have to clear the last line, as we display it and it
+ *       probably won't be empty if we are shrinking the window.
+ *       Needs to run before the update.
+ */
         mberase();
-
 	update(TRUE);
 
 	return TRUE;
@@ -1618,8 +1603,10 @@ static int newscreensize(int h, int w)
 #endif
 
 
-/* IMD */
-/* erases the mapped minibuffer line (so different from mlerase() */
+/* GGR
+ *    function to erase the mapped minibuffer line
+ *    (so different from mlerase()
+ */
 void mberase(void)
 {
         struct video *vp1;
@@ -1640,7 +1627,9 @@ void mberase(void)
                 return;
 }
 
-/* update *just* the minibuffer window */
+/* GGR
+ *    function to update *just* the minibuffer window
+ */
 void mbupdate(void)
 {
     mbonly = TRUE;

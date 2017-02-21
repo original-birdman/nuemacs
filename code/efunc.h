@@ -126,6 +126,7 @@ extern int cex(int f, int n);
 extern int unarg(int f, int n);
 extern int cexit(int status);
 extern int reexecute(int, int);
+extern void meexit(int);
 
 /* display.c */
 extern void vtinit(void);
@@ -384,7 +385,7 @@ extern void lckerror(char *errstr);
 extern char *dolock(char *fname);
 extern char *undolock(char *fname);
 
-/* GML */
+/* GGR */
 /* complet.c */
 extern int comp_file(char *, char *);
 extern int comp_buffer(char *, char *);

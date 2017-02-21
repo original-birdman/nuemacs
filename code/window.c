@@ -59,8 +59,7 @@ int nextwind(int f, int n)
 	struct window *wp;
 	int nwindows;	/* total number of windows */
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())   /* GGR - disallow in minibuffer */
                   return(FALSE);
 
 	if (f) {
@@ -106,8 +105,7 @@ int prevwind(int f, int n)
 	struct window *wp1;
 	struct window *wp2;
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())   /* GGR - disallow in minibuffer */
                   return(FALSE);
 
 	/* if we have an argument, we mean the nth window from the bottom */
@@ -199,8 +197,7 @@ int onlywind(int f, int n)
 	struct line *lp;
 	int i;
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())       /* GGR - disallow in minibuffer */
                   return(FALSE);
 
 	while (wheadp != curwp) {
@@ -248,10 +245,9 @@ int delwind(int f, int n)
 {
 	struct window *wp;	/* window to recieve deleted space */
 	struct window *lwp;	/* ptr window before curwp */
-	int target;	/* target line to search for */
+	int target;	        /* target line to search for */
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())           /* GGR - disallow in minibuffer */
                   return(FALSE);
 
 	/* if there is only one window, don't delete it */
@@ -322,7 +318,7 @@ int delwind(int f, int n)
  * split.  An argument of 1 forces the cursor into the upper window, an
  * argument of two forces the cursor to the lower window.  The only
  * other error that is possible is a "malloc" failure allocating the
- * structure for the new window.  Bound to "C-X 2". 
+ * structure for the new window.  Bound to "C-X 2".
  *
  * int f, n;	default flag and numeric argument
  */
@@ -411,8 +407,7 @@ int enlargewind(int f, int n)
 	struct line *lp;
 	int i;
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())   /* GGR - disallow in minibuffer */
                   return(FALSE);
 
 	if (n < 0)
@@ -436,7 +431,7 @@ int enlargewind(int f, int n)
 			lp = lforw(lp);
 		adjwp->w_linep = lp;
 		adjwp->w_toprow += n;
-	} else {		/* Shrink above.        */
+	} else {		        /* Shrink above.        */
 		lp = curwp->w_linep;
 		for (i = 0; i < n && lback(lp) != curbp->b_linep; ++i)
 			lp = lback(lp);
@@ -466,8 +461,7 @@ int shrinkwind(int f, int n)
 	struct line *lp;
 	int i;
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())   /* GGR - disallow in minibuffer */
                   return(FALSE);
 
 	if (n < 0)
@@ -492,7 +486,7 @@ int shrinkwind(int f, int n)
 			lp = lback(lp);
 		adjwp->w_linep = lp;
 		adjwp->w_toprow -= n;
-	} else {		/* Grow above.          */
+	} else {		        /* Grow above.          */
 		lp = curwp->w_linep;
 		for (i = 0; i < n && lp != curbp->b_linep; ++i)
 			lp = lforw(lp);
@@ -520,8 +514,7 @@ int resize(int f, int n)
 {
 	int clines;		/* current # of lines in window */
 
-        /* IMD - disallow in minibuffer */
-        if (mbstop())
+        if (mbstop())           /* GGR - disallow in minibuffer */
                   return(FALSE);
 
 	/* must have a non-default argument, else ignore call */
@@ -550,14 +543,15 @@ struct window *wpopup(void)
 	if (wheadp->w_wndp == NULL	/* Only 1 window        */
 	    && splitwind(FALSE, 0) == FALSE)	/* and it won't split   */
 		return NULL;
-	wp = wheadp;		/* Find window to use   */
+	wp = wheadp;		        /* Find window to use   */
 	while (wp != NULL && wp == curwp)
 		wp = wp->w_wndp;
 	return wp;
 }
 
 int scrnextup(int f, int n)
-{				/* scroll the next window up (back) a page */
+/* scroll the next window up (back) a page */
+{
 	nextwind(FALSE, 1);
 	backpage(f, n);
 	prevwind(FALSE, 1);
@@ -565,7 +559,8 @@ int scrnextup(int f, int n)
 }
 
 int scrnextdw(int f, int n)
-{				/* scroll the next window down (forward) a page */
+/* scroll the next window down (forward) a page */
+{
 	nextwind(FALSE, 1);
 	forwpage(f, n);
 	prevwind(FALSE, 1);
@@ -573,13 +568,15 @@ int scrnextdw(int f, int n)
 }
 
 int savewnd(int f, int n)
-{				/* save ptr to current window */
+/* save ptr to current window */
+{
 	swindow = curwp;
 	return TRUE;
 }
 
 int restwnd(int f, int n)
-{				/* restore the saved screen */
+/* restore the saved screen */
+{
 	struct window *wp;
 
 	/* find the window */
@@ -606,7 +603,7 @@ int restwnd(int f, int n)
  */
 int newsize(int f, int n)
 {
-	struct window *wp;		/* current window being examined */
+	struct window *wp;      /* current window being examined */
 	struct window *nextwp;	/* next window to scan */
 	struct window *lastwp;	/* last window scanned */
 	int lastline;		/* screen line of last line of current window */
@@ -723,8 +720,9 @@ int newwidth(int f, int n)
 }
 
 int getwpos(void)
-{				/* get screen offset of current line in current window */
-	int sline;	/* screen line from top of window */
+/* get screen offset of current line in current window */
+{
+	int sline;	        /* screen line from top of window */
 	struct line *lp;	/* scannile line pointer */
 
 	/* search down the line we want */
