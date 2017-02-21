@@ -87,6 +87,7 @@ int comp_file(char *name, char *choices)
  */
     if (l >= NFILEN) l = NFILEN - 1;
     strncpy(choices, so_far, l);
+    choices[l] = '\0';          /* We need to do this ourself */
     max -= l;
     unique = TRUE;
     while ((next = getnfile())) {
@@ -603,6 +604,7 @@ int comp_buffer(char *name, char *choices)
  */
     if (l >= NFILEN) l = NFILEN - 1;
     strncpy(choices, so_far, l);
+    choices[l] = '\0';          /* We need to do this ourself */
     max -= l;
     unique = TRUE;
     while ((next = getnbuffer(name, namelen)) != NULL) {
