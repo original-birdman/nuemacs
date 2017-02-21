@@ -560,8 +560,11 @@ if (nspaces) {
  * Ignore if so.
  */
     int end_doto = curwp->w_doto;
-    if (was_dotflag) end_doto--;
     gap = fillcol - clength;    /* How much we need to add (in columns) */
+    if (was_dotflag) {          /* Back one char and increase gap */
+        end_doto--;
+        gap++;
+    }
     while (gap > 0) {
         if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
             curwp->w_doto = space_ind[ns];
