@@ -1,0 +1,51 @@
+See GGR4.100.changes for the original changes around moving from 3.9e to
+pK4.105.
+
+========== GGR4.101
+.gitignore
+CHANGES
+   Files added.
+
+Makefile:
+   Change the PROGRAM build from em to uemacs
+
+epath.h:
+    Fix a left-over from build testing - change the startup file name
+    from  nuemacs.rc to uemacs.rc
+
+word.c
+    Change justpara() so that it can handle unicode characters, based on
+    the fillpara() code from merging.
+    Get the correct indent from column, not byte offset.
+    Handle leading whitespace in the paragraph to reformat.
+    Make the temporary buffer dynamically allocated, to cater for long
+    strings with no spaces.
+    Add punctuation handling in ggr-mode.
+
+etc/uemacs.rc
+    Bind EscR to search-reverse (not the default replace-string).
+
+etc/uemacs.hlp
+    Put back that Metas that had been changed to Esc.
+
+complet.c
+    Replace strncpy() calls to populate choices with memcpy(), as we
+    have to nul-terminate manually anyway.
+
+eval.c
+exec.c
+input.c
+    Replace strncpy() calls followed by "manual" nul-termination with
+    memcpy() ones.
+
+lock.c
+    Replace strncpy() call into tmpname with just strcpy(), as fname
+    can't be more the NFILEN anyway.
+
+README
+readme.39e
+     Moved both to the archive directory.
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.101
