@@ -1,10 +1,10 @@
-/*	ANSI.C
+/*      ANSI.C
  *
  * The routines in this file provide support for ANSI style terminals
  * over a serial line. The serial I/O services are provided by routines in
  * "termio.c". It compiles into nothing if not an ANSI device.
  *
- *	modified by Petri Kutvonen
+ *      modified by Petri Kutvonen
  */
 
 #define termdef 1               /* don't define "term" external */
@@ -104,7 +104,7 @@ void ansifcol(int color)
         ansiparm(color + 30);
         ttputc('m');
         cfcolor = color;
-	return;
+        return;
 }
 
 /* Set the current background color.

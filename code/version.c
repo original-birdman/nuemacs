@@ -3,5 +3,5 @@
 
 void version(void)
 {
-	printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);
+        printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);
 }

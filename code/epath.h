@@ -1,24 +1,24 @@
-/*	EPATH.H
+/*      EPATH.H
  *
- *	This file contains certain info needed to locate the
- *	initialization (etc) files on a system dependent basis
+ *      This file contains certain info needed to locate the
+ *      initialization (etc) files on a system dependent basis
  *
- *	modified by Petri Kutvonen
+ *      modified by Petri Kutvonen
  */
 #ifndef EPATH_H_
 #define EPATH_H_
 
-/*	possible names and paths of help files under different OSs	*/
+/*      possible names and paths of help files under different OSs      */
 static char *pathname[] =
-#if	MSDOS
+#if     MSDOS
 {
-	"emacs.rc",
-	"emacs.hlp",
-	"\\sys\\public\\",
-	"\\usr\\bin\\",
-	"\\bin\\",
-	"\\",
-	""
+        "emacs.rc",
+        "emacs.hlp",
+        "\\sys\\public\\",
+        "\\usr\\bin\\",
+        "\\bin\\",
+        "\\",
+        ""
 };
 #endif
 
@@ -40,11 +40,11 @@ static char *pathname[] =
 };
 #endif
 
-#if	VMS
+#if     VMS
 {
-	"emacs.rc", "emacs.hlp", "",
-#if	PKCODE
-	    "sys$login:", "emacs_dir:",
+        "emacs.rc", "emacs.hlp", "",
+#if     PKCODE
+            "sys$login:", "emacs_dir:",
 #endif
 "sys$sysdevice:[vmstools]"};
 #endif
