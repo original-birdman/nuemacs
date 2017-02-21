@@ -38,6 +38,7 @@ bind-to-key execute-macro-37            M-^J    ; Previously Esc-J in 3.9e
 bind-to-key i-shell                     M-^U
 bind-to-key yank-minibuffer             M-^Y
 ;
+bind-to-key search-reverse              M-R
 bind-to-key execute-macro-38            M-T
 bind-to-key fill-paragraph              M-Q
 bind-to-key white-delete                M-\
