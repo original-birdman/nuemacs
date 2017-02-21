@@ -14,7 +14,7 @@ export E Q
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
-PROGRAM=em
+PROGRAM=uemacs
 
 SRC=ansi.c basic.c bind.c buffer.c crypt.c display.c eval.c exec.c \
 	file.c fileio.c ibmpc.c input.c isearch.c line.c lock.c main.c \
