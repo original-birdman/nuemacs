@@ -624,27 +624,29 @@ if (nspaces) {
  */
 int justpara(int f, int n)
 {
-        unicode_t c;                /* current char durring scan    */
-        unicode_t wbuf[NSTRING];    /* buffer for current word      */
-        int wordlen;                /* length of current word       */
-        int clength;                /* position on line during fill */
-        int i;                      /* index during word copy       */
-        int newlength;              /* tentative new line length    */
-        int eopflag;                /* Are we at the End-Of-Paragraph? */
-        int firstflag;              /* first word? (needs no space) */
-        struct line *eopline;       /* pointer to line just past EOP */
-        int leftmarg;               /* left marginal */
+        unicode_t c;            /* current char durring scan    */
+        unicode_t *wbuf;        /* buffer for current word      */
+        size_t wbuf_size;
+        int dotflag;            /* was the last char a period?  */
+        int wordlen;            /* length of current word       */
+        int clength;            /* position on line during fill */
+        int i;                  /* index during word copy       */
+        int newlength;          /* tentative new line length    */
+        int eopflag;            /* Are we at the End-Of-Paragraph? */
+        int firstflag;          /* first word? (needs no space) */
+        struct line *eopline;   /* pointer to line just past EOP */
+        int leftmarg;           /* left marginal */
+        int startline, endline;
 
         if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
                 return rdonly();        /* we are in read only mode     */
-        if (fillcol == 0) {     /* no fill column set */
+        if (fillcol == 0) {             /* no fill column set */
                 mlwrite("No fill column set");
                 return FALSE;
         }
-        justflag = TRUE;
-        leftmarg = curwp->w_doto;
+/* GGR - have to cater for tabs...can't use w_doto */
+        leftmarg = getccol(FALSE);
         if (leftmarg + 10 > fillcol) {
-                leftmarg = 0;
                 mlwrite("Column too narrow");
                 return FALSE;
         }
@@ -652,17 +654,30 @@ int justpara(int f, int n)
         /* record the pointer to the line just past the EOP */
         gotoeop(FALSE, 1);
         eopline = lforw(curwp->w_dotp);
+/* GGR - if empty buffer we can get caught, so... */
+        endline = getcline();
 
         /* and back top the beginning of the paragraph */
         gotobop(FALSE, 1);
+/* GGR - ...check for the results of such a state */
+        startline = getcline();
+        if (endline < startline)
+                return(TRUE);
 
-        /* initialize various info */
-        if (leftmarg < llength(curwp->w_dotp))
-                curwp->w_doto = leftmarg;
-
-        clength = curwp->w_doto;
-        if (clength && curwp->w_dotp->l_text[0] == TAB)
-                clength = 8;
+/* GGR - need to get rid of any leading whitespace, then pad first line
+ * here, at bop */
+        if (whitedelete(1, 1) != TRUE) return(TRUE);
+        for (i = 0; i < leftmarg; i++)
+                linsert(1, ' ');
+        curwp->w_doto = clength = leftmarg;
+                
+/* GGR
+ * wbuf needs to be sufficiently long to contain all of the longest
+ * line (plus 1, for luck...) in case there is no word-break in it.
+ */
+        wbuf_size = sizeof(wbuf[0])*(llength(curwp->w_dotp) + 1);
+        wbuf = malloc(wbuf_size);
+        dotflag = FALSE;
 
         wordlen = 0;
 
@@ -677,6 +692,13 @@ int justpara(int f, int n)
                         c = ' ';
                         if (lforw(curwp->w_dotp) == eopline)
                                 eopflag = TRUE;
+/* GGR  - Reallocate buffer if more space needed
+ *        Make sure we check the *next* line length
+ */
+                        if (llength(lforw(curwp->w_dotp)) >= wbuf_size) {
+                            wbuf_size = sizeof(wbuf[0])*(llength(lforw(curwp->w_dotp)) + 1);
+                            wbuf = realloc(wbuf, wbuf_size);
+                        }
                 } else
                         bytes = lgetchar(&c);
 
@@ -685,8 +707,12 @@ int justpara(int f, int n)
 
                 /* if not a separator, just add it in */
                 if (c != ' ' && c != '\t') {
-                        if (wordlen < NSTRING - 1)
-                                wbuf[wordlen++] = c;
+/* GGR - note punctuation in ggr-mode */
+                        if (using_ggr_mode) {
+                                dotflag = (c == '.' || c == '!' || c == '?');
+                        }
+/* GGR - dynamically sized, so this assignment can always be done */
+                        wbuf[wordlen++] = c;
                 } else if (wordlen) {
                         /* at a word break with a word waiting */
                         /* calculate tentitive new length with word added */
@@ -711,6 +737,10 @@ int justpara(int f, int n)
                                 linsert(1, wbuf[i]);
                                 ++clength;
                         }
+                        if (dotflag) {  /* GGR added */
+                                linsert(1, ' ');
+                                ++clength;
+                        }
                         wordlen = 0;
                 }
         }
@@ -723,7 +753,7 @@ int justpara(int f, int n)
         else
                 curwp->w_doto = llength(curwp->w_dotp);
 
-        justflag = FALSE;
+        free(wbuf);     /* GGR - mustn't forget this... */
         return TRUE;
 }
 #endif
