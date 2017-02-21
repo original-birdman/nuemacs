@@ -669,7 +669,8 @@ int justpara(int f, int n)
 
 /* GGR - need to get rid of any leading whitespace, then pad first line
  * here, at bop */
-        if (whitedelete(1, 1) != TRUE) return(TRUE);
+        (void)whitedelete(1, 1);    /* Don't care whether there was any */
+        curwp->w_doto = 0;          /* If bop == bof, would be 1. (!?!) */
         for (i = 0; i < leftmarg; i++)
                 linsert(1, ' ');
         curwp->w_doto = clength = leftmarg;
