@@ -27,7 +27,7 @@ int namedcmd(int f, int n)
 	/* and now get the function name to execute */
 	kfunc = getname();
 	if (kfunc == NULL) {
-		mlwrite("(No such function)");
+		mlwrite(MLpre "No such function" MLpost);
 		return FALSE;
 	}
 
@@ -77,7 +77,7 @@ int docmd(char *cline)
 	int oldcle;		/* old contents of clexec flag */
 	char *oldestr;		/* original exec string */
 	char tkn[NSTRING];	/* next token off of command line */
-
+        char tbuf[NSTRING];     /* string buffer for some workings */
 	/* if we are scanning and not executing..go back here */
 	if (execlevel)
 		return TRUE;
@@ -99,7 +99,11 @@ int docmd(char *cline)
 	/* process leadin argument */
 	if (gettyp(tkn) != TKCMD) {
 		f = TRUE;
-		strcpy(tkn, getval(tkn));
+/* GML - Possible illegal overlap of args.  Must do in two stages   
+ *              strcpy(tkn, getval(tkn));
+ */
+                strcpy(tbuf, getval(tkn));
+                strcpy(tkn, tbuf);
 		n = atoi(tkn);
 
 		/* and now get the command to execute */
@@ -111,7 +115,7 @@ int docmd(char *cline)
 
 	/* and match the token to see if it exists */
 	if ((fnc = fncmatch(tkn)) == NULL) {
-		mlwrite("(No such Function)");
+		mlwrite(MLpre "No such Function" MLpost);
 		execstr = oldestr;
 		return FALSE;
 	}
@@ -229,15 +233,19 @@ int macarg(char *tok)
  */
 int nextarg(char *prompt, char *buffer, int size, int terminator)
 {
-	/* if we are interactive, go get it! */
+        char tbuf[NSTRING];     /* string buffer for some workings */
+      	/* if we are interactive, go get it! */
 	if (clexec == FALSE)
 		return getstring(prompt, buffer, size, terminator);
-
 	/* grab token and advance past */
 	execstr = token(execstr, buffer, size);
 
 	/* evaluate it */
-	strcpy(buffer, getval(buffer));
+/* GML - Possible illegal overlap of args.  Must do in two stages   
+ *      strcpy(buffer, getval(buffer));  
+ */
+        strcpy(tbuf, getval(buffer));
+        strcpy(buffer, tbuf);
 	return TRUE;
 }
 
@@ -435,6 +443,7 @@ int dobuf(struct buffer *bp)
 	char *einit;		/* initial value of eline */
 	char *eline;		/* text of line to execute */
 	char tkn[NSTRING];	/* buffer to evaluate an expresion in */
+        int return_stat = TRUE; /* What we expect to do */
 
 #if	DEBUGM
 	char *sp;		/* temp for building debug string */
@@ -568,7 +577,11 @@ int dobuf(struct buffer *bp)
 			strcat(outline, ":");
 
 			/* and lastly the line */
-			strcat(outline, eline);
+                        /* IMD - if line > 80 chars, chop it */
+                        if (strlen(eline) > 80)
+                                strncat(outline, eline, 80);
+                        else
+                                strcat(outline, eline);
 			strcat(outline, ">>>");
 
 			/* change all '%' to ':' so mlwrite won't expect arguments */
@@ -594,7 +607,7 @@ int dobuf(struct buffer *bp)
 
 			/* and get the keystroke */
 			if ((c = get1key()) == abortc) {
-				mlforce("(Macro aborted)");
+				mlforce(MLpre "Macro aborted" MLpost);
 				freewhile(whlist);
 				return FALSE;
 			}
@@ -786,7 +799,14 @@ int dobuf(struct buffer *bp)
 
 			case DFORCE:	/* FORCE directive */
 				force = TRUE;
+                                break; /* GML: Must drop down!! */
 
+                        case DFINISH:   /* FINISH directive */
+                                if (execlevel == 0) {
+                                        return_stat = FALSE;
+                                        goto eexec;
+                                }
+                                goto onward;
 			}
 		}
 
@@ -825,7 +845,7 @@ int dobuf(struct buffer *bp)
       eexec:			/* exit the current function */
 	execlevel = 0;
 	freewhile(whlist);
-	return TRUE;
+	return return_stat;
 }
 
 /*
@@ -896,11 +916,15 @@ int dofile(char *fname)
 	bp->b_mode = MDVIEW;	/* mark the buffer as read only */
 	cb = curbp;		/* save the old buffer */
 	curbp = bp;		/* make this one current */
+        if (silent)             /* IMD */
+                pathexpand = FALSE;
 	/* and try to read in the file to execute */
 	if ((status = readin(fname, FALSE)) != TRUE) {
 		curbp = cb;	/* restore the current buffer */
+                pathexpand = TRUE;    /* IMD */
 		return status;
 	}
+        pathexpand = TRUE;            /* IMD */
 
 	/* go execute it! */
 	curbp = cb;		/* restore the current buffer */

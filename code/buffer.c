@@ -28,8 +28,16 @@ int usebuffer(int f, int n)
 	int s;
 	char bufn[NBUFN];
 
-	if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE)
-		return s;
+/* IMD	if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE)
+		return s; */
+        if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
+                /* IMD */
+                if (!inmb)
+                        strcpy(bufn, savnam);
+                else
+                        return(s);
+        }
+
 	if ((bp = bfind(bufn, TRUE, 0)) == NULL)
 		return FALSE;
 	return swbuffer(bp);
@@ -96,10 +104,14 @@ int swbuffer(struct buffer *bp)
 		curbp->b_doto = 0;
 		curbp->b_active = TRUE;
 		curbp->b_mode |= gmode;	/* P.K. */
+/* IMD - handle file-hooks */
+		struct buffer *sb;  
+                if ((sb=bfind("*file-hooks*", FALSE, 0)) != NULL)
+                        dobuf(sb);
 	}
 	curwp->w_bufp = bp;
 	curwp->w_linep = bp->b_linep;	/* For macros, ignored. */
-	curwp->w_flag |= WFMODE | WFFORCE | WFHARD;	/* Quite nasty.         */
+	curwp->w_flag |= WFMODE | WFFORCE | WFHARD;	/* Quite nasty. */
 	if (bp->b_nwnd++ == 0) {	/* First use.           */
 		curwp->w_dotp = bp->b_dotp;
 		curwp->w_doto = bp->b_doto;
@@ -224,6 +236,10 @@ int listbuffers(int f, int n)
 	struct window *wp;
 	struct buffer *bp;
 	int s;
+
+/* IMD - disallow in minibuffer */
+        if (mbstop())
+                return(FALSE);
 
 	if ((s = makelist(f)) != TRUE)
 		return s;
@@ -450,7 +466,7 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
 	struct buffer *bp;
 	struct buffer *sb;	/* buffer to insert after */
 	struct line *lp;
-
+	
 	bp = bheadp;
 	while (bp != NULL) {
 		if (strcmp(bname, bp->b_bname) == 0)
@@ -483,6 +499,8 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
 		}
 
 		/* and set up the other buffer fields */
+		bp->b_topline = NULL;   /* GML */
+		bp->b_botline = NULL;   /* GML */
 		bp->b_active = TRUE;
 		bp->b_dotp = lp;
 		bp->b_doto = 0;
@@ -499,6 +517,16 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
 #endif
 		lp->l_fp = lp;
 		lp->l_bp = lp;
+
+/* IMD - file-hooks 
+ * find the pointer to that buffer.  If it's not there, forget it.
+ * If it *is*, run it; ignore errors here... */
+                if (!inmb && ((sb=bfind("*file-hooks*", FALSE, 0)) != NULL)) {
+                        struct buffer *savbp = curbp;
+                        curbp = bp;
+                        dobuf(sb);
+                        curbp = savbp;
+                }   /* end of file-hooks */
 	}
 	return bp;
 }

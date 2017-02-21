@@ -50,8 +50,8 @@ static void tcapclose(void);
 #endif
 
 #if COLOR
-static void tcapfcol(void);
-static void tcapbcol(void);
+static void tcapfcol(int);
+static void tcapbcol(int);
 #endif
 #if SCROLLCODE
 static void tcapscroll_reg(int from, int to, int linestoscroll);
@@ -335,11 +335,11 @@ static void tcapscrollregion(int top, int bot)
 
 #if COLOR
 /* No colors here, ignore this. */
-static void tcapfcol(void)
+static void tcapfcol(int color)
 {
 }
 /* No colors here, ignore this. */
-static void tcapbcol(void)
+static void tcapbcol(int color)
 {
 }
 #endif

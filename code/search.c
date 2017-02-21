@@ -615,9 +615,9 @@ static int readpattern(char *prompt, char *apat, int srch)
 	char tpat[NPAT + 20];
 
 	strcpy(tpat, prompt);	/* copy prompt to output string */
-	strcat(tpat, " (");	/* build new prompt string */
+	strcat(tpat, " " MLpre);	/* build new prompt string */
 	expandp(&apat[0], &tpat[strlen(tpat)], NPAT / 2);	/* add old pattern */
-	strcat(tpat, ")<Meta>: ");
+	strcat(tpat, MLpost ": ");
 
 	/* Read a pattern.  Either we get one,
 	 * or we just get the META charater, and use the previous pattern.
@@ -713,6 +713,9 @@ int sreplace(int f, int n)
  */
 int qreplace(int f, int n)
 {
+/* IMD - disallow in minibuffer */
+        if (mbstop())
+                return(FALSE);
 	return replaces(TRUE, f, n);
 }
 
@@ -829,6 +832,9 @@ static int replaces(int kind, int f, int n)
 
 			/* And respond appropriately.
 			 */
+/* IMD - make case-insensitive */
+                        if ('A' <= c && c <= 'Z')
+                             c -= 'A' - 'a';
 			switch (c) {
 #if	PKCODE
 			case 'Y':
@@ -910,6 +916,12 @@ static int replaces(int kind, int f, int n)
 		}
 
 		/* end of "if kind" */
+#if     MAGIC
+/* IMD  fix */   
+                else if ((rmagical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
+                        savematch();
+#endif
+
 		/*
 		 * Delete the sucker, and insert its
 		 * replacement.

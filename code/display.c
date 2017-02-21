@@ -21,6 +21,9 @@
 #include "wrapper.h"
 #include "utf8.h"
 
+/* IMD */
+static int mbonly = FALSE;
+
 struct video {
 	int v_flag;		/* Flags */
 #if	COLOR
@@ -96,16 +99,27 @@ void vtinit(void)
 		vp = xmalloc(sizeof(struct video) + term.t_mcol*4);
 		vp->v_flag = 0;
 #if	COLOR
+/* ??? GML 
 		vp->v_rfcolor = 7;
 		vp->v_rbcolor = 0;
+ */
+		vp->v_rfcolor = gfcolor;
+		vp->v_rbcolor = gbcolor;
 #endif
 		vscreen[i] = vp;
+/* IMD */
+        int j = 0;
+        while (j < term.t_ncol)
+                vp->v_text[j++] = ' ';
+
 #if	MEMMAP == 0 || SCROLLCODE
 		vp = xmalloc(sizeof(struct video) + term.t_mcol*4);
 		vp->v_flag = 0;
 		pscreen[i] = vp;
 #endif
 	}
+        /* IMD */
+        mberase();
 }
 
 #if	CLEAN
@@ -141,7 +155,7 @@ void vttidy(void)
 	TTclose();
 	TTkclose();
 #ifdef PKCODE
-	write(1, "\r", 1);
+	int dnc __attribute__ ((unused)) = write(1, "\r", 1);
 #endif
 }
 
@@ -221,12 +235,9 @@ static void vtputc(int c)
  */
 static void vteeol(void)
 {
-/*  struct video *vp;	*/
 	unicode_t *vcp = vscreen[vtrow]->v_text;
 
-/*  vp = vscreen[vtrow];	*/
 	while (vtcol < term.t_ncol)
-/*	vp->v_text[vtcol++] = ' ';	*/
 		vcp[vtcol++] = ' ';
 }
 
@@ -242,7 +253,8 @@ int upscreen(int f, int n)
 }
 
 #if SCROLLCODE
-static int scrflags;
+// static int scrflags;
+static int scrflags = 0;
 #endif
 
 /*
@@ -293,7 +305,11 @@ int update(int force)
 #endif
 
 	/* update any windows that need refreshing */
-	wp = wheadp;
+//IMD	wp = wheadp;
+        if (mbonly)  
+                wp = curwp;
+        else
+                wp = wheadp;
 	while (wp != NULL) {
 		if (wp->w_flag) {
 			/* if the window has changed, service it */
@@ -319,9 +335,12 @@ int update(int force)
 			wp->w_force = 0;
 		}
 		/* on to the next window */
-		wp = wp->w_wndp;
+//IMD		wp = wp->w_wndp;
+                if (mbonly)
+                        wp = NULL;
+                else
+                        wp = wp->w_wndp;
 	}
-
 	/* recalc the current hardware cursor location */
 	updpos();
 
@@ -443,7 +462,6 @@ static int reframe(struct window *wp)
 static void show_line(struct line *lp)
 {
 	int i = 0, len = llength(lp);
-
 	while (i < len) {
 		unicode_t c;
 		i += utf8_to_unicode(lp->l_text, i, len, &c);
@@ -516,7 +534,6 @@ static void updall(struct window *wp)
 		vteeol();
 		++sline;
 	}
-
 }
 
 /*
@@ -568,7 +585,7 @@ void upddex(void)
 {
 	struct window *wp;
 	struct line *lp;
-	int i;
+	int i, j;
 
 	wp = wheadp;
 
@@ -576,13 +593,22 @@ void upddex(void)
 		lp = wp->w_linep;
 		i = wp->w_toprow;
 
-		while (i < wp->w_toprow + wp->w_ntrows) {
+/* GML - FIX1 (version 2)
+ * Check for reaching end-of-buffer (== loop back to start) too
+ * otherwise we process lines at start of file as if they are
+ * beyond the end of it.
+ */
+		while ((i < wp->w_toprow + wp->w_ntrows) &&
+		       (lp != wp->w_bufp->b_linep)) {
 			if (vscreen[i]->v_flag & VFEXT) {
 				if ((wp != curwp) || (lp != wp->w_dotp) ||
 				    (curcol < term.t_ncol - 1)) {
-					vtmove(i, 0);
-					show_line(lp);
+                                        taboff = wp->w_fcolor;
+					vtmove(i, -taboff);
+					for (j = 0; j < llength(lp); ++j)
+                                                vtputc(lgetc(lp, j));
 					vteeol();
+					taboff = 0;
 
 					/* this line no longer is extended */
 					vscreen[i]->v_flag &= ~VFEXT;
@@ -607,7 +633,9 @@ void updgar(void)
 	unicode_t *txt;
 	int i, j;
 
-	for (i = 0; i < term.t_nrow; ++i) {
+//GML - we need to include the last row (mini-buffer)!!!
+//	for (i = 0; i < term.t_nrow; ++i) {
+	for (i = 0; i <= term.t_nrow; ++i) {
 		vscreen[i]->v_flag |= VFCHG;
 #if	REVSTA
 		vscreen[i]->v_flag &= ~VFREV;
@@ -642,7 +670,6 @@ int updupd(int force)
 {
 	struct video *vp1;
 	int i;
-
 #if SCROLLCODE
 	if (scrflags & WFKILLS)
 		scrolls(FALSE);
@@ -651,7 +678,9 @@ int updupd(int force)
 	scrflags = 0;
 #endif
 
-	for (i = 0; i < term.t_nrow; ++i) {
+//GML - we need to include the last row (mini-buffer)!!!
+//	for (i = 0; i < term.t_nrow; ++i) {
+	for (i = 0; i <= term.t_nrow; ++i) {
 		vp1 = vscreen[i];
 
 		/* for each line that needs to be updated */
@@ -1088,12 +1117,14 @@ static void modeline(struct window *wp)
 	n = wp->w_toprow + wp->w_ntrows;	/* Location. */
 	vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;	/* Redraw next time. */
 #if	COLOR
-	vscreen[n]->v_rfcolor = 0;	/* black on */
-	vscreen[n]->v_rbcolor = 7;	/* white..... */
+//GML	vscreen[n]->v_rfcolor = 0;	/* black on */
+//GML	vscreen[n]->v_rbcolor = 7;	/* white..... */
+	vscreen[n]->v_rfcolor = gbcolor;    /* chosen  on */
+	vscreen[n]->v_rbcolor = gfcolor;    /* chosen..... */
 #endif
 	vtmove(n, 0);		/* Seek to right line. */
 	if (wp == curwp)	/* mark the current buffer */
-#if	PKCODE
+#if	PKCODE && !GGR_MODE
 		lchar = '-';
 #else
 		lchar = '=';
@@ -1124,7 +1155,12 @@ static void modeline(struct window *wp)
 	strcpy(tline, " ");
 	strcat(tline, PROGRAM_NAME_LONG);
 	strcat(tline, " ");
-	strcat(tline, VERSION);
+
+/* IMD 	strcat(tline, VERSION); */
+        if (bp->b_fname[0] == 0) {
+                strcat(tline, " ");
+                strcat(tline, VERSION); 
+        }
 	strcat(tline, ": ");
 	cp = &tline[0];
 	while ((c = *cp++) != 0) {
@@ -1291,8 +1327,10 @@ void mlerase(void)
 		return;
 
 #if	COLOR
-	TTforg(7);
-	TTbacg(0);
+//GML   TTforg(7);
+//GML   TTbacg(0);
+        TTforg(gfcolor);
+        TTbacg(gbcolor);
 #endif
 	if (eolexist == TRUE)
 		TTeeol();
@@ -1315,9 +1353,11 @@ void mlerase(void)
  * char *fmt;		format string for output
  * char *arg;		pointer to first argument to print
  */
+//GML - modified to handle utf8 strings.
 void mlwrite(const char *fmt, ...)
 {
-	int c;		/* current char in format string */
+//GML	int c;		/* current char in format string */
+	unicode_t c;		/* current char in format string */
 	va_list ap;
 
 	/* if we are not currently echoing on the command line, abort this */
@@ -1327,8 +1367,10 @@ void mlwrite(const char *fmt, ...)
 	}
 #if	COLOR
 	/* set up the proper colors for the command line */
-	TTforg(7);
-	TTbacg(0);
+//GML	TTforg(7);
+//GML	TTbacg(0);
+	TTforg(gfcolor);
+	TTbacg(gbcolor);
 #endif
 
 	/* if we can not erase to end-of-line, do it manually */
@@ -1336,15 +1378,24 @@ void mlwrite(const char *fmt, ...)
 		mlerase();
 		TTflush();
 	}
-
 	movecursor(term.t_nrow, 0);
 	va_start(ap, fmt);
-	while ((c = *fmt++) != 0) {
+
+/* GML 	while ((c = *fmt++) != 0) { */
+        int bytes_togo = strlen(fmt);
+        while (bytes_togo > 0) {
+            int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
+            bytes_togo -= used;
+            fmt += used;
+            
 		if (c != '%') {
 			TTputc(c);
 			++ttcol;
 		} else {
-			c = *fmt++;
+                        int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
+                        bytes_togo -= used;
+                        fmt += used;
+
 			switch (c) {
 			case 'd':
 				mlputi(va_arg(ap, int), 10);
@@ -1407,11 +1458,20 @@ void mlforce(char *s)
  * the characters in the string all have width "1"; if this is not the case
  * things will get screwed up a little.
  */
+//GML modified to handle utf8 strings.
 void mlputs(char *s)
 {
-	int c;
+//GML	int c;
+	unicode_t c;
 
-	while ((c = *s++) != 0) {
+//GML	while ((c = *s++) != 0) {
+
+        int bytes_togo = strlen(s);
+        while (bytes_togo > 0) {
+                int used = utf8_to_unicode(s, 0, bytes_togo, &c);
+                bytes_togo -= used;
+                s += used;
+
 		TTputc(c);
 		++ttcol;
 	}
@@ -1545,8 +1605,45 @@ static int newscreensize(int h, int w)
 	if (w < term.t_mcol)
 		newwidth(TRUE, w);
 
+//GML - we have to clear the last line, as we display it and it
+//      probably won't be empty if we are shrinking the window.
+//      Needs to run before the update.
+        mberase();
+
 	update(TRUE);
+
 	return TRUE;
 }
 
 #endif
+
+
+/* IMD */
+/* erases the mapped minibuffer line (so different from mlerase() */
+void mberase(void)
+{
+        struct video *vp1;
+
+                vtmove(term.t_nrow, 0);
+                vteeol();
+                vp1 = vscreen[term.t_nrow];
+#if COLOR
+                vp1->v_fcolor = gfcolor;
+                vp1->v_bcolor = gbcolor;
+#endif
+
+#if     MEMMAP
+                        updateline(term.t_nrow, vp1);
+#else
+                        updateline(term.t_nrow, vp1, pscreen[term.t_nrow]);
+#endif
+                return;
+}
+
+/* update *just* the minibuffer window */
+void mbupdate(void)
+{
+    mbonly = TRUE;
+    update(TRUE);
+    mbonly = FALSE;
+}

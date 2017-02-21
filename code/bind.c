@@ -24,13 +24,18 @@ int help(int f, int n)
 	struct buffer *bp;	/* buffer pointer to help */
 	char *fname = NULL;	/* ptr to file returned by flook() */
 
+        /* IMD - disallow in minibuffer */
+        if (mbstop())
+                return(FALSE);
+                                
 	/* first check if we are already here */
-	bp = bfind("emacs.hlp", FALSE, BFINVS);
+/* IMD	bp = bfind("emacs.hlp", FALSE, BFINVS); */
+	bp = bfind(pathname[1], FALSE, BFINVS);
 
 	if (bp == NULL) {
 		fname = flook(pathname[1], FALSE);
 		if (fname == NULL) {
-			mlwrite("(Help file is not online)");
+			mlwrite(MLpre "Help file is not online" MLpost);
 			return FALSE;
 		}
 	}
@@ -41,8 +46,12 @@ int help(int f, int n)
 
 	if (bp == NULL) {
 		/* and read the stuff in */
-		if (getfile(fname, FALSE) == FALSE)
-			return FALSE;
+/* IMD		if (getfile(fname, FALSE) == FALSE)
+			return FALSE; */
+                pathexpand = FALSE;
+		int res = getfile(fname, FALSE);
+                pathexpand = TRUE;
+                if (res == FALSE) return(FALSE);
 	} else
 		swbuffer(bp);
 
@@ -80,7 +89,9 @@ int deskey(int f, int n)
 
 	/* output the command sequence */
 	ostring(ptr);
-	return TRUE;
+        /* IMD */
+        mpresf = TRUE;
+        return TRUE;
 }
 
 /*
@@ -100,10 +111,13 @@ int bindtokey(int f, int n)
 	/* prompt the user to type in a key to bind */
 	mlwrite(": bind-to-key ");
 
+        /* IMD */
+        mpresf = TRUE;
+
 	/* get the function name to bind it to */
 	kfunc = getname();
 	if (kfunc == NULL) {
-		mlwrite("(No such function)");
+		mlwrite(MLpre "No such function" MLpost);
 		return FALSE;
 	}
 	ostring(" ");
@@ -168,6 +182,10 @@ int bindtokey(int f, int n)
 		ktp->k_code = 0;
 		ktp->k_fp = NULL;
 	}
+        /* IMD */
+        mpresf = TRUE;
+        TTflush();
+
 	return TRUE;
 }
 
@@ -185,6 +203,9 @@ int unbindkey(int f, int n)
 	/* prompt the user to type in a key to unbind */
 	mlwrite(": unbind-key ");
 
+        /* IMD */
+        mpresf = TRUE;
+
 	/* get the command sequence to unbind */
 	c = getckey(FALSE);	/* get a command sequence */
 
@@ -196,9 +217,12 @@ int unbindkey(int f, int n)
 
 	/* if it isn't bound, bitch */
 	if (unbindchar(c) == FALSE) {
-		mlwrite("(Key not bound)");
+		mlwrite(MLpre "Key not bound" MLpost);
 		return FALSE;
 	}
+        /* IMD */
+        TTflush();
+
 	return TRUE;
 }
 
@@ -261,6 +285,10 @@ int apro(int f, int n)
 	char mstring[NSTRING];	/* string to match cmd names to */
 	int status;		/* status return */
 
+        /* IMD - disallow in minibuffer */
+        if (mbstop())
+                return(FALSE);
+
 	status = mlreply("Apropos string: ", mstring, NSTRING - 1);
 	if (status != TRUE)
 		return status;
@@ -284,6 +312,10 @@ int buildlist(int type, char *mstring)
 	int cpos;             /* current position to use in outseq */
 	char outseq[80];      /* output buffer for keystroke sequence */
 
+        /* IMD - disallow in minibuffer */
+        if (mbstop())
+                return(FALSE);
+
 	/* split the current window to make room for the binding list */
 	if (splitwind(FALSE, 1) == FALSE)
 		return FALSE;
@@ -296,7 +328,7 @@ int buildlist(int type, char *mstring)
 	}
 
 	/* let us know this is in progress */
-	mlwrite("(Building binding list)");
+	mlwrite(MLpre "Building binding list" MLpost);
 
 	/* disconect the current buffer */
 	if (--curbp->b_nwnd == 0) {	/* Last use.            */
@@ -466,47 +498,13 @@ int startup(char *sfname)
 	return dofile(fname);
 }
 
-/*
- * Look up the existance of a file along the normal or PATH
- * environment variable. Look first in the HOME directory if
- * asked and possible
- *
- * char *fname;		base file name to search for
- * int hflag;		Look in the HOME environment variable first?
+/* GML - Helper functions for flook
  */
-char *flook(char *fname, int hflag)
-{
-	char *home;	/* path to home directory */
+#if	ENVFUNC
+static int along_path(char *fname, char *fspec) {
 	char *path;	/* environmental PATH variable */
 	char *sp;	/* pointer into path spec */
-	int i;		/* index */
-	static char fspec[NSTRING];	/* full path spec to search */
 
-#if	ENVFUNC
-
-	if (hflag) {
-		home = getenv("HOME");
-		if (home != NULL) {
-			/* build home dir file spec */
-			strcpy(fspec, home);
-			strcat(fspec, "/");
-			strcat(fspec, fname);
-
-			/* and try it out */
-			if (ffropen(fspec) == FIOSUC) {
-				ffclose();
-				return fspec;
-			}
-		}
-	}
-#endif
-
-	/* always try the current directory first */
-	if (ffropen(fname) == FIOSUC) {
-		ffclose();
-		return fname;
-	}
-#if	ENVFUNC
 	/* get the PATH variable */
 	path = getenv("PATH");
 	if (path != NULL)
@@ -526,12 +524,65 @@ char *flook(char *fname, int hflag)
 			/* and try it out */
 			if (ffropen(fspec) == FIOSUC) {
 				ffclose();
-				return fspec;
+				return TRUE;
 			}
 
 			if (*path == PATHCHR)
 				++path;
 		}
+	return FALSE;
+}
+#endif
+
+/*
+ * Look up the existence of a file along the normal or PATH
+ * environment variable. Look first in the HOME directory if
+ * asked and possible
+ *
+ * char *fname;		base file name to search for
+ * int hflag;		Look in the HOME environment variable first?
+ */
+char *flook(char *fname, int hflag)
+{
+	char *home;	/* path to home directory */
+	int i;		/* index */
+	static char fspec[NSTRING];	/* full path spec to search */
+
+/* IMD */
+        pathexpand = FALSE;
+
+#if	ENVFUNC
+
+	if (hflag) {
+		home = getenv("HOME");
+		if (home != NULL) {
+			/* build home dir file spec */
+			strcpy(fspec, home);
+			strcat(fspec, "/");
+			strcat(fspec, fname);
+
+			/* and try it out */
+			if (ffropen(fspec) == FIOSUC) {
+				ffclose();
+                                pathexpand = TRUE;  /* IMD */
+				return fspec;
+			}
+		}
+	}
+#endif
+
+	/* always try the current directory first */
+	if (ffropen(fname) == FIOSUC) {
+		ffclose();
+                pathexpand = TRUE;  /* IMD */
+		return fname;
+	}
+
+#if	ENVFUNC & PATH_THEN_TABLE
+        if (along_path(fname, fspec) == TRUE) {
+	        pathexpand = TRUE;  /* IMD */
+		return fspec;
+	}
 #endif
 
 	/* look it up via the old table method */
@@ -542,10 +593,19 @@ char *flook(char *fname, int hflag)
 		/* and try it out */
 		if (ffropen(fspec) == FIOSUC) {
 			ffclose();
+                        pathexpand = TRUE;  /* IMD */
 			return fspec;
 		}
 	}
 
+#if	ENVFUNC & TABLE_THEN_PATH
+        if (along_path(fname, fspec) == TRUE) {
+	        pathexpand = TRUE;  /* IMD */
+		return fspec;
+	}
+#endif
+
+        pathexpand = TRUE;      /* IMD */
 	return NULL;		/* no such luck */
 }
 
@@ -586,7 +646,13 @@ void cmdstr(int c, char *seq)
 
 	/* and output the final sequence */
 
-	*ptr++ = c & 255;	/* strip the prefixes */
+	/* GGR - handle the SP for space which we allow */
+	if ((c & 255) == ' ') {
+		*ptr++ = 'S';
+		*ptr++ = 'P';
+	}
+	else
+		*ptr++ = c & 255;   /* strip the prefixes */
 
 	*ptr = 0;		/* terminate the string */
 }
@@ -660,6 +726,10 @@ unsigned int stock(char *keyname)
 {
 	unsigned int c;	/* key sequence to return */
 
+/* IMD */
+        int noupper;
+        noupper = (strlen(keyname) == 1);
+
 	/* parse it up */
 	c = 0;
 
@@ -690,10 +760,16 @@ unsigned int stock(char *keyname)
 		c |= CONTROL;
 		*keyname += 'A';
 	}
+	/* GML - allow SP for space by putting it there... */
+	if (*keyname == 'S' && *(keyname + 1) == 'P') {
+		++keyname;
+		*keyname = ' ';
+	}
 
 
 	/* make sure we are not lower case (not with function keys) */
-	if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC))
+/* IMD 	if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC)) */
+	if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC) && !(noupper))
 		*keyname -= 32;
 
 	/* the final sequence... */

@@ -26,6 +26,11 @@ int set_encryption_key(int f, int n)
 	int odisinp;		/* original vlaue of disinp */
 	char key[NPAT];		/* new encryption string */
 
+        /* IMD */
+        char keycop[NPAT];
+        int lcop;
+        /* end IMD */
+
 	/* turn command input echo off */
 	odisinp = disinp;
 	disinp = FALSE;
@@ -35,6 +40,17 @@ int set_encryption_key(int f, int n)
 	disinp = odisinp;
 	if (status != TRUE)
 		return status;
+
+        /* IMD */
+        strcpy(keycop, key);
+        lcop = strlen(key);
+        while (lcop < 63) {
+                /* doesn't seem to like me strcating with itself.. */
+                strcpy(keycop, key);
+                strcat(key, keycop);
+                lcop += lcop;
+        }
+        /* end IMD */
 
 	/* and encrypt it */
 	myencrypt((char *) NULL, 0);

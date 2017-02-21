@@ -34,8 +34,20 @@ int fileread(int f, int n)
 
 	if (restflag)		/* don't allow this command if restricted */
 		return resterr();
-	if ((s = mlreply("Read file: ", fname, NFILEN)) != TRUE)
-		return s;
+/* IMD	if ((s = mlreply("Read file: ", fname, NFILEN)) != TRUE)
+		return s; */
+        s = mlreply("Read file: ", fname, NFILEN);
+        if (s == ABORT)
+                return(s);
+        else if (s == FALSE) {
+                if (strlen(curbp->b_fname) == 0)
+                        return(s);
+                else   
+                        strcpy(fname, curbp->b_fname);
+        }
+/* IMD end */
+
+
 	return readin(fname, TRUE);
 }
 
@@ -75,11 +87,11 @@ int filefind(int f, int n)
 {
 	char fname[NFILEN];	/* file user wishes to find */
 	int s;		/* status return */
-
 	if (restflag)		/* don't allow this command if restricted */
 		return resterr();
-	if ((s = mlreply("Find file: ", fname, NFILEN)) != TRUE)
+	if ((s = mlreply("Find file: ", fname, NFILEN)) != TRUE) {
 		return s;
+	}
 	return getfile(fname, TRUE);
 }
 
@@ -168,7 +180,7 @@ int getfile(char *fname, int lockfl)
 			curwp->w_linep = lp;
 			curwp->w_flag |= WFMODE | WFHARD;
 			cknewwindow();
-			mlwrite("(Old buffer)");
+			mlwrite(MLpre "Old buffer" MLpost);
 			return TRUE;
 		}
 	}
@@ -193,6 +205,10 @@ int getfile(char *fname, int lockfl)
 		curbp->b_markp = curwp->w_markp;
 		curbp->b_marko = curwp->w_marko;
 	}
+/* IMD */
+        if (!inmb)
+                strcpy(savnam, curbp->b_bname);
+
 	curbp = bp;		/* Switch to it.        */
 	curwp->w_bufp = bp;
 	curbp->b_nwnd++;
@@ -220,11 +236,11 @@ int readin(char *fname, int lockfl)
 	struct window *wp;
 	struct buffer *bp;
 	int s;
-	int nbytes;
+/* IMD	int nbytes; */
 	int nline;
 	char mesg[NSTRING];
 
-#if	(FILOCK && BSD) || SVR4
+#if	FILOCK && (BSD || SVR4)
 	if (lockfl && lockchk(fname) == ABORT)
 #if PKCODE
 	{
@@ -255,16 +271,19 @@ int readin(char *fname, int lockfl)
 		goto out;
 
 	if (s == FIOFNF) {	/* File not found.      */
-		mlwrite("(New file)");
+		mlwrite(MLpre "New file" MLpost);
 		goto out;
 	}
 
 	/* read the file in */
-	mlwrite("(Reading file)");
+/* IMD	mlwrite("(Reading file)"); */
+        if (!silent)
+                mlwrite(MLpre "Reading file" MLpost);
 	nline = 0;
 	while ((s = ffgetline()) == FIOSUC) {
-		nbytes = strlen(fline);
-		if ((lp1 = lalloc(nbytes)) == NULL) {
+/* IMD		nbytes = strlen(fline); *
+		if ((lp1 = lalloc(nbytes)) == NULL) { */
+		if ((lp1 = lalloc(ftrulen)) == NULL) {
 			s = FIOMEM;	/* Keep message on the  */
 			break;	/* display.             */
 		}
@@ -279,12 +298,17 @@ int readin(char *fname, int lockfl)
 		lp1->l_fp = curbp->b_linep;
 		lp1->l_bp = lp2;
 		curbp->b_linep->l_bp = lp1;
-		for (i = 0; i < nbytes; ++i)
+/* IMD 		for (i = 0; i < nbytes; ++i) */
+		for (i = 0; i < ftrulen; ++i)
 			lputc(lp1, i, fline[i]);
 		++nline;
+/* IMD - progress report */
+                if (!(nline % 300) && !silent)
+                        mlwrite(MLpre "Reading file" MLpost " : %d lines",nline);
+
 	}
 	ffclose();		/* Ignore errors.       */
-	strcpy(mesg, "(");
+	strcpy(mesg, MLpre);
 	if (s == FIOERR) {
 		strcat(mesg, "I/O ERROR, ");
 		curbp->b_flag |= BFTRUNC;
@@ -296,8 +320,13 @@ int readin(char *fname, int lockfl)
 	sprintf(&mesg[strlen(mesg)], "Read %d line", nline);
 	if (nline != 1)
 		strcat(mesg, "s");
-	strcat(mesg, ")");
-	mlwrite(mesg);
+	strcat(mesg, MLpost);
+/* IMD	mlwrite(mesg); */
+        if (!silent) {
+              mlwrite(mesg);
+              if (s == FIOMEM)
+                    sleep(1);
+        }
 
       out:
 	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
@@ -371,11 +400,42 @@ void unqname(char *name)
 		sp = name;
 		while (*sp)
 			++sp;
-		if (sp == name || (*(sp - 1) < '0' || *(sp - 1) > '8')) {
-			*sp++ = '0';
-			*sp = 0;
-		} else
-			*(--sp) += 1;
+
+/* GML - This is wrong! It can add a character (*sp++).
+ *       It needs to check whether the it is already at the max length
+ *       first
+                if (sp == name || (*(sp-1) <'0' || *(sp-1) > '8')) {
+                        *sp++ = '0';
+                        *sp = 0;
+                } else
+                        *(--sp) += 1;
+ */
+/* First append a number (if there is free space) and let that go up
+ * to 9. Iff we run out of numbers and length, increment the last
+ * non-numeric character...
+ */
+                if (sp == name) {   /* Empty name!! */
+                        *sp++ = '0';
+                        *sp = 0;
+                        continue;
+                }
+                if ((sp - name) < NBUFN-1) {  /* Space left */
+                        *sp++ = '0';
+                        *sp = 0;
+                        continue;
+                }
+                char *last_non_numeric = NULL;
+                while (--sp > name) {
+                    if ((*sp >= '0') && (*sp <= '8')) {
+                        break;
+                    }
+                    if (!last_non_numeric) last_non_numeric = sp;
+                }
+                if (sp == name) {
+                    sp = last_non_numeric;
+                    *sp = '0' - 1;
+                }
+                *sp += 1;       /* Increment where we are now */
 	}
 }
 
@@ -436,7 +496,7 @@ int filesave(int f, int n)
 	/* complain about truncated files */
 	if ((curbp->b_flag & BFTRUNC) != 0) {
 		if (mlyesno("Truncated file ... write it out") == FALSE) {
-			mlwrite("(Aborted)");
+			mlwrite(MLpre "Aborted" MLpost);
 			return FALSE;
 		}
 	}
@@ -476,22 +536,25 @@ int writeout(char *fn)
 	if ((s = ffwopen(fn)) != FIOSUC) {	/* Open writes message. */
 		return FALSE;
 	}
-	mlwrite("(Writing...)");	/* tell us were writing */
+	mlwrite(MLpre "Writing..." MLpost);	/* tell us were writing */
 	lp = lforw(curbp->b_linep);	/* First line.          */
 	nline = 0;		/* Number of lines.     */
 	while (lp != curbp->b_linep) {
 		if ((s = ffputline(&lp->l_text[0], llength(lp))) != FIOSUC)
 			break;
 		++nline;
+/* IMD - progress report */
+                if (!(nline % 300) && !silent)
+                        mlwrite(MLpre "Writing..." MLpre " : %d lines",nline);
 		lp = lforw(lp);
 	}
 	if (s == FIOSUC) {	/* No write error.      */
 		s = ffclose();
 		if (s == FIOSUC) {	/* No close error.      */
 			if (nline == 1)
-				mlwrite("(Wrote 1 line)");
+				mlwrite(MLpre "Wrote 1 line" MLpost);
 			else
-				mlwrite("(Wrote %d lines)", nline);
+				mlwrite(MLpre "Wrote %d lines" MLpost, nline);
 		}
 	} else			/* Ignore close error   */
 		ffclose();	/* if a write error.    */
@@ -546,20 +609,23 @@ int ifile(char *fname)
 	int i;
 	struct buffer *bp;
 	int s;
-	int nbytes;
+/* IMD 	int nbytes; */
 	int nline;
 	char mesg[NSTRING];
 
 	bp = curbp;		/* Cheap.               */
 	bp->b_flag |= BFCHG;	/* we have changed      */
 	bp->b_flag &= ~BFINVS;	/* and are not temporary */
+/* IMD */
+        pathexpand = FALSE;
+
 	if ((s = ffropen(fname)) == FIOERR)	/* Hard file open.      */
 		goto out;
 	if (s == FIOFNF) {	/* File not found.      */
-		mlwrite("(No such file)");
+		mlwrite(MLpre "No such file" MLpost);
 		return FALSE;
 	}
-	mlwrite("(Inserting file)");
+	mlwrite(MLpre "Inserting file" MLpost);
 
 #if	CRYPT
 	s = resetkey();
@@ -574,8 +640,9 @@ int ifile(char *fname)
 
 	nline = 0;
 	while ((s = ffgetline()) == FIOSUC) {
-		nbytes = strlen(fline);
-		if ((lp1 = lalloc(nbytes)) == NULL) {
+/* IMD		nbytes = strlen(fline);
+		if ((lp1 = lalloc(nbytes)) == NULL) { */
+		if ((lp1 = lalloc(ftrulen)) == NULL) {
 			s = FIOMEM;	/* Keep message on the  */
 			break;	/* display.             */
 		}
@@ -590,13 +657,18 @@ int ifile(char *fname)
 
 		/* and advance and write out the current line */
 		curwp->w_dotp = lp1;
-		for (i = 0; i < nbytes; ++i)
+/* IMD 		for (i = 0; i < nbytes; ++i) */
+		for (i = 0; i < ftrulen; ++i)
 			lputc(lp1, i, fline[i]);
 		++nline;
+/* IMD - progress report */
+                if (!(nline % 300) && !silent)
+                        mlwrite(MLpre "Inserting file" MLpost " : %d lines",nline);
+
 	}
 	ffclose();		/* Ignore errors.       */
 	curwp->w_markp = lforw(curwp->w_markp);
-	strcpy(mesg, "(");
+	strcpy(mesg, MLpre);
 	if (s == FIOERR) {
 		strcat(mesg, "I/O ERROR, ");
 		curbp->b_flag |= BFTRUNC;
@@ -608,7 +680,7 @@ int ifile(char *fname)
 	sprintf(&mesg[strlen(mesg)], "Inserted %d line", nline);
 	if (nline > 1)
 		strcat(mesg, "s");
-	strcat(mesg, ")");
+	strcat(mesg, MLpost);
 	mlwrite(mesg);
 
       out:

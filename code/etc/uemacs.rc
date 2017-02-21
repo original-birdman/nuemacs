@@ -1,0 +1,448 @@
+;
+;       uemacs.rc:      Standard micro Startup program
+;                       for MicroEMACS 4.1GGR and above
+;                       GGR version
+;                       Last Update: 18 Feb 2017
+;
+set $discmd FALSE
+write-message "[Setting up....]"
+;
+2 ggr-mode          ; Enable ggr-mode
+;
+; Overwrite some standard bindings - for historic GGR feel.
+; Binding names are from name_bind in names.c
+;
+bind-to-key reexecute                   ^C
+bind-to-key type-tab                    ^I
+bind-to-key replace-string              ^R
+bind-to-key previous-line               ^Z
+bind-to-key set-mark                    ^@
+bind-to-key execute-macro-34            ^\
+;
+unbind-key                              ^X^A
+bind-to-key detab-line                  ^X^D
+bind-to-key handle-tab                  ^X^I
+;
+bind-to-key insert-file                 ^XI
+bind-to-key execute-macro-40            ^XL
+bind-to-key save-file                   ^XS
+bind-to-key execute-macro-39            ^XT
+bind-to-key fill-all-paragraphs         ^X.
+bind-to-key narrow-to-region            ^X<
+bind-to-key widen-from-region           ^X>
+bind-to-key help                        ^X?
+;
+bind-to-key execute-macro-36            M-^D
+bind-to-key incremental-search          M-^I
+bind-to-key execute-macro-37            M-^J    ; Previously Esc-J in 3.9e
+bind-to-key i-shell                     M-^U
+bind-to-key yank-minibuffer             M-^Y
+;
+bind-to-key execute-macro-38            M-T
+bind-to-key fill-paragraph              M-Q
+bind-to-key white-delete                M-\
+; The SP on the following line denotes "space"
+bind-to-key leave-one-white             M-SP
+bind-to-key query-replace-string        M-%
+bind-to-key quoted-count                M-'
+bind-to-key execute-macro-35            M-=
+bind-to-key describe-key                M-?
+;
+bind-to-key previous-line               FNA
+bind-to-key next-line                   FNB
+bind-to-key forward-character           FNC
+bind-to-key backward-character          FND
+bind-to-key kill-to-end-of-line         FNQ
+bind-to-key previous-word               FNP
+bind-to-key next-word                   FNR
+bind-to-key set-mark                    FNH
+;
+;
+store-procedure file-hooks
+    set %rctmp &sin $cbufname "."
+    !if &equ %rctmp 0
+        !return
+    !endif
+    set %rctmp &mid $cbufname &add %rctmp 1 5
+    set %rctmp &lower %rctmp
+    !if &or &seq %rctmp "c" &or &seq %rctmp "cc" &or &seq %rctmp "h" &or &seq %rctmp "pl"
+        add-mode "cmode"
+        delete-mode "wrap"
+    !else
+        !if &or &seq %rctmp "ftn" &or &seq %rctmp "f77" &or &seq %rctmp "for" &or &seq %rctmp "cpl" &or &seq %rctmp "spl" &or &seq %rctmp "rc" &or &seq %rctmp "cmd" &seq %rctmp "fex"
+            delete-mode "wrap"
+        !else
+                !if &seq %rctmp "asave"
+                    add-mode "asave"
+                !else
+                    !if &seq %rctmp "com"
+                        delete-mode "wrap"
+                    !endif
+                !endif
+        !endif
+    !endif
+!endm
+;
+40 store-macro              ; centre-line
+        beginning-of-line
+        !force white-delete
+        end-of-line
+        set %rctmp $curcol
+        beginning-of-line
+        !if &greater $fillcol %rctmp
+                &div &sub $fillcol %rctmp 2 insert-space
+                beginning-of-line
+        !else
+                write-message "[Line too long to centre]"
+        !endif
+!endm
+;
+36 store-macro              ; nullify-default-replace
+    set $replace ""
+    write-message "[Default replace string set null]"
+!endm
+;
+store-procedure spell-check
+    set %extras @"<return> or any special SPELL options: "
+    !if &seq %extras "ERROR"
+        write-message "[Aborted]"
+        !return
+    !endif
+    write-message "[Pushing buffer out to SPELL..]~n~r"
+    set %savefile $cfname
+    write-file "Temp.spell"
+    write-message "~n[Starting spelling checker..]  ~n~r"
+    !force shell-command &cat "culspell Temp.spell " %extras
+    !if &seq $status TRUE
+      write-message "[Pulling (corrected) buffer back in..]~n~r"
+      read-file "Temp.spell"
+      write-message "~n[Tidying up temporary files..]"
+      set %crunch FALSE
+    !else
+      set %crunch TRUE
+    !endif
+    set $discmd FALSE
+    2 shell-command "rm Temp.spell"
+    set $discmd TRUE
+    set $cfname %savefile
+;   must force buffer to be modified
+    insert-string "."
+    delete-previous-character
+!endm
+;
+35  store-macro             ; spell-check
+    run spell-check
+!endm
+;
+set %lindef 0
+set %rindef 0
+set %spc "                                                                  "
+
+;
+; left-and-right-justify
+;
+37 store-macro              ; Left and right justify paragraph
+  set %oldfill $fillcol
+  set %left @&cat &cat "Left indent [" %lindef "]: "
+  !if &seq %left "ERROR"
+    write-message "[Aborted]"
+    !return
+  !endif
+  !if &sequ %left ""      ; If <null>.....
+    set %left %lindef     ; ....accept default
+  !else
+    !if &and &not &seq %left "0" &not &greater %left 0        ; is it a number?
+        write-message "[Not a valid indent!]"
+        !return
+    !endif
+    set %lindef %left     ; Else set default to new value.
+  !endif
+  set %right @&cat &cat "Right indent [" %rindef "]: "
+  !if &seq %right "ERROR"
+    write-message "[Aborted]"
+    !return
+  !endif
+  !if &sequ %right ""
+    set %right %rindef
+  !else
+    !if &and &not &seq %right "0" &not &greater %right 0 ; is it a number?
+        write-message "[Not a valid indent!]"
+        !return
+    !endif
+    set %rindef %right
+  !endif
+  write-message "[Filling..]"
+  set %indent &add %left %right        ; Add together the L&R indent values
+  set $fillcol &sub %oldfill %indent   ; ...and set $fillcol to this value.
+  end-of-line           ; make sure point is not at the beginning of paragraph
+  previous-paragraph    ; .....and go to beginning of paragraph
+  beginning-of-line     ; .....column 0
+;  set %ch $curchar
+  !if &or &equ $curchar 32 &equ $curchar 9   ; Space or tab?
+    !force white-delete                         ; If so, delete it.
+  !endif
+  2 fill-paragraph                     ; L&R justify paragraph
+  set $fillcol %oldfill                ; Re-set $fillcol
+  set %endlin &add $curline 1
+  previous-paragraph
+;  set %indstr &left %spc %left
+;  set %dum %left
+;  set %dum &len %indstr
+  beginning-of-line
+  !while &less $curline %endlin
+;    beginning-of-line
+    %left insert-space
+    next-line
+  !endwhile
+;  set %indstr ""
+  clear-message-line
+!endm
+;
+39 store-macro              ; toggle local mode
+    write-message "Toggle mode (ACEMOVWXH): "
+    set %report " "
+    set %modesel &upper &gtkey
+    !if &or &seq %modesel "" &seq %modesel "~n"
+        write-message "[Aborted]"
+        !finish
+    !endif
+    !if &seq %modesel "W"
+        !if &band $cmode 1
+            set %report "WRAP mode toggled off"
+        !else
+            set %report "WRAP mode toggled on"
+        !endif
+        set $cmode &bxor $cmode 1
+        !goto exit
+    !endif
+    !if &seq %modesel "C"
+        !if &band $cmode 2
+            set %report "CMODE toggled off"
+        !else
+            set %report "CMODE toggled on"
+        !endif
+        set $cmode &bxor $cmode 2
+        !goto exit
+    !endif
+    !if &seq %modesel "E"
+        !if &band $cmode 8
+            set %report "EXACT mode toggled off"
+        !else
+            set %report "EXACT mode toggled on"
+        !endif
+        set $cmode &bxor $cmode 8
+        !goto exit
+    !endif
+    !if &seq %modesel "V"
+        !if &band $cmode 16
+            set %report "VIEW mode toggled off"
+        !else
+            set %report "VIEW mode toggled on"
+        !endif
+        set $cmode &bxor $cmode 16
+        !goto exit
+    !endif
+    !if &seq %modesel "O"
+        !if &band $cmode 32
+            set %report "OVER mode toggled off"
+        !else
+            set %report "OVER mode toggled on"
+        !endif
+        set $cmode &bxor $cmode 32
+        !goto exit
+    !endif
+    !if &seq %modesel "M"
+        !if &band $cmode 64
+            set %report "MAGIC mode toggled off"
+        !else
+            set %report "MAGIC mode toggled on"
+        !endif
+        set $cmode &bxor $cmode 64
+        !goto exit
+    !endif
+    !if &seq %modesel "X"
+        !if &band $cmode 128
+            set %report "CRYPT mode toggled off"
+        !else
+            set %report "CRYPT mode toggled on"
+        !endif
+        set $cmode &bxor $cmode 128
+        !goto exit
+    !endif
+    !if &seq %modesel "A"
+        !if &band $cmode 256
+            set %report "ASAVE mode toggled off"
+        !else
+            set %report "ASAVE mode toggled on"
+        !endif
+        set $cmode &bxor $cmode 256
+        !goto exit
+    !endif
+    !if &seq %modesel "H"
+        !if $hscroll
+            set %report "Horizontal scrolling toggled off"
+        !else
+            set %report "Horizontal scrolling toggled on"
+        !endif
+        set $hscroll &not $hscroll
+        !goto exit
+    !endif
+    write-message "Unknown mode"
+    !finish
+*exit
+    write-message %report
+    !finish
+!endm
+;
+38 store-macro              ; toggle global mode
+    write-message "Toggle global mode (ACEMOVWXH): "
+    set %report " "
+    set %modesel &upper &gtkey
+    !if &or &seq %modesel "" &seq %modesel "~n"
+        write-message "[Aborted]"
+        !finish
+    !endif
+    !if &seq %modesel "W"
+        !if &band $gmode 1
+            set %report "WRAP mode toggled off globally"
+        !else
+            set %report "WRAP mode toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 1
+        !goto exit
+    !endif
+    !if &seq %modesel "C"
+        !if &band $gmode 2
+            set %report "CMODE toggled off globally"
+        !else
+            set %report "CMODE toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 2
+        !goto exit
+    !endif
+    !if &seq %modesel "E"
+        !if &band $gmode 8
+            set %report "EXACT mode toggled off globally"
+        !else
+            set %report "EXACT mode toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 8
+        !goto exit
+    !endif
+    !if &seq %modesel "V"
+        !if &band $gmode 16
+            set %report "VIEW mode toggled off globally"
+        !else
+            set %report "VIEW mode toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 16
+        !goto exit
+    !endif
+    !if &seq %modesel "O"
+        !if &band $gmode 32
+            set %report "OVER mode toggled off globally"
+        !else
+            set %report "OVER mode toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 32
+        !goto exit
+    !endif
+    !if &seq %modesel "M"
+        !if &band $gmode 64
+            set %report "MAGIC mode toggled off globally"
+        !else
+            set %report "MAGIC mode toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 64
+        !goto exit
+    !endif
+    !if &seq %modesel "X"
+        !if &band $gmode 128
+            set %report "CRYPT mode toggled off globally"
+        !else
+            set %report "CRYPT mode toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 128
+        !goto exit
+    !endif
+    !if &seq %modesel "A"
+        !if &band $gmode 256
+            set %report "ASAVE mode toggled off globally"
+        !else
+            set %report "ASAVE mode toggled on globally"
+        !endif
+        set $gmode &bxor $gmode 256
+        !goto exit
+    !endif
+    !if &seq %modesel "H"
+        !if $hscroll
+            set %report "Horizontal scrolling toggled off"
+        !else
+            set %report "Horizontal scrolling toggled on"
+        !endif
+        set $hscroll &not $hscroll
+        !goto exit
+    !endif
+    write-message "Unknown global mode"
+    !finish
+*exit
+    write-message %report
+    !finish
+!endm
+;
+34 store-macro              ; delete space right
+    !while &or &equal $curchar 32 &equal $curchar 9
+        delete-next-character
+    !endwhile
+!endm
+
+4 handle-tab
+add-global-mode "wrap"
+add-global-mode "exact"
+;
+set $discmd TRUE
+
+;	Setup for ASCII {|}[\] to ISO Latin-1 translation
+
+21	store-macro
+	insert-string "ä"
+!endm
+22	store-macro
+	insert-string "ö"
+!endm
+23	store-macro
+	insert-string "å"
+!endm
+24	store-macro
+	insert-string "Ä"
+!endm
+25	store-macro
+	insert-string "Ö"
+!endm
+26	store-macro
+	insert-string "Å"
+!endm
+
+27	store-macro
+	bind-to-key execute-macro-21 {
+	bind-to-key execute-macro-22 |
+	bind-to-key execute-macro-23 }
+	bind-to-key execute-macro-24 [
+	bind-to-key execute-macro-25 \
+	bind-to-key execute-macro-26 ]
+;	write-message "ISO Latin-1 äöåÄÖÅ"
+	write-message "ISO Latin-1 Ã¤Ã¶Ã¥Ã„Ã–Ã…"
+!endm
+
+28	store-macro
+	unbind-key {
+	unbind-key |
+	unbind-key }
+	unbind-key [
+	unbind-key \
+	unbind-key ]
+	write-message "ASCII {|}[\]"
+!endm
+
+bind-to-key execute-macro-27 ^X[
+bind-to-key execute-macro-28 ^X]

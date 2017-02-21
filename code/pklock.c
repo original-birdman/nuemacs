@@ -7,7 +7,7 @@
 #include "edef.h"
 #include "efunc.h"
 
-#if (FILOCK && BSD) || SVR4
+#if BSD || SVR4
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -84,7 +84,8 @@ char *dolock(char *fname)
 		cuserid(locker);
 		strcat(locker + strlen(locker), "@");
 		gethostname(locker + strlen(locker), 64);
-		write(fd, locker, strlen(locker));
+		int dnc __attribute__ ((unused)) = 
+			write(fd, locker, strlen(locker));
 		close(fd);
 		return NULL;
 	}

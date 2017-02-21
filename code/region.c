@@ -69,7 +69,7 @@ int copyregion(int f, int n)
 			++loffs;
 		}
 	}
-	mlwrite("(region copied)");
+	mlwrite(MLpre "region copied" MLpost);
 	return TRUE;
 }
 
@@ -211,3 +211,132 @@ int getregion(struct region *rp)
 	mlwrite("Bug: lost mark");
 	return FALSE;
 }
+
+/*      Narrow-to-region (^X-<) makes all but the current region in
+        the current buffer invisable and unchangable
+*/
+
+int narrow(int f, int n)
+{
+        int status;             /* return status */
+        struct buffer *bp;      /* buffer being narrowed */
+        struct window *wp;      /* windows to fix up pointers in as well */
+        struct region creg;     /* region boundry structure */
+
+        if (mbstop())
+                return(FALSE);
+
+        /* find the proper buffer and make sure we aren't already narrow */
+        bp = curwp->w_bufp;             /* find the right buffer */
+        if (bp->b_flag&BFNAROW) {
+                mlwrite("This buffer is already narrowed");
+                return(FALSE);
+        }
+
+        /* find the boundries of the current region */
+        if ((status=getregion(&creg)) != TRUE)
+                return(status);
+        curwp->w_dotp = creg.r_linep;   /* only by full lines please! */
+        curwp->w_doto = 0;
+        creg.r_size += (long)creg.r_offset;
+        if (creg.r_size <= (long)curwp->w_dotp->l_used) {
+                mlwrite("Must narrow at least 1 full line");
+                return(FALSE);
+        }
+
+        /* archive the top fragment */
+        if (bp->b_linep->l_fp != creg.r_linep) {
+                bp->b_topline = bp->b_linep->l_fp;
+                creg.r_linep->l_bp->l_fp = (struct line *)NULL;
+                bp->b_linep->l_fp = creg.r_linep;
+                creg.r_linep->l_bp = bp->b_linep;
+        }
+
+        /* move forward to the end of this region
+           (a long number of bytes perhaps) */
+        while (creg.r_size > (long)32000) {
+                forwchar(TRUE, 32000);
+                creg.r_size -= (long)32000;
+        }
+        forwchar(TRUE, (int)creg.r_size);
+        curwp->w_doto = 0;              /* only full lines! */
+
+        /* archive the bottom fragment */
+        if (bp->b_linep != curwp->w_dotp) {
+                bp->b_botline = curwp->w_dotp;
+                bp->b_botline->l_bp->l_fp = bp->b_linep;
+                bp->b_linep->l_bp->l_fp = (struct line *)NULL;
+                bp->b_linep->l_bp = bp->b_botline->l_bp;
+        }
+
+        /* let all the proper windows be updated */
+        wp = wheadp;
+        while (wp) {
+                if (wp->w_bufp == bp) {
+                        wp->w_linep = creg.r_linep;
+                        wp->w_dotp = creg.r_linep;
+                        wp->w_doto = 0;
+                        wp->w_markp = creg.r_linep;
+                        wp->w_marko = 0;
+                        wp->w_flag |= (WFHARD|WFMODE);
+                }
+                wp = wp->w_wndp;
+        }
+
+        /* and now remember we are narrowed */
+        bp->b_flag |= BFNAROW;
+        mlwrite(MLpre "Buffer is narrowed" MLpost);
+        return(TRUE);
+}
+
+/*      widen-from-region (^X->) restores a narrowed region     */
+
+int widen(int f, int n)
+{
+        struct line *lp;       /* temp line pointer */
+        struct buffer *bp;     /* buffer being narrowed */
+        struct window *wp;     /* windows to fix up pointers in as well */
+
+        /* find the proper buffer and make sure we are narrow */
+        bp = curwp->w_bufp;             /* find the right buffer */
+        if ((bp->b_flag&BFNAROW) == 0) {
+                mlwrite("This buffer is not narrowed");
+                return(FALSE);
+        }
+
+        /* recover the top fragment */
+        if (bp->b_topline != (struct line *)NULL) {
+                lp = bp->b_topline;
+                while (lp->l_fp != (struct line *)NULL)
+                        lp = lp->l_fp;
+                lp->l_fp = bp->b_linep->l_fp;
+                lp->l_fp->l_bp = lp;
+                bp->b_linep->l_fp = bp->b_topline;
+                bp->b_topline->l_bp = bp->b_linep;
+                bp->b_topline = (struct line *)NULL;
+        }
+
+        /* recover the bottom fragment */
+        if (bp->b_botline != (struct line *)NULL) {
+                lp = bp->b_botline;
+                while (lp->l_fp != (struct line *)NULL)
+                        lp = lp->l_fp;
+                lp->l_fp = bp->b_linep;
+                bp->b_linep->l_bp->l_fp = bp->b_botline;
+                bp->b_botline->l_bp = bp->b_linep->l_bp;
+                bp->b_linep->l_bp = lp;
+                bp->b_botline = (struct line *)NULL;
+        }
+
+        /* let all the proper windows be updated */
+        wp = wheadp;
+        while (wp) {
+                if (wp->w_bufp == bp)
+                        wp->w_flag |= (WFHARD|WFMODE);
+                wp = wp->w_wndp;
+        }
+        /* and now remember we are not narrowed */
+        bp->b_flag &= (~BFNAROW);
+        mlwrite(MLpre "Buffer is widened" MLpost);
+        return(TRUE);
+}    

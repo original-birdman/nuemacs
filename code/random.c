@@ -20,8 +20,13 @@ int tabsize; /* Tab size (0: use real tabs) */
  */
 int setfillcol(int f, int n)
 {
-	fillcol = n;
-	mlwrite("(Fill column is %d)", n);
+/* GML - default to 72 on no arg or an invalid one */
+        if (f && (n > 0))
+            fillcol = n;
+        else
+            fillcol = 72;
+
+	mlwrite(MLpre "Fill column is %d" MLpost, fillcol);
 	return TRUE;
 }
 
@@ -39,7 +44,8 @@ int showcpos(int f, int n)
 	int numlines;	/* # of lines in file */
 	long predchars;	/* # chars preceding point */
 	int predlines;	/* # lines preceding point */
-	int curchar;	/* character under cursor */
+//GML	int curchar;	/* character under cursor */
+	unicode_t curchar;	/* character under cursor */
 	int ratio;
 	int col;
 	int savepos;		/* temp save for current offset */
@@ -62,7 +68,8 @@ int showcpos(int f, int n)
 			if ((curwp->w_doto) == llength(lp))
 				curchar = '\n';
 			else
-				curchar = lgetc(lp, curwp->w_doto);
+//GML				curchar = lgetc(lp, curwp->w_doto);
+				lgetchar(&curchar);
 		}
 		/* on to the next line */
 		++numlines;
@@ -75,7 +82,9 @@ int showcpos(int f, int n)
 		predlines = numlines;
 		predchars = numchars;
 #if	PKCODE
-		curchar = 0;
+/* GML - 0 is a valid character...
+		curchar = 0; */
+		curchar = 0x0FFFFFFF;   /* Top 4 bits special */
 #endif
 	}
 
@@ -91,9 +100,34 @@ int showcpos(int f, int n)
 		ratio = (100L * predchars) / numchars;
 
 	/* summarize and report the info */
+/* IMD mod
 	mlwrite("Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x",
 		predlines + 1, numlines + 1, col, ecol,
 		predchars, numchars, ratio, curchar);
+ */
+   if (curchar == 0x0FFFFFFF)
+        mlwrite("Line %d/%d Col %d/%d Byte %D/%D (%d%%) at end of buffer",
+                predlines+1, numlines+1, col, ecol,
+                predchars, numchars, ratio);
+   else {
+#include "charset.h"
+        char temp[8];
+        if (curchar > 127) {        /* utf8!? */
+            int blen = unicode_to_utf8(curchar, temp);
+            temp[blen] = '\0';
+        }
+        else if (curchar <= ' ') {    /* non-printing */
+            strcpy(temp, charset[curchar]);
+        }
+        else {                      /* printable ASCII */
+            temp[0] = curchar;
+            temp[1] = '\0';
+        }
+        mlwrite("Line %d/%d Col %d/%d Byte %D/%D (%d%%) char = %o, 0x%x (%s)",
+                predlines+1, numlines+1, col, ecol,
+                predchars, numchars, ratio, curchar, curchar,
+                temp);
+   }
 	return TRUE;
 }
 
@@ -202,12 +236,23 @@ int twiddle(int f, int n)
 		return rdonly();	/* we are in read only mode     */
 	dotp = curwp->w_dotp;
 	doto = curwp->w_doto;
-	if (doto == llength(dotp) && --doto < 0)
-		return FALSE;
-	cr = lgetc(dotp, doto);
-	if (--doto < 0)
-		return FALSE;
-	cl = lgetc(dotp, doto);
+/* GML - handle according to ggr_mode state */
+	if (using_ggr_mode) {
+	        if (--doto < 0)
+	                return (FALSE);
+	        cr = lgetc(dotp, doto);
+	        if (--doto < 0)
+	                return (FALSE);
+	        cl = lgetc(dotp, doto);
+	}
+	else {
+		if (doto == llength(dotp) && --doto < 0)
+			return FALSE;
+		cr = lgetc(dotp, doto);
+		if (--doto < 0)
+			return FALSE;
+		cl = lgetc(dotp, doto);
+	}
 	lputc(dotp, doto + 0, cr);
 	lputc(dotp, doto + 1, cl);
 	lchange(WFEDIT);
@@ -239,6 +284,35 @@ int quote(int f, int n)
 		return s;
 	}
 	return linsert(n, c);
+}
+
+/* IMD version of tab */
+int typetab(int f, int n)
+{
+        int nextstop;
+
+        if (n < 0)
+                return (FALSE);
+        if (n == 0 || n > 1) {
+                tabsize = n;
+                return(TRUE);
+        }
+
+        if (! tabsize)
+                return(linsert(1, '\t'));
+
+        nextstop = curwp->w_doto += tabsize - (getccol(FALSE) % tabsize);
+
+        if (nextstop <= llength(curwp->w_dotp)) {
+                curwp->w_doto = nextstop;
+                return(TRUE);
+        }
+
+        /* otherise tabstop past end, so move to end then insert */
+
+        curwp->w_doto = llength(curwp->w_dotp);
+
+        return(linsert(tabsize - (getccol(FALSE) % tabsize), ' '));
 }
 
 /*
@@ -493,6 +567,10 @@ int cinsert(void)
 	int bracef;	/* was there a brace at the end of line? */
 	int i;
 	char ichar[NSTRING];	/* buffer to hold indent of last line */
+
+/* IMD fix - nothing fancy if we're at left hand edge */
+        if (curwp->w_doto == 0)
+                return(lnewline());
 
 	/* grab a pointer to text to copy indentation from */
 	cptr = &curwp->w_dotp->l_text[0];
@@ -1020,9 +1098,13 @@ int writemsg(int f, int n)
 	char buf[NPAT];		/* buffer to recieve message into */
 	char nbuf[NPAT * 2];	/* buffer to expand string into */
 
+/* GML
 	if ((status =
 	     mlreply("Message to write: ", buf, NPAT - 1)) != TRUE)
 		return status;
+ */
+	status = mlreply("Message to write: ", buf, NPAT - 1);
+	if (status != TRUE) return status;
 
 	/* expand all '%' to "%%" so mlwrite won't expect arguments */
 	sp = buf;
@@ -1219,7 +1301,8 @@ int istring(int f, int n)
 
 	/* ask for string to insert */
 	status =
-	    mlreplyt("String to insert<META>: ", tstring, NPAT, metac);
+/* IMD	    mlreplyt("String to insert<META>: ", tstring, NPAT, metac); */
+	    mlreplyt("String to insert: ", tstring, NPAT, metac);
 	if (status != TRUE)
 		return status;
 
@@ -1247,7 +1330,8 @@ int ovstring(int f, int n)
 
 	/* ask for string to insert */
 	status =
-	    mlreplyt("String to overwrite<META>: ", tstring, NPAT, metac);
+/* IMD	    mlreplyt("String to overwrite<META>: ", tstring, NPAT, metac); */
+	    mlreplyt("String to overwrite: ", tstring, NPAT, metac);
 	if (status != TRUE)
 		return status;
 
@@ -1261,3 +1345,79 @@ int ovstring(int f, int n)
 	while (n-- && (status = lover(tstring)));
 	return status;
 }
+
+/* IMD extras follow */
+int leaveone(int f, int n)  /* delete all but one white around cursor */
+{
+    if (whitedelete(f, n))
+         return(linsert(1, ' '));
+    return(FALSE);
+}
+
+int whitedelete(int f, int n)
+{
+int c;
+int status;
+
+    status = FALSE;
+    /* use forwdel and backdel so *they* take care of VIEW etc */
+    while (curwp->w_doto != 0 &&
+         ((c = lgetc(curwp->w_dotp, (curwp->w_doto)-1)) == ' '
+         || c == '\t')) {
+         if (!backdel(f, n))
+              return(FALSE);
+         status = TRUE;
+    }
+    while (curwp->w_doto != llength(curwp->w_dotp) &&
+         ((c = lgetc(curwp->w_dotp, curwp->w_doto)) == ' '
+         || c == '\t')) {
+         if (!forwdel(f, n))
+              return(FALSE);
+         status = TRUE;
+    }
+    return(status);
+}
+
+int quotedcount(int f, int n)
+{
+int savedpos;
+int count;
+int doubles;
+
+    if (curbp->b_mode&MDVIEW)       /* don't allow this command if  */
+         return(rdonly());       /* we are in read only mode     */
+    doubles = 0;
+    savedpos = curwp->w_doto;
+    while (curwp->w_doto > 0) {
+         if (lgetc(curwp->w_dotp, --(curwp->w_doto)) == '\'') {
+              /* Is it a doubled real quote? */
+              if ((curwp->w_doto != 0) &&
+                  (lgetc(curwp->w_dotp, (curwp->w_doto - 1)) == '\'')) {
+                  --curwp->w_doto;
+                  ++doubles;
+              }
+              else {
+                  count = savedpos - curwp->w_doto - 1 - doubles;
+                  curwp->w_doto = savedpos;
+                  linstr("',");
+                  linstr(itoa(count));
+                  return(TRUE);
+              }
+         }
+    }
+    curwp->w_doto = savedpos;
+    mlwrite("Bad quoting!");
+    TTbeep();
+    return(FALSE);
+}
+
+/*
+ * Set GGR mode global var if given non-default argument (n > 1).
+ * Otherwise, switch it off,
+ */
+int ggr_mode(int f, int n)
+{
+        using_ggr_mode = (n > 1);
+	return TRUE;
+}
+

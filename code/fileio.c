@@ -19,8 +19,20 @@ static int eofflag;			/* end-of-file flag */
  */
 int ffropen(char *fn)
 {
+#if (BSD | USG)
+#if EXPAND_TILDE
+        expand_tilde(fn);
+#endif
+#if EXPAND_SHELL
+        expand_shell(fn);
+#endif
+#endif
 	if ((ffp = fopen(fn, "r")) == NULL)
 		return FIOFNF;
+/* IMD */
+        if (pathexpand) {
+                strcpy(curbp->b_fname, fn);
+        }
 	eofflag = FALSE;
 	return FIOSUC;
 }
@@ -31,6 +43,14 @@ int ffropen(char *fn)
  */
 int ffwopen(char *fn)
 {
+#if (BSD | USG)
+#if EXPAND_TILDE
+        expand_tilde(fn);
+#endif
+#if EXPAND_SHELL
+        expand_shell(fn);
+#endif         
+#endif
 #if     VMS
 	int fd;
 
@@ -42,7 +62,11 @@ int ffwopen(char *fn)
 		mlwrite("Cannot open file for writing");
 		return FIOERR;
 	}
-	return FIOSUC;
+/* IMD */
+        if (pathexpand) {
+                strcpy(curbp->b_fname, fn);
+        }	
+        return FIOSUC;
 }
 
 /*
@@ -118,7 +142,7 @@ int ffgetline(void)
 {
 	int c;		/* current character read */
 	int i;		/* current index into fline */
-	char *tmpline;	/* temp storage for expanding line */
+//GML	char *tmpline;	/* temp storage for expanding line */
 
 	/* if we are at the end...return it */
 	if (eofflag)
@@ -164,6 +188,7 @@ int ffgetline(void)
 			fline[i++] = c;
 			/* if it's longer, get more room */
 			if (i >= flen) {
+/* GML - realloc seems to be simpler....
 				if ((tmpline =
 				     malloc(flen + NSTRING)) == NULL)
 					return FIOMEM;
@@ -171,6 +196,9 @@ int ffgetline(void)
 				flen += NSTRING;
 				free(fline);
 				fline = tmpline;
+ */
+				flen += NSTRING;
+				fline = realloc(fline, flen);
 			}
 #if	PKCODE
 		}
@@ -193,6 +221,9 @@ int ffgetline(void)
 
 	/* terminate and decrypt the string */
 	fline[i] = 0;
+/* IMD */
+        ftrulen = i;
+
 #if	CRYPT
 	if (cryptflag)
 		myencrypt(fline, strlen(fline));
@@ -208,7 +239,14 @@ int ffgetline(void)
 int fexist(char *fname)
 {
 	FILE *fp;
-
+#if (BSD | USG)
+#if EXPAND_TILDE
+        expand_tilde(fname);
+#endif
+#if EXPAND_SHELL
+        expand_shell(fname);
+#endif      
+#endif
 	/* try to open the file for reading */
 	fp = fopen(fname, "r");
 
@@ -220,3 +258,69 @@ int fexist(char *fname)
 	fclose(fp);
 	return TRUE;
 }
+
+#if BSD | USG
+
+#if EXPAND_SHELL
+void expand_shell(char *fn)
+{
+    char *ptr;
+    char command[NFILEN];
+    int c;
+    FILE *pipe;
+    
+    if (strchr(fn, '$') == NULL)    /* Don't bother if no $s */
+        return;
+    strcpy(command, "echo ");  /* Not all systems have -n, sadly */
+    strcat(command, fn);
+    if ((pipe = popen(command, "r")) == NULL)
+        return;
+    ptr = fn;
+    while ((c = getc(pipe)) != EOF && c != 012)
+        *ptr++ = c;
+    *ptr = 0;
+    pclose(pipe);
+    return;
+}
+#endif
+
+#if EXPAND_TILDE
+#include <stdlib.h>
+#include <pwd.h>
+void expand_tilde(char *fn)
+{       
+    char tilde_copy[NFILEN];
+    char *p, *q;
+    short i;
+    struct passwd *pwptr;
+                
+    if (fn[0]=='~') {
+        if (fn[1]=='/' || fn[1]==0) {
+            if ((p = getenv("HOME")) != NULL) {
+                strcpy(tilde_copy, fn);
+                strcpy(fn , p);
+                i = 1;  
+                /* special case for root! */
+                if (fn[0]=='/' && fn[1]==0 && tilde_copy[1] != 0)
+                    i++;
+                strcat(fn, &tilde_copy[i]);
+            }
+        }
+        else {
+            p = fn + 1;
+            q = tilde_copy;
+            while (*p != 0 && *p != '/')
+                *q++ = *p++;
+            *q = 0;
+            if ((pwptr = getpwnam(tilde_copy)) != NULL) {
+                strcpy(tilde_copy, pwptr->pw_dir);
+                strcat(tilde_copy, p);
+                strcpy(fn, tilde_copy);
+            }
+        }       
+    }           
+    return;     
+}               
+#endif              
+                
+#endif

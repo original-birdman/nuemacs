@@ -10,7 +10,14 @@
 #include "edef.h"
 #include "efunc.h"
 
-#if	BSD | SVR4
+#if EXPAND_TILDE
+        extern void expand_tilde(char *);
+#endif
+#if EXPAND_SHELL
+        extern void expand_shell(char *);
+#endif
+
+#if	FILOCK && (BSD | SVR4)
 #include <sys/errno.h>
 
 static char *lname[NLOCKS];		/* names of all locked files */
@@ -26,11 +33,26 @@ int lockchk(char *fname)
 {
 	int i;		/* loop indexes */
 	int status;	/* return status */
-
+/* MLA */
+	char *tmpname = (char *) malloc(NFILEN);
+        if (tmpname == NULL)
+        {
+          mlwrite("Cannot lock, out of memory");
+          return ABORT;
+        }
+        strncpy(tmpname, fname, NFILEN - 1);
+        *(tmpname + NFILEN - 1) = '\0';
+#if EXPAND_TILDE
+        expand_tilde(tmpname);
+#endif
+#if EXPAND_SHELL
+        expand_shell(tmpname);
+#endif
+/* */
 	/* check to see if that file is already locked here */
 	if (numlocks > 0)
 		for (i = 0; i < numlocks; ++i)
-			if (strcmp(fname, lname[i]) == 0)
+			if (strcmp(tmpname, lname[i]) == 0)
 				return TRUE;
 
 	/* if we have a full locking table, bitch and leave */
@@ -40,23 +62,23 @@ int lockchk(char *fname)
 	}
 
 	/* next, try to lock it */
-	status = lock(fname);
+	status = lock(tmpname);
 	if (status == ABORT)	/* file is locked, no override */
 		return ABORT;
 	if (status == FALSE)	/* locked, overriden, dont add to table */
 		return TRUE;
 
 	/* we have now locked it, add it to our table */
-	lname[++numlocks - 1] = (char *) malloc(strlen(fname) + 1);
+	lname[++numlocks - 1] = (char *) malloc(strlen(tmpname) + 1);
 	if (lname[numlocks - 1] == NULL) {	/* malloc failure */
-		undolock(fname);	/* free the lock */
+		undolock(tmpname);	/* free the lock */
 		mlwrite("Cannot lock, out of memory");
 		--numlocks;
 		return ABORT;
 	}
 
 	/* everthing is cool, add it to the table */
-	strcpy(lname[numlocks - 1], fname);
+	lname[++numlocks - 1] = tmpname;
 	return TRUE;
 }
 

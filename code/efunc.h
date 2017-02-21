@@ -26,6 +26,8 @@ extern int justpara(int f, int n);
 extern int killpara(int f, int n);
 extern int wordcount(int f, int n);
 
+extern int fillwhole(int, int);
+
 /* window.c */
 extern int reposition(int f, int n);
 extern int redraw(int f, int n);
@@ -76,6 +78,7 @@ extern int getccol(int bflg);
 extern int setccol(int pos);
 extern int twiddle(int f, int n);
 extern int quote(int f, int n);
+extern int typetab(int f, int n);
 extern int insert_tab(int f, int n);
 extern int detab(int f, int n);
 extern int entab(int f, int n);
@@ -101,6 +104,10 @@ extern int getfence(int f, int n);
 extern int fmatch(int ch);
 extern int istring(int f, int n);
 extern int ovstring(int f, int n);
+extern int leaveone(int f, int n);
+extern int whitedelete(int f, int n);
+extern int quotedcount(int f, int n);
+extern int ggr_mode(int f, int n);
 
 /* main.c */
 extern void edinit(char *bname);
@@ -118,6 +125,7 @@ extern int metafn(int f, int n);
 extern int cex(int f, int n);
 extern int unarg(int f, int n);
 extern int cexit(int status);
+extern int reexecute(int, int);
 
 /* display.c */
 extern void vtinit(void);
@@ -139,12 +147,20 @@ extern void mlputs(char *s);
 extern void getscreensize(int *widthp, int *heightp);
 extern void sizesignal(int signr);
 
+extern void mberase(void);
+extern void mbupdate(void);
+extern void mlputs(char *);
+extern void movecursor(int, int);
+      
 /* region.c */
 extern int killregion(int f, int n);
 extern int copyregion(int f, int n);
 extern int lowerregion(int f, int n);
 extern int upperregion(int f, int n);
 extern int getregion(struct region *rp);
+
+extern int narrow(int, int);
+extern int widen(int, int);
 
 /* posix.c */
 extern void ttopen(void);
@@ -167,6 +183,8 @@ extern int getcmd(void);
 extern int getstring(char *prompt, char *buf, int nbuf, int eolchar);
 extern void outstring(char *s);
 extern void ostring(char *s);
+extern int yankmb(int f, int n);
+extern int mbstop(void);
 
 /* bind.c */
 extern int help(int f, int n);
@@ -227,6 +245,9 @@ extern int ffclose(void);
 extern int ffputline(char *buf, int nbuf);
 extern int ffgetline(void);
 extern int fexist(char *fname);
+
+extern void expand_tilde(char *);
+extern void expand_shell(char *);
 
 /* exec.c */
 extern int namedcmd(int f, int n);
@@ -362,3 +383,10 @@ extern void lckerror(char *errstr);
 /* pklock.c */
 extern char *dolock(char *fname);
 extern char *undolock(char *fname);
+
+/* GML */
+/* complet.c */
+extern int comp_file(char *, char *);
+extern int comp_buffer(char *, char *);
+
+extern void do_backtrace(void);

@@ -90,6 +90,8 @@ extern int justflag;		/* justify, don't fill */
 #endif
 extern int overlap;		/* line overlap in forw/back page */
 extern int scrollcount;		/* number of lines to scroll */
+/* IMD */
+extern int pathexpand;
 
 /* Uninitialized global external declarations. */
 
@@ -126,3 +128,16 @@ extern char outline[];		/* Global string to hold debug line text. */
 extern struct terminal term;
 
 #endif  /* EDEF_H_ */
+
+//GML added
+extern  int inmb;
+extern  int clast;
+extern  int flast;
+extern  int nlast;
+extern  int silent;
+extern  int inreex;
+extern  int ftrulen;    /* current real length of fline */
+extern  char lastmb[];
+extern  char savnam[];
+extern  int using_ggr_mode;
+

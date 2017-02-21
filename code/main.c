@@ -52,6 +52,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 
 /* Make global definitions not external. */
 #define	maindef
@@ -83,9 +84,6 @@ extern unsigned _stklen = 32766;
 #if UNIX
 #include <signal.h>
 static void emergencyexit(int);
-#ifdef SIGWINCH
-extern void sizesignal(int);
-#endif
 #endif
 
 void usage(int status)
@@ -192,8 +190,11 @@ int main(int argc, char **argv)
 #if	CRYPT
 			case 'k':	/* -k<key> for code key */
 			case 'K':
-				cryptflag = TRUE;
-				strcpy(ekey, &argv[carg][2]);
+                                /* IMD only if given a key.. */
+                                if (strlen(&argv[carg][2]) > 0) {
+                                    cryptflag = TRUE;
+                                    strcpy(ekey, &argv[carg][2]);
+                                }
 				break;
 #endif
 #if	PKCODE
@@ -210,6 +211,10 @@ int main(int argc, char **argv)
 			case 'S':
 				searchflag = TRUE;
 				strncpy(pat, &argv[carg][2], NPAT);
+                       /* IMD */
+                                rvstrcpy(tap, pat);
+                                mlenold = matchlen = strlen(pat);
+                       /* end */
 				break;
 			case 'v':	/* -v for View File */
 			case 'V':
@@ -222,14 +227,24 @@ int main(int argc, char **argv)
 
 		} else if (argv[carg][0] == '@') {
 
+                        /* IMD */
+                        silent = TRUE;
 			/* Process Startup macroes */
 			if (startup(&argv[carg][1]) == TRUE)
 				/* don't execute emacs.rc */
 				startflag = TRUE;
-
+                        /* IMD */
+                        silent = FALSE;
 		} else {
 
 			/* Process an input file */
+/* GML - Sanity check */
+                        if (strlen(argv[carg]) >= NFILEN) {
+                            fprintf(stderr, "filename too long!!\n");
+                            sleep(2);
+                            vttidy();
+                            exit(1);
+                        }
 
 			/* set up a buffer for this file */
 			makename(bname, argv[carg]);
@@ -272,8 +287,11 @@ int main(int argc, char **argv)
 	/* if invoked with no other startup files,
 	   run the system startup file here */
 	if (startflag == FALSE) {
+/* IMD */
+                silent = TRUE;
 		startup("");
 		startflag = TRUE;
+                silent = FALSE;
 	}
 	discmd = TRUE;		/* P.K. */
 
@@ -288,11 +306,11 @@ int main(int argc, char **argv)
 	/* Deal with startup gotos and searches */
 	if (gotoflag && searchflag) {
 		update(FALSE);
-		mlwrite("(Can not search and goto at the same time!)");
+		mlwrite(MLpre "Can not search and goto at the same time!" MLpost);
 	} else if (gotoflag) {
 		if (gotoline(TRUE, gline) == FALSE) {
 			update(FALSE);
-			mlwrite("(Bogus goto argument)");
+			mlwrite(MLpre "Bogus goto argument" MLpost);
 		}
 	} else if (searchflag) {
 		if (forwhunt(FALSE, 0) == FALSE)
@@ -479,10 +497,26 @@ int execute(int c, int f, int n)
 	execfunc = getbind(c);
 	if (execfunc != NULL) {
 		thisflag = 0;
+/* IMD(?) implement ctl-C as re-exec */
+                if (inreex) {
+                        if ((execfunc == fisearch) || (execfunc == forwsearch))
+                             execfunc = forwhunt;
+                        if ((execfunc == risearch) || (execfunc == backsearch))
+                             execfunc = backhunt;
+                }
+                else if ((execfunc != reexecute) && (execfunc != nullproc)
+                        && (kbdmode != PLAY)) {
+                        clast = c;
+                        flast = f;
+                        nlast = n;
+                }
 		status = (*execfunc) (f, n);
 		lastflag = thisflag;
+/* IMD - abort keyboard macro at point of error */
+                if ((kbdmode == PLAY) & !status) kbdmode = STOP;
+ 
 		return status;
-	}
+        }
 
 	/*
 	 * If a space was typed, fill column is defined, the argument is non-
@@ -551,7 +585,7 @@ int execute(int c, int f, int n)
 		return status;
 	}
 	TTbeep();
-	mlwrite("(Key not bound)");	/* complain             */
+	mlwrite(MLpre "Key not bound" MLpost);	/* complain             */
 	lastflag = 0;		/* Fake last flags.     */
 	return FALSE;
 }
@@ -566,6 +600,10 @@ int quickexit(int f, int n)
 	struct buffer *oldcb;	/* original current buffer */
 	int status;
 
+        /* IMD - disallow in minibuffer */
+        if (mbstop())
+                return(FALSE);
+
 	oldcb = curbp;		/* save in case we fail */
 
 	bp = bheadp;
@@ -574,7 +612,7 @@ int quickexit(int f, int n)
 		    && (bp->b_flag & BFTRUNC) == 0	/* Not truncated P.K.   */
 		    && (bp->b_flag & BFINVS) == 0) {	/* Real.                */
 			curbp = bp;	/* make that buffer cur */
-			mlwrite("(Saving %s)", bp->b_fname);
+			mlwrite(MLpre "Saving %s" MLpost, bp->b_fname);
 #if	PKCODE
 #else
 			mlwrite("\n");
@@ -609,7 +647,7 @@ int quit(int f, int n)
 	    /* User says it's OK.   */
 	    || (s =
 		mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
-#if	(FILOCK && BSD) || SVR4
+#if	FILOCK && (BSD || SVR4)
 		if (lockrel() != TRUE) {
 			TTputc('\n');
 			TTputc('\r');
@@ -639,7 +677,7 @@ int ctlxlp(int f, int n)
 		mlwrite("%%Macro already active");
 		return FALSE;
 	}
-	mlwrite("(Start macro)");
+	mlwrite(MLpre "Start macro" MLpost);
 	kbdptr = &kbdm[0];
 	kbdend = kbdptr;
 	kbdmode = RECORD;
@@ -657,7 +695,7 @@ int ctlxrp(int f, int n)
 		return FALSE;
 	}
 	if (kbdmode == RECORD) {
-		mlwrite("(End macro)");
+		mlwrite(MLpre "End macro" MLpost);
 		kbdmode = STOP;
 	}
 	return TRUE;
@@ -691,7 +729,7 @@ int ctrlg(int f, int n)
 {
 	TTbeep();
 	kbdmode = STOP;
-	mlwrite("(Aborted)");
+	mlwrite(MLpre "Aborted" MLpost);
 	return ABORT;
 }
 
@@ -702,14 +740,14 @@ int ctrlg(int f, int n)
 int rdonly(void)
 {
 	TTbeep();
-	mlwrite("(Key illegal in VIEW mode)");
+	mlwrite(MLpre "Key illegal in VIEW mode" MLpost);
 	return FALSE;
 }
 
 int resterr(void)
 {
 	TTbeep();
-	mlwrite("(That command is RESTRICTED)");
+	mlwrite(MLpre "That command is RESTRICTED" MLpost);
 	return FALSE;
 }
 
@@ -856,3 +894,17 @@ int cexit(int status)
 	exit(status);
 }
 #endif
+
+/* IMD */
+int reexecute(int f, int n)
+{
+        int reloop;
+  
+        inreex = TRUE;
+        /* We can't just multiply n's. Must loop. */
+        for (reloop = 1; reloop<=n; ++reloop) {
+                execute(clast, flast, nlast);
+        }
+        inreex = FALSE;
+        return(TRUE);
+}

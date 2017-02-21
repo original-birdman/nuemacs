@@ -11,6 +11,14 @@
 #define MAXCOL	500
 #define MAXROW	500
 
+#ifdef GGR_MODE   
+#define MLpre  "["
+#define MLpost "]"
+#else   
+#define MLpre  "("
+#define MLpost ")"
+#endif
+
 #ifdef	MSDOS
 #undef	MSDOS
 #endif
@@ -132,16 +140,19 @@
 #define	NBRACE	1  /* new style brace matching command             */
 #define	REVSTA	1  /* Status line appears in reverse video         */
 
+#define EXPAND_TILDE    1    /* Understand ~/ as meaning $HOME/    */
+#define EXPAND_SHELL    1    /* Understand embedded shell vars etc */
+
 #ifndef	AUTOCONF
 
 #define	COLOR	1  /* color commands and windows                   */
-#define	FILOCK	0  /* file locking under unix BSD 4.2              */
+#define	FILOCK	1  /* file locking under unix BSD 4.2              */
 
 #else
 
-#define	COLOR	MSDOS
+#define	COLOR	1
 #ifdef  SVR4
-#define FILOCK  1
+#define FILOCK  0
 #else
 #define	FILOCK	BSD
 #endif
@@ -219,17 +230,26 @@
 #define	ENVFUNC	0
 #endif
 
+/* GML - whether we want PATH to be searched before table lookup */
+#if GGR_MODE
+#define TABLE_THEN_PATH 1
+#else 
+#define TABLE_THEN_PATH 0
+#endif
+#define PATH_THEN_TABLE !TABLE_THEN_PATH
+
 /* Emacs global flag bit definitions (for gflags). */
 
 #define	GFREAD	1
 
 /* Internal constants. */
 
+/* GML - Increase NFILEN(80), NLINE(256) and NSTRING(128) to 513 each */
 #define	NBINDS	256		/* max # of bound keys          */
-#define NFILEN  80		/* # of bytes, file name        */
+#define NFILEN  513		/* # of bytes, file name        */
 #define NBUFN   16		/* # of bytes, buffer name      */
-#define NLINE   256		/* # of bytes, input line       */
-#define	NSTRING	128		/* # of bytes, string buffers   */
+#define NLINE   513		/* # of bytes, input line       */
+#define	NSTRING	513		/* # of bytes, string buffers   */
 #define NKBDM   256		/* # of strokes, keyboard macro */
 #define NPAT    128		/* # of bytes, pattern          */
 #define HUGE    1000		/* Huge number                  */
@@ -270,8 +290,9 @@
 #define	DENDWHILE	7
 #define	DBREAK		8
 #define DFORCE		9
+#define DFINISH        10       /* GML */
 
-#define NUMDIRS		10
+#define NUMDIRS		11      /* GML */
 
 /*
  * PTBEG, PTEND, FORWARD, and REVERSE are all toggle-able values for
@@ -454,6 +475,8 @@ struct buffer {
 	struct line *b_dotp;	/* Link to "." struct line structure   */
 	struct line *b_markp;	/* The same as the above two,   */
 	struct line *b_linep;	/* Link to the header struct line      */
+        struct line *b_topline; /* Link to narrowed top text    */
+        struct line *b_botline; /* Link to narrowed bottom text */
 	int b_doto;		/* Offset of "." in above struct line  */
 	int b_marko;		/* but for the "mark"           */
 	int b_mode;		/* editor mode of this buffer   */
@@ -470,9 +493,11 @@ struct buffer {
 #define BFINVS  0x01		/* Internal invisable buffer    */
 #define BFCHG   0x02		/* Changed since last write     */
 #define	BFTRUNC	0x04		/* buffer was truncated when read */
+#define BFNAROW 0x08            /* buffer has been narrowed - GML */
 
 /*	mode flags	*/
-#define	NUMMODES	10	/* # of defined modes           */
+//GML ?? #define	NUMMODES	10	/* # of defined modes           */
+#define	NUMMODES	9	/* # of defined modes           */
 
 #define	MDWRAP	0x0001		/* word wrap                    */
 #define	MDCMOD	0x0002		/* C indentation and fence match */
@@ -525,8 +550,8 @@ struct terminal {
 	void (*t_rev)(int);	/* set reverse video state      */
 	int (*t_rez)(char *);	/* change screen resolution     */
 #if	COLOR
-	int (*t_setfor) ();	/* set forground color          */
-	int (*t_setback) ();	/* set background color         */
+	void (*t_setfor) (int); 	/* set foreground color         */
+	void (*t_setback) (int);	/* set background color         */
 #endif
 #if     SCROLLCODE
 	void (*t_scroll)(int, int,int);	/* scroll a region of the screen */

@@ -1,4 +1,4 @@
-/*	word.c
+/*      word.c
  *
  *      The routines in this file implement commands that work word or a
  *      paragraph at a time.  There are all sorts of word mode commands.  If I
@@ -97,12 +97,18 @@ int forwword(int f, int n)
 	if (n < 0)
 		return backword(f, -n);
 	while (n--) {
-		while (inword() == TRUE) {
+/* GGR - reverse loop order according to ggr-mode state
+ * Determines whether you end up at the end of the current word (ggr-mode)
+ * or the start of next.
+ */
+		int state1 = using_ggr_mode? FALSE: TRUE;
+
+		while (inword() == state1) {
 			if (forwchar(FALSE, 1) == FALSE)
 				return FALSE;
 		}
 
-		while (inword() == FALSE) {
+		while (inword() == !state1) {
 			if (forwchar(FALSE, 1) == FALSE)
 				return FALSE;
 		}
@@ -119,7 +125,7 @@ int upperword(int f, int n)
 {
 	int c;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return FALSE;
@@ -155,7 +161,7 @@ int lowerword(int f, int n)
 {
 	int c;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return FALSE;
@@ -192,7 +198,7 @@ int capword(int f, int n)
 {
 	int c;
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (n < 0)
 		return FALSE;
@@ -243,17 +249,16 @@ int capword(int f, int n)
 int delfword(int f, int n)
 {
 	struct line *dotp;	/* original cursor line */
-	int doto;	/*      and row */
-	int c;		/* temp char */
+	int doto;	        /*      and row */
 	long size;		/* # of chars to delete */
 
 	/* don't allow this command if we are in read only mode */
 	if (curbp->b_mode & MDVIEW)
 		return rdonly();
 
-	/* ignore the command if there is a negative argument */
+	/* GGR - allow a -ve arg - use the backward function */
 	if (n < 0)
-		return FALSE;
+                return(delbword(f, -n));
 
 	/* Clear the kill buffer if last command wasn't a kill */
 	if ((lastflag & CFKILL) == 0)
@@ -309,6 +314,8 @@ int delfword(int f, int n)
 		}
 
 		/* skip whitespace and newlines */
+#ifndef GGR_MODE
+/* GGR - we *don't* want to do this bit.. */
 		while ((curwp->w_doto == llength(curwp->w_dotp)) ||
 		       ((c = lgetc(curwp->w_dotp, curwp->w_doto)) == ' ')
 		       || (c == '\t')) {
@@ -316,6 +323,7 @@ int delfword(int f, int n)
 				break;
 			++size;
 		}
+#endif
 	}
 
 	/* restore the original position and delete the words */
@@ -337,9 +345,9 @@ int delbword(int f, int n)
 	if (curbp->b_mode & MDVIEW)
 		return rdonly();
 
-	/* ignore the command if there is a nonpositive argument */
+        /* GGR - allow a -ve arg - use the forward function */
 	if (n <= 0)
-		return FALSE;
+                return(delfword(f, -n));
 
 	/* Clear the kill buffer if last command wasn't a kill */
 	if ((lastflag & CFKILL) == 0)
@@ -391,6 +399,25 @@ int inword(void)
 }
 
 #if	WORDPRO
+/* a GGR one.. */
+int fillwhole(int f, int n)
+{
+    int savline, thisline;
+    int status = FALSE;
+
+        gotobob(TRUE, 1);
+        savline = 0;
+        mlwrite(MLpre "Filling all paragraphs in buffer.." MLpost);
+        while ((thisline = getcline()) > savline) {
+                status = fillpara(f, n);
+                savline = thisline;
+        }
+        mlwrite("");
+        return(status);
+}
+
+
+
 /*
  * Fill the current paragraph according to the current
  * fill column
@@ -400,17 +427,26 @@ int inword(void)
 int fillpara(int f, int n)
 {
 	unicode_t c;		/* current char during scan    */
-	unicode_t wbuf[NSTRING];/* buffer for current word      */
-	int wordlen;	/* length of current word       */
-	int clength;	/* position on line during fill */
-	int i;		/* index during word copy       */
-	int newlength;	/* tentative new line length    */
-	int eopflag;	/* Are we at the End-Of-Paragraph? */
-	int firstflag;	/* first word? (needs no space) */
-	struct line *eopline;	/* pointer to line just past EOP */
-	int dotflag;	/* was the last char a period?  */
+	unicode_t *wbuf;        /* buffer for current word     */
+        size_t wbuf_size;
+        int *space_ind;         /* Where the spaces are */
+        int nspaces;            /* How many spaces there are */
 
-	if (curbp->b_mode & MDVIEW)	/* don't allow this command if      */
+	int wordlen;	        /* length of current word       */
+	int clength;	        /* position on line during fill */
+	int i;		        /* index during word copy       */
+	int newlength;	        /* tentative new line length    */
+	int eopflag;	        /* Are we at the End-Of-Paragraph? */
+	int firstflag;	        /* first word? (needs no space) */
+	struct line *eopline;	/* pointer to line just past EOP */
+	int dotflag;	        /* was the last char a period?  */
+	int was_dotflag;	/* value of dotflag when last word added */
+/* GGR added vars - to allow for padding to right-justify */
+        int gap;        /* number of spaces to pad with */
+        int rtol;       /* Pass direction */
+        int startline, endline;
+
+	if (curbp->b_mode & MDVIEW)	/* don't allow this command if  */
 		return rdonly();	/* we are in read only mode     */
 	if (fillcol == 0) {	/* no fill column set */
 		mlwrite("No fill column set");
@@ -419,13 +455,21 @@ int fillpara(int f, int n)
 #if	PKCODE
 	justflag = FALSE;
 #endif
+/* GGR */
+        rtol = 1;           /* Direction of first padding pass */
 
 	/* record the pointer to the line just past the EOP */
 	gotoeop(FALSE, 1);
 	eopline = lforw(curwp->w_dotp);
+/* GGR - if empty buffer we can get caught, so... */
+        endline = getcline();
 
 	/* and back top the beginning of the paragraph */
 	gotobop(FALSE, 1);
+/* GGR - ...check for the results of such a state */
+        startline = getcline();
+        if (endline < startline)
+                return(TRUE);
 
 	/* initialize various info */
 	clength = curwp->w_doto;
@@ -433,10 +477,26 @@ int fillpara(int f, int n)
 		clength = 8;
 	wordlen = 0;
 	dotflag = FALSE;
+	was_dotflag = 0;
 
 	/* scan through lines, filling words */
 	firstflag = TRUE;
 	eopflag = FALSE;
+
+/* GGR
+ * wbuf needs to be sufficiently long to contain all of the longest
+ * line (plus 1, for luck...) in case there is no word-break in it.
+ * So we allocate it dynamically.
+ */
+        wbuf_size = sizeof(wbuf[0])*(llength(curwp->w_dotp) + 1);
+        wbuf = malloc(wbuf_size);
+	if (n > 1) {            /* We've been asked to right-justify */
+		space_ind = malloc((wbuf_size+1)/2);
+	}
+	else {
+                space_ind = NULL;   /* no right-justify */
+	}
+	nspaces = 0;
 	while (!eopflag) {
 		int bytes = 1;
 
@@ -445,6 +505,16 @@ int fillpara(int f, int n)
 			c = ' ';
 			if (lforw(curwp->w_dotp) == eopline)
 				eopflag = TRUE;
+/* GGR  - Reallocate buffer if more space needed
+ *        Make sure we check the *next* line length
+ */
+                        if (llength(lforw(curwp->w_dotp)) >= wbuf_size) {
+                            wbuf_size = sizeof(wbuf[0])*(llength(lforw(curwp->w_dotp)) + 1);
+                            wbuf = realloc(wbuf, wbuf_size);
+			    if (space_ind) {    /* We're padding */
+				space_ind = realloc(space_ind, (wbuf_size+1)/2);
+			    }
+                        }
 		} else
 			bytes = lgetchar(&c);
 
@@ -453,9 +523,15 @@ int fillpara(int f, int n)
 
 		/* if not a separator, just add it in */
 		if (c != ' ' && c != '\t') {
-			dotflag = (c == '.');	/* was it a dot */
-			if (wordlen < NSTRING - 1)
-				wbuf[wordlen++] = c;
+/* GGR - addditional punctuation in ggr-mode */
+			if (using_ggr_mode) {
+				dotflag = (c == '.' || c == '!' || c == '?');
+			}
+			else {
+				dotflag = (c == '.');
+			}
+/* GGR - dynamically sized, so this assignment can always be done */
+        		wbuf[wordlen++] = c;
 		} else if (wordlen) {
 			/* at a word break with a word waiting */
 			/* calculate tentitive new length with word added */
@@ -463,14 +539,64 @@ int fillpara(int f, int n)
 			if (newlength <= fillcol) {
 				/* add word to current line */
 				if (!firstflag) {
+					if (space_ind) { /* GGR */
+/* We need to save the doto location, not clength, to allow for unicode */
+						space_ind[nspaces] = curwp->w_doto;
+						nspaces++;
+						was_dotflag = dotflag;
+					}
 					linsert(1, ' ');	/* the space */
 					++clength;
 				}
 				firstflag = FALSE;
 			} else {
+/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
+/* GGR - implement Esc n Esc q - justify right edges too..       */
+/* Now written in a manner to handle unicode chars....           */
+/* We can only do it if we've actually found some spaces         */
+
+if (nspaces) {
+
+/* Rememeber where we are on the line.
+ * Also, was the last char added to line a space after a dot?
+ * Ignore if so.
+ */
+    int end_doto = curwp->w_doto;
+    if (was_dotflag) end_doto--;
+    gap = fillcol - clength;    /* How much we need to add (in columns) */
+    while (gap > 0) {
+        if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
+            curwp->w_doto = space_ind[ns];
+            linsert(1, ' ');
+            end_doto++;     /* A space is one byte... */
+            rtol = 0;       /* So next pass goes other way */
+            if (--gap <= 0) break;
+            for (int ni = ns; ni < nspaces; ni++) {
+                space_ind[ni]++;
+            }
+	}
+        if (gap <= 0) break;
+        for (int ns = 0; ns < nspaces; ns++) {
+            curwp->w_doto = space_ind[ns];
+            linsert(1, ' ');
+            end_doto++;     /* A space is one byte... */
+            rtol = 1;       /* So next pass goes other way */
+            if (--gap <= 0) break;
+            for (int ni = ns; ni < nspaces; ni++) {
+                space_ind[ni]++;
+            }
+	}
+    }
+/* Fix up out location in the line to be where we were, plus added spaces */
+    curwp->w_doto = end_doto;
+}
+/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 				/* start a new line */
-				lnewline();
+                                if (!firstflag)     /* GGR */
+                                       lnewline();
+                                firstflag = FALSE;
 				clength = 0;
+				nspaces = 0;
 			}
 
 			/* and add the word in in either case */
@@ -487,6 +613,8 @@ int fillpara(int f, int n)
 	}
 	/* and add a last newline for the end of our new paragraph */
 	lnewline();
+	free(wbuf);     /* GGR - mustn't forget these... */
+	if (space_ind) free(space_ind);
 	return TRUE;
 }
 
@@ -601,7 +729,7 @@ int justpara(int f, int n)
 	return TRUE;
 }
 #endif
-
+    
 /*
  * delete n paragraphs starting with the current one
  *
@@ -623,7 +751,7 @@ int killpara(int f, int n)
 
 		/* go to the beginning of the paragraph */
 		gotobop(FALSE, 1);
-		curwp->w_doto = 0;	/* force us to the beginning of line */
+		curwp->w_doto = 0;  /* force us to the beginning of line */
 
 		/* and delete it */
 		if ((status = killregion(FALSE, 1)) != TRUE)
@@ -646,25 +774,26 @@ int killpara(int f, int n)
 int wordcount(int f, int n)
 {
 	struct line *lp;	/* current line to scan */
-	int offset;	/* current char to scan */
+	int offset;		/* current char to scan */
+	int orig_offset;	/* offset in line at start */
 	long size;		/* size of region left to count */
-	int ch;	/* current character to scan */
-	int wordflag;	/* are we in a word now? */
-	int lastword;	/* were we just in a word? */
+	int ch;			/* current character to scan */
+	int wordflag;		/* are we in a word now? */
+	int lastword;		/* were we just in a word? */
 	long nwords;		/* total # of words */
 	long nchars;		/* total number of chars */
 	int nlines;		/* total number of lines in region */
 	int avgch;		/* average number of chars/word */
 	int status;		/* status return code */
-	struct region region;		/* region to look at */
+	struct region region;	/* region to look at */
 
 	/* make sure we have a region to count */
 	if ((status = getregion(&region)) != TRUE)
 		return status;
 	lp = region.r_linep;
 	offset = region.r_offset;
+        orig_offset = offset;
 	size = region.r_size;
-
 	/* count up things */
 	lastword = FALSE;
 	nchars = 0L;
@@ -697,15 +826,19 @@ int wordcount(int f, int n)
 		lastword = wordflag;
 		++nchars;
 	}
-
+/* GGR - Increment line count if offset is now more than at the start
+ * So line1 col3 -> line2 col55 is 2 lines,. not 1
+ */
+        if (offset > orig_offset) ++nlines;
 	/* and report on the info */
 	if (nwords > 0L)
 		avgch = (int) ((100L * nchars) / nwords);
 	else
 		avgch = 0;
 
+/* GGR - we don't need nlines+1 here now */
 	mlwrite("Words %D Chars %D Lines %d Avg chars/word %f",
-		nwords, nchars, nlines + 1, avgch);
+		nwords, nchars, nlines, avgch);
 	return TRUE;
 }
 #endif

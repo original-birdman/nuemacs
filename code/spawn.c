@@ -29,13 +29,14 @@ extern short iochan;		/* In "termio.c"        */
 #include        <signal.h>
 #ifdef SIGWINCH
 extern int chg_width, chg_height;
-extern void sizesignal(int);
 #endif
 #endif
 
 #if	MSDOS & (MSC | TURBO)
 #include	<process.h>
 #endif
+
+static int dnc __attribute__ ((unused));   /* GML */
 
 /*
  * Create a subjob with a copy of the command intrepreter in it. When the
@@ -55,12 +56,12 @@ int spawncli(int f, int n)
 
 #if     VMS
 	movecursor(term.t_nrow, 0);	/* In last line.        */
-	mlputs("(Starting DCL)\r\n");
+	mlputs(MLpre "Starting DCL" MLpost "\r\n");
 	TTflush();		/* Ignore "ttcol".      */
 	sgarbf = TRUE;
 	sys(NULL);
 	sleep(1);
-	mlputs("\r\n(Returning from DCL)\r\n");
+	mlputs("\r\n" MLpre "Returning from DCL" MLpost "\r\n");
 	TTflush();
 	sleep(1);
 	return TRUE;
@@ -80,12 +81,12 @@ int spawncli(int f, int n)
 	TTclose();		/* stty to old settings */
 	TTkclose();		/* Close "keyboard" */
 	if ((cp = getenv("SHELL")) != NULL && *cp != '\0')
-		system(cp);
+		dnc = system(cp);
 	else
 #if	BSD
-		system("exec /bin/csh");
+		dnc = system("exec /bin/csh");
 #else
-		system("exec /bin/sh");
+		dnc = system("exec /bin/sh");
 #endif
 	sgarbf = TRUE;
 	sleep(2);
@@ -177,12 +178,12 @@ int spawn(int f, int n)
 	TTflush();
 	TTclose();		/* stty to old modes    */
 	TTkclose();
-	system(line);
+	dnc = system(line);
 	fflush(stdout);		/* to be sure P.K.      */
 	TTopen();
 
 	if (clexec == FALSE) {
-		mlputs("(End)");	/* Pause.               */
+		mlputs(MLpre "Press <return> to continue" MLpost); /* Pause */
 		TTflush();
 		while ((s = tgetc()) != '\r' && s != ' ');
 		mlputs("\r\n");
@@ -243,10 +244,10 @@ int execprg(int f, int n)
 	TTflush();
 	TTclose();		/* stty to old modes    */
 	TTkclose();
-	system(line);
+	dnc = system(line);
 	fflush(stdout);		/* to be sure P.K.      */
 	TTopen();
-	mlputs("(End)");	/* Pause.               */
+	mlputs(MLpre "Press <return> to continue" MLpost); /* Pause */
 	TTflush();
 	while ((s = tgetc()) != '\r' && s != ' ');
 	sgarbf = TRUE;
@@ -346,7 +347,7 @@ int pipecmd(int f, int n)
 	TTkclose();
 	strcat(line, ">");
 	strcat(line, filnam);
-	system(line);
+	dnc = system(line);
 	TTopen();
 	TTkopen();
 	TTflush();
@@ -416,7 +417,7 @@ int filter_buffer(int f, int n)
 
 	/* write it out, checking for errors */
 	if (writeout(filnam1) != TRUE) {
-		mlwrite("(Cannot write filter file)");
+		mlwrite(MLpre "Cannot write filter file" MLpost);
 		strcpy(bp->b_fname, tmpnam);
 		return FALSE;
 	}
@@ -436,7 +437,7 @@ int filter_buffer(int f, int n)
 	TTclose();		/* stty to old modes    */
 	TTkclose();
 	strcat(line, " <fltinp >fltout");
-	system(line);
+	dnc = system(line);
 	TTopen();
 	TTkopen();
 	TTflush();
@@ -446,7 +447,7 @@ int filter_buffer(int f, int n)
 
 	/* on failure, escape gracefully */
 	if (s != TRUE || (readin(filnam2, FALSE) == FALSE)) {
-		mlwrite("(Execution failed)");
+		mlwrite(MLpre "Execution failed" MLpost);
 		strcpy(bp->b_fname, tmpnam);
 		unlink(filnam1);
 		unlink(filnam2);

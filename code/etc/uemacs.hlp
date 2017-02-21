@@ -1,0 +1,175 @@
+=>                   uEmacs/PK GGR4.100 Help Index     (21 Feb 2017)
+.. The very basics
+.. Cursor movement
+.. File commands
+.. Miscellaneous character commands
+.. Mode commands
+.. Keys and commands
+.. Deleting and inserting
+.. Formatting
+.. Window commands
+.. Buffer commands
+.. Searching and replacing
+.. Accessing the operating system
+.. Macro commands
+.. Miscellaneous
+.. Functions
+.. System variables
+.. File name completion
+-------------------------------------------------------------------------------
+=>                      THE VERY BASICS
+Notations: ^X means <Ctrl> and X. The < Esc> key is <Esc> on most systems.
+Exiting:   ^G aborts almost any operation. ^X ^C will get you out of uEmacs.
+
+A BUFFER is a named area containing a FILE being edited. Many buffers may
+be active at once. Many WINDOWS may be active at once on the screen. All
+windows may show different parts of the same buffer, or each may display a
+different one.
+-------------------------------------------------------------------------------
+=>                      CURSOR MOVEMENT
+Backward character ....      ^B         Forward character .....      ^F
+Previous word .........  Esc  B         Next word .............  Esc  F
+Beginning of line .....      ^A         End of line ...........      ^E
+Previous line .........  ^P or ^Z       Next line .............      ^N
+Previous paragraph ....  Esc  P         Next paragraph ........  Esc  N
+Previous page .........  Esc  V         Next page .............      ^V
+Beginning of file .....  Esc  <         End of file ...........  Esc  >
+-------------------------------------------------------------------------------
+=>                      FILE COMMANDS
+Find file .............   ^X ^F         Quick exit ............  Esc  Z
+View file .............   ^X ^V         Exit emacs ............   ^X ^C
+Insert file ...........   ^X ^I
+Change file name ......   ^X  N         Filter buffer .........   ^X  #
+Save file .............   ^X ^S
+Read file .............   ^X ^R
+Write file ............   ^X ^W         Execute file .......... not bound  
+-------------------------------------------------------------------------------
+=>                      MISCELLANEOUS CHARACTER COMMANDS
+Newline ...............      ^M         Transpose characters ..      ^T
+Newline and indent ....      ^J         Trim line .............   ^X ^T
+Open line .............      ^O
+Handle tab ............      ^I         Quote character .......   ^X  Q
+Goto line .............  Esc  G         Abort command .........      ^G
+Goto matching fence ...  Esc ^F
+-------------------------------------------------------------------------------
+=>                      MODE COMMANDS
+Add mode ..............   ^X  M         Add global mode	.......  Esc  M
+Delete mode ...........   ^X ^M         Delete global mode ....  Esc ^M
+Toggle mode ...........   ^X  T         Toggle global mode ....  Esc  T
+OVER   :: Overwrite, don't insert       MAGIC  :: Match patterns in search
+WRAP   :: Automatic carriage return     ^ $  Beginning and end of line
+VIEW   :: View only, don't change       .    Any character   \c   Character c
+CMODE  :: C program indenting           c*   Any number of character c
+EXACT  :: Match case in search          [ ]  Character class
+-------------------------------------------------------------------------------
+=>                      KEYS AND COMMANDS
+Bind to key ...........  Esc  K         Help ..................   ^X  ?
+Unbind key ............  Esc ^K         Apropos ...............  Esc  A
+Describe key ..........  Esc  ?         Abort command .........      ^G
+Describe bindings ..... not bound      
+ Esc prefix ...........      Esc    ::  Although meta-prefix can be bound to
+Cntlx prefix ..........      ^X     ::  some other key, no other command can
+Execute named command .  Esc  X     ::  be bound to Esc.
+-------------------------------------------------------------------------------
+=>                      DELETING AND INSERTING
+Delete previous character    ^H         Delete next character .      ^D
+Delete previous word ..  Esc ^H         Delete next word ......  Esc  D
+Leave on whitespace ...  Esc space      Deleet all whitspace ..  Esc  \
+Kill to end of line ...      ^K         Set mark ..............      ^@
+Kill region ...........      ^W         Yank ..................      ^Y
+Kill paragraph ........  Esc ^W         Exchange point and mark   ^X ^X
+Delete blank lines ....   ^X ^O     ::  A region is defined as the area between
+Copy region ...........  Esc  W     ::  the mark and the current position.
+-------------------------------------------------------------------------------
+=>                      FORMATTING
+Case word upper .......  Esc  U         Case word lower .......  Esc  L
+Case region upper .....   ^X ^U         Case region lower .....   ^X ^L
+Case word capitalize ..  Esc  C         Trim line .............   ^X ^T
+                                        Detab line ............   ^X ^A
+Set fill column .......   ^X  F         Entab line ............   ^X ^E
+Fill paragraph ........  Esc  Q         Change screen size ....  Esc ^D
+Justify paragraph .....  Esc  J         Change screen width ...  Esc ^T
+Left and right Justify   Esc ^J         Narrow to region ......   ^X  <
+                                        Widen from region .....   ^X  >
+-------------------------------------------------------------------------------
+=>                      WINDOW COMMANDS
+Split current window ..   ^X  2         Next window ...........   ^X  O
+Delete other windows ..   ^X  1         Previous window .......   ^X  P
+Delete window .........   ^X  0         Scroll next up ........  Esc ^Z
+Grow window ...........   ^X  Z         Scroll next down ......  Esc ^V
+Shrink window .........   ^X ^Z         Resize window .........   ^X  W
+Move window up ........   ^X ^P         Save window ........... not bound  
+Move window down ......   ^X ^N         Restore window ........ not bound  
+-------------------------------------------------------------------------------
+=>                      BUFFER COMMANDS
+Next buffer ...........   ^X  X         Buffer position .......   ^X  = 
+Select buffer .........   ^X  B         Unmark buffer .........  Esc  ~
+List buffers ..........   ^X ^B
+Delete buffer .........   ^X  K         Write message ......... not bound  
+Name buffer ...........  Esc ^N         Clear message line .... not bound  
+Filter buffer .........   ^X  #
+Pipe command ..........   ^X  @         Execute buffer ........ not bound  
+-------------------------------------------------------------------------------
+=>                      SEARCHING AND REPLACING
+Search forward ........  Esc  S     ::  End string with  Esc.
+Incremental search ....   ^X  S     ::  Search next ^X, stop  Esc, cancel ^G.
+Search reverse ........      ^R  
+Reverse incremental search              Hunt forward ..........  Alt-S
+.......................   ^X  R         Hunt backward .........  Alt-R
+Replace string ........  Esc  R
+Query replace string ..  Esc  %     ::  Yes/no Y/N, replace rest !, cancel ^G.
+-------------------------------------------------------------------------------
+=>                      ACCESSING THE OPERATING SYSTEM
+Quick exit ............  Esc  Z     ::  Write out all changed buffers and exit.
+Exit emacs ............   ^X ^C     ::  Exit without automatic save.
+I shell ...............   ^X  C     ::  Start a new command processor.
+Shell command .........   ^X  !     ::  Execute one operating system command.
+Pipe command ..........   ^X  @     ::  Pipe command results to a new buffer. *
+Filter buffer .........   ^X  #     ::  Filter buffer through a program.      *
+Execute program .......   ^X  $     ::  * Not under VMS.
+-------------------------------------------------------------------------------
+=>                      MACRO COMMANDS
+Begin macro ...........   ^X  (
+End macro .............   ^X  )
+Execute macro .........   ^X  E
+Store macro ........... not bound    
+Execute macro nn ...... not bound  
+Store procedure ....... not bound  
+Execute procedure .....  Esc ^E
+-------------------------------------------------------------------------------
+=>                      MISCELLANEOUS
+Universal argument ....      ^U         Set mark ..............  Esc Space
+Clear and redraw ......      ^L         Exchange point and mark   ^X ^X
+Redraw display ........  Esc ^L
+Execute named command .  Esc  X         Insert string ......... not bound  
+Execute command line .. not bound       Overwrite string ...... not bound
+Set encryption key ....  Esc  E         Wrap word ............. not bound
+Count words ...........  Esc ^C         Update screen ......... not bound
+-------------------------------------------------------------------------------
+=>                      SYSTEM VARIABLES
+Set ...................  Esc ^A         Current buffer name ... $cbufname
+Tabulator (4, 8)....... $tab            Current file name ..... $cfname
+Screen resolution ..... $sres       ::  NORMAL, CGA, EGA, VGA
+Display commands ...... $discmd     ::  TRUE, FALSE
+Scrolling enabled ..... $scroll     ::  TRUE, FALSE, can only be reset
+Scrolling movement .... $jump       ::  # lines, default 1, 0 = 1/2 page
+Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
+-------------------------------------------------------------------------------
+=>                      FUNCTIONS
+&neg, &abs, &add, &sub, &tim, &div, &mod ... Arithmetic
+&equ, &les, &gre ........................... Arithmetic comparisons
+&not, &and, &or ............................ Logical
+&lef s len, &rig s pos, &mid s pos len ..... Substring
+&cat, &len, &upp, &low, &asc, &chr ......... Other string operations
+&seq, &sle, &sgr ........................... String comparisons
+&sin ....................................... String index
+-------------------------------------------------------------------------------
+=>                      FILE NAME COMPLETION
+
+File name completion can be used with all file commands (find-file,
+view-file, ...) but it works only under UNIX and MS-DOS. It is invoked
+by a <Tab>. If more than one possible completion existthey are displayed
+in the minibuffer and the longest common part is retained for you to add
+to. The minibuffer is an editabel buffer line.
+Shell and variable expansion is handled.
+-------------------------------------------------------------------------------

@@ -121,9 +121,11 @@ char *gtfun(char *fname)
 	case UFLENGTH:
 		return itoa(strlen(arg1));
 	case UFUPPER:
-		return mkupper(arg1);
+		strcpy(result, arg1);
+		return mkupper(result);
 	case UFLOWER:
-		return mklower(arg1);
+		strcpy(result, arg1);
+		return mklower(result);
 	case UFTRUTH:
 		return ltos(atoi(arg1) == 42);
 	case UFASCII:
@@ -438,7 +440,7 @@ int setvar(int f, int n)
 
 		/* and get the keystroke to hold the output */
 		if (get1key() == abortc) {
-			mlforce("(Macro aborted)");
+			mlforce(MLpre "Macro aborted" MLpost);
 			status = FALSE;
 		}
 	}
@@ -533,7 +535,10 @@ int svar(struct variable_description *var, char *value)
 			free(uv[vnum].u_value);
 		sp = malloc(strlen(value) + 1);
 		if (sp == NULL)
+		{
+			uv[vnum].u_value = NULL;    /* GML */
 			return FALSE;
+		}
 		strcpy(sp, value);
 		uv[vnum].u_value = sp;
 		break;
@@ -767,18 +772,22 @@ int gettyp(char *token)
  */
 char *getval(char *token)
 {
-	int status;	/* error return */
+	int status;	        /* error return */
 	struct buffer *bp;	/* temp buffer pointer */
-	int blen;	/* length of buffer argument */
-	int distmp;	/* temporary discmd flag */
-	static char buf[NSTRING];	/* string buffer for some returns */
-
+	int blen;	        /* length of buffer argument */
+	int distmp;	        /* temporary discmd flag */
+	static char buf[NSTRING]; /* string buffer for some returns */
+        char tbuf[NSTRING];     /* string buffer for some workings */
 	switch (gettyp(token)) {
 	case TKNUL:
 		return "";
 
 	case TKARG:		/* interactive argument */
-		strcpy(token, getval(&token[1]));
+/* GML - Possible illegal overlap of args.  Must do in two stages
+ *                              strcpy(token, getval(&token[1]));
+ */
+                strcpy(tbuf, getval(&token[1]));
+                strcpy(token, tbuf);
 		distmp = discmd;	/* echo it always! */
 		discmd = TRUE;
 		status = getstring(token, buf, NSTRING, ctoec('\n'));
@@ -790,7 +799,11 @@ char *getval(char *token)
 	case TKBUF:		/* buffer contents fetch */
 
 		/* grab the right buffer */
-		strcpy(token, getval(&token[1]));
+/* GML - Possible illegal overlap of args.  Must do in two stages
+ *                              strcpy(token, getval(&token[1]));
+ */
+                strcpy(tbuf, getval(&token[1]));
+                strcpy(token, tbuf);
 		bp = bfind(token, FALSE, 0);
 		if (bp == NULL)
 			return errorm;
@@ -808,8 +821,12 @@ char *getval(char *token)
 
 		/* grab the line as an argument */
 		blen = bp->b_dotp->l_used - bp->b_doto;
-		if (blen > NSTRING)
-			blen = NSTRING;
+/* GML - have to allow for trailing NUL!
+ *		if (blen > NSTRING)
+ *			blen = NSTRING;
+ */
+		if (blen >= NSTRING)
+			blen = NSTRING - 1;
 		strncpy(buf, bp->b_dotp->l_text + bp->b_doto, blen);
 		buf[blen] = 0;
 

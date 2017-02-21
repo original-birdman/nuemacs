@@ -112,10 +112,12 @@ struct name_bind names[] = {
 	{"exit-emacs", quit},
 #if	WORDPRO
 	{"fill-paragraph", fillpara},
+        {"fill-all-paragraphs", fillwhole}, /* IMD */
 #endif
 	{"filter-buffer", filter_buffer},
 	{"find-file", filefind},
 	{"forward-character", forwchar},
+	{"ggr-mode", ggr_mode},             /* GML */
 	{"goto-line", gotoline},
 #if	CFENCE
 	{"goto-matching-fence", getfence},
@@ -140,11 +142,13 @@ struct name_bind names[] = {
 #endif
 	{"kill-region", killregion},
 	{"kill-to-end-of-line", killtext},
+        {"leave-one-white", leaveone},          /* IMD */
 	{"list-buffers", listbuffers},
 	{"meta-prefix", metafn},
 	{"move-window-down", mvdnwind},
 	{"move-window-up", mvupwind},
 	{"name-buffer", namebuffer},
+	{"narrow-to-region", narrow},           /* IMD */
 	{"newline", insert_newline},
 	{"newline-and-indent", indent},
 	{"next-buffer", nextbuffer},
@@ -169,8 +173,10 @@ struct name_bind names[] = {
 	{"query-replace-string", qreplace},
 	{"quick-exit", quickexit},
 	{"quote-character", quote},
+        {"quoted-count", quotedcount},  /* IMD */
 	{"read-file", fileread},
 	{"redraw-display", reposition},
+        {"reexecute", reexecute},       /* IMD */
 	{"resize-window", resize},
 	{"restore-window", restwnd},
 	{"replace-string", sreplace},
@@ -207,15 +213,19 @@ struct name_bind names[] = {
 #if	AEDIT
 	{"trim-line", trim},
 #endif
+        {"type-tab", typetab},          /* IMD */
 	{"unbind-key", unbindkey},
 	{"universal-argument", unarg},
 	{"unmark-buffer", unmark},
 	{"update-screen", upscreen},
 	{"view-file", viewfile},
+        {"white-delete", whitedelete},  /* IMD */
+        {"widen-from-region", widen},   /* IMD */
 	{"wrap-word", wrapword},
 	{"write-file", filewrite},
 	{"write-message", writemsg},
 	{"yank", yank},
+        {"yank-minibuffer", yankmb},    /* IMD */
 
 	{"", NULL}
 };

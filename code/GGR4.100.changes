@@ -1,0 +1,217 @@
+Changes made for GGR-4.100 (the initial merge)
+
+Makefile:
+   Add complet.c to SRC and complet.o to OBJ
+   CFLAGS - remove -g, change -O2 to -O3, add -std=c99 -DGGR_MODE
+   Fix, and simplify, the depend rule to generate makedep
+   Regenerated the dependency list.
+
+Generic:
+   Made the message line a minibuffer when prompting.
+      o mpresf set if there is a message present (bind.c, display.c)
+        Tested in input.c. main.c
+   Various functions disabled in the minibuffer
+      o mbstop defined in input.c
+      o called from bind.c, buffer.c, isearch.c, main.c, region.c,
+        search.c, window.c
+   Various save/restores of buffer names around minibuffer use.
+     (inmb checks in buffer.c, file.c)
+
+   Changed "(" and ")" in minibuffer prompt to be MLpre and MLpost,
+   which are defined as "[","]" in GGRMODE, otherwise as "(",")".
+
+   Shrinkable regions added (b_topline, b_botline)
+      (buffer.c)
+
+   Changed some hard-wired 0/7s to gbcolor/gfcolor (but probably doesn't
+   affect most builds anyway).
+
+basic.c:
+   Added ctrulen() and used it in two locations.
+   Removed justflag from basic.c, globals.c, word.c and edef.h.
+   Add a fix in forwpage() to prevent a loop round from end to start of
+   buffer.
+
+bind.c:
+   Turn off pathexpand around various calls.
+   Allow (compile-time) choice of which order the PATH search and table
+   search are done when looking for a startup file. (PATH_THEN_TABLE
+   TABLE_THEN_PATH).  Dropped some code into along_path() for this.
+   cmdstr() checks for space in a key binding and prints "SP", stock
+   allows "SP" as a binding character.
+   Changed stock() to allow lower and UPPER single chars to have
+   different bindings.
+
+buffer.c:
+   Added code to run contents of a "*file-hooks*" buffer on activating a
+   new buffer. This can be loaded in the startup file to have different
+   default modes active according to the file loaded.
+
+complet.c
+   GGR added file containing functions to handle file-completion in the
+   minibuffer.  Adds comp_file(), comp_buffer().
+
+crypt.c
+   Recursively "doubles" (key+key) any user-given key until it is at
+   least 63 chars long.
+
+display.c
+   Add a fix in upddex() to prevent a loop round from end to start of
+   buffer.
+   Extend update loops in updgar() and updupd() to include the last
+   line, since that is where our minibuffer is.
+   Only display the version number in the status line if there is no
+   filename to display. [modeline()]
+   mlwrite() and mlputs() modified to handle utf8 strings.
+   Added mberase() to clear the minibuffer line.
+   Added mbupdate() call, to update the minibuffer. [mbonly set/unset].
+
+eval.c
+   Takes copy of an arg before upper/lowercasing it. [gtfun()]
+   Set saved pointer to NULL if it can't be allocated. [svar()]
+   Perform copying from getval calls via a temporary buffer, as otherwise
+   this can involve an overlapping copy, which is illegal for strcpy().
+   Correctly limit blen in getval().
+
+exec.c
+   Perform copying from getval calls via a temporary buffer, as otherwise
+   this can involve an overlapping copy, which is illegal for strcpy().
+   Only copy up to 80 chars during macro debug.
+   Add the "finish" directive - allows a macro to abort without
+   having to complete every repeated instance requested by Esc-<n>.
+   Turn off pathexpand while reading in file if in silent mode
+   [dofile()].
+
+file.c
+   Return current filename on empty input line in fileread()..
+   (Enables ^X^R<CR> to re-read current file on erroneous change.)
+   Use ftrulen global; (which we've just set) as te hline length, rather
+   than calling strlen on it.
+   Fix unqname() so that it doesn't just extend the string beyond its
+   defined length.
+   Added progress reports while reading/writing files.
+
+fileio.c
+   Remember just read in line length in ftrulen global [ffgetline()]
+   Put full pathname into buffer name if pathexpand is set.
+   Pause for a second to allow error message to be read in readin().
+   Replace malloc()+strncpy()+free() with realloc().
+   Added expand_tilde() and expand_shell() functions.
+
+globals.c
+   Removed justflag.
+   Use NPAT+1 for pattern buffers.
+   Add 'finish' to dname[].
+   Add GGR additional variables at end.
+
+ibmpc.c
+   Add an ibmeeol() call.
+
+input.c
+   Totally replace the getstring function to provide a minibuffer (can
+   use uemacs Ctl, Ctlx and Escape commands). This is based on the 3.9e
+   main loop. Also contains filename expansion via ctl-I.
+   Add yankmb(), mbstop(), tmpnam() and (for MSDOS) sleep()  functions.
+
+isearch.c
+   Use NPAT+1 for pattern buffers.
+
+line.c
+   Set a mark on yank so we can re-kill. [yank()]
+
+lock.c
+   Allow expand_tilde() and expand_shell() on fname, so use expanded
+   tmpname in related code. [lockchk()]
+
+main.c
+   Check crypt key has been given before trying to save it.
+   Save a reverse string search pattern.
+   Switch on silent mode for startup macro files.
+   Check for filename being too long.
+   Handle re-execute and add reexecute().
+
+names.c
+   Add GGR extra functions.
+
+pklock.c
+   Added dnc var to get rid of "ignored return value" for write() call.
+
+random.c
+   Check given arg for validity and set 72 if not a +ve number.
+   Handle unicode chars in showcpos().
+   Handle twiddle() according to ggr-mode state.
+   Add typetab() function. Allows you to set a tabstop and move to the
+   next multiple of that (extending line with spaces if necessary).
+   Fix cinsert() to do nothing if we are at left-hand edge.
+   Added leaveone(), whitedelete(), quotedcount() and ggr_mode()
+   functions.
+
+region.c
+   Added narrow() and widen() functions.
+
+search.c
+   Make y/n/u replies to question in replaces() case-insensitive.
+   Add a savematch() call fix in magic mode.
+
+spawn.c
+   Added dnc to get rid of messages about ignored return values.
+
+tcap.c
+   Fixed tcapfcol() and tcapbcol() function prototypes.
+
+window.c
+    Generic changes.
+
+word.c
+   In forwword, make the loop order dependant on ggr-mode, so you end up
+   at the end of the last word if this is set, not the start of the next
+   one.
+   Treat -ve arg to delfword() as delbword() call.
+   Remove the "skip whitespace and newlines" code in delfword().
+   Treat -ve arg to delbword() as delfword() call.
+   Add fillwhole() function (fill all paragraphs in buffer).
+   In fillpara()
+      o make buffer dynamically sized
+      o check for being in an empty buffer
+      o extend punctuation set in ggr-mode
+      o enable padding to right-justification
+   In justpara()
+      o make buffer dynamically sized
+      o check for being in an empty buffer
+      o add punctuation set in ggr-mode
+      o fix the code to justify the first line correctly
+      o cater for existing leading space/tab in paragraph (remove it)
+   Removed justflag.
+   In wordcount() add one to linecount if end col > start col. This
+   counts "partial lines" and means we don't have to add one at the end
+   (which resulted in a 1 line file always having "2" lines).
+
+Includes ==========
+
+charset.h:
+   Added a set of descriptors for bytes 0 to 32 (space).
+
+edef.h
+   Add declarations for GGR-added variables.
+   Removed justflag.
+
+efunc.h
+   Add declarations for GGR-added functions.
+
+epath.h
+   Edit the table for start-up filename, help file-name and paths based
+   on GGR_MODE setting at compile time.
+
+estruct.h
+   Defined MLpre and MLpost based on GGR_MODE setting at compile time.
+   Defined EXPAND_TILDE (~ == HOME) and EXPAND_SHELL (expand embedded
+   shell vars).
+   Set TABLE_THEN_PATH and PATH_THEN_TABLE based on GGR_MODE.
+   Increase NFILEN(80), NLINE(256) and NSTRING(128) to 513 each.
+   Add DFINISH directive and increment NUMDIRS to 11.
+   Set NUMMODES to 9. Somehow it was set to 10, but there are only 9.
+
+version.h
+   Changed values to GGR ones.
+
+

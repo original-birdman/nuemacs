@@ -39,7 +39,7 @@ struct line *lalloc(int used)
 	if (size == 0)	/* Assume that is an empty. */
 		size = BLOCK_SIZE;  /* Line is for type-in. */
 	if ((lp = (struct line *)malloc(sizeof(struct line) + size)) == NULL) {
-		mlwrite("(OUT OF MEMORY)");
+		mlwrite(MLpre "OUT OF MEMORY" MLpost);
 		return NULL;
 	}
 	lp->l_size = size;
@@ -664,6 +664,12 @@ int yank(int f, int n)
 	/* make sure there is something to yank */
 	if (kbufh == NULL)
 		return TRUE;	/* not an error, just nothing */
+
+/* IMD - set a mark so we can rekill if we want - we don't
+ * want a message, so don't use setmark().. */
+        curwp->w_markp = curwp->w_dotp;
+        curwp->w_marko = curwp->w_doto;
+/* end of IMD */
 
 	/* for each time.... */
 	while (n--) {

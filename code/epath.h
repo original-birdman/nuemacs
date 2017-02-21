@@ -24,11 +24,20 @@ static char *pathname[] =
 
 #if	V7 | BSD | USG
 {
-	".emacsrc", "emacs.hlp",
+#ifdef GGR_MODE
+        "uemacs.rc",
+        "uemacs.hlp",
+        "/local/etc/",
+        "/opt/local/etc/",
+#else
+	".emacsrc",
+	"emacs.hlp",
 #if	PKCODE
 	    "/usr/global/lib/", "/usr/local/bin/", "/usr/local/lib/",
 #endif
-"/usr/local/", "/usr/lib/", ""};
+"/usr/local/", "/usr/lib/", "",
+#endif
+};
 #endif
 
 #if	VMS

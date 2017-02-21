@@ -17,6 +17,26 @@
 #include "line.h"
 #include "utf8.h"
 
+/* IMD */
+static int ctrulen(void)
+{
+    int end;
+    char c;
+
+    end = llength(curwp->w_dotp);
+    while (end > 0 &&
+#if    PKCODE
+			((justflag == TRUE) ||
+#endif
+         ((c = lgetc(curwp->w_dotp, (end - 1))) == ' ' || c == TAB))
+#if    PKCODE
+			)
+#endif
+
+         --end;
+    return(end);
+}
+
 /*
  * This routine, given a pointer to a struct line, and the current cursor goal
  * column, return the best choice for the offset. The offset is returned.
@@ -148,7 +168,7 @@ int gotoline(int f, int n)
 	if (f == FALSE) {
 		if ((status =
 		     mlreply("Line to GOTO: ", arg, NSTRING)) != TRUE) {
-			mlwrite("(Aborted)");
+			mlwrite(MLpre "Aborted" MLpost);
 			return status;
 		}
 		n = atoi(arg);
@@ -295,15 +315,7 @@ int gotobop(int f, int n)
 		/* and scan back until we hit a <NL><NL> or <NL><TAB>
 		   or a <NL><SPACE>                                     */
 		while (lback(curwp->w_dotp) != curbp->b_linep)
-			if (llength(curwp->w_dotp) != 0 &&
-#if	PKCODE
-			    ((justflag == TRUE) ||
-#endif
-			     (lgetc(curwp->w_dotp, curwp->w_doto) != TAB &&
-			      lgetc(curwp->w_dotp, curwp->w_doto) != ' '))
-#if	PKCODE
-			    )
-#endif
+                        if (ctrulen() != 0)
 				curwp->w_dotp = lback(curwp->w_dotp);
 			else
 				break;
@@ -343,15 +355,7 @@ int gotoeop(int f, int n)
 		/* and scan forword until we hit a <NL><NL> or <NL><TAB>
 		   or a <NL><SPACE>                                     */
 		while (curwp->w_dotp != curbp->b_linep) {
-			if (llength(curwp->w_dotp) != 0 &&
-#if	PKCODE
-			    ((justflag == TRUE) ||
-#endif
-			     (lgetc(curwp->w_dotp, curwp->w_doto) != TAB &&
-			      lgetc(curwp->w_dotp, curwp->w_doto) != ' '))
-#if	PKCODE
-			    )
-#endif
+                        if (ctrulen() != 0)
 				curwp->w_dotp = lforw(curwp->w_dotp);
 			else
 				break;
@@ -398,6 +402,13 @@ int forwpage(int f, int n)
 		n *= curwp->w_ntrows;	/* To lines. */
 #endif
 	lp = curwp->w_linep;
+
+/* GML - FIX2
+ * Stop *before* loop round from end to start of file buffer, so
+ * we always leave a line on screen (but it may be empty)
+        while (n-- && lp!=curbp->b_linep)
+ */
+        if (lp==curbp->b_linep) return (TRUE);
 	while (n-- && lp != curbp->b_linep)
 		lp = lforw(lp);
 	curwp->w_linep = lp;
@@ -461,7 +472,7 @@ int setmark(int f, int n)
 {
 	curwp->w_markp = curwp->w_dotp;
 	curwp->w_marko = curwp->w_doto;
-	mlwrite("(Mark set)");
+	mlwrite(MLpre "Mark set" MLpost);
 	return TRUE;
 }
 

@@ -54,6 +54,10 @@ int risearch(int f, int n)
 	struct line *curline;		/* Current line on entry              */
 	int curoff;		/* Current offset on entry            */
 
+/* IMD - disallow in minibuffer */
+        if (mbstop())   
+                return(FALSE);              
+
 	/* remember the initial . on entry: */
 
 	curline = curwp->w_dotp;	/* Save the current line pointer      */
@@ -68,7 +72,7 @@ int risearch(int f, int n)
 		curwp->w_doto = curoff;	/*  and the offset to original value  */
 		curwp->w_flag |= WFMOVE;	/* Say we've moved                    */
 		update(FALSE);	/* And force an update                */
-		mlwrite("(search failed)");	/* Say we died                        */
+		mlwrite(MLpre "search failed" MLpost);	/* Say we died                        */
 #if	PKCODE
 		matchlen = strlen(pat);
 #endif
@@ -88,6 +92,10 @@ int fisearch(int f, int n)
 	struct line *curline;		/* Current line on entry              */
 	int curoff;		/* Current offset on entry            */
 
+/* IMD - disallow in minibuffer */
+        if (mbstop())   
+                    return(FALSE);              
+
 	/* remember the initial . on entry: */
 
 	curline = curwp->w_dotp;	/* Save the current line pointer      */
@@ -100,7 +108,7 @@ int fisearch(int f, int n)
 		curwp->w_doto = curoff;	/*  and the offset to original value  */
 		curwp->w_flag |= WFMOVE;	/* Say we've moved                    */
 		update(FALSE);	/* And force an update                */
-		mlwrite("(search failed)");	/* Say we died                        */
+		mlwrite(MLpre "search failed" MLpost);	/* Say we died                        */
 #if	PKCODE
 		matchlen = strlen(pat);
 #endif
@@ -145,7 +153,9 @@ int isearch(int f, int n)
 	int cpos;	/* character number in search string  */
 	int c;		/* current input character */
 	int expc;	/* function expanded input char       */
-	char pat_save[NPAT];	/* Saved copy of the old pattern str  */
+/* GML - Allow for a trailing NUL 
+ *	char pat_save[NPAT];	   Saved copy of the old pattern str  */
+	char pat_save[NPAT+1];  /* Saved copy of the old pattern str  */
 	struct line *curline;		/* Current line on entry              */
 	int curoff;		/* Current offset on entry            */
 	int init_direction;	/* The initial search direction       */
@@ -388,9 +398,9 @@ int promptpattern(char *prompt)
 	char tpat[NPAT + 20];
 
 	strcpy(tpat, prompt);	/* copy prompt to output string */
-	strcat(tpat, " (");	/* build new prompt string */
+	strcat(tpat, " " MLpre);	/* build new prompt string */
 	expandp(pat, &tpat[strlen(tpat)], NPAT / 2);	/* add old pattern */
-	strcat(tpat, ")<Meta>: ");
+	strcat(tpat, MLpost "<Meta>: ");
 
 	/* check to see if we are executing a command line */
 	if (!clexec) {
