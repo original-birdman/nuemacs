@@ -58,10 +58,12 @@ int chg_width, chg_height;
 static int reframe(struct window *wp);
 static void updone(struct window *wp);
 static void updall(struct window *wp);
+#if SCROLLCODE
 static int scrolls(int inserts);
 static void scrscroll(int from, int to, int count);
 static int texttest(int vrow, int prow);
 static int endofline(unicode_t *s, int n);
+#endif
 static void updext(void);
 static int updateline(int row, struct video *vp1, struct video *vp2);
 static void modeline(struct window *wp);
@@ -370,7 +372,10 @@ int update(int force)
  */
 static int reframe(struct window *wp)
 {
-        struct line *lp, *lp0;
+        struct line *lp;
+#if SCROLLCODE
+        struct line *lp0;
+#endif
         int i = 0;
 
         /* if not a requested reframe, check for a needed one */

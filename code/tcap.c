@@ -41,7 +41,9 @@ static void tcapeeop(void);
 static void tcapbeep(void);
 static void tcaprev(int);
 static int tcapcres(char *);
+#if SCROLLCODE
 static void tcapscrollregion(int top, int bot);
+#endif
 static void putpad(char *str);
 
 static void tcapopen(void);
