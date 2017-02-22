@@ -56,6 +56,7 @@ struct name_bind names[] = {
         {"end-macro", ctlxrp},
         {"end-of-file", gotoeob},
         {"end-of-line", gotoeol},
+        {"eos-chars", eos_chars},           /* GGR */
 #if     AEDIT
         {"entab-line", entab},
 #endif

@@ -140,8 +140,10 @@ char outline[NSTRING];          /* global string to hold debug line text */
 int  clast           = META|SPEC|'C';
 int  flast           = TRUE;
 int  ftrulen         = 0;
-int  inmb            = FALSE;
 int  inreex          = FALSE;
+
+unicode_t *eos_list  = NULL;
+int  inmb            = FALSE;
 char lastmb[NSTRING] = "";
 int  nlast           = 1;
 int  pathexpand      = TRUE;

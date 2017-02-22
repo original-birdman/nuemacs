@@ -437,8 +437,9 @@ int fillpara(int f, int n)
         int eopflag;            /* Are we at the End-Of-Paragraph? */
         int firstflag;          /* first word? (needs no space) */
         struct line *eopline;   /* pointer to line just past EOP */
-        int dotflag;            /* was the last char a period?  */
-        int was_dotflag;        /* value of dotflag when last word added */
+        int eosflag;            /* was the last char a period?  */
+        int was_eosflag;        /* value of eosflag when last word added */
+        int trailing_eos;       /* Was last event to add an eos space? */
 /* GGR added vars - to allow for padding to right-justify */
         int gap;        /* number of spaces to pad with */
         int rtol;       /* Pass direction */
@@ -474,8 +475,9 @@ int fillpara(int f, int n)
         if (clength && curwp->w_dotp->l_text[0] == TAB)
                 clength = 8;
         wordlen = 0;
-        dotflag = FALSE;
-        was_dotflag = 0;
+        eosflag = FALSE;
+        was_eosflag = 0;
+        trailing_eos = 0;
 
         /* scan through lines, filling words */
         firstflag = TRUE;
@@ -521,15 +523,22 @@ int fillpara(int f, int n)
 
                 /* if not a separator, just add it in */
                 if (c != ' ' && c != '\t') {
-/* GGR - addditional punctuation in ggr-mode */
-                        if (using_ggr_mode) {
-                                dotflag = (c == '.' || c == '!' || c == '?');
+/* GGR - Handle any defined punctuation characters */
+                        if (eos_list) {     /* Some eos defined */
+                                eosflag = 0;
+                                for (unicode_t *eosch = eos_list;
+                                    *eosch != 0xffffffff; eosch++) {
+                                        if (c == *eosch) {
+                                                eosflag = 1;
+                                                break;
+                                        }
+                                }
                         }
-                        else {
-                                dotflag = (c == '.');
-                        }
+                        else eosflag = 0;
+
 /* GGR - dynamically sized, so this assignment can always be done */
                         wbuf[wordlen++] = c;
+                        trailing_eos = 0;
                 } else if (wordlen) {
                         /* at a word break with a word waiting */
                         /* calculate tentitive new length with word added */
@@ -541,7 +550,7 @@ int fillpara(int f, int n)
 /* We need to save the doto location, not clength, to allow for unicode */
                                                 space_ind[nspaces] = curwp->w_doto;
                                                 nspaces++;
-                                                was_dotflag = dotflag;
+                                                was_eosflag = eosflag;
                                         }
                                         linsert(1, ' ');        /* the space */
                                         ++clength;
@@ -561,7 +570,7 @@ if (nspaces) {
  */
     int end_doto = curwp->w_doto;
     gap = fillcol - clength;    /* How much we need to add (in columns) */
-    if (was_dotflag) {          /* Back one char and increase gap */
+    if (was_eosflag) {          /* Back one char and increase gap */
         end_doto--;
         gap++;
     }
@@ -605,13 +614,17 @@ if (nspaces) {
                                 linsert(1, wbuf[i]);
                                 ++clength;
                         }
-                        if (dotflag) {
+                        if (eosflag) {
                                 linsert(1, ' ');
                                 ++clength;
+                                trailing_eos = 1;
                         }
                         wordlen = 0;
                 }
         }
+        /* If we arrive at eop with trailing_eos set, remove the space */
+        if (trailing_eos) backdel(FALSE, 1);
+
         /* and add a last newline for the end of our new paragraph */
         lnewline();
         free(wbuf);     /* GGR - mustn't forget these... */
@@ -630,7 +643,6 @@ int justpara(int f, int n)
         unicode_t c;            /* current char durring scan    */
         unicode_t *wbuf;        /* buffer for current word      */
         size_t wbuf_size;
-        int dotflag;            /* was the last char a period?  */
         int wordlen;            /* length of current word       */
         int clength;            /* position on line during fill */
         int i;                  /* index during word copy       */
@@ -640,6 +652,8 @@ int justpara(int f, int n)
         struct line *eopline;   /* pointer to line just past EOP */
         int leftmarg;           /* left marginal */
         int startline, endline;
+        int eosflag;            /* was the last char a period?  */
+        int trailing_eos;       /* Was last event to add an eos space? */
 
         if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
                 return rdonly();        /* we are in read only mode     */
@@ -674,14 +688,15 @@ int justpara(int f, int n)
         for (i = 0; i < leftmarg; i++)
                 linsert(1, ' ');
         curwp->w_doto = clength = leftmarg;
-                
+
 /* GGR
  * wbuf needs to be sufficiently long to contain all of the longest
  * line (plus 1, for luck...) in case there is no word-break in it.
  */
         wbuf_size = sizeof(wbuf[0])*(llength(curwp->w_dotp) + 1);
         wbuf = malloc(wbuf_size);
-        dotflag = FALSE;
+        eosflag = FALSE;
+        trailing_eos = 0;
 
         wordlen = 0;
 
@@ -711,12 +726,22 @@ int justpara(int f, int n)
 
                 /* if not a separator, just add it in */
                 if (c != ' ' && c != '\t') {
-/* GGR - note punctuation in ggr-mode */
-                        if (using_ggr_mode) {
-                                dotflag = (c == '.' || c == '!' || c == '?');
+/* GGR - Handle any defined punctuation characters */
+                        if (eos_list) {     /* Some eos defined */
+                                eosflag = 0;
+                                for (unicode_t *eosch = eos_list;
+                                    *eosch != 0xffffffff; eosch++) {
+                                        if (c == *eosch) {
+                                                eosflag = 1;
+                                                break;
+                                        }
+                                }
                         }
+                        else eosflag = 0;
+
 /* GGR - dynamically sized, so this assignment can always be done */
                         wbuf[wordlen++] = c;
+                        trailing_eos = 0;
                 } else if (wordlen) {
                         /* at a word break with a word waiting */
                         /* calculate tentitive new length with word added */
@@ -741,13 +766,17 @@ int justpara(int f, int n)
                                 linsert(1, wbuf[i]);
                                 ++clength;
                         }
-                        if (dotflag) {  /* GGR added */
+                        if (eosflag) {  /* GGR added */
                                 linsert(1, ' ');
                                 ++clength;
+                                trailing_eos = 1;
                         }
                         wordlen = 0;
                 }
         }
+        /* If we arrive at eop with trailing_eos set, remove the space */
+        if (trailing_eos) backdel(FALSE, 1);
+                        
         /* and add a last newline for the end of our new paragraph */
         lnewline();
 
@@ -874,3 +903,40 @@ int wordcount(int f, int n)
         return TRUE;
 }
 #endif
+
+/*
+ * Set the GGR-added end-of-sentence list for use by fillpara and
+ * justpara.
+ * Allows utf8 punctuation.
+ * Mainly for macro usage
+ *
+ * int f, n;            arguments ignored
+ */
+int eos_chars(int f, int n)
+{
+        int status;
+        char buf[NLINE];        /* buffer to recieve message into */
+
+        status = mlreply("Punctuation characters: ", buf, NLINE - 1);
+        if (status == FALSE) {      /* Empty response - remove item */
+                if (eos_list) free (eos_list);
+        }
+        else if (status == TRUE) {  /* Some response - set item */
+/* We'll get the buffer length in characters, then allocate that number of
+ * unicode chars. It might be more than we need (if there is a utf8
+ * multi-byte character in there) but it's not going to be that big.
+ * Actually we'll allocate one extra an put an illegal value at the end.
+ */
+                int len = strlen(buf);
+                eos_list = realloc(eos_list, sizeof(unicode_t)*(len + 1));
+                int eos = 0, i = 0;
+                while (i < len) {
+                        unicode_t c;
+                        i += utf8_to_unicode(buf, i, len, &c);
+                        eos_list[eos++] = c;
+                }
+                eos_list[eos] = 0xffffffff;
+        }
+/* Do nothing on anythign else - allows you to abort once you've started. */
+        return status;              /* Whatever mlreply returned */
+}

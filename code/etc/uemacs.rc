@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 18 Feb 2017
+;                       Last Update: 22 Feb 2017
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -400,50 +400,6 @@ set %spc "                                                                  "
 4 handle-tab
 add-global-mode "wrap"
 add-global-mode "exact"
+eos-chars ".!?"         ; Our end-of-sentence chars
 ;
 set $discmd TRUE
-
-;	Setup for ASCII {|}[\] to ISO Latin-1 translation
-
-21	store-macro
-	insert-string "ä"
-!endm
-22	store-macro
-	insert-string "ö"
-!endm
-23	store-macro
-	insert-string "å"
-!endm
-24	store-macro
-	insert-string "Ä"
-!endm
-25	store-macro
-	insert-string "Ö"
-!endm
-26	store-macro
-	insert-string "Å"
-!endm
-
-27	store-macro
-	bind-to-key execute-macro-21 {
-	bind-to-key execute-macro-22 |
-	bind-to-key execute-macro-23 }
-	bind-to-key execute-macro-24 [
-	bind-to-key execute-macro-25 \
-	bind-to-key execute-macro-26 ]
-;	write-message "ISO Latin-1 äöåÄÖÅ"
-	write-message "ISO Latin-1 Ã¤Ã¶Ã¥Ã„Ã–Ã…"
-!endm
-
-28	store-macro
-	unbind-key {
-	unbind-key |
-	unbind-key }
-	unbind-key [
-	unbind-key \
-	unbind-key ]
-	write-message "ASCII {|}[\]"
-!endm
-
-bind-to-key execute-macro-27 ^X[
-bind-to-key execute-macro-28 ^X]

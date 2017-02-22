@@ -12,6 +12,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "utf8.h"
 
 /* Some global fuction declarations. */
 typedef int (*fn_t)(int, int);
@@ -133,10 +134,11 @@ extern int flast;               /* "f" option to last command */
 extern int nlast;               /* "n" option to last command */
 extern int inreex;              /* Set when re-executing */
 
+extern unicode_t *eos_list;     /* List of end-of-sentence characters */
 extern int ftrulen;             /* current real length of fline */
 extern int inmb;                /* Set when in minibuffer */
 extern char lastmb[];           /* Contents of last minibuffer */
-extern int pathexpand;          /* GGR - whether to expand paths */
+extern int pathexpand;          /* Whether to expand paths */
 extern int silent;              /* Set for "no message line info" */
 extern char savnam[];           /* Saved buffer name */
 extern int using_ggr_mode;      /* Macro-settable options flag */
