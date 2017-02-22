@@ -60,23 +60,37 @@ word.c
 word.c
     justify-paragraph (Esc-J) changes had stopped it working at the
     start of a buffer and if there was no whitespace at the start of the
-    paragraph. 
+    paragraph.
     Ignore whitedelete() result and force w_doto to 0 (since at the
-    start of the buffer it seems to end up as 1). 
+    start of the buffer it seems to end up as 1).
 
 buffer,c
     Just entering <CR> when prompted for "Use buffer:" (^XB) used to
-    take you back to the last one, but now takes you to "main". 
+    take you back to the last one, but now takes you to "main".
     Add back a save of b_name to savnam in swbuffer() missed in the
     migration.
 
 tcap.c
 display.c
     Add test for SCROLLCODE around some declarations to avoid
-    compilation warnings if this is turned off. 
+    compilation warnings if this is turned off.
 
 version.h
 etc/uemacs.hlp
     Update to version GGR4.102
 
-========== GGR4.103
+========== GGR4.103 [22 Feb 2017]
+
+display.c
+    Fix a display issue on de-extending a line (coming back to <~col 80
+    after having gone beyond there on a long line).
+    Looks like a code migration issue.  The loop in upddex() contained
+    the 3.9e code, but with the now-absent w_fcol changed to w_fcolor,
+    which was set to 7 resulting in an off-by-7 on the redisplay (the
+    underlying data was OK, so a redisplay fixed things).
+    Replaced with the 4.1 code (but kept the GGR fix on the loop
+    constraint).
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.103
