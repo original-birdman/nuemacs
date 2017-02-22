@@ -485,7 +485,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     int depth;
     int r, i, dummy;
 #endif
-    char choices[1000];       /* MUST be > max likely window width */
+    char choices[1000];     /* MUST be > max likely window width */
     short savdoto;
     int prolen;
     int status;
@@ -498,9 +498,15 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
 
     short bufexpand, expanded;
 
+/* GGR NOTE!!
+ * We want to ensure that we don't return with garbage in buf, but we
+ * can't initialize it to empty here, as some callers use it as a 
+ * temporary buffer for the prompt!
+ */
 #if MSDOS
     if (mbdepth >= MAXDEPTH) {
         TTbeep();
+        buf = "";               /* Ensure we never return garbage */
         return(ABORT);
     }
 #endif
@@ -518,6 +524,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     inmb = TRUE;
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
         inmb = FALSE;
+        buf = "";               /* Ensure we never return garbage */
         return(FALSE);
     }
     bufexpand = (nbuf == NBUFN);
