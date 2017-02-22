@@ -6,14 +6,14 @@ Word-wrapping doesn't happen on yank(), even if there is a space in the
 yank()ed text.
 But then there is also the question of what happens to newlines in
 the restored text.
-Also, when wrapping, shoud we just wrap the last word, or wrap the line
-a first-before fillcol?
+Also, when wrapping, should we just wrap the last word, or wrap the line
+at first-before fillcol?
 Perhaps do wrapping if wrap-mode was on at *both* the kill and yank
 stages (so need to have a way of tagging the kill buffers).
 
 
 
-BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG 
+BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG
 "I see .rc file has to be specified by an absolute path."
 Change the search code. It shouldn't include CWD by default. Not sure
 about relative paths - probably not in general (security issues - they

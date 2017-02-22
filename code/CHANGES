@@ -94,3 +94,36 @@ display.c
 version.h
 etc/uemacs.hlp
     Update to version GGR4.103
+
+========== GGR4.104 [22 Feb 2017]
+
+input.c
+    Ensure that getstring doesn't return a garbage buffer, regardless of
+    returned status.
+    But beware that some callers use the output buffer as a temporary
+    prompt buffer!
+
+edef.h
+efunc.h
+globals.c
+names.c
+word.c
+etc/uemacs.rc
+    Add eos_chars() function, eos_list global list and eos-chars
+    macro-callable function to set eos_list.
+    Use the eos_list in both justpara() and fillpara() for end of
+    sentence character handling (an additional space) and remove any
+    such added space from the final sentence of a paragraph.
+    Define the standard GGR setting ( .!? ) in uemacs.rc.
+
+.gitignore
+    Added core
+
+archive/example.rc
+    Added.
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.104
+
+========== GGR4.105...
