@@ -1,7 +1,7 @@
 See GGR4.100.changes for the original changes around moving from 3.9e to
 pK4.105.
 
-========== GGR4.101
+========== GGR4.101 [21 Feb 2017]
 .gitignore
 CHANGES
    Files added.
@@ -49,3 +49,34 @@ readme.39e
 version.h
 etc/uemacs.hlp
     Update to version GGR4.101
+
+========== GGR4.102 [22 Feb 2017]
+
+word.c
+    Right-justification in fillpara() was leaving an extra space at eol
+    after a punctuation mark.
+    Increment gap as well if dotflag is set.
+
+word.c
+    justify-paragraph (Esc-J) changes had stopped it working at the
+    start of a buffer and if there was no whitespace at the start of the
+    paragraph. 
+    Ignore whitedelete() result and force w_doto to 0 (since at the
+    start of the buffer it seems to end up as 1). 
+
+buffer,c
+    Just entering <CR> when prompted for "Use buffer:" (^XB) used to
+    take you back to the last one, but now takes you to "main". 
+    Add back a save of b_name to savnam in swbuffer() missed in the
+    migration.
+
+tcap.c
+display.c
+    Add test for SCROLLCODE around some declarations to avoid
+    compilation warnings if this is turned off. 
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.102
+
+========== GGR4.103

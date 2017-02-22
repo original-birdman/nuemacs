@@ -1,0 +1,26 @@
+At 4.101:
+
+BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG 
+Word-wrapping causes the beginning of the wrapped line to be lost on
+screen on a <CR> - a <SP> is OK.
+It does exist, and can be seen on a refresh.
+
+4.1 result - which actually does *not* depend on wrap mode.
+On a long line (when the line has been shifted left to display the R/h
+side) a CR result in the line being redrawn starting at col7 (missing 7
+chars). It is always 7, regardless of how long the line is.
+
+It also doesn't depend on CR. Just go to the end of a long line, get the
+$ up in col 1 then step backwards - you will lose 7 chars once the $
+goes.
+
+
+
+BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG ?????
+Word-wrapping doesn't happen on yank(), even if there is a space in the
+yank()ed text.
+But then there is also the question of what happens to newlines in
+the restored text.
+Also, when wrapping, shoud we just wrap the last word, or wrap the line
+a first-before fillcol?
+

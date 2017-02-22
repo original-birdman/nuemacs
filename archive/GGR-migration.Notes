@@ -1,0 +1,148 @@
+A note of issues during the GGR code migration from 3.9e to 4.1
+
+===== TODO =====
+Control chars are displayed a, e.g., ^M (2 chars) but the code is only
+counting as one so navigating though such a file screws up the display.
+Not sure why - GGR3.2xx versions did the same.
+Need to look at (probably not exhaustive):
+  o basic::getgoal - caters for ^C and \xx in display widths
+  o display:: vtputc - puts out the ^C and \xx to the display
+  o posix::ttputc - actually writes characters to the display.
+
+Our getstring (tab expand and minibuffer) only returns on <CR> (or
+^X^C). The "standard" one allows other terminators, e.g. Esc, allowing
+you to insert strings containing newlines. (Mind you - that ^X^C could
+work...).
+
+The justpara() and fillpara() could be "rationalized", so that numeric
+args to the latter behaved similarly to those for the former?
+Also, can the dotflag punctuation list be set by a variable/function in
+uemacs.rc? 
+
+Need to update, and install with the source, an updated Help file.
+
+===== Fixes ====
+Forward word (Esc-F) ends up at start of next word rather then end of
+current one.
+Fix: Reverse loop order in word::forwword.
+[Now done according to ggr-mode setting - in nuemacs.rc]
+
+The va_arg entries in the switch statement of display::mlwrite have all
+lost a level of indirection.  Check that they work (and did they do so
+before?  - if so, how?!?).  Checked - they BOTH work!!
+No idea how - but both seem to work...possibly trailing * was ignored?
+
+Ian's toggle local mode and toggle global mode macros result in a SEGV
+crash at start-up (so I need one without them in current dir to stop the
+installed one being read).
+Fix: Add "finish" string to dname in globals.c (NUMDIRS already
+incremented for it..)
+
+file-hooks not working.
+Fix: exec::storeproc had changed stored procedure buffer names from
+[...] to *...*. Edited buffer.c to use *file-hooks* not [file-hooks].
+
+The write-message and insert-string macros in the ASCII/ISO Latin-1
+macros in the supplied emacs.rc put garbage on the screen when (trying
+to print) utf8/non-ASCII characters.
+Fix: modified mlwrite() and mlputs() to use unicode_t chars.
+     Also use lgetchar not lgetc in showcpos and show utf8 chars.
+
+Add a ggr_mode variable to control things such as:
+[   o searching PATH for uemacs.rc [no]
+ doesn't work, as we'd set it in uemacs.rc....chicken and egg]
+   o whether forward word goes to end of word or start of next [eow]
+   o whether twiddle acts on 2 preceding chars or two around point [prec]
+
+wbuf in word::fillpara is never freed!!  (current uemacs problem).
+Need to look at other malloc()s too.
+Fix: Added free(wbuf) to word::fillpara.
+
+Placing the cursor over the final character in UTF-8-demo.txt (the
+smiley face) results in it not displaying correctly. It's OK otherwise.
+Fix: NONE. This appears to be a Konsole bug (as uemacs only sends an
+Escape sequence to move the cursor, not the character there).
+
+In GSK version EscQ very usefully reformats the current or *next* para
+(if not within one).  Torvalds' version only does it only when the
+cursor is *within* a para.
+Fixed by: Ian's mods to word::fillpara
+BUT!!!! Probably need to merge this into justpara instead, which handles
+utf8 characters.
+NOTE!!! that the previous comment about dynamic wbuf non-freeing
+applies here as well.
+Fix: Various fixes in word, re-wrote the justifying code to handle unicode.
+
+Get all status line messages to use [] not ().
+[Tie it to GGR MODE??]
+Fix; Defined MBpre and MBpost chars to use. Defining GGR_MODE at compile
+time decides.
+
+Need to look at *all* strncpy() and replace them with a routine which
+always puts a NUL at the end of the target (like bytecopy, but "better").
+Result: All look OK, although the ones in main.c and eval.c will fail if
+you give a search pattern that is too long. Not really worth trying to
+improve it just for the sake of doing something.
+
+The default fillpara (justify-paragraph) bound to Esc-J may be broken
+(justify var failure?).
+Fix: Remove justflag from ctrulen (and hence removed it from all code).
+     Set leftmargin to column, not char count (to handle tabs).
+     Delete existing whitespace as start of paragraph.
+
+===== Key Bindings =====
+Some have changed:
+
+Key                 Old (GGR3.219)      New
+CTRL|'C',           reexecute           insspace
+CTRL|'I',           typetab             insert_tab
+CTRL|'L',           refresh             redraw          [name change...]
+CTRL|'M',           newline             insert_newline  [name change...]
+CTRL|'R',           backsearch          sreplace
+CTRL|Z              backline            backpage
+CTRL|'@'            setmark             <<none>>
+CTRL|']' (==Esc)    <<none>>            metafn
+CTLX|CTRL|'A'       <<none>>            detab           [removed]
+CTLX|CTRL|'D'       <<none>>            filesave        [replace]
+CTLX|CTRL|'I'       tab                 insfile
+CTLX|'.'            fillwhole           <<none>>
+CTLX|'?'            help                deskey
+CTLX|'#'            filter              filter_buffer   [name change...]
+CTLX|'<'            narrow              <<none>>
+CTLX|'>'            widen               <<none>>
+CTLX|'I'            insfile             <<none>>
+CTLX|'M'            setmode             setemode        [name change...]
+CTLX|'S'            filesave            fisearch
+META|CTRL|'D'       <<none>>            newsize
+   [NOTE: This is bound to clear replacement string in minibuffer]
+META|CTRL|'i'       fisearch            <<none>>
+META|CTRL|'U'       spawncli            <<none>>
+META|CTRL|'Y'       yankmb              <<none>>
+META|'\\'           whitedelete         <<none>>
+META|'\''           quotedcount         <<none>>
+META|' '            leaveone            setmark
+META|'?'            deskey              help
+META|'%'            qreplace            <<none>>
+META|'E'            mysetkey            set_encryption_key  [name change...]
+META|'J'            <<none>>            justpara        [left in place]
+
+Change things so we use the standard definitions, and change to the GGR
+ones via the uemacs.rc file.
+Fix: Done.  Edited various things back to standard and ensured that GGR
+added functions ended up in names.c.
+Also changed bind::stock() to allow "SP" as a space (for leaveone
+above).
+Also note that the actual function names in uemacs.rc are not those given
+above, but the longer ones in names.c
+
+
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+
+===== Also ====
+
+Look through the original-git.log for any comments that might conflict
+with what we do.
+
+Look at readme.39e and README files (the former has the only
+documentation I've seen on available macro commands).
