@@ -356,6 +356,7 @@ int update(int force)
 
         /* update the cursor and flush the buffers */
         movecursor(currow, curcol - lbound);
+
         TTflush();
         displaying = FALSE;
 #if SIGWINCH
@@ -577,13 +578,13 @@ void updpos(void)
 
 /*
  * upddex:
- *      de-extend any line that derserves it
+ *      de-extend any line that deserves it
  */
 void upddex(void)
 {
         struct window *wp;
         struct line *lp;
-        int i, j;
+        int i;
 
         wp = wheadp;
 
@@ -601,12 +602,9 @@ void upddex(void)
                         if (vscreen[i]->v_flag & VFEXT) {
                                 if ((wp != curwp) || (lp != wp->w_dotp) ||
                                     (curcol < term.t_ncol - 1)) {
-                                        taboff = wp->w_fcolor;
-                                        vtmove(i, -taboff);
-                                        for (j = 0; j < llength(lp); ++j)
-                                                vtputc(lgetc(lp, j));
+                                        vtmove(i, 0);
+                                        show_line(lp);
                                         vteeol();
-                                        taboff = 0;
 
                                         /* this line no longer is extended */
                                         vscreen[i]->v_flag &= ~VFEXT;
