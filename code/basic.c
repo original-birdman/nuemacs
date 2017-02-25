@@ -101,13 +101,12 @@ int backchar(int f, int n)
                         curwp->w_doto = llength(lp);
                         curwp->w_flag |= WFMOVE;
                 } else {
-                        do {
-                                unsigned char c;
-                                curwp->w_doto--;
-                                c = lgetc(curwp->w_dotp, curwp->w_doto);
-                                if (is_beginning_utf8(c))
-                                        break;
-                        } while (curwp->w_doto);
+/* GGR - We must cater for utf8 characters in the same way
+ * as the rest of the utf8 code does.
+ */
+                        curwp->w_doto = prev_utf8_offset(
+                                curwp->w_dotp->l_text, curwp->w_doto,
+                                llength(curwp->w_dotp));
                 }
         }
         return TRUE;
@@ -141,13 +140,12 @@ int forwchar(int f, int n)
                         curwp->w_doto = 0;
                         curwp->w_flag |= WFMOVE;
                 } else {
-                        do {
-                                unsigned char c;
-                                curwp->w_doto++;
-                                c = lgetc(curwp->w_dotp, curwp->w_doto);
-                                if (is_beginning_utf8(c))
-                                        break;
-                        } while (curwp->w_doto < len);
+/* GGR - We must cater for utf8 characters in the same way
+ * as the rest of the utf8 code does.
+ */
+                        curwp->w_doto = next_utf8_offset(
+                                curwp->w_dotp->l_text, curwp->w_doto,
+                                llength(curwp->w_dotp));
                 }
         }
         return TRUE;
