@@ -565,6 +565,15 @@ void updpos(void)
                 if (c == '\t')
                         curcol |= tabmask;
 
+/* GGR - when counting columns we need to allow for *all* displays of
+ *   non-printing characters as multiple chars in vtputc()!
+ */
+                else if (c < 0x20 || c == 0x7f)     /* Displayed as ^X */
+                        ++curcol;
+                else if (c >= 0x80 && c <= 0xA0) {  /* Displayed as \nn */
+                        curcol += 2;
+        }
+
                 ++curcol;
         }
 
