@@ -1,0 +1,6 @@
+There are three characters here:
+  ñ  ñ  �
+but they differ.
+The first is ASCII n (0x6e) + a combining diacritic ~ (U+0303 = 0xcc 0x83)
+The second is a utf-8 small n with tidle (U+00F1 = 0xc3 0xb1).
+The third is Latin-1 (0xf1)

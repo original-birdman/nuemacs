@@ -1,0 +1,38 @@
+Although this uemacs handles utf8 characters, it also handles any
+arbitrary byte that gets thrown at it.  To some extent these concepts
+are incompatible.  The issue arise when it sees a byte that is not a
+valid start of a utf8 sequence at the start fo the next character, or
+when it finds a byte which is not part of a valid utf8 sequence in the
+middle of a sequence.
+In practice this is not a problem.
+If you have a valid utf8 file it will display correctly.
+If you have invalid utf8 (e.g. a binary file) then it will do its best.
+
+===== utf8 (since 2003)
+                range (hex)              byte
+nbytes  bits    start   end      1     2      3     4
+1       7           0      7f   0xxxxxxx
+2       11         80     7ff   110xxxxx 10xxxxxx
+3       16        800    ffff   1110xxxx 10xxxxxx 10xxxxxx
+4       21      10000  10ffff   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+
+utf8.c handles anything up to 11000000 (0xc0) as a single, leading byte
+(i.e where a byte-1 sequence above is expected) is taken "raw" and is
+assumed to be "Latin-1".  11111xxx is taken as raw too.
+
+So, when going forwards 1 char:
+   o If the byte isn't a byte-1 from a 2-, 3- or 4-byte utf8 string then
+     it is taken as a single byte character.
+   o If it starts as a 2-, 3- or 4-byte utf8 string but there is an
+     illegal (not 10xxxxxx) byte in the string the value (and n bytes)
+     is taken to be what has already been collected.
+
+As a result, going backwards is far more difficult.
+   o Anything under 10000000 (0x80) will be a single character.
+   o Anything over 10111111 (0xbf) will be a single character.
+   o Anything else will be a utf8 extension byte *unless* the preceding
+     byte is *not* an extension byte or a byte-1 from a 2-, 3- or 4-byte
+     utf8 string.  When we do reach the utf8 start byte it must be
+     correct for how far back we have gone (so no point going back > 6)
+     and we mustn't go back before start of buffer.
+     If it fails these tests then we just go back one byte.
