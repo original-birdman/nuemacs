@@ -97,11 +97,11 @@ int forwword(int f, int n)
         if (n < 0)
                 return backword(f, -n);
         while (n--) {
-/* GGR - reverse loop order according to ggr-mode state
- * Determines whether you end up at the end of the current word (ggr-mode)
+/* GGR - reverse loop order according to ggr-style state
+ * Determines whether you end up at the end of the current word (ggr-style)
  * or the start of next.
  */
-                int state1 = using_ggr_mode? FALSE: TRUE;
+                int state1 = using_ggr_style? FALSE: TRUE;
 
                 while (inword() == state1) {
                         if (forwchar(FALSE, 1) == FALSE)

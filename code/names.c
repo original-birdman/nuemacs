@@ -118,7 +118,7 @@ struct name_bind names[] = {
         {"filter-buffer", filter_buffer},
         {"find-file", filefind},
         {"forward-character", forwchar},
-        {"ggr-mode", ggr_mode},             /* GGR */
+        {"ggr-style", ggr_style},           /* GGR */
         {"goto-line", gotoline},
 #if     CFENCE
         {"goto-matching-fence", getfence},

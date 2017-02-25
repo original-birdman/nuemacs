@@ -233,9 +233,9 @@ int twiddle(int f, int n)
  * Except when you are at the end of a line....
  * This inconsistency seems odd. Prime emacs always acted on the two chars
  * preceding point, which was great for fixing typos as you made them.
- * If the ggr-mode is set then twiddle will act on the two preceding chars.
+ * If the ggr-style is set then twiddle will act on the two preceding chars.
  */
-        if (using_ggr_mode) {
+        if (using_ggr_style) {
                 if (--doto < 0)
                         return (FALSE);
                 cr = lgetc(dotp, doto);
@@ -1418,8 +1418,8 @@ int doubles;
  * Set GGR mode global var if given non-default argument (n > 1).
  * Otherwise, switch it off,
  */
-int ggr_mode(int f, int n)
+int ggr_style(int f, int n)
 {
-        using_ggr_mode = (n > 1);
+        using_ggr_style = (n > 1);
         return TRUE;
 }

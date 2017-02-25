@@ -108,7 +108,7 @@ extern int ovstring(int f, int n);
 extern int leaveone(int f, int n);
 extern int whitedelete(int f, int n);
 extern int quotedcount(int f, int n);
-extern int ggr_mode(int f, int n);
+extern int ggr_style (int f, int n);
 
 /* main.c */
 extern void edinit(char *bname);

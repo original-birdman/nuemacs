@@ -149,4 +149,4 @@ int  nlast           = 1;
 int  pathexpand      = TRUE;
 char savnam[NBUFN]   = "main";
 int  silent          = FALSE;
-int  using_ggr_mode  = 0;
+int  using_ggr_style = 0;

@@ -7,7 +7,7 @@
 set $discmd FALSE
 write-message "[Setting up....]"
 ;
-2 ggr-mode          ; Enable ggr-mode
+2 ggr-style         ; Enable ggr-style
 ;
 ; Overwrite some standard bindings - for historic GGR feel.
 ; Binding names are from name_bind in names.c
