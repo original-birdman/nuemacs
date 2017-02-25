@@ -39,7 +39,7 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len, unicode_t *re
         }
 
         /* Invalid? Do it as a single byte Latin1 */
-        if (bytes > 6)
+        if (bytes > MAX_UTF8_LEN)
                 return 1;
         if (bytes > len)
                 return 1;
@@ -96,3 +96,53 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8)
         }
         return bytes;
 }
+
+/* GGR functions to get offset of previous/next character in a buffer.
+ * Added here to keep utf8 character handling together 
+ */
+int next_utf8_offset(char *buf, int offset, int max_offset) {
+
+        unicode_t c;
+        
+/* Just use utf8_to_unicode */
+
+        int incr = utf8_to_unicode(buf, offset, max_offset, &c);
+        return offset + incr;
+}
+
+int prev_utf8_offset(char *buf, int offset, int max_offset) {
+    
+/* Step back a byte at a time.
+ * If the first byte isn't a utf8 continuation byte (10xxxxxx0 that is it.
+ * It it *is* a continuation byte look back another byte, up to 3
+ * times. If we then find a utf8 leading byte (that is a correct one for
+ * the length we have found) we use that.
+ * If we fail along the way we revert to the original "back one byte".
+ */
+
+        if (offset-- < 0) return 0;
+        
+        char c = buf[offset];
+        if ((c & 0xc0) == 0x80) {       /* Ext byte? */
+                int trypos = offset;
+                int tryb = MAX_UTF8_LEN;
+                int marker = 0xc0;
+                int valmask = 0x1f;
+                while ((--trypos >= 0) && (--tryb >= 0)) {
+                        c = buf[trypos];
+                        if ((c & 0xc0) == 0x80) {   /* Ext byte */
+                                marker >>= 1;       /* Shift right..*/
+                                marker |= 0x80;     /* ..set top bit */
+                                valmask >>= 1;      /* Fewer... */
+                                continue;
+                        }
+                        if ((c & ~valmask) == marker) { /* Start */
+                                offset = trypos;
+                        }
+                        break;          /* By default, now done */
+                }
+        }
+        return offset;
+}
+
+
