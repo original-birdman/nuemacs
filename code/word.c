@@ -776,7 +776,7 @@ int justpara(int f, int n)
         }
         /* If we arrive at eop with trailing_eos set, remove the space */
         if (trailing_eos) backdel(FALSE, 1);
-                        
+
         /* and add a last newline for the end of our new paragraph */
         lnewline();
 
@@ -912,14 +912,26 @@ int wordcount(int f, int n)
  *
  * int f, n;            arguments ignored
  */
+static int n_eos = 0;
+static char eos_str[NLINE] = "";    /* String given by user */
 int eos_chars(int f, int n)
 {
-        int status;
-        char buf[NLINE];        /* buffer to recieve message into */
 
-        status = mlreply("Punctuation characters: ", buf, NLINE - 1);
+        int status;
+        char prompt[NLINE+60];
+        char buf[NLINE];
+
+        if (n_eos == 0) {
+            strcpy(eos_str, "none");    /* Clearer for user? */
+        }
+        sprintf(prompt,
+            "End of sentence characters " MLpre "currently %s" MLpost ":",
+        eos_str);
+
+        status = mlreply(prompt, buf, NLINE - 1);
         if (status == FALSE) {      /* Empty response - remove item */
                 if (eos_list) free (eos_list);
+                n_eos = 0;
         }
         else if (status == TRUE) {  /* Some response - set item */
 /* We'll get the buffer length in characters, then allocate that number of
@@ -929,14 +941,16 @@ int eos_chars(int f, int n)
  */
                 int len = strlen(buf);
                 eos_list = realloc(eos_list, sizeof(unicode_t)*(len + 1));
-                int eos = 0, i = 0;
+                int i = 0;
+                n_eos = 0;
                 while (i < len) {
                         unicode_t c;
                         i += utf8_to_unicode(buf, i, len, &c);
-                        eos_list[eos++] = c;
+                        eos_list[n_eos++] = c;
                 }
-                eos_list[eos] = 0xffffffff;
+                eos_list[n_eos] = 0xffffffff;
+                strcpy(eos_str, buf);
         }
-/* Do nothing on anythign else - allows you to abort once you've started. */
+/* Do nothing on anything else - allows you to abort once you've started. */
         return status;              /* Whatever mlreply returned */
 }
