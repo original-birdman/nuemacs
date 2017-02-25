@@ -3,7 +3,6 @@
 /* A description of control charactes for the status command */
 
 static char *charset[] =
-
 {
         "nul",
         "soh",

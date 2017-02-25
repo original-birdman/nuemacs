@@ -126,4 +126,48 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.104
 
-========== GGR4.105...
+========== GGR4.105 [25 Feb2017]
+
+docs/utf8.info
+test-files/combining-diacritics
+    Added
+
+Makefile
+    Replace "-D_BSD_SOURCE -D_SVID_SOURCE" with "-D_DEFAULT_SOURCE" in
+    DEFINES for Linux. Some distros warn about this.
+
+basic.c
+    Use next_utf8_offset()/prev_utf8_offset() to find start of utf8
+    characters.
+
+display.c
+    In updpos() we need to allow for the same number of characters
+    used by vtputc() for *all* non-printing characters.
+
+globals.c
+names.c
+random.c
+word.c
+edef.h
+efunc.h
+etc/uemacs.rc
+    Rename *ggr.mode to *ggr.style, as it isn't a mode.
+
+random.c
+    Tidy up the current position display code in showcpos().
+
+utf8.c
+utf8.h
+    Use MAX_UTF8_LEN for max length of a utf8 sequence. Which, since
+    2003, is 4 (not 6).
+    Add next_utf8_offset() and prev_utf8_offset() functions.
+    Removed is_beginning_utf8().
+
+word.c
+    Change prompt in eos_chars() and display current setting.
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.105
+
+========== GGR4.106...
