@@ -96,10 +96,9 @@ int showcpos(int f, int n)
                 ratio = (100L * predchars) / numchars;
 
         /* summarize and report the info */
+        char descr[40];
         if (curchar == 0x0FFFFFFF)
-        mlwrite("Line %d/%d Col %d/%d Byte %D/%D (%d%%) at end of buffer",
-                predlines+1, numlines+1, col, ecol,
-                predchars, numchars, ratio);
+            strcpy(descr, "at end of buffer");
         else {
 #include "charset.h"
             char temp[8];
@@ -114,12 +113,12 @@ int showcpos(int f, int n)
                 temp[0] = curchar;
                 temp[1] = '\0';
             }
-            mlwrite(
-            "Line %d/%d Col %d/%d Byte %D/%D (%d%%) char = %o, 0x%x (%s)",
-                predlines+1, numlines+1, col, ecol,
-                predchars, numchars, ratio, curchar, curchar,
-                temp);
+            snprintf(descr, 40 ,"char = 0%o, 0x%x (%s)",
+                curchar, curchar, temp);
         }
+        mlwrite( "Line %d/%d Col %d/%d Byte %D/%D (%d%%) %s",
+                predlines+1, numlines+1, col, ecol,
+                predchars, numchars, ratio, descr);
         return TRUE;
 }
 
