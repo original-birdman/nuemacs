@@ -97,7 +97,8 @@ void vtinit(void)
         pscreen = xmalloc(term.t_mrow * sizeof(struct video *));
 #endif
         for (i = 0; i < term.t_mrow; ++i) {
-                vp = xmalloc(sizeof(struct video) + term.t_mcol*4);
+                vp = xmalloc(sizeof(struct video) +
+                        term.t_mcol*sizeof(unicode_t));
                 vp->v_flag = 0;
 #if     COLOR
 /* GGR - use defined colors */
@@ -111,7 +112,8 @@ void vtinit(void)
                 vp->v_text[j++] = ' ';
 
 #if     MEMMAP == 0 || SCROLLCODE
-                vp = xmalloc(sizeof(struct video) + term.t_mcol*4);
+                vp = xmalloc(sizeof(struct video) +
+                        term.t_mcol*sizeof(unicode_t));
                 vp->v_flag = 0;
                 pscreen[i] = vp;
 #endif
@@ -743,7 +745,8 @@ static int scrolls(int inserts)
                 end = endofline(vpv->v_text, cols);
                 if (end == 0)
                         target = first; /* newlines */
-                else if (memcmp(vpp->v_text, vpv->v_text, 4*end) == 0)
+                else if (memcmp(vpp->v_text, vpv->v_text,
+                                sizeof(unicode_t)*end) == 0)
                         target = first + 1;     /* broken line newlines */
                 else
                         target = first;
@@ -802,7 +805,8 @@ static int scrolls(int inserts)
                 for (i = 0; i < count; i++) {
                         vpp = pscreen[to + i];
                         vpv = vscreen[to + i];
-                        memcpy(vpp->v_text, vpv->v_text, 4*cols);
+                        memcpy(vpp->v_text, vpv->v_text,
+                                sizeof(unicode_t)*cols);
                         vpp->v_flag = vpv->v_flag;      /* XXX */
                         if (vpp->v_flag & VFREV) {
                                 vpp->v_flag &= ~VFREV;
@@ -850,7 +854,7 @@ static int texttest(int vrow, int prow)
         struct video *vpv = vscreen[vrow];      /* virtual screen image */
         struct video *vpp = pscreen[prow];      /* physical screen image */
 
-        return !memcmp(vpv->v_text, vpp->v_text, 4*term.t_ncol);
+        return !memcmp(vpv->v_text, vpp->v_text, sizeof(unicode_t)*term.t_ncol);
 }
 
 /*
