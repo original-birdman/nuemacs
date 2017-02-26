@@ -1,5 +1,5 @@
 See GGR4.100.changes for the original changes around moving from 3.9e to
-pK4.105.
+pK4.0.15.
 
 ========== GGR4.101 [21 Feb 2017]
 .gitignore
@@ -170,4 +170,45 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.105
 
-========== GGR4.106...
+========== GGR4.106 [26 Feb 2017]
+
+Makefile
+    Add back "-D_BSD_SOURCE -D_SVID_SOURCE" while keeping
+    "-D_DEFAULT_SOURCE" in DEFINES for Linux.
+    Both need to be there for a transitional period.
+    Also added "-D_DEFAULT_SOURCE" to the non-Linux branches as the
+    uemacs code itself doesn't use any of them so is just setting them
+    for system header files, which can use them or not as they see fit.
+
+archive/orignal-git.log
+    The log of changes from the original pK4.0.15 git repository.
+
+etc/uemacs.rc
+    Add a description of some environment variable settings and set
+    $overlap to 2 (which was the value used by 3.9e).
+
+fileio.c
+file.c
+    Check for strcpy()ing a name to itself, which happens when
+    activating an inactive buffer.
+    The action of strcpy() is undefined for overlapping strings.
+    On a Mac it will crash...
+
+display.c
+    Change the unexplained 4 in several malloc()s to be sizeof(unicode_t).
+
+basic.c
+    Correct the fix in forwpage() to stop before we loop round, and
+    hence stay on the last line, not go one past it.
+    (Incorrectly merged from 3.9e.)
+
+input.c
+    Remove a redundant set of braces around (c == (CONTROL|'I')) as
+    otherwise the Mac compiler warns about a possible intended
+    assignment.
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.106
+
+========== GGR4.107...

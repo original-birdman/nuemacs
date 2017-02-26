@@ -1,4 +1,4 @@
-At 4.105:
+At 4.106:
 
 RETHINK??? RETHINK??? RETHINK??? RETHINK??? RETHINK??? RETHINK???
 Might not be a bug - just needs a think...
@@ -38,3 +38,8 @@ The Unicode ranges for these are:
  Combining Half Marks (FE20–FE2F), versions 1.0, mode up to v8
 
 test-files/combining-diacritics shows the issue.
+
+
+MISSING? MISSING? MISSING? MISSING? MISSING? MISSING? MISSING? MISSING?
+Horizontal scrolling (which was in 3.9e).
+Did anyone ever use it?
