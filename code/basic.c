@@ -400,13 +400,16 @@ int forwpage(int f, int n)
 #endif
         lp = curwp->w_linep;
 
-/* GGR - FIX2
- * Add a check to stop *before* we loop round from end to start of file
+/* GGR
+ * Make the check stop *before* we loop round from end to start of file
  * buffer, so we always leave a line on screen (but it may be empty...)
+ * (replace "lp !=..." with "lforw(lp) !=...").
+ * So we need to make 1 specific check first
  */
-        if (lp == curbp->b_linep) return (TRUE);
-        while (n-- && lp != curbp->b_linep)
-                lp = lforw(lp);
+        if (lp != curbp->b_linep) {
+                while (n-- && lforw(lp) != curbp->b_linep)
+                        lp = lforw(lp);
+        }
         curwp->w_linep = lp;
         curwp->w_dotp = lp;
         curwp->w_doto = 0;
