@@ -9,6 +9,16 @@ write-message "[Setting up....]"
 ;
 2 ggr-style         ; Enable ggr-style
 ;
+; There are some system variables of use (see eval.c and evar.h).
+;
+; $tab lets you set a tab to 4 or 8 chars
+; $overlap sets the number of lines to overlap on scrolling to a new page.
+; The default (overlap == 0) is 1/3rd of the screen!
+; $jump is how many lines to scroll on prev-line at the top of a screen
+; or next-line at the bottom (default == 1).
+;
+set $overlap 2          ; What it used to be
+;
 ; Overwrite some standard bindings - for historic GGR feel.
 ; Binding names are from name_bind in names.c
 ;
