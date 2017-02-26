@@ -1,0 +1,25 @@
+This is an extension to the uEmacs/PR 4.0.
+That was obtained by:
+ git clone git://git.kernel.org/pub/scm/editors/uemacs/uemacs.git uemacs
+in early Feb 2017.
+I wasn't working in git at the time, so didn't fork it. In the end I put
+all of that code into my own local git and started from there. So the
+original 4.015 branch is just that. Then I uploaded it to github, but
+didn't want to go back to a fork and have to start again.
+
+The main extension as to add code which had been put into 3.9e many
+years ago to make the bottom line into a minibuffer - you can use many
+uemacs commands to move around, delete, yank etc.  It handles
+filename expansion (ctlI/tab), albeit in a different manner to 4.015.
+That code also handles environment variable expansion.
+
+Other changes are being made to
+  o better handle utf8 strings (ongoing...),
+  o make some buffer dynamically allocatable to cater for very long
+    pieces of text and enlarge others,
+  o make some things user-configurable in start-up files such as
+    * the definition of "end of sentence" characters,
+    * how twiddle and forward word work (ggr-mode)
+  o fix the display of "binary files" (where ^X and \yy are used),
+  o handle utf8 character strings in the message/minibuffer line and the
+    modeline.
