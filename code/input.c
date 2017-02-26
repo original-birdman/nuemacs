@@ -584,7 +584,7 @@ loop:
 /* Filename expansion code:
  * a list of matches is temporarily displayed in the minibuffer.
  */
-    if ((c == (CONTROL|'I'))) {
+    if (c == (CONTROL|'I')) {
         lp = curwp->w_dotp;
         sp = lp->l_text;
 /* NSTRING-1, as we need to add a trailing NUL */
