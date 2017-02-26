@@ -30,7 +30,11 @@ int ffropen(char *fn)
         if ((ffp = fopen(fn, "r")) == NULL)
                 return FIOFNF;
         if (pathexpand) {       /* GGR */
-                strcpy(curbp->b_fname, fn);
+/* If activating an inactive buffer, these may be the same and the
+ * action of strcpy() is undefined for overlapping strings.
+ * On a Mac it will crash...
+ */
+                if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
         }
         eofflag = FALSE;
         return FIOSUC;
@@ -48,7 +52,7 @@ int ffwopen(char *fn)
 #endif
 #if EXPAND_SHELL
         expand_shell(fn);
-#endif         
+#endif
 #endif
 #if     VMS
         int fd;
@@ -62,8 +66,12 @@ int ffwopen(char *fn)
                 return FIOERR;
         }
         if (pathexpand) {       /* GGR */
-                strcpy(curbp->b_fname, fn);
-        }       
+/* If activating an inactive buffer, these may be the same and the
+ * action of strcpy() is undefined for overlapping strings.
+ * On a Mac it will crash...
+ */
+                if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
+        }
         return FIOSUC;
 }
 
@@ -233,7 +241,7 @@ int fexist(char *fname)
 #endif
 #if EXPAND_SHELL
         expand_shell(fname);
-#endif      
+#endif
 #endif
         /* try to open the file for reading */
         fp = fopen(fname, "r");
@@ -256,7 +264,7 @@ void expand_shell(char *fn)
     char command[NFILEN];
     int c;
     FILE *pipe;
-    
+
     if (strchr(fn, '$') == NULL)    /* Don't bother if no $s */
         return;
     strcpy(command, "echo ");  /* Not all systems have -n, sadly */
@@ -276,18 +284,18 @@ void expand_shell(char *fn)
 #include <stdlib.h>
 #include <pwd.h>
 void expand_tilde(char *fn)
-{       
+{
     char tilde_copy[NFILEN];
     char *p, *q;
     short i;
     struct passwd *pwptr;
-                
+
     if (fn[0]=='~') {
         if (fn[1]=='/' || fn[1]==0) {
             if ((p = getenv("HOME")) != NULL) {
                 strcpy(tilde_copy, fn);
                 strcpy(fn , p);
-                i = 1;  
+                i = 1;
                 /* special case for root! */
                 if (fn[0]=='/' && fn[1]==0 && tilde_copy[1] != 0)
                     i++;
@@ -305,10 +313,10 @@ void expand_tilde(char *fn)
                 strcat(tilde_copy, p);
                 strcpy(fn, tilde_copy);
             }
-        }       
-    }           
-    return;     
-}               
-#endif              
-                
+        }
+    }
+    return;
+}
+#endif
+
 #endif
