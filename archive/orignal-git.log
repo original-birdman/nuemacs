@@ -1,0 +1,1464 @@
+commit 8841922689769960fa074fbb053cb8507f2f3ed9
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Mon Dec 8 14:53:04 2014 -0800
+
+    Don't use 'char' for number of lines
+
+    Heh.  My new UHD monitor makes it easy to have more than 127 lines of
+    text.  I guess the 'char' could be an unsigned char, but quite frankly,
+    trying to save a couple of bytes per open editor window seems a bit
+    excessive these days.  So just make it 'int'.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit fa00fe882f719351fdf7a4c4100baf4f3eab4d61
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Fri Feb 22 14:32:16 2013 -0800
+
+    Stop using 'short' for line and allocation sizes
+
+    Yes, yes, it probably made sense 30 years ago as a way to save a tiny
+    amount of memory, but especially when interspersed in structures that
+    have pointers (aligned to 64 bits these days), it's not even saving
+    memory today.  And it makes us fail in nasty ways when looking at files
+    with long lines.
+
+    So just make them 'int'.  And if you have a line that is longer than
+    2GB, you only have yourself to blame.  I no longer care.
+
+    In case anybody care, the "test-case" for this was a lovely UDDF file
+    with a binary divecomputer dump encoded as an XML element.  Resulting in
+    a lovely 41kB single line.  Not what poor micro-emacs was designed for,
+    I'm afraid.
+
+    I really should just learn another editor, rather than continue to
+    polish this turd.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 25f0141df133f3522c6d23ddd96ae341813b9638
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Fri Feb 22 14:29:43 2013 -0800
+
+    Avoid memory access errors if llength() overflows
+
+    llength() is currently a 'short' which can overflow and result in signed
+    numbers if line lengths are larger than 32k.  We'll fix the overflow
+    separately, but before we do that, just use a signed int to hold the
+    value so that we don't overrun memory allocations when we converted that
+    negative number to a large positive unsigned integer.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 8899ed4e1f076d6f3c400731992210513bb629d3
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Mon Sep 24 19:44:21 2012 -0700
+
+    Fix the unicode character limit (0 .. 0x10ffff)
+
+    For some reason I had limited things to 0xffff, it really should be 0x10ffff.
+
+    We don't actually support a full 32-bit unicode model anyway, since we
+    use the high bits for the control/meta/^X/special bits, but there was no
+    reason to limit things to 16 bits when we had 28 bits available.  And
+    the real limit for real Unicode characters is 0x10ffff.
+
+    Add a silly example character past the 16-bit range to the UTF8 demo
+    file:
+      'SMILING FACE WITH HALO' (U+1F607)
+    from the 'emoticons' block.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit dbf1a014a7b038f59fbb1bea6f93b105f25ad3a0
+Author: Pekka Enberg <penberg@kernel.org>
+Date:   Wed Aug 15 09:27:21 2012 +0300
+
+    uemacs: Remove unused 'lflag' variables from file.c
+
+    GCC spotted the following unused variable:
+
+        CC       file.o
+      file.c: In function ‘readin’:
+      file.c:225:6: warning: variable ‘lflag’ set but not used [-Wunused-but-set-variable]
+      file.c: In function ‘ifile’:
+      file.c:553:6: warning: variable ‘lflag’ set but not used [-Wunused-but-set-variable]
+
+    Signed-off-by: Pekka Enberg <penberg@kernel.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit ddd45dbff17f4fc30c66404331f6b8f0c05cdd82
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Sun Jul 15 14:36:38 2012 -0700
+
+    Fix 'getccol()' and 'getgoal()' functions for multibyte UTF-8 characters
+
+    These functions convert the byte offset into the column number
+    (getccol()) and vice versa (getgoal()).
+
+    Getting this right means that moving up and down the text gets us the
+    right columns, rather than moving randomly left and right when you move
+    up and down.  We also won't end up in the middle of a utf-8 character,
+    because we're not just moving into some random byte offset, we're moving
+    into a proper column.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 1edeced67c1cacefe83444e5fd403dab73529ebf
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Wed Jul 11 11:23:32 2012 -0700
+
+    Fix vtputc() and simplify show_line by using it again
+
+    This re-introduces vtputc() as the way to show characters, which
+    reinstates the control character handing, and simplifies show_line() in
+    the process.
+
+    vtputc now takes an "int" that is either a unicode character or a signed
+    char (so negative values in the range [-1, -128] are considered to be
+    the same as [128, 255]).  This allows us to use it regardless of what
+    the source of data is.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 0a8b429059b47bca13307967ff0dabf0b79fb1d5
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Wed Jul 11 10:43:16 2012 -0700
+
+    Start doing character removal properly
+
+    This makes actual basic editing work.  Including things like
+    justify-paragraph etc, so lines get justified by number of UTF8
+    characters rather than bytes.
+
+    There are probably tons of broken stuff left, but this actually seems to
+    get the basics working right.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 0e9fc2be15b0926dfee08846c906cd3b2668878a
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Wed Jul 11 02:21:36 2012 -0700
+
+    Start actually inserting full utf8 sequences
+
+    This makes it possible to cut-and-paste the UTF8 testfile into a new
+    buffer, and the end result looks correct.
+
+    NOTE! We still do various things wrong while editing.  For example,
+    while the cursor movements were fixed, simple things like deleting a
+    character still work on single bytes, rather than utf8 characters.
+
+    So while this is getting much closer to actually editing UTF-8 data,
+    it's not there yet.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 4bccfab6324c8c8bc8106e65c4aec076f5d121be
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Wed Jul 11 01:22:32 2012 -0700
+
+    Make 'show_line()' do proper TAB handling
+
+    The TAB handling got broken by commit cee00b0efb86 ("Show UTF-8 input as
+    UTF-8 output") when it stopped doing things one byte at a time.
+
+    I'm sure the other special character cases are broken too.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 42d9cb33a555d113897b5decb29c099b4d47a164
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 18:14:02 2012 -0700
+
+    Expand keycode to 'int' from 'short'
+
+    This uses the four high bits for the meta and control key sequences.
+    This means that we will be limiting our Unicode space to 28 bits, but
+    that's more than we really need.
+
+    It *would* be nicer if we just used the sign bit to mark "we have meta
+    character information") but that would require bigger changes.  And we
+    really don't need to worry about 30-bit unicode.  Small steps, remember.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 6e4a45c0050ed8eacdd2426b971e263cbdcca0ae
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 18:11:30 2012 -0700
+
+    character input: make sure we have enough bytes for a full utf8 character
+
+    .. but we do have that 0.1s delay, so if somebody feeds us non-utf8
+    sequences, we won't delay forever.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 3abd3dba424450401ca0bb34c043d0331f1c1abe
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 17:56:53 2012 -0700
+
+    utf8: make sure to honor the array length properly
+
+    Right now the input side can give partial utf8 input, and that showed
+    that we didn't properly handle that case.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 3c7bd9a7d294ed9f34e952fab792644c5caf6c18
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 17:42:19 2012 -0700
+
+    Make kbd macro save area use 'int' instead of short
+
+    I'm starting to expand the input value from 'short' (with flags in the
+    upper eight bytes) to 'int' (with negative values having flags).
+
+    Small baby steps.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit ec6f4f36ec679a9434c71915f22c45b165cd227a
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 17:36:30 2012 -0700
+
+    Use utf8 helper functions for keyboard input
+
+    ttgetc() used some homebrew utf8 to unicode translation, limited to just
+    the normal latin1 characters.  Use the utf8 helper functions to get it
+    right for the more complex cases.
+
+    NOTE! We don't actually handle characters > 0xff right anyway.  And we
+    still end up doing Latin1 in the buffers on input.  One small step at a
+    time.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 6b793211c2aec69115dd2769892be0524801f7d8
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 16:40:36 2012 -0700
+
+    Make cursor movement (largely) understand UTF-8 character boundaries
+
+    Ok, so it may do odd things if it's not truly utf-8, and when moving up
+    and down lines that have utf-8 the cursor moves oddly (because the byte
+    offset within the line stays constant, rather than the character
+    offset), but with this you can actually open the UTF8 example file and
+    move around it, and at least some of the movement makes sense.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit e62cdf04cff63381121364cd6ef077f00d72307a
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 16:21:35 2012 -0700
+
+    Split up the utf8 helper functions into a file of their own
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 12e4647debb6016da2063feed7516ad835fffd08
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 15:09:31 2012 -0700
+
+    Remove the old utf8_mode thing.
+
+    Let's just plan on being fully utf8 some day.  We're not there yet, and
+    maybe we'll never be, but having the halfway mode is not useful either.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit cee00b0efb86c583a10f478a1d7d5b4b5a530a88
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 15:08:17 2012 -0700
+
+    Show UTF-8 input as UTF-8 output
+
+    .. by doing the stupid "convert to unicode value and back" model.
+
+    This actually populates the 'struct video' array with the unicode
+    values, so UTF8 input actually shows correctly.  In particular, the nice
+    test-file (UTF-8-demo.txt) shows up not as garbage, but as the UTF-8 it
+    is.
+
+    HOWEVER!
+
+    Since the *editing* doesn't know about UTF-8, and considers it just a
+    stream of bytes, the end result is not actually a usable utf-8 editor.
+    So don't get too excited yet: this is just a partial step to "actually
+    edit utf8 data"
+
+    NOTE NOTE NOTE! If the character buffer contains Latin1, we will
+    transform that Latin1 to unicode, and then output it as UTF8.  And we
+    will edit it correctly as the character-by-character data.  Also, we
+    still do the "UTF8 to Latin1" translation on *input*, so with this
+    commit we can actually continue to *edit* Latin1 text.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit e8f984a1b0dc4f5160bc8ccf16ae7df55ac7563d
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 14:24:23 2012 -0700
+
+    Make the 'struct video' contain an array of unicode characters rather than bytes
+
+    This is disgusting.  And quite frankly, it's debatable whether this will
+    ever work.  The "line" structure is still just an array of characters,
+    so that has to work with utf-8.
+
+    But the 'struct video' thing is what represents the actual screen
+    rectangle, and is fixed-size by the size of the screen.  So making it
+    contain actual 32-bit unicode characters *may* make sense.
+
+    Right now we translate things the same way we always used to, though, so
+    utf-8 in 'struct line' will not be translated to the proper unicode
+    array, but to the bytes of the utf-8 representation.  So this really
+    doesn't improve anything per se yet, just expands the memory use of the
+    video array.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 2dddd4f970e9dd7aa415ec6b4f646273c5c92211
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Jul 10 13:38:41 2012 -0700
+
+    Show lines with a single helper function, not one byte at a time
+
+    Let's see how hard it is to show UTF-8 characters properly.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 1d0cfd02760c39c0c1ae0790d69391f29e19271e
+Author: Naohiro Aota <naota@gentoo.org>
+Date:   Sat May 26 16:06:28 2012 +0200
+
+    Make uemacs build on FreeBSD.
+
+    See <https://bugs.gentoo.org/show_bug.cgi?id=387135>.
+
+    Signed-off-by: Ulrich Müller <ulm@gentoo.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 12ba84c8dd6173b710e14d735e1576f09e7c9825
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Thu Aug 25 16:01:28 2011 -0700
+
+    spawn.c: do the "keyboard open/close" around shell invocations
+
+    I'm not 100% sure we really should even be doing this whole "keyboard"
+    open/close for termcap, but even if the right thing to do ends up being
+    to just do everything in the TTopen/TTclose (and make TTkopen/TTkclose
+    no-ops), it does seem to be the right thing to do.
+
+    Reported-by: Bijan Soleymani <bijan@psq.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 33676d6d23f1381a7984dd1b1fd4f1464317e6aa
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Thu Aug 25 15:52:41 2011 -0700
+
+    file.c: remove crazy keyboard open/close calls
+
+    It seems to have something to do with some old DOS mode, and not having
+    keyboard translation on ("Insert floppy A:" questions while opening
+    files? Whatever).  But this is while doing normal file opens, and it is
+    just insane to open/close a tty across a file open.
+
+    The possible tty init/exit sequence would mess up some of the file
+    read/write messages.
+
+    Reported-by: Bijan Soleymani <bijan@psq.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit c0970c42209c707f14e6ef6d50dd5861682a11ae
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Thu Aug 25 13:45:08 2011 -0700
+
+    Force a screen re-draw after tcap 'ti' on terminal open
+
+    The 'tcapkopen()' function re-initializes the terminal with the 'ti'
+    sequence, which for most sane termcap entries is just empty.  But for
+    'xterm', that seems to actually be a real control sequence (clear and
+    reset?), and we'd better tell display.c that the screen is now garbage
+    and needs to be re-drawn.
+
+    Also, make tcapkclose() match the 'ti' (terminal init) with a 'te'
+    (terminal exit).
+
+    Maybe we should just stop playing games with ti/te, but this at least
+    improves the situation a bit.
+
+    Reported-by: Bijan Soleymani <bijan@psq.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 2d0b5685594d23355ed9aa9f6f43acdc7b6c64bf
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Apr 23 11:23:13 2011 -0300
+
+    uemacs: Add -g options to the output usage.
+
+    While I'm here, improve the word of the above two options.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit a511e03e609001935e8671f8aa3764aca9b5a803
+Author: Ulrich Müller <ulm@gentoo.org>
+Date:   Sun Aug 21 12:39:10 2011 +0200
+
+    Respect LDFLAGS when linking.
+
+    Signed-off-by: Ulrich Müller <ulm@gentoo.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit c718cb2a4a204627d6c2a9cfb1ac8e88c15a198b
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Mon Aug 22 09:25:04 2011 -0700
+
+    Show xA0 (nbsp) as a non-printable character
+
+    I want to see the difference between space and nbsp, and I consider nbsp
+    to be a control character, so show it as such.  Even if it is
+    technically "printable".
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 823786d263fc88ef9343d56970044be17b6dd755
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Thu Dec 16 21:37:50 2010 -0200
+
+    uemacs: display.c: Use the newly introduced xmalloc function.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 6e4aec520ef4f16960fb70d54b9e9a3955d12b03
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Wed Dec 15 23:34:57 2010 -0200
+
+    uemacs: Add xmalloc as a wrapper function for malloc.
+
+    xmalloc checks the returned pointer and dies if it failed to allocate
+    the memory.
+
+    Use this new function in window.c.
+    More places will be converted to use xmalloc latter.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit bf3c3ac2bd36ee89c1b18999ac779e86deb7750f
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Dec 5 18:35:55 2010 -0200
+
+    uemacs: Make some magic variables private to search.c module.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit d6e76cca7b54f9e692481f878c663f97748e8ad9
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Fri Dec 3 23:32:08 2010 -0200
+
+    uemacs: input.c: Fix mkstemp warning.
+
+    Fix the following warning:
+
+    input.c: In function ‘getstring’:
+    input.c:590: warning: ignoring return value of ‘mkstemp’, declared with attribute warn_unused_result
+
+    This add usage.c module for die function.
+    This also add wrapper.c module for the xmkstemp that is wrapper function
+    around the original mkstemp function.
+
+    Both module codes was largelly based on git, linux and sparse codes.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit f28629471c737da5af23db627b750a4b4666c89d
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Nov 28 23:56:30 2010 -0200
+
+    uemacs: convert typedef struct RMC to struct magic_replacement.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 9744421f3ca0a6f812182b52745dcfabdcb987f8
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Nov 28 23:14:31 2010 -0200
+
+    uemacs: Move MAXNLINE constant from estruct.h to file.c
+
+    This constant is used only there, so there is no reason for it to be
+    in estruct.h
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit a1891f8efcfdd78dc2f0494f8abad2dc366b6f29
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Nov 28 20:09:55 2010 -0200
+
+    uemacs: Move some constants from estruct.h to posix.c
+
+    These two constants are only needed/used by the posix.c file,
+    so just define them there.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit dff382de1d39be7bf41d1fd1fb5e7bbf15023888
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Nov 28 18:57:12 2010 -0200
+
+    uemacs: buffer.c: Fix uninitialized struct warning.
+
+    This fix the following warning:
+
+      buffer.c: In function ‘nextbuffer’:
+      buffer.c:45: warning: ‘bp’ may be used uninitialized in this function
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit ebd4f2f1eb6b0a032273b8adceacd1155dbc9c67
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Nov 27 22:28:01 2010 -0200
+
+    uemacs: convert typedef struct MC to struct magic.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit e1b2f459e22d4d704ecb0cfed19df02a43e803a4
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Tue Nov 23 20:41:25 2010 -0200
+
+    uemacs: Move uv variable into the eval.c source file.
+
+    It's used only there.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 1cf0fc1609a4a573b92aa4cca37fb3f8334cad47
+Author: Li Jie <eltshanli@gmail.com>
+Date:   Thu Nov 18 14:51:16 2010 +0800
+
+    uemacs: add line.h in names.c to fix compiling error
+
+    I got following errors while compiling uemacs:
+
+    names.c:132: error: ‘insspace’ undeclared here (not in a function)
+    names.c:217: error: ‘yank’ undeclared here (not in a function)
+    make: *** [names.o] Error 1
+
+    It looks like names.c needs line.h for function declarations.
+
+    Signed-off-by: Li Jie <eltshanli@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 10ae1711470749d10c2aee32d3e79f7568e5dcf7
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Nov 15 18:40:03 2010 -0200
+
+    uemacs: Move NBLOCK constant into line.c
+
+    This constant is only used in line.c. So just keep it there.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit af19da1a99c37bc8b5e82f1d272673260f0a976f
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Nov 15 00:10:03 2010 -0200
+
+    uemacs: Move structure line and its functions to its own header file.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 72a1af4d91a36516e9c7642368ab35fba28cc25c
+Author: Pekka Enberg <penberg@kernel.org>
+Date:   Sun Nov 14 22:42:12 2010 +0200
+
+    uemacs: Kill dead code
+
+    This patch kills #ifdef'd code from display.c and file.c.
+
+    Signed-off-by: Pekka Enberg <penberg@kernel.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 6ceea8ba9b06c89cd0fd8342f9248d5ca2ff7563
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Nov 6 14:09:44 2010 -0200
+
+    uemacs: convert typedef struct VDESC to struct variable_description.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit fa57a63d574dc9f3d2274cfb93e47499c8745c9e
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Wed Nov 3 10:35:35 2010 -0200
+
+    uemacs: remove forward declaration of 'struct video' from edef.h
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 85b4f0af1a0ecb2148364e6b9d6cb779d5720592
+Merge: 4966cb3 6491f4c
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Tue Nov 2 09:05:21 2010 -0400
+
+    Merge branch 'master' of git://git.kernel.org/pub/scm/editors/uemacs/uemacs
+
+commit 4966cb355eecf368200916f98eb8d0abe6edd6a4
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Nov 1 22:22:42 2010 -0200
+
+    uemacs: get rid of BITMAP typedef.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 6491f4c4f04ec84879a751d3a406bc903478441a
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Oct 30 23:07:41 2010 -0200
+
+    uemacs: convert typedef struct WHBLOCK to struct while_block.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 18342f6246bef932f9b6f3ca0fe1137f05a76e74
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Wed Oct 20 22:57:08 2010 -0200
+
+    uemacs: Move function declarations from edef.h to efunc.h.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit da3d470b8d036cfd95d0f22e9ea19ffd81e1b7a2
+Author: Christian Faulhammer <christian@faulhammer.org>
+Date:   Mon Sep 13 11:18:00 2010 +0200
+
+    Fix a tiny typo
+
+    Signed-off-by: Christian Faulhammer <christian@faulhammer.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 5664b10291a34c978137b70be199d3f473e0e347
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 29 20:39:06 2010 -0300
+
+    uemacs/version.c: Add version function to output the version string information.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 74336ca924c45d46b9fafffb9309878e368cc301
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 29 23:28:34 2010 -0300
+
+    uemacs: Get rid of the CALLED macro.
+
+    uemacs is not a subprogram and doesn't seem it will be, so there is no reason
+    to leave this macro. And this macro is defined to 0, so we never reach the path
+    where we test for this macro.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 1dcc35b3098ee7675d974aee313cd73291f8f2dd
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 29 23:16:38 2010 -0300
+
+    uemacs: Remove more garbage emacs.* files from the tree.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit b71ee14235e13382fd1f69d96bd42cbf5c2a0a11
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 29 22:21:42 2010 -0300
+
+    uemacs: Remove two completly unused functions (fnclabel and spal).
+
+    The implementation of these functions are doing anything at all at this moment.
+    So cleanup a bit the code by removing fnclabel and spal functions completly.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 9f801a88222af6aa07102414ae0d203dfca3812a
+Author: Pekka Enberg <penberg@kernel.org>
+Date:   Sun Aug 29 13:35:20 2010 +0300
+
+    uemacs: Remove garbage from the tree
+
+    This patch removes bunch of ancient Makefiles and VMS scripts from
+    uemacs source tree.  If somebody really needs them, they can always look
+    them up from git repository history.
+
+    Signed-off-by: Pekka Enberg <penberg@kernel.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit f4ccd4965003bdef5acbc4e8be988911b428c58f
+Author: Pekka Enberg <penberg@kernel.org>
+Date:   Sun Aug 29 13:08:13 2010 +0300
+
+    uemacs: Clean up program executable
+
+    This patch fixes Makefile 'clean' target to clean up program executable 'em'.
+
+    Signed-off-by: Pekka Enberg <penberg@kernel.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 0f05e53f99c07afcd4fa8040c8631bc3caf4de56
+Author: Pekka Enberg <penberg@kernel.org>
+Date:   Sun Aug 29 13:03:55 2010 +0300
+
+    uemacs: Fix return statements
+
+    Return statement is not a function so remove superfluous use of parenthesis.
+
+    Cc: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Pekka Enberg <penberg@kernel.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 3246438f7350ad080355b9031e9ea4b3925a34bf
+Author: Pekka Enberg <penberg@kernel.org>
+Date:   Sun Aug 29 13:03:54 2010 +0300
+
+    uemacs: Kill unused lckhello function
+
+    This patch kills an unused 'lckhello' function and gets rid of the following
+    GCC warning:
+
+        CC       lock.o
+      lock.c:160: warning: ‘lckhello’ defined but not used
+
+    Signed-off-by: Pekka Enberg <penberg@kernel.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit bd635515a690aa5d6a4f003594b984e12fa695b6
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 29 03:10:02 2010 -0300
+
+    uemacs/efunc.h: Get rid of a duplicated exported type called "names".
+
+    This type is already exported in edef.h
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 78f045749f10397c93b703dcfced19641e852e28
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Aug 28 19:38:52 2010 -0300
+
+    uemacs: Add more two options to the usage output.
+
+    Added + and +<n> to the usage output.
+
+    Also fixed the following warning:
+
+      main.c: In function ‘main’:
+      main.c:121: warning: ‘gline’ may be used uninitialized in this function
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 7622263b457be5cc46ebd1747dcc3faa46faa9bf
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Thu Aug 26 13:20:25 2010 -0300
+
+    uemacs: Make getgoal function private to basic.c.
+
+    This functions is only used internally by basic.c, so marking it static,
+    to make it private.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 799b74b9e7ad2b8d68ac6b592c7577927de80f60
+Author: Pekka Enberg <penberg@kernel.org>
+Date:   Wed Aug 25 10:35:55 2010 +0300
+
+    uemacs: Fix out-of-box build on Mac OS X
+
+    This patch fixes out-of-box build on Mac OS X by using "uname -s" to detect the
+    underlying OS and fixing up defines accordingly.
+
+    Cc: Yong Luk Stanley Elijah Goh <stan@t0xt.com>
+    Signed-off-by: Pekka Enberg <penberg@kernel.org>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 89fea23de593344fbe250e95f80e264777a69593
+Author: Yong Luk Stanley Elijah Goh <stan@t0xt.com>
+Date:   Fri Aug 20 05:55:31 2010 +0800
+
+    uemacs: Compiles on Mac OS X.
+
+    Compiles on Mac OS X 10.6.4.
+
+    setmode() is renamed to setemode() to avoid conflict with OS X's unistd.h's
+    setmode().
+
+    Modify Makefile to enable the appropriate DEFINES to compile on Mac OS X.
+
+    Signed-off-by: Yong Luk Stanley Elijah Goh <stan@t0xt.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 834bfd37aa8a7342289bd71a0bf196e1591cb442
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Fri Aug 20 23:53:23 2010 -0300
+
+    uemacs: basic.c: Add support to go to the end of the buffer.
+
+    There is a case when the user can type something like this:
+
+        em filename +
+
+    or even
+
+        em +
+
+    Instead of saying "Bogus argument" when the uemacs start, just go to the end of
+    the buffer like we can do in vim for example.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 8facd84c6f58dfd27e99aea6596389227390f97b
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 15 00:11:27 2010 -0300
+
+    uemacs: Add --help option.
+
+    Add a basic usage() function to support the --help option.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit dfc102ce3a47dfd63a98cad7930e223b2597e3ac
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Fri Aug 13 00:19:22 2010 -0300
+
+    uemacs: Add --version option.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 1f271323f8bd6b3d12fbc31fd432b4903cf633de
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 8 23:03:42 2010 -0300
+
+    uemacs: convert typedef struct KILL to struct kill.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit c206895b9eff24b08a1c7174c449523d80d1e0e9
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Wed Aug 4 01:05:25 2010 -0300
+
+    uemacs: evar.h: Add enum function_type.
+
+    Replace four macros used to define integer constants with a enum.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 54966da9f01fca956d3034af9afc9152ba67ecf0
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Aug 2 00:05:41 2010 -0300
+
+    uemacs: ibmpc.c: Move the functions to the ANSI style declaration.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 81a3a0be6ebe9b3d461100034d313e1dc029796c
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Aug 1 18:37:28 2010 -0300
+
+    uemacs: convert typedef struct window_t to struct window.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit af9710adc420b7c054657e22875b13506a4dc9c0
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sun Jul 11 14:54:48 2010 -0300
+
+    uemacs: convert typedef struct TERM to struct terminal.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit bbf253858a878ad4ce137ea6dfe2b6979ef797c7
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Jul 10 01:46:27 2010 -0300
+
+    uemacs: convert typedef struct REGION to struct region.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 724c4efc5fbc1c49361a75a86139e27b2e96c506
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Fri Jul 2 16:37:45 2010 -0300
+
+    uemacs: convert typedef struct NBIND to struct name_bind.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 8403b1d597fd574e934e52401750827cf1c00de6
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Wed Jun 30 00:08:45 2010 -0300
+
+    uemacs: convert typedef struct KEYTAB to struct key_tab.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit e5e0fbd7e76dd2e0804986302aaf39ff96c011b4
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Jun 28 22:32:20 2010 -0300
+
+    uemacs/ansi.c: Convert the old functions style declarations to the new one.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit da18fa4a2f9c79a417c4a7d7e506524767ff5090
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Jun 28 01:37:08 2010 -0300
+
+    uemacs: Convert typedef struct UVAR to struct user_variable.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit d01bdbdc42a4b9d09eb9d2908d4e45457705a445
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Jun 26 18:40:11 2010 -0300
+
+    uemacs: convert typedef struct UFUNC to struct user_function.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 3b4567fb813aac3c924477cbdfbdf47b19bbce9f
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Fri Jun 11 01:32:18 2010 -0300
+
+    uemacs: Use ARRAY_SIZE in more places.
+
+    Signed-off-by: Thiago Farina <thiago.farina@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 9489673a1b15b764d774cef4fa15e6e0222821e3
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Thu Jun 3 20:36:01 2010 -0300
+
+    uemacs: Add ARRAY_SIZE macro so we can get rid of some hard coded calculations.
+
+    Signed-off-by: Thiago Farina <thiago.farina@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit e32cecc843cb7f74e5ced292b29b756d46fc6a3d
+Author: Thiago Farina <thiago.farina@gmail.com>
+Date:   Mon May 31 22:50:16 2010 -0300
+
+    uemacs: convert typdef struct VIDEO to struct video.
+
+    Signed-off-by: Thiago Farina <thiago.farina@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 6eb8722dd8c7e660cd5c2af8a700de78fe0f1261
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Apr 17 19:54:28 2010 -0400
+
+    uemacs: rename 'readme' to 'README'
+
+    Also removes some tabs and whitespaces.
+
+    Cc: Pekka Enberg <penberg@cs.helsinki.fi>
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit c7e30a963662f53637c7fa729d8ea236d5c64e21
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Sat Apr 17 19:38:09 2010 -0400
+
+    uemacs: convert typdef struct LINE to struct line.
+
+    Cc: Pekka Enberg <penberg@cs.helsinki.fi>
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 7281ae375ee95fcdc121e98573d0d0d7f139b2c4
+Author: Pekka Enberg <penberg@cs.helsinki.fi>
+Date:   Sat Feb 27 12:38:24 2010 +0200
+
+    uemacs: enable -Wstrict-prototypes
+
+    This patch enables the GCC '-Wstrict-prototypes' switch and fixes up broken
+    prototypes.
+
+    Cc: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Pekka Enberg <penberg@cs.helsinki.fi>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 3844da04b4a55fe0beb7f0b1ce42b8a5ee802513
+Author: Pekka Enberg <penberg@cs.helsinki.fi>
+Date:   Sat Feb 27 12:38:23 2010 +0200
+
+    uemacs: rename 'makefile' to 'Makefile'
+
+    I keep typoing 'Makefile' instead of 'makefile'.  I guess it's hard-wired to
+    the brain by now so just rename the damn thing.
+
+    Cc: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Pekka Enberg <penberg@cs.helsinki.fi>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 74ffb9e254fc69e3228395c71c681ec2dccad9e2
+Author: Pekka Enberg <penberg@cs.helsinki.fi>
+Date:   Sat Feb 27 12:38:22 2010 +0200
+
+    uemacs: remove use of 'register' keyword
+
+    Lets welcome uEmacs/PK to the year 2010! As expected, the patch has no effect
+    on the generated code:
+
+       text	   data	    bss	    dec	    hex	filename
+     106002	   8864	  18616	 133482	  2096a	em
+     106002	   8864	  18616	 133482	  2096a	em.new
+
+    Cc: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Pekka Enberg <penberg@cs.helsinki.fi>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 8a3292cd0d95be2f9319770049a308754eb02ab4
+Author: Pekka Enberg <penberg@cs.helsinki.fi>
+Date:   Fri Feb 26 20:48:57 2010 +0200
+
+    uemacs: remove unused functions
+
+    Commit 8fc7449 ("uemacs: fix sparse warnings, making file-local symbols
+    static.") made some functions that are not used anywhere static. This patch
+    removes them to kill the following compilation warnings:
+
+      ansi.c:255: warning: ‘ansihello’ defined but not used
+      ibmpc.c:505: warning: ‘ibmhello’ defined but not used
+      vmsvt.c:521: warning: ‘hellovms’ defined but not used
+      vt52.c:181: warning: ‘vt52hello’ defined but not used
+
+    Cc: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Pekka Enberg <penberg@cs.helsinki.fi>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 54a12c01efdae9d6363b5467599ae446698d160c
+Author: Pekka Enberg <penberg@cs.helsinki.fi>
+Date:   Fri Feb 26 20:48:56 2010 +0200
+
+    uemacs: make build output more readable
+
+    This patch makes the build output look like what we have in the linux kernel so
+    that warnings stand out better:
+
+      CC       ansi.o
+      CC       basic.o
+      CC       bind.o
+      CC       buffer.o
+    buffer.c: In function ‘nextbuffer’:
+    buffer.c:43: warning: ‘bp’ may be used uninitialized in this function
+      CC       crypt.o
+      CC       display.o
+      [...]
+
+    Cc: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Pekka Enberg <penberg@cs.helsinki.fi>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 6139ec4e731405847c7a731678fb6cac315bd629
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Feb 15 21:12:02 2010 -0500
+
+    uemacs/line.c: remove two unused variables.
+
+    line.c:21: warning: ‘ykbuf’ defined but not used
+    line.c:22: warning: ‘ykboff’ defined but not used
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 5ffdebdbf323ecfd6863b08aec5ec1da00a0f97c
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Mon Feb 15 21:09:42 2010 -0500
+
+    uemacs: remove typdef struct BUFFER -> struct buffer.
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 8fc74498394810e3744518e76d2e73b18c2dce8e
+Author: Thiago Farina <tfransosi@gmail.com>
+Date:   Fri Jan 29 19:17:02 2010 -0500
+
+    uemacs: fix sparse warnings, making file-local symbols static.
+
+    ansi.c:255:6: warning: symbol 'ansihello' was not declared. Should it be static?
+    epath.h:11:6: warning: symbol 'pathname' was not declared. Should it be static?
+    display.c:36:7: warning: symbol 'vscreen' was not declared. Should it be static?
+    display.c:38:7: warning: symbol 'pscreen' was not declared. Should it be static?
+    display.c:927:5: warning: symbol 'updateline' was not declared. Should it be static?
+    evar.h:20:6: warning: symbol 'uv' was not declared. Should it be static?
+    evar.h:24:6: warning: symbol 'envars' was not declared. Should it be static?
+    evar.h:128:7: warning: symbol 'funcs' was not declared. Should it be static?
+    fileio.c:14:6: warning: symbol 'ffp' was not declared. Should it be static?
+    fileio.c:15:5: warning: symbol 'eofflag' was not declared. Should it be static?
+    ibmpc.c:505:6: warning: symbol 'ibmhello' was not declared. Should it be static?
+    isearch.c:36:5: warning: symbol 'saved_get_char' was not declared. Should it be static?
+    isearch.c:37:5: warning: symbol 'eaten_char' was not declared. Should it be static?
+    isearch.c:41:5: warning: symbol 'cmd_buff' was not declared. Should it be static?
+    isearch.c:42:5: warning: symbol 'cmd_offset' was not declared. Should it be static?
+    isearch.c:43:5: warning: symbol 'cmd_reexecute' was not declared. Should it be static?
+    line.c:21:6: warning: symbol 'ykbuf' was not declared. Should it be static?
+    line.c:22:5: warning: symbol 'ykboff' was not declared. Should it be static?
+    lock.c:17:6: warning: symbol 'lname' was not declared. Should it be static?
+    lock.c:18:5: warning: symbol 'numlocks' was not declared. Should it be static?
+    vmsvt.c:521:6: warning: symbol 'hellovms' was not declared. Should it be static?
+    vt52.c:181:6: warning: symbol 'vt52hello' was not declared. Should it be static?
+
+    Signed-off-by: Thiago Farina <tfransosi@gmail.com>
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit dd5b2fec4e843cc519dfdb0a77ee47435825d3e0
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Wed Jul 15 08:44:14 2009 -0700
+
+    Add ignore file for generated files
+
+    At least the most obvious ones.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit a3022faaed6e03c971ec9a648a2854650b963a4c
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Wed Jul 15 08:42:47 2009 -0700
+
+    Add libcurses, remove ltermcap
+
+    That's how modern distributions roll (and have, for a long time.  I just
+    haven't committed this).
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit c2a7e41fae342531dbd0b8ba74136ad90b060817
+Author: Linus Torvalds <torvalds@linux-foundation.org>
+Date:   Sat Jun 7 11:48:44 2008 -0700
+
+    Turn ESC+'[' into a CSI character
+
+    This avoids the annoying behavior where we're on the command line,
+    waiting for an ESC, and any control character sequence ends up finishing
+    the command line and eating the first ESC.
+
+    Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+
+commit 686a9e74ed82a08735cdf679195cbdda172706bd
+Author: Linus Torvalds <torvalds@woody.osdl.org>
+Date:   Sun Nov 19 11:52:18 2006 -0800
+
+    Clean up various compile warnings
+
+    Most of them were harmless: gcc not being smart enough to realize that
+    an uninitialized variable was never used if it wasn't initialized etc.
+
+    Some of them were name clashes ("crypt()" is a standard library
+    function, so rename it to "myencrypt()") etc.
+
+    Signed-off-by: Linus Torvalds <torvalds@osdl.org>
+
+commit 1c5e6d81216183d0938a3f5d14c7bfaeed0762bc
+Author: Linus Torvalds <torvalds@woody.osdl.org>
+Date:   Sun Nov 19 11:28:19 2006 -0800
+
+    Make the sparse setup default to x86-64 rather than ppc
+
+    Hey, what can I say? Without Apple, ppc on the desktop? Not very likely.
+
+    Signed-off-by: Linus Torvalds <torvalds@osdl.org>
+
+commit 378d2a835bb96ce412f8da327e80fbf7e9c71a12
+Author: Linus Torvalds <torvalds@woody.osdl.org>
+Date:   Sun Nov 19 11:22:04 2006 -0800
+
+    Mark functions and variables local to display.c 'static'
+
+    Waste a few minutes occasionally on cleanup, and maybe we can make this
+    thing look ok in a decade or two..
+
+    Signed-off-by: Linus Torvalds <torvalds@osdl.org>
+
+commit 4659255f60114652d0839083b33a855ea1cbf9fc
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Wed Nov 16 17:13:35 2005 -0800
+
+    Make "sparse" check target do a global sparse
+
+    Instead of iterating over all the source files, just check them all
+    together since it works these days, and could potentially find
+    cross-file issues.
+
+commit 3e0492ffd49aa2fb6e93b5cc175019df6419c477
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Mon Oct 10 10:07:31 2005 -0700
+
+    Add a true UTF-8 demonstration file
+
+    We obviously don't handle it, but it's a wonderful example if we ever do.
+
+    Demo by Markus Kuhn from
+
+    	http://www.cl.cam.ac.uk/~mgk25/ucs/examples/UTF-8-demo.txt
+
+    Signed-off-by: Linus Torvalds <torvalds@osdl.org>
+
+commit f313bcf64a798d1b461f10c51227c94dbcff1225
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Sun Oct 2 17:47:28 2005 -0700
+
+    Add support for a "utf-8" mode
+
+    NOTE! MicroEmacs is very much a byte-based editor, and the new utf-8
+    support is purely an issue of terminal input and output.  The file
+    contents themselves are in the 8-bit space.  In that space, Unicode is
+    the same as Latin1.
+
+    The new mode is called "utf-8", and is enabled automatically by the
+    new emacs.rc when $LANG contains the substring "UTF-8".
+
+    I'm sure people would like to some day also edit real UTF-8 contents,
+    rather than just edit old 8-bit Latin1 contents in a UTF-8 terminal.
+    However, that's an independent (and much bigger and thornier) issue.
+
+    Signed-off-by: Linus Torvalds <torvalds@osdl.org>
+
+commit 0fc43a842945b46a3831620a8d42b54fffafb6a8
+Author: Horst von Brand <vonbrand@inf.utfsm.cl>
+Date:   Sat Oct 1 21:22:20 2005 -0400
+
+    [PATCH] Fix use of mktemp() in uemacs
+
+    After your last round of changes it compiles without warnings here (Fedora
+    rawhide, gcc-4.0.2), but the link complains.
+
+    mktemp(3) isn't always secure, the problem is fixed in mkstemp(3)
+
+    Signed-off-by: Horst H. von Brand <vonbrand@inf.utfsm.cl>
+    Signed-off-by: Linus Torvalds <torvalds@osdl.org>
+
+commit dbc51bf97222bee5845d3d7a5bd1d91be05e4416
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Sat Oct 1 10:46:09 2005 -0700
+
+    Handle 8-bit characters better in display
+
+    This code still assumes a latin1 kind of "one byte, one character" setup.
+
+    UTF-8 input/output (even if the data is encoded in latin-1) is a separate
+    issue.
+
+commit ef92bc8cd9ad58da15a1f6f311c234e991551710
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Sat Oct 1 01:09:22 2005 -0700
+
+    Make sources mostly sparse-clean
+
+    Mainly an issue of taking care of a few remaining K&R function
+    declarations.
+
+commit 24338ae85538707c42408a953900374910c04771
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Sat Oct 1 00:56:15 2005 -0700
+
+    Fix more compiler warnings
+
+    Better initializers, and more proper function types.
+
+commit 8967dfc2c6c87f5c88c3ff01feadcfe4b3474b11
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Sat Oct 1 00:33:44 2005 -0700
+
+    Fix ugly "definitions in header file" crud
+
+    Move various initializations into new "globals.c" file.
+
+    Also mark some variables static, and fix up some trivial compiler and
+    sparse warnings.
+
+commit 12cb79ceb4ebaa528efc5b6c6063b55374aca8fd
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Sat Oct 1 00:22:55 2005 -0700
+
+    Avoid various name clashes with curses and termcap headers
+
+    This allows us to include the proper headers, instead of declaring
+    things (badly) by hand.
+
+commit d66d329986bd916e201fb15664afc76dca198f21
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Sat Oct 1 00:02:32 2005 -0700
+
+    Replace "WINDOW" type with "window_t"
+
+    Starting to try to avoid name clashes with curses and friends.
+
+commit d79d222a45561055e6a353a6a3065f8d5700c42f
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 23:54:34 2005 -0700
+
+    Fix up unused variable and ambiguous else in random.c
+
+commit 8eab871e557bcd0666f0a002330c9465463dd8f3
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 23:52:55 2005 -0700
+
+    More warning avoidance and code cleanup
+
+commit d0ed902432e60671a9b5df62f14c1683ed23a7eb
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 23:37:34 2005 -0700
+
+    Fix up some trivial gcc -Wall warnings
+
+    Lots more to go.
+
+commit d5dc3160cfa2f2c648f008d7fef1506303b7a1da
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 22:52:45 2005 -0700
+
+    Lots of ANSI'fication and cleanups
+
+    Still tons of warnings with "-Wall", but now it's actually getting closer.
+
+    It even compiles again.
+
+commit 92803fe8d5db8a5b714c8f7dbff443a8574819df
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 18:06:45 2005 -0700
+
+    Start using "-Wall" when compiling
+
+    Oh, and change the -O4 to a saner -O2 while at it
+
+commit e3ca2a12cf50e0ee9e62911036ebe029a6cf9fa1
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 18:06:17 2005 -0700
+
+    More ANSI'fication
+
+    Next up: enabling "-Wall" in the makefile. Not because it's ready,
+    but because it gets easier to track where we are in the process..
+
+commit de0961e007deb25c1c4f5635eba32abc559d797a
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 17:52:20 2005 -0700
+
+    Yet more ANSI'fication
+
+    Bored? Me? Why do you ask?
+
+commit 2b3627510d247bd0d29f2c793372ce6b546b90ca
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 17:37:16 2005 -0700
+
+    Move "input.c" towards ANSI function declarations
+
+commit 453f80d2697c907cce683bd9c7efabbddb9d5693
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 17:08:36 2005 -0700
+
+    More ANSI-fication of the sources
+
+    Ugh.  Some of this is ugly.  We should really include <curses.h> etc,
+    but there are too many name clashes for that right now.
+
+commit 021605246ce0fa8666074d83e84996dbfb5f6306
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 16:37:36 2005 -0700
+
+    More function declarations: region.c
+
+    Hey, "word.c" is now sparse-clean.
+
+commit 9605cf882670d8647dd8ed1fe05b90e1c1a12461
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 16:34:11 2005 -0700
+
+    First cut at turning things into proper modern ANSI C
+
+    Hey! Real declarations!
+
+commit 118ee5f944912f19db268d1d2d18fa70a3fd7d6f
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 15:33:51 2005 -0700
+
+    Fix up headers and bogus re-definitions to use <stdlib.h> and <string.h>
+
+    Hey, it's already compiling cleaner. Getting proper function declarations
+    will be a bitch, though.
+
+commit b9deaf1bd83c0f04090faa97f1f945236a589e51
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 15:28:37 2005 -0700
+
+    Very optimistically add a "sparse" makefile target.
+
+    Since sparse really wants clean ANSI C, we're not even _remotely_ close
+    to being sparse-clean.  But maybe some day...
+
+commit 435dd32ae2d9a5543318e5c4b5d29de672cae1b5
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Fri Sep 30 15:26:09 2005 -0700
+
+    Run "indent -kr -i8" on the sources
+
+    Let's see how nasty it is to clean things up. For real.
+
+commit 1f6239bfebf39cc209b31e18c237655a1708d1ad
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Tue May 31 08:59:49 2005 -0700
+
+    Up the limit on maximum lines.
+
+    Hey, get with the bloated new world.
+
+commit 77784cd46cdb8584cf3d78df4a3e8b9a67c9130b
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Tue May 31 08:58:59 2005 -0700
+
+    Minimal patches to make uemacs compile in a modern environment.
+
+    make sure to include <errno.h>, and allow for the fact that newer
+    gcc's don't allow function declarations in function scope (don't
+    ask me why, but there you have it..)
+
+commit d7148b21fe4fff228acf5b7006cf9323bd750df7
+Author: Linus Torvalds <torvalds@g5.osdl.org>
+Date:   Tue May 31 08:50:56 2005 -0700
+
+    Initial import of em-4.0.15-lt
+
+    This is a slightly updated version of uemacs-PK (PK is Pekka
+    Kutvonen) which was used at Helsinki University a long time
+    ago. My fingers cannot be retrained.
