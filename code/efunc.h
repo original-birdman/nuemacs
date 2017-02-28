@@ -8,6 +8,8 @@
  *
  *      modified by Petri Kutvonen
  */
+#ifndef EFUNC_H_
+#define EFUNC_H_
 
 /* External function declarations. */
 
@@ -153,7 +155,7 @@ extern void mberase(void);
 extern void mbupdate(void);
 extern void mlputs(char *);
 extern void movecursor(int, int);
-      
+
 /* region.c */
 extern int killregion(int f, int n);
 extern int copyregion(int f, int n);
@@ -392,3 +394,5 @@ extern int comp_file(char *, char *);
 extern int comp_buffer(char *, char *);
 
 extern void do_backtrace(void);
+
+#endif

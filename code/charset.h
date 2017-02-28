@@ -1,5 +1,8 @@
 /* Character set - GGR */
 
+#ifndef CHARSET_H_
+#define CHARSET_H_
+
 /* A description of control charactes for the status command */
 
 static char *charset[] =
@@ -38,3 +41,5 @@ static char *charset[] =
         "us",
         "space",
 };
+
+#endif

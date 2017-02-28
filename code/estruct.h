@@ -7,6 +7,8 @@
  *      substantially modified by Daniel Lawrence
  *      modified by Petri Kutvonen
  */
+#ifndef ESTRUCT_H_
+#define ESTRUCT_H_
 
 #define MAXCOL  500
 #define MAXROW  500
@@ -233,7 +235,7 @@
 /* GGR - whether we want PATH to be searched before table lookup */
 #if GGR_MODE
 #define TABLE_THEN_PATH 1
-#else 
+#else
 #define TABLE_THEN_PATH 0
 #endif
 #define PATH_THEN_TABLE !TABLE_THEN_PATH
@@ -703,3 +705,5 @@ struct magic_replacement {
 };
 
 #endif  /* MAGIC */
+
+#endif
