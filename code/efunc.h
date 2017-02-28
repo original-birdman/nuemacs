@@ -153,7 +153,6 @@ extern void sizesignal(int signr);
 
 extern void mberase(void);
 extern void mbupdate(void);
-extern void mlputs(char *);
 extern void movecursor(int, int);
 
 /* region.c */
@@ -185,8 +184,6 @@ extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);
 extern int getstring(char *prompt, char *buf, int nbuf, int eolchar);
-extern void outstring(char *s);
-extern void ostring(char *s);
 extern int yankmb(int f, int n);
 extern int mbstop(void);
 

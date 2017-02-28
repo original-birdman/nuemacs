@@ -74,18 +74,17 @@ int deskey(int f, int n)
 
         /* get the command sequence to describe
            change it to something we can print as well */
-        cmdstr(c = getckey(FALSE), &outseq[0]);
-
+        cmdstr(c = getckey(FALSE), outseq);
         /* and dump it out */
-        ostring(outseq);
-        ostring(" ");
+        mlputs(outseq);
+        mlputs(" ");
 
         /* find the right ->function */
         if ((ptr = getfname(getbind(c))) == NULL)
                 ptr = "Not Bound";
 
         /* output the command sequence */
-        ostring(ptr);
+        mlputs(ptr);
 
         mpresf = TRUE;      /* GGR */
         return TRUE;
@@ -116,17 +115,17 @@ int bindtokey(int f, int n)
                 mlwrite(MLpre "No such function" MLpost);
                 return FALSE;
         }
-        ostring(" ");
+        mlputs(" ");
 
         /* get the command sequence to bind */
         c = getckey((kfunc == metafn) || (kfunc == cex) ||
                     (kfunc == unarg) || (kfunc == ctrlg));
 
         /* change it to something we can print as well */
-        cmdstr(c, &outseq[0]);
+        cmdstr(c, outseq);
 
         /* and dump it out */
-        ostring(outseq);
+        mlputs(outseq);
 
         /* if the function is a prefix key */
         if (kfunc == metafn || kfunc == cex ||
@@ -204,10 +203,10 @@ int unbindkey(int f, int n)
         c = getckey(FALSE);     /* get a command sequence */
 
         /* change it to something we can print as well */
-        cmdstr(c, &outseq[0]);
+        cmdstr(c, outseq);
 
         /* and dump it out */
-        ostring(outseq);
+        mlputs(outseq);
 
         /* if it isn't bound, bitch */
         if (unbindchar(c) == FALSE) {
@@ -366,7 +365,7 @@ int buildlist(int type, char *mstring)
                                         outseq[cpos++] = ' ';
 
                                 /* add in the command sequence */
-                                cmdstr(ktp->k_code, &outseq[cpos]);
+                                cmdstr(ktp->k_code, outseq+cpos);
                                 strcat(outseq, "\n");
 
                                 /* and add it as a line into the buffer */

@@ -18,7 +18,7 @@
 #include "line.h"
 
 static int mbdepth = 0;
-                
+
 #if MSDOS | BSD | USG
 static int tmpnamincr = 0;
 #define tmpnam our_tmpnam
@@ -500,7 +500,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
 
 /* GGR NOTE!!
  * We want to ensure that we don't return with garbage in buf, but we
- * can't initialize it to empty here, as some callers use it as a 
+ * can't initialize it to empty here, as some callers use it as a
  * temporary buffer for the prompt!
  */
 #if MSDOS
@@ -731,7 +731,7 @@ submit:     /* Tidy up */
     sp = lp->l_text;
     size = lp->l_used;
 
-/* Need to copy to return buffer and, if not empty, 
+/* Need to copy to return buffer and, if not empty,
  * to save as last minibuffer.
  */
 
@@ -849,29 +849,3 @@ int n;
     }
 }
 #endif
-
-/* GGR - Back to original code... */
-
-/*
- * output a string of characters
- *
- * char *s;             string to output
- */
-void outstring(char *s)
-{
-        if (disinp)
-                while (*s)
-                        TTputc(*s++);
-}
-
-/*
- * output a string of output characters
- *
- * char *s;             string to output
- */
-void ostring(char *s)
-{
-        if (discmd)
-                while (*s)
-                        TTputc(*s++);
-}
