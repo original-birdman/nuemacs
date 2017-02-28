@@ -574,9 +574,17 @@ int cinsert(void)
         /* grab a pointer to text to copy indentation from */
         cptr = &curwp->w_dotp->l_text[0];
 
-        /* check for a brace */
-        tptr = curwp->w_doto - 1;
-        bracef = (cptr[tptr] == '{');
+        /* check for a brace - check for last non-blank character! */
+        tptr = curwp->w_doto;
+        bracef = 0;
+        i = tptr;
+        while (--i >= 0) {
+            if (cptr[i] == ' ' || cptr[i] == '\t') continue;
+            if (cptr[i] == '{') {
+                bracef = 1;
+                break;
+            }
+        }
 
         /* save the indent of the previous line */
         i = 0;
