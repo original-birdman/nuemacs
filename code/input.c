@@ -181,85 +181,65 @@ fn_t getname(void)
 
                 } else if (c == ' ' || c == 0x1b || c == 0x09) {
 /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-                        /* attempt a completion */
-                        buf[cpos] = 0;  /* terminate it for us */
-                        ffp = &names[0];        /* scan for matches */
-                        while (ffp->n_func != NULL) {
-                                if (strncmp(buf, ffp->n_name, strlen(buf))
-                                    == 0) {
-                                        /* a possible match! More than one? */
-                                        if ((ffp + 1)->n_func == NULL ||
-                                            (strncmp
-                                             (buf, (ffp + 1)->n_name,
+/* GGR - rewritten to tab indent of 4 for this section... */
+                /* attempt a completion */
+                    buf[cpos] = 0;  /* terminate it for us */
+                    for (ffp = names; ffp->n_func != NULL; ffp++) {
+                        if (strncmp(buf, ffp->n_name, strlen(buf)) == 0) {
+                            /* a possible match! More than one? */
+                            if ((ffp + 1)->n_func == NULL ||
+                                (strncmp(buf, (ffp + 1)->n_name,
                                               strlen(buf)) != 0)) {
-                                                /* no...we match, print it */
-                                                sp = ffp->n_name + cpos;
-                                                while (*sp)
-                                                        TTputc(*sp++);
-                                                TTflush();
-                                                return ffp->n_func;
-                                        } else {
-/* << << << << << << << << << << << << << << << << << */
-                                                /* try for a partial match against the list */
-
-                                                /* first scan down until we no longer match the current input */
-                                                lffp = (ffp + 1);
-                                                while ((lffp +
-                                                        1)->n_func !=
-                                                       NULL) {
-                                                        if (strncmp
-                                                            (buf,
-                                                             (lffp +
-                                                              1)->n_name,
-                                                             strlen(buf))
-                                                            != 0)
-                                                                break;
-                                                        ++lffp;
-                                                }
-
-                                                /* and now, attempt to partial complete the string, char at a time */
-                                                while (TRUE) {
-                                                        /* add the next char in */
-                                                        buf[cpos] =
-                                                            ffp->
-                                                            n_name[cpos];
-
-                                                        /* scan through the candidates */
-                                                        cffp = ffp + 1;
-                                                        while (cffp <=
-                                                               lffp) {
-                                                                if (cffp->
-                                                                    n_name
-                                                                    [cpos]
-                                                                    !=
-                                                                    buf
-                                                                    [cpos])
-                                                                        goto onward;
-                                                                ++cffp;
-                                                        }
-
-                                                        /* add the character */
-                                                        TTputc(buf
-                                                               [cpos++]);
-                                                }
-/* << << << << << << << << << << << << << << << << << */
-                                        }
+                                /* no...we match, print it */
+                                sp = ffp->n_name + cpos;
+                                while (*sp) {
+                                    TTputc(*sp++);
+                                    ttcol++;
                                 }
-                                ++ffp;
-                        }
+                                TTflush();
+                                return ffp->n_func;
+                            } else {
+/* << << << << << << << << << << << << << << << << << */
+/* try for a partial match against the list
+ * first scan down until we no longer match the current input
+ */
+                                lffp = ffp + 1;
+                                while ((lffp + 1)->n_func != NULL) {
+                                    if (strncmp(buf, (lffp+1)->n_name,
+                                        strlen(buf)) != 0) break;
+                                    ++lffp;
+                                }
+/* and now, attempt to partial complete the string, char at a time */
+                                while (TRUE) {
+                                    /* add the next char in */
+                                    buf[cpos] = ffp->n_name[cpos];
+                                    /* scan through the candidates */
+                                    cffp = ffp + 1;
+                                    while (cffp <= lffp) {
+                                        if (cffp->n_name[cpos] != buf[cpos])
+                                            goto onward;
+                                        ++cffp;
+                                    }
 
-                        /* no match.....beep and onward */
-                        TTbeep();
-                      onward:;
-                        TTflush();
+                                    /* add the character */
+                                    TTputc(buf[cpos++]);
+                                    ttcol++;
+                                }
+/* << << << << << << << << << << << << << << << << << */
+                            }
+                        }
+                    }
+                    /* no match.....beep and onward */
+                    TTbeep();
+onward:
+                    TTflush();
 /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
                 } else {
                         if (cpos < NSTRING - 1 && c > ' ') {
                                 buf[cpos++] = c;
                                 TTputc(c);
+                                ttcol++;
                         }
-
-                        ++ttcol;
                         TTflush();
                 }
         }
