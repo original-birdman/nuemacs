@@ -63,6 +63,7 @@
 #include "edef.h"    /* Global definitions. */
 #include "efunc.h"   /* Function declarations and name table. */
 #include "ebind.h"   /* Default key bindings. */
+#include "epath.h"   /* Path locations */
 #include "version.h"
 
 /* For MSDOS, increase the default stack space. */
@@ -88,16 +89,26 @@ extern unsigned _stklen = 32766;
 static void emergencyexit(int);
 #endif
 
-void usage(int status)
+void usage(int status) /* GGR - list all options actually available! */
 {
-  printf("Usage: %s filename\n", PROGRAM_NAME);
-  printf("   or: %s [options]\n\n", PROGRAM_NAME);
-  fputs("      +          start at the end of file\n", stdout);
-  fputs("      +<n>       start at line <n>\n", stdout);
-  fputs("      -g[G]<n>   go to line <n>\n", stdout);
-  fputs("      --help     display this help and exit\n", stdout);
-  fputs("      --version  output version information and exit\n", stdout);
+#define NL "\n"
 
+printf( \
+"Usage: %s [options] [filename(s)]"                       NL \
+"      +            start at the end of file"             NL \
+"      +<n>         start at line <n>"                    NL \
+"      -a           process error file"                   NL \
+"      -d<dir>      directory holding rc and hlp files"   NL \
+"      -e           edit file (default)"                  NL \
+"      -g<n>        go to line <n> (same as +<n>)"        NL \
+"      -k<key>      encryption key"                       NL \
+"      -n           accept null chars"                    NL \
+"      -r           restrictive use"                      NL \
+"      -s<str>      initial search string"                NL \
+"      -v           view only (no edit)"                  NL \
+"      -h,--help    display this help and exit"           NL \
+"      -V,--version output version information and exit"  NL \
+        , PROGRAM_NAME);
   exit(status);
 }
 
@@ -140,10 +151,10 @@ int main(int argc, char **argv)
 #endif
 #endif
         if (argc == 2) {
-                if (strcmp(argv[1], "--help") == 0) {
+                if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
                         usage(EXIT_FAILURE);
                 }
-                if (strcmp(argv[1], "--version") == 0) {
+                if (!strcmp(argv[1], "-V") || !strcmp(argv[1], "--version")) {
                         version();
                         exit(EXIT_SUCCESS);
                 }
@@ -165,7 +176,9 @@ int main(int argc, char **argv)
 #endif
 
         /* Parse the command line */
-        for (carg = 1; carg < argc; ++carg) {
+        /* GGR - use while loop instead of for loop to allow fiddling carg */
+        carg = 0;
+        while (argv[++carg] != NULL) {
                 /* Process Switches */
 #if     PKCODE
                 if (argv[carg][0] == '+') {
@@ -174,11 +187,25 @@ int main(int argc, char **argv)
                 } else
 #endif
                 if (argv[carg][0] == '-') {
-                        switch (argv[carg][1]) {
+/* GGR - allow options to be given as separate tokens */
+                        char key = *(argv[carg] + 1);
+                        char *opt = NULL;
+                        if (strchr("dDgGkKsS", key)) {
+			        opt = argv[carg] + 2;
+                                if (*opt == '\0' && argv[carg + 1] &&
+                                    argv[carg +1][0] != '-')
+                                        opt = argv[++carg];
+                        }
+
+                        switch (key) {
                                         /* Process Startup macroes */
                         case 'a':       /* process error file */
                         case 'A':
                                 errflag = TRUE;
+                                break;
+                        case 'd':
+                        case 'D':       /* GGR -d for config/help directory */
+                                pathname[2] = opt;
                                 break;
                         case 'e':       /* -e for Edit file */
                         case 'E':
@@ -187,15 +214,15 @@ int main(int argc, char **argv)
                         case 'g':       /* -g for initial goto */
                         case 'G':
                                 gotoflag = TRUE;
-                                gline = atoi(&argv[carg][2]);
+                                gline = atoi(opt);
                                 break;
 #if     CRYPT
                         case 'k':       /* -k<key> for code key */
                         case 'K':
                                 /* GGR only if given a key.. */
-                                if (strlen(&argv[carg][2]) > 0) {
+                                if (strlen(opt) > 0) {
                                     cryptflag = TRUE;
-                                    strcpy(ekey, &argv[carg][2]);
+                                    strcpy(ekey, opt);
                                 }
                                 break;
 #endif
@@ -212,7 +239,7 @@ int main(int argc, char **argv)
                         case 's':       /* -s for initial search string */
                         case 'S':
                                 searchflag = TRUE;
-                                strncpy(pat, &argv[carg][2], NPAT);
+                                strncpy(pat, opt, NPAT);
                        /* GGR - set-up some more things */
                                 rvstrcpy(tap, pat);
                                 mlenold = matchlen = strlen(pat);
