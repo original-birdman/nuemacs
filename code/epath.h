@@ -8,45 +8,28 @@
 #ifndef EPATH_H_
 #define EPATH_H_
 
-/*      possible names and paths of help files under different OSs      */
-static char *pathname[] =
+/*      possible names and paths of help files under different OSs
+ * NOTE that there must be at least one!!
+ */
+#ifndef DFLT_PATH
 #if     MSDOS
-{
-        "emacs.rc",
-        "emacs.hlp",
-        "\\sys\\public\\",
-        "\\usr\\bin\\",
-        "\\bin\\",
-        "\\",
-        ""
-};
+#define DFLT_PATH "\\sys\\public\\", "\\usr\\bin\\", "\\bin\\", "\\", ""
 #endif
 
-#if	V7 | BSD | USG
-{
-#ifdef GGR_MODE
-        "uemacs.rc",
-        "uemacs.hlp",
-        "/local/etc/",
-        "/opt/local/etc/",
-#else
-	".emacsrc",
-	"emacs.hlp",
-#if	PKCODE
-	    "/usr/global/lib/", "/usr/local/bin/", "/usr/local/lib/",
-#endif
-"/usr/local/", "/usr/lib/", "",
-#endif
-};
+#if     V7 | BSD | USG
+#define DFLT_PATH "/local/etc/", "/opt/local/etc/"
 #endif
 
 #if     VMS
-{
-        "emacs.rc", "emacs.hlp", "",
-#if     PKCODE
-            "sys$login:", "emacs_dir:",
+#define DFLT_PATH "sys$login:", "emacs_dir:", "sys$sysdevice:[vmstools]"
 #endif
-"sys$sysdevice:[vmstools]"};
 #endif
+
+static struct init_files {
+    char *startup;
+    char *help;
+} init_files = {"uemacs.rc", "uemacs.hlp"};
+
+static char *pathname[] = { DFLT_PATH , NULL};
 
 #endif  /* EPATH_H_ */

@@ -156,7 +156,7 @@ char *gtfun(char *fname)
         case UFEXIST:
                 return ltos(fexist(arg1));
         case UFFIND:
-                tsp = flook(arg1, TRUE);
+                tsp = flook(arg1, TRUE, ONPATH);
                 return tsp == NULL ? "" : tsp;
         case UFBAND:
                 return itoa(atoi(arg1) & atoi(arg2));

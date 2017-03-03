@@ -881,7 +881,7 @@ int execfile(int f, int n)
 
 #if     1
         /* look up the path for the file */
-        fspec = flook(fname, FALSE);    /* used to by TRUE, P.K. */
+        fspec = flook(fname, FALSE, INTABLE);   /* used to by TRUE, P.K. */
 
         /* if it isn't around */
         if (fspec == NULL)

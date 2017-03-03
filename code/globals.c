@@ -142,6 +142,7 @@ int  flast           = TRUE;
 int  ftrulen         = 0;
 int  inreex          = FALSE;
 
+int  allow_current   = 0;
 unicode_t *eos_list  = NULL;
 int  inmb            = FALSE;
 char lastmb[NSTRING] = "";

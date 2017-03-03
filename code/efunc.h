@@ -199,7 +199,10 @@ extern int buildlist(int type, char *mstring);
 extern int strinc(char *source, char *sub);
 extern unsigned int getckey(int mflag);
 extern int startup(char *sfname);
-extern char *flook(char *fname, int hflag);
+extern void set_pathname(char *);
+#define ONPATH 1
+#define INTABLE 2
+extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
 extern fn_t getbind(int c);
 extern char *getfname(fn_t);

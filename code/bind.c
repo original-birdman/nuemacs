@@ -28,10 +28,10 @@ int help(int f, int n)
                 return(FALSE);
 
         /* first check if we are already here */
-        bp = bfind(pathname[1], FALSE, BFINVS); /* GGR - epath.h setting */
+        bp = bfind(init_files.help, FALSE, BFINVS); /* GGR - epath.h setting */
 
         if (bp == NULL) {
-                fname = flook(pathname[1], FALSE);
+                fname = flook(init_files.help, FALSE, INTABLE);
                 if (fname == NULL) {
                         mlwrite(MLpre "Help file is not online" MLpost);
                         return FALSE;
@@ -476,9 +476,9 @@ int startup(char *sfname)
 
         /* look up the startup file */
         if (*sfname != 0)
-                fname = flook(sfname, TRUE);
+                fname = flook(sfname, TRUE, INTABLE);
         else
-                fname = flook(pathname[0], TRUE);
+                fname = flook(init_files.startup, TRUE, INTABLE);
 
         /* if it isn't around, don't sweat it */
         if (fname == NULL)
@@ -524,15 +524,51 @@ static int along_path(char *fname, char *fspec) {
 }
 #endif
 
+/* GGR - function to set pathname from the command-line
+ * This overides the compiled-in defaults
+ */
+static char path_sep =
+#if MSDOS
+    '\\'
+#else
+#if V7 | BSD | USG
+    '/'
+#else
+    '\0'
+#endif
+#endif
+;
+
+void set_pathname(char *cl_string) {
+    int slen;
+    int add_sep = 0;
+    if (path_sep != '\0') {     /* Ensure it ends with it... */
+        slen = strlen(cl_string);
+        if ((slen > 0) && (cl_string[slen-1] != path_sep)) {
+            add_sep = 1;
+        }
+    }
+    pathname[0] = strdup(cl_string);
+    if (add_sep) {
+        pathname[0] = realloc(pathname[0], slen+2); /* incl. NULL! */
+        pathname[0][slen] = path_sep;
+        pathname[0][slen+1] = '\0';
+    }
+    pathname[1] = NULL;
+    return;
+}
+
 /*
  * Look up the existence of a file along the normal or PATH
  * environment variable. Look first in the HOME directory if
- * asked and possible
+ * asked and possible.
+ * GGR - added mode flag detemines whether to look along PATH
+ * or in the set list of directories.
  *
  * char *fname;         base file name to search for
  * int hflag;           Look in the HOME environment variable first?
  */
-char *flook(char *fname, int hflag)
+char *flook(char *fname, int hflag, int mode)
 {
         char *home;                     /* path to home directory */
         int i;                          /* index */
@@ -560,39 +596,40 @@ char *flook(char *fname, int hflag)
         }
 #endif
 
-        /* always try the current directory first */
-        if (ffropen(fname) == FIOSUC) {
+        /* always try the current directory first - if allowed */
+        if (allow_current && ffropen(fname) == FIOSUC) {
                 ffclose();
                 pathexpand = TRUE;                  /* GGR */
                 return fname;
         }
 
-#if     ENVFUNC & PATH_THEN_TABLE
-        if (along_path(fname, fspec) == TRUE) {
+/* GGR - use PATH or TABLE according to mode.
+ * You want to use ONPATH when looking for a command, but INTABLE
+ * when looking for a config files.
+ * The caller knows which...
+ */
+        if (mode == ONPATH) {
+            if (along_path(fname, fspec) == TRUE) {
                 pathexpand = TRUE;                  /* GGR */
                 return fspec;
+            }
         }
-#endif
 
+        if (mode == INTABLE) {
         /* look it up via the old table method */
-        for (i = 2; i < ARRAY_SIZE(pathname); i++) {
+            for (i = 0;; i++) {
+                if (pathname[i] == NULL) break;
                 strcpy(fspec, pathname[i]);
                 strcat(fspec, fname);
 
                 /* and try it out */
                 if (ffropen(fspec) == FIOSUC) {
-                        ffclose();
-                        pathexpand = TRUE;          /* GGR */
-                        return fspec;
+                    ffclose();
+                    pathexpand = TRUE;          /* GGR */
+                    return fspec;
                 }
+	    }
         }
-
-#if     ENVFUNC & TABLE_THEN_PATH
-        if (along_path(fname, fspec) == TRUE) {
-                pathexpand = TRUE;                  /* GGR */
-                return fspec;
-        }
-#endif
 
         pathexpand = TRUE;                          /* GGR */
         return NULL;            /* no such luck */

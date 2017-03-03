@@ -63,7 +63,6 @@
 #include "edef.h"    /* Global definitions. */
 #include "efunc.h"   /* Function declarations and name table. */
 #include "ebind.h"   /* Default key bindings. */
-#include "epath.h"   /* Path locations */
 #include "version.h"
 
 /* For MSDOS, increase the default stack space. */
@@ -101,6 +100,7 @@ printf( \
 "      -d<dir>      directory holding rc and hlp files"   NL \
 "      -e           edit file (default)"                  NL \
 "      -g<n>        go to line <n> (same as +<n>)"        NL \
+"      -i           Insecure mode - look in current dir"  NL \
 "      -k<key>      encryption key"                       NL \
 "      -n           accept null chars"                    NL \
 "      -r           restrictive use"                      NL \
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
                                 break;
                         case 'd':
                         case 'D':       /* GGR -d for config/help directory */
-                                pathname[2] = opt;
+                                set_pathname(opt);
                                 break;
                         case 'e':       /* -e for Edit file */
                         case 'E':
@@ -215,6 +215,10 @@ int main(int argc, char **argv)
                         case 'G':
                                 gotoflag = TRUE;
                                 gline = atoi(opt);
+                                break;
+                        case 'i':       /* -i for insecure mode */
+                        case 'I':
+                                allow_current = 1;
                                 break;
 #if     CRYPT
                         case 'k':       /* -k<key> for code key */

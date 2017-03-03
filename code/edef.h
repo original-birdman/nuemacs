@@ -142,3 +142,4 @@ extern int pathexpand;          /* Whether to expand paths */
 extern int silent;              /* Set for "no message line info" */
 extern char savnam[];           /* Saved buffer name */
 extern int using_ggr_style;     /* Macro-settable options flag */
+extern int allow_current;       /* Look in current dir for startup? */

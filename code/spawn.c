@@ -588,10 +588,10 @@ int execprog(char *cmd)
         strcat(&tail[1], "\r");
 
         /* look up the program on the path trying various extentions */
-        if ((sp = flook(prog, TRUE)) == NULL)
-                if ((sp = flook(strcat(prog, ".exe"), TRUE)) == NULL) {
+        if ((sp = flook(prog, TRUE, INTABLE)) == NULL)
+                if ((sp = flook(strcat(prog, ".exe"), TRUE, INTABLE)) == NULL) {
                         strcpy(&prog[strlen(prog) - 4], ".com");
-                        if ((sp = flook(prog, TRUE)) == NULL)
+                        if ((sp = flook(prog, TRUE, INTABLE)) == NULL)
                                 return FALSE;
                 }
         strcpy(prog, sp);

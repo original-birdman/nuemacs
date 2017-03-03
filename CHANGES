@@ -2,6 +2,7 @@ See GGR4.100.changes for the original changes around moving from 3.9e to
 pK4.0.15.
 
 ========== GGR4.101 [21 Feb 2017]
+
 .gitignore
 CHANGES
    Files added.
@@ -180,7 +181,7 @@ Makefile
     uemacs code itself doesn't use any of them so is just setting them
     for system header files, which can use them or not as they see fit.
 
-archive/orignal-git.log
+archive/original-git.log
     The log of changes from the original pK4.0.15 git repository.
 
 etc/uemacs.rc
@@ -212,3 +213,64 @@ etc/uemacs.hlp
     Update to version GGR4.106
 
 ========== GGR4.107...
+
+README
+CHANGES
+KNOWN_ISSUES
+    Added README, moved CHANGES and BUGS (=> KNOWN_ISSUES) up to main
+    directory.
+
+random.c
+    In cinsert(), skip over trailing blank space when looking for a
+    trailing '{' and keep correct indent count (not one less for blank
+    lines).
+
+charset.h
+efunc.h
+estruct.h
+    Add #ifndef lines to allow for multiple inclusion.
+
+bind.c
+input.c
+efunc.h
+    Change ostring() calls to mlputs and some tidying.
+    Remove unused outstring and (now) unused ostring code and
+    declarations.
+
+input.c
+    getname() code re-indented to make it readable.
+    Changed a while() loop to for().
+    Increment ttcol during TTputc calls in the expansion code.
+
+word.c
+    Ensure that text comes back in the original order after multiple
+    successive delete-previous-word calls.
+
+main.c
+    Extended usage() to list all available options.
+    Added -h (for --help) and -V (for --version) options.
+    Allow options to be given as separate tokens.
+    Add -d option for specifying config/help directories.
+
+bind.c
+eval.c
+exec.c
+globals.c
+main.c
+spawn.c
+edef.h
+efunc.h
+epath.h
+    Redo code that looks for start-up/help files etc.
+    Add INTABLE and INPATH modes to flook(). Fix calls in bind.c,
+    eval.c, exec.c, spawn.c
+    to use the appropriate setting.
+    Only look in current directory in flook() is the insecure (-i)
+    command line option has been given.
+    Add set_pathname() to bind.c to allow the command-line processing to
+    alter the directory path to one given location.
+    Add -i (insecure) command line option and associated global flag.
+    Alter the structure set-ups in epath.h.  You can now set the default
+    table values by defining DFLT_PATH in the compilation options.  The
+    help and start-up file names are now uemacs.hlp and uemacs.rc in all
+    cases.
