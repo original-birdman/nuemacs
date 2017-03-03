@@ -341,6 +341,12 @@ int delbword(int f, int n)
 {
         long size;
 
+/* GGR - variables for kill-ring fix-up */
+        int    i, status, ku;
+        char   *sp;             /* pointer into string to insert */
+        struct kill *kp;        /* pointer into kill buffer */
+        struct kill *op;
+
         /* don't allow this command if we are in read only mode */
         if (curbp->b_mode & MDVIEW)
                 return rdonly();
@@ -371,7 +377,39 @@ int delbword(int f, int n)
         }
         if (forwchar(FALSE, 1) == FALSE)
                 return FALSE;
-      bckdel:return ldelchar(size, TRUE);
+
+/* GGR
+ * We have to cater for the function being called multiple times in
+ * succession. This should be the equivalent of Esc<n>delbword, i.e. the
+ * text can be yanked back and still all be in the same order as it was
+ * originally.
+ * This means that we have to fiddle with the kill ring buffers.
+ */
+bckdel:
+    if ((kp = kbufh) != NULL) {
+        kbufh = kbufp = NULL;
+        ku = kused;
+        kused = KBLOCK;
+    }
+
+    status = ldelete(size, TRUE);
+
+    /* fudge back the rest of the kill ring */
+    while (kp != NULL) {
+        if (kp->d_next == NULL)
+                i = ku;
+        else
+                i = KBLOCK;
+        sp = kp->d_chunk;
+        while (i--) {
+            kinsert(*sp++);
+        }
+        op = kp;
+        kp = kp->d_next;
+        free(op);           /* kinsert() mallocs, so we free */
+    }
+
+    return(status);
 }
 
 /*
