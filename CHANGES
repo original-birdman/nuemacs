@@ -274,3 +274,9 @@ epath.h
     table values by defining DFLT_PATH in the compilation options.  The
     help and start-up file names are now uemacs.hlp and uemacs.rc in all
     cases.
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.107
+
+========== GGR4.108...
