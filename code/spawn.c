@@ -27,9 +27,6 @@ extern short iochan;            /* In "termio.c"        */
 
 #if     V7 | USG | BSD
 #include        <signal.h>
-#ifdef SIGWINCH
-extern int chg_width, chg_height;
-#endif
 #endif
 
 #if     MSDOS & (MSC | TURBO)
@@ -37,6 +34,20 @@ extern int chg_width, chg_height;
 #endif
 
 static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
+
+#ifdef SIGWINCH
+/*
+ * This fools the update routines to force a full
+ * redraw with complete window size checking.
+ * Call this in any function that calls system().
+ */
+void force_resize(void) {
+        chg_width = term.t_ncol;
+        chg_height = term.t_nrow + 1;
+        term.t_nrow = term.t_ncol = 0;
+        return;
+}
+#endif
 
 /*
  * Create a subjob with a copy of the command intrepreter in it. When the
@@ -93,14 +104,7 @@ int spawncli(int f, int n)
         TTopen();
         TTkopen();
 #ifdef SIGWINCH
-/*
- * This fools the update routines to force a full
- * redraw with complete window size checking.
- *              -lbt
- */
-        chg_width = term.t_ncol;
-        chg_height = term.t_nrow + 1;
-        term.t_nrow = term.t_ncol = 0;
+        force_resize();
 #endif
         return TRUE;
 #endif
@@ -190,6 +194,9 @@ int spawn(int f, int n)
         }
         TTkopen();
         sgarbf = TRUE;
+#ifdef SIGWINCH
+        force_resize();
+#endif
         return TRUE;
 #endif
 }
@@ -251,6 +258,9 @@ int execprg(int f, int n)
         TTflush();
         while ((s = tgetc()) != '\r' && s != ' ');
         sgarbf = TRUE;
+#ifdef SIGWINCH
+        force_resize();
+#endif
         return TRUE;
 #endif
 }
@@ -354,7 +364,9 @@ int pipecmd(int f, int n)
         sgarbf = TRUE;
         s = TRUE;
 #endif
-
+#ifdef SIGWINCH
+        force_resize();
+#endif
         if (s != TRUE)
                 return s;
 
@@ -444,7 +456,9 @@ int filter_buffer(int f, int n)
         sgarbf = TRUE;
         s = TRUE;
 #endif
-
+#ifdef SIGWINCH
+        force_resize();
+#endif
         /* on failure, escape gracefully */
         if (s != TRUE || (readin(filnam2, FALSE) == FALSE)) {
                 mlwrite(MLpre "Execution failed" MLpost);
