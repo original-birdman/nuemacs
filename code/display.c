@@ -51,8 +51,6 @@ static int displaying = TRUE;
 #endif
 #ifdef SIGWINCH
 #include <sys/ioctl.h>
-/* for window size changes */
-int chg_width, chg_height;
 #endif
 
 static int reframe(struct window *wp);

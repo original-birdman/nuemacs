@@ -151,3 +151,7 @@ int  pathexpand      = TRUE;
 char savnam[NBUFN]   = "main";
 int  silent          = FALSE;
 int  using_ggr_style = 0;
+
+int chg_width        = 0;
+int chg_height       = 0;
+
