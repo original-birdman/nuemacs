@@ -335,10 +335,10 @@ int getcmd(void)
         c = get1key();
 
 #if VT220
-      proc_metac:
-#endif
-        if (c == 128+27)                /* CSI */
+proc_metac:
+        if (c == 128+27)                /* CSI - ~equiv to Esc[ */
                 goto handle_CSI;
+#endif
         /* process META prefix */
         if (c == (CONTROL | '[')) {
                 c = get1key();
@@ -377,8 +377,6 @@ handle_CSI:
                         else
                                 return SPEC | c | cmask;
                 }
-#endif
-#if VT220
                 if (c == (CONTROL | '[')) {
                         cmask = META;
                         goto proc_metac;
@@ -409,7 +407,7 @@ handle_CSI:
 
 
 #if     VT220
-      proc_ctlxc:
+proc_ctlxc:
 #endif
         /* process CTLX prefix */
         if (c == ctlxc) {
@@ -483,7 +481,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
  * can't initialize it to empty here, as some callers use it as a
  * temporary buffer for the prompt!
  */
-#if MSDOS
+#if MSC
     if (mbdepth >= MAXDEPTH) {
         TTbeep();
         buf = "";               /* Ensure we never return garbage */
