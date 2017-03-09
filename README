@@ -23,3 +23,10 @@ Other changes are being made to
   o fix the display of "binary files" (where ^X and \yy are used),
   o handle utf8 character strings in the message/minibuffer line and the
     modeline.
+
+NOTE:
+The uemacs.rc file re-binds various keys from the standard settings in
+the source files. The uemacs.hlp file reflects these re-bindings (since
+if the code finds the hlp file, it should have found the rc file).
+
+For LICENCE details see the README file in the archive directory.

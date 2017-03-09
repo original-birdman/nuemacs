@@ -280,3 +280,44 @@ etc/uemacs.hlp
     Update to version GGR4.107
 
 ========== GGR4.108...
+
+display.c
+    Add NULL as missing 3rd arg (unused) in update line() for MEMMAP &
+    !SCROLLCODE call.
+
+input.c
+    Extend the VT220 conditonal code inclusion to cover the
+        if (c == 128+27) // goto handle_CSI;
+    given that the target label is VT220 dependent.
+
+input.c
+    #ifdef for MSC not MSDOS when checking mbdepth against MAXDEPTH.
+
+word.c
+    Define "int c" within the #ifndef GGR_MODE block.
+
+tcap.c
+    Move includes of curses.h and term.h to be within the #if TERMCAP
+    block.
+
+display.c
+globals.c
+edef.h
+    Make chg_width and chg_height global (also used by spawn.c).
+
+spawn.c
+    Moved code to force full window redraw into force_resize() and call
+    this before returning from any function with a system() call.
+
+termio.c
+    Fix ANSI prototyping on some functions.
+
+utf8.c
+    Fix prev_utf8_offset() to use char for marker and valmask, so we
+    don't end up sign-extending into an int and failing tests.
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.108
+
+========== GGR4.109...
