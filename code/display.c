@@ -695,7 +695,7 @@ int updupd(int force)
                                 return TRUE;
 #endif
 #if     MEMMAP && ! SCROLLCODE
-                        updateline(i, vp1);
+                        updateline(i, vp1, NULL);
 #else
                         updateline(i, vp1, pscreen[i]);
 #endif
