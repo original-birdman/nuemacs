@@ -316,6 +316,7 @@ int delfword(int f, int n)
                 /* skip whitespace and newlines */
 #ifndef GGR_MODE
 /* GGR - we *don't* want to do this bit.. */
+                int c;          /* temp char */
                 while ((curwp->w_doto == llength(curwp->w_dotp)) ||
                        ((c = lgetc(curwp->w_dotp, curwp->w_doto)) == ' ')
                        || (c == '\t')) {
