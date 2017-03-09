@@ -1,4 +1,3 @@
-
 /*      TERMIO.C
  *
  * The functions in this file negotiate with the operating system for
@@ -269,7 +268,7 @@ void ttclose(void)
  * On CPM terminal I/O unbuffered, so we just write the byte out. Ditto on
  * MS-DOS (use the very very raw console output routine).
  */
-void ttputc(c)
+void ttputc(char c)
 {
 #if     VMS
         if (nobuf >= NOBUF)
@@ -339,7 +338,7 @@ int ttflush(void)
  * at all. More complex in VMS that almost anyplace else, which figures. Very
  * simple on CPM, because the system can do exactly what you want.
  */
-ttgetc()
+int ttgetc(void)
 {
 #if     VMS
         int status;
@@ -412,7 +411,7 @@ ttgetc()
                 keyboard buffer
 */
 
-typahead()
+int typahead(void)
 {
 #if     MSDOS & (MSC | TURBO)
         if (kbhit() != 0)
