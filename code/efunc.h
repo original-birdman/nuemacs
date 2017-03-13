@@ -151,6 +151,7 @@ extern void mlputs(char *s);
 extern void getscreensize(int *widthp, int *heightp);
 extern void sizesignal(int signr);
 
+extern  int ttput1c(char);
 extern void mberase(void);
 extern void mbupdate(void);
 extern void movecursor(int, int);
@@ -177,6 +178,7 @@ extern int typahead(void);
 extern int mlyesno(char *prompt);
 extern int mlreply(char *prompt, char *buf, int nbuf);
 extern int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar);
+extern int mlreplyall(char *, char *, int);
 extern int ectoc(int c);
 extern int ctoec(int c);
 extern fn_t getname(void);
@@ -392,7 +394,5 @@ extern char *undolock(char *fname);
 /* complet.c */
 extern int comp_file(char *, char *);
 extern int comp_buffer(char *, char *);
-
-extern void do_backtrace(void);
 
 #endif

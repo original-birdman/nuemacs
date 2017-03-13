@@ -57,7 +57,7 @@
 #include <unistd.h>
 
 /* Make global definitions not external. */
-#define maindef
+// #define maindef
 
 #include "estruct.h" /* Global structures and defines. */
 #include "edef.h"    /* Global definitions. */
@@ -147,7 +147,10 @@ int main(int argc, char **argv)
 
 #if     UNIX
 #ifdef SIGWINCH
-        signal(SIGWINCH, sizesignal);
+        struct sigaction sigact, oldact;
+        sigact.sa_handler = sizesignal;
+        sigact.sa_flags = SA_RESTART;
+        sigaction(SIGWINCH, &sigact, &oldact);
 #endif
 #endif
         if (argc == 2) {
@@ -675,8 +678,8 @@ int quit(int f, int n)
                 mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
 #if     FILOCK && (BSD || SVR4)
                 if (lockrel() != TRUE) {
-                        TTputc('\n');
-                        TTputc('\r');
+                        ttput1c('\n');
+                        ttput1c('\r');
                         TTclose();
                         TTkclose();
                         exit(1);
@@ -863,7 +866,7 @@ void dspram(void)
         sprintf(mbuf, "[%lu]", envram);
         sp = &mbuf[0];
         while (*sp)
-                TTputc(*sp++);
+                ttput1c(*sp++);
         TTmove(term.t_nrow, 0);
         movecursor(term.t_nrow, 0);
 }

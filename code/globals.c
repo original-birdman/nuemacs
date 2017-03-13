@@ -37,8 +37,6 @@ int mstore = FALSE;             /* storing text to macro flag   */
 int discmd = TRUE;              /* display command flag         */
 int disinp = TRUE;              /* display input characters     */
 struct buffer *bstore = NULL;   /* buffer to store macro text to */
-int vtrow = 0;                  /* Row location of SW cursor */
-int vtcol = 0;                  /* Column location of SW cursor */
 int ttrow = HUGE;               /* Row location of HW cursor */
 int ttcol = HUGE;               /* Column location of HW cursor */
 int lbound = 0;                 /* leftmost column of current line
@@ -154,4 +152,3 @@ int  using_ggr_style = 0;
 
 int chg_width        = 0;
 int chg_height       = 0;
-

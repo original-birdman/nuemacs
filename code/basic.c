@@ -51,8 +51,9 @@ static int getgoal(struct line *dlp)
         col = 0;
         dbo = 0;
         while (dbo != len) {
-                unicode_t c;
-                int width = utf8_to_unicode(dlp->l_text, dbo, len, &c);
+            unicode_t c;
+            int width = utf8_to_unicode(dlp->l_text, dbo, len, &c);
+            if (!zerowidth_type(c)) {
                 newcol = col;
 
                 /* Take tabs, ^X and \xx hex characters into account */
@@ -67,7 +68,8 @@ static int getgoal(struct line *dlp)
                 if (newcol > curgoal)
                         break;
                 col = newcol;
-                dbo += width;
+            }
+            dbo += width;
         }
         return dbo;
 }
@@ -106,7 +108,7 @@ int backchar(int f, int n)
  */
                         curwp->w_doto = prev_utf8_offset(
                                 curwp->w_dotp->l_text, curwp->w_doto,
-                                llength(curwp->w_dotp));
+                                llength(curwp->w_dotp), TRUE);
                 }
         }
         return TRUE;
@@ -145,7 +147,7 @@ int forwchar(int f, int n)
  */
                         curwp->w_doto = next_utf8_offset(
                                 curwp->w_dotp->l_text, curwp->w_doto,
-                                llength(curwp->w_dotp));
+                                llength(curwp->w_dotp), TRUE);
                 }
         }
         return TRUE;

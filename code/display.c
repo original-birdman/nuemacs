@@ -23,6 +23,15 @@
 
 static int mbonly = FALSE;      /* GGR - minibuffer only */
 
+/* The display information is buffered.
+ * We fill in vscreen as we go (with vtrow and vtcol) then this
+ * is copied (in update()) to pscreen, which is sent to the
+ * display with TTputc calls, with ttcol tracked by other TTput* calls.
+ * Only this source file needs to know about the data.
+ */
+static int vtrow = 0;                  /* Row location of SW cursor */
+static int vtcol = 0;                  /* Column location of SW cursor */
+
 struct video {
         int v_flag;             /* Flags */
 #if     COLOR
@@ -31,7 +40,7 @@ struct video {
         int v_rfcolor;          /* requested forground color */
         int v_rbcolor;          /* requested background color */
 #endif
-        unicode_t v_text[1];    /* Screen data. */
+        struct glyph v_text[0]; /* Screen data - dynamic */
 };
 
 #define VFCHG   0x0001          /* Changed flag                 */
@@ -60,7 +69,7 @@ static void updall(struct window *wp);
 static int scrolls(int inserts);
 static void scrscroll(int from, int to, int count);
 static int texttest(int vrow, int prow);
-static int endofline(unicode_t *s, int n);
+static int endofline(struct glyph *s, int n);
 #endif
 static void updext(void);
 static int updateline(int row, struct video *vp1, struct video *vp2);
@@ -73,6 +82,123 @@ static int newscreensize(int h, int w);
 #if RAINBOW
 static void putline(int row, int col, char *buf);
 #endif
+
+/* GGR Some functions to handle struct glyph usage */
+
+/* Set the entry to an ASCII character.
+ * Checks for previous extended cdm usage and frees any such found.
+ * POSSIBLY INLINABLE??
+ */
+static void set_glyph(struct glyph *gp, unicode_t uc) {
+    gp->uc = uc;
+    gp->cdm = 0;
+    if (gp->ex != NULL) {
+        free(gp->ex);
+        gp->ex = NULL;
+    }
+    return;
+}
+
+/* Add a unicode character as a cdm or dynamic ex entry
+ */
+static void extend_glyph(struct glyph *gp, unicode_t uc) {
+
+    if (gp->cdm == 0) {         /* None there yet - simple */
+        gp->cdm = (unicode_t)uc;
+        return;
+    }
+/* Need to create or extend an ex section */
+    int xc;
+    if (gp->ex == NULL) {
+        xc = 0;
+    }
+    else {
+        xc = 1;
+        while(gp->ex[xc] != END_UCLIST) xc++;
+    }
+    gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
+    gp->ex[xc] = uc;
+    gp->ex[xc+1] = END_UCLIST;
+    return;
+}
+
+/* Copy glyph data between structures.
+ * This needs to allocate new space for any ex section and copy the data.
+ */
+static void clone_glyph(struct glyph *gtarget, struct glyph *gsource) {
+
+    gtarget->uc = gsource->uc;
+    gtarget->cdm = gsource->cdm;
+/* Free any existing ex data in the target */
+    if (gtarget->ex != NULL) free(gtarget->ex);
+    if (gsource->ex == NULL) {  /* No incoming ex section */
+        gtarget->ex = NULL;
+        return;
+    }
+
+/* Need to allocate and copy the ex section */
+    int xc = 1;
+    while(gsource->ex[xc] != END_UCLIST) xc++;
+    gtarget->ex = malloc((xc+2)*sizeof(unicode_t));
+    memcpy(gtarget->ex, gsource->ex, (xc+2)*sizeof(unicode_t));
+    return;
+}
+
+/* Only interested in same/not same here
+ */
+static int glyph_same(struct glyph *gp1, struct glyph *gp2) {
+    if (gp1->uc != gp2->uc) return FALSE;
+    if (gp1->cdm != gp2->cdm) return FALSE;
+    if ((gp1->ex == NULL) && (gp2->ex == NULL)) return TRUE;
+    if ((gp1->ex == NULL) && (gp2->ex != NULL)) return FALSE;
+    if ((gp1->ex != NULL) && (gp2->ex == NULL)) return FALSE;
+/* Have to compare the ex lists!... */
+    unicode_t *ex1 = gp1->ex;
+    unicode_t *ex2 = gp2->ex;
+    while(1) {
+        if (*ex1 != *ex2) return FALSE;
+        if ((*ex1 == END_UCLIST) || (*ex2 == END_UCLIST)) break;
+        ex1++; ex2++;
+    }
+    return ((*ex1 == END_UCLIST) && (*ex2 == END_UCLIST));
+}
+
+static int glyph_same_array(struct glyph *gp1, struct glyph *gp2, int nelem) {
+    for (int i = 0; i < nelem; i++) {
+        if (!glyph_same(gp1+i, gp2+i)) return FALSE;
+    }
+    return TRUE;
+}
+
+static int is_space(struct glyph *gp) {
+    return ((gp->uc == ' ') && (gp->cdm == 0));
+}
+
+/* Output a glyph - which is in one column.
+ * Handle remapping on the main character.
+ */
+static inline int TTputglyph(struct glyph *gp) {
+    int status = TTputc(display_for(gp->uc));
+    if (gp->cdm) TTputc(gp->cdm);   /* Might add display_for here too */
+    if (gp->ex != NULL) {
+        for(unicode_t *zw = gp->ex; *zw != END_UCLIST; zw++) {
+            TTputc(*zw);            /* Might add display_for here too */
+        }
+    }
+    ttcol++;
+    return status;
+}
+/* Output a single character. mlwrite, mlput* may send zerowidth ones */
+static inline int TTput1char(unicode_t uc) {
+    int status = TTputc(display_for(uc));
+    if (!zerowidth_type(uc)) ttcol++;
+    return status;
+}
+
+/* Routine callable from other modules to access the TTput* handlers */
+int ttput1c(char c) {
+    return TTput1char((unicode_t)c);
+}
 
 /*
  * Initialize the data structures used by the display code. The edge vectors
@@ -96,7 +222,7 @@ void vtinit(void)
 #endif
         for (i = 0; i < term.t_mrow; ++i) {
                 vp = xmalloc(sizeof(struct video) +
-                        term.t_mcol*sizeof(unicode_t));
+                        term.t_mcol*sizeof(struct glyph));
                 vp->v_flag = 0;
 #if     COLOR
 /* GGR - use defined colors */
@@ -104,14 +230,22 @@ void vtinit(void)
                 vp->v_rbcolor = gbcolor;
 #endif
                 vscreen[i] = vp;
-/* GGR - clear things out at the start */
+
+/* GGR - clear things out at the start.
+ * Can't use set_glyph() until after we have initialized
+ * We only need to initialize vscreen, as we do all assigning
+ * (including malloc()/free()) there.
+ */
         int j = 0;
-        while (j < term.t_ncol)
-                vp->v_text[j++] = ' ';
+        while (j < term.t_mcol) {   /* Need to clear out *all* now */
+                vp->v_text[j++].uc = ' ';
+                vp->v_text[j++].cdm = 0;
+                vp->v_text[j++].ex = NULL;
+        }
 
 #if     MEMMAP == 0 || SCROLLCODE
                 vp = xmalloc(sizeof(struct video) +
-                        term.t_mcol*sizeof(unicode_t));
+                        term.t_mcol*sizeof(struct glyph));
                 vp->v_flag = 0;
                 pscreen[i] = vp;
 #endif
@@ -175,22 +309,26 @@ void vtmove(int row, int col)
  * This routine only puts printing characters into the virtual
  * terminal buffers. Only column overflow is checked.
  */
-static void vtputc(int c)
+
+static void vtputc(unsigned int c)
 {
         struct video *vp;       /* ptr to line being updated */
 
-        /* In case somebody passes us a signed char.. */
-        if (c < 0) {
-                c += 256;
-                if (c < 0)
-                        return;
-        }
+        if (c > MAX_UTF8_CHAR) c = display_for(c);
 
         vp = vscreen[vtrow];
 
+        if (zerowidth_type((unicode_t)c)) {
+/* Only extend a glyph if we have a prev-char within screen width */
+            if (vtcol > 0 && (vtcol <= term.t_ncol)) {
+                extend_glyph(&(vp->v_text[vtcol-1]), c);
+                return;     /* Nothing else do do... */
+            }
+        }
+
         if (vtcol >= term.t_ncol) {
                 ++vtcol;
-                vp->v_text[term.t_ncol - 1] = '$';
+                set_glyph(&(vp->v_text[term.t_ncol - 1]), '$');
                 return;
         }
 
@@ -201,12 +339,18 @@ static void vtputc(int c)
                 return;
         }
 
+/* NOTE: Unicode has characters for displaying Control Charcaters
+ *  U+2400 to U+241F (so 2400+c)
+ */
         if (c < 0x20) {
                 vtputc('^');
                 vtputc(c ^ 0x40);
                 return;
         }
 
+/* NOTE: Unicode has a characters for displaying Delete.
+ *  U+2421
+ */
         if (c == 0x7f) {
                 vtputc('^');
                 vtputc('?');
@@ -222,7 +366,7 @@ static void vtputc(int c)
         }
 
         if (vtcol >= 0)
-                vp->v_text[vtcol] = c;
+                set_glyph(&(vp->v_text[vtcol]), c);
         ++vtcol;
 }
 
@@ -232,10 +376,10 @@ static void vtputc(int c)
  */
 static void vteeol(void)
 {
-        unicode_t *vcp = vscreen[vtrow]->v_text;
+        struct glyph *vcp = vscreen[vtrow]->v_text;
 
         while (vtcol < term.t_ncol)
-                vcp[vtcol++] = ' ';
+                set_glyph(&(vcp[vtcol++]), ' ');
 }
 
 /*
@@ -250,7 +394,6 @@ int upscreen(int f, int n)
 }
 
 #if SCROLLCODE
-// static int scrflags;
 static int scrflags = 0;
 #endif
 
@@ -567,13 +710,13 @@ void updpos(void)
 
 /* GGR - when counting columns we need to allow for *all* displays of
  *   non-printing characters as multiple chars in vtputc()!
+ *   And those with no width at all!!
  */
                 else if (c < 0x20 || c == 0x7f)     /* Displayed as ^X */
                         ++curcol;
-                else if (c >= 0x80 && c <= 0xA0) {  /* Displayed as \nn */
+                else if (c >= 0x80 && c <= 0xA0)    /* Displayed as \nn */
                         curcol += 2;
-        }
-
+                else if (zerowidth_type(c)) curcol--;
                 ++curcol;
         }
 
@@ -635,7 +778,7 @@ void upddex(void)
  */
 void updgar(void)
 {
-        unicode_t *txt;
+        struct glyph *txt;
         int i, j;
 
 /* GGR - include the last row, so <=, (for mini-buffer) */
@@ -651,7 +794,7 @@ void updgar(void)
 #if     MEMMAP == 0 || SCROLLCODE
                 txt = pscreen[i]->v_text;
                 for (j = 0; j < term.t_ncol; ++j)
-                        txt[j] = ' ';
+                        set_glyph(txt+j, ' ');
 #endif
         }
 
@@ -743,8 +886,7 @@ static int scrolls(int inserts)
                 end = endofline(vpv->v_text, cols);
                 if (end == 0)
                         target = first; /* newlines */
-                else if (memcmp(vpp->v_text, vpv->v_text,
-                                sizeof(unicode_t)*end) == 0)
+                else if (glyph_same_array(vpp->v_text, vpv->v_text, end))
                         target = first + 1;     /* broken line newlines */
                 else
                         target = first;
@@ -804,7 +946,7 @@ static int scrolls(int inserts)
                         vpp = pscreen[to + i];
                         vpv = vscreen[to + i];
                         memcpy(vpp->v_text, vpv->v_text,
-                                sizeof(unicode_t)*cols);
+                                sizeof(struct glyph)*cols);
                         vpp->v_flag = vpv->v_flag;      /* XXX */
                         if (vpp->v_flag & VFREV) {
                                 vpp->v_flag &= ~VFREV;
@@ -823,10 +965,10 @@ static int scrolls(int inserts)
                 }
 #if     MEMMAP == 0
                 for (i = from; i < to; i++) {
-                        unicode_t *txt;
+                        struct glyph *txt;
                         txt = pscreen[i]->v_text;
                         for (j = 0; j < term.t_ncol; ++j)
-                                txt[j] = ' ';
+                                set_glyph(txt+j, ' ');
                         vscreen[i]->v_flag |= VFCHG;
                 }
 #endif
@@ -852,17 +994,17 @@ static int texttest(int vrow, int prow)
         struct video *vpv = vscreen[vrow];      /* virtual screen image */
         struct video *vpp = pscreen[prow];      /* physical screen image */
 
-        return !memcmp(vpv->v_text, vpp->v_text, sizeof(unicode_t)*term.t_ncol);
+        return glyph_same_array(vpv->v_text, vpp->v_text, term.t_ncol);
 }
 
 /*
  * return the index of the first blank of trailing whitespace
  */
-static int endofline(unicode_t *s, int n)
+static int endofline(struct glyph *s, int n)
 {
         int i;
         for (i = n - 1; i >= 0; i--)
-                if (s[i] != ' ')
+                if (!is_space(s+i))
                         return i + 1;
         return 0;
 }
@@ -896,7 +1038,7 @@ static void updext(void)
         taboff = 0;
 
         /* and put a '$' in column 1 */
-        vscreen[currow]->v_text[0] = '$';
+        set_glyph(&(vscreen[currow]->v_text[0]), '$');
 }
 
 /*
@@ -911,15 +1053,15 @@ static void updext(void)
 static int updateline(int row, struct video *vp1, struct video *vp2)
 {
 #if     SCROLLCODE
-        unicode_t *cp1;
-        unicode_t *cp2;
+        struct glyph *cp1;
+        struct glyph *cp2;
         int nch;
 
         cp1 = &vp1->v_text[0];
         cp2 = &vp2->v_text[0];
         nch = term.t_ncol;
         do {
-                *cp2 = *cp1;
+                clone_glyph(cp2, cp1);
                 ++cp2;
                 ++cp1;
         }
@@ -953,8 +1095,8 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 #if RAINBOW
 /*      UPDATELINE specific code for the DEC rainbow 100 micro  */
 
-        unicode_t *cp1;
-        unicode_t *cp2;
+        struct glyph *cp1;
+        struct glyph *cp2;
         int nch;
 
         /* since we don't know how to make the rainbow do this, turn it off */
@@ -975,11 +1117,11 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 #else
 /*      UPDATELINE code for all other versions          */
 
-        unicode_t *cp1;
-        unicode_t *cp2;
-        unicode_t *cp3;
-        unicode_t *cp4;
-        unicode_t *cp5;
+        struct glyph *cp1;
+        struct glyph *cp2;
+        struct glyph *cp3;
+        struct glyph *cp4;
+        struct glyph *cp5;
         int nbflag;             /* non-blanks to the right flag? */
         int rev;                /* reverse video flag */
         int req;                /* reverse video request flag */
@@ -1014,9 +1156,8 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
                    the virtual screen array                             */
                 cp3 = &vp1->v_text[term.t_ncol];
                 while (cp1 < cp3) {
-                        TTputc(*cp1);
-                        ++ttcol;
-                        *cp2++ = *cp1++;
+                        TTputglyph(cp1);
+                        clone_glyph(cp2++, cp1++);
                 }
                 /* turn rev video off */
                 if (rev != req)
@@ -1037,7 +1178,8 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 #endif
 
         /* advance past any common chars at the left */
-        while (cp1 != &vp1->v_text[term.t_ncol] && cp1[0] == cp2[0]) {
+        while (cp1 != &vp1->v_text[term.t_ncol] &&
+             glyph_same(cp1, cp2)) {
                 ++cp1;
                 ++cp2;
         }
@@ -1059,18 +1201,18 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
         cp3 = &vp1->v_text[term.t_ncol];
         cp4 = &vp2->v_text[term.t_ncol];
 
-        while (cp3[-1] == cp4[-1]) {
+        while (glyph_same(&(cp3[-1]), &(cp4[-1]))) {
                 --cp3;
                 --cp4;
-                if (cp3[0] != ' ')      /* Note if any nonblank */
-                        nbflag = TRUE;  /* in right match. */
+                if (!is_space(&(cp3[0])))   /* Note if any nonblank */
+                        nbflag = TRUE;      /* in right match. */
         }
 
         cp5 = cp3;
 
         /* Erase to EOL ? */
         if (nbflag == FALSE && eolexist == TRUE && (req != TRUE)) {
-                while (cp5 != cp1 && cp5[-1] == ' ')
+                while (cp5 != cp1 && is_space(&(cp5[-1])))
                         --cp5;
 
                 if (cp3 - cp5 <= 3)     /* Use only if erase is */
@@ -1083,16 +1225,15 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 #endif
 
         while (cp1 != cp5) {    /* Ordinary. */
-                TTputc(*cp1);
-                ++ttcol;
-                *cp2++ = *cp1++;
+                TTputglyph(cp1);
+                clone_glyph(cp2++, cp1++);
         }
 
         if (cp5 != cp3) {       /* Erase. */
                 TTeeol();
                 while (cp1 != cp3)
-                        *cp2++ = *cp1++;
-        }
+                        clone_glyph(cp2++, cp1++);
+}
 #if     REVSTA
         TTrev(FALSE);
 #endif
@@ -1112,14 +1253,13 @@ static void modeline(struct window *wp)
 {
         char *cp;
         int c;
-        int n;          /* cursor position count */
         struct buffer *bp;
-        int i;          /* loop index */
-        int lchar;      /* character to draw line in buffer with */
-        int firstm;     /* is this the first mode? */
+        int i;                  /* loop index */
+        int lchar;              /* character to draw line in buffer with */
+        int firstm;             /* is this the first mode? */
         char tline[NLINE];      /* buffer for part of mode line */
 
-        n = wp->w_toprow + wp->w_ntrows;        /* Location. */
+        int n = wp->w_toprow + wp->w_ntrows;            /* Location. */
         vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;    /* Redraw next time. */
 #if     COLOR
 /* GGR - use configured colors, not 0 and 7 */
@@ -1154,8 +1294,6 @@ static void modeline(struct window *wp)
         else
                 vtputc(lchar);
 
-        n = 2;
-
         strcpy(tline, " ");
         strcat(tline, PROGRAM_NAME_LONG);
         strcat(tline, " ");
@@ -1167,18 +1305,12 @@ static void modeline(struct window *wp)
         }
         strcat(tline, ": ");
         cp = &tline[0];
-        while ((c = *cp++) != 0) {
-                vtputc(c);
-                ++n;
-        }
+        while ((c = *cp++) != 0) vtputc(c);
 
         cp = &bp->b_bname[0];
-        while ((c = *cp++) != 0) {
-                vtputc(c);
-                ++n;
-        }
+        while ((c = *cp++) != 0) vtputc(c);
 
-        strcpy(tline, " (");
+        strcpy(tline, " " MLpre);
 
         /* display the modes */
 
@@ -1194,13 +1326,10 @@ static void modeline(struct window *wp)
                         firstm = FALSE;
                         strcat(tline, mode2name[i]);
                 }
-        strcat(tline, ") ");
+        strcat(tline, MLpost " ");
 
         cp = &tline[0];
-        while ((c = *cp++) != 0) {
-                vtputc(c);
-                ++n;
-        }
+        while ((c = *cp++) != 0) vtputc(c);
 
 #if     PKCODE
         if (bp->b_fname[0] != 0 && strcmp(bp->b_bname, bp->b_fname) != 0)
@@ -1210,85 +1339,71 @@ static void modeline(struct window *wp)
         {
 #if     PKCODE == 0
                 cp = "File: ";
-
-                while ((c = *cp++) != 0) {
-                        vtputc(c);
-                        ++n;
-                }
+                while ((c = *cp++) != 0) vtputc(c);
 #endif
 
                 cp = &bp->b_fname[0];
-
-                while ((c = *cp++) != 0) {
-                        vtputc(c);
-                        ++n;
-                }
-
+                while ((c = *cp++) != 0) vtputc(c);
                 vtputc(' ');
-                ++n;
         }
+/* Pad to full width. */
+        while (vtcol < term.t_ncol) vtputc(lchar);
 
-        while (n < term.t_ncol) {       /* Pad to full width. */
-                vtputc(lchar);
-                ++n;
+/* determine if top line, bottom line, or both are visible */
+
+        struct line *lp = wp->w_linep;
+        int rows = wp->w_ntrows;
+        char *msg = NULL;
+
+        vtcol -= 7;  /* strlen(" top ") plus a couple */
+        while (rows--) {
+                lp = lforw(lp);
+                if (lp == wp->w_bufp->b_linep) {
+                        msg = " Bot ";
+                        break;
+                }
         }
+        if (lback(wp->w_linep) == wp->w_bufp->b_linep) {
+                if (msg) {
+                        if (wp->w_linep == wp->w_bufp->b_linep)
+                                msg = " Emp ";
+                        else
+                                msg = " All ";
+                } else {
+                        msg = " Top ";
+                }
+        }
+        if (!msg) {
+                struct line *lp;
+                int numlines, predlines, ratio;
 
-        {                       /* determine if top line, bottom line, or both are visible */
-                struct line *lp = wp->w_linep;
-                int rows = wp->w_ntrows;
-                char *msg = NULL;
-
-                vtcol = n - 7;  /* strlen(" top ") plus a couple */
-                while (rows--) {
+                lp = lforw(bp->b_linep);
+                numlines = 0;
+                predlines = 0;
+                while (lp != bp->b_linep) {
+                        if (lp == wp->w_linep) {
+                                predlines = numlines;
+                        }
+                        ++numlines;
                         lp = lforw(lp);
-                        if (lp == wp->w_bufp->b_linep) {
-                                msg = " Bot ";
-                                break;
-                        }
                 }
-                if (lback(wp->w_linep) == wp->w_bufp->b_linep) {
-                        if (msg) {
-                                if (wp->w_linep == wp->w_bufp->b_linep)
-                                        msg = " Emp ";
-                                else
-                                        msg = " All ";
-                        } else {
-                                msg = " Top ";
-                        }
+                if (wp->w_dotp == bp->b_linep) {
+                        msg = " Bot ";
+                } else {
+                        ratio = 0;
+                        if (numlines != 0)
+                                ratio = (100L * predlines) / numlines;
+                        if (ratio > 99)
+                                ratio = 99;
+                        sprintf(tline, " %2d%% ", ratio);
+                        msg = tline;
                 }
-                if (!msg) {
-                        struct line *lp;
-                        int numlines, predlines, ratio;
+        }
 
-                        lp = lforw(bp->b_linep);
-                        numlines = 0;
-                        predlines = 0;
-                        while (lp != bp->b_linep) {
-                                if (lp == wp->w_linep) {
-                                        predlines = numlines;
-                                }
-                                ++numlines;
-                                lp = lforw(lp);
-                        }
-                        if (wp->w_dotp == bp->b_linep) {
-                                msg = " Bot ";
-                        } else {
-                                ratio = 0;
-                                if (numlines != 0)
-                                        ratio =
-                                            (100L * predlines) / numlines;
-                                if (ratio > 99)
-                                        ratio = 99;
-                                sprintf(tline, " %2d%% ", ratio);
-                                msg = tline;
-                        }
-                }
-
-                cp = msg;
-                while ((c = *cp++) != 0) {
-                        vtputc(c);
-                        ++n;
-                }
+        cp = msg;
+        while ((c = *cp++) != 0) {
+                vtputc(c);
+                ++n;
         }
 }
 
@@ -1339,7 +1454,7 @@ void mlerase(void)
                 TTeeol();
         else {
                 for (i = 0; i < term.t_ncol - 1; i++)
-                        TTputc(' ');
+                        TTputc(' ');            /* No need to update ttcol */
                 movecursor(term.t_nrow, 1);     /* force the move! */
                 movecursor(term.t_nrow, 0);
         }
@@ -1390,8 +1505,7 @@ void mlwrite(const char *fmt, ...)
             bytes_togo -= used;
             fmt += used;
                 if (c != '%') {
-                        TTputc(c);
-                        ++ttcol;
+                        TTput1char(c);
                 } else {
                         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
                         bytes_togo -= used;
@@ -1423,8 +1537,7 @@ void mlwrite(const char *fmt, ...)
                                 break;
 
                         default:
-                                TTputc(c);
-                                ++ttcol;
+                                TTput1char(c);
                         }
                 }
         }
@@ -1465,14 +1578,11 @@ void mlputs(char *s)
 {
         unicode_t c;
 
-        int bytes_togo = strlen(s);
-        while (bytes_togo > 0) {
-                int used = utf8_to_unicode(s, 0, bytes_togo, &c);
-                bytes_togo -= used;
-                s += used;
-
-                TTputc(c);
-                ++ttcol;
+        int nbytes = strlen(s);
+        int idx = 0;
+        while (idx <= nbytes) {
+                idx += utf8_to_unicode(s, idx, nbytes, &c);
+                TTput1char(c);
         }
 }
 
@@ -1487,7 +1597,7 @@ static void mlputi(int i, int r)
 
         if (i < 0) {
                 i = -i;
-                TTputc('-');
+                TTput1char('-');
         }
 
         q = i / r;
@@ -1495,8 +1605,7 @@ static void mlputi(int i, int r)
         if (q != 0)
                 mlputi(q, r);
 
-        TTputc(hexdigits[i % r]);
-        ++ttcol;
+        TTput1char(hexdigits[i % r]);
 }
 
 /*
@@ -1508,7 +1617,7 @@ static void mlputli(long l, int r)
 
         if (l < 0) {
                 l = -l;
-                TTputc('-');
+                TTput1char('-');
         }
 
         q = l / r;
@@ -1516,8 +1625,7 @@ static void mlputli(long l, int r)
         if (q != 0)
                 mlputli(q, r);
 
-        TTputc((int) (l % r) + '0');
-        ++ttcol;
+        TTput1char((int) (l % r) + '0');
 }
 
 /*
@@ -1536,10 +1644,9 @@ static void mlputf(int s)
 
         /* send out the integer portion */
         mlputi(i, 10);
-        TTputc('.');
-        TTputc((f / 10) + '0');
-        TTputc((f % 10) + '0');
-        ttcol += 3;
+        TTput1char('.');
+        TTput1char((f / 10) + '0');
+        TTput1char((f % 10) + '0');
 }
 
 #if RAINBOW
@@ -1586,7 +1693,10 @@ void sizesignal(int signr)
         if (h && w && (h - 1 != term.t_nrow || w != term.t_ncol))
                 newscreensize(h, w);
 
-        signal(SIGWINCH, sizesignal);
+        struct sigaction sigact, oldact;
+        sigact.sa_handler = sizesignal;
+        sigact.sa_flags = SA_RESTART;
+        sigaction(SIGWINCH, &sigact, &oldact);
         errno = old_errno;
 }
 
@@ -1634,7 +1744,7 @@ void mberase(void)
 #endif
 
 #if     MEMMAP
-                        updateline(term.t_nrow, vp1);
+                        updateline(term.t_nrow, vp1, NULL);
 #else
                         updateline(term.t_nrow, vp1, pscreen[term.t_nrow]);
 #endif

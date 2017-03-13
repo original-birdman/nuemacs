@@ -31,6 +31,7 @@ struct name_bind names[] = {
         {"change-file-name", filename},
         {"change-screen-size", newsize},
         {"change-screen-width", newwidth},
+        {"char-replace", char_replace},     /* GGR */
         {"clear-and-redraw", redraw},
         {"clear-message-line", clrmes},
         {"copy-region", copyregion},

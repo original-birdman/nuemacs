@@ -566,7 +566,7 @@ int fillpara(int f, int n)
                         if (eos_list) {     /* Some eos defined */
                                 eosflag = 0;
                                 for (unicode_t *eosch = eos_list;
-                                    *eosch != 0xffffffff; eosch++) {
+                                    *eosch != END_UCLIST; eosch++) {
                                         if (c == *eosch) {
                                                 eosflag = 1;
                                                 break;
@@ -769,7 +769,7 @@ int justpara(int f, int n)
                         if (eos_list) {     /* Some eos defined */
                                 eosflag = 0;
                                 for (unicode_t *eosch = eos_list;
-                                    *eosch != 0xffffffff; eosch++) {
+                                    *eosch != END_UCLIST; eosch++) {
                                         if (c == *eosch) {
                                                 eosflag = 1;
                                                 break;
@@ -946,7 +946,8 @@ int wordcount(int f, int n)
 /*
  * Set the GGR-added end-of-sentence list for use by fillpara and
  * justpara.
- * Allows utf8 punctuation.
+ * Allows utf8 punctuation, but does NOT cater for any zero-width
+ * character usage (so no combining diacritical marks here...).
  * Mainly for macro usage
  *
  * int f, n;            arguments ignored
@@ -955,7 +956,6 @@ static int n_eos = 0;
 static char eos_str[NLINE] = "";    /* String given by user */
 int eos_chars(int f, int n)
 {
-
         int status;
         char prompt[NLINE+60];
         char buf[NLINE];
@@ -987,7 +987,7 @@ int eos_chars(int f, int n)
                         i += utf8_to_unicode(buf, i, len, &c);
                         eos_list[n_eos++] = c;
                 }
-                eos_list[n_eos] = 0xffffffff;
+                eos_list[n_eos] = END_UCLIST;
                 strcpy(eos_str, buf);
         }
 /* Do nothing on anything else - allows you to abort once you've started. */

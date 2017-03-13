@@ -10,6 +10,8 @@
 #ifndef ESTRUCT_H_
 #define ESTRUCT_H_
 
+#include "utf8.h"
+
 #define MAXCOL  500
 #define MAXROW  500
 
@@ -20,6 +22,9 @@
 #define MLpre  "("
 #define MLpost ")"
 #endif
+
+/* Define an invalid unicode character to mark the end of lists */
+#define END_UCLIST 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
 
 #ifdef  MSDOS
 #undef  MSDOS
@@ -531,29 +536,29 @@ struct region {
  * one terminal type.
  */
 struct terminal {
-        short t_mrow;           /* max number of rows allowable */
-        short t_nrow;           /* current number of rows used  */
-        short t_mcol;           /* max Number of columns.       */
-        short t_ncol;           /* current Number of columns.   */
-        short t_margin;         /* min margin for extended lines */
-        short t_scrsiz;         /* size of scroll region "      */
-        int t_pause;            /* # times thru update to pause */
-        void (*t_open)(void);   /* Open terminal at the start.  */
-        void (*t_close)(void);  /* Close terminal at end.       */
-        void (*t_kopen)(void);  /* Open keyboard                */
-        void (*t_kclose)(void); /* close keyboard               */
-        int (*t_getchar)(void); /* Get character from keyboard. */
-        int (*t_putchar)(int);  /* Put character to display.    */
-        void (*t_flush) (void); /* Flush output buffers.        */
-        void (*t_move)(int, int);/* Move the cursor, origin 0.   */
-        void (*t_eeol)(void);   /* Erase to end of line.        */
-        void (*t_eeop)(void);   /* Erase to end of page.        */
-        void (*t_beep)(void);   /* Beep.                        */
-        void (*t_rev)(int);     /* set reverse video state      */
-        int (*t_rez)(char *);   /* change screen resolution     */
+        short t_mrow;               /* max number of rows allowable  */
+        short t_nrow;               /* current number of rows used   */
+        short t_mcol;               /* max Number of columns.        */
+        short t_ncol;               /* current Number of columns.    */
+        short t_margin;             /* min margin for extended lines */
+        short t_scrsiz;             /* size of scroll region "       */
+        int t_pause;                /* # times thru update to pause  */
+        void (*t_open)(void);       /* Open terminal at the start.   */
+        void (*t_close)(void);      /* Close terminal at end.        */
+        void (*t_kopen)(void);      /* Open keyboard                 */
+        void (*t_kclose)(void);     /* close keyboard                */
+        int (*t_getchar)(void);     /* Get character from keyboard.  */
+        int (*t_putchar)(int);      /* Put character to display.     */
+        void (*t_flush) (void);     /* Flush output buffers.         */
+        void (*t_move)(int, int);   /* Move the cursor, origin 0.    */
+        void (*t_eeol)(void);       /* Erase to end of line.         */
+        void (*t_eeop)(void);       /* Erase to end of page.         */
+        void (*t_beep)(void);       /* Beep.                         */
+        void (*t_rev)(int);         /* set reverse video state       */
+        int (*t_rez)(char *);       /* change screen resolution      */
 #if     COLOR
-        void (*t_setfor) (int);         /* set foreground color         */
-        void (*t_setback) (int);        /* set background color         */
+        void (*t_setfor) (int);     /* set foreground color          */
+        void (*t_setback) (int);    /* set background color          */
 #endif
 #if     SCROLLCODE
         void (*t_scroll)(int, int,int); /* scroll a region of the screen */

@@ -1,4 +1,4 @@
-/*      spaw.c
+/*      spawn.c
  *
  *      Various operating system access commands.
  *
@@ -247,7 +247,7 @@ int execprg(int f, int n)
 #if     V7 | USG | BSD
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
-        TTputc('\n');           /* Already have '\r'    */
+        ttput1c('\n');          /* Already have '\r'    */
         TTflush();
         TTclose();              /* stty to old modes    */
         TTkclose();
@@ -444,7 +444,7 @@ int filter_buffer(int f, int n)
 #endif
 
 #if     V7 | USG | BSD
-        TTputc('\n');           /* Already have '\r'    */
+        ttput1c('\n');          /* Already have '\r'    */
         TTflush();
         TTclose();              /* stty to old modes    */
         TTkclose();

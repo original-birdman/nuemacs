@@ -36,7 +36,7 @@ int gethostname(char *name, int namelen)
 
 /**********************
  *
- * if successful, returns NULL  
+ * if successful, returns NULL
  * if file locked, returns username of person locking the file
  * if other error, returns "LOCK ERROR: explanation"
  *
@@ -84,7 +84,7 @@ char *dolock(char *fname)
                 cuserid(locker);
                 strcat(locker + strlen(locker), "@");
                 gethostname(locker + strlen(locker), 64);
-                int dnc __attribute__ ((unused)) = 
+                int dnc __attribute__ ((unused)) =
                         write(fd, locker, strlen(locker));
                 close(fd);
                 return NULL;

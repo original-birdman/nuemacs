@@ -282,11 +282,11 @@ etc/uemacs.hlp
 ========== GGR4.108...
 
 display.c
-    Add NULL as missing 3rd arg (unused) in update line() for MEMMAP &
+    Add NULL as missing 3rd arg (unused) in updateline() for MEMMAP &
     !SCROLLCODE call.
 
 input.c
-    Extend the VT220 conditonal code inclusion to cover the
+    Extend the VT220 conditional code inclusion to cover the
         if (c == 128+27) // goto handle_CSI;
     given that the target label is VT220 dependent.
 
@@ -321,3 +321,136 @@ etc/uemacs.hlp
     Update to version GGR4.108
 
 ========== GGR4.109...
+The Great Glyphing code change...
+
+Most of this is about adding a structure to describe a character
+displayed at a column (a glyph) which may contain multiple utf8
+characters when some are Combining Diacritical Marks, or Zerowidth.
+The glyph structure mainly affects vtputc() and updateline() (and
+their callers) in display.c, but handling of zerowidth entities
+extends elsewhere too.
+
+Makefile
+    Use gnu99, not c99 as the --std.
+
+basic.c
+    Skip over zerowidth characters in getgoal().
+    Tell next_utf8_offset(), prev_utf8_offset() to go to the stat of a
+    glyph (i.e skip over zerowidth chars).
+
+bind.c
+    In bindtokey() and unbindkey() don't write out the message line
+    (mini-buffer) prompts if we are processing start-up files.
+
+display.c
+    Explicitly initialize scrflags to 0.
+    Move vtcol and vtrow to local static storage (display.c is the only
+    user).
+    Change struct video to have an array of struct glyph rather than
+    unicode_t at the end. Changed parameters to affected routines.
+    Added set_glyph(), extend_glyph() clone_glyph(), glyph_same(),
+    glyph_same_array(), is_space(), TTputglyph() and TTput1char() as
+    static functions.
+    Add ttput1c() for external callers to reach TTput1char().
+    Change vtinit() to setup a struct glyph array for the *whole*
+    vscreen and pscreen arrays (not just the currently in use).
+    Make the input to vtputc() an *unsigned* int.
+    vtputc() now checks for a unicode character over the maximum allowed,
+    and display the replacement character for it.
+    vtputc() will extend any preceding character glyph on finding a
+    zerowidth one.
+    vtputc(), vteeol(), updgar(), scrolls(), updext() now call
+    set_glyph() to add a character to vscreen.
+    scrolls(), texttest() use glyph_same_array() and updateline() uses
+    glyph_same() to check for a display change.
+    endofline() and updateline() now use is_space() to check for a
+    space, so we can cater for any added zerowidth modifiers.
+    TTputc() calls were replace with TTputglyph()/TTput1char() ones and
+    those functions adjust ttcol.
+    Added a missing third arg (as NULL) to another updateline() call.
+    Removed use of n as a column counter in modeline(), as vtcol is
+    already doing it. Also "unblocked" a code section to remove an
+    unnecessary extra level of indentation.
+    Use clone_glyph to move vscreen glyphs to pscreen ones in
+    updateline().
+    Use sigaction(), not signal(), to set-up signals (portability).
+
+edef.h
+    Removed vtrow and vtcol (now local to display.c).
+
+efunc.h
+    Added ttput1c() and mlreplyall(). Removed (unused) do_backtrace().
+
+estruct.h
+    Include utf8.h.
+    Define END_UCLIST.
+    Lined up comments.
+
+etc/uemacs.rc
+    Added some char-replace settings.
+
+globals.c
+    Removed vtrow and vtcol (now local to display.c).
+
+input.c
+    Added mlreplyall() to get all of the function args in one go when
+    called from a start-up script.
+    Some TTputc() calls changed to ttput1c().
+    Add a SIGWINCH (if defined) handler for getstring to get abort
+    the minibuffer if it occurs. Being in a minibuffer confuses the
+    redraw. Needs various signal block to ensure we don't pass though
+    set-up/take-down code twice.
+
+line.c
+line.h
+    Added lgetglyph() to get the struct glyph for the current character
+    (or just its length).
+    Changed ldelchar() to use lgetglyph() for how many bytes to remove.
+
+main.c
+    Some TTputc() calls changed to ttput1c().
+    Removed the no longer used #define maindef
+    Use sigaction(), not signal(), to set-up signals (portability).
+
+names.c
+    Added "char-replace" => char_replace() function mapping.
+
+random.c
+    In showcpos() use lgetglyph() to get the full glyph data for the
+    current character. Display the number of bytes (and unicode
+    characters( used in the glyph if more than one.
+    Update getccol() to handle zerowidth characters.
+    Modified twiddle() to handle multibyte and zerowidth characters.
+
+spawn.c
+    Some TTputc() calls changed to ttput1c().
+
+utf8.c
+utf8.h
+    Modified utf8_to_unicode() to check that the resulting character is
+    not more than the maximum utf8 allows.
+    next_utf8_offset() and prev_utf8_offset() now have an option to skip
+    over zerowidth characters.
+    Added zerowidth_type() function and associated data structure.
+    Added char_replace() function to map non- (or poorly) represented
+    characters to a (user-configurable) replacement one. The list of
+    what to map is also user-configurable.
+    Added display_for() to work out what should be displayed for a given
+    unicode character.
+
+word.c
+    Changed to end-of-sentence coding to use END_UCLIST as an end
+    marker rather than 0xffffffff (for consistency).
+
+test-files/combining-diacritics
+    Added a few more lines
+
+test-files/1ffff
+test-files/3uc-test
+test-files/3uc-together
+test-files/3uc-together-twiddle
+test-files/overrun.txt
+    Added some small test files. May extend/document more later.
+
+TODO
+    Added to the top-level, as a reminder....

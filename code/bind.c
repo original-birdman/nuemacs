@@ -105,17 +105,18 @@ int bindtokey(int f, int n)
         char outseq[80];        /* output buffer for keystroke sequence */
 
         /* prompt the user to type in a key to bind */
-        mlwrite(": bind-to-key ");
-
-        mpresf = TRUE;          /* GGR */
+        if (!clexec) {
+            mlwrite(": bind-to-key ");
+            mpresf = TRUE;          /* GGR */
+        }
 
         /* get the function name to bind it to */
         kfunc = getname();
         if (kfunc == NULL) {
-                mlwrite(MLpre "No such function" MLpost);
+                if (!clexec) mlwrite(MLpre "No such function" MLpost);
                 return FALSE;
         }
-        mlputs(" ");
+        if (!clexec) mlputs(" ");
 
         /* get the command sequence to bind */
         c = getckey((kfunc == metafn) || (kfunc == cex) ||
@@ -125,7 +126,7 @@ int bindtokey(int f, int n)
         cmdstr(c, outseq);
 
         /* and dump it out */
-        mlputs(outseq);
+        if (!clexec) mlputs(outseq);
 
         /* if the function is a prefix key */
         if (kfunc == metafn || kfunc == cex ||
@@ -168,6 +169,7 @@ int bindtokey(int f, int n)
                 /* if we run out of binding room, bitch */
                 if (ktp >= &keytab[NBINDS]) {
                         mlwrite("Binding table FULL!");
+                        mpresf = TRUE;          /* GGR */
                         return FALSE;
                 }
 
@@ -195,9 +197,10 @@ int unbindkey(int f, int n)
         char outseq[80];        /* output buffer for keystroke sequence */
 
         /* prompt the user to type in a key to unbind */
-        mlwrite(": unbind-key ");
-
-        mpresf = TRUE;          /* GGR */
+        if (!clexec) {
+            mlwrite(": unbind-key ");
+            mpresf = TRUE;      /* GGR */
+        }
 
         /* get the command sequence to unbind */
         c = getckey(FALSE);     /* get a command sequence */
@@ -206,11 +209,12 @@ int unbindkey(int f, int n)
         cmdstr(c, outseq);
 
         /* and dump it out */
-        mlputs(outseq);
+        if (!clexec) mlputs(outseq);
 
         /* if it isn't bound, bitch */
         if (unbindchar(c) == FALSE) {
                 mlwrite(MLpre "Key not bound" MLpost);
+                mpresf = TRUE;  /* GGR */
                 return FALSE;
         }
         TTflush();              /* GGR */

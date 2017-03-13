@@ -305,7 +305,7 @@ void ibmclose(void)
 #endif
 /* GGR attempted fix.. */
         ibmeeol();
-                
+
         /* if we had the EGA open... close it */
         if (dtype == CDEGA)
                 egaclose();

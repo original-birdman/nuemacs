@@ -55,7 +55,7 @@ int risearch(int f, int n)
         int curoff;                 /* Current offset on entry      */
 
         if (mbstop())               /* GGR - disallow in minibuffer */
-                return(FALSE);              
+                return(FALSE);
 
         /* remember the initial . on entry: */
 
@@ -93,7 +93,7 @@ int fisearch(int f, int n)
         int curoff;                     /* Current offset on entry  */
 
         if (mbstop())                   /* GGR - disallow in minibuffer */
-                return(FALSE);              
+                return(FALSE);
 
         /* remember the initial . on entry: */
 
@@ -281,7 +281,7 @@ int isearch(int f, int n)
 /*
  * Trivial routine to insure that the next character in the search string is
  * still true to whatever we're pointing to in the buffer.  This routine will
- * not attempt to move the "point" if the match fails, although it will 
+ * not attempt to move the "point" if the match fails, although it will
  * implicitly move the "point" if we're forward searching, and find a match,
  * since that's the way forward isearch works.
  *
@@ -292,7 +292,7 @@ int isearch(int f, int n)
  * char *patrn;         The entire search string (incl chr)
  * int dir;             Search direction
  */
-int checknext(char chr, char *patrn, int dir)   
+int checknext(char chr, char *patrn, int dir)
 /* Check next character in search string */
 {
         struct line *curline;   /* current line during scan           */
@@ -423,6 +423,7 @@ int promptpattern(char *prompt)
 
 /*
  * routine to echo i-search characters
+ * GGR - This is *NOT* a mini-buffer, and tracks its own column.
  *
  * int c;               character to be echoed
  * int col;             column to be echoed in
@@ -468,7 +469,7 @@ static int echo_char(int c, int col)
 
 /*
  * Routine to get the next character from the input stream.  If we're reading
- * from the real terminal, force a screen update before we get the char. 
+ * from the real terminal, force a screen update before we get the char.
  * Otherwise, we must be re-executing the command string, so just return the
  * next character.
  */

@@ -95,7 +95,7 @@ void lfree(struct line *lp)
  * This routine gets called when a character is changed in place in the current
  * buffer. It updates all of the required flags in the buffer and window
  * system. The flag used is passed as an argument; if the buffer is being
- * displayed in more than 1 window we change EDIT t HARD. Set MODE if the
+ * displayed in more than 1 window we change EDIT to HARD. Set MODE if the
  * mode line needs to be updated (the "*" has to be set).
  */
 void lchange(int flag)
@@ -364,18 +364,49 @@ int lgetchar(unicode_t *c)
         return utf8_to_unicode(buf, curwp->w_doto, len, c);
 }
 
+/* Get the glyph structure for what point is looking at.
+ * Returns the number of bytes used up by the utf8 string.
+ */
+int lgetglyph(struct glyph *gp, int utf8_len_only)
+{
+        int len = llength(curwp->w_dotp);
+        char *buf = curwp->w_dotp->l_text;
+        int used = utf8_to_unicode(buf, curwp->w_doto, len, &(gp->uc));
+        gp->cdm = 0;
+        gp->ex = NULL;
+        unicode_t uc;
+        int xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
+        if (!zerowidth_type(uc)) {
+            return used;
+        }
+        used += xtra;
+        gp->cdm = uc;
+        for (int xc = 0;;xc++) {
+            xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
+            if (!zerowidth_type(uc)) break;
+            used += xtra;
+            if (!utf8_len_only) {
+                gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
+                gp->ex[xc] = uc;
+                gp->ex[xc+1] = END_UCLIST;
+            }
+        }
+        return used;
+}
+
 /*
  * ldelete() really fundamentally works on bytes, not characters.
  * It is used for things like "scan 5 words forwards, and remove
  * the bytes we scanned".
+ * GGR - cater for zero-width characters...with lgetglyph.
  *
  * If you want to delete characters, use ldelchar().
  */
 int ldelchar(long n, int kflag)
 {
         while (n-- > 0) {
-                unicode_t c;
-                if (!ldelete(lgetchar(&c), kflag))
+                struct glyph gc;
+                if (!ldelete(lgetglyph(&gc, TRUE), kflag))
                         return FALSE;
         }
         return TRUE;

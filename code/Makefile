@@ -34,7 +34,8 @@ HDR=ebind.h edef.h efunc.h epath.h estruct.h evar.h util.h version.h
 
 CC=gcc
 WARNINGS=-Wall -Wstrict-prototypes
-CFLAGS=-O3 $(WARNINGS) -std=c99 -DGGR_MODE
+CFLAGS=-O3 $(WARNINGS) -std=gnu99 -DGGR_MODE
+# CFLAGS=-O0 -g $(WARNINGS) -std=gnu99 -DGGR_MODE
 #CC=c89 +O3			# HP
 #CFLAGS= -D_HPUX_SOURCE -DSYSV
 #CFLAGS=-O4 -DSVR4		# Sun

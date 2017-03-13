@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 25 Feb 2017
+;                       Last Update: 13 Mar 2017
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -410,6 +410,11 @@ set %spc "                                                                  "
 4 handle-tab
 add-global-mode "wrap"
 add-global-mode "exact"
-eos-chars ".!?"         ; Our end-of-sentence chars
+; Our end-of-sentence chars
+eos-chars ".!?"
+; Replacement character users
+char-replace U+0800 U+10000
+; Single UTF-16 surrogates
+char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
 ;
 set $discmd TRUE

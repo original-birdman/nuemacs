@@ -49,6 +49,8 @@ int showcpos(int f, int n)
         int col;
         int savepos;            /* temp save for current offset */
         int ecol;               /* column pos/end of current line */
+        int bytes_used = 1;     /* ...by the current glyph */
+        int uc_used = 1;        /* unicode characters in glyph */
 
         /* starting at the beginning of the buffer */
         lp = lforw(curbp->b_linep);
@@ -66,8 +68,19 @@ int showcpos(int f, int n)
                         predchars = numchars + curwp->w_doto;
                         if ((curwp->w_doto) == llength(lp))
                                 curchar = '\n';
-                        else
-                                lgetchar(&curchar); /* GGR */
+                        else {
+                                struct glyph glyi;  /* Full glyph data */
+                                bytes_used = lgetglyph(&glyi, FALSE);
+                                curchar = glyi.uc;
+                                if (glyi.cdm != 0) uc_used = 2;
+                                if (glyi.ex != NULL) {
+                                    for (unicode_t *xc = glyi.ex;
+                                           *xc != END_UCLIST;
+                                           xc++)
+                                         uc_used++;
+                                    free(glyi.ex);
+                                }
+                        }
                 }
                 /* on to the next line */
                 ++numlines;
@@ -80,7 +93,7 @@ int showcpos(int f, int n)
                 predlines = numlines;
                 predchars = numchars;
 #if     PKCODE
-                curchar = 0x0FFFFFFF;   /* GGR - NoChar. Top 4 bits special */
+                curchar = END_UCLIST;   /* NoChar */
 #endif
         }
 
@@ -97,13 +110,13 @@ int showcpos(int f, int n)
 
         /* summarize and report the info */
         char descr[40];
-        if (curchar == 0x0FFFFFFF)
+        if (curchar == END_UCLIST)
             strcpy(descr, "at end of buffer");
         else {
 #include "charset.h"
             char temp[8];
             if (curchar > 127) {        /* utf8!? */
-                int blen = unicode_to_utf8(curchar, temp);
+                int blen = unicode_to_utf8(display_for(curchar), temp);
                 temp[blen] = '\0';
             }
             else if (curchar <= ' ') {  /* non-printing - lookup descr */
@@ -116,9 +129,12 @@ int showcpos(int f, int n)
             snprintf(descr, 40 ,"char = 0%o, 0x%x (%s)",
                 curchar, curchar, temp);
         }
-        mlwrite( "Line %d/%d Col %d/%d Byte %D/%D (%d%%) %s",
+        char gl_descr[20] = "";
+        if (bytes_used > 1)
+            snprintf(gl_descr, 20, " %db/%duc", bytes_used, uc_used);
+        mlwrite( "Line %d/%d Col %d/%d Byte %D/%D (%d%%) %s%s",
                 predlines+1, numlines+1, col, ecol,
-                predchars, numchars, ratio, descr);
+                predchars, numchars, ratio, descr, gl_descr);
         return TRUE;
 }
 
@@ -159,6 +175,7 @@ int getccol(int bflg)
                 unicode_t c;
 
                 i += utf8_to_unicode(dlp->l_text, i, len, &c);
+                if (zerowidth_type(c)) continue;
                 if (c != ' ' && c != '\t' && bflg)
                         break;
                 if (c == '\t')
@@ -220,38 +237,57 @@ int twiddle(int f, int n)
 {
         struct line *dotp;
         int doto;
-        int cl;
-        int cr;
+        char rch_buf[64], lch_buf[64];
+        int rch_st, rch_nb, lch_st, lch_nb;
 
         if (curbp->b_mode & MDVIEW)     /* don't allow this command if      */
                 return rdonly();        /* we are in read only mode     */
+
         dotp = curwp->w_dotp;
         doto = curwp->w_doto;
+
+        int reset_col = 0;
+        int maxlen = llength(dotp);
+        char *l_buf = dotp->l_text;
+
 /* GGR
  * twiddle now (e.g. bash) seems to act on the chars before and after point.
  * Except when you are at the end of a line....
  * This inconsistency seems odd. Prime emacs always acted on the two chars
  * preceding point, which was great for fixing typos as you made them.
  * If the ggr-style is set then twiddle will act on the two preceding chars.
+ *
+ * So where the righ-hand character is depends on the mode and if you're
+ * not in GGR style then it depends on whether you are at the end-of-line
+ * too (doto == maxlen, so you then use ggr-style!!).
+ * But once we know where the right-hand character is the left-hand one
+ * is always the one preceding it.
  */
-        if (using_ggr_style) {
-                if (--doto < 0)
-                        return (FALSE);
-                cr = lgetc(dotp, doto);
-                if (--doto < 0)
-                        return (FALSE);
-                cl = lgetc(dotp, doto);
+        if (using_ggr_style || doto == maxlen) {
+            rch_st = prev_utf8_offset(l_buf, doto, maxlen, TRUE);
+            if (rch_st < 0) return (FALSE);
+            rch_nb = doto - rch_st;
         }
-        else {
-                if (doto == llength(dotp) && --doto < 0)
-                        return FALSE;
-                cr = lgetc(dotp, doto);
-                if (--doto < 0)
-                        return FALSE;
-                cl = lgetc(dotp, doto);
+        else {  /* Need to get back to where we are in this mode...*/
+            reset_col = 1;
+            rch_st = doto;
+            rch_nb = next_utf8_offset(l_buf, rch_st, maxlen, TRUE) - rch_st;
         }
-        lputc(dotp, doto + 0, cr);
-        lputc(dotp, doto + 1, cl);
+        lch_st = prev_utf8_offset(l_buf, rch_st, maxlen, TRUE);
+        if (lch_st < 0) return (FALSE);
+        lch_nb = rch_st - lch_st;
+
+/* We know where the two characters start, and how many bytes each has.
+ * So we take a copy of each and put them back in the reverse order.
+ * If we are twiddling *around* point we might now be in the "middle" of
+ * a character, so we have to reset to the original colum.
+ * This is the start of the now R/h character (i.e what was L/h).
+ */
+        memcpy(rch_buf, l_buf + rch_st, rch_nb);
+        memcpy(lch_buf, l_buf + lch_st, lch_nb);
+        memcpy(l_buf+lch_st, rch_buf, rch_nb);
+        memcpy(l_buf+lch_st+rch_nb, lch_buf, lch_nb);
+        if (reset_col) curwp->w_doto = lch_st + rch_nb;
         lchange(WFEDIT);
         return TRUE;
 }

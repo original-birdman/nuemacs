@@ -15,6 +15,9 @@
 #include "wrapper.h"
 
 /* GGR - some needed things for minibuffer handling */
+#if UNIX
+#include <signal.h>
+#endif
 #include "line.h"
 
 static int mbdepth = 0;
@@ -91,6 +94,21 @@ int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar)
         return nextarg(prompt, buf, nbuf, eolchar);
 }
 
+/* GGR
+ * The bizarre thing about the two functions above is that when processing
+ * macros from a (start-up) file they will get one arg at a time.
+ * BUT when run interactively they will return the entire prompt.
+ * This just complicates any caller's code.
+ */
+int mlreplyall(char *prompt, char *buf, int nbuf) {
+        if (!clexec)
+            return nextarg(prompt, buf, nbuf, ctoec('\n'));
+        int nb = strlen(execstr);
+        memcpy(buf, execstr, nb+1); /* Copy the NUL */
+        execstr+= nb;               /* Show we've read it all */
+        return TRUE;
+}
+
 /*
  * ectoc:
  *      expanded character to character
@@ -160,7 +178,7 @@ fn_t getname(void)
 
                 } else if (c == 0x7F || c == 0x08) {    /* rubout/erase */
                         if (cpos != 0) {
-                                TTputc('\b');
+                                TTputc('\b');           /* Local handling */
                                 TTputc(' ');
                                 TTputc('\b');
                                 --ttcol;
@@ -184,7 +202,8 @@ fn_t getname(void)
 /* GGR - rewritten to tab indent of 4 for this section... */
                 /* attempt a completion */
                     buf[cpos] = 0;  /* terminate it for us */
-                    for (ffp = names; ffp->n_func != NULL; ffp++) {
+                    ffp = &names[0];        /* scan for matches */
+                    while (ffp->n_func != NULL) {
                         if (strncmp(buf, ffp->n_name, strlen(buf)) == 0) {
                             /* a possible match! More than one? */
                             if ((ffp + 1)->n_func == NULL ||
@@ -193,8 +212,8 @@ fn_t getname(void)
                                 /* no...we match, print it */
                                 sp = ffp->n_name + cpos;
                                 while (*sp) {
-                                    TTputc(*sp++);
-                                    ttcol++;
+                                    ttput1c(*sp++);
+                                    if (!zerowidth_type(*sp)) ttcol++;
                                 }
                                 TTflush();
                                 return ffp->n_func;
@@ -203,7 +222,7 @@ fn_t getname(void)
 /* try for a partial match against the list
  * first scan down until we no longer match the current input
  */
-                                lffp = ffp + 1;
+                                lffp = (ffp + 1);
                                 while ((lffp + 1)->n_func != NULL) {
                                     if (strncmp(buf, (lffp+1)->n_name,
                                         strlen(buf)) != 0) break;
@@ -222,12 +241,13 @@ fn_t getname(void)
                                     }
 
                                     /* add the character */
-                                    TTputc(buf[cpos++]);
-                                    ttcol++;
+                                    ttput1c(buf[cpos++]);
+                                    if (!zerowidth_type(buf[cpos])) ttcol++;
                                 }
 /* << << << << << << << << << << << << << << << << << */
                             }
                         }
+                        ++ffp;
                     }
                     /* no match.....beep and onward */
                     TTbeep();
@@ -237,8 +257,8 @@ onward:
                 } else {
                         if (cpos < NSTRING - 1 && c > ' ') {
                                 buf[cpos++] = c;
-                                TTputc(c);
-                                ttcol++;
+                                ttput1c(c);
+                                if (!zerowidth_type(c)) ttcol++;
                         }
                         TTflush();
                 }
@@ -433,12 +453,37 @@ proc_ctlxc:
  * A version of getstring in which the  minibuffer is a true buffer!
  */
 
+/* If the window size changes whilst this is running the display will end
+ * up incorrect (as the code reckons we are in this buffer, not the one we
+ * arrived from).
+ * So set up a SIGWINCH handler to get us out the minibuffer before
+ * display::newscreensize() runs.
+ */
+#ifdef SIGWINCH
+
+#include <setjmp.h>
+
+static jmp_buf winch_env;
+typedef void (*sighandler_t)(int);
+
+/* We define a value for this before the "goto abort" to avoid a
+ * "may be used uninitialized" warning in gcc4.
+ * It won't be actually used when NULL.
+ */
+static sighandler_t display_handler = NULL;    
+
+void sigwinch_handler(int signr) {
+/* Jump back to getstring to clean up and leave */
+    if (signr == SIGWINCH) longjmp(winch_env, 1);
+}
+#endif
+
 int getstring(char *prompt, char *buf, int nbuf, int eolchar)
 {
     struct buffer *bp;
     struct buffer *cb;
     char mbname[NBUFN];
-    char *mbnameptr;
+    char *mbnameptr = NULL;
     int    c;               /* command character */
     int    f;               /* default flag */
     int    n;               /* numeric repeat count */
@@ -476,6 +521,16 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
 
     short bufexpand, expanded;
 
+#ifdef SIGWINCH
+/* We need to block SIGWINCH until we have set-up all of the variables
+ * we need after the longjmp.
+ */
+    sigset_t sigwinch_set, incoming_set;
+    sigemptyset(&sigwinch_set);
+    sigaddset(&sigwinch_set, SIGWINCH);
+    sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
+#endif                            
+
 /* GGR NOTE!!
  * We want to ensure that we don't return with garbage in buf, but we
  * can't initialize it to empty here, as some callers use it as a
@@ -485,9 +540,11 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     if (mbdepth >= MAXDEPTH) {
         TTbeep();
         buf = "";               /* Ensure we never return garbage */
+        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
         return(ABORT);
     }
 #endif
+
 /* Expansion commands leave junk in mb */
 
     mlerase();
@@ -499,10 +556,12 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     strcpy(mbname, mbnameptr);
 #endif
     cb = curbp;
+
     inmb = TRUE;
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
         inmb = FALSE;
         buf = "";               /* Ensure we never return garbage */
+        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
         return(FALSE);
     }
     bufexpand = (nbuf == NBUFN);
@@ -530,6 +589,25 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     if (mpresf)
         mlerase();
     mberase();
+
+#ifdef SIGWINCH
+    int winch_seen = 0;
+    if (setjmp(winch_env)) {
+        winch_seen = 1;
+        status = ABORT;
+        buf = "";               /* Don't return garbage */
+        goto abort;
+    }
+    
+    struct sigaction sigact, oldact;
+    sigact.sa_handler = sigwinch_handler;        
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;            /* No SA_RESTART for this one! */
+    sigaction(SIGWINCH, &sigact, &oldact);    
+    display_handler = oldact.sa_handler;
+/* Now we can enable the signal */
+    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
+#endif
 
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
@@ -725,6 +803,15 @@ submit:     /* Tidy up */
     else status = FALSE;        /* Empty input... */
 
 abort:  /* Make sure we're still in our minibuffer */
+
+#ifdef SIGWINCH
+/* If we get here "normally" SIGWINCH will still be enabled, so we need
+ * to block it while we tidy up, otherwise we might run through this end
+ * code twice.
+ */
+    sigprocmask(SIG_BLOCK, &sigwinch_set, NULL);
+#endif
+
     swbuffer(bp);
     unmark(TRUE, 1);
     mbdepth--;
@@ -749,6 +836,21 @@ abort:  /* Make sure we're still in our minibuffer */
         ctrlg(FALSE, 0);
         TTflush();
     }
+
+#ifdef SIGWINCH
+/* We need to re-instate the original handler now... */
+
+    sigact.sa_handler = display_handler;        
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = SA_RESTART;   /* This does do restarts */
+    sigaction(SIGWINCH, &sigact, NULL);
+    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
+
+/* If we saw the signal, resend it now that we've tidied up the 
+ * minibuffer code.
+ */
+    if (winch_seen) raise(SIGWINCH);
+#endif
     return(status);
 }
 
