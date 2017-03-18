@@ -94,21 +94,35 @@ void usage(int status) /* GGR - list all options actually available! */
 
 printf( \
 "Usage: %s [options] [filename(s)]"                       NL \
+"   Options:"                                             NL \
 "      +            start at the end of file"             NL \
 "      +<n>         start at line <n>"                    NL \
 "      -a           process error file"                   NL \
+"      -c<filepath> replacement for default rc file"      NL \
+"      @<filepath>  deprecated legacy synonym for -c"     NL \
 "      -d<dir>      directory holding rc and hlp files"   NL \
 "      -e           edit file (default)"                  NL \
 "      -g<n>        go to line <n> (same as +<n>)"        NL \
-"      -i           Insecure mode - look in current dir"  NL \
+"      -i           insecure mode - look in current dir"  NL \
+        , PROGRAM_NAME);
+#if CRYPT
+fputs(
 "      -k<key>      encryption key"                       NL \
+, stdout);
+#endif
+#if PKCODE
+fputs(
 "      -n           accept null chars"                    NL \
+, stdout);
+#endif
+fputs(
 "      -r           restrictive use"                      NL \
 "      -s<str>      initial search string"                NL \
 "      -v           view only (no edit)"                  NL \
+"      -x<filepath> an additional rc file"                NL \
 "      -h,--help    display this help and exit"           NL \
 "      -V,--version output version information and exit"  NL \
-        , PROGRAM_NAME);
+, stdout);
   exit(status);
 }
 
@@ -120,7 +134,6 @@ int main(int argc, char **argv)
         int mflag;      /* negative flag on repeat */
         struct buffer *bp;      /* temp buffer pointer */
         int firstfile;  /* first file flag */
-        int carg;       /* current arg to scan */
         int startflag;  /* startup executed flag */
         struct buffer *firstbp = NULL;  /* ptr to first buffer in cmd line */
         int basec;              /* c stripped of meta character */
@@ -136,6 +149,10 @@ int main(int argc, char **argv)
         char ekey[NPAT];        /* startup encryption key */
 #endif
         int newc;
+        int verflag = 0;        /* GGR Flags -v/-V presence on command line */
+        char *rcfile = NULL;    /* GGR non-default rc file */
+        char *rcextra[10];      /* GGR additional rc files */
+        int rcnum = 0;          /* GGR number of extra files to process */
 
 #if     PKCODE & VMS
         (void) umask(-1); /* Use old protection (this is at wrong place). */
@@ -153,20 +170,8 @@ int main(int argc, char **argv)
         sigaction(SIGWINCH, &sigact, &oldact);
 #endif
 #endif
-        if (argc == 2) {
-                if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
-                        usage(EXIT_FAILURE);
-                }
-                if (!strcmp(argv[1], "-V") || !strcmp(argv[1], "--version")) {
-                        version();
-                        exit(EXIT_SUCCESS);
-                }
-        }
-
-        /* Initialize the editor. */
-        vtinit();               /* Display */
-        edinit("main");         /* Buffers, windows */
-        varinit();              /* user variables */
+/* GGR The rest of intialisation is done after processing optional args */
+        varinit();              /* initialise user variables */
 
         viewflag = FALSE;       /* view mode defaults off in command line */
         gotoflag = FALSE;       /* set to off to begin with */
@@ -178,33 +183,55 @@ int main(int argc, char **argv)
         cryptflag = FALSE;      /* no encryption by default */
 #endif
 
-        /* Parse the command line */
-        /* GGR - use while loop instead of for loop to allow fiddling carg */
-        carg = 0;
-        while (argv[++carg] != NULL) {
+/* GGR Command line parsing substantially reorganised. It now consists of two
+ * separate loops. The first loop processes all optional arguments (command
+ * keywords and associated options if any) and stops on reaching the first
+ * specification of a file to edit. Along the way it collects specs of
+ * initialisation files to process -- these are processed in the correct order
+ * after this first loop. The second loop then deals with files nominated
+ * by the user.
+ */
+        while (--argc) {
+                argv++;         /* Point at the next token */
                 /* Process Switches */
 #if     PKCODE
-                if (argv[carg][0] == '+') {
+                if (**argv == '+') {
                         gotoflag = TRUE;
-                        gline = atoi(&argv[carg][1]);
+                        gline = atoi(*argv + 1); /* skip the '+' */
                 } else
 #endif
-                if (argv[carg][0] == '-') {
-/* GGR - allow options to be given as separate tokens */
-                        char key = *(argv[carg] + 1);
+                if (**argv == '-') {
                         char *opt = NULL;
-                        if (strchr("dDgGkKsS", key)) {
-			        opt = argv[carg] + 2;
-                                if (*opt == '\0' && argv[carg + 1] &&
-                                    argv[carg +1][0] != '-')
-                                        opt = argv[++carg];
+                        char key1;
+                        char *arg = *argv + 1;
+                        if (*arg == '-') arg++; /* Treat -- as - */
+/* Check for specials: help and version requests */
+                        if (*arg == '?' || 
+                                strncmp("help", arg, strlen(arg)) == 0) {
+                                        usage(EXIT_FAILURE);
+                                }
+                        if (strncmp("version", arg, strlen(arg)) == 0)
+                                verflag = strlen(arg);
+                        key1 = *arg;
+/* Allow options to be given as separate tokens */
+                        if (strchr("cCdDgGkKsSxX", key1)) {
+			        opt = *argv + 2;
+                                if (*opt == '\0' && argc > 0 &&
+                                    !strchr("-@", *(*argv + 1))) {
+                                        opt = *(++argv);
+                                        argc--;
+                                    }
                         }
 
-                        switch (key) {
-                                        /* Process Startup macroes */
+                        switch (key1) {
+                                        /* Process Startup macros */
                         case 'a':       /* process error file */
                         case 'A':
                                 errflag = TRUE;
+                                break;
+                        case 'c':
+                        case 'C':       /* GGR -c replacement of default rc */
+                                rcfile = opt;
                                 break;
                         case 'd':
                         case 'D':       /* GGR -d for config/help directory */
@@ -253,58 +280,79 @@ int main(int argc, char **argv)
                                 break;
                         case 'v':       /* -v for View File */
                         case 'V':
-                                viewflag = TRUE;
+                                if (verflag == 1)
+                                  viewflag = TRUE;  /* could be view request */
+                                break;
+                        case 'x':       /* GGR: -x for eXtra rc file */
+                        case 'X':
+                                if (rcnum < sizeof(rcextra)/sizeof(rcextra[0]))
+                                        rcextra[rcnum++] = opt;
                                 break;
                         default:        /* unknown switch */
                                 /* ignore this for now */
                                 break;
                         }
 
-                } else if (argv[carg][0] == '@') {
-                        silent = TRUE;      /* GGR */
-                        /* Process Startup macroes */
-                        if (startup(&argv[carg][1]) == TRUE)
-                                /* don't execute emacs.rc */
-                                startflag = TRUE;
-                        silent = FALSE;     /* GGR */
-                } else {
-
-                        /* Process an input file */
-/* GGR - Sanity check */
-                        if (strlen(argv[carg]) >= NFILEN) {
-                            fprintf(stderr, "filename too long!!\n");
-                            sleep(2);
-                            vttidy();
-                            exit(1);
-                        }
-
-                        /* set up a buffer for this file */
-                        makename(bname, argv[carg]);
-                        unqname(bname);
-
-                        /* set this to inactive */
-                        bp = bfind(bname, TRUE, 0);
-                        strcpy(bp->b_fname, argv[carg]);
-                        bp->b_active = FALSE;
-                        if (firstfile) {
-                                firstbp = bp;
-                                firstfile = FALSE;
-                        }
-
-                        /* set the modes appropriatly */
-                        if (viewflag)
-                                bp->b_mode |= MDVIEW;
-#if     CRYPT
-                        if (cryptflag) {
-                                bp->b_mode |= MDCRYPT;
-                                myencrypt((char *) NULL, 0);
-                                myencrypt(ekey, strlen(ekey));
-                                strncpy(bp->b_key, ekey, NPAT);
-                        }
-#endif
-                }
+                } else if (**argv == '@') {
+                        rcfile = *argv + 1;
+                } else break;
+        }
+        if ((verflag && argc == 0) || verflag > 1)
+        {
+                version();
+                exit(EXIT_SUCCESS);
         }
 
+        /* Initialize the editor. */
+        vtinit();               /* Display */
+        edinit("main");         /* Buffers, windows */
+        
+/* GGR - Now process initialisation files before processing rest of comline */
+        silent = TRUE;
+        if (rcfile) startup(rcfile);
+        else startup("");
+        if (rcnum) {
+                for (int n = 0; n < rcnum; n++)
+                        startup(rcextra[n]);
+        }
+        silent = FALSE;
+
+/* Process rest of comline, which is a list of files to edit */
+        while (argc--) {
+                if (strlen(*argv) >= NFILEN) {  /* Sanity check */
+                    fprintf(stderr, "filename too long!!\n");
+                    sleep(2);
+                    vttidy();
+                    exit(1);
+                }
+                 /* set up a buffer for this file */
+                makename(bname, *argv);
+                unqname(bname);
+                 /* set this to inactive */
+                bp = bfind(bname, TRUE, 0);
+                strcpy(bp->b_fname, *argv);
+                bp->b_active = FALSE;
+                if (firstfile) {
+                        firstbp = bp;
+                        firstfile = FALSE;
+                }
+                 /* set the modes appropriatly */
+                
+                if (viewflag)
+                        bp->b_mode |= MDVIEW;
+#if     CRYPT
+                if (cryptflag) {
+                        bp->b_mode |= MDCRYPT;
+                        myencrypt((char *) NULL, 0);
+                        myencrypt(ekey, strlen(ekey));
+                        strncpy(bp->b_key, ekey, NPAT);
+                }
+#endif
+                argv++;
+        }
+
+/* Done with processing command line */
+                                                                        
 #if     UNIX
         signal(SIGHUP, emergencyexit);
         signal(SIGTERM, emergencyexit);
