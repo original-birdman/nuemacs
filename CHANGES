@@ -396,9 +396,9 @@ input.c
     Added mlreplyall() to get all of the function args in one go when
     called from a start-up script.
     Some TTputc() calls changed to ttput1c().
-    Add a SIGWINCH (if defined) handler for getstring to get abort
-    the minibuffer if it occurs. Being in a minibuffer confuses the
-    redraw. Needs various signal block to ensure we don't pass though
+    Add a SIGWINCH (if defined) handler for getstring to abort the
+    minibuffer if it occurs.  Being in a minibuffer confuses the redraw.
+    Needs various signal block to ensure we don't pass though
     set-up/take-down code twice.
 
 line.c
@@ -454,3 +454,52 @@ test-files/overrun.txt
 
 TODO
     Added to the top-level, as a reminder....
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.109
+
+========== GGR4.110
+
+tcap.c
+    Change tcapkclose() to not send TE for the systems where it has just
+    sent it in tcapclose().
+
+bind.c
+    If flook is sent a pathname, check just that and don't look in HOME,
+    along PATH or in the table.
+
+spawn.c
+    Forbid the runnning of external commands when you are in the
+    minibuffer (spawncli(), spawn(), execprg() and pipecmd()).
+    There's a forced redraw on return, which ends up clearing the
+    minibuffer data, while displaying its status in the status line.
+
+estruct.h
+    Set XONXOFF and NATIONL to 0 if GGR_MODE is defined.
+
+posix.c
+    Add turning off of IXON if XONXOFF is not set (as done in termio.c).
+    Enables ctl-Q and ctl-S to be usable for commands.
+
+bind.c
+names.c
+efunc.h
+    Added an include-file command (for use in start-up files) to include
+    another file for processing at that point.
+
+word.c
+    Fix justpara() and fillpara() when adding an eos space at the end of
+    a line in the middle of a paragraph.
+
+main.c
+    Redo command line parsing.
+    Add options:
+        -c<filepath> replacement for default rc file
+        -x<filepath> an additional rc file
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.110
+
+==========
