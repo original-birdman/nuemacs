@@ -65,6 +65,12 @@ int spawncli(int f, int n)
         if (restflag)
                 return resterr();
 
+/* Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
+ */
+        if (mbstop()) return FALSE;
+
 #if     VMS
         movecursor(term.t_nrow, 0);     /* In last line.        */
         mlputs(MLpre "Starting DCL" MLpost "\r\n");
@@ -147,6 +153,12 @@ int spawn(int f, int n)
         if (restflag)
                 return resterr();
 
+/* Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
+ */
+        if (mbstop()) return FALSE;
+
 #if     VMS
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
@@ -215,6 +227,12 @@ int execprg(int f, int n)
         /* don't allow this command if restricted */
         if (restflag)
                 return resterr();
+
+/* Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
+ */
+        if (mbstop()) return FALSE;
 
 #if     VMS
         if ((s = mlreply("!", line, NLINE)) != TRUE)
@@ -288,6 +306,12 @@ int pipecmd(int f, int n)
         /* don't allow this command if restricted */
         if (restflag)
                 return resterr();
+
+/* Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
+ */
+        if (mbstop()) return FALSE;
 
 #if     MSDOS
         if ((tmp = getenv("TMP")) == NULL
