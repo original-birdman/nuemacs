@@ -240,7 +240,16 @@ static void tcapkopen(void)
 
 static void tcapkclose(void)
 {
-#if     PKCODE
+/* Each of these three will have just called TTclose (-> tcapclose())
+ * immediately before TTkclose (-> tcapkclose()).
+ * So don't send TE again, as on some systems (OE Linux PVR boxes)
+ * this clears the *current* screen, and sending it twice means
+ * that the original screen gets cleared (as you've switched to it before
+ * the second clear arrives).
+ */
+#if V7 | USG | BSD
+
+#elif PKCODE
         putpad(TE);
         ttflush();
 #endif
