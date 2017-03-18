@@ -477,7 +477,6 @@ int fillpara(int f, int n)
         int firstflag;          /* first word? (needs no space) */
         struct line *eopline;   /* pointer to line just past EOP */
         int eosflag;            /* was the last char a period?  */
-        int was_eosflag;        /* value of eosflag when last word added */
         int trailing_eos;       /* Was last event to add an eos space? */
 /* GGR added vars - to allow for padding to right-justify */
         int gap;        /* number of spaces to pad with */
@@ -515,7 +514,6 @@ int fillpara(int f, int n)
                 clength = 8;
         wordlen = 0;
         eosflag = FALSE;
-        was_eosflag = 0;
         trailing_eos = 0;
 
         /* scan through lines, filling words */
@@ -563,8 +561,8 @@ int fillpara(int f, int n)
                 /* if not a separator, just add it in */
                 if (c != ' ' && c != '\t') {
 /* GGR - Handle any defined punctuation characters */
+                        eosflag = 0;
                         if (eos_list) {     /* Some eos defined */
-                                eosflag = 0;
                                 for (unicode_t *eosch = eos_list;
                                     *eosch != END_UCLIST; eosch++) {
                                         if (c == *eosch) {
@@ -573,11 +571,9 @@ int fillpara(int f, int n)
                                         }
                                 }
                         }
-                        else eosflag = 0;
 
 /* GGR - dynamically sized, so this assignment can always be done */
                         wbuf[wordlen++] = c;
-                        trailing_eos = 0;
                 } else if (wordlen) {
                         /* at a word break with a word waiting */
                         /* calculate tentitive new length with word added */
@@ -589,13 +585,13 @@ int fillpara(int f, int n)
 /* We need to save the doto location, not clength, to allow for unicode */
                                                 space_ind[nspaces] = curwp->w_doto;
                                                 nspaces++;
-                                                was_eosflag = eosflag;
                                         }
                                         linsert(1, ' ');        /* the space */
                                         ++clength;
                                 }
                                 firstflag = FALSE;
                         } else {
+
 /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
 /* GGR - implement Esc n Esc q - justify right edges too..       */
 /* Now written in a manner to handle unicode chars....           */
@@ -603,15 +599,16 @@ int fillpara(int f, int n)
 
 if (nspaces) {
 
-/* Rememeber where we are on the line.
+/* Remember where we are on the line.
  * Also, was the last char added to line a space after a dot?
  * Ignore if so.
  */
     int end_doto = curwp->w_doto;
     gap = fillcol - clength;    /* How much we need to add (in columns) */
-    if (was_eosflag) {          /* Back one char and increase gap */
+    if (trailing_eos) {         /* Back one char and increase gap */
         end_doto--;
         gap++;
+        trailing_eos = 0;       /* We'll remove it... */
     }
     while (gap > 0) {
         if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
@@ -636,29 +633,34 @@ if (nspaces) {
             }
         }
     }
-/* Fix up out location in the line to be where we were, plus added spaces */
+/* Fix up our location in the line to be where we were, plus added spaces */
     curwp->w_doto = end_doto;
 }
 /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-                                /* start a new line */
-                                if (!firstflag)     /* GGR */
-                                       lnewline();
+/* Possibly start a new line... */
+                                if (!firstflag) {   /* GGR */
+                                    if (trailing_eos) backdel(FALSE, 1);
+                                    lnewline();
+                                }
                                 firstflag = FALSE;
                                 clength = 0;
                                 nspaces = 0;
                         }
-
-                        /* and add the word in in either case */
+/* ...and add the word in in either case */
                         for (i = 0; i < wordlen; i++) {
                                 linsert(1, wbuf[i]);
                                 ++clength;
                         }
-                        if (eosflag) {
+                        wordlen = 0;
+
+/* Add any requested trailing eos space, if there is room
+ */
+                        if (eosflag && clength < fillcol) {
                                 linsert(1, ' ');
                                 ++clength;
                                 trailing_eos = 1;
                         }
-                        wordlen = 0;
+                        else trailing_eos = 0;
                 }
         }
         /* If we arrive at eop with trailing_eos set, remove the space */
@@ -766,8 +768,8 @@ int justpara(int f, int n)
                 /* if not a separator, just add it in */
                 if (c != ' ' && c != '\t') {
 /* GGR - Handle any defined punctuation characters */
+                        eosflag = 0;
                         if (eos_list) {     /* Some eos defined */
-                                eosflag = 0;
                                 for (unicode_t *eosch = eos_list;
                                     *eosch != END_UCLIST; eosch++) {
                                         if (c == *eosch) {
@@ -776,11 +778,9 @@ int justpara(int f, int n)
                                         }
                                 }
                         }
-                        else eosflag = 0;
 
 /* GGR - dynamically sized, so this assignment can always be done */
                         wbuf[wordlen++] = c;
-                        trailing_eos = 0;
                 } else if (wordlen) {
                         /* at a word break with a word waiting */
                         /* calculate tentitive new length with word added */
@@ -794,6 +794,7 @@ int justpara(int f, int n)
                                 firstflag = FALSE;
                         } else {
                                 /* start a new line */
+                                if (trailing_eos) backdel(FALSE, 1);
                                 lnewline();
                                 for (i = 0; i < leftmarg; i++)
                                         linsert(1, ' ');
@@ -805,11 +806,12 @@ int justpara(int f, int n)
                                 linsert(1, wbuf[i]);
                                 ++clength;
                         }
-                        if (eosflag) {  /* GGR added */
+                        if (eosflag && clength < fillcol) {  /* GGR added */
                                 linsert(1, ' ');
                                 ++clength;
                                 trailing_eos = 1;
                         }
+                        else trailing_eos = 0;
                         wordlen = 0;
                 }
         }
