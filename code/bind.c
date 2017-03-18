@@ -580,6 +580,18 @@ char *flook(char *fname, int hflag, int mode)
 
         pathexpand = FALSE;             /* GGR */
 
+/* If we've been given a pathname, rather than a filename, just use that */
+
+        if (strchr(fname, path_sep)) {
+            char *res = NULL;   /* Assume the worst */
+            if (ffropen(fname) == FIOSUC) {
+                ffclose();
+                res = fname;
+            }
+            pathexpand = TRUE;  /* GGR */
+            return res;
+        }
+
 #if     ENVFUNC
 
         if (hflag) {
