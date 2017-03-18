@@ -130,6 +130,7 @@ struct name_bind names[] = {
         {"hunt-backward", backhunt},
         {"help", help},
         {"i-shell", spawncli},
+        {"include-file", include_file},     /* GGR */
 #if     ISRCH
         {"incremental-search", fisearch},
 #endif
