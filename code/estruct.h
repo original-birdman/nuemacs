@@ -178,7 +178,7 @@
 #define ASCII   1  /* always using ASCII char sequences for now    */
 #define EBCDIC  0  /* later IBM mainfraim versions will use EBCDIC */
 
-#ifndef AUTOCONF
+#if !defined(AUTOCONF) || defined(GGR_MODE)
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
 #define NATIONL 0  /* interprete [,],\,{,},| as characters P.K.    */
