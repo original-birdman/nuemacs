@@ -128,13 +128,12 @@ fputs(
 
 int main(int argc, char **argv)
 {
-        int c = -1;     /* command character */
-        int f;          /* default flag */
-        int n;          /* numeric repeat count */
-        int mflag;      /* negative flag on repeat */
+        int c = -1;             /* command character */
+        int f;                  /* default flag */
+        int n;                  /* numeric repeat count */
+        int mflag;              /* negative flag on repeat */
         struct buffer *bp;      /* temp buffer pointer */
-        int firstfile;  /* first file flag */
-        int startflag;  /* startup executed flag */
+        int firstfile;          /* first file flag */
         struct buffer *firstbp = NULL;  /* ptr to first buffer in cmd line */
         int basec;              /* c stripped of meta character */
         int viewflag;           /* are we starting in view mode? */
@@ -177,7 +176,6 @@ int main(int argc, char **argv)
         gotoflag = FALSE;       /* set to off to begin with */
         searchflag = FALSE;     /* set to off to begin with */
         firstfile = TRUE;       /* no file to edit yet */
-        startflag = FALSE;      /* startup file not executed yet */
         errflag = FALSE;        /* not doing C error parsing */
 #if     CRYPT
         cryptflag = FALSE;      /* no encryption by default */
@@ -206,7 +204,7 @@ int main(int argc, char **argv)
                         char *arg = *argv + 1;
                         if (*arg == '-') arg++; /* Treat -- as - */
 /* Check for specials: help and version requests */
-                        if (*arg == '?' || 
+                        if (*arg == '?' ||
                                 strncmp("help", arg, strlen(arg)) == 0) {
                                         usage(EXIT_FAILURE);
                                 }
@@ -306,19 +304,29 @@ int main(int argc, char **argv)
         /* Initialize the editor. */
         vtinit();               /* Display */
         edinit("main");         /* Buffers, windows */
-        
+
 /* GGR - Now process initialisation files before processing rest of comline */
         silent = TRUE;
-        if (rcfile) startup(rcfile);
-        else startup("");
+        if (!rcfile || !startup(rcfile)) startup("");
         if (rcnum) {
                 for (int n = 0; n < rcnum; n++)
                         startup(rcextra[n]);
         }
         silent = FALSE;
 
+/* If we are C error parsing... run it! */
+        if (errflag) startup("error.cmd");
+
+
 /* Process rest of comline, which is a list of files to edit */
         while (argc--) {
+                if (strcmp(*argv, "-e") == 0) { /* Default option now */
+                    continue;
+                }
+                if (strcmp(*argv, "-v") == 0) {
+                    viewflag = 1;
+                    continue;
+                }
                 if (strlen(*argv) >= NFILEN) {  /* Sanity check */
                     fprintf(stderr, "filename too long!!\n");
                     sleep(2);
@@ -337,7 +345,7 @@ int main(int argc, char **argv)
                         firstfile = FALSE;
                 }
                  /* set the modes appropriatly */
-                
+
                 if (viewflag)
                         bp->b_mode |= MDVIEW;
 #if     CRYPT
@@ -352,26 +360,12 @@ int main(int argc, char **argv)
         }
 
 /* Done with processing command line */
-                                                                        
+
 #if     UNIX
         signal(SIGHUP, emergencyexit);
         signal(SIGTERM, emergencyexit);
 #endif
 
-        /* if we are C error parsing... run it! */
-        if (errflag) {
-                if (startup("error.cmd") == TRUE)
-                        startflag = TRUE;
-        }
-
-        /* if invoked with no other startup files,
-           run the system startup file here */
-        if (startflag == FALSE) {
-                silent = TRUE;  /* GGR */
-                startup("");
-                startflag = TRUE;
-                silent = FALSE; /* GGR */
-        }
         discmd = TRUE;          /* P.K. */
 
         /* if there are any files to read, read the first one! */
