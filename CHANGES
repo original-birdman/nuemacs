@@ -502,4 +502,43 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.110
 
+========== GGR4.111
+
+bind.c
+exec.c
+names.c
+efunc.h
+    Merge the include-file code added in GGR4.110 with execute-file, as
+    they are essentially the same.
+
+main.c
+    Further command line handling tidying up.
+    Fix -v/-e option handling when mixed in with filenames.
+    Remove second startup file check (after handling filenames) and the
+    now-redundant startflag variable.
+
+display.c
+spawn.c
+    Fix up for screen refresh on return from external commands.
+    Call newscreensize() at beginning and end of update(). Add a new arg
+    to it to stop it calling update() when it is called from the start
+    of update(). This ensures that term.t_nrow and term.t_ncol are set
+    to "correct" values before we set off. [display.c]
+    In updgar() and updupd() only update the minibuffer line when we are
+    actually using the minibuffer. This allows us to remove the added
+    mberase() call at the end of newscreensize(). [display.c]
+
+    Add get_orig_size() to save the original screen size before
+    system() calls.
+    force_resize() checks the current col/rows and only sets the chg*
+    variables to force a redraw if things have changed and also to set
+    term.t_nrow and term.t_ncol back to what they were, not to 0, which
+    can cause redraw issues in display.c.
+    Renamed to check_for_resize(). [spawn.c]
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.111
+
 ==========
+
