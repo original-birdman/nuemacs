@@ -211,7 +211,6 @@ extern char *getfname(fn_t);
 extern fn_t fncmatch(char *);
 extern unsigned int stock(char *keyname);
 extern char *transbind(char *skey);
-extern int include_file(int, int);
 
 /* buffer.c */
 extern int usebuffer(int f, int n);

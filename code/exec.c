@@ -866,33 +866,51 @@ void freewhile(struct while_block *wp)
 
 /*
  * execute a series of commands in a file
- *
+ * If given fname starts with "^", remove that character and don't
+ * return any error status.
  * int f, n;            default flag and numeric arg to pass on to file
  */
+static int include_level = 0;
+#define MAX_INCLUDE_LEVEL 8
 int execfile(int f, int n)
 {
-        int status;     /* return status of name query */
+        int status;             /* return status of name query */
         char fname[NSTRING];    /* name of file to execute */
         char *fspec;            /* full file spec */
+        int fail_ok = 0;
+        int fns = 0;
 
         if ((status =
              mlreply("File to execute: ", fname, NSTRING - 1)) != TRUE)
                 return status;
 
-#if     1
-        /* look up the path for the file */
-        fspec = flook(fname, FALSE, INTABLE);   /* used to by TRUE, P.K. */
+        if (include_level >= MAX_INCLUDE_LEVEL) {
+                mlwrite("Include depth too great (%d)!",  include_level+1);
+                return FALSE;
+        }
+        if (fname[0] == '^') {
+                fail_ok = 1;
+                fns = 1;
+        }
+/* Don't look in HOME!
+ * This allows you to have uemacs.rc in HOME that includes a system one
+ * by using "include-file uemacs.rc"
+ */
+        fspec = flook(fname+fns, FALSE, INTABLE);
 
         /* if it isn't around */
-        if (fspec == NULL)
-                return FALSE;
+        if (fspec == NULL) {
+                mlwrite("Include file %s not found!", fname+fns);
+                return fail_ok? TRUE: FALSE;
+        }
 
-#endif
         /* otherwise, execute it */
-        while (n-- > 0)
-                if ((status = dofile(fspec)) != TRUE)
-                        return status;
-
+        while (n-- > 0) {
+                include_level++;
+                status = dofile(fspec);
+                include_level--;
+                if (status != TRUE) return fail_ok? TRUE: status;
+        }
         return TRUE;
 }
 

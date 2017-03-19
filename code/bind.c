@@ -648,7 +648,7 @@ char *flook(char *fname, int hflag, int mode)
                     pathexpand = TRUE;          /* GGR */
                     return fspec;
                 }
-	    }
+            }
         }
 
         pathexpand = TRUE;                          /* GGR */
@@ -836,41 +836,4 @@ char *transbind(char *skey)
                 bindname = "ERROR";
 
         return bindname;
-}
-
-/* GGR - include command */
-static int include_level = 0;
-#define MAX_INCLUDE_LEVEL 8
-int include_file(int f, int n) {
-
-    int fail_ok = 0;
-    int fns = 0;
-    
-    if (!clexec) mlwrite(MLpre "Only allowed in start-up files" MLpost);
-
-    char lfname[NFILEN];
-    int status = mlreply("", lfname, NFILEN-1);
-    if (status != TRUE) return status;
-    if (strlen(lfname) == 0) return FALSE;
-    if (include_level >= MAX_INCLUDE_LEVEL) {
-        mlwrite(MLpre "Include depth too great (%d)" MLpost, include_level+1);
-        return FALSE;
-    }
-    if (lfname[0] == '^') {
-        fail_ok = 1;
-        fns = 1;
-    }        
-/* Don't look in HOME!
- * This allows you to have uemacs.rc in HOME that includes a system one
- * by using "include-file uemacs.rc"
- */
-    char *fname = flook(lfname+fns, FALSE, INTABLE);
-    if (fname == NULL) {
-        mlwrite(MLpre "Include file %s not found" MLpost, lfname);
-        return fail_ok? TRUE: FALSE;
-    }
-    include_level++;
-    status = dofile(fname);
-    include_level--;
-    return fail_ok? TRUE: status;
 }
