@@ -37,14 +37,27 @@ static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
 
 #ifdef SIGWINCH
 /*
- * This fools the update routines to force a full
- * redraw with complete window size checking.
- * Call this in any function that calls system().
+ * If the screen size has changed whilst we were away on the command line
+ * force a redraw to the new size.
+ * Requires setting the new values (lwidth and lheight) and restoring
+ * the old ones (term.t_nrow and term.t_ncol). (Just setting the
+ * originals to zero can lead to crashes in vtputc).
+ * Call this at the end of any function that calls system().
  */
-void force_resize(void) {
-        chg_width = term.t_ncol;
-        chg_height = term.t_nrow + 1;
-        term.t_nrow = term.t_ncol = 0;
+static int orig_width, orig_height;
+void get_orig_size(void) {
+        getscreensize(&orig_width, &orig_height);
+        return;
+}
+void check_for_resize(void) {
+        int lwidth, lheight;
+        getscreensize(&lwidth, &lheight);
+        if ((lwidth != orig_width) || (lheight != orig_height)) {
+            chg_width = lwidth;
+            chg_height = lheight;
+            term.t_nrow = orig_height - 1;
+            term.t_ncol = orig_width;
+        }
         return;
 }
 #endif
@@ -71,6 +84,9 @@ int spawncli(int f, int n)
  */
         if (mbstop()) return FALSE;
 
+#ifdef SIGWINCH
+        get_orig_size();
+#endif
 #if     VMS
         movecursor(term.t_nrow, 0);     /* In last line.        */
         mlputs(MLpre "Starting DCL" MLpost "\r\n");
@@ -110,7 +126,7 @@ int spawncli(int f, int n)
         TTopen();
         TTkopen();
 #ifdef SIGWINCH
-        force_resize();
+        check_for_resize();
 #endif
         return TRUE;
 #endif
@@ -159,6 +175,9 @@ int spawn(int f, int n)
  */
         if (mbstop()) return FALSE;
 
+#ifdef SIGWINCH
+        get_orig_size();
+#endif
 #if     VMS
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
@@ -207,7 +226,7 @@ int spawn(int f, int n)
         TTkopen();
         sgarbf = TRUE;
 #ifdef SIGWINCH
-        force_resize();
+        check_for_resize();
 #endif
         return TRUE;
 #endif
@@ -234,6 +253,9 @@ int execprg(int f, int n)
  */
         if (mbstop()) return FALSE;
 
+#ifdef SIGWINCH
+        get_orig_size();
+#endif
 #if     VMS
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
@@ -277,7 +299,7 @@ int execprg(int f, int n)
         while ((s = tgetc()) != '\r' && s != ' ');
         sgarbf = TRUE;
 #ifdef SIGWINCH
-        force_resize();
+        check_for_resize();
 #endif
         return TRUE;
 #endif
@@ -313,6 +335,9 @@ int pipecmd(int f, int n)
  */
         if (mbstop()) return FALSE;
 
+#ifdef SIGWINCH
+        get_orig_size();
+#endif
 #if     MSDOS
         if ((tmp = getenv("TMP")) == NULL
             && (tmp = getenv("TEMP")) == NULL)
@@ -389,7 +414,7 @@ int pipecmd(int f, int n)
         s = TRUE;
 #endif
 #ifdef SIGWINCH
-        force_resize();
+        check_for_resize();
 #endif
         if (s != TRUE)
                 return s;
@@ -442,6 +467,9 @@ int filter_buffer(int f, int n)
         return FALSE;
 #endif
 
+#ifdef SIGWINCH
+        get_orig_size();
+#endif
         /* get the filter name and its args */
         if ((s = mlreply("#", line, NLINE)) != TRUE)
                 return s;
@@ -481,7 +509,7 @@ int filter_buffer(int f, int n)
         s = TRUE;
 #endif
 #ifdef SIGWINCH
-        force_resize();
+        check_for_resize();
 #endif
         /* on failure, escape gracefully */
         if (s != TRUE || (readin(filnam2, FALSE) == FALSE)) {

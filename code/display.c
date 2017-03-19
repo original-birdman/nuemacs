@@ -77,7 +77,7 @@ static void modeline(struct window *wp);
 static void mlputi(int i, int r);
 static void mlputli(long l, int r);
 static void mlputf(int s);
-static int newscreensize(int h, int w);
+static int newscreensize(int h, int w, int);
 
 #if RAINBOW
 static void putline(int row, int col, char *buf);
@@ -419,6 +419,15 @@ int update(int force)
                 return TRUE;
 #endif
 
+/* GGR Set-up any requested new screen size before working out a screen
+ * update, rathert than waiting until the end.
+ * spawn.c forces a redraw using this on return form a command line, and
+ * we need to ensure that term.t_ncol is set before doing any vtputc() calls.
+ */
+#if SIGWINCH
+        while (chg_width || chg_height)
+                newscreensize(chg_height, chg_width, 1);
+#endif
         displaying = TRUE;
 
 #if SCROLLCODE
@@ -502,10 +511,12 @@ int update(int force)
 
         TTflush();
         displaying = FALSE;
+
 #if SIGWINCH
         while (chg_width || chg_height)
-                newscreensize(chg_height, chg_width);
+                newscreensize(chg_height, chg_width, 0);
 #endif
+
         return TRUE;
 }
 
@@ -782,7 +793,10 @@ void updgar(void)
         int i, j;
 
 /* GGR - include the last row, so <=, (for mini-buffer) */
-        for (i = 0; i <= term.t_nrow; ++i) {
+        int lrow;
+        if (inmb) lrow = term.t_nrow +1;
+        else      lrow = term.t_nrow;
+        for (i = 0; i < lrow; ++i) {
                 vscreen[i]->v_flag |= VFCHG;
 #if     REVSTA
                 vscreen[i]->v_flag &= ~VFREV;
@@ -826,7 +840,10 @@ int updupd(int force)
 #endif
 
 /* GGR - include the last row, so <=, (for mini-buffer) */
-        for (i = 0; i <= term.t_nrow; ++i) {
+        int lrow;
+        if (inmb) lrow = term.t_nrow +1;
+        else      lrow = term.t_nrow;
+        for (i = 0; i < lrow; ++i) {
                 vp1 = vscreen[i];
 
                 /* for each line that needs to be updated */
@@ -1691,7 +1708,7 @@ void sizesignal(int signr)
         getscreensize(&w, &h);
 
         if (h && w && (h - 1 != term.t_nrow || w != term.t_ncol))
-                newscreensize(h, w);
+                newscreensize(h, w, 0);
 
         struct sigaction sigact, oldact;
         sigact.sa_handler = sizesignal;
@@ -1700,7 +1717,7 @@ void sizesignal(int signr)
         errno = old_errno;
 }
 
-static int newscreensize(int h, int w)
+static int newscreensize(int h, int w, int no_update_needed)
 {
         /* do the change later */
         if (displaying) {
@@ -1714,12 +1731,7 @@ static int newscreensize(int h, int w)
         if (w < term.t_mcol)
                 newwidth(TRUE, w);
 
-/* GGR - We have to clear the last line, as we display it and it
- *       probably won't be empty if we are shrinking the window.
- *       Needs to run before the update.
- */
-        mberase();
-        update(TRUE);
+        if (!no_update_needed) update(TRUE);
 
         return TRUE;
 }
