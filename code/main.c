@@ -320,13 +320,14 @@ int main(int argc, char **argv)
 
 /* Process rest of comline, which is a list of files to edit */
         while (argc--) {
-                if (strcmp(*argv, "-e") == 0) { /* Default option now */
-                    continue;
-                }
-                if (strcmp(*argv, "-v") == 0) {
-                    viewflag = 1;
-                    continue;
-                }
+
+/* You can use -v/-e to toggle view mode on/off as you go through the
+ * files on the command line.
+ */
+                if (strcmp(*argv, "-e") == 0 || strcmp(*argv, "-v") == 0) {
+                        viewflag = *(*(argv++) + 1) == 'v';
+                        continue;
+                } 
                 if (strlen(*argv) >= NFILEN) {  /* Sanity check */
                     fprintf(stderr, "filename too long!!\n");
                     sleep(2);
