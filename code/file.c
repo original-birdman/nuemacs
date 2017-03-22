@@ -22,7 +22,7 @@
 
 /*
  * Read a file into the current
- * buffer. This is really easy; all you do it
+ * buffer. This is really easy; all you do is
  * find the name of the file, and call the standard
  * "read a file into the current buffer" code.
  * Bound to "C-X C-R".
@@ -483,11 +483,19 @@ int filesave(int f, int n)
                 return FALSE;
         }
 
-        /* complain about truncated files */
+        /* Complain about truncated files */
         if ((curbp->b_flag & BFTRUNC) != 0) {
                 if (mlyesno("Truncated file ... write it out") == FALSE) {
                         mlwrite(MLpre "Aborted" MLpost);
                         return FALSE;
+                }
+        }
+
+        /* Complain about narrowed buffers */
+        if ((curbp->b_flag&BFNAROW) != 0) {
+                if (mlyesno("Narrowed buffer: write it out anyway") != TRUE) {
+                        mlwrite(MLpre "Aborted" MLpost);
+                        return(FALSE);
                 }
         }
 

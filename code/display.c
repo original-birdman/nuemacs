@@ -420,7 +420,7 @@ int update(int force)
 #endif
 
 /* GGR Set-up any requested new screen size before working out a screen
- * update, rathert than waiting until the end.
+ * update, rather than waiting until the end.
  * spawn.c forces a redraw using this on return form a command line, and
  * we need to ensure that term.t_ncol is set before doing any vtputc() calls.
  */
@@ -1310,6 +1310,12 @@ static void modeline(struct window *wp)
                 vtputc('*');
         else
                 vtputc(lchar);
+
+        if ((bp->b_flag&BFNAROW) != 0) {    /* GGR "<" if narrowed */
+                vtputc('<');
+        } else {
+                vtputc(lchar);
+        }
 
         strcpy(tline, " ");
         strcat(tline, PROGRAM_NAME_LONG);

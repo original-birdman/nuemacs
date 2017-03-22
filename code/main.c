@@ -213,7 +213,7 @@ int main(int argc, char **argv)
                         key1 = *arg;
 /* Allow options to be given as separate tokens */
                         if (strchr("cCdDgGkKsSxX", key1)) {
-			        opt = *argv + 2;
+                                opt = *argv + 2;
                                 if (*opt == '\0' && argc > 0 &&
                                     !strchr("-@", *(*argv + 1))) {
                                         opt = *(++argv);
@@ -327,7 +327,7 @@ int main(int argc, char **argv)
                 if (strcmp(*argv, "-e") == 0 || strcmp(*argv, "-v") == 0) {
                         viewflag = *(*(argv++) + 1) == 'v';
                         continue;
-                } 
+                }
                 if (strlen(*argv) >= NFILEN) {  /* Sanity check */
                     fprintf(stderr, "filename too long!!\n");
                     sleep(2);
@@ -394,7 +394,7 @@ int main(int argc, char **argv)
         /* Setup to process commands. */
         lastflag = 0;  /* Fake last flags. */
 
-      loop:
+loop:
         /* Execute the "command" macro...normally null. */
         saveflag = lastflag;  /* Preserve lastflag through this. */
         execute(META | SPEC | 'C', FALSE, 1);
@@ -665,8 +665,8 @@ int execute(int c, int f, int n)
 }
 
 /*
- * Fancy quit command, as implemented by Norm. If the any buffer has
- * changed do a write on that buffer and exit emacs, otherwise simply exit.
+ * Fancy quit command, as implemented by Norm. If any buffer has changed
+ * do a write on that buffer and exit uemacs, otherwise simply exit.
  */
 int quickexit(int f, int n)
 {
@@ -681,21 +681,20 @@ int quickexit(int f, int n)
 
         bp = bheadp;
         while (bp != NULL) {
-                if ((bp->b_flag & BFCHG) != 0           /* Changed.           */
-                    && (bp->b_flag & BFTRUNC) == 0      /* Not truncated P.K. */
-                    && (bp->b_flag & BFINVS) == 0) {    /* Real.              */
-                        curbp = bp;                 /* make that buffer cur   */
-                        mlwrite(MLpre "Saving %s" MLpost, bp->b_fname);
-#if     PKCODE
-#else
-                        mlwrite("\n");
-#endif
-                        if ((status = filesave(f, n)) != TRUE) {
-                                curbp = oldcb;  /* restore curbp */
-                                return status;
-                        }
+            if ((bp->b_flag & BFCHG) != 0       /* Changed.             */
+                && (bp->b_flag & BFTRUNC) == 0  /* Not truncated P.K.   */
+                && (bp->b_flag & BFINVS) == 0) {/* Real.                */
+                    curbp = bp;                 /* make that buffer cur */
+                mlwrite(MLpre "Saving %s" MLpost, bp->b_fname);
+                mlwrite("\n");              /* So user can see filename */
+                if ((status = filesave(f, n)) != TRUE) {
+                    curbp = oldcb;          /* restore curbp */
+                    sleep(1);
+                    redraw(FALSE, 0);       /* Redraw - remove filenames */
+                    return status;
                 }
-                bp = bp->b_bufp;        /* on to the next buffer */
+            }
+            bp = bp->b_bufp;        /* on to the next buffer */
         }
         quit(f, n);                     /* conditionally quit   */
         return TRUE;

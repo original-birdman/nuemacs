@@ -235,14 +235,53 @@ int narrow(int f, int n)
                 return(FALSE);
         }
 
-        /* find the boundries of the current region */
-        if ((status=getregion(&creg)) != TRUE)
+/* We want to include all of the lines that mark and dot are on.
+ * We also need to reset the original mark and dot if we return
+ * without narrowing...
+ */
+        struct window orig_wp = *curwp;         /* Copy original struct */
+        struct line *lp = lforw(bp->b_linep);
+        int fix_up = 0;
+/* Is mark or doto earliest in the file?
+ * We need to move the *other* one to the start of its next line if
+ * it is not at the start of a line.
+ */
+        while (lp != bp->b_linep) {
+            if (lp == curwp->w_dotp) {          /* doto */
+                fix_up = 1;
+                break;
+            }
+            else if (lp == curwp->w_markp) {    /* mark */
+                fix_up = -1;
+                break;
+            }
+            lp = lforw(lp);
+        }
+        if ((fix_up == 1) && (curwp->w_marko > 0)) {
+            curwp->w_markp = lforw(curwp->w_markp);
+            curwp->w_marko = 0;
+        }
+        else if ((fix_up == -1) && (curwp->w_doto > 0)) {
+            curwp->w_dotp = lforw(curwp->w_dotp);
+            curwp->w_doto = 0;
+        }
+
+        /* Find the boundaries of the current region */
+        if ((status = getregion(&creg)) != TRUE) {
+                *curwp = orig_wp;       /* restore original struct */
                 return(status);
+        }
         curwp->w_dotp = creg.r_linep;   /* only by full lines please! */
         curwp->w_doto = 0;
         creg.r_size += (long)creg.r_offset;
+
+/* Might no longer be possible for this to happen because we now move
+ * to the start of next line after the later of mark/doto.
+ * But leave it here just in case...
+ */
         if (creg.r_size <= (long)curwp->w_dotp->l_used) {
                 mlwrite("Must narrow at least 1 full line");
+                *curwp = orig_wp;       /* restore original struct */
                 return(FALSE);
         }
 
@@ -340,5 +379,7 @@ int widen(int f, int n)
         /* and now remember we are not narrowed */
         bp->b_flag &= (~BFNAROW);
         mlwrite(MLpre "Buffer is widened" MLpost);
+/* Redraw with the start of the ex-narrowed region in middle of screen */
+        reposition(FALSE, 0);
         return(TRUE);
 }
