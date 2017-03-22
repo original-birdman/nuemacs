@@ -542,3 +542,33 @@ etc/uemacs.hlp
 
 ==========
 
+main.c
+    Fix the -e/-v handling once we get to looking for files on the
+    command line. You can use -v/-e to toggle view mode on/off as you go
+    through the file list.
+
+display.c
+file.c
+main.c
+region.c
+    Add in some buffer-narrowing code missed in the GGR migration to
+    prevent you saving a narrowed buffer without first being queried.
+    [display.c, file.c]
+    In quickexit(), add back the mlwrite("\n") call when Saving files.
+    This lets the user see which is affected if there is a narrowed
+    buffer involved.  Also, if the user aborts redraw the screen to
+    remove these filenames.  [display.c]
+    When narrowing a region, move whichever of mark and point is further
+    through the file to the start of the next line if they are not at
+    the start of a line.  So you get any line if you are in the middle
+    of it (this already happens to whichever is first in the file).
+    When rewidening, redraw the screen with the start of the narrowed
+    region in the middle of the window, which makes it more obvious that the
+    other text has returned.
+    [region.c]
+
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.112
+
+==========

@@ -62,7 +62,7 @@ int mlyesno(char *prompt)
                 strcat(buf, " " MLpre "y/n" MLpost "? ");
                 mlwrite(buf);
 
-                /* get the responce */
+                /* get the response */
                 c = tgetc();
 
                 if (c == ectoc(abortc)) /* Bail out! */
