@@ -1490,16 +1490,16 @@ void mlerase(void)
  * position. A small class of printf like format items is handled. Assumes the
  * stack grows down; this assumption is made by the "++" in the argument scan
  * loop. Set the "message line" flag TRUE.
+ * The handling is now hived off to mlwrite_ap, whch can be called by
+ * either mlwrite or mlforce.
  *
  * GGR modified to handle utf8 strings.
  *
  * char *fmt;           format string for output
  * char *arg;           pointer to first argument to print
  */
-void mlwrite(const char *fmt, ...)
-{
+static void mlwrite_ap(const char *fmt, va_list ap) {
         unicode_t c;            /* current char in format string */
-        va_list ap;
 
         /* if we are not currently echoing on the command line, abort this */
         if (discmd == FALSE) {
@@ -1519,7 +1519,6 @@ void mlwrite(const char *fmt, ...)
                 TTflush();
         }
         movecursor(term.t_nrow, 0);
-        va_start(ap, fmt);
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
         int bytes_togo = strlen(fmt);
@@ -1564,13 +1563,20 @@ void mlwrite(const char *fmt, ...)
                         }
                 }
         }
-        va_end(ap);
 
         /* if we can, erase to the end of screen */
         if (eolexist == TRUE)
                 TTeeol();
         TTflush();
         mpresf = TRUE;
+}
+
+void mlwrite(const char *fmt, ...) {
+        va_list ap;
+        va_start(ap, fmt);
+        mlwrite_ap(fmt, ap);
+        va_end(ap);
+        return;
 }
 
 /*
@@ -1580,13 +1586,16 @@ void mlwrite(const char *fmt, ...)
  *
  * char *s;             string to force out
  */
-void mlforce(char *s)
-{
+void mlforce(const char *fmt, ...) {
         int oldcmd;     /* original command display flag */
+
+        va_list ap;
+        va_start(ap, fmt);
 
         oldcmd = discmd;        /* save the discmd value */
         discmd = TRUE;          /* and turn display on */
-        mlwrite(s);             /* write the string out */
+        mlwrite_ap(fmt, ap);       /* write the string out */
+        va_end(ap);
         discmd = oldcmd;        /* and restore the original setting */
 }
 

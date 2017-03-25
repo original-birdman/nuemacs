@@ -146,7 +146,7 @@ extern void upmode(void);
 extern void movecursor(int row, int col);
 extern void mlerase(void);
 extern void mlwrite(const char *fmt, ...);
-extern void mlforce(char *s);
+extern void mlforce(const char *fmt, ...);
 extern void mlputs(char *s);
 extern void getscreensize(int *widthp, int *heightp);
 extern void sizesignal(int signr);
