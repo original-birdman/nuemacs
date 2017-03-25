@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 13 Mar 2017
+;                       Last Update: 25 Mar 2017
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -19,55 +19,11 @@ write-message "[Setting up....]"
 ;
 set $overlap 2          ; What it used to be
 ;
-; Overwrite some standard bindings - for historic GGR feel.
-; Binding names are from name_bind in names.c
+
 ;
-bind-to-key reexecute                   ^C
-bind-to-key type-tab                    ^I
-bind-to-key replace-string              ^R
-bind-to-key previous-line               ^Z
-bind-to-key set-mark                    ^@
-bind-to-key execute-macro-34            ^\
-;
-unbind-key                              ^X^A
-bind-to-key detab-line                  ^X^D
-bind-to-key handle-tab                  ^X^I
-;
-bind-to-key insert-file                 ^XI
-bind-to-key execute-macro-40            ^XL
-bind-to-key save-file                   ^XS
-bind-to-key execute-macro-39            ^XT
-bind-to-key fill-all-paragraphs         ^X.
-bind-to-key narrow-to-region            ^X<
-bind-to-key widen-from-region           ^X>
-bind-to-key help                        ^X?
-;
-bind-to-key execute-macro-36            M-^D
-bind-to-key incremental-search          M-^I
-bind-to-key execute-macro-37            M-^J    ; Previously Esc-J in 3.9e
-bind-to-key i-shell                     M-^U
-bind-to-key yank-minibuffer             M-^Y
-;
-bind-to-key search-reverse              M-R
-bind-to-key execute-macro-38            M-T
-bind-to-key fill-paragraph              M-Q
-bind-to-key white-delete                M-\
-; The SP on the following line denotes "space"
-bind-to-key leave-one-white             M-SP
-bind-to-key query-replace-string        M-%
-bind-to-key quoted-count                M-'
-bind-to-key execute-macro-35            M-=
-bind-to-key describe-key                M-?
-;
-bind-to-key previous-line               FNA
-bind-to-key next-line                   FNB
-bind-to-key forward-character           FNC
-bind-to-key backward-character          FND
-bind-to-key kill-to-end-of-line         FNQ
-bind-to-key previous-word               FNP
-bind-to-key next-word                   FNR
-bind-to-key set-mark                    FNH
-;
+; Define macro procedures. Has to be done before we can bind them to a key.
+; NOTE: that the maximum length of any store-procedure/buffer-to-key name
+; is 14 characters.
 ;
 store-procedure file-hooks
     set %rctmp &sin $cbufname "."
@@ -94,7 +50,7 @@ store-procedure file-hooks
     !endif
 !endm
 ;
-40 store-macro              ; centre-line
+store-procedure centre-line
         beginning-of-line
         !force white-delete
         end-of-line
@@ -108,7 +64,7 @@ store-procedure file-hooks
         !endif
 !endm
 ;
-36 store-macro              ; nullify-default-replace
+store-procedure rm-dflt-repl
     set $replace ""
     write-message "[Default replace string set null]"
 !endm
@@ -141,10 +97,6 @@ store-procedure spell-check
     delete-previous-character
 !endm
 ;
-35  store-macro             ; spell-check
-    run spell-check
-!endm
-;
 set %lindef 0
 set %rindef 0
 set %spc "                                                                  "
@@ -152,7 +104,7 @@ set %spc "                                                                  "
 ;
 ; left-and-right-justify
 ;
-37 store-macro              ; Left and right justify paragraph
+store-procedure lr-justify          ; Left and right justify paragraph
   set %oldfill $fillcol
   set %left @&cat &cat "Left indent [" %lindef "]: "
   !if &seq %left "ERROR"
@@ -209,7 +161,7 @@ set %spc "                                                                  "
   clear-message-line
 !endm
 ;
-39 store-macro              ; toggle local mode
+store-procedure toggle-lmode            ; toggle local mode
     write-message "Toggle mode (ACEMOVWXH): "
     set %report " "
     set %modesel &upper &gtkey
@@ -305,7 +257,7 @@ set %spc "                                                                  "
     !finish
 !endm
 ;
-38 store-macro              ; toggle global mode
+store-procedure toggle-gmode            ; toggle global mode
     write-message "Toggle global mode (ACEMOVWXH): "
     set %report " "
     set %modesel &upper &gtkey
@@ -401,11 +353,62 @@ set %spc "                                                                  "
     !finish
 !endm
 ;
-34 store-macro              ; delete space right
+store-procedure del-sp-right            ; delete space right
     !while &or &equal $curchar 32 &equal $curchar 9
         delete-next-character
     !endwhile
 !endm
+
+;
+; Overwrite some standard bindings - for historic GGR feel.
+; Binding names are from name_bind in names.c
+;
+bind-to-key reexecute                   ^C
+bind-to-key type-tab                    ^I
+bind-to-key replace-string              ^R
+bind-to-key previous-line               ^Z
+bind-to-key set-mark                    ^@
+buffer-to-key del-sp-right              ^\
+;
+unbind-key                              ^X^A
+bind-to-key detab-line                  ^X^D
+bind-to-key handle-tab                  ^X^I
+;
+bind-to-key insert-file                 ^XI
+buffer-to-key centre-line              ^XL
+bind-to-key save-file                   ^XS
+buffer-to-key toggle-lmode              ^XT
+bind-to-key fill-all-paragraphs         ^X.
+bind-to-key narrow-to-region            ^X<
+bind-to-key widen-from-region           ^X>
+bind-to-key help                        ^X?
+;
+buffer-to-key rm-dflt-repl              M-^D
+bind-to-key incremental-search          M-^I
+buffer-to-key lr-justify                M-^J    ; Previously Esc-J in 3.9e
+bind-to-key i-shell                     M-^U
+bind-to-key yank-minibuffer             M-^Y
+;
+bind-to-key search-reverse              M-R
+buffer-to-key toggle-gmode              M-T
+bind-to-key fill-paragraph              M-Q
+bind-to-key white-delete                M-\
+; The SP on the following line denotes "space"
+bind-to-key leave-one-white             M-SP
+bind-to-key query-replace-string        M-%
+bind-to-key quoted-count                M-'
+buffer-to-key spell-check               M-=
+bind-to-key describe-key                M-?
+;
+bind-to-key previous-line               FNA
+bind-to-key next-line                   FNB
+bind-to-key forward-character           FNC
+bind-to-key backward-character          FND
+bind-to-key kill-to-end-of-line         FNQ
+bind-to-key previous-word               FNP
+bind-to-key next-word                   FNR
+bind-to-key set-mark                    FNH
+;
 
 4 handle-tab
 add-global-mode "wrap"
