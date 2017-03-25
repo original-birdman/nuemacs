@@ -14,9 +14,6 @@
 #include <string.h>
 #include "utf8.h"
 
-/* Some global fuction declarations. */
-typedef int (*fn_t)(int, int);
-
 /* Initialized global external declarations. */
 
 extern int fillcol;             /* Fill column                  */
@@ -32,7 +29,7 @@ extern int flickcode;           /* do flicker supression?       */
 extern char *modename[];        /* text names of modes          */
 extern char *mode2name[];       /* text names of modes          */
 extern char modecode[];         /* letters to represent modes   */
-extern struct key_tab keytab[]; /* key bind to functions table  */
+extern struct key_tab *keytab;  /* key bind to functions table  */
 extern struct name_bind names[];/* name to function table */
 extern int gmode;               /* global editor mode           */
 extern int gflags;              /* global control flag          */
@@ -144,3 +141,8 @@ extern int allow_current;       /* Look in current dir for startup? */
 
 extern int chg_width;           /* Changed width on SIGWINCH */
 extern int chg_height;          /* Changed height on SIGWINCH */
+
+extern char *input_waiting;     /* Input ready (for execproc) */
+
+extern int keytab_alloc_ents;   /* Allocated number of keytab entries */
+

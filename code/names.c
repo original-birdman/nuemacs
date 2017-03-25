@@ -23,6 +23,7 @@ struct name_bind names[] = {
         {"beginning-of-line", gotobol},
         {"bind-to-key", bindtokey},
         {"buffer-position", showcpos},
+        {"buffer-to-key", buffertokey},     /* GGR */
         {"case-region-lower", lowerregion},
         {"case-region-upper", upperregion},
         {"case-word-capitalize", capword},

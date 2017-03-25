@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -68,6 +69,7 @@ int deskey(int f, int n)
         int c;          /* key to describe */
         char *ptr;      /* string pointer to scan output strings */
         char outseq[NSTRING];   /* output buffer for command sequence */
+        char *pbp;
 
         /* prompt the user to type us a key to describe */
         mlwrite(": describe-key ");
@@ -80,12 +82,17 @@ int deskey(int f, int n)
         mlputs(" ");
 
         /* find the right ->function */
-        if ((ptr = getfname(getbind(c))) == NULL)
+        if ((ptr = getfname(getbind(c, &pbp))) == NULL)
                 ptr = "Not Bound";
 
         /* output the command sequence */
         mlputs(ptr);
 
+        /* Add buffer-name, if set */
+        if (pbp) {
+            mlputs(" ");
+            mlputs(pbp);
+        }
         mpresf = TRUE;      /* GGR */
         return TRUE;
 }
@@ -103,6 +110,7 @@ int bindtokey(int f, int n)
         struct key_tab *ktp;    /* pointer into the command table */
         int found;              /* matched command flag */
         char outseq[80];        /* output buffer for keystroke sequence */
+        struct key_tab *destp;  /* Where to copy the name and type */
 
         /* prompt the user to type in a key to bind */
         if (!clexec) {
@@ -132,11 +140,13 @@ int bindtokey(int f, int n)
         if (kfunc == metafn || kfunc == cex ||
             kfunc == unarg || kfunc == ctrlg) {
 
-                /* search for an existing binding for the prefix key */
-                ktp = &keytab[0];
+/* Search for an existing binding for the prefix key
+ */
+                ktp = keytab;
                 found = FALSE;
-                while (ktp->k_fp != NULL) {
-                        if (ktp->k_fp == kfunc)
+                while (ktp->k_type != ENDL_KMAP) {
+                        if ((ktp->k_type == FUNC_KMAP) &&
+                            (ktp->hndlr.k_fp == kfunc))
                                 unbindchar(ktp->k_code);
                         ++ktp;
                 }
@@ -153,9 +163,9 @@ int bindtokey(int f, int n)
         }
 
         /* search the table to see if it exists */
-        ktp = &keytab[0];
+        ktp = keytab;
         found = FALSE;
-        while (ktp->k_fp != NULL) {
+        while (ktp->k_type != ENDL_KMAP) {
                 if (ktp->k_code == c) {
                         found = TRUE;
                         break;
@@ -164,22 +174,31 @@ int bindtokey(int f, int n)
         }
 
         if (found) {            /* it exists, just change it then */
-                ktp->k_fp = kfunc;
+                if (ktp->k_type == PROC_KMAP)
+                    free(ktp->hndlr.pbp);       /* Free the name */
+                destp = ktp;
         } else {                /* otherwise we need to add it to the end */
-                /* if we run out of binding room, bitch */
-                if (ktp >= &keytab[NBINDS]) {
-                        mlwrite("Binding table FULL!");
-                        mpresf = TRUE;          /* GGR */
-                        return FALSE;
-                }
+                ktp->k_code = c;        /* set keycode */
+                destp = ktp;
 
-                ktp->k_code = c;    /* add keycode */
-                ktp->k_fp = kfunc;  /* and the function pointer */
-                ++ktp;              /* and make sure the next is null */
-                ktp->k_code = 0;
-                ktp->k_fp = NULL;
+/* If the list is not exhausted the next one will also be an End-of-List.
+ * If it is an End-of-Structure we need to extend, and if we do that we
+ * need to handle destp, in case the realloc() moves things.
+ * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
+ */
+                ++ktp;
+                if (ktp->k_type == ENDS_KMAP) {
+                    int destp_offs = destp - keytab;
+                    int ktp_offs = ktp - keytab;
+                    extend_keytab(0);
+                    destp = keytab + destp_offs;
+                    ktp = keytab + ktp_offs;
+                }
         }
-        mpresf = TRUE;              /* GGR */
+        destp->hndlr.k_fp = kfunc;      /* and the function pointer */
+        destp->k_type = FUNC_KMAP;      /* Set the type */
+
+        mpresf = TRUE;                  /* GGR */
         TTflush();
 
         return TRUE;
@@ -235,9 +254,9 @@ int unbindchar(int c)
         int found;             /* matched command flag */
 
         /* search the table to see if the key exists */
-        ktp = &keytab[0];
+        ktp = keytab;
         found = FALSE;
-        while (ktp->k_fp != NULL) {
+        while (ktp->k_type != ENDL_KMAP) {
                 if (ktp->k_code == c) {
                         found = TRUE;
                         break;
@@ -251,17 +270,17 @@ int unbindchar(int c)
 
         /* save the pointer and scan to the end of the table */
         sktp = ktp;
-        while (ktp->k_fp != NULL)
+        while (ktp->k_type != ENDL_KMAP)
                 ++ktp;
         --ktp;                  /* backup to the last legit entry */
 
         /* copy the last entry to the current one */
-        sktp->k_code = ktp->k_code;
-        sktp->k_fp = ktp->k_fp;
+        *sktp = *ktp;           /* Copy the whole structure */
 
         /* null out the last one */
         ktp->k_code = 0;
-        ktp->k_fp = NULL;
+        ktp->hndlr.k_fp = NULL;
+        ktp->k_type = ENDL_KMAP;
         return TRUE;
 }
 
@@ -315,7 +334,7 @@ int buildlist(int type, char *mstring)
                 return FALSE;
 
         /* and get a buffer for it */
-        bp = bfind("*Binding list*", TRUE, 0);
+        bp = bfind("/Binding list", TRUE, 0);
         if (bp == NULL || bclear(bp) == FALSE) {
                 mlwrite("Can not display binding list");
                 return FALSE;
@@ -361,10 +380,11 @@ int buildlist(int type, char *mstring)
                         goto fail;
 #endif
                 /* search down any keys bound to this */
-                ktp = &keytab[0];
-                while (ktp->k_fp != NULL) {
-                        if (ktp->k_fp == nptr->n_func) {
-                                /* padd out some spaces */
+                ktp = keytab;
+                while (ktp->k_type != ENDL_KMAP) {
+                        if ((ktp->k_type == FUNC_KMAP) &&
+                            (ktp->hndlr.k_fp == nptr->n_func)) {
+                                /* pad out some spaces */
                                 while (cpos < 28)
                                         outseq[cpos++] = ' ';
 
@@ -389,9 +409,34 @@ int buildlist(int type, char *mstring)
                                 return FALSE;
                 }
 
-              fail:             /* and on to the next name */
+fail:           /* and on to the next name */
                 ++nptr;
         }
+
+/* Now we go through all the key_table looking for proc buf bindings */
+
+    cpos = 0;
+    int found = 0;
+    for(ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
+        if (ktp->k_type == PROC_KMAP) {
+            if (!found) {
+                if (linstr("\nProcedure bindings\n") != TRUE) return FALSE;
+                found = 1;
+            }
+        }
+        else continue;
+        strcpy(outseq, ktp->hndlr.pbp);
+        cpos = strlen(outseq);
+        while (cpos < 28) outseq[cpos++] = ' ';
+/* Add in the command sequence */
+        cmdstr(ktp->k_code, outseq+cpos);
+        strcat(outseq, "\n");
+
+/* Add the line into the buffer */
+        if (linstr(outseq) != TRUE) return FALSE;
+        cpos = 0;       /* and clear the line */
+    }
+
 
         curwp->w_bufp->b_mode |= MDVIEW;    /* put this buffer view mode */
         curbp->b_flag &= ~BFCHG;            /* don't flag this as a change */
@@ -705,22 +750,30 @@ void cmdstr(int c, char *seq)
 
 /*
  * This function looks a key binding up in the binding table
+ * GGR - it now sets the buffer name for PROC_KMAP entries
  *
  * int c;               key to find what is bound to it
  */
-int (*getbind(int c))(int, int)
+fn_t getbind(int c, char **pbp)
 {
         struct key_tab *ktp;
 
-        ktp = &keytab[0];  /* Look in key table. */
-        while (ktp->k_fp != NULL) {
-                if (ktp->k_code == c)
-                        return ktp->k_fp;
-                ++ktp;
-        }
+/* Look through the key table. */
 
-        /* no such binding */
-        return NULL;
+        for (ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
+                if (ktp->k_code == c) {
+                    if (ktp->k_type == FUNC_KMAP) {
+                        *pbp = NULL;
+                        return ktp->hndlr.k_fp;
+                    }
+                    else if (ktp->k_type == PROC_KMAP) {
+                        *pbp = ktp->hndlr.pbp;
+                        return execproc;
+                    }
+                }
+        }
+        *pbp = NULL;
+        return NULL;        /* No such binding */
 }
 
 /*
@@ -825,15 +878,122 @@ unsigned int stock(char *keyname)
 /*
  * string key name to binding name....
  *
- * char *skey;          name of keey to get binding for
+ * char *skey;          name of key to get binding for
  */
 char *transbind(char *skey)
 {
-        char *bindname;
+        char *bindname, *pbp;
 
-        bindname = getfname(getbind(stock(skey)));
+        bindname = getfname(getbind(stock(skey), &pbp));
         if (bindname == NULL)
                 bindname = "ERROR";
 
         return bindname;
+}
+
+/* GGR added
+ * buffertokey:
+ *      Add a new key to the key binding table to invoke a buffer.
+ *      Much copied from bindtokey B()and execproc()
+ *
+ * int f, n;            command arguments [IGNORED]
+ */
+int buffertokey(int f, int n)
+{
+    unsigned int c;         /* command key to bind */
+    struct key_tab *ktp;    /* pointer into the command table */
+    int found;              /* matched command flag */
+    char bname[NBUFN+1];    /* buffer name */
+    char outseq[80];        /* output buffer for keystroke sequence */
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+    struct key_tab *destp;  /* Where to copy the name and type */
+
+/* Prompt the user to type in a key to bind */
+
+    if (!clexec) {
+        mlwrite(": buffer-to-key ");
+        mpresf = TRUE;          /* GGR */
+    }
+
+/* Fudge in the tag, then get the name of the buffer to invoke.
+ * The maximum length is 16 chars *including* the NUL.
+ * mlreply (via either token or getstring) includes the NUL in the size
+ * and we are actually writing this in from offset 1, so we allow NBUFN
+ * chars for that and complain if the reply fills the buffer (as that will
+ * make the name too long, and we don't want unexpected truncation meaning
+ * we have two different names ending up the same.
+ */
+    bname[0] = '/';
+    if ((status = mlreply("macro buffer: ", bname+1, NBUFN)) != TRUE)
+        return status;
+    if (strlen(bname) >= NBUFN) {
+         mlforce("Procedure name too long: %s. Ignored.", bname);
+         sleep(1);
+         return TRUE;       /* Don't abort start-up file */
+    }
+
+/* Check that this buffer exists */
+    if ((bp = bfind(bname, FALSE, 0)) == NULL) {
+        mlwrite("No such exec procedure %s", bname);
+        return FALSE;
+    }
+
+    if (!clexec) mlputs("key sequence: ");
+
+/* get the command sequence to bind */
+
+    c = getckey(0);
+
+/* Change it to something we can print as well and dump it out */
+
+    cmdstr(c, outseq);
+    if (!clexec) mlputs(outseq);
+
+/* Search the table to see if it exists */
+
+    ktp = keytab;
+    found = FALSE;
+    while (ktp->k_type != ENDL_KMAP) {
+        if (ktp->k_code == c) {
+            found = TRUE;
+            break;
+        }
+        ++ktp;
+    }
+
+    if (found) {                    /* If it exists, change it... */
+        if (ktp->k_type == FUNC_KMAP) /* Need to allocate space for name */
+            ktp->hndlr.pbp = malloc(NBUFN);
+        destp = ktp;
+    }
+    else {                          /* ...else add it at the end */
+        ktp->k_code = c;            /* set keycode */
+        ktp->hndlr.pbp = malloc(NBUFN);
+        destp = ktp;
+
+/* If the list is not exhausted the next one will also be an End-of-List.
+ * If it is an End-of-Structure we need to extend, and if we do that we
+ * need to handle destp, in case the realloc() moves things.
+ * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
+ */
+        ++ktp;
+        if (ktp->k_type == ENDS_KMAP) {
+            int destp_offs = destp - keytab;
+            int ktp_offs = ktp - keytab;
+            extend_keytab(0);
+            destp = keytab + destp_offs;
+            ktp = keytab + ktp_offs;
+        }
+        ktp->k_code = 0;
+        ktp->hndlr.pbp = NULL;
+        ktp->k_type = ENDL_KMAP;
+    }
+    destp->k_type = PROC_KMAP;
+    strcpy(destp->hndlr.pbp, bname+1); /* ...and copy in name */
+
+    mpresf = TRUE;                  /* GGR */
+    TTflush();
+
+    return TRUE;
 }

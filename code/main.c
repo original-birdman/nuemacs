@@ -56,9 +56,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-/* Make global definitions not external. */
-// #define maindef
-
 #include "estruct.h" /* Global structures and defines. */
 #include "edef.h"    /* Global definitions. */
 #include "efunc.h"   /* Function declarations and name table. */
@@ -180,6 +177,19 @@ int main(int argc, char **argv)
 #if     CRYPT
         cryptflag = FALSE;      /* no encryption by default */
 #endif
+
+/* Set up the initial keybindings.  Must be done early, before any
+ * command line processing.
+ * We need to allow for the additonal ENDL_KMAP and ENDS_KMAP entries,
+ * which mark the End-of-List and End-of-Structure, and round up to the
+ * next KEYTAB_INCR boundary.
+ */
+        int n_init_keys = sizeof(init_keytab)/sizeof(struct key_tab);
+        int keytab_alloc_ents = n_init_keys + 2 + KEYTAB_INCR;
+        keytab_alloc_ents /= KEYTAB_INCR;
+        keytab_alloc_ents *= KEYTAB_INCR;
+        extend_keytab(keytab_alloc_ents);
+        memcpy(keytab, init_keytab, sizeof(init_keytab));
 
 /* GGR Command line parsing substantially reorganised. It now consists of two
  * separate loops. The first loop processes all optional arguments (command
@@ -406,8 +416,9 @@ loop:
                 update(FALSE);
                 do {
                         fn_t execfunc;
+                        char *pbp;
 
-                        if (c == newc && (execfunc = getbind(c)) != NULL
+                        if (c == newc && (execfunc = getbind(c, &pbp)) != NULL
                             && execfunc != insert_newline
                             && execfunc != insert_tab)
                                 newc = getcmd();
@@ -530,7 +541,7 @@ void edinit(char *bname)
         struct window *wp;
 
         bp = bfind(bname, TRUE, 0);             /* First buffer         */
-        blistp = bfind("*List*", TRUE, BFINVS); /* Buffer list buffer   */
+        blistp = bfind("/List", TRUE, BFINVS); /* Buffer list buffer   */
         wp = (struct window *)malloc(sizeof(struct window)); /* First window */
         if (bp == NULL || wp == NULL || blistp == NULL)
                 exit(1);
@@ -566,9 +577,11 @@ int execute(int c, int f, int n)
 {
         int status;
         fn_t execfunc;
+        char *pbp;
 
         /* if the keystroke is a bound function...do it */
-        execfunc = getbind(c);
+
+        execfunc = getbind(c, &pbp);
         if (execfunc != NULL) {
                 thisflag = 0;
 /* GGR - implement re-execute */
@@ -584,7 +597,10 @@ int execute(int c, int f, int n)
                         flast = f;
                         nlast = n;
                 }
+                if (pbp != NULL) input_waiting = pbp;
+                else input_waiting = NULL;
                 status = (*execfunc) (f, n);
+                input_waiting = NULL;
                 lastflag = thisflag;
 /* GGR - abort keyboard macro at point of error */
                 if ((kbdmode == PLAY) & !status) kbdmode = STOP;
@@ -976,4 +992,31 @@ int reexecute(int f, int n)
         }
         inreex = FALSE;
         return(TRUE);
+}
+
+/* GGR
+ * Extend the size of the key_table list.
+ * If input arg is non-zero use that, otherwise extend by the
+ * defined increment and update keytab_alloc_ents.
+ */
+static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}};
+static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}};
+
+void extend_keytab(int n_ents) {
+
+    int init_from;
+    if (n_ents == 0) {
+        init_from = keytab_alloc_ents;
+        keytab_alloc_ents += KEYTAB_INCR;
+    }
+    else {      /* Only happens at start */
+        init_from = 0;
+        keytab_alloc_ents = n_ents;
+    }
+    keytab = realloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
+    for (int i = init_from; i < keytab_alloc_ents - 1; i++)
+        keytab[i] = endl_keytab;
+    keytab[keytab_alloc_ents - 1] = ends_keytab;
+
+    return;
 }

@@ -130,6 +130,7 @@ extern int unarg(int f, int n);
 extern int cexit(int status);
 extern int reexecute(int, int);
 extern void meexit(int);
+extern void extend_keytab(int);
 
 /* display.c */
 extern void vtinit(void);
@@ -206,11 +207,12 @@ extern void set_pathname(char *);
 #define INTABLE 2
 extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
-extern fn_t getbind(int c);
+extern fn_t getbind(int, char **);
 extern char *getfname(fn_t);
 extern fn_t fncmatch(char *);
 extern unsigned int stock(char *keyname);
 extern char *transbind(char *skey);
+extern int buffertokey(int, int);
 
 /* buffer.c */
 extern int usebuffer(int f, int n);

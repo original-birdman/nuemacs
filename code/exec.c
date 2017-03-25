@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -262,7 +263,7 @@ int nextarg(char *prompt, char *buffer, int size, int terminator)
 int storemac(int f, int n)
 {
         struct buffer *bp;      /* pointer to macro buffer */
-        char bname[NBUFN];      /* name of buffer to use */
+        char bufn[NBUFN];       /* name of buffer to use */
 
         /* must have a numeric argument to this function */
         if (f == FALSE) {
@@ -277,12 +278,12 @@ int storemac(int f, int n)
         }
 
         /* construct the macro buffer name */
-        strcpy(bname, "*Macro xx*");
-        bname[7] = '0' + (n / 10);
-        bname[8] = '0' + (n % 10);
+        strcpy(bufn, "/Macro xx");
+        bufn[7] = '0' + (n / 10);
+        bufn[8] = '0' + (n % 10);
 
         /* set up the new macro buffer */
-        if ((bp = bfind(bname, TRUE, BFINVS)) == NULL) {
+        if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
                 mlwrite("Can not create macro");
                 return FALSE;
         }
@@ -308,24 +309,26 @@ int storemac(int f, int n)
 int storeproc(int f, int n)
 {
         struct buffer *bp;      /* pointer to macro buffer */
-        int status;     /* return status */
-        char bname[NBUFN];      /* name of buffer to use */
+        int status;             /* return status */
+        char bufn[NBUFN+1];     /* name of buffer to use */
 
         /* a numeric argument means its a numbered macro */
         if (f == TRUE)
                 return storemac(f, n);
 
-        /* get the name of the procedure */
+/* Prepend the procedure name to the buffer marker tag */
+        bufn[0] = '/';
         if ((status =
-             mlreply("Procedure name: ", &bname[1], NBUFN - 2)) != TRUE)
+             mlreply("Procedure name: ", &bufn[1], NBUFN)) != TRUE)
                 return status;
-
-        /* construct the macro buffer name */
-        bname[0] = '*';
-        strcat(bname, "*");
+        if (strlen(bufn) >= NBUFN) {
+            mlforce("Procedure name too long (store): %s. Ignored.", bufn);
+            sleep(1);
+            return TRUE;    /* Don't abort start-up file */
+        }
 
         /* set up the new macro buffer */
-        if ((bp = bfind(bname, TRUE, BFINVS)) == NULL) {
+        if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
                 mlwrite("Can not create macro");
                 return FALSE;
         }
@@ -348,17 +351,29 @@ int storeproc(int f, int n)
 int execproc(int f, int n)
 {
         struct buffer *bp;      /* ptr to buffer to execute */
-        int status;     /* status return */
-        char bufn[NBUFN + 2];   /* name of buffer to execute */
+        int status;             /* status return */
+        char bufn[NBUFN+1];     /* name of buffer to execute */
 
-        /* find out what buffer the user wants to execute */
-        if ((status =
-             mlreply("Execute procedure: ", &bufn[1], NBUFN)) != TRUE)
-                return status;
+/* Prepend the procedure name to the buffer marker tag */
+        bufn[0] = '/';
+
+        if (input_waiting != NULL) {
+            strcpy(bufn+1, input_waiting);
+            input_waiting = NULL;   /* We've used it */
+        }
+        else {
+            if ((status =
+                 mlreply("Execute procedure: ", &bufn[1], NBUFN)) != TRUE)
+                    return status;
+            if (strlen(bufn) >= NBUFN) {
+                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
+                sleep(1);
+                return TRUE;    /* Don't abort start-up file */
+            }
+        }
 
         /* construct the buffer name */
-        bufn[0] = '*';
-        strcat(bufn, "*");
+        bufn[0] = '/';
 
         /* find the pointer to that buffer */
         if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
@@ -383,7 +398,7 @@ int execproc(int f, int n)
 int execbuf(int f, int n)
 {
         struct buffer *bp;      /* ptr to buffer to execute */
-        int status;     /* status return */
+        int status;             /* status return */
         char bufn[NSTRING];     /* name of buffer to execute */
 
         /* find out what buffer the user wants to execute */
@@ -477,10 +492,8 @@ int dobuf(struct buffer *bp)
                 if (eline[0] == '!' && eline[1] == 'w' && eline[2] == 'h') {
                         whtemp = (struct while_block *)malloc(sizeof(struct while_block));
                         if (whtemp == NULL) {
-                              noram:mlwrite
-                                    ("%%Out of memory during while scan");
-                              failexit:freewhile
-                                    (scanner);
+noram:                          mlwrite("%%Out of memory during while scan");
+failexit:                       freewhile(scanner);
                                 freewhile(whlist);
                                 return FALSE;
                         }
@@ -526,7 +539,7 @@ int dobuf(struct buffer *bp)
                         } while (whlist->w_type == BTBREAK);
                 }
 
-              nxtscan:          /* on to the next line */
+                nxtscan:          /* on to the next line */
                 lp = lp->l_fp;
         }
 
@@ -925,12 +938,12 @@ int dofile(char *fname)
 {
         struct buffer *bp;      /* buffer to place file to exeute */
         struct buffer *cb;      /* temp to hold current buf while we read */
-        int status;     /* results of various calls */
-        char bname[NBUFN];      /* name of buffer */
+        int status;             /* results of various calls */
+        char bufn[NBUFN];       /* name of buffer */
 
-        makename(bname, fname); /* derive the name of the buffer */
-        unqname(bname);         /* make sure we don't stomp things */
-        if ((bp = bfind(bname, TRUE, 0)) == NULL)       /* get the needed buffer */
+        makename(bufn, fname);  /* derive the name of the buffer */
+        unqname(bufn);          /* make sure we don't stomp things */
+        if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
                 return FALSE;
 
         bp->b_mode = MDVIEW;    /* mark the buffer as read only */
@@ -967,8 +980,8 @@ int dofile(char *fname)
 int cbuf(int f, int n, int bufnum)
 {
         struct buffer *bp;      /* ptr to buffer to execute */
-        int status;     /* status return */
-        static char bufname[] = "*Macro xx*";
+        int status;             /* status return */
+        static char bufname[] = "/Macro xx";
 
         /* make the buffer name */
         bufname[7] = '0' + (bufnum / 10);

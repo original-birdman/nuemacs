@@ -15,411 +15,246 @@
  * This table  is *roughly* in ASCII order, left to right across the
  * characters of the command. This explains the funny location of the
  * control-X commands.
+ * This is the standard binding and is copied to the dynamically
+ * allocated keytab at start-up. It only contians live entries - the
+ * allocation mechanism initializes keytab with ENDL_KMAP entries and
+ * an ENDS_KMAP entry as the final element.
  */
-struct key_tab keytab[NBINDS] = {
-        {CONTROL | 'A', gotobol}
-        ,
-        {CONTROL | 'B', backchar}
-        ,
-        {CONTROL | 'C', insspace}
-        ,
-        {CONTROL | 'D', forwdel}
-        ,
-        {CONTROL | 'E', gotoeol}
-        ,
-        {CONTROL | 'F', forwchar}
-        ,
-        {CONTROL | 'G', ctrlg}
-        ,
-        {CONTROL | 'H', backdel}
-        ,
-        {CONTROL | 'I', insert_tab}
-        ,
-        {CONTROL | 'J', indent}
-        ,
-        {CONTROL | 'K', killtext}
-        ,
-        {CONTROL | 'L', redraw}
-        ,
-        {CONTROL | 'M', insert_newline}
-        ,
-        {CONTROL | 'N', forwline}
-        ,
-        {CONTROL | 'O', openline}
-        ,
-        {CONTROL | 'P', backline}
-        ,
-        {CONTROL | 'Q', quote}
-        ,
-        {CONTROL | 'R', backsearch}
-        ,
-        {CONTROL | 'S', forwsearch}
-        ,
-        {CONTROL | 'T', twiddle}
-        ,
-        {CONTROL | 'U', unarg}
-        ,
-        {CONTROL | 'V', forwpage}
-        ,
-        {CONTROL | 'W', killregion}
-        ,
-        {CONTROL | 'X', cex}
-        ,
-        {CONTROL | 'Y', yank}
-        ,
-        {CONTROL | 'Z', backpage}
-        ,
-        {CONTROL | ']', metafn}
-        ,
-        {CTLX | CONTROL | 'B', listbuffers}
-        ,
-        {CTLX | CONTROL | 'C', quit}
-        ,                       /* Hard quit.           */
+#define KEYTAB_INCR 32
+
+struct key_tab *keytab;
+struct key_tab init_keytab[] = {
+        {FUNC_KMAP, CONTROL | 'A', {gotobol}            },
+        {FUNC_KMAP, CONTROL | 'B', {backchar}           },
+        {FUNC_KMAP, CONTROL | 'C', {insspace}           },
+        {FUNC_KMAP, CONTROL | 'D', {forwdel}            },
+        {FUNC_KMAP, CONTROL | 'E', {gotoeol}            },
+        {FUNC_KMAP, CONTROL | 'F', {forwchar}           },
+        {FUNC_KMAP, CONTROL | 'G', {ctrlg}              },
+        {FUNC_KMAP, CONTROL | 'H', {backdel}            },
+        {FUNC_KMAP, CONTROL | 'I', {insert_tab}         },
+        {FUNC_KMAP, CONTROL | 'J', {indent}             },
+        {FUNC_KMAP, CONTROL | 'K', {killtext}           },
+        {FUNC_KMAP, CONTROL | 'L', {redraw}             },
+        {FUNC_KMAP, CONTROL | 'M', {insert_newline}     },
+        {FUNC_KMAP, CONTROL | 'N', {forwline}           },
+        {FUNC_KMAP, CONTROL | 'O', {openline}           },
+        {FUNC_KMAP, CONTROL | 'P', {backline}           },
+        {FUNC_KMAP, CONTROL | 'Q', {quote}              },
+        {FUNC_KMAP, CONTROL | 'R', {backsearch}         },
+        {FUNC_KMAP, CONTROL | 'S', {forwsearch}         },
+        {FUNC_KMAP, CONTROL | 'T', {twiddle}            },
+        {FUNC_KMAP, CONTROL | 'U', {unarg}              },
+        {FUNC_KMAP, CONTROL | 'V', {forwpage}           },
+        {FUNC_KMAP, CONTROL | 'W', {killregion}         },
+        {FUNC_KMAP, CONTROL | 'X', {cex}                },
+        {FUNC_KMAP, CONTROL | 'Y', {yank}               },
+        {FUNC_KMAP, CONTROL | 'Z', {backpage}           },
+        {FUNC_KMAP, CONTROL | ']', {metafn}             },
+        {FUNC_KMAP, CTLX | CONTROL | 'B', {listbuffers} },
+        {FUNC_KMAP, CTLX | CONTROL | 'C', {quit}        }, /* Hard quit. */
 #if     PKCODE & AEDIT
-        {CTLX | CONTROL | 'A', detab}
-        ,
+        {FUNC_KMAP, CTLX | CONTROL | 'A', {detab}       },
 #endif
 #if     PKCODE
-        {CTLX | CONTROL | 'D', filesave}
-        ,                       /* alternative          */
+        {FUNC_KMAP, CTLX | CONTROL | 'D', {filesave}    }, /* alternative */
 #else
 #if     AEDIT
-        {CTLX | CONTROL | 'D', detab}
-        ,
+        {FUNC_KMAP, CTLX | CONTROL | 'D', {detab}       },
 #endif
 #endif
 #if     AEDIT
-        {CTLX | CONTROL | 'E', entab}
-        ,
+        {FUNC_KMAP, CTLX | CONTROL | 'E', {entab}       },
 #endif
-        {CTLX | CONTROL | 'F', filefind}
-        ,
-        {CTLX | CONTROL | 'I', insfile}
-        ,
-        {CTLX | CONTROL | 'L', lowerregion}
-        ,
-        {CTLX | CONTROL | 'M', delmode}
-        ,
-        {CTLX | CONTROL | 'N', mvdnwind}
-        ,
-        {CTLX | CONTROL | 'O', deblank}
-        ,
-        {CTLX | CONTROL | 'P', mvupwind}
-        ,
-        {CTLX | CONTROL | 'R', fileread}
-        ,
-        {CTLX | CONTROL | 'S', filesave}
-        ,
+        {FUNC_KMAP, CTLX | CONTROL | 'F', {filefind}    },
+        {FUNC_KMAP, CTLX | CONTROL | 'I', {insfile}     },
+        {FUNC_KMAP, CTLX | CONTROL | 'L', {lowerregion} },
+        {FUNC_KMAP, CTLX | CONTROL | 'M', {delmode}     },
+        {FUNC_KMAP, CTLX | CONTROL | 'N', {mvdnwind}    },
+        {FUNC_KMAP, CTLX | CONTROL | 'O', {deblank}     },
+        {FUNC_KMAP, CTLX | CONTROL | 'P', {mvupwind}    },
+        {FUNC_KMAP, CTLX | CONTROL | 'R', {fileread}    },
+        {FUNC_KMAP, CTLX | CONTROL | 'S', {filesave}    },
 #if     AEDIT
-        {CTLX | CONTROL | 'T', trim}
-        ,
+        {FUNC_KMAP, CTLX | CONTROL | 'T', {trim}        },
 #endif
-        {CTLX | CONTROL | 'U', upperregion}
-        ,
-        {CTLX | CONTROL | 'V', viewfile}
-        ,
-        {CTLX | CONTROL | 'W', filewrite}
-        ,
-        {CTLX | CONTROL | 'X', swapmark}
-        ,
-        {CTLX | CONTROL | 'Z', shrinkwind}
-        ,
-        {CTLX | '?', deskey}
-        ,
-        {CTLX | '!', spawn}
-        ,
-        {CTLX | '@', pipecmd}
-        ,
-        {CTLX | '#', filter_buffer}
-        ,
-        {CTLX | '$', execprg}
-        ,
-        {CTLX | '=', showcpos}
-        ,
-        {CTLX | '(', ctlxlp}
-        ,
-        {CTLX | ')', ctlxrp}
-        ,
-        {CTLX | '^', enlargewind}
-        ,
-        {CTLX | '0', delwind}
-        ,
-        {CTLX | '1', onlywind}
-        ,
-        {CTLX | '2', splitwind}
-        ,
-        {CTLX | 'A', setvar}
-        ,
-        {CTLX | 'B', usebuffer}
-        ,
-        {CTLX | 'C', spawncli}
-        ,
+        {FUNC_KMAP, CTLX | CONTROL | 'U', {upperregion} },
+        {FUNC_KMAP, CTLX | CONTROL | 'V', {viewfile}    },
+        {FUNC_KMAP, CTLX | CONTROL | 'W', {filewrite}   },
+        {FUNC_KMAP, CTLX | CONTROL | 'X', {swapmark}    },
+        {FUNC_KMAP, CTLX | CONTROL | 'Z', {shrinkwind}  },
+        {FUNC_KMAP, CTLX | '?', {deskey}                },
+        {FUNC_KMAP, CTLX | '!', {spawn}                 },
+        {FUNC_KMAP, CTLX | '@', {pipecmd}               },
+        {FUNC_KMAP, CTLX | '#', {filter_buffer}         },
+        {FUNC_KMAP, CTLX | '$', {execprg}               },
+        {FUNC_KMAP, CTLX | '=', {showcpos}              },
+        {FUNC_KMAP, CTLX | '(', {ctlxlp}                },
+        {FUNC_KMAP, CTLX | ')', {ctlxrp}                },
+        {FUNC_KMAP, CTLX | '^', {enlargewind}           },
+        {FUNC_KMAP, CTLX | '0', {delwind}               },
+        {FUNC_KMAP, CTLX | '1', {onlywind}              },
+        {FUNC_KMAP, CTLX | '2', {splitwind}             },
+        {FUNC_KMAP, CTLX | 'A', {setvar}                },
+        {FUNC_KMAP, CTLX | 'B', {usebuffer}             },
+        {FUNC_KMAP, CTLX | 'C', {spawncli}              },
 #if     BSD | __hpux | SVR4
-        {CTLX | 'D', bktoshell}
-        ,
+        {FUNC_KMAP, CTLX | 'D', {bktoshell}             },
 #endif
-        {CTLX | 'E', ctlxe}
-        ,
-        {CTLX | 'F', setfillcol}
-        ,
-        {CTLX | 'K', killbuffer}
-        ,
-        {CTLX | 'M', setemode}
-        ,
-        {CTLX | 'N', filename}
-        ,
-        {CTLX | 'O', nextwind}
-        ,
-        {CTLX | 'P', prevwind}
-        ,
+        {FUNC_KMAP, CTLX | 'E', {ctlxe}                 },
+        {FUNC_KMAP, CTLX | 'F', {setfillcol}            },
+        {FUNC_KMAP, CTLX | 'K', {killbuffer}            },
+        {FUNC_KMAP, CTLX | 'M', {setemode}              },
+        {FUNC_KMAP, CTLX | 'N', {filename}              },
+        {FUNC_KMAP, CTLX | 'O', {nextwind}              },
+        {FUNC_KMAP, CTLX | 'P', {prevwind}              },
 #if     PKCODE
-        {CTLX | 'Q', quote}
-        ,                       /* alternative  */
+        {FUNC_KMAP, CTLX | 'Q', {quote}                 }, /* alternative */
 #endif
 #if     ISRCH
-        {CTLX | 'R', risearch}
-        ,
-        {CTLX | 'S', fisearch}
-        ,
+        {FUNC_KMAP, CTLX | 'R', {risearch}              },
+        {FUNC_KMAP, CTLX | 'S', {fisearch}              },
 #endif
-        {CTLX | 'W', resize}
-        ,
-        {CTLX | 'X', nextbuffer}
-        ,
-        {CTLX | 'Z', enlargewind}
-        ,
+        {FUNC_KMAP, CTLX | 'W', {resize}                },
+        {FUNC_KMAP, CTLX | 'X', {nextbuffer}            },
+        {FUNC_KMAP, CTLX | 'Z', {enlargewind}           },
 #if     WORDPRO
-        {META | CONTROL | 'C', wordcount}
-        ,
+        {FUNC_KMAP, META | CONTROL | 'C', {wordcount}   },
 #endif
 #if     PKCODE
-        {META | CONTROL | 'D', newsize}
-        ,
+        {FUNC_KMAP, META | CONTROL | 'D', {newsize}     },
 #endif
 #if     PROC
-        {META | CONTROL | 'E', execproc}
-        ,
+        {FUNC_KMAP, META | CONTROL | 'E', {execproc}    },
 #endif
 #if     CFENCE
-        {META | CONTROL | 'F', getfence}
-        ,
+        {FUNC_KMAP, META | CONTROL | 'F', {getfence}    },
 #endif
-        {META | CONTROL | 'H', delbword}
-        ,
-        {META | CONTROL | 'K', unbindkey}
-        ,
-        {META | CONTROL | 'L', reposition}
-        ,
-        {META | CONTROL | 'M', delgmode}
-        ,
-        {META | CONTROL | 'N', namebuffer}
-        ,
-        {META | CONTROL | 'R', qreplace}
-        ,
-        {META | CONTROL | 'S', newsize}
-        ,
-        {META | CONTROL | 'T', newwidth}
-        ,
-        {META | CONTROL | 'V', scrnextdw}
-        ,
+        {FUNC_KMAP, META | CONTROL | 'H', {delbword}    },
+        {FUNC_KMAP, META | CONTROL | 'K', {unbindkey}   },
+        {FUNC_KMAP, META | CONTROL | 'L', {reposition}  },
+        {FUNC_KMAP, META | CONTROL | 'M', {delgmode}    },
+        {FUNC_KMAP, META | CONTROL | 'N', {namebuffer}  },
+        {FUNC_KMAP, META | CONTROL | 'R', {qreplace}    },
+        {FUNC_KMAP, META | CONTROL | 'S', {newsize}     },
+        {FUNC_KMAP, META | CONTROL | 'T', {newwidth}    },
+        {FUNC_KMAP, META | CONTROL | 'V', {scrnextdw}   },
 #if     WORDPRO
-        {META | CONTROL | 'W', killpara}
-        ,
+        {FUNC_KMAP, META | CONTROL | 'W', {killpara}    },
 #endif
-        {META | CONTROL | 'Z', scrnextup}
-        ,
-        {META | ' ', setmark}
-        ,
-        {META | '?', help}
-        ,
-        {META | '!', reposition}
-        ,
-        {META | '.', setmark}
-        ,
-        {META | '>', gotoeob}
-        ,
-        {META | '<', gotobob}
-        ,
-        {META | '~', unmark}
-        ,
+        {FUNC_KMAP, META | CONTROL | 'Z', {scrnextup}   },
+        {FUNC_KMAP, META | ' ', {setmark}               },
+        {FUNC_KMAP, META | '?', {help}                  },
+        {FUNC_KMAP, META | '!', {reposition}            },
+        {FUNC_KMAP, META | '.', {setmark}               },
+        {FUNC_KMAP, META | '>', {gotoeob}               },
+        {FUNC_KMAP, META | '<', {gotobob}               },
+        {FUNC_KMAP, META | '~', {unmark}                },
 #if     APROP
-        {META | 'A', apro}
-        ,
+        {FUNC_KMAP, META | 'A', {apro}                  },
 #endif
-        {META | 'B', backword}
-        ,
-        {META | 'C', capword}
-        ,
-        {META | 'D', delfword}
-        ,
+        {FUNC_KMAP, META | 'B', {backword}              },
+        {FUNC_KMAP, META | 'C', {capword}               },
+        {FUNC_KMAP, META | 'D', {delfword}              },
 #if     CRYPT
-        {META | 'E', set_encryption_key}
-        ,
+        {FUNC_KMAP, META | 'E', {set_encryption_key}    },
 #endif
-        {META | 'F', forwword}
-        ,
-        {META | 'G', gotoline}
-        ,
+        {FUNC_KMAP, META | 'F', {forwword}              },
+        {FUNC_KMAP, META | 'G', {gotoline}              },
 #if     PKCODE
 #if     WORDPRO
-        {META | 'J', justpara}
-        ,
+        {FUNC_KMAP, META | 'J', {justpara}              },
 #endif
 #endif
-        {META | 'K', bindtokey}
-        ,
-        {META | 'L', lowerword}
-        ,
-        {META | 'M', setgmode}
-        ,
+        {FUNC_KMAP, META | 'K', {bindtokey}             },
+        {FUNC_KMAP, META | 'L', {lowerword}             },
+        {FUNC_KMAP, META | 'M', {setgmode}              },
 #if     WORDPRO
-        {META | 'N', gotoeop}
-        ,
-        {META | 'P', gotobop}
-        ,
-        {META | 'Q', fillpara}
-        ,
+        {FUNC_KMAP, META | 'N', {gotoeop}               },
+        {FUNC_KMAP, META | 'P', {gotobop}               },
+        {FUNC_KMAP, META | 'Q', {fillpara}              },
 #endif
-        {META | 'R', sreplace}
-        ,
+        {FUNC_KMAP, META | 'R', {sreplace}              },
 #if     PKCODE
-        {META | 'S', forwsearch}
-        ,                       /* alternative P.K.     */
+        {FUNC_KMAP, META | 'S', {forwsearch}            }, /* alternative P.K. */
 #else
 #if     BSD
-        {META | 'S', bktoshell}
-        ,
+        {FUNC_KMAP, META | 'S', {bktoshell}             },
 #endif
 #endif
-        {META | 'U', upperword}
-        ,
-        {META | 'V', backpage}
-        ,
-        {META | 'W', copyregion}
-        ,
-        {META | 'X', namedcmd}
-        ,
-        {META | 'Z', quickexit}
-        ,
-        {META | 0x7F, delbword}
-        ,
+        {FUNC_KMAP, META | 'U', {upperword}             },
+        {FUNC_KMAP, META | 'V', {backpage}              },
+        {FUNC_KMAP, META | 'W', {copyregion}            },
+        {FUNC_KMAP, META | 'X', {namedcmd}              },
+        {FUNC_KMAP, META | 'Z', {quickexit}             },
+        {FUNC_KMAP, META | 0x7F, {delbword}             },
 
 #if     MSDOS
-        {SPEC | CONTROL | '_', forwhunt}
-        ,
-        {SPEC | CONTROL | 'S', backhunt}
-        ,
-        {SPEC | 71, gotobol}
-        ,
-        {SPEC | 72, backline}
-        ,
-        {SPEC | 73, backpage}
-        ,
-        {SPEC | 75, backchar}
-        ,
-        {SPEC | 77, forwchar}
-        ,
-        {SPEC | 79, gotoeol}
-        ,
-        {SPEC | 80, forwline}
-        ,
-        {SPEC | 81, forwpage}
-        ,
-        {SPEC | 82, insspace}
-        ,
-        {SPEC | 83, forwdel}
-        ,
-        {SPEC | 115, backword}
-        ,
-        {SPEC | 116, forwword}
-        ,
+        {FUNC_KMAP, SPEC | CONTROL | '_', {forwhunt}    },
+        {FUNC_KMAP, SPEC | CONTROL | 'S', {backhunt}    },
+        {FUNC_KMAP, SPEC | 71, {gotobol}                },
+        {FUNC_KMAP, SPEC | 72, {backline}               },
+        {FUNC_KMAP, SPEC | 73, {backpage}               },
+        {FUNC_KMAP, SPEC | 75, {backchar}               },
+        {FUNC_KMAP, SPEC | 77, {forwchar}               },
+        {FUNC_KMAP, SPEC | 79, {gotoeol}                },
+        {FUNC_KMAP, SPEC | 80, {forwline}               },
+        {FUNC_KMAP, SPEC | 81, {forwpage}               },
+        {FUNC_KMAP, SPEC | 82, {insspace}               },
+        {FUNC_KMAP, SPEC | 83, {forwdel}                },
+        {FUNC_KMAP, SPEC | 115, {backword}              },
+        {FUNC_KMAP, SPEC | 116, {forwword}              },
 #if     WORDPRO
-        {SPEC | 132, gotobop}
-        ,
-        {SPEC | 118, gotoeop}
-        ,
+        {FUNC_KMAP, SPEC | 132, {gotobop}               },
+        {FUNC_KMAP, SPEC | 118, {gotoeop}               },
 #endif
-        {SPEC | 84, cbuf1}
-        ,
-        {SPEC | 85, cbuf2}
-        ,
-        {SPEC | 86, cbuf3}
-        ,
-        {SPEC | 87, cbuf4}
-        ,
-        {SPEC | 88, cbuf5}
-        ,
-        {SPEC | 89, cbuf6}
-        ,
-        {SPEC | 90, cbuf7}
-        ,
-        {SPEC | 91, cbuf8}
-        ,
-        {SPEC | 92, cbuf9}
-        ,
-        {SPEC | 93, cbuf10}
-        ,
+        {FUNC_KMAP, SPEC | 84, {cbuf1}                  },
+        {FUNC_KMAP, SPEC | 85, {cbuf2}                  },
+        {FUNC_KMAP, SPEC | 86, {cbuf3}                  },
+        {FUNC_KMAP, SPEC | 87, {cbuf4}                  },
+        {FUNC_KMAP, SPEC | 88, {cbuf5}                  },
+        {FUNC_KMAP, SPEC | 89, {cbuf6}                  },
+        {FUNC_KMAP, SPEC | 90, {cbuf7}                  },
+        {FUNC_KMAP, SPEC | 91, {cbuf8}                  },
+        {FUNC_KMAP, SPEC | 92, {cbuf9}                  },
+        {FUNC_KMAP, SPEC | 93, {cbuf10}                 },
 #if PKCODE
-        {SPEC | 117, gotoeob}
-        ,
-        {SPEC | 119, gotobob}
-        ,
-        {SPEC | 141, gotobop}
-        ,
-        {SPEC | 145, gotoeop}
-        ,
-        {SPEC | 146, yank}
-        ,
-        {SPEC | 147, killregion}
-        ,
+        {FUNC_KMAP, SPEC | 117, {gotoeob}               },
+        {FUNC_KMAP, SPEC | 119, {gotobob}               },
+        {FUNC_KMAP, SPEC | 141, {gotobop}               },
+        {FUNC_KMAP, SPEC | 145, {gotoeop}               },
+        {FUNC_KMAP, SPEC | 146, {yank}                  },
+        {FUNC_KMAP, SPEC | 147, {killregion}            },
 #endif
 #endif
 
 #if     VT220
-        {SPEC | '1', fisearch}
-        ,                       /* VT220 keys   */
-        {SPEC | '2', yank}
-        ,
-        {SPEC | '3', killregion}
-        ,
-        {SPEC | '4', setmark}
-        ,
-        {SPEC | '5', backpage}
-        ,
-        {SPEC | '6', forwpage}
-        ,
-        {SPEC | 'A', backline}
-        ,
-        {SPEC | 'B', forwline}
-        ,
-        {SPEC | 'C', forwchar}
-        ,
-        {SPEC | 'D', backchar}
-        ,
-        {SPEC | 'c', metafn}
-        ,
-        {SPEC | 'd', backchar}
-        ,
-        {SPEC | 'e', forwline}
-        ,
-        {SPEC | 'f', gotobob}
-        ,
-        {SPEC | 'h', help}
-        ,
-        {SPEC | 'i', cex}
-        ,
+        {FUNC_KMAP, SPEC | '1', {fisearch}              }, /* VT220 keys   */
+        {FUNC_KMAP, SPEC | '2', {yank}                  },
+        {FUNC_KMAP, SPEC | '3', {killregion}            },
+        {FUNC_KMAP, SPEC | '4', {setmark}               },
+        {FUNC_KMAP, SPEC | '5', {backpage}              },
+        {FUNC_KMAP, SPEC | '6', {forwpage}              },
+        {FUNC_KMAP, SPEC | 'A', {backline}              },
+        {FUNC_KMAP, SPEC | 'B', {forwline}              },
+        {FUNC_KMAP, SPEC | 'C', {forwchar}              },
+        {FUNC_KMAP, SPEC | 'D', {backchar}              },
+        {FUNC_KMAP, SPEC | 'c', {metafn}                },
+        {FUNC_KMAP, SPEC | 'd', {backchar}              },
+        {FUNC_KMAP, SPEC | 'e', {forwline}              },
+        {FUNC_KMAP, SPEC | 'f', {gotobob}               },
+        {FUNC_KMAP, SPEC | 'h', {help}                  },
+        {FUNC_KMAP, SPEC | 'i', {cex}                   },
 #endif
 
-        {0x7F, backdel}
-        ,
+        {FUNC_KMAP, 0x7F, {backdel}                     },
 
         /* special internal bindings */
-        { SPEC | META | 'W', wrapword },        /* called on word wrap */
-        { SPEC | META | 'C', nullproc },        /*  every command input */
-        { SPEC | META | 'R', nullproc },        /*  on file read */
-        { SPEC | META | 'X', nullproc },        /*  on window change P.K. */
+        {FUNC_KMAP,  SPEC | META | 'W', {wrapword }     }, /* called on word wrap */
+        {FUNC_KMAP,  SPEC | META | 'C', {nullproc }     }, /*  every command input */
+        {FUNC_KMAP,  SPEC | META | 'R', {nullproc }     }, /*  on file read */
+        {FUNC_KMAP,  SPEC | META | 'X', {nullproc }     }, /*  on window change P.K. */
 
-        {0, NULL}
 };
 
 #endif  /* EBIND_H_ */

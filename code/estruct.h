@@ -587,15 +587,24 @@ struct terminal {
 #endif
 
 /* Structure for the table of initial key bindings. */
+#define ENDS_KMAP -1
+#define ENDL_KMAP 0
+#define FUNC_KMAP 1
+#define PROC_KMAP 2
+typedef int (*fn_t)(int, int);  /* Bound function prototype*/
 struct key_tab {
-        int k_code;              /* Key code */
-        int (*k_fp)(int, int);   /* Routine to handle it */
+        int k_type;             /* function or procedure buffer */
+        int k_code;             /* Key code */
+        union {
+            fn_t k_fp;          /* Routine to handle it, or... */
+            char *pbp;          /* ...procedure buffer name */
+        } hndlr;
 };
 
 /* Structure for the name binding table. */
 struct name_bind {
         char *n_name;            /* name of function key */
-        int (*n_func)(int, int); /* function name is bound to */
+        fn_t n_func;             /* function name is bound to */
 };
 
 /* The editor holds deleted text chunks in the struct kill buffer. The

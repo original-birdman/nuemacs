@@ -9,7 +9,8 @@
  *      modified by Petri Kutvonen
  */
 
-#include        <stdio.h>
+#include <stdio.h>
+#include <unistd.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -107,7 +108,7 @@ int swbuffer(struct buffer *bp)
                 curbp->b_mode |= gmode; /* P.K. */
 /* GGR - handle file-hooks */
                 struct buffer *sb;
-                if ((sb=bfind("*file-hooks*", FALSE, 0)) != NULL)
+                if ((sb=bfind("/file-hooks", FALSE, 0)) != NULL)
                         dobuf(sb);
         }
         curwp->w_bufp = bp;
@@ -467,6 +468,14 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
         struct buffer *sb;      /* buffer to insert after */
         struct line *lp;
 
+/* GGR Add a check on the sent namelength, given that we are going
+ * to copy it into a structure if we create a new buffer.
+ */
+        if (strlen(bname) >= NBUFN) {   /* We need a NUL too */
+            mlforce("Buffer name too long: %s. Ignored.", bname);
+            sleep(1);
+            return NULL;
+        }
         bp = bheadp;
         while (bp != NULL) {
                 if (strcmp(bname, bp->b_bname) == 0)
@@ -522,7 +531,7 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
  * find the pointer to that buffer.  If it's not there, forget it.
  * If it *is*, run it; ignore errors here...
  */
-                if (!inmb && ((sb=bfind("*file-hooks*", FALSE, 0)) != NULL)) {
+                if (!inmb && ((sb=bfind("/file-hooks", FALSE, 0)) != NULL)) {
                         struct buffer *savbp = curbp;
                         curbp = bp;
                         dobuf(sb);

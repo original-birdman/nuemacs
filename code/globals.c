@@ -152,3 +152,7 @@ int  using_ggr_style = 0;
 
 int chg_width        = 0;
 int chg_height       = 0;
+
+char *input_waiting  = NULL;
+
+int keytab_alloc_ents = 0;
