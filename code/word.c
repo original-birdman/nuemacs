@@ -455,6 +455,9 @@ int fillwhole(int f, int n)
         return(status);
 }
 
+/* Space factor needed for a unicode array copied from a char array */
+#define MFACTOR sizeof(unicode_t)/sizeof(char)
+
 /*
  * Fill the current paragraph according to the current
  * fill column
@@ -464,8 +467,8 @@ int fillwhole(int f, int n)
 int fillpara(int f, int n)
 {
         unicode_t c;            /* current char during scan    */
-        unicode_t *wbuf;        /* buffer for current word     */
-        size_t wbuf_size;
+        unicode_t *wbuf       ; /* buffer for current word     */
+        size_t wbuf_ents;       /* Number of elements needed.. */
         int *space_ind;         /* Where the spaces are */
         int nspaces;            /* How many spaces there are */
 
@@ -525,10 +528,10 @@ int fillpara(int f, int n)
  * line (plus 1, for luck...) in case there is no word-break in it.
  * So we allocate it dynamically.
  */
-        wbuf_size = sizeof(wbuf[0])*(llength(curwp->w_dotp) + 1);
-        wbuf = malloc(wbuf_size);
+        wbuf_ents = llength(curwp->w_dotp) + 1;
+        wbuf = malloc(MFACTOR*wbuf_ents);
         if (n > 1) {            /* We've been asked to right-justify */
-                space_ind = malloc((wbuf_size+1)/2);
+                space_ind = malloc(sizeof(int)*(wbuf_ents+1)/2);
         }
         else {
                 space_ind = NULL;   /* no right-justify */
@@ -542,14 +545,15 @@ int fillpara(int f, int n)
                         c = ' ';
                         if (lforw(curwp->w_dotp) == eopline)
                                 eopflag = TRUE;
-/* GGR  - Reallocate buffer if more space needed
+/* GGR  - Reallocate buffer if more space needed.
+ *        Remember we are using unicode_t, while llength is char
  *        Make sure we check the *next* line length
  */
-                        if (llength(lforw(curwp->w_dotp)) >= wbuf_size) {
-                            wbuf_size = sizeof(wbuf[0])*(llength(lforw(curwp->w_dotp)) + 1);
-                            wbuf = realloc(wbuf, wbuf_size);
+                        if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
+                            wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
+                            wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
                             if (space_ind) {    /* We're padding */
-                                space_ind = realloc(space_ind, (wbuf_size+1)/2);
+                                space_ind = realloc(space_ind, sizeof(int)*(wbuf_ents+1)/2);
                             }
                         }
                 } else
@@ -576,7 +580,7 @@ int fillpara(int f, int n)
                         wbuf[wordlen++] = c;
                 } else if (wordlen) {
                         /* at a word break with a word waiting */
-                        /* calculate tentitive new length with word added */
+                        /* calculate tentative new length with word added */
                         newlength = clength + 1 + wordlen;
                         if (newlength <= fillcol) {
                                 /* add word to current line */
@@ -598,7 +602,6 @@ int fillpara(int f, int n)
 /* We can only do it if we've actually found some spaces         */
 
 if (nspaces) {
-
 /* Remember where we are on the line.
  * Also, was the last char added to line a space after a dot?
  * Ignore if so.
@@ -683,7 +686,7 @@ int justpara(int f, int n)
 {
         unicode_t c;            /* current char durring scan    */
         unicode_t *wbuf;        /* buffer for current word      */
-        size_t wbuf_size;
+        size_t wbuf_ents;
         int wordlen;            /* length of current word       */
         int clength;            /* position on line during fill */
         int i;                  /* index during word copy       */
@@ -734,8 +737,8 @@ int justpara(int f, int n)
  * wbuf needs to be sufficiently long to contain all of the longest
  * line (plus 1, for luck...) in case there is no word-break in it.
  */
-        wbuf_size = sizeof(wbuf[0])*(llength(curwp->w_dotp) + 1);
-        wbuf = malloc(wbuf_size);
+        wbuf_ents = llength(curwp->w_dotp) + 1;
+        wbuf = malloc(MFACTOR*wbuf_ents);
         eosflag = FALSE;
         trailing_eos = 0;
 
@@ -755,9 +758,9 @@ int justpara(int f, int n)
 /* GGR  - Reallocate buffer if more space needed
  *        Make sure we check the *next* line length
  */
-                        if (llength(lforw(curwp->w_dotp)) >= wbuf_size) {
-                            wbuf_size = sizeof(wbuf[0])*(llength(lforw(curwp->w_dotp)) + 1);
-                            wbuf = realloc(wbuf, wbuf_size);
+                        if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
+                            wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
+                            wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
                         }
                 } else
                         bytes = lgetchar(&c);
