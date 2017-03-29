@@ -288,8 +288,9 @@ int main(int argc, char **argv)
                                 break;
                         case 'v':       /* -v for View File */
                         case 'V':
-                                if (verflag == 1)
-                                  viewflag = TRUE;  /* could be view request */
+                                if (!verflag)
+                                    verflag = 1;    /* could be version or */
+                                viewflag = TRUE;    /* view request */
                                 break;
                         case 'x':       /* GGR: -x for eXtra rc file */
                         case 'X':
