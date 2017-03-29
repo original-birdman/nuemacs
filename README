@@ -13,15 +13,26 @@ uemacs commands to move around, delete, yank etc.  It handles
 filename expansion (ctlI/tab), albeit in a different manner to 4.015.
 That code also handles environment variable expansion.
 
-Other changes are being made to
-  o better handle utf8 strings (ongoing...),
-  o make some buffer dynamically allocatable to cater for very long
-    pieces of text and enlarge others,
+Other changes so far made are:
   o make some things user-configurable in start-up files such as
     * the definition of "end of sentence" characters,
     * how twiddle and forward word work (ggr-mode)
   o fix the display of "binary files" (where ^X and \yy are used),
   o handle utf8 character strings in the message/minibuffer line and the
+    modeline.
+  o better handlingf utf8 strings (zero-width character handling).
+  o Add all options to the usage() output, and handle command-line
+    options better.
+  o enable ctl-Q and ctl-S as command (rather than XON/XOFF).
+  o allow user-created procedures to be bound directly to keys (without
+    needing to use one of the 40 numbered macros), and make the
+    key-table dynamicllay asibsgend, so that it is no longer a limited
+    size.
+
+Other changes to be made are:
+  o better handle utf8 strings (ongoing...),
+  o make some buffer dynamically allocatable to cater for very long
+    pieces of text and enlarge others,
     modeline.
 
 NOTE:

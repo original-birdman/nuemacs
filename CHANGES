@@ -470,7 +470,7 @@ bind.c
     along PATH or in the table.
 
 spawn.c
-    Forbid the runnning of external commands when you are in the
+    Forbid the running of external commands when you are in the
     minibuffer (spawncli(), spawn(), execprg() and pipecmd()).
     There's a forced redraw on return, which ends up clearing the
     minibuffer data, while displaying its status in the status line.
@@ -538,7 +538,7 @@ spawn.c
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.111
+    Update to version GGR4.112
 
 ==========
 
@@ -570,5 +570,55 @@ region.c
 version.h
 etc/uemacs.hlp
     Update to version GGR4.112
+
+==========
+word.c
+    Fix the re-allocation need check for wbuf to cater for char vs.
+    unicode_t sizes.
+
+tcap.c
+    Make curses.h and term.h inclusion conditional, so CygWin and MinGW
+    builds can work.
+
+display.c
+efunc.h
+    Allow mlforce() to take a variable number of args by changing
+    mlwrite() to mlwrite_ap() and making both mlwrite() and mlforce()
+    front ends to that.
+
+bind.c
+buffer.c
+ebind.h
+edef.h
+efunc.h
+estruct.h
+exec.c
+globals.c
+main.c
+     Make the key table dynamically assigned (so no longer a fixed
+     maximum number of bindings) and enable key binding to user-defined
+     procedures.
+     Add checks for given buffer/procedure name being too long. Silent
+     truncation to 14/15 characters could result in running an
+     unintended procedure.
+     Change "special" buffer names from *name* to /name, since the
+     latter leaves more room for "name" and also cannot be generated
+     from a filename.
+
+etc/uemacs.rc
+     Updated to use the new buffer-to-key binding implemented above.
+     This runs the user-defined store-procedure methods directly.
+     Entries from the 40 hard-wired store-macro names are no longer
+     used.
+
+main.c
+     Fix -v/-V handling for consistency.
+
+../CHANGES
+../KNOWN_ISSUES
+../README
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.113
 
 ==========

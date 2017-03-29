@@ -824,7 +824,7 @@ abort:  /* Make sure we're still in our minibuffer */
 #if (MSDOS & (LATTICE | MSC)) | BSD | USG
     free(mbnameptr);            /* free the space */
 #endif
-     zotbuf(bp);
+    zotbuf(bp);
 
 /* Restore real reexecution history */
 
