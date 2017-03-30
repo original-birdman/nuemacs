@@ -17,7 +17,7 @@
 #endif
 
 #if     V7 | BSD | USG
-#define DFLT_PATH "/local/etc/", "/opt/local/etc/"
+#define DFLT_PATH "/opt/local/etc/", "/usr/local/etc/"
 #endif
 
 #if     VMS
