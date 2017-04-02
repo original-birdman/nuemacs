@@ -24,6 +24,7 @@ struct line {
 #define lgetc(lp, n)    ((lp)->l_text[(n)]&0xFF)
 #define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))
 #define llength(lp)     ((lp)->l_used)
+#define lfillchars(lp, n, c)    (memcpy((lp)->l_text, (c), (n)))
 
 extern void lfree(struct line *lp);
 extern void lchange(int flag);

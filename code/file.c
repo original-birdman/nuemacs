@@ -229,7 +229,6 @@ int readin(char *fname, int lockfl)
 {
         struct line *lp1;
         struct line *lp2;
-        int i;
         struct window *wp;
         struct buffer *bp;
         int s;
@@ -297,8 +296,7 @@ int readin(char *fname, int lockfl)
                 lp1->l_bp = lp2;
                 curbp->b_linep->l_bp = lp1;
 /* GGR - ftrulen to handle encrypted files(?) */
-                for (i = 0; i < ftrulen; ++i)
-                        lputc(lp1, i, fline[i]);
+                lfillchars(lp1, ftrulen, fline);
                 ++nline;
                 if (!(nline % 300) && !silent)  /* GGR */
                         mlwrite(MLpre "Reading file" MLpost " : %d lines",
@@ -603,7 +601,6 @@ int ifile(char *fname)
         struct line *lp0;
         struct line *lp1;
         struct line *lp2;
-        int i;
         struct buffer *bp;
         int s;
         int nline;
@@ -653,8 +650,7 @@ int ifile(char *fname)
                 /* and advance and write out the current line */
                 curwp->w_dotp = lp1;
 /* GGR - ftrulen to handle encrypted files(?) */
-                for (i = 0; i < ftrulen; ++i)
-                        lputc(lp1, i, fline[i]);
+                lfillchars(lp1, ftrulen, fline);
                 ++nline;
                 if (!(nline % 300) && !silent)      /* GGR */
                         mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);

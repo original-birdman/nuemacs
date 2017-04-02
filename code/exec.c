@@ -316,7 +316,7 @@ int storeproc(int f, int n)
         if (f == TRUE)
                 return storemac(f, n);
 
-/* Prepend the procedure name to the buffer marker tag */
+/* Append the procedure name to the buffer marker tag */
         bufn[0] = '/';
         if ((status =
              mlreply("Procedure name: ", &bufn[1], NBUFN)) != TRUE)
@@ -354,7 +354,7 @@ int execproc(int f, int n)
         int status;             /* status return */
         char bufn[NBUFN+1];     /* name of buffer to execute */
 
-/* Prepend the procedure name to the buffer marker tag */
+/* Append the procedure name to the buffer marker tag */
         bufn[0] = '/';
 
         if (input_waiting != NULL) {
@@ -671,8 +671,7 @@ failexit:                       freewhile(scanner);
                         }
 
                         /* copy the text into the new line */
-                        for (i = 0; i < linlen; ++i)
-                                lputc(mp, i, eline[i]);
+                        lfillchars(mp, linlen, eline);
 
                         /* attach the line to the end of the buffer */
                         bstore->b_linep->l_bp->l_fp = mp;

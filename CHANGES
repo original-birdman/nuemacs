@@ -622,3 +622,15 @@ etc/uemacs.hlp
     Update to version GGR4.113
 
 ==========
+
+epath.h
+   Set DFLT_PATH to the "standard" locations of /opt/local/etc/ then
+   /usr/local/etc/ for Unix-style systems.
+
+
+buffer.c
+exec.c
+file.c
+line.h
+   Added lfillchars macro to fill line text buffer using memcpy() rather
+   than looping one char at a time.

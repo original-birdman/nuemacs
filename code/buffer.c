@@ -414,14 +414,12 @@ void ltoa(char *buf, int width, long num)
 int addline(char *text)
 {
         struct line *lp;
-        int i;
         int ntext;
 
         ntext = strlen(text);
         if ((lp = lalloc(ntext)) == NULL)
                 return FALSE;
-        for (i = 0; i < ntext; ++i)
-                lputc(lp, i, text[i]);
+        lfillchars(lp, ntext, text);
         blistp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
         lp->l_bp = blistp->b_linep->l_bp;
         blistp->b_linep->l_bp = lp;
