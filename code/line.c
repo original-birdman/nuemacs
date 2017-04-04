@@ -129,30 +129,6 @@ int insspace(int f, int n)
 }
 
 /*
- * linstr -- Insert a string at the current point
- */
-
-int linstr(char *instr)
-{
-        int status = TRUE;
-        char tmpc;
-
-        if (instr != NULL)
-                while ((tmpc = *instr) && status == TRUE) {
-                        status =
-                            (tmpc == '\n' ? lnewline() : linsert(1, tmpc));
-
-                        /* Insertion error? */
-                        if (status != TRUE) {
-                                mlwrite("%%Out of memory while inserting");
-                                break;
-                        }
-                        instr++;
-                }
-        return status;
-}
-
-/*
  * Insert "n" copies of the character "c" at the current location of dot. In
  * the easy case all that happens is the text is stored in the line. In the
  * hard case, the line has to be reallocated. When the window list is updated,
@@ -238,6 +214,36 @@ static int linsert_byte(int n, int c)
                 wp = wp->w_wndp;
         }
         return TRUE;
+}
+
+/*
+ * linstr -- Insert a string at the current point
+ */
+
+int linstr(char *instr)
+{
+        int status = TRUE;
+        char tmpc;
+
+        if (instr != NULL)
+                while ((tmpc = *instr) && status == TRUE) {
+                        status =
+/* GML - linsert will insert unicode
+ *        but we've been sent a (utf8) string!
+ */
+#if 0
+                            (tmpc == '\n' ? lnewline() : linsert(1, tmpc));
+#endif
+                            (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
+
+                        /* Insertion error? */
+                        if (status != TRUE) {
+                                mlwrite("%%Out of memory while inserting");
+                                break;
+                        }
+                        instr++;
+                }
+        return status;
 }
 
 int linsert(int n, int c)
