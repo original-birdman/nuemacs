@@ -99,7 +99,7 @@ store-procedure spell-check
 ;
 set %lindef 0
 set %rindef 0
-set %spc "                                                                  "
+; set %spc "                                                                  "
 
 ;
 ; left-and-right-justify
@@ -162,7 +162,7 @@ store-procedure lr-justify          ; Left and right justify paragraph
 !endm
 ;
 store-procedure toggle-lmode            ; toggle local mode
-    write-message "Toggle mode (ACEMOVWXH): "
+    write-message "Toggle mode (ACEMOVWX): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
@@ -241,15 +241,6 @@ store-procedure toggle-lmode            ; toggle local mode
         set $cmode &bxor $cmode 256
         !goto exit
     !endif
-    !if &seq %modesel "H"
-        !if $hscroll
-            set %report "Horizontal scrolling toggled off"
-        !else
-            set %report "Horizontal scrolling toggled on"
-        !endif
-        set $hscroll &not $hscroll
-        !goto exit
-    !endif
     write-message "Unknown mode"
     !finish
 *exit
@@ -258,7 +249,7 @@ store-procedure toggle-lmode            ; toggle local mode
 !endm
 ;
 store-procedure toggle-gmode            ; toggle global mode
-    write-message "Toggle global mode (ACEMOVWXH): "
+    write-message "Toggle global mode (ACEMOVWX): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
@@ -335,15 +326,6 @@ store-procedure toggle-gmode            ; toggle global mode
             set %report "ASAVE mode toggled on globally"
         !endif
         set $gmode &bxor $gmode 256
-        !goto exit
-    !endif
-    !if &seq %modesel "H"
-        !if $hscroll
-            set %report "Horizontal scrolling toggled off"
-        !else
-            set %report "Horizontal scrolling toggled on"
-        !endif
-        set $hscroll &not $hscroll
         !goto exit
     !endif
     write-message "Unknown global mode"
