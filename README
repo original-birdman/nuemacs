@@ -28,6 +28,9 @@ Other changes so far made are:
     needing to use one of the 40 numbered macros), and make the
     key-table dynamicllay asibsgend, so that it is no longer a limited
     size.
+  o allows you to define key-sequences (phonetic translation tables)
+    that get mapped, on input, to other strings.
+    Useful for utf8 input form an ASCII keyboard.
 
 Other changes to be made are:
   o better handle utf8 strings (ongoing...),

@@ -7,7 +7,7 @@ front-ends.
 
 BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!!
 forwword() and backword() don't know about anything other than ASCII
-work characters. Should(?) handle unicode ones.
+word characters. Should(?) handle unicode ones.
 Similar failing applies to the upperword(), lowerword() and capword()
 functions.
 

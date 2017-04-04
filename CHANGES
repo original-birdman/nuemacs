@@ -634,3 +634,41 @@ file.c
 line.h
    Added lfillchars macro to fill line text buffer using memcpy() rather
    than looping one char at a time.
+
+line.c
+   linstr() takes a char * arg, but was passing this on to linsert(),
+   which expects a unicode arg, and runs unicode_to_utf8() on it!
+   Changed linstr() to call linsert_byte() instead.
+
+etc/uemacs.rc
+   Removed H (horizontal scrolling) mode from the toggle-lmode and
+   toggle-gmode macros, as it no longer exists.
+
+
+buffer.c
+exec.c
+file.c
+globals.c
+line.c
+main.c
+names.c
+spawn.c
+efunc.h
+estruct.h
+   Added code to handle "phonetic translation tables" on input.
+   This allows you to define a table of strings that will be mapped to
+   other strings, allowing for simple input of utf-8 characters.
+   You may have multiple tables, but only one is ever "ready". Usage is
+   defined by a mode (Phon) which may be turned on/off.
+
+ptt/czech.cmd
+   Created a ptt/ directory for ptt tables and added a Czech one.
+
+../CHANGES
+../README
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.114
+
+==========
+
