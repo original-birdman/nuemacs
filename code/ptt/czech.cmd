@@ -48,7 +48,7 @@ store-pttable czech
   T~~    U+0164
   t~~    U+0165
   Z~~    U+017d
-  z~~    U+017c
+  z~~    U+017e
 !endm
 bind-to-key toggle-ptmode               M-^P
 
