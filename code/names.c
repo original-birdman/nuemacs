@@ -202,15 +202,22 @@ struct name_bind names[] = {
 #endif
         {"set-fill-column", setfillcol},
         {"set-mark", setmark},
+#if PROC
+        {"set-pttable", set_pttable},       /* GGR */
+#endif
         {"shell-command", spawn},
         {"shrink-window", shrinkwind},
         {"split-current-window", splitwind},
         {"store-macro", storemac},
 #if     PROC
         {"store-procedure", storeproc},
+        {"store-pttable", storepttable},    /* GGR */
 #endif
 #if     BSD | __hpux | SVR4
         {"suspend-emacs", bktoshell},
+#endif
+#if PROC
+        {"toggle-ptmode", toggle_ptmode},   /* GGR */
 #endif
         {"transpose-characters", twiddle},
 #if     AEDIT

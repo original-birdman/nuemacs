@@ -298,6 +298,216 @@ int storemac(int f, int n)
 }
 
 #if     PROC
+
+/* GGR
+ * Free up any current ptt_ent allocation
+ */
+void ptt_free(struct buffer *bp) {
+
+    struct ptt_ent *fwdptr;
+    struct ptt_ent *ptr = bp->ptt_headp;
+    while(ptr) {
+        fwdptr = ptr->nextp;
+        free(ptr->from);
+        free(ptr->to);
+        free(ptr);
+        ptr = fwdptr;
+    }
+    bp->ptt_headp = NULL;
+    return;
+}
+
+/* GGR
+ * Compile the contents of a buffer into a ptt_remap structure
+ */
+static struct buffer *ptt = NULL;
+static int ptt_compile(struct buffer *bp) {
+
+/* Free up any previously-compiled table */
+
+    ptt_free(bp);
+
+/* Read through the lines of the buffer */
+
+    struct line *hlp = bp->b_linep;
+    char lbuf[NLINE];       /* Could be dynamic... */
+    char tok[NLINE];
+    struct ptt_ent *lastp = NULL;
+    for (struct line *lp = hlp->l_fp; lp != hlp; lp = lp->l_fp) {
+        char to_string[NLINE] = "";
+        int to_len = 0;
+        memcpy(lbuf, lp->l_text, lp->l_used);
+        char *rp = lbuf;
+        lbuf[lp->l_used] = '\0';
+        rp = token(rp, tok, NLINE);
+        char from_string[NLINE];
+        int bow;
+        char *from_start;
+        if (tok[0] == '^') {
+            bow = 1;
+            from_start = tok+1;
+        }
+        else {
+            bow = 0;
+            from_start = tok;
+        }
+        strcpy(from_string, from_start);
+        while(*rp != '\0') {
+            rp = token(rp, tok, NLINE);
+            if (tok[0] == '\0') break;
+            if (!strncmp(tok, "0x", 2)) {
+                long add = strtol(tok+2, NULL, 16);
+                to_string[to_len++] = add;
+            }
+            else if (tok[0] == 'U' && tok[1] == '+') {
+                int val = strtol(tok+2, NULL, 16);
+                int incr = unicode_to_utf8(val, to_string+to_len);
+                to_len += incr;
+            }
+            else {
+                strcat(to_string, tok);
+                to_len += strlen(tok);
+            }
+        }
+        if (to_len == 0) continue;
+        struct ptt_ent *new = malloc(sizeof(struct ptt_ent));
+        if (lastp == NULL)
+            bp->ptt_headp = new;
+        else {
+            lastp->nextp = new;
+        }
+        lastp = new;
+        new->nextp = NULL;
+        new->from_len = strlen(from_string);
+        new->from = malloc(new->from_len+1);
+        strcpy(new->from, from_string);
+        new->to = malloc(to_len+1);
+        strncpy(new->to, to_string, to_len);
+        new->to[to_len] = '\0';
+        new->bow_only = bow;
+    }
+    if (lastp == NULL) return FALSE;
+    ptt = bp;
+    return TRUE;
+}
+
+
+/* GGR
+ * Store a phonetic translation table.
+ * This starts by storing a procedure, so we just use that code.
+ */
+static int ptt_storing = 0;
+int storepttable(int f, int n) {
+    int status = storeproc(f, n);
+    if (status != TRUE) return status;
+
+/* Mark that we need to compile the buffer */
+
+    bstore->b_type = BTPHON;    /* Mark this as a translation buffer */
+    ptt_storing = 1;
+    return TRUE;
+}
+
+/* GGR
+ * Let the user set which translation table to use.
+ * Doesn't (yet?) check that it is a translation table.
+ */
+int set_pttable(int f, int n) {
+    int status;
+    char pttbuf[NBUFN];
+    struct buffer *bp;
+
+/* As soon as a table is defined ptt gets set, so if it isn't
+ * we know that there are no translation tables.
+ */
+
+    if (!ptt) {
+        mlforce("No phonetic translation tables are yet defined!");
+        return FALSE;
+    }
+
+    status = mlreply("Translation table to use?", pttbuf+1, NBUFN-2);
+    if (status != TRUE) return status;
+
+/* Find the ptt buffer */
+    pttbuf[0] = '/';
+    if ((bp = bfind(pttbuf, FALSE, BFINVS)) == NULL) {
+        mlforce("Table %s was not found", pttbuf);
+        return FALSE;
+    }
+
+/* Check that it is a translation buffer */
+
+    if (bp->b_type != BTPHON) {
+        mlforce("Buffer %s is not a translation buffer.", pttbuf);
+        sleep(1);
+        return TRUE;    /* Don't abort start-up file */
+    }
+    ptt = bp;               /* This does not actually activate it */
+    return TRUE;
+}
+
+/* GGR
+ * Toogle the Phonetic Translation table on/off for the current buffer.
+ */
+int toggle_ptmode(int f, int n) {
+    if (mbstop())           /* Disallow in minibuffer */
+        return(FALSE);
+    if (!ptt) {
+        mlforce("No phonetic translation tables are yet defined!");
+        return FALSE;
+    }
+
+/* With a -ve arg we force it off, +ve forces it on and 0 toggles it */
+    int toggle_off = 0;
+    if (f == 0) n = 0;
+    if (n == 0) toggle_off = (curbp->b_mode & MDPHON);
+    if (toggle_off || (n < 0))
+        curbp->b_mode &= ~MDPHON;
+    else
+        curbp->b_mode |= MDPHON;
+    curwp->w_flag |= WFMODE;
+    update(TRUE);
+    return TRUE;
+}
+
+/* GGR
+ * Handle a typed-character when PHON mode is on
+ */
+int ptt_handler(int c) {
+
+    if (!ptt) return FALSE;
+    if (!ptt->ptt_headp && !ptt_compile(ptt))
+        return FALSE;
+
+/* We insert the character for testing... */
+
+    int orig_doto = curwp->w_doto;
+    if (linsert(1, c) != TRUE) return FALSE;
+
+    for (struct ptt_ent *ptr = ptt->ptt_headp; ptr; ptr = ptr->nextp) {
+        if (ptr->from[ptr->from_len-1] != c) continue;
+        if (curwp->w_doto < ptr->from_len) continue;
+        if (strncmp(&curwp->w_dotp->l_text[curwp->w_doto - ptr->from_len],
+                    ptr->from, ptr->from_len)) continue;
+        if (ptr->bow_only && (curwp->w_doto > ptr->from_len)) { /* Not BOL */
+            if (isletter(lgetc(curwp->w_dotp,
+                               curwp->w_doto - ptr->from_len - 1)))
+            continue;
+        }
+
+/* We have to replace the string with the translation */
+        curwp->w_doto -= ptr->from_len;
+        ldelete(ptr->from_len, FALSE);
+        linstr(ptr->to);
+        return TRUE;
+    }
+/* We have to delete the added character before returning */
+    curwp->w_doto = orig_doto;
+    ldelchar(1, FALSE);
+    return FALSE;
+}
+
 /*
  * storeproc:
  *      Set up a procedure buffer and flag to store all
@@ -338,6 +548,7 @@ int storeproc(int f, int n)
 
         /* and set the macro store pointers to it */
         mstore = TRUE;
+        bp->b_type = BTPROC;    /* Mark the buffer type */
         bstore = bp;
         return TRUE;
 }
@@ -379,6 +590,14 @@ int execproc(int f, int n)
         if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
                 mlwrite("No such procedure");
                 return FALSE;
+        }
+
+/* Check that it is a procedure buffer */
+
+        if (bp->b_type != BTPROC) {
+            mlforce("Buffer %s is not a procedure buffer.", bufn);
+            sleep(1);
+            return TRUE;    /* Don't abort start-up file */
         }
 
         /* and now execute it as asked */
@@ -651,6 +870,9 @@ failexit:                       freewhile(scanner);
 
                         /* service only the !ENDM macro here */
                         if (dirnum == DENDM) {
+                                if (ptt_storing) {
+                                    ptt_compile(bstore);
+                                }
                                 mstore = FALSE;
                                 bstore = NULL;
                                 goto onward;

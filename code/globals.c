@@ -12,14 +12,14 @@ int eolexist = TRUE;            /* does clear to EOL exist      */
 int revexist = FALSE;           /* does reverse video exist?    */
 int flickcode = FALSE;          /* do flicker supression?       */
 char *modename[] = {            /* name of modes                */
-        "WRAP", "CMODE", "SPELL", "EXACT", "VIEW", "OVER",
-        "MAGIC", "CRYPT", "ASAVE", "UTF-8"
+        "WRAP", "CMODE", "PHON", "EXACT", "VIEW", "OVER",
+        "MAGIC", "CRYPT", "ASAVE",
 };
 char *mode2name[] = {           /* name of modes                */
-        "Wrap", "Cmode", "Spell", "Exact", "View", "Over",
-        "Magic", "Crypt", "Asave", "utf-8"
+        "Wrap", "Cmode", "Phon", "Exact", "View", "Over",
+        "Magic", "Crypt", "Asave",
 };
-char modecode[] = "WCSEVOMYAU"; /* letters to represent modes   */
+char modecode[] = "WCPEVOMYA";  /* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
 #if     PKCODE & IBMPC

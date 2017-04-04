@@ -522,6 +522,10 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
 #if     CRYPT
                 bp->b_key[0] = 0;
 #endif
+#if PROC
+                bp->ptt_headp = NULL;
+                bp->b_type = BTNORM;
+#endif
                 lp->l_fp = lp;
                 lp->l_bp = lp;
 

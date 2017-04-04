@@ -524,6 +524,11 @@ int filter_buffer(int f, int n)
         strcpy(bp->b_fname, tmpnam);    /* restore name */
         bp->b_flag |= BFCHG;            /* flag it as changed */
 
+/* If this is a translation table, remove any compiled data */
+
+        if ((bp->b_type == BTPHON) && bp->ptt_headp)
+                    ptt_free(bp);
+
         /* and get rid of the temporary file */
         unlink(filnam1);
         unlink(filnam2);

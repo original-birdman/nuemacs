@@ -257,6 +257,12 @@ int readin(char *fname, int lockfl)
         if ((s = bclear(bp)) != TRUE)       /* Might be old. */
                 return s;
         bp->b_flag &= ~(BFINVS | BFCHG);
+
+/* If this is a translation table, remove any compiled data */
+
+        if ((bp->b_type == BTPHON) && bp->ptt_headp)
+            ptt_free(bp);
+
 /* If activating an inactive buffer, these may be the same and the
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
@@ -609,6 +615,11 @@ int ifile(char *fname)
         bp = curbp;             /* Cheap.               */
         bp->b_flag |= BFCHG;    /* we have changed      */
         bp->b_flag &= ~BFINVS;  /* and are not temporary */
+
+/* If this is a translation table, remove any compiled data */
+
+        if ((bp->b_type == BTPHON) && bp->ptt_headp)
+            ptt_free(bp);
 
         pathexpand = FALSE;     /* GGR */
 

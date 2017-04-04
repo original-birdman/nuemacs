@@ -114,6 +114,11 @@ void lchange(int flag)
                         wp->w_flag |= flag;
                 wp = wp->w_wndp;
         }
+
+/* If this is a translation table, remove any compiled data */
+
+        if ((curbp->b_type == BTPHON) && curbp->ptt_headp)
+            ptt_free(curbp);
 }
 
 /*

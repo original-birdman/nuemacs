@@ -477,6 +477,16 @@ struct window {
  *      Buffers may be "Inactive" which means the files associated with them
  * have not been read in yet. These get read in at "use buffer" time.
  */
+
+#if PROC
+struct ptt_ent {
+    struct ptt_ent *nextp;
+    char *from;
+    char *to;
+    int from_len;
+    int bow_only;
+};
+#endif
 struct buffer {
         struct buffer *b_bufp;  /* Link to next struct buffer   */
         struct line *b_dotp;    /* Link to "." struct line structure   */
@@ -484,6 +494,10 @@ struct buffer {
         struct line *b_linep;   /* Link to the header struct line      */
         struct line *b_topline; /* Link to narrowed top text    */
         struct line *b_botline; /* Link to narrowed bottom text */
+#if PROC
+        struct ptt_ent *ptt_headp;
+        int b_type;             /* Type of buffer */
+#endif
         int b_doto;             /* Offset of "." in above struct line  */
         int b_marko;            /* but for the "mark"           */
         int b_mode;             /* editor mode of this buffer   */
@@ -497,6 +511,11 @@ struct buffer {
 #endif
 };
 
+#define BTNORM  0               /* A "normal" buffer            */
+#define BTSPEC  1               /* Generic special buffer       */
+#define BTPROC  2               /* Buffer from store-procedure  */
+#define BTPHON  3               /* Buffer from store-pttable    */
+
 #define BFINVS  0x01            /* Internal invisable buffer    */
 #define BFCHG   0x02            /* Changed since last write     */
 #define BFTRUNC 0x04            /* buffer was truncated when read */
@@ -508,7 +527,7 @@ struct buffer {
 
 #define MDWRAP  0x0001          /* word wrap                    */
 #define MDCMOD  0x0002          /* C indentation and fence match */
-#define MDSPELL 0x0004          /* spell error parcing          */
+#define MDPHON  0x0004          /* Phonetic input handling      */
 #define MDEXACT 0x0008          /* Exact matching for searches  */
 #define MDVIEW  0x0010          /* read-only buffer             */
 #define MDOVER  0x0020          /* overwrite mode               */

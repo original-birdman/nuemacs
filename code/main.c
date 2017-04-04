@@ -633,6 +633,16 @@ int execute(int c, int f, int n)
 #else
         if ((c >= 0x20 && c <= 0xFF)) { /* Self inserting.      */
 #endif
+
+/* GGR - Implement Phonetic Translation iff we are about to self-insert.
+ * If the mode is active call the handler.
+ * If this returns TRUE then the character has been handled such that
+ * we do not need to insert it.
+ */
+                if (curbp->b_mode & MDPHON) {
+                    if (ptt_handler(c)) return TRUE;
+                }
+
                 if (n <= 0) {   /* Fenceposts.          */
                         lastflag = 0;
                         return n < 0 ? FALSE : TRUE;
