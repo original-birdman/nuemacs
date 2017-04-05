@@ -121,7 +121,6 @@
 #define ANSI    0
 #define VT52    0
 #define TERMCAP UNIX
-#define IBMPC   MSDOS
 
 #endif /* Autoconf. */
 
@@ -166,9 +165,6 @@
 #define PROC    1  /* named procedures                             */
 #define CLEAN   0  /* de-alloc memory on exit                      */
 
-#define ASCII   1  /* always using ASCII char sequences for now    */
-#define EBCDIC  0  /* later IBM mainfraim versions will use EBCDIC */
-
 #if !defined(AUTOCONF) || defined(GGR_MODE)
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
@@ -182,7 +178,6 @@
 #endif /* Autoconf. */
 
 #define PKCODE  1      /* include my extensions P.K., define always    */
-#define IBMCHR  MSDOS  /* use IBM PC character set P.K.                */
 #define SCROLLCODE 1   /* scrolling code P.K.                          */
 
 /* System dependant library redefinitions, structures and includes. */
@@ -349,8 +344,6 @@
 #endif
 #endif
 
-#if     ASCII
-
 #define DIFCASE         0x20
 
 #if     NATIONL
@@ -361,14 +354,6 @@
 #define LASTLL 'z'
 #endif
 
-#if     IBMCHR
-
-#define isletter(c)     (('a' <= c && LASTLL >= c) || ('A' <= c && LASTUL >= c) || (128<=c && c<=167))
-#define islower(c)      (('a' <= c && LASTLL >= c))
-#define isupper(c)      (('A' <= c && LASTUL >= c))
-
-#else
-
 #define isletter(c)     isxletter((0xFF & (c)))
 #define islower(c)      isxlower((0xFF & (c)))
 #define isupper(c)      isxupper((0xFF & (c)))
@@ -376,21 +361,6 @@
 #define isxletter(c)    (('a' <= c && LASTLL >= c) || ('A' <= c && LASTUL >= c) || (192<=c && c<=255))
 #define isxlower(c)     (('a' <= c && LASTLL >= c) || (224 <= c && 252 >= c))
 #define isxupper(c)     (('A' <= c && LASTUL >= c) || (192 <= c && 220 >= c))
-
-#endif
-
-#endif
-
-#if     EBCDIC
-
-#define DIFCASE         0x40
-#define isletter(c)     (('a' <= c && 'i' >= c) || ('j' <= c && 'r' >= c) || ('s' <= c && 'z' >= c) || ('A' <= c && 'I' >= c) || ('J' <= c && 'R' >= c) || ('S' <= c && 'Z' >= c))
-#define islower(c)      (('a' <= c && 'i' >= c) || ('j' <= c && 'r' >= c) || ('s' <= c && 'z' >= c))
-#if     PKCODE
-#define isupper(c)      (('A' <= c && 'I' >= c) || ('J' <= c && 'R' >= c) || ('S' <= c && 'Z' >= c))
-#endif
-
-#endif
 
 /*      Dynamic RAM tracking and reporting redefinitions        */
 
