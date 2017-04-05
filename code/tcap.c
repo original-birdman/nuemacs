@@ -49,9 +49,7 @@ static void tcapscrollregion(int top, int bot);
 static void putpad(char *str);
 
 static void tcapopen(void);
-#if PKCODE
 static void tcapclose(void);
-#endif
 
 #if COLOR
 static void tcapfcol(int);
@@ -66,11 +64,9 @@ static void tcapscroll_delins(int from, int to, int linestoscroll);
 static char tcapbuf[TCAPSLEN];
 static char *UP, PC, *CM, *CE, *CL, *SO, *SE;
 
-#if PKCODE
 static char *TI, *TE;
 #if USE_BROKEN_OPTIMIZATION
 static int term_init_ok = 0;
-#endif
 #endif
 
 #if SCROLLCODE
@@ -86,11 +82,7 @@ struct terminal term = {
         SCRSIZ,
         NPAUSE,
         tcapopen,
-#if     PKCODE
         tcapclose,
-#else
-        ttclose,
-#endif
         tcapkopen,
         tcapkclose,
         ttgetc,
@@ -119,7 +111,7 @@ static void tcapopen(void)
         char err_str[72];
         int int_col, int_row;
 
-#if PKCODE && USE_BROKEN_OPTIMIZATION
+#if USE_BROKEN_OPTIMIZATION
         if (!term_init_ok) {
 #endif
                 if ((tv_stype = getenv("TERM")) == NULL) {
@@ -172,7 +164,6 @@ static void tcapopen(void)
                 SO = tgetstr("so", &p);
                 if (SO != NULL)
                         revexist = TRUE;
-#if     PKCODE
                 if (tgetnum("sg") > 0) {    /* can reverse be used? P.K. */
                         revexist = FALSE;
                         SE = NULL;
@@ -180,7 +171,6 @@ static void tcapopen(void)
                 }
                 TI = tgetstr("ti", &p);     /* terminal init and exit */
                 TE = tgetstr("te", &p);
-#endif
 
                 if (CL == NULL || CM == NULL || UP == NULL) {
                         puts("Incomplete termcap entry\n");
@@ -211,14 +201,13 @@ static void tcapopen(void)
                         puts("Terminal description too big!\n");
                         exit(1);
                 }
-#if PKCODE && USE_BROKEN_OPTIMIZATION
+#if USE_BROKEN_OPTIMIZATION
                 term_init_ok = 1;
         }
 #endif
         ttopen();
 }
 
-#if     PKCODE
 static void tcapclose(void)
 {
         putpad(tgoto(CM, 0, term.t_nrow));
@@ -226,17 +215,14 @@ static void tcapclose(void)
         ttflush();
         ttclose();
 }
-#endif
 
 static void tcapkopen(void)
 {
-#if     PKCODE
         putpad(TI);
         ttflush();
         ttrow = 999;
         ttcol = 999;
         sgarbf = TRUE;
-#endif
         strcpy(sres, "NORMAL");
 }
 
@@ -251,7 +237,7 @@ static void tcapkclose(void)
  */
 #if V7 | USG | BSD
 
-#elif PKCODE
+#else
         putpad(TE);
         ttflush();
 #endif

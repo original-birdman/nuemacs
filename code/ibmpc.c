@@ -15,11 +15,7 @@
 #include        "edef.h"
 
 #if     IBMPC
-#if     PKCODE
 #define NROW    50
-#else
-#define NROW    43              /* Max Screen size.             */
-#endif
 #define NCOL    80              /* Edit if you want to.         */
 #define MARGIN  8               /* size of minimim margin and   */
 #define SCRSIZ  64              /* scroll size for extended lines */
@@ -39,23 +35,14 @@
 #define CDCGA   0               /* color graphics card          */
 #define CDMONO  1               /* monochrome text card         */
 #define CDEGA   2               /* EGA color adapter            */
-#if     PKCODE
 #define CDVGA   3
-#endif
 #define CDSENSE 9               /* detect the card type         */
 
-#if     PKCODE
-#define NDRIVE  4
-#else
-#define NDRIVE  3               /* number of screen drivers     */
-#endif
+#define NDRIVE  4               /* number of screen drivers     */
 
 int dtype = -1;                 /* current display type         */
 char drvname[][8] = {           /* screen resolution names      */
-        "CGA", "MONO", "EGA"
-#if     PKCODE
-            , "VGA"
-#endif
+        "CGA", "MONO", "EGA", "VGA"
 };
 long scadd;                     /* address of screen ram        */
 int *scptr[NROW];               /* pointer to screen lines      */
@@ -88,11 +75,7 @@ extern int ibmscroll_reg();
 int cfcolor = -1;               /* current forground color */
 int cbcolor = -1;               /* current background color */
 int ctrans[] =                  /* ansi to ibm color translation table */
-#if     PKCODE
 { 0, 4, 2, 6, 1, 5, 3, 7, 15 };
-#else
-{ 0, 4, 2, 6, 1, 5, 3, 7 };
-#endif
 #endif
 
 /*
@@ -309,11 +292,8 @@ void ibmclose(void)
         /* if we had the EGA open... close it */
         if (dtype == CDEGA)
                 egaclose();
-#if     PKCODE
         if (dtype == CDVGA)
                 egaclose();
-#endif
-
         ttclose();
 }
 
@@ -354,10 +334,8 @@ static int scinit(int type)
         /* if we had the EGA open... close it */
         if (dtype == CDEGA)
                 egaclose();
-#if     PKCODE
         if (dtype == CDVGA)
                 egaclose();
-#endif
 
         /* and set up the various parameters as needed */
         switch (type) {

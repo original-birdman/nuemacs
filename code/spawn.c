@@ -311,16 +311,11 @@ int pipecmd(int f, int n)
                 wp = wheadp;
                 while (wp != NULL) {
                         if (wp->w_bufp == bp) {
-#if     PKCODE
                                 if (wp == curwp)
                                         delwind(FALSE, 1);
                                 else
                                         onlywind(FALSE, 1);
                                 break;
-#else
-                                onlywind(FALSE, 1);
-                                break;
-#endif
                         }
                         wp = wp->w_wndp;
                 }

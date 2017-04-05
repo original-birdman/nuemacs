@@ -163,7 +163,6 @@
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
 
-#define PKCODE  1      /* include my extensions P.K., define always    */
 #define SCROLLCODE 1   /* scrolling code P.K.                          */
 
 /* System dependant library redefinitions, structures and includes. */
@@ -324,10 +323,8 @@
 #undef  islower
 #endif
 
-#if     PKCODE
 #ifdef  isupper
 #undef  isupper
-#endif
 #endif
 
 #define DIFCASE         0x20

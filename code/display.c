@@ -285,9 +285,7 @@ void vttidy(void)
         TTflush();
         TTclose();
         TTkclose();
-#ifdef PKCODE
         int dnc __attribute__ ((unused)) = write(1, "\r", 1);
-#endif
 }
 
 /*
@@ -410,10 +408,6 @@ int update(int force)
 {
         struct window *wp;
 
-#if     TYPEAH && ! PKCODE
-        if (force == FALSE && typahead())
-                return TRUE;
-#endif
 #if     VISMAC == 0
         if (force == FALSE && kbdmode == PLAY)
                 return TRUE;
@@ -848,10 +842,6 @@ int updupd(int force)
 
                 /* for each line that needs to be updated */
                 if ((vp1->v_flag & VFCHG) != 0) {
-#if     TYPEAH && ! PKCODE
-                        if (force == FALSE && typahead())
-                                return TRUE;
-#endif
 #if     MEMMAP && ! SCROLLCODE
                         updateline(i, vp1, NULL);
 #else
@@ -1295,11 +1285,9 @@ static void modeline(struct window *wp)
                 lchar = '-';
 
         bp = wp->w_bufp;
-#if     PKCODE == 0
         if ((bp->b_flag & BFTRUNC) != 0)
                 vtputc('#');
         else
-#endif
                 vtputc(lchar);
 
         if ((bp->b_flag & BFCHG) != 0)  /* "*" if changed. */
@@ -1350,17 +1338,8 @@ static void modeline(struct window *wp)
         cp = &tline[0];
         while ((c = *cp++) != 0) vtputc(c);
 
-#if     PKCODE
         if (bp->b_fname[0] != 0 && strcmp(bp->b_bname, bp->b_fname) != 0)
-#else
-        if (bp->b_fname[0] != 0)        /* File name. */
-#endif
         {
-#if     PKCODE == 0
-                cp = "File: ";
-                while ((c = *cp++) != 0) vtputc(c);
-#endif
-
                 cp = &bp->b_fname[0];
                 while ((c = *cp++) != 0) vtputc(c);
                 vtputc(' ');

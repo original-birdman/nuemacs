@@ -15,10 +15,8 @@
 #include "efunc.h"
 #include "line.h"
 
-#if defined(PKCODE)
 /* Max number of lines from one file. */
 #define MAXNLINE 10000000
-#endif
 
 /*
  * Read a file into the current
@@ -237,16 +235,12 @@ int readin(char *fname, int lockfl)
 
 #if     FILOCK && (BSD || SVR4)
         if (lockfl && lockchk(fname) == ABORT)
-#if PKCODE
         {
                 s = FIOFNF;
                 bp = curbp;
                 strcpy(bp->b_fname, "");
                 goto out;
         }
-#else
-                return ABORT;
-#endif
 #endif
 #if     CRYPT
         s = resetkey();
@@ -290,12 +284,10 @@ int readin(char *fname, int lockfl)
                         s = FIOMEM;     /* Keep message on */
                         break;          /* the display.    */
                 }
-#if     PKCODE
                 if (nline > MAXNLINE) {
                         s = FIOMEM;
                         break;
                 }
-#endif
                 lp2 = lback(curbp->b_linep);
                 lp2->l_fp = lp1;
                 lp1->l_fp = curbp->b_linep;

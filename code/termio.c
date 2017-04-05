@@ -48,7 +48,7 @@ struct tchars ntchars = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
                                 /* A lot of nothing */
 #endif
-#if     BSD & PKCODE
+#if BSD
 struct ltchars oltchars;        /* Saved terminal local special character set */
 struct ltchars nltchars = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -75,7 +75,7 @@ char tobuf[TBUFSIZ];            /* terminal output buffer */
  */
 void ttopen(void)
 {
-#if     MSDOS & (TURBO | (PKCODE & MSC))
+#if     MSDOS & (TURBO | MSC)
         /* kill the CONTROL-break interupt */
         rg.h.ah = 0x33;         /* control-break check dos call */
         rg.h.al = 1;            /* set the current state */
@@ -95,11 +95,7 @@ void ttopen(void)
         ntermio.c_line = otermio.c_line;
         ntermio.c_cc[VMIN] = 1;
         ntermio.c_cc[VTIME] = 0;
-#if     PKCODE
         ioctl(0, TCSETAW, &ntermio);    /* and activate them */
-#else
-        ioctl(0, TCSETA, &ntermio);     /* and activate them */
-#endif
         kbdflgs = fcntl(0, F_GETFL, 0);
         kbdpoll = FALSE;
 #endif
@@ -116,7 +112,7 @@ void ttopen(void)
         stty(0, &nstate);                   /* set mode */
         ioctl(0, TIOCGETC, &otchars);       /* Save old characters */
         ioctl(0, TIOCSETC, &ntchars);       /* Place new character into K */
-#if     BSD & PKCODE
+#if BSD
         ioctl(0, TIOCGLTC, &oltchars);      /* Save old local characters */
         ioctl(0, TIOCSLTC, &nltchars);      /* New local characters */
 #endif
@@ -151,7 +147,7 @@ void ttopen(void)
  */
 void ttclose(void)
 {
-#if     MSDOS & (TURBO | (PKCODE & MSC))
+#if     MSDOS & (TURBO | MSC)
         /* restore the CONTROL-break interupt */
         rg.h.ah = 0x33;         /* control-break check dos call */
         rg.h.al = 1;            /* set the current state */
@@ -160,20 +156,14 @@ void ttclose(void)
 #endif
 
 #if     USG
-#if     PKCODE
         ioctl(0, TCSETAW, &otermio);    /* restore terminal settings */
-#else
-        ioctl(0, TCSETA, &otermio);     /* restore terminal settings */
-#endif
         fcntl(0, F_SETFL, kbdflgs);
 #endif
 
 #if     V7 | BSD
         stty(0, &ostate);
         ioctl(0, TIOCSETC, &otchars);   /* Place old character into K */
-#if     BSD & PKCODE
         ioctl(0, TIOCSLTC, &oltchars);  /* Place old local character into K */
-#endif
 #endif
 }
 
@@ -289,9 +279,7 @@ int typahead(void)
         if (!kbdqp) {
                 if (!kbdpoll && fcntl(0, F_SETFL, kbdflgs | O_NDELAY) < 0)
                         return FALSE;
-#if     PKCODE
                 kbdpoll = 1;
-#endif
                 kbdqp = (1 == read(0, &kbdq, 1));
         }
         return kbdqp;

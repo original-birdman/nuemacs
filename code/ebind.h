@@ -53,16 +53,10 @@ struct key_tab init_keytab[] = {
         {FUNC_KMAP, CONTROL | ']', {metafn}             },
         {FUNC_KMAP, CTLX | CONTROL | 'B', {listbuffers} },
         {FUNC_KMAP, CTLX | CONTROL | 'C', {quit}        }, /* Hard quit. */
-#if     PKCODE & AEDIT
+#if     AEDIT
         {FUNC_KMAP, CTLX | CONTROL | 'A', {detab}       },
 #endif
-#if     PKCODE
         {FUNC_KMAP, CTLX | CONTROL | 'D', {filesave}    }, /* alternative */
-#else
-#if     AEDIT
-        {FUNC_KMAP, CTLX | CONTROL | 'D', {detab}       },
-#endif
-#endif
 #if     AEDIT
         {FUNC_KMAP, CTLX | CONTROL | 'E', {entab}       },
 #endif
@@ -108,9 +102,7 @@ struct key_tab init_keytab[] = {
         {FUNC_KMAP, CTLX | 'N', {filename}              },
         {FUNC_KMAP, CTLX | 'O', {nextwind}              },
         {FUNC_KMAP, CTLX | 'P', {prevwind}              },
-#if     PKCODE
         {FUNC_KMAP, CTLX | 'Q', {quote}                 }, /* alternative */
-#endif
 #if     ISRCH
         {FUNC_KMAP, CTLX | 'R', {risearch}              },
         {FUNC_KMAP, CTLX | 'S', {fisearch}              },
@@ -121,9 +113,7 @@ struct key_tab init_keytab[] = {
 #if     WORDPRO
         {FUNC_KMAP, META | CONTROL | 'C', {wordcount}   },
 #endif
-#if     PKCODE
         {FUNC_KMAP, META | CONTROL | 'D', {newsize}     },
-#endif
 #if     PROC
         {FUNC_KMAP, META | CONTROL | 'E', {execproc}    },
 #endif
@@ -161,10 +151,8 @@ struct key_tab init_keytab[] = {
 #endif
         {FUNC_KMAP, META | 'F', {forwword}              },
         {FUNC_KMAP, META | 'G', {gotoline}              },
-#if     PKCODE
 #if     WORDPRO
         {FUNC_KMAP, META | 'J', {justpara}              },
-#endif
 #endif
         {FUNC_KMAP, META | 'K', {bindtokey}             },
         {FUNC_KMAP, META | 'L', {lowerword}             },
@@ -175,13 +163,7 @@ struct key_tab init_keytab[] = {
         {FUNC_KMAP, META | 'Q', {fillpara}              },
 #endif
         {FUNC_KMAP, META | 'R', {sreplace}              },
-#if     PKCODE
         {FUNC_KMAP, META | 'S', {forwsearch}            }, /* alternative P.K. */
-#else
-#if     BSD
-        {FUNC_KMAP, META | 'S', {bktoshell}             },
-#endif
-#endif
         {FUNC_KMAP, META | 'U', {upperword}             },
         {FUNC_KMAP, META | 'V', {backpage}              },
         {FUNC_KMAP, META | 'W', {copyregion}            },
@@ -218,14 +200,12 @@ struct key_tab init_keytab[] = {
         {FUNC_KMAP, SPEC | 91, {cbuf8}                  },
         {FUNC_KMAP, SPEC | 92, {cbuf9}                  },
         {FUNC_KMAP, SPEC | 93, {cbuf10}                 },
-#if PKCODE
         {FUNC_KMAP, SPEC | 117, {gotoeob}               },
         {FUNC_KMAP, SPEC | 119, {gotobob}               },
         {FUNC_KMAP, SPEC | 141, {gotobop}               },
         {FUNC_KMAP, SPEC | 145, {gotoeop}               },
         {FUNC_KMAP, SPEC | 146, {yank}                  },
         {FUNC_KMAP, SPEC | 147, {killregion}            },
-#endif
 #endif
 
 #if     VT220

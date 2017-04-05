@@ -64,11 +64,7 @@
 
 /* For MSDOS, increase the default stack space. */
 #if MSDOS & TURBO
-#if PKCODE
 extern unsigned _stklen = 20000;
-#else
-extern unsigned _stklen = 32766;
-#endif
 #endif
 
 #ifndef GOOD
@@ -102,12 +98,8 @@ fputs(
 "      -k<key>      encryption key"                       NL \
 , stdout);
 #endif
-#if PKCODE
 fputs(
 "      -n           accept null chars"                    NL \
-, stdout);
-#endif
-fputs(
 "      -r           restrictive use"                      NL \
 "      -s<str>      initial search string"                NL \
 "      -v           view only (no edit)"                  NL \
@@ -145,7 +137,7 @@ int main(int argc, char **argv)
         char *rcextra[10];      /* GGR additional rc files */
         int rcnum = 0;          /* GGR number of extra files to process */
 
-#if     PKCODE & BSD
+#if BSD
         sleep(1); /* Time for window manager. */
 #endif
 
@@ -193,12 +185,10 @@ int main(int argc, char **argv)
         while (--argc) {
                 argv++;         /* Point at the next token */
                 /* Process Switches */
-#if     PKCODE
                 if (**argv == '+') {
                         gotoflag = TRUE;
                         gline = atoi(*argv + 1); /* skip the '+' */
                 } else
-#endif
                 if (**argv == '-') {
                         char *opt = NULL;
                         char key1;
@@ -259,12 +249,10 @@ int main(int argc, char **argv)
                                 }
                                 break;
 #endif
-#if     PKCODE
                         case 'n':       /* -n accept null chars */
                         case 'N':
                                 nullflag = TRUE;
                                 break;
-#endif
                         case 'r':       /* -r restrictive use */
                         case 'R':
                                 restflag = TRUE;
@@ -402,7 +390,7 @@ loop:
         execute(META | SPEC | 'C', FALSE, 1);
         lastflag = saveflag;
 
-#if TYPEAH && PKCODE
+#if TYPEAH
         if (typahead()) {
                 newc = getcmd();
                 update(FALSE);
@@ -610,7 +598,6 @@ int execute(int c, int f, int n)
             (curwp->w_bufp->b_mode & MDVIEW) == FALSE)
                 execute(META | SPEC | 'W', FALSE, 1);
 
-#if     PKCODE
         if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
 #if     IBMPC
             || (c >= 0x80 && c <= 0xFE)) {
@@ -620,9 +607,6 @@ int execute(int c, int f, int n)
 #else
             ) {
 #endif
-#endif
-#else
-        if ((c >= 0x20 && c <= 0xFF)) { /* Self inserting.      */
 #endif
 
 /* GGR - Implement Phonetic Translation iff we are about to self-insert.

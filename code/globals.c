@@ -22,7 +22,7 @@ char *mode2name[] = {           /* name of modes                */
 char modecode[] = "WCPEVOMYA";  /* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
-#if     PKCODE & IBMPC
+#if IBMPC
 int gfcolor = 8;                /* global forgrnd color (white) */
 #else
 int gfcolor = 7;                /* global forgrnd color (white) */
@@ -52,7 +52,7 @@ int tabmask = 0x07;             /* tabulator mask */
 char *cname[] = {               /* names of colors              */
         "BLACK", "RED", "GREEN", "YELLOW", "BLUE",
         "MAGENTA", "CYAN", "WHITE"
-#if     PKCODE & IBMPC
+#if IBMPC
             , "HIGH"
 #endif
 };
@@ -79,10 +79,8 @@ int saveflag = 0;               /* Flags, saved with the $target var */
 char *fline = NULL;             /* dynamic return line */
 int flen = 0;                   /* current allocated size of fline */
 int rval = 0;                   /* return value of a subprocess */
-#if     PKCODE
 int nullflag = FALSE;           /* accept null characters */
 int justflag = FALSE;           /* justify, don't fill */
-#endif
 int overlap = 0;                /* line overlap in forw/back page */
 int scrollcount = 1;            /* number of lines to scroll */
 

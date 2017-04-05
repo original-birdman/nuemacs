@@ -80,10 +80,8 @@ extern int saveflag;            /* Flags, saved with the $target var */
 extern char *fline;             /* dynamic return line */
 extern int flen;                /* current length of fline */
 extern int rval;                /* return value of a subprocess */
-#if     PKCODE
 extern int nullflag;
 extern int justflag;            /* justify, don't fill */
-#endif
 extern int overlap;             /* line overlap in forw/back page */
 extern int scrollcount;         /* number of lines to scroll */
 

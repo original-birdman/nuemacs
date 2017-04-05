@@ -34,13 +34,11 @@ void sleep();
 #endif
 
 
-#if     PKCODE
 #if     MSDOS && TURBO
 #include        <dir.h>
 #endif
-#endif
 
-#if     PKCODE && (UNIX || (MSDOS && TURBO))
+#if (UNIX || (MSDOS && TURBO))
 #define COMPLC  1
 #else
 #define COMPLC  0
@@ -408,7 +406,6 @@ handle_CSI:
                         c = CONTROL | (c + '@');
                 return META | c;
         }
-#if     PKCODE
         else if (c == metac) {
                 c = get1key();
 #if VT220
@@ -423,8 +420,6 @@ handle_CSI:
                         c = CONTROL | (c + '@');
                 return META | c;
         }
-#endif
-
 
 #if     VT220
 proc_ctlxc:

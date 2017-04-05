@@ -25,14 +25,9 @@ static int ctrulen(void)
 
     end = llength(curwp->w_dotp);
     while (end > 0 &&
-#if    PKCODE
-                        ((justflag == TRUE) ||
-#endif
-         ((c = lgetc(curwp->w_dotp, (end - 1))) == ' ' || c == TAB))
-#if    PKCODE
-                        )
-#endif
-          --end;
+           ((justflag == TRUE) ||
+           ((c = lgetc(curwp->w_dotp, (end - 1))) == ' ' || c == TAB)))
+	--end;
     return(end);
 }
 
