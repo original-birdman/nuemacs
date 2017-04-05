@@ -71,11 +71,6 @@ extern unsigned _stklen = 32766;
 #endif
 #endif
 
-#if VMS
-#include <ssdef.h>
-#define GOOD    (SS$_NORMAL)
-#endif
-
 #ifndef GOOD
 #define GOOD    0
 #endif
@@ -149,10 +144,6 @@ int main(int argc, char **argv)
         char *rcfile = NULL;    /* GGR non-default rc file */
         char *rcextra[10];      /* GGR additional rc files */
         int rcnum = 0;          /* GGR number of extra files to process */
-
-#if     PKCODE & VMS
-        (void) umask(-1); /* Use old protection (this is at wrong place). */
-#endif
 
 #if     PKCODE & BSD
         sleep(1); /* Time for window manager. */
@@ -624,7 +615,7 @@ int execute(int c, int f, int n)
 #if     IBMPC
             || (c >= 0x80 && c <= 0xFE)) {
 #else
-#if     VMS || BSD || USG       /* 8BIT P.K. */
+#if     BSD || USG       /* 8BIT P.K. */
             || (c >= 0xA0 && c <= 0x10FFFF)) {
 #else
             ) {

@@ -20,9 +20,6 @@
 #define DFLT_PATH "/opt/local/etc/", "/usr/local/etc/"
 #endif
 
-#if     VMS
-#define DFLT_PATH "sys$login:", "emacs_dir:", "sys$sysdevice:[vmstools]"
-#endif
 #endif
 
 static struct init_files {

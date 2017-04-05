@@ -38,7 +38,7 @@
 
 /* Machine/OS definitions. */
 
-#if defined(AUTOCONF) || defined(MSDOS) || defined(BSD) || defined(SYSV) || defined(VMS)
+#if defined(AUTOCONF) || defined(MSDOS) || defined(BSD) || defined(SYSV)
 
 /* Make an intelligent guess about the target system. */
 
@@ -68,12 +68,6 @@
 #define USG 0
 #endif
 
-#if defined(VMS) || (defined(vax) && ! defined(unix))
-#define VMS 1 /* VAX/VMS */
-#else
-#define VMS 0
-#endif
-
 #define V7 0 /* No more. */
 
 #else
@@ -82,7 +76,6 @@
 #define V7      0               /* V7 UNIX or Coherent or BSD4.2 */
 #define BSD     0               /* UNIX BSD 4.2 and ULTRIX      */
 #define USG     0               /* UNIX system V                */
-#define VMS     0               /* VAX/VMS                      */
 
 #endif                          /*autoconf */
 
@@ -116,18 +109,16 @@
 /*      Terminal Output definitions             */
 
 #define ANSI    0               /* ANSI escape sequences        */
-#define VMSVT   0               /* various VMS terminal entries */
 #define VT52    0               /* VT52 terminal (Zenith).      */
 #define TERMCAP 0               /* Use TERMCAP                  */
 #define IBMPC   1               /* IBM-PC CGA/MONO/EGA driver   */
 
 #else
 
-#define VT220   (UNIX | VMS)
+#define VT220   UNIX
 #define VT100   0
 
 #define ANSI    0
-#define VMSVT   VMS
 #define VT52    0
 #define TERMCAP UNIX
 #define IBMPC   MSDOS
@@ -185,8 +176,8 @@
 
 #else
 
-#define XONXOFF (UNIX | VMS)
-#define NATIONL (UNIX | VMS)
+#define XONXOFF UNIX
+#define NATIONL UNIX
 
 #endif /* Autoconf. */
 
@@ -205,22 +196,12 @@
 #define       poke(a,b,c,d)   movedata(FP_SEG(c),FP_OFF(c),a,b,d)
 #endif
 
-#if     VMS
-#define atoi    xatoi
-#define abs     xabs
-#define getname xgetname
-#endif
-
 #if MSDOS & MSC
 #include        <dos.h>
 #include        <memory.h>
 #define peek(a,b,c,d)   movedata(a,b,FP_SEG(c),FP_OFF(c),d)
 #define poke(a,b,c,d)   movedata(FP_SEG(c),FP_OFF(c),a,b,d)
 #define movmem(a, b, c)         memcpy(b, a, c)
-#endif
-
-#if     VMS
-#define unlink(a)       delete(a)
 #endif
 
 /* Define some ability flags. */

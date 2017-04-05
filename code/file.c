@@ -361,15 +361,6 @@ void makename(char *bname, char *fname)
         while (*cp1 != 0)
                 ++cp1;
 
-#if     VMS
-#if     PKCODE
-        while (cp1 != &fname[0] && cp1[-1] != ':' && cp1[-1] != ']'
-               && cp1[-1] != '>')
-#else
-        while (cp1 != &fname[0] && cp1[-1] != ':' && cp1[-1] != ']')
-#endif
-                --cp1;
-#endif
 #if     MSDOS
         while (cp1 != &fname[0] && cp1[-1] != ':' && cp1[-1] != '\\'
                && cp1[-1] != '/')

@@ -493,21 +493,6 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     int size;
     char *sp;               /* string pointer into line */
     char tstring[NSTRING];
-#if VMS
-#define MATCH       0
-#define NO_MATCH    1
-#define CONCEALED   2
-#define LIST        4
-    int searchhit;
-    int stripped;
-    char listmatch[NSTRING];
-    char savstring[NSTRING];
-    char xstring[NSTRING];
-    char dstring[NSTRING];
-    char copy[NSTRING];
-    int depth;
-    int r, i, dummy;
-#endif
     char choices[1000];     /* MUST be > max likely window width */
     short savdoto;
     int prolen;
@@ -549,12 +534,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
 
     mlerase();
     mbnameptr = tmpnam(NULL);
-#if VMS
-    strcpy(mbname, "CC$");
-    strcat(mbname, mbnameptr);
-#else
     strcpy(mbname, mbnameptr);
-#endif
     cb = curbp;
 
     inmb = TRUE;

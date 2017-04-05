@@ -54,14 +54,7 @@ int ffwopen(char *fn)
         expand_shell(fn);
 #endif
 #endif
-#if     VMS
-        int fd;
-
-        if ((fd = creat(fn, 0666, "rfm=var", "rat=cr")) < 0
-            || (ffp = fdopen(fd, "w")) == NULL) {
-#else
         if ((ffp = fopen(fn, "w")) == NULL) {
-#endif
                 mlwrite("Cannot open file for writing");
                 return FIOERR;
         }

@@ -19,13 +19,13 @@ PROGRAM=uemacs
 SRC=ansi.c basic.c bind.c buffer.c crypt.c display.c eval.c exec.c \
 	file.c fileio.c ibmpc.c input.c isearch.c line.c lock.c main.c \
 	pklock.c posix.c random.c region.c search.c spawn.c tcap.c \
-	termio.c vmsvt.c vt52.c window.c word.c names.c globals.c version.c \
+	termio.c vt52.c window.c word.c names.c globals.c version.c \
 	usage.c wrapper.c utf8.c complet.c
 
 OBJ=ansi.o basic.o bind.o buffer.o crypt.o display.o eval.o exec.o \
 	file.o fileio.o ibmpc.o input.o isearch.o line.o lock.o main.o \
 	pklock.o posix.o random.o region.o search.o spawn.o tcap.o \
-	termio.o vmsvt.o vt52.o window.o word.o names.o globals.o version.o \
+	termio.o vt52.o window.o word.o names.o globals.o version.o \
 	usage.o wrapper.o utf8.o complet.o
 
 HDR=ebind.h edef.h efunc.h epath.h estruct.h evar.h util.h version.h
@@ -152,7 +152,6 @@ search.o: search.c estruct.h edef.h efunc.h line.h utf8.h
 spawn.o: spawn.c estruct.h edef.h efunc.h
 tcap.o: tcap.c estruct.h edef.h efunc.h
 termio.o: termio.c
-vmsvt.o: vmsvt.c estruct.h edef.h
 vt52.o: vt52.c estruct.h edef.h
 window.o: window.c estruct.h edef.h efunc.h line.h utf8.h wrapper.h
 word.o: word.c estruct.h edef.h efunc.h line.h utf8.h
