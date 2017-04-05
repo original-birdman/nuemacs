@@ -15,6 +15,8 @@
 #include "efunc.h"
 #include "line.h"
 
+#include "utf8proc.h"
+
 /*
  * Execute a named command even if it is not bound.
  */
@@ -491,9 +493,18 @@ int ptt_handler(int c) {
         if (strncmp(&curwp->w_dotp->l_text[curwp->w_doto - ptr->from_len],
                     ptr->from, ptr->from_len)) continue;
         if (ptr->bow_only && (curwp->w_doto > ptr->from_len)) { /* Not BOL */
-            if (isletter(lgetc(curwp->w_dotp,
-                               curwp->w_doto - ptr->from_len - 1)))
-            continue;
+/* Need to step back to the start of the preceding glyph and get the
+ * base Unicode char from there.
+ */
+            int offs = prev_utf8_offset(curwp->w_dotp->l_text,
+                 curwp->w_doto - ptr->from_len, TRUE);
+            unicode_t prev_uc;
+            (void)utf8_to_unicode(curwp->w_dotp->l_text,
+                 offs, curwp->w_dotp->l_used, &prev_uc);
+
+            const char *uc_class =
+                 utf8proc_category_string((utf8proc_int32_t)prev_uc);
+            if (uc_class[0] == 'L') continue;
         }
 
 /* We have to replace the string with the translation */

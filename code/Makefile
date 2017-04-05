@@ -32,9 +32,12 @@ HDR=ebind.h edef.h efunc.h epath.h estruct.h evar.h util.h version.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
 
+UTF8DIR=../../utf8proc
+LIBUTF8=$(UTF8DIR)/libutf8proc.a
+
 CC=gcc
 WARNINGS=-Wall -Wstrict-prototypes
-CFLAGS=-O3 $(WARNINGS) -std=gnu99 -DGGR_MODE
+CFLAGS=-O3 $(WARNINGS) -std=gnu99 -DGGR_MODE -I$(UTF8DIR)
 # CFLAGS=-O0 -g $(WARNINGS) -std=gnu99 -DGGR_MODE
 #CC=c89 +O3			# HP
 #CFLAGS= -D_HPUX_SOURCE -DSYSV
@@ -50,8 +53,8 @@ ifeq ($(uname_S),Darwin)
  DEFINES=-DAUTOCONF -DPOSIX -DSYSV -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
 endif
 #DEFINES=-DAUTOCONF
-#LIBS=-ltermcap			# BSD
-LIBS=-lcurses			# SYSV
+#LIBS=-ltermcap                 # BSD
+LIBS=$(LIBUTF8) -lcurses        # SYSV
 #LIBS=-ltermlib
 #LIBS=-L/usr/lib/termcap -ltermcap
 LFLAGS=-hbx
