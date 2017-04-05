@@ -15,13 +15,9 @@
 #define MAXCOL  500
 #define MAXROW  500
 
-#ifdef GGR_MODE
+/* The character with which to start/end message line info */
 #define MLpre  "["
 #define MLpost "]"
-#else
-#define MLpre  "("
-#define MLpost ")"
-#endif
 
 /* Define an invalid unicode character to mark the end of lists */
 #define END_UCLIST 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
@@ -165,17 +161,7 @@
 #define PROC    1  /* named procedures                             */
 #define CLEAN   0  /* de-alloc memory on exit                      */
 
-#if !defined(AUTOCONF) || defined(GGR_MODE)
-
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
-#define NATIONL 0  /* interprete [,],\,{,},| as characters P.K.    */
-
-#else
-
-#define XONXOFF UNIX
-#define NATIONL UNIX
-
-#endif /* Autoconf. */
 
 #define PKCODE  1      /* include my extensions P.K., define always    */
 #define SCROLLCODE 1   /* scrolling code P.K.                          */
@@ -346,13 +332,8 @@
 
 #define DIFCASE         0x20
 
-#if     NATIONL
-#define LASTUL ']'
-#define LASTLL '}'
-#else
 #define LASTUL 'Z'
 #define LASTLL 'z'
-#endif
 
 #define isletter(c)     isxletter((0xFF & (c)))
 #define islower(c)      isxlower((0xFF & (c)))

@@ -312,21 +312,7 @@ int delfword(int f, int n)
                                         ++size;
                                 }
                 }
-
-                /* skip whitespace and newlines */
-#ifndef GGR_MODE
-/* GGR - we *don't* want to do this bit.. */
-                int c;          /* temp char */
-                while ((curwp->w_doto == llength(curwp->w_dotp)) ||
-                       ((c = lgetc(curwp->w_dotp, curwp->w_doto)) == ' ')
-                       || (c == '\t')) {
-                        if (forwchar(FALSE, 1) == FALSE)
-                                break;
-                        ++size;
-                }
-#endif
         }
-
         /* restore the original position and delete the words */
         curwp->w_dotp = dotp;
         curwp->w_doto = doto;

@@ -1285,11 +1285,7 @@ static void modeline(struct window *wp)
 #endif
         vtmove(n, 0);           /* Seek to right line. */
         if (wp == curwp)        /* mark the current buffer */
-#if     PKCODE && !GGR_MODE
-                lchar = '-';
-#else
                 lchar = '=';
-#endif
         else
 #if     REVSTA
         if (revexist)
