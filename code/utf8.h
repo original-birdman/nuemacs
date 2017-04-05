@@ -24,7 +24,7 @@ struct glyph {
 };
 
 int next_utf8_offset(char *, int, int, int);
-int prev_utf8_offset(char *, int, int, int);
+int prev_utf8_offset(char *, int, int);
 
 #define COM_DIA 1
 #define ZW_JOIN 2

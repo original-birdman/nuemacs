@@ -264,7 +264,7 @@ int twiddle(int f, int n)
  * is always the one preceding it.
  */
         if (using_ggr_style || doto == maxlen) {
-            rch_st = prev_utf8_offset(l_buf, doto, maxlen, TRUE);
+            rch_st = prev_utf8_offset(l_buf, doto, TRUE);
             if (rch_st < 0) return (FALSE);
             rch_nb = doto - rch_st;
         }
@@ -273,7 +273,7 @@ int twiddle(int f, int n)
             rch_st = doto;
             rch_nb = next_utf8_offset(l_buf, rch_st, maxlen, TRUE) - rch_st;
         }
-        lch_st = prev_utf8_offset(l_buf, rch_st, maxlen, TRUE);
+        lch_st = prev_utf8_offset(l_buf, rch_st, TRUE);
         if (lch_st < 0) return (FALSE);
         lch_nb = rch_st - lch_st;
 

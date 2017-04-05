@@ -107,8 +107,7 @@ int backchar(int f, int n)
  * as the rest of the utf8 code does.
  */
                         curwp->w_doto = prev_utf8_offset(
-                                curwp->w_dotp->l_text, curwp->w_doto,
-                                llength(curwp->w_dotp), TRUE);
+                                curwp->w_dotp->l_text, curwp->w_doto, TRUE);
                 }
         }
         return TRUE;

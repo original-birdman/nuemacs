@@ -138,8 +138,7 @@ int next_utf8_offset(char *buf, int offset, int max_offset, int glyph_start) {
  * Optional (glyph_start):
  * If we find a zero-width character we go back to the next previous one.
  */
-int prev_utf8_offset(char *buf, int offset, int max_offset,
-     int glyph_start) {
+int prev_utf8_offset(char *buf, int offset, int glyph_start) {
 
         if (offset <= 0) return -1;
         unicode_t res = 0;
