@@ -428,7 +428,7 @@ int set_pttable(int f, int n) {
         return FALSE;
     }
 
-    status = mlreply("Translation table to use?", pttbuf+1, NBUFN-2);
+    status = mlreply("Translation table to use? ", pttbuf+1, NBUFN-2);
     if (status != TRUE) return status;
 
 /* Find the ptt buffer */

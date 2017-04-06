@@ -14,6 +14,13 @@
 #include "efunc.h"
 #include "line.h"
 
+#include "utf8proc.h"
+
+/* This is set by inword() when a call tests a glyph with a
+ * zero-width work-break attached.
+ */
+static int zw_break = 0;
+
 /* Word wrap on n-spaces. Back-over whatever precedes the point on the current
  * line and stop on the first word-break or the beginning of the line. If we
  * reach the beginning of the line, jump back to the end of the word and start
@@ -80,7 +87,7 @@ int backword(int f, int n)
                         if (backchar(FALSE, 1) == FALSE)
                                 return FALSE;
                 }
-                while (inword() != FALSE) {
+                while ((inword() != FALSE) || zw_break) {
                         if (backchar(FALSE, 1) == FALSE)
                                 return FALSE;
                 }
@@ -94,26 +101,61 @@ int backword(int f, int n)
  */
 int forwword(int f, int n)
 {
-        if (n < 0)
-                return backword(f, -n);
-        while (n--) {
+    if (n < 0)
+            return backword(f, -n);
+    while (n--) {
 /* GGR - reverse loop order according to ggr-style state
  * Determines whether you end up at the end of the current word (ggr-style)
  * or the start of next.
  */
-                int state1 = using_ggr_style? FALSE: TRUE;
-
-                while (inword() == state1) {
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                }
-
-                while (inword() == !state1) {
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                }
+        int state1 = using_ggr_style? FALSE: TRUE;
+        int prev_zw_break = 0;
+        while ((inword() == state1) || (!state1 && prev_zw_break)) {
+            if (forwchar(FALSE, 1) == FALSE)
+                return FALSE;
+            prev_zw_break = zw_break;
         }
-        return TRUE;
+        prev_zw_break = zw_break;
+        while ((inword() == !state1) || (!state1 && zw_break)) {
+            if (forwchar(FALSE, 1) == FALSE)
+                return FALSE;
+            prev_zw_break = zw_break;
+        }
+    }
+    return TRUE;
+}
+
+/* GGR
+ * Force the case of the current character (or the main character of
+ * a multi-char glyph) to be a particular case.
+ * For use by upper/lower/cap-word()
+ * We start by defining the calling parameters.
+ */
+struct case_ctl {
+    utf8proc_category_t case_ctgy;
+    utf8proc_int32_t (*case_hndlr) (utf8proc_int32_t);
+};
+static struct case_ctl upr_case = { UTF8PROC_CATEGORY_LL, utf8proc_toupper};
+static struct case_ctl lwr_case = { UTF8PROC_CATEGORY_LU, utf8proc_tolower};
+
+static void ensure_case(struct case_ctl *cc) {
+    int saved_doto = curwp->w_doto;     /* Save position */
+    struct glyph gc;
+    (void)lgetglyph(&gc, FALSE);        /* Doesn't move doto */
+/* We only look at the base character for casing.
+ * If it's not what we want to change, leave now...
+ */
+    if (utf8proc_category((utf8proc_int32_t)gc.uc) != cc->case_ctgy) return;
+    char utf8_repl[8];
+    int orig_utf8_len = unicode_to_utf8(gc.uc, utf8_repl);
+    gc.uc = cc->case_hndlr((utf8proc_int32_t)gc.uc);
+    int new_utf8_len = unicode_to_utf8(gc.uc, utf8_repl);
+    ldelete(orig_utf8_len, FALSE);
+    utf8_repl[new_utf8_len] = '\0';
+    linstr(utf8_repl);
+    curwp->w_doto = saved_doto;     /* Restore positon */
+    lchange(WFHARD);
+    return;
 }
 
 /*
@@ -123,29 +165,24 @@ int forwword(int f, int n)
  */
 int upperword(int f, int n)
 {
-        int c;
-
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if (n < 0)
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+        return rdonly();        /* we are in read only mode     */
+    if (n < 0)
+        return FALSE;
+    while (n--) {
+        while (inword() == FALSE) {
+            if (forwchar(FALSE, 1) == FALSE)
                 return FALSE;
-        while (n--) {
-                while (inword() == FALSE) {
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                }
-                while (inword() != FALSE) {
-                        c = lgetc(curwp->w_dotp, curwp->w_doto);
-                        if (islower(c)) {
-                                c -= 'a' - 'A';
-                                lputc(curwp->w_dotp, curwp->w_doto, c);
-                                lchange(WFHARD);
-                        }
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                }
         }
-        return TRUE;
+        int prev_zw_break = zw_break;
+        while ((inword() != FALSE) || prev_zw_break) {
+            ensure_case(&upr_case);
+            if (forwchar(FALSE, 1) == FALSE)
+                return FALSE;
+            prev_zw_break = zw_break;
+        }
+    }
+    return TRUE;
 }
 
 /*
@@ -155,29 +192,24 @@ int upperword(int f, int n)
  */
 int lowerword(int f, int n)
 {
-        int c;
-
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if (n < 0)
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+        return rdonly();        /* we are in read only mode     */
+    if (n < 0)
+        return FALSE;
+    while (n--) {
+        while (inword() == FALSE) {
+            if (forwchar(FALSE, 1) == FALSE)
                 return FALSE;
-        while (n--) {
-                while (inword() == FALSE) {
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                }
-                while (inword() != FALSE) {
-                        c = lgetc(curwp->w_dotp, curwp->w_doto);
-                        if (isupper(c)) {
-                                c += 'a' - 'A';
-                                lputc(curwp->w_dotp, curwp->w_doto, c);
-                                lchange(WFHARD);
-                        }
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                }
         }
-        return TRUE;
+        int prev_zw_break = zw_break;
+        while ((inword() != FALSE)  || prev_zw_break) {
+            ensure_case(&lwr_case);
+            if (forwchar(FALSE, 1) == FALSE)
+                return FALSE;
+            prev_zw_break = zw_break;
+        }
+    }
+    return TRUE;
 }
 
 /*
@@ -188,40 +220,28 @@ int lowerword(int f, int n)
  */
 int capword(int f, int n)
 {
-        int c;
-
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if (n < 0)
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+        return rdonly();        /* we are in read only mode     */
+    if (n < 0)
+        return FALSE;
+    while (n--) {
+        while (inword() == FALSE) {
+            if (forwchar(FALSE, 1) == FALSE)
                 return FALSE;
-        while (n--) {
-                while (inword() == FALSE) {
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                }
-                if (inword() != FALSE) {
-                        c = lgetc(curwp->w_dotp, curwp->w_doto);
-                        if (islower(c)) {
-                                c -= 'a' - 'A';
-                                lputc(curwp->w_dotp, curwp->w_doto, c);
-                                lchange(WFHARD);
-                        }
-                        if (forwchar(FALSE, 1) == FALSE)
-                                return FALSE;
-                        while (inword() != FALSE) {
-                                c = lgetc(curwp->w_dotp, curwp->w_doto);
-                                if (isupper(c)) {
-                                        c += 'a' - 'A';
-                                        lputc(curwp->w_dotp, curwp->w_doto,
-                                              c);
-                                        lchange(WFHARD);
-                                }
-                                if (forwchar(FALSE, 1) == FALSE)
-                                        return FALSE;
-                        }
-                }
         }
-        return TRUE;
+        int prev_zw_break = zw_break;
+        if (inword() != FALSE) {
+            ensure_case(&upr_case);
+            if (forwchar(FALSE, 1) == FALSE)
+                return FALSE;
+            while ((inword() != FALSE) || prev_zw_break) {
+                ensure_case(&lwr_case);
+                if (forwchar(FALSE, 1) == FALSE)
+                    return FALSE;
+            }
+        }
+    }
+    return TRUE;
 }
 
 /*
@@ -265,10 +285,12 @@ int delfword(int f, int n)
 
         if (n == 0) {
                 /* skip one word, no whitespace! */
-                while (inword() == TRUE) {
+                int prev_zw_break = 0;
+                while ((inword() == TRUE) || prev_zw_break) {
                         if (forwchar(FALSE, 1) == FALSE)
                                 return FALSE;
                         ++size;
+                        prev_zw_break = zw_break;
                 }
         } else {
                 /* skip n words.... */
@@ -282,10 +304,12 @@ int delfword(int f, int n)
                         }
 
                         /* move forward till we are at the end of the word */
-                        while (inword() == TRUE) {
+                        int prev_zw_break = 0;
+                        while ((inword() == TRUE) || prev_zw_break) {
                                 if (forwchar(FALSE, 1) == FALSE)
                                         return FALSE;
                                 ++size;
+                                prev_zw_break = zw_break;
                         }
 
                         /* if there are more words, skip the interword stuff */
@@ -340,7 +364,7 @@ int delbword(int f, int n)
                                 return FALSE;
                         ++size;
                 }
-                while (inword() != FALSE) {
+                while ((inword() != FALSE) || zw_break) {
                         ++size;
                         if (backchar(FALSE, 1) == FALSE)
                                 goto bckdel;
@@ -386,19 +410,38 @@ bckdel:
 /*
  * Return TRUE if the character at dot is a character that is considered to be
  * part of a word. The word character list is hard coded. Should be setable.
+ * GGR - the glyph-based version.
  */
 int inword(void)
 {
-        int c;
+    struct glyph gc;
 
-        if (curwp->w_doto == llength(curwp->w_dotp))
-                return FALSE;
-        c = lgetc(curwp->w_dotp, curwp->w_doto);
-        if (isletter(c))
-                return TRUE;
-        if (c >= '0' && c <= '9')
-                return TRUE;
+    if (curwp->w_doto == llength(curwp->w_dotp))
         return FALSE;
+    (void)lgetglyph(&gc, FALSE);
+
+    zw_break = 0;
+    if (gc.cdm == 0x200B) {
+        zw_break = 1;
+    }
+    else if (gc.ex) {
+        for (unicode_t *exc = gc.ex; *exc != END_UCLIST; exc++) {
+            if (*exc == 0x200B) {
+                zw_break = 1;
+                break;
+            }
+        }
+    }
+
+/* We only look at the base character to determine whether this is a
+ * word character.
+ */
+    const char *uc_class =
+         utf8proc_category_string((utf8proc_int32_t)gc.uc);
+
+    if (uc_class[0] == 'L') return TRUE;    /* Letter */
+    if (uc_class[0] == 'N') return TRUE;    /* Number */
+    return FALSE;
 }
 
 #if     WORDPRO
@@ -880,7 +923,7 @@ int wordcount(int f, int n)
 
                 /* and tabulate it */
                 wordflag = (
-                    (isletter(ch)) || 
+                    (isletter(ch)) ||
                     (ch >= '0' && ch <= '9'));
                 if (wordflag == TRUE && lastword == FALSE)
                         ++nwords;

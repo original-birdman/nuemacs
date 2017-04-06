@@ -79,10 +79,13 @@ int gotobol(int f, int n)
 }
 
 /*
- * Move the cursor backwards by "n" characters. If "n" is less than zero call
- * "forwchar" to actually do the move. Otherwise compute the new cursor
- * location. Error if you try and move out of the buffer. Set the flag if the
- * line pointer for dot changes.
+ * Move the cursor backwards by "n" characters.
+ * GGR - we now move by glyph - or actual *display* character - rather
+ * than by byte or utf8 character.
+ * If "n" is less than zero call "forwchar" to actually do the move.
+ * Otherwise compute the new cursor location.
+ * Error if you try and move out of the buffer.
+ * Set the flag if the line pointer for dot changes.
  */
 int backchar(int f, int n)
 {
@@ -118,10 +121,13 @@ int gotoeol(int f, int n)
 }
 
 /*
- * Move the cursor forwards by "n" characters. If "n" is less than zero call
- * "backchar" to actually do the move. Otherwise compute the new cursor
- * location, and move ".". Error if you try and move off the end of the
- * buffer. Set the flag if the line pointer for dot changes.
+ * Move the cursor forwards by "n" characters. 
+ * GGR - we now move by glyph - or actual *display* character - rather
+ * than by byte or utf8 character.
+ * If "n" is less than zero call "backchar" to actually do the move.
+ * Otherwise compute the new cursor location, and move ".".
+ * Error if you try and move off the end of the buffer.
+ * Set the flag if the line pointer for dot changes.
  */
 int forwchar(int f, int n)
 {
