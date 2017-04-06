@@ -192,8 +192,11 @@ char *token(char *src, char *tok, int size)
                         }
 
                         /* set quote mode if quote found */
-                        if (*src == '"')
+                        if (*src == '"') {
                                 quotef = TRUE;
+                                src++;
+                                continue;   /* Don't record it... */
+                        }
 
                         /* record the character */
                         c = *src++;

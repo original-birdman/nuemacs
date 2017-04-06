@@ -1307,33 +1307,56 @@ int fmatch(int ch)
 /*
  * ask for and insert a string into the current
  * buffer at the current point
+ * GGR
+ * Treats response as a set of tokens, allowing unicode (U+xxxx) and utf8
+ * (0x..) characters to be entered.
+ * You can enter ASCII words (i.e. space-separated ones) within "..".
  *
  * int f, n;            ignored arguments
  */
 int istring(int f, int n)
 {
-        int status;                     /* status return code */
-        char tstring[NPAT + 1];         /* string to add */
+    int status;                     /* status return code */
+    char tstring[NLINE + 1];        /* string to add */
 
-        /* ask for string to insert */
-        status =
+/* ask for string to insert */
 /* GGR
  * Our mlreplyt returns only on CR
  *          mlreplyt("String to insert<META>: ", tstring, NPAT, metac);
  */
-            mlreplyt("String to insert: ", tstring, NPAT, metac);
-        if (status != TRUE)
-                return status;
-
-        if (f == FALSE)
-                n = 1;
-
-        if (n < 0)
-                n = -n;
-
-        /* insert it */
-        while (n-- && (status = linstr(tstring)));
+    status = mlreply("String/unicode chars: ", tstring, NLINE);
+    if (status != TRUE)
         return status;
+
+    char *rp = tstring;
+    char nstring[NLINE] = "";
+    int nlen = 0;
+    char tok[NLINE];
+    while(*rp != '\0') {
+        rp = token(rp, tok, NLINE);
+        if (tok[0] == '\0') break;
+        if (!strncmp(tok, "0x", 2)) {
+            long add = strtol(tok+2, NULL, 16);
+            nstring[nlen++] = add;
+        }
+        else if (tok[0] == 'U' && tok[1] == '+') {
+            int val = strtol(tok+2, NULL, 16);
+            int incr = unicode_to_utf8(val, nstring+nlen);
+            nlen += incr;
+        }
+        else {
+            strcat(nstring, tok);
+            nlen += strlen(tok);
+        }
+        nstring[nlen] = '\0';
+    }
+    if (f == FALSE) n = 1;
+    if (n < 0) n = -n;
+
+/* insert it */
+
+    while (n-- && (status = linstr(nstring)));
+    return status;
 }
 
 /*
