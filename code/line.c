@@ -375,10 +375,10 @@ int lgetchar(unicode_t *c)
         return utf8_to_unicode(buf, curwp->w_doto, len, c);
 }
 
-/* Get the glyph structure for what point is looking at.
+/* Get the grapheme structure for what point is looking at.
  * Returns the number of bytes used up by the utf8 string.
  */
-int lgetglyph(struct glyph *gp, int utf8_len_only)
+int lgetgrapheme(struct grapheme *gp, int utf8_len_only)
 {
         int len = llength(curwp->w_dotp);
         char *buf = curwp->w_dotp->l_text;
@@ -409,15 +409,15 @@ int lgetglyph(struct glyph *gp, int utf8_len_only)
  * ldelete() really fundamentally works on bytes, not characters.
  * It is used for things like "scan 5 words forwards, and remove
  * the bytes we scanned".
- * GGR - cater for zero-width characters...with lgetglyph.
+ * GGR - cater for zero-width characters...with lgetgrapheme.
  *
  * If you want to delete characters, use ldelchar().
  */
 int ldelchar(long n, int kflag)
 {
         while (n-- > 0) {
-                struct glyph gc;
-                if (!ldelete(lgetglyph(&gc, TRUE), kflag))
+                struct grapheme gc;
+                if (!ldelete(lgetgrapheme(&gc, TRUE), kflag))
                         return FALSE;
         }
         return TRUE;

@@ -10,14 +10,14 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len, unicode_t *re
 unsigned unicode_to_utf8(unsigned int c, char *utf8);
 
 /* GGR
- * Define a structure to hold the data for a single glyph.
+ * Define a structure to hold the data for a single grapheme.
  * This may include additonal unicode characters such as combining
  * diacritics, or any zero-width character.
  * We expect most characters to have no cdm, and most that do have
  * them to only have one. So we access the first directly (as alignment
  * mean we'll probably get that space "free").
  */
-struct glyph {
+struct grapheme {
         unicode_t  uc;          /* The "main" unicode character */
         unicode_t cdm;          /* A "combining diacritic marker" */
         unicode_t *ex;          /* A possible list of further cdm */

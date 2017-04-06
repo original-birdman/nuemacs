@@ -35,12 +35,12 @@ static int vtcol = 0;                  /* Column location of SW cursor */
 struct video {
         int v_flag;             /* Flags */
 #if     COLOR
-        int v_fcolor;           /* current forground color */
-        int v_bcolor;           /* current background color */
-        int v_rfcolor;          /* requested forground color */
-        int v_rbcolor;          /* requested background color */
+        int v_fcolor;           /* current forground color      */
+        int v_bcolor;           /* current background color     */
+        int v_rfcolor;          /* requested forground color    */
+        int v_rbcolor;          /* requested background color   */
 #endif
-        struct glyph v_text[0]; /* Screen data - dynamic */
+        struct grapheme v_text[0];  /* Screen data - dynamic    */
 };
 
 #define VFCHG   0x0001          /* Changed flag                 */
@@ -69,7 +69,7 @@ static void updall(struct window *wp);
 static int scrolls(int inserts);
 static void scrscroll(int from, int to, int count);
 static int texttest(int vrow, int prow);
-static int endofline(struct glyph *s, int n);
+static int endofline(struct grapheme *s, int n);
 #endif
 static void updext(void);
 static int updateline(int row, struct video *vp1, struct video *vp2);
@@ -83,13 +83,13 @@ static int newscreensize(int h, int w, int);
 static void putline(int row, int col, char *buf);
 #endif
 
-/* GGR Some functions to handle struct glyph usage */
+/* GGR Some functions to handle struct grapheme usage */
 
 /* Set the entry to an ASCII character.
  * Checks for previous extended cdm usage and frees any such found.
  * POSSIBLY INLINABLE??
  */
-static void set_glyph(struct glyph *gp, unicode_t uc) {
+static void set_grapheme(struct grapheme *gp, unicode_t uc) {
     gp->uc = uc;
     gp->cdm = 0;
     if (gp->ex != NULL) {
@@ -101,7 +101,7 @@ static void set_glyph(struct glyph *gp, unicode_t uc) {
 
 /* Add a unicode character as a cdm or dynamic ex entry
  */
-static void extend_glyph(struct glyph *gp, unicode_t uc) {
+static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
 
     if (gp->cdm == 0) {         /* None there yet - simple */
         gp->cdm = (unicode_t)uc;
@@ -122,11 +122,11 @@ static void extend_glyph(struct glyph *gp, unicode_t uc) {
     return;
 }
 
-/* Copy glyph data between structures.
+/* Copy grapheme data between structures.
  * This needs to allocate new space for any ex section and copy the data.
  */
-static void clone_glyph(struct glyph *gtarget, struct glyph *gsource) {
-
+static void
+  clone_grapheme(struct grapheme *gtarget, struct grapheme *gsource) {
     gtarget->uc = gsource->uc;
     gtarget->cdm = gsource->cdm;
 /* Free any existing ex data in the target */
@@ -146,7 +146,7 @@ static void clone_glyph(struct glyph *gtarget, struct glyph *gsource) {
 
 /* Only interested in same/not same here
  */
-static int glyph_same(struct glyph *gp1, struct glyph *gp2) {
+static int grapheme_same(struct grapheme *gp1, struct grapheme *gp2) {
     if (gp1->uc != gp2->uc) return FALSE;
     if (gp1->cdm != gp2->cdm) return FALSE;
     if ((gp1->ex == NULL) && (gp2->ex == NULL)) return TRUE;
@@ -163,21 +163,22 @@ static int glyph_same(struct glyph *gp1, struct glyph *gp2) {
     return ((*ex1 == END_UCLIST) && (*ex2 == END_UCLIST));
 }
 
-static int glyph_same_array(struct glyph *gp1, struct glyph *gp2, int nelem) {
+static int
+  grapheme_same_array(struct grapheme *gp1, struct grapheme *gp2, int nelem) {
     for (int i = 0; i < nelem; i++) {
-        if (!glyph_same(gp1+i, gp2+i)) return FALSE;
+        if (!grapheme_same(gp1+i, gp2+i)) return FALSE;
     }
     return TRUE;
 }
 
-static int is_space(struct glyph *gp) {
+static int is_space(struct grapheme *gp) {
     return ((gp->uc == ' ') && (gp->cdm == 0));
 }
 
-/* Output a glyph - which is in one column.
+/* Output a grapheme - which is in one column.
  * Handle remapping on the main character.
  */
-static inline int TTputglyph(struct glyph *gp) {
+static inline int TTputgrapheme(struct grapheme *gp) {
     int status = TTputc(display_for(gp->uc));
     if (gp->cdm) TTputc(gp->cdm);   /* Might add display_for here too */
     if (gp->ex != NULL) {
@@ -222,7 +223,7 @@ void vtinit(void)
 #endif
         for (i = 0; i < term.t_mrow; ++i) {
                 vp = xmalloc(sizeof(struct video) +
-                        term.t_mcol*sizeof(struct glyph));
+                        term.t_mcol*sizeof(struct grapheme));
                 vp->v_flag = 0;
 #if     COLOR
 /* GGR - use defined colors */
@@ -232,7 +233,7 @@ void vtinit(void)
                 vscreen[i] = vp;
 
 /* GGR - clear things out at the start.
- * Can't use set_glyph() until after we have initialized
+ * Can't use set_grapheme() until after we have initialized
  * We only need to initialize vscreen, as we do all assigning
  * (including malloc()/free()) there.
  */
@@ -245,7 +246,7 @@ void vtinit(void)
 
 #if     MEMMAP == 0 || SCROLLCODE
                 vp = xmalloc(sizeof(struct video) +
-                        term.t_mcol*sizeof(struct glyph));
+                        term.t_mcol*sizeof(struct grapheme));
                 vp->v_flag = 0;
                 pscreen[i] = vp;
 #endif
@@ -317,16 +318,16 @@ static void vtputc(unsigned int c)
         vp = vscreen[vtrow];
 
         if (zerowidth_type((unicode_t)c)) {
-/* Only extend a glyph if we have a prev-char within screen width */
+/* Only extend a grapheme if we have a prev-char within screen width */
             if (vtcol > 0 && (vtcol <= term.t_ncol)) {
-                extend_glyph(&(vp->v_text[vtcol-1]), c);
+                extend_grapheme(&(vp->v_text[vtcol-1]), c);
                 return;     /* Nothing else do do... */
             }
         }
 
         if (vtcol >= term.t_ncol) {
                 ++vtcol;
-                set_glyph(&(vp->v_text[term.t_ncol - 1]), '$');
+                set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
                 return;
         }
 
@@ -364,7 +365,7 @@ static void vtputc(unsigned int c)
         }
 
         if (vtcol >= 0)
-                set_glyph(&(vp->v_text[vtcol]), c);
+                set_grapheme(&(vp->v_text[vtcol]), c);
         ++vtcol;
 }
 
@@ -374,10 +375,10 @@ static void vtputc(unsigned int c)
  */
 static void vteeol(void)
 {
-        struct glyph *vcp = vscreen[vtrow]->v_text;
+        struct grapheme *vcp = vscreen[vtrow]->v_text;
 
         while (vtcol < term.t_ncol)
-                set_glyph(&(vcp[vtcol++]), ' ');
+                set_grapheme(&(vcp[vtcol++]), ' ');
 }
 
 /*
@@ -783,7 +784,7 @@ void upddex(void)
  */
 void updgar(void)
 {
-        struct glyph *txt;
+        struct grapheme *txt;
         int i, j;
 
 /* GGR - include the last row, so <=, (for mini-buffer) */
@@ -802,7 +803,7 @@ void updgar(void)
 #if     MEMMAP == 0 || SCROLLCODE
                 txt = pscreen[i]->v_text;
                 for (j = 0; j < term.t_ncol; ++j)
-                        set_glyph(txt+j, ' ');
+                        set_grapheme(txt+j, ' ');
 #endif
         }
 
@@ -893,7 +894,7 @@ static int scrolls(int inserts)
                 end = endofline(vpv->v_text, cols);
                 if (end == 0)
                         target = first; /* newlines */
-                else if (glyph_same_array(vpp->v_text, vpv->v_text, end))
+                else if (grapheme_same_array(vpp->v_text, vpv->v_text, end))
                         target = first + 1;     /* broken line newlines */
                 else
                         target = first;
@@ -953,7 +954,7 @@ static int scrolls(int inserts)
                         vpp = pscreen[to + i];
                         vpv = vscreen[to + i];
                         memcpy(vpp->v_text, vpv->v_text,
-                                sizeof(struct glyph)*cols);
+                                sizeof(struct grapheme)*cols);
                         vpp->v_flag = vpv->v_flag;      /* XXX */
                         if (vpp->v_flag & VFREV) {
                                 vpp->v_flag &= ~VFREV;
@@ -972,10 +973,10 @@ static int scrolls(int inserts)
                 }
 #if     MEMMAP == 0
                 for (i = from; i < to; i++) {
-                        struct glyph *txt;
+                        struct grapheme *txt;
                         txt = pscreen[i]->v_text;
                         for (j = 0; j < term.t_ncol; ++j)
-                                set_glyph(txt+j, ' ');
+                                set_grapheme(txt+j, ' ');
                         vscreen[i]->v_flag |= VFCHG;
                 }
 #endif
@@ -1001,13 +1002,13 @@ static int texttest(int vrow, int prow)
         struct video *vpv = vscreen[vrow];      /* virtual screen image */
         struct video *vpp = pscreen[prow];      /* physical screen image */
 
-        return glyph_same_array(vpv->v_text, vpp->v_text, term.t_ncol);
+        return grapheme_same_array(vpv->v_text, vpp->v_text, term.t_ncol);
 }
 
 /*
  * return the index of the first blank of trailing whitespace
  */
-static int endofline(struct glyph *s, int n)
+static int endofline(struct grapheme *s, int n)
 {
         int i;
         for (i = n - 1; i >= 0; i--)
@@ -1045,7 +1046,7 @@ static void updext(void)
         taboff = 0;
 
         /* and put a '$' in column 1 */
-        set_glyph(&(vscreen[currow]->v_text[0]), '$');
+        set_grapheme(&(vscreen[currow]->v_text[0]), '$');
 }
 
 /*
@@ -1060,15 +1061,15 @@ static void updext(void)
 static int updateline(int row, struct video *vp1, struct video *vp2)
 {
 #if     SCROLLCODE
-        struct glyph *cp1;
-        struct glyph *cp2;
+        struct grapheme *cp1;
+        struct grapheme *cp2;
         int nch;
 
         cp1 = &vp1->v_text[0];
         cp2 = &vp2->v_text[0];
         nch = term.t_ncol;
         do {
-                clone_glyph(cp2, cp1);
+                clone_grapheme(cp2, cp1);
                 ++cp2;
                 ++cp1;
         }
@@ -1102,8 +1103,8 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 #if RAINBOW
 /*      UPDATELINE specific code for the DEC rainbow 100 micro  */
 
-        struct glyph *cp1;
-        struct glyph *cp2;
+        struct grapheme *cp1;
+        struct grapheme *cp2;
         int nch;
 
         /* since we don't know how to make the rainbow do this, turn it off */
@@ -1124,11 +1125,11 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 #else
 /*      UPDATELINE code for all other versions          */
 
-        struct glyph *cp1;
-        struct glyph *cp2;
-        struct glyph *cp3;
-        struct glyph *cp4;
-        struct glyph *cp5;
+        struct grapheme *cp1;
+        struct grapheme *cp2;
+        struct grapheme *cp3;
+        struct grapheme *cp4;
+        struct grapheme *cp5;
         int nbflag;             /* non-blanks to the right flag? */
         int rev;                /* reverse video flag */
         int req;                /* reverse video request flag */
@@ -1163,8 +1164,8 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
                    the virtual screen array                             */
                 cp3 = &vp1->v_text[term.t_ncol];
                 while (cp1 < cp3) {
-                        TTputglyph(cp1);
-                        clone_glyph(cp2++, cp1++);
+                        TTputgrapheme(cp1);
+                        clone_grapheme(cp2++, cp1++);
                 }
                 /* turn rev video off */
                 if (rev != req)
@@ -1186,7 +1187,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 
         /* advance past any common chars at the left */
         while (cp1 != &vp1->v_text[term.t_ncol] &&
-             glyph_same(cp1, cp2)) {
+             grapheme_same(cp1, cp2)) {
                 ++cp1;
                 ++cp2;
         }
@@ -1208,7 +1209,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
         cp3 = &vp1->v_text[term.t_ncol];
         cp4 = &vp2->v_text[term.t_ncol];
 
-        while (glyph_same(&(cp3[-1]), &(cp4[-1]))) {
+        while (grapheme_same(&(cp3[-1]), &(cp4[-1]))) {
                 --cp3;
                 --cp4;
                 if (!is_space(&(cp3[0])))   /* Note if any nonblank */
@@ -1232,14 +1233,14 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 #endif
 
         while (cp1 != cp5) {    /* Ordinary. */
-                TTputglyph(cp1);
-                clone_glyph(cp2++, cp1++);
+                TTputgrapheme(cp1);
+                clone_grapheme(cp2++, cp1++);
         }
 
         if (cp5 != cp3) {       /* Erase. */
                 TTeeol();
                 while (cp1 != cp3)
-                        clone_glyph(cp2++, cp1++);
+                        clone_grapheme(cp2++, cp1++);
 }
 #if     REVSTA
         TTrev(FALSE);

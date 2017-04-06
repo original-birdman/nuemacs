@@ -49,8 +49,8 @@ int showcpos(int f, int n)
         int col;
         int savepos;            /* temp save for current offset */
         int ecol;               /* column pos/end of current line */
-        int bytes_used = 1;     /* ...by the current glyph */
-        int uc_used = 1;        /* unicode characters in glyph */
+        int bytes_used = 1;     /* ...by the current grapheme */
+        int uc_used = 1;        /* unicode characters in grapheme */
 
         /* starting at the beginning of the buffer */
         lp = lforw(curbp->b_linep);
@@ -69,8 +69,8 @@ int showcpos(int f, int n)
                         if ((curwp->w_doto) == llength(lp))
                                 curchar = '\n';
                         else {
-                                struct glyph glyi;  /* Full glyph data */
-                                bytes_used = lgetglyph(&glyi, FALSE);
+                                struct grapheme glyi;   /* Full data */
+                                bytes_used = lgetgrapheme(&glyi, FALSE);
                                 curchar = glyi.uc;
                                 if (glyi.cdm != 0) uc_used = 2;
                                 if (glyi.ex != NULL) {

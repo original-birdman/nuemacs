@@ -493,7 +493,7 @@ int ptt_handler(int c) {
         if (strncmp(&curwp->w_dotp->l_text[curwp->w_doto - ptr->from_len],
                     ptr->from, ptr->from_len)) continue;
         if (ptr->bow_only && (curwp->w_doto > ptr->from_len)) { /* Not BOL */
-/* Need to step back to the start of the preceding glyph and get the
+/* Need to step back to the start of the preceding grapheme and get the
  * base Unicode char from there.
  */
             int offs = prev_utf8_offset(curwp->w_dotp->l_text,

@@ -80,7 +80,7 @@ int gotobol(int f, int n)
 
 /*
  * Move the cursor backwards by "n" characters.
- * GGR - we now move by glyph - or actual *display* character - rather
+ * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
  * If "n" is less than zero call "forwchar" to actually do the move.
  * Otherwise compute the new cursor location.
@@ -121,8 +121,8 @@ int gotoeol(int f, int n)
 }
 
 /*
- * Move the cursor forwards by "n" characters. 
- * GGR - we now move by glyph - or actual *display* character - rather
+ * Move the cursor forwards by "n" characters.
+ * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
  * If "n" is less than zero call "backchar" to actually do the move.
  * Otherwise compute the new cursor location, and move ".".

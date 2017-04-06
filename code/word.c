@@ -16,7 +16,7 @@
 
 #include "utf8proc.h"
 
-/* This is set by inword() when a call tests a glyph with a
+/* This is set by inword() when a call tests a grapheme with a
  * zero-width work-break attached.
  */
 static int zw_break = 0;
@@ -127,7 +127,7 @@ int forwword(int f, int n)
 
 /* GGR
  * Force the case of the current character (or the main character of
- * a multi-char glyph) to be a particular case.
+ * a multi-char grapheme) to be a particular case.
  * For use by upper/lower/cap-word()
  * We start by defining the calling parameters.
  */
@@ -140,8 +140,8 @@ static struct case_ctl lwr_case = { UTF8PROC_CATEGORY_LU, utf8proc_tolower};
 
 static void ensure_case(struct case_ctl *cc) {
     int saved_doto = curwp->w_doto;     /* Save position */
-    struct glyph gc;
-    (void)lgetglyph(&gc, FALSE);        /* Doesn't move doto */
+    struct grapheme gc;
+    (void)lgetgrapheme(&gc, FALSE);     /* Doesn't move doto */
 /* We only look at the base character for casing.
  * If it's not what we want to change, leave now...
  */
@@ -153,7 +153,7 @@ static void ensure_case(struct case_ctl *cc) {
     ldelete(orig_utf8_len, FALSE);
     utf8_repl[new_utf8_len] = '\0';
     linstr(utf8_repl);
-    curwp->w_doto = saved_doto;     /* Restore positon */
+    curwp->w_doto = saved_doto;         /* Restore positon */
     lchange(WFHARD);
     return;
 }
@@ -410,15 +410,15 @@ bckdel:
 /*
  * Return TRUE if the character at dot is a character that is considered to be
  * part of a word. The word character list is hard coded. Should be setable.
- * GGR - the glyph-based version.
+ * GGR - the grapheme-based version.
  */
 int inword(void)
 {
-    struct glyph gc;
+    struct grapheme gc;
 
     if (curwp->w_doto == llength(curwp->w_dotp))
         return FALSE;
-    (void)lgetglyph(&gc, FALSE);
+    (void)lgetgrapheme(&gc, FALSE);
 
     zw_break = 0;
     if (gc.cdm == 0x200B) {

@@ -37,7 +37,7 @@ extern int lnewline(void);
 extern int ldelete(long n, int kflag);
 extern int ldelchar(long n, int kflag);
 extern int lgetchar(unicode_t *);
-extern int lgetglyph(struct glyph *, int);
+extern int lgetgrapheme(struct grapheme *, int);
 extern char *getctext(void);
 extern int putctext(char *iline);
 extern int ldelnewline(void);

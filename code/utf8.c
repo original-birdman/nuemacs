@@ -110,10 +110,11 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8)
 
 /* GGR functions to get offset of previous/next character in a buffer.
  * Added here to keep utf8 character handling together
- * Optional (glyph_start):
- * Check the following character(s) for being zero-width too.
+ * Optional (grapheme_start):
+ *    check the following character(s) for being zero-width too.
  */
-int next_utf8_offset(char *buf, int offset, int max_offset, int glyph_start) {
+int
+ next_utf8_offset(char *buf, int offset, int max_offset, int grapheme_start) {
 
         unicode_t c;
 
@@ -123,7 +124,7 @@ int next_utf8_offset(char *buf, int offset, int max_offset, int glyph_start) {
         offs += utf8_to_unicode(buf, offs, max_offset, &c);
         while(1) {      /* Look for any attached zero-width modifiers */
             int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
-            if (glyph_start && !zerowidth_type(c)) break;
+            if (grapheme_start && !zerowidth_type(c)) break;
             offs += next_incr;
         }
         return offs;
@@ -135,10 +136,10 @@ int next_utf8_offset(char *buf, int offset, int max_offset, int glyph_start) {
  * times. If we then find a utf8 leading byte (that is a correct one for
  * the length we have found) we use that.
  * If we fail along the way we revert to the original "back one byte".
- * Optional (glyph_start):
- * If we find a zero-width character we go back to the next previous one.
+ * Optional (grapheme_start):
+ *    if we find a zero-width character we go back to the next previous one.
  */
-int prev_utf8_offset(char *buf, int offset, int glyph_start) {
+int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
 
         if (offset <= 0) return -1;
         unicode_t res = 0;
@@ -183,12 +184,12 @@ int prev_utf8_offset(char *buf, int offset, int glyph_start) {
                 }
             }
             if (got_utf8) res = poss;
-        } while(glyph_start && (offs >= 0) && zerowidth_type(res));
+        } while(grapheme_start && (offs >= 0) && zerowidth_type(res));
         return offs;
 }
 
 /* Check whether the character is a zero-width one - needed for
- * glyph handling in display.c
+ * grapheme handling in display.c
  */
 
 struct range_t {
