@@ -1,18 +1,95 @@
-# makefile for emacs, updated Sun Apr 28 17:59:07 EET DST 1996
+# (GNU)Makefile for uemacs
 
 # Make the build silent by default
+#
 V =
-
 ifeq ($(strip $(V)),)
-	E = @echo
-	Q = @
+    E = @echo
+    Q = @
 else
-	E = @\#
-	Q =
+    E = @\#
+    Q =
 endif
 export E Q
 
+# No debug by default
+#
+DBG =
+ifeq ($(strip $(DBG)),)
+    DBG_OPTS = -O3
+else
+    DBG_OPTS = -O0 -g
+endif
+
+# Where is the utf8proc library?
+# If no specifc option is given we go looking for it.
+
+# The default assumption is that it is installed alongside the nuemacs
+# installation, and will will load the static library.
+# If UTF8 is set to sys, we assume a system installation (and use a
+# dynamic library)
+# If UTF8 is set to syslocal, we assume a /usr/local installation
+# with a dynamic library that needs RPATH set in the executable
+# If UTF8 is set a anything else we assume it is the location of
+# utf8proc and load the static library
+#
+UTF8 =
+ifeq ($(strip $(UTF8)),)
+# No override - so go looking...
+#
+    dlist := /usr/include/utf8proc.h
+    dlist += /usr/local/include/utf8proc.h
+    dlist += /opt/local/include/utf8proc.h
+    dlist += ../../utf8proc/utf8proc.h
+
+    filex = $(shell test -f $(1) && echo $(1))
+    res := $(firstword $(foreach dir, $(dlist), $(call filex, $(dir) ) ) )
+    ifeq ($(strip $(res)),/usr/include/utf8proc.h)
+# System location - use dynamic lib with no special options
+        UTF8INCL =
+        UTF8LIB = -lutf8proc
+    else ifeq ($(strip $(res)),/usr/local/include/utf8proc.h)
+        UTF8INCL = -I/usr/local/include
+        UTF8LIB = -L/usr/local -lutf8proc
+    else ifeq ($(strip $(res)),/opt/local/include/utf8proc.h)
+        UTF8INCL = -I/opt/local/include
+        UTF8LIB = -L/opt/local -lutf8proc
+    else ifeq ($(strip $(res)),../../utf8proc/utf8proc.h)
+# Parallel local build - use static lib
+        UTF8INCL = -I../../utf8proc
+        UTF8LIB = ../../utf8proc/libutf8proc.a
+endif
+# If the user gave a specifc UTF8 option, use that
+else ifeq ($(strip $(UTF8)),sys)
+    UTF8INCL =
+    UTF8LIB  = -lutf8proc
+else ifeq ($(strip $(UTF8)),syslocal)
+    UTF8INCL =
+    UTF8LIB  = -lutf8proc
+    RPATH    =  -Wl,-rpath=/usr/local/lib
+else
+    UTF8INCL = -I$(UTF8)
+    UTF8LIB  = $(UTF8)/libutf8proc.a
+endif
+
+# If we haven't got a defined UTF8LIB then we haven't foudn one
+# and need to exit, reporting that fact
+#
+ifeq ($(strip $(UTF8LIB)),)
+    .DEFAULT_GOAL := error
+endif
+
+# Who are we?
+#
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+
+ifeq ($(uname_S),Linux)
+ DEFINES=-DAUTOCONF -DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
+else ifeq ($(uname_S),FreeBSD)
+ DEFINES=-DAUTOCONF -DPOSIX -DSYSV -D_FREEBSD_C_SOURCE -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
+else ifeq ($(uname_S),Darwin)
+ DEFINES=-DAUTOCONF -DPOSIX -DSYSV -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
+endif
 
 PROGRAM=uemacs
 
@@ -32,38 +109,21 @@ HDR=ebind.h edef.h efunc.h epath.h estruct.h evar.h util.h version.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
 
-UTF8DIR=../../utf8proc
-LIBUTF8=$(UTF8DIR)/libutf8proc.a
-
-CC=gcc
+# Set the default options
+#
+CC = gcc
 WARNINGS=-Wall -Wstrict-prototypes
-CFLAGS=-O3 $(WARNINGS) -std=gnu99 -DGGR_MODE -I$(UTF8DIR)
-# CFLAGS=-O0 -g $(WARNINGS) -std=gnu99 -DGGR_MODE
-#CC=c89 +O3			# HP
-#CFLAGS= -D_HPUX_SOURCE -DSYSV
-#CFLAGS=-O4 -DSVR4		# Sun
-#CFLAGS=-O -qchars=signed	# RS/6000
-ifeq ($(uname_S),Linux)
- DEFINES=-DAUTOCONF -DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
-endif
-ifeq ($(uname_S),FreeBSD)
- DEFINES=-DAUTOCONF -DPOSIX -DSYSV -D_FREEBSD_C_SOURCE -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
-endif
-ifeq ($(uname_S),Darwin)
- DEFINES=-DAUTOCONF -DPOSIX -DSYSV -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
-endif
-#DEFINES=-DAUTOCONF
-#LIBS=-ltermcap                 # BSD
-LIBS=$(LIBUTF8) -lcurses        # SYSV
-#LIBS=-ltermlib
-#LIBS=-L/usr/lib/termcap -ltermcap
+CFLAGS=$(DBG_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE $(UTF8INCL)
+LIBS=$(UTF8LIB) -lcurses        # SYSV
 LFLAGS=-hbx
 BINDIR=/usr/bin
 LIBDIR=/usr/lib
 
+# The Rules
+#
 $(PROGRAM): $(OBJ)
 	$(E) "  LINK    " $@
-	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(LIBS)
+	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(LIBS) $(RPATH)
 
 SPARSE=sparse
 SPARSE_FLAGS=-D__LITTLE_ENDIAN__ -D__x86_64__ -D__linux__ -D__unix__
@@ -123,6 +183,10 @@ depend: ${SRC}
 .c.o:
 	$(E) "  CC      " $@
 	$(Q) ${CC} ${CFLAGS} ${DEFINES} -c $*.c
+
+error:
+	@echo "ERROR: Unable to find the Julia Lang utf8lib"
+	@echo "       This is a pre-requisite!"
 
 # DO NOT DELETE THIS LINE -- make depend uses it
 
