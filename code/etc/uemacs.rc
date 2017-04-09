@@ -162,175 +162,147 @@ store-procedure lr-justify          ; Left and right justify paragraph
 !endm
 ;
 store-procedure toggle-lmode            ; toggle local mode
-    write-message "Toggle mode (ACEMOVWX): "
+    !if $inmb
+        write-message "Command not allowed in mini-buffer"
+        !finish
+    !endif
+    write-message "Toggle mode (WCPEVOMYA): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
         write-message "[Aborted]"
         !finish
     !endif
+;
     !if &seq %modesel "W"
-        !if &band $cmode 1
-            set %report "WRAP mode toggled off"
-        !else
-            set %report "WRAP mode toggled on"
-        !endif
-        set $cmode &bxor $cmode 1
-        !goto exit
+        set %bit 1
+        set %what "WRAP"
+        !goto doit
     !endif
     !if &seq %modesel "C"
-        !if &band $cmode 2
-            set %report "CMODE toggled off"
-        !else
-            set %report "CMODE toggled on"
-        !endif
-        set $cmode &bxor $cmode 2
-        !goto exit
+        set %bit 2
+        set %what "CMODE"
+        !goto doit
+    !endif
+    !if &seq %modesel "P"
+        set %bit 4
+        set %what "PHON"
+        !goto doit
     !endif
     !if &seq %modesel "E"
-        !if &band $cmode 8
-            set %report "EXACT mode toggled off"
-        !else
-            set %report "EXACT mode toggled on"
-        !endif
-        set $cmode &bxor $cmode 8
-        !goto exit
+        set %bit 8
+        set %what "EXACT"
+        !goto doit
     !endif
     !if &seq %modesel "V"
-        !if &band $cmode 16
-            set %report "VIEW mode toggled off"
-        !else
-            set %report "VIEW mode toggled on"
-        !endif
-        set $cmode &bxor $cmode 16
-        !goto exit
+        set %bit 16
+        set %what "VIEW"
+        !goto doit
     !endif
     !if &seq %modesel "O"
-        !if &band $cmode 32
-            set %report "OVER mode toggled off"
-        !else
-            set %report "OVER mode toggled on"
-        !endif
-        set $cmode &bxor $cmode 32
-        !goto exit
+        set %bit 32
+        set %what "OVER"
+        !goto doit
     !endif
     !if &seq %modesel "M"
-        !if &band $cmode 64
-            set %report "MAGIC mode toggled off"
-        !else
-            set %report "MAGIC mode toggled on"
-        !endif
-        set $cmode &bxor $cmode 64
-        !goto exit
+        set %bit 64
+        set %what "MAGIC"
+        !goto doit
     !endif
-    !if &seq %modesel "X"
-        !if &band $cmode 128
-            set %report "CRYPT mode toggled off"
-        !else
-            set %report "CRYPT mode toggled on"
-        !endif
-        set $cmode &bxor $cmode 128
-        !goto exit
+    !if &seq %modesel "Y"
+        set %bit 128
+        set %what "CRYPT"
+        !goto doit
     !endif
     !if &seq %modesel "A"
-        !if &band $cmode 256
-            set %report "ASAVE mode toggled off"
-        !else
-            set %report "ASAVE mode toggled on"
-        !endif
-        set $cmode &bxor $cmode 256
-        !goto exit
+        set %bit 256
+        set %what "ASAVE"
+        !goto doit
     !endif
-    write-message "Unknown mode"
+    write-message "Unknown global mode"
     !finish
-*exit
+;
+*doit
+    write-message &cat "bit " %bit
+    !if &band $gmode %bit
+        set %mfunc delete-mode
+        set %report &cat %what " mode toggled off"
+    !else 
+        set %mfunc add-mode
+        set %report &cat %what " mode toggled on"
+    !endif
+    %mfunc %what
     write-message %report
     !finish
 !endm
 ;
 store-procedure toggle-gmode            ; toggle global mode
-    write-message "Toggle global mode (ACEMOVWX): "
+    write-message "Toggle global mode (WCPEVOMYA): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
         write-message "[Aborted]"
         !finish
     !endif
+;
     !if &seq %modesel "W"
-        !if &band $gmode 1
-            set %report "WRAP mode toggled off globally"
-        !else
-            set %report "WRAP mode toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 1
-        !goto exit
+        set %bit 1
+        set %what "WRAP"
+        !goto doit
     !endif
     !if &seq %modesel "C"
-        !if &band $gmode 2
-            set %report "CMODE toggled off globally"
-        !else
-            set %report "CMODE toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 2
-        !goto exit
+        set %bit 2
+        set %what "CMODE"
+        !goto doit
+    !endif
+    !if &seq %modesel "P"
+        set %bit 4
+        set %what "PHON"
+        !goto doit
     !endif
     !if &seq %modesel "E"
-        !if &band $gmode 8
-            set %report "EXACT mode toggled off globally"
-        !else
-            set %report "EXACT mode toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 8
-        !goto exit
+        set %bit 8
+        set %what "EXACT"
+        !goto doit
     !endif
     !if &seq %modesel "V"
-        !if &band $gmode 16
-            set %report "VIEW mode toggled off globally"
-        !else
-            set %report "VIEW mode toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 16
-        !goto exit
+        set %bit 16
+        set %what "VIEW"
+        !goto doit
     !endif
     !if &seq %modesel "O"
-        !if &band $gmode 32
-            set %report "OVER mode toggled off globally"
-        !else
-            set %report "OVER mode toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 32
-        !goto exit
+        set %bit 32
+        set %what "OVER"
+        !goto doit
     !endif
     !if &seq %modesel "M"
-        !if &band $gmode 64
-            set %report "MAGIC mode toggled off globally"
-        !else
-            set %report "MAGIC mode toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 64
-        !goto exit
+        set %bit 64
+        set %what "MAGIC"
+        !goto doit
     !endif
-    !if &seq %modesel "X"
-        !if &band $gmode 128
-            set %report "CRYPT mode toggled off globally"
-        !else
-            set %report "CRYPT mode toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 128
-        !goto exit
+    !if &seq %modesel "Y"
+        set %bit 128
+        set %what "CRYPT"
+        !goto doit
     !endif
     !if &seq %modesel "A"
-        !if &band $gmode 256
-            set %report "ASAVE mode toggled off globally"
-        !else
-            set %report "ASAVE mode toggled on globally"
-        !endif
-        set $gmode &bxor $gmode 256
-        !goto exit
+        set %bit 256
+        set %what "ASAVE"
+        !goto doit
     !endif
     write-message "Unknown global mode"
     !finish
-*exit
+;
+*doit
+    write-message &cat "bit " %bit
+    !if &band $gmode %bit
+        set %mfunc delete-global-mode
+        set %report &cat %what " mode toggled off globally"
+    !else 
+        set %mfunc add-global-mode
+        set %report &cat %what " mode toggled on globally"
+    !endif
+    %mfunc %what
     write-message %report
     !finish
 !endm
