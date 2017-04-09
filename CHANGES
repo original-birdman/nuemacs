@@ -335,7 +335,7 @@ Makefile
 
 basic.c
     Skip over zerowidth characters in getgoal().
-    Tell next_utf8_offset(), prev_utf8_offset() to go to the stat of a
+    Tell next_utf8_offset(), prev_utf8_offset() to go to the start of a
     glyph (i.e skip over zerowidth chars).
 
 bind.c
@@ -672,3 +672,162 @@ etc/uemacs.hlp
 
 ==========
 
+ptt/czech.cmd
+   Fix the z~ mapping.
+
+basic.c
+random.c
+utf8.c
+utf8.h
+   Remove the unneeded third arg (maxlen) from prev_utf8_offset(). When
+   going backwards the *minimum* offset is always 0!
+
+Makefile
+exec.c
+   make use of the Julia language utf8/unicode library
+      https://julialang.org/utf8proc/
+   to detect character types.
+
+      This first test was to determine the character type for a
+      beginning-of-word test in phonetic translation table handling.
+
+   The Julia language utf8/unicode library is now a pre-requisite for
+   this version of uemacs (an beyond).
+
+Simplify the code by removing various ifdefs by noting that we always
+want:
+    PKCODE = 1                  // We are extending the pK version
+    GGR_MODE = 1                // We really are extending the pK version
+    EBCDIC = 0, ASCII = 1       // We're using Unicode
+    VMS = 0                     // No longer of use...
+This will simplify the switch to using the Julia language utf8/unicode
+library generally.
+
+>>> VMS deletions
+Makefile
+vmsvt.c
+   Deleted.
+
+complet.c
+file.c
+fileio.c
+input.c
+main.c
+search.c
+spawn.c
+termio.c
+epath.h
+estruct.h
+   Deleted VMS references.
+
+isearch.c
+   Deleted IS_VMSFORW and IS_VMSQUOTE (also from estruct.h)
+
+>>> EBCDIC/ASCII removal
+estruct.h
+   Delete EBCDIC. Enable all ASCII.
+   Also remove IBMCHR, as we will be replacing isletter(), islower() and
+   isupper() with unicode versions.
+
+>>> GGR_MODE forced
+display.c
+word.c
+estruct.h
+   Removed GGR_MODE assuming it to be set.
+   Also removed NATIONL, as we will be replacing isletter(), islower()
+   and isupper() with unicode versions [estruct.h].
+
+>>> PKCODE forced
+ansi.c
+basic.c
+display.c
+file.c
+fileio.c
+globals.c
+ibmpc.c
+input.c
+isearch.c
+main.c
+names.c
+random.c
+search.c
+spawn.c
+tcap.c
+termio.c
+word.c
+ebind.h
+edef.h
+estruct.h
+   Removed PKCODE assuming it to be set.
+   Except for:
+      Enable "#" for truncated files. [display.c]
+
+basic.c
+word.c
+   forword(), backword(), upperword(), lowerword() and capword() were
+   changed to know about display characters (glyphs) and also to use the
+   Julia utf8 library for character types (letters/non-letters) and case
+   changing (upper letter to/from lower letter).
+   Updated some comments to reflect that backchar()/forwchar() move by n
+   display characters (glyphs) not bytes (have done since GGR4.109).
+
+basic.c
+display.c
+exec.c
+line.c
+random.c
+utf8.c
+word.c
+line.h
+utf8.h
+   Changed all references to glyph (including comments) to use grapheme
+   instead, as that is what the Unicode documentation uses for the
+   concept of the data to describe a sequence of coded characters that
+   ‘should be kept together’ and there a glyph is something different.
+   No code change.
+
+exec.c
+random.c
+   Changed token() [exec.c] to not add the starting quote to a quoted
+   token (it never added the closing one!).
+   Changed istring [random.c] to treat the response as a set of token,
+   and handled Unicode (U+xxxx) and utf8 bytes (0x..) in those.
+   This allows you to enter known Unicode character points and utf8 code
+   sequences. "Normal" text strings can still be added - but you now
+   need to put them in "..." if they contain spaces.
+
+random.c
+   In showcpos(), remove the printing of the decimal code, and just
+   display the unicode codepoint as U+xxxx.
+
+ptt/russian.cmd
+ptt/czech.cmd
+etc/uemacs.rc
+   Added a Russian pttable and moved the toggle-ptmode key binding to
+   the main start-up file.
+
+etc/uemacs.hlp
+    Added some information at the end about recent additions to macros
+    (eos-chars, char-replace, pttables, use defined procedure key
+    binding.
+
+Makefile
+    Added code to enable finding the Julia utf8proc lib, and exit with
+    an error if unable to find it.
+
+../PREREQUISITE
+../README
+    Added a specific note about the use of the Julia utf8proc lib and
+    also commented on it in the README file.
+
+Makefile
+    Added code to look for curses term.h.
+    Probably specifc to Oleg's router distros, but could be extended
+    for others as necessary.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.115
+
+==========
