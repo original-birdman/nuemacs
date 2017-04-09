@@ -1,4 +1,4 @@
-=>                   uEmacs/PK GGR4.114 Help Index     (04 April 2017)
+=>                   uEmacs/PK GGR4.115 Help Index     (09 April 2017)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -42,7 +42,7 @@ Insert file ...........   ^X ^I
 Change file name ......   ^X  N         Filter buffer .........   ^X  #
 Save file .............   ^X ^S
 Read file .............   ^X ^R
-Write file ............   ^X ^W         Execute file .......... not bound  
+Write file ............   ^X ^W         Execute file .......... not bound
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS CHARACTER COMMANDS
 Newline ...............      ^M         Transpose characters ..      ^T
@@ -66,7 +66,7 @@ EXACT  :: Match case in search          [ ]  Character class
 Bind to key ........... Meta  K         Help ..................   ^X  ?
 Unbind key ............ Meta ^K         Apropos ............... Meta  A
 Describe key .......... Meta  ?         Abort command .........      ^G
-Describe bindings ..... not bound      
+Describe bindings ..... not bound
 Meta prefix ...........      Esc    ::  Although meta-prefix can be bound to
 Cntlx prefix ..........      ^X     ::  some other key, no other command can
 Execute named command . Meta  X     ::  be bound to Esc.
@@ -98,22 +98,22 @@ Delete other windows ..   ^X  1         Previous window .......   ^X  P
 Delete window .........   ^X  0         Scroll next up ........ Meta ^Z
 Grow window ...........   ^X  Z         Scroll next down ...... Meta ^V
 Shrink window .........   ^X ^Z         Resize window .........   ^X  W
-Move window up ........   ^X ^P         Save window ........... not bound  
-Move window down ......   ^X ^N         Restore window ........ not bound  
+Move window up ........   ^X ^P         Save window ........... not bound
+Move window down ......   ^X ^N         Restore window ........ not bound
 -------------------------------------------------------------------------------
 =>                      BUFFER COMMANDS
-Next buffer ...........   ^X  X         Buffer position .......   ^X  = 
+Next buffer ...........   ^X  X         Buffer position .......   ^X  =
 Select buffer .........   ^X  B         Unmark buffer ......... Meta  ~
 List buffers ..........   ^X ^B
-Delete buffer .........   ^X  K         Write message ......... not bound  
-Name buffer ........... Meta ^N         Clear message line .... not bound  
+Delete buffer .........   ^X  K         Write message ......... not bound
+Name buffer ........... Meta ^N         Clear message line .... not bound
 Filter buffer .........   ^X  #
-Pipe command ..........   ^X  @         Execute buffer ........ not bound  
+Pipe command ..........   ^X  @         Execute buffer ........ not bound
 -------------------------------------------------------------------------------
 =>                      SEARCHING AND REPLACING
 Search forward ........ Meta  S     ::  End string with Meta.
 Incremental search ....   ^X  S     ::  Search next ^X, stop Meta, cancel ^G.
-Search reverse ........      ^R  
+Search reverse ........      ^R
 Reverse incremental search              Hunt forward ..........  Alt-S
 .......................   ^X  R         Hunt backward .........  Alt-R
 Replace string ........ Meta  R
@@ -132,16 +132,19 @@ Execute program .......   ^X  $     ::  * Not under VMS.
 Begin macro ...........   ^X  (
 End macro .............   ^X  )
 Execute macro .........   ^X  E
-Store macro ........... not bound    
-Execute macro nn ...... not bound  
-Store procedure ....... not bound  
+Store macro ........... not bound
+Execute macro nn ...... not bound
+Store procedure ....... not bound
 Execute procedure ..... Meta ^E
+Store pttable ......... not bound
+Set pttable ........... not bound
+Toggle ptmode ......... not bound
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS
 Universal argument ....      ^U         Set mark .............. Meta Space
 Clear and redraw ......      ^L         Exchange point and mark   ^X ^X
 Redraw display ........ Meta ^L
-Execute named command . Meta  X         Insert string ......... not bound  
+Execute named command . Meta  X         Insert string ......... not bound
 Execute command line .. not bound       Overwrite string ...... not bound
 Set encryption key .... Meta  E         Wrap word ............. not bound
 Count words ........... Meta ^C         Update screen ......... not bound
@@ -168,8 +171,51 @@ Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
 
 File name completion can be used with all file commands (find-file,
 view-file, ...) but it works only under UNIX and MS-DOS. It is invoked
-by a <Tab>. If more than one possible completion existthey are displayed
+by a <Tab>. If more than one possible completion exists they are displayed
 in the minibuffer and the longest common part is retained for you to add
-to. The minibuffer is an editabel buffer line.
+to. The minibuffer is an editable buffer line.
 Shell and variable expansion is handled.
 -------------------------------------------------------------------------------
+=>                      MACRO functions
+eos-chars <string of characters>
+    This defines which characters to treat as end of sentence one,s so
+    that they have an extra space appended when justifying paragraphs.
+    The default is none.
+
+char-replace
+    Allows you to define the on-screen representation of characters -
+    useful for those oddities that display incorrectly in your terminal
+    emulator.
+    char-replace reset
+        resets everything to no replace, replace-char 0xFFFD
+    char-replace repchar U+xxxx
+        sets the replace-char to U+xxxx
+    char-replace U+xxxx | U+xxxx-U+xxxx
+        sets the given character (range) to be replaced
+
+store-procedure <proc-name>
+    Store a user-defined set of macro commands with the given name
+    (which can be a maximum of 14 characters in length).
+
+buffer-to-key <proc-name>   <key-spec>
+    Bind the user-defined procedure <proc-name> to the given key.
+
+store-pttable <ptt-name>
+    from1  to1
+    from2  to2
+    ...
+!endm
+    Define a phonetic translation table.  When this is switched on any
+    typing that results in the completion of from1 (from2, ...) will
+    result in that text being replaced with to1 (to2, ...).
+
+toggle-ptmode
+    This turns pttable usage on and off.  Normally it just toggles the
+    current state, but a positive argument will force it on and a
+    negative one off. You must have a pttable defined.
+    The ptmode state is per-buffer, but which pttable is active (if you
+    have more then one defined) is global - so the same table applies to
+    all buffers with the ptmode state on.
+
+set-pttable <ptt-name>
+    Make <ptt-name> the currently-active pttable.
