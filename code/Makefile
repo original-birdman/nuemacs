@@ -24,6 +24,8 @@ endif
 # Where is the utf8proc library?
 # If no specifc option is given we go looking for it.
 
+filex = $(shell test -f $(1) && echo $(1))
+
 # The default assumption is that it is installed alongside the nuemacs
 # installation, and will will load the static library.
 # If UTF8 is set to sys, we assume a system installation (and use a
@@ -42,18 +44,17 @@ ifeq ($(strip $(UTF8)),)
     dlist += /opt/local/include/utf8proc.h
     dlist += ../../utf8proc/utf8proc.h
 
-    filex = $(shell test -f $(1) && echo $(1))
-    res := $(firstword $(foreach dir, $(dlist), $(call filex, $(dir) ) ) )
+    res := $(firstword $(foreach arg, $(dlist), $(call filex, $(arg) ) ) )
     ifeq ($(strip $(res)),/usr/include/utf8proc.h)
 # System location - use dynamic lib with no special options
         UTF8INCL =
         UTF8LIB = -lutf8proc
     else ifeq ($(strip $(res)),/usr/local/include/utf8proc.h)
         UTF8INCL = -I/usr/local/include
-        UTF8LIB = -L/usr/local -lutf8proc
+        UTF8LIB = -L/usr/local/lib -lutf8proc
     else ifeq ($(strip $(res)),/opt/local/include/utf8proc.h)
         UTF8INCL = -I/opt/local/include
-        UTF8LIB = -L/opt/local -lutf8proc
+        UTF8LIB = -L/opt/local/lib -lutf8proc
     else ifeq ($(strip $(res)),../../utf8proc/utf8proc.h)
 # Parallel local build - use static lib
         UTF8INCL = -I../../utf8proc
@@ -112,18 +113,29 @@ HDR=ebind.h edef.h efunc.h epath.h estruct.h evar.h util.h version.h
 # Set the default options
 #
 CC = gcc
-WARNINGS=-Wall -Wstrict-prototypes
-CFLAGS=$(DBG_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE $(UTF8INCL)
-LIBS=$(UTF8LIB) -lcurses        # SYSV
-LFLAGS=-hbx
-BINDIR=/usr/bin
-LIBDIR=/usr/lib
+WARNINGS = -Wall -Wstrict-prototypes
+CFLAGS = $(DBG_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE $(UTF8INCL)
+
+LIBS = -lcurses     # SYSV
+LFLAGS = -hbx
+BINDIR = /usr/bin
+LIBDIR = /usr/lib
+
+#Let's try to find libcurses/libncurses etc.
+# Start by finding term.h (for Oleg's router distros)
+#
+tlist := /opt/include/ncurses/term.h
+tres := $(firstword $(foreach arg, $(tlist), $(call filex, $(arg) ) ) )
+ifeq ($(strip $(tres)),/opt/include/ncurses/term.h)
+   CFLAGS += -I/opt/include/ncurses
+   LIBS = -lncurses
+endif
 
 # The Rules
 #
 $(PROGRAM): $(OBJ)
 	$(E) "  LINK    " $@
-	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(LIBS) $(RPATH)
+	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(LIBS) $(UTF8LIB) $(RPATH)
 
 SPARSE=sparse
 SPARSE_FLAGS=-D__LITTLE_ENDIAN__ -D__x86_64__ -D__linux__ -D__unix__
