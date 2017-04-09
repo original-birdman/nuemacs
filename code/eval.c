@@ -322,6 +322,8 @@ char *gtenv(char *vname)
         case EVSCROLL:
                 return ltos(0);
 #endif
+        case EVINMB:
+                return itoa(inmb);
         }
         exit(-12);              /* again, we should never get here */
 }
@@ -679,6 +681,8 @@ int svar(struct variable_description *var, char *value)
                         break;
                 }
                 break;
+                case EVINMB:
+                        break;
         }
         return status;
 }

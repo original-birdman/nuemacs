@@ -154,3 +154,5 @@ int chg_height       = 0;
 char *input_waiting  = NULL;
 
 int keytab_alloc_ents = 0;
+
+struct buffer *ptt = NULL;

@@ -63,6 +63,7 @@ static char *envars[] = {
 #if SCROLLCODE
         "scroll",               /* scroll enabled */
 #endif
+        "inmb",                 /* In mini-buffer (read only) */
 };
 
 /* And its preprocesor definitions. */
@@ -108,6 +109,7 @@ static char *envars[] = {
 #define EVOVERLAP       38
 #define EVSCROLLCOUNT   39
 #define EVSCROLL        40
+#define EVINMB          41
 
 enum function_type {
         NILNAMIC = 0,
