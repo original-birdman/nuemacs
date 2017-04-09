@@ -42,7 +42,7 @@ ifeq ($(strip $(UTF8)),)
     dlist := /usr/include/utf8proc.h
     dlist += /usr/local/include/utf8proc.h
     dlist += /opt/local/include/utf8proc.h
-    dlist += ../../utf8proc/utf8proc.h
+    dlist += ../../utf8proc*/utf8proc.h
 
     res := $(firstword $(foreach arg, $(dlist), $(call filex, $(arg) ) ) )
     ifeq ($(strip $(res)),/usr/include/utf8proc.h)
@@ -55,10 +55,12 @@ ifeq ($(strip $(UTF8)),)
     else ifeq ($(strip $(res)),/opt/local/include/utf8proc.h)
         UTF8INCL = -I/opt/local/include
         UTF8LIB = -L/opt/local/lib -lutf8proc
-    else ifeq ($(strip $(res)),../../utf8proc/utf8proc.h)
+    else ifeq ($(notdir $(strip $(res))),utf8proc.h)
 # Parallel local build - use static lib
-        UTF8INCL = -I../../utf8proc
-        UTF8LIB = ../../utf8proc/libutf8proc.a
+#
+        UTF8LOC = $(dir $(strip $(res)))
+        UTF8INCL = -I$(UTF8LOC)
+        UTF8LIB = $(UTF8LOC)/libutf8proc.a
 endif
 # If the user gave a specifc UTF8 option, use that
 else ifeq ($(strip $(UTF8)),sys)
@@ -199,6 +201,8 @@ depend: ${SRC}
 error:
 	@echo "ERROR: Unable to find the Julia Lang utf8lib"
 	@echo "       This is a pre-requisite!"
+	@echo "  See https://julialang.org/utf8proc"
+
 
 # DO NOT DELETE THIS LINE -- make depend uses it
 
