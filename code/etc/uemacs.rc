@@ -402,4 +402,5 @@ char-replace U+0800 U+10000
 ; Single UTF-16 surrogates
 char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
 ;
+bind-to-key toggle-ptmode               M-^P
 set $discmd TRUE
