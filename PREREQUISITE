@@ -1,0 +1,12 @@
+Version GGR4.115 improved unicode character handling (such as upper and
+lower-casing) by using the Julia Lang utf8proc library for character
+properties.  As a result this library is now a pre-requisite for this
+version of uemacs.
+
+The library is available from https://julialang.org/utf8proc/
+(downloadable from https://github.com/JuliaLang/utf8proc).
+
+To use it you can either place it alongside the nuemacs repository code
+and build it (in which case uemacs will use the static library from
+there) or install it to you system, in which case uemacs will use the
+dynamic library.  Read the Makefile for more details.

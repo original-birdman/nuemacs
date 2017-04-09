@@ -1,4 +1,4 @@
-This is an extension to the uEmacs/PR 4.0.
+This is an extension to the uEmacs/pK 4.0.
 That was obtained by:
  git clone git://git.kernel.org/pub/scm/editors/uemacs/uemacs.git uemacs
 in early Feb 2017.
@@ -13,6 +13,11 @@ uemacs commands to move around, delete, yank etc.  It handles
 filename expansion (ctlI/tab), albeit in a different manner to 4.015.
 That code also handles environment variable expansion.
 
+It also now has improved utf8 character class/property support, which
+as been done by making use of the Julia Lang utf8proc library.  As a
+result this uemacs is now DEPENDENT ON that library.
+See the PREREQUISITE file.
+
 Other changes so far made are:
   o make some things user-configurable in start-up files such as
     * the definition of "end of sentence" characters,
@@ -20,13 +25,13 @@ Other changes so far made are:
   o fix the display of "binary files" (where ^X and \yy are used),
   o handle utf8 character strings in the message/minibuffer line and the
     modeline.
-  o better handlingf utf8 strings (zero-width character handling).
+  o better handling of utf8 strings (zero-width character handling).
   o Add all options to the usage() output, and handle command-line
     options better.
   o enable ctl-Q and ctl-S as command (rather than XON/XOFF).
   o allow user-created procedures to be bound directly to keys (without
     needing to use one of the 40 numbered macros), and make the
-    key-table dynamicllay asibsgend, so that it is no longer a limited
+    key-table dynamically assigned, so that it is no longer a limited
     size.
   o allows you to define key-sequences (phonetic translation tables)
     that get mapped, on input, to other strings.
