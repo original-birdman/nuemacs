@@ -124,8 +124,8 @@ int showcpos(int f, int n)
                 temp[0] = curchar;
                 temp[1] = '\0';
             }
-            snprintf(descr, 40 ,"char = 0%o, 0x%x (%s)",
-                curchar, curchar, temp);
+            snprintf(descr, 40 ,"char = U+%04x (%s)",
+                curchar, temp);
         }
         char gl_descr[20] = "";
         if (bytes_used > 1)
