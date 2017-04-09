@@ -955,52 +955,12 @@ int killtext(int f, int n)
 }
 
 /*
- * prompt and set an editor mode
- *
- * int f, n;            default and argument
- */
-int setemode(int f, int n)
-{
-        return adjustmode(TRUE, FALSE);
-}
-
-/*
- * prompt and delete an editor mode
- *
- * int f, n;            default and argument
- */
-int delmode(int f, int n)
-{
-        return adjustmode(FALSE, FALSE);
-}
-
-/*
- * prompt and set a global editor mode
- *
- * int f, n;            default and argument
- */
-int setgmode(int f, int n)
-{
-        return adjustmode(TRUE, TRUE);
-}
-
-/*
- * prompt and delete a global editor mode
- *
- * int f, n;            default and argument
- */
-int delgmode(int f, int n)
-{
-        return adjustmode(FALSE, TRUE);
-}
-
-/*
  * change the editor mode status
  *
  * int kind;            true = set,          false = delete
  * int global;          true = global flag,  false = current buffer flag
  */
-int adjustmode(int kind, int global)
+static int adjustmode(int kind, int global)
 {
         char *scan;     /* scanning pointer to convert prompt */
         int i;          /* loop index */
@@ -1010,6 +970,9 @@ int adjustmode(int kind, int global)
 #endif
         char prompt[50];        /* string to prompt user with */
         char cbuf[NPAT];        /* buffer to recieve mode name into */
+
+        if (mbstop())           /* Disallow in minibuffer */
+               return(FALSE);
 
         /* build the proper prompt string */
         if (global)
@@ -1071,11 +1034,16 @@ int adjustmode(int kind, int global)
         for (i = 0; i < NUMMODES; i++) {
                 if (strcmp(cbuf, modename[i]) == 0) {
                         /* finding a match, we process it */
-                        if (kind == TRUE)
+                        if (kind == TRUE) {
+                            if (!ptt && !strcmp(modename[i], "PHON")) {
+                mlforce("No phonetic translation tables are yet defined!");
+                                    return FALSE;
+                                }
                                 if (global)
                                         gmode |= (1 << i);
                                 else
                                         curbp->b_mode |= (1 << i);
+                        }
                         else if (global)
                                 gmode &= ~(1 << i);
                         else
@@ -1090,6 +1058,46 @@ int adjustmode(int kind, int global)
 
         mlwrite("No such mode!");
         return FALSE;
+}
+
+/*
+ * prompt and set an editor mode
+ *
+ * int f, n;            default and argument
+ */
+int setemode(int f, int n)
+{
+        return adjustmode(TRUE, FALSE);
+}
+
+/*
+ * prompt and delete an editor mode
+ *
+ * int f, n;            default and argument
+ */
+int delmode(int f, int n)
+{
+        return adjustmode(FALSE, FALSE);
+}
+
+/*
+ * prompt and set a global editor mode
+ *
+ * int f, n;            default and argument
+ */
+int setgmode(int f, int n)
+{
+        return adjustmode(TRUE, TRUE);
+}
+
+/*
+ * prompt and delete a global editor mode
+ *
+ * int f, n;            default and argument
+ */
+int delgmode(int f, int n)
+{
+        return adjustmode(FALSE, TRUE);
 }
 
 /*

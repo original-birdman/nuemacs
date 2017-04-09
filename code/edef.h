@@ -144,3 +144,4 @@ extern char *input_waiting;     /* Input ready (for execproc) */
 
 extern int keytab_alloc_ents;   /* Allocated number of keytab entries */
 
+extern struct buffer *ptt;      /* Global pt table */
