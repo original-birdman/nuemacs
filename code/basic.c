@@ -45,7 +45,7 @@ static int getgoal(struct line *dlp)
 
         col = 0;
         dbo = 0;
-        while (dbo != len) {
+        while (dbo < len) {
             unicode_t c;
             int width = utf8_to_unicode(dlp->l_text, dbo, len, &c);
             if (!zerowidth_type(c)) {

@@ -1505,6 +1505,7 @@ static void mlwrite_ap(const char *fmt, va_list ap) {
                 if (c != '%') {
                         TTput1char(c);
                 } else {
+                        if (bytes_togo <= 0) continue;
                         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
                         bytes_togo -= used;
                         fmt += used;
@@ -1588,7 +1589,7 @@ void mlputs(char *s)
 
         int nbytes = strlen(s);
         int idx = 0;
-        while (idx <= nbytes) {
+        while (idx < nbytes) {
                 idx += utf8_to_unicode(s, idx, nbytes, &c);
                 TTput1char(c);
         }

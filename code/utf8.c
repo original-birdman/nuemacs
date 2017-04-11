@@ -19,10 +19,16 @@
  *
  * GGR NOTE! This code assumes that the incoming index is <= len.
  *           So it can always return a +ve result, and a "valid" res.
+ *  NOW CHANGED to return 0 and a unicode char of 0.
  */
 unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
      unicode_t *res)
 {
+        if (index >= len) {
+            *res = 0;
+            return 0;
+        }
+
         unsigned value;
         unsigned char c = line[index];
         unsigned bytes, mask, i;
