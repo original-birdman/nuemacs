@@ -93,7 +93,8 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8)
         int bytes = 1;
 
         *utf8 = c;
-        if (c >= 0xc0) {
+/* We have a unicode point - anything over 0x7f is multi-byte */
+        if (c >= 0x80) {
                 int prefix = 0x40;
                 char *p = utf8;
                 do {
