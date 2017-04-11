@@ -26,11 +26,11 @@ set $overlap 2          ; What it used to be
 ; is 14 characters.
 ;
 store-procedure file-hooks
-    set %rctmp &sin $cbufname "."
+    set %rctmp &sin $cfname "."
     !if &equ %rctmp 0
         !return
     !endif
-    set %rctmp &mid $cbufname &add %rctmp 1 5
+    set %rctmp &mid $cfname &add %rctmp 1 5
     set %rctmp &lower %rctmp
     !if &or &seq %rctmp "c" &or &seq %rctmp "cc" &or &seq %rctmp "h" &or &seq %rctmp "pl"
         add-mode "cmode"
