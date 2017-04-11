@@ -128,31 +128,35 @@ int forwword(int f, int n)
 /* GGR
  * Force the case of the current character (or the main character of
  * a multi-char grapheme) to be a particular case.
- * For use by upper/lower/cap-word()
+ * For use by upper/lower/cap-word() and equiv.
  * We start by defining the calling parameters.
  */
-struct case_ctl {
-    utf8proc_category_t case_ctgy;
+void ensure_case(int want_case) {
+    utf8proc_category_t case_tofix;
     utf8proc_int32_t (*case_hndlr) (utf8proc_int32_t);
-};
-static struct case_ctl upr_case = { UTF8PROC_CATEGORY_LL, utf8proc_toupper};
-static struct case_ctl lwr_case = { UTF8PROC_CATEGORY_LU, utf8proc_tolower};
 
-static void ensure_case(struct case_ctl *cc) {
+    if (want_case == LOWERCASE) {
+        case_tofix = UTF8PROC_CATEGORY_LU;
+        case_hndlr = utf8proc_tolower;
+    }
+    else if (want_case == UPPERCASE) {
+        case_tofix = UTF8PROC_CATEGORY_LL;
+        case_hndlr = utf8proc_toupper;
+    }
+    else return;
+
     int saved_doto = curwp->w_doto;     /* Save position */
     struct grapheme gc;
     (void)lgetgrapheme(&gc, FALSE);     /* Doesn't move doto */
 /* We only look at the base character for casing.
  * If it's not what we want to change, leave now...
  */
-    if (utf8proc_category((utf8proc_int32_t)gc.uc) != cc->case_ctgy) return;
+    if (utf8proc_category((utf8proc_int32_t)gc.uc) != case_tofix) return;
     char utf8_repl[8];
     int orig_utf8_len = unicode_to_utf8(gc.uc, utf8_repl);
-    gc.uc = cc->case_hndlr((utf8proc_int32_t)gc.uc);
-    int new_utf8_len = unicode_to_utf8(gc.uc, utf8_repl);
+    gc.uc = case_hndlr((utf8proc_int32_t)gc.uc);
     ldelete(orig_utf8_len, FALSE);
-    utf8_repl[new_utf8_len] = '\0';
-    linstr(utf8_repl);
+    linsert(1, gc.uc);                  /* Inserts unicode */
     curwp->w_doto = saved_doto;         /* Restore positon */
     lchange(WFHARD);
     return;
@@ -176,7 +180,7 @@ int upperword(int f, int n)
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE) || prev_zw_break) {
-            ensure_case(&upr_case);
+            ensure_case(UPPERCASE);
             if (forwchar(FALSE, 1) == FALSE)
                 return FALSE;
             prev_zw_break = zw_break;
@@ -203,7 +207,7 @@ int lowerword(int f, int n)
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE)  || prev_zw_break) {
-            ensure_case(&lwr_case);
+            ensure_case(LOWERCASE);
             if (forwchar(FALSE, 1) == FALSE)
                 return FALSE;
             prev_zw_break = zw_break;
@@ -231,11 +235,11 @@ int capword(int f, int n)
         }
         int prev_zw_break = zw_break;
         if (inword() != FALSE) {
-            ensure_case(&upr_case);
+            ensure_case(UPPERCASE);
             if (forwchar(FALSE, 1) == FALSE)
                 return FALSE;
             while ((inword() != FALSE) || prev_zw_break) {
-                ensure_case(&lwr_case);
+                ensure_case(LOWERCASE);
                 if (forwchar(FALSE, 1) == FALSE)
                     return FALSE;
             }

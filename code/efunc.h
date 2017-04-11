@@ -30,6 +30,9 @@ extern int wordcount(int f, int n);
 
 extern int fillwhole(int, int);
 extern int eos_chars(int f, int n);
+#define LOWERCASE 0
+#define UPPERCASE 1
+void ensure_case(int);
 
 /* window.c */
 extern int reposition(int f, int n);
