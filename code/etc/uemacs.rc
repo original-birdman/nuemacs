@@ -219,12 +219,11 @@ store-procedure toggle-lmode            ; toggle local mode
         set %what "ASAVE"
         !goto doit
     !endif
-    write-message "Unknown global mode"
+    write-message "Unknown mode"
     !finish
 ;
 *doit
-    write-message &cat "bit " %bit
-    !if &band $gmode %bit
+    !if &band $cmode %bit
         set %mfunc delete-mode
         set %report &cat %what " mode toggled off"
     !else 
@@ -294,7 +293,6 @@ store-procedure toggle-gmode            ; toggle global mode
     !finish
 ;
 *doit
-    write-message &cat "bit " %bit
     !if &band $gmode %bit
         set %mfunc delete-global-mode
         set %report &cat %what " mode toggled off globally"
