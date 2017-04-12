@@ -82,6 +82,8 @@ int gotobol(int f, int n)
  * Move the cursor backwards by "n" characters.
  * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
+ * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
+ * the way results in it returning 0.
  * If "n" is less than zero call "forwchar" to actually do the move.
  * Otherwise compute the new cursor location.
  * Error if you try and move out of the buffer.
@@ -93,22 +95,26 @@ int backchar(int f, int n)
 
         if (n < 0)
                 return forwchar(f, -n);
+        int moved = 0;
         while (n--) {
                 if (curwp->w_doto == 0) {
                         if ((lp = lback(curwp->w_dotp)) == curbp->b_linep)
-                                return FALSE;
+                                return 0;
                         curwp->w_dotp = lp;
                         curwp->w_doto = llength(lp);
                         curwp->w_flag |= WFMOVE;
+                        moved++;
                 } else {
 /* GGR - We must cater for utf8 characters in the same way
  * as the rest of the utf8 code does.
  */
+                        int saved_doto = curwp->w_doto;
                         curwp->w_doto = prev_utf8_offset(
                                 curwp->w_dotp->l_text, curwp->w_doto, TRUE);
+                        moved += saved_doto - curwp->w_doto;
                 }
         }
-        return TRUE;
+        return moved;
 }
 
 /*
@@ -124,6 +130,8 @@ int gotoeol(int f, int n)
  * Move the cursor forwards by "n" characters.
  * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
+ * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
+ * the way results in it returning 0.
  * If "n" is less than zero call "backchar" to actually do the move.
  * Otherwise compute the new cursor location, and move ".".
  * Error if you try and move off the end of the buffer.
@@ -133,24 +141,29 @@ int forwchar(int f, int n)
 {
         if (n < 0)
                 return backchar(f, -n);
+        int moved = 0;
         while (n--) {
                 int len = llength(curwp->w_dotp);
                 if (curwp->w_doto == len) {
                         if (curwp->w_dotp == curbp->b_linep)
-                                return FALSE;
+                                return 0;
                         curwp->w_dotp = lforw(curwp->w_dotp);
                         curwp->w_doto = 0;
                         curwp->w_flag |= WFMOVE;
-                } else {
+                        moved++;
+                }
+                else {
 /* GGR - We must cater for utf8 characters in the same way
  * as the rest of the utf8 code does.
  */
+                        int saved_doto = curwp->w_doto;
                         curwp->w_doto = next_utf8_offset(
                                 curwp->w_dotp->l_text, curwp->w_doto,
                                 llength(curwp->w_dotp), TRUE);
+                        moved += curwp->w_doto - saved_doto;
                 }
         }
-        return TRUE;
+        return moved;
 }
 
 /*
@@ -298,7 +311,7 @@ int backline(int f, int n)
  */
 int gotobop(int f, int n)
 {
-        int suc;  /* success of last backchar */
+        int suc;  /* success of last backchar (now bytes moved) */
 
         if (n < 0) /* the other way... */
                 return gotoeop(f, -n);
@@ -337,7 +350,7 @@ int gotobop(int f, int n)
  */
 int gotoeop(int f, int n)
 {
-        int suc;  /* success of last backchar */
+        int suc;  /* success of last backchar (now bytes moved) */
 
         if (n < 0)  /* the other way... */
                 return gotobop(f, -n);

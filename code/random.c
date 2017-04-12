@@ -531,7 +531,7 @@ int trim(int f, int n)
 /*
  * Open up some blank space. The basic plan is to insert a bunch of newlines,
  * and then back up over them. Everything is done by the subcommand
- * procerssors. They even handle the looping. Normally this is bound to "C-O".
+ * processors. They even handle the looping. Normally this is bound to "C-O".
  */
 int openline(int f, int n)
 {
@@ -548,8 +548,8 @@ int openline(int f, int n)
         do {
                 s = lnewline();
         } while (s == TRUE && --i);
-        if (s == TRUE)                  /* Then back up overtop */
-                s = backchar(f, n);     /* of them all.         */
+        if (s == TRUE)                      /* Then back up overtop */
+                s = (backchar(f, n) > 0);   /* of them all.         */
         return s;
 }
 
@@ -908,7 +908,8 @@ int backdel(int f, int n)
                         kdelete();
                 thisflag |= CFKILL;
         }
-        if ((s = backchar(f, n)) == TRUE)
+        s = (backchar(f, n) > 0);
+        if (s == TRUE)
                 s = ldelchar(n, f);
         return s;
 }
