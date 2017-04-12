@@ -616,17 +616,17 @@ int ptt_handler(int c) {
             int count = ptr->to_len_uc;
             curwp->w_doto = start_at;
             ensure_case(set_case);
-            forwchar(FALSE, 1);
+            forw_grapheme(FALSE, 1);
             if (ptr->caseset == CASESET_CAPI_ONE) { /* Just step over chars */
                 while (--count) {       /* First already done */
-                    if (forwchar(FALSE, 1) == 0) /* !?! */
+                    if (forw_grapheme(FALSE, 1) <= 0) /* !?! */
                         break;
                 }
             }
             else if (ptr->caseset == CASESET_ON) {   /* Do the lot */
 /* Like upperword(), but with known char count */
                 while (--count) {       /* First already done */
-                    if (forwchar(FALSE, 1) == 0) /* !?! */
+                    if (forw_grapheme(FALSE, 1) <= 0) /* !?! */
                         break;
                     ensure_case(set_case);
                 }
@@ -636,7 +636,7 @@ int ptt_handler(int c) {
 /* Like capword(), but with known char count */
                 int was_inword = inword();
                 while (--count) {       /* First already done */
-                    if (forwchar(FALSE, 1) == 0) /* !?! */
+                    if (forw_grapheme(FALSE, 1) <= 0) /* !?! */
                         break;
                     int now_in_word = inword();
                     if (now_in_word && !was_inword) {

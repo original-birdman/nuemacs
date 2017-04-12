@@ -17,7 +17,7 @@ struct name_bind names[] = {
 #if     APROP
         {"apropos", apro},
 #endif
-        {"backward-character", backchar},
+        {"backward-character", back_grapheme},
         {"begin-macro", ctlxlp},
         {"beginning-of-file", gotobob},
         {"beginning-of-line", gotobol},
@@ -119,7 +119,7 @@ struct name_bind names[] = {
 #endif
         {"filter-buffer", filter_buffer},
         {"find-file", filefind},
-        {"forward-character", forwchar},
+        {"forward-character", forw_grapheme},
         {"ggr-style", ggr_style},           /* GGR */
         {"goto-line", gotoline},
 #if     CFENCE

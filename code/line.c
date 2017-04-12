@@ -129,7 +129,7 @@ void lchange(int flag)
 int insspace(int f, int n)
 {
         linsert(n, ' ');
-        backchar(f, n);
+        back_grapheme(f, n);
         return TRUE;
 }
 

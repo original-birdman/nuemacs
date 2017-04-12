@@ -601,7 +601,7 @@ int svar(struct variable_description *var, char *value)
                                 lnewline();
                         else
                                 linsert(1, c);
-                        backchar(FALSE, 1);
+                        back_grapheme(FALSE, 1);
                         break;
                 case EVDISCMD:
                         discmd = stol(value);

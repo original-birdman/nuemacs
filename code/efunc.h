@@ -60,9 +60,9 @@ extern struct window *wpopup(void);  /* Pop up window creation. */
 
 /* basic.c */
 extern int gotobol(int f, int n);
-extern int backchar(int f, int n);
+extern int back_grapheme(int, int);
 extern int gotoeol(int f, int n);
-extern int forwchar(int f, int n);
+extern int forw_grapheme(int, int);
 extern int gotoline(int f, int n);
 extern int gotobob(int f, int n);
 extern int gotoeob(int f, int n);

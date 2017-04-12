@@ -37,7 +37,7 @@ int wrapword(int f, int n)
         int c;          /* charector temporary */
 
         /* backup from the <NL> 1 char */
-        if (!backchar(0, 1))
+        if (back_grapheme(0, 1) <= 0)
                 return FALSE;
 
         /* back up until we aren't in a word,
@@ -46,7 +46,7 @@ int wrapword(int f, int n)
         while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) != ' ')
                && (c != '\t')) {
                 cnt++;
-                if (!backchar(0, 1))
+                if (back_grapheme(0, 1) <= 0)
                         return FALSE;
                 /* if we make it to the beginning, start a new line */
                 if (curwp->w_doto == 0) {
@@ -65,7 +65,7 @@ int wrapword(int f, int n)
 
         /* and past the first word */
         while (cnt-- > 0) {
-                if (forwchar(FALSE, 1) == 0)
+                if (forw_grapheme(FALSE, 1) <= 0)
                         return FALSE;
         }
         return TRUE;
@@ -73,31 +73,32 @@ int wrapword(int f, int n)
 
 /*
  * Move the cursor backward by "n" words. All of the details of motion are
- * performed by the "backchar" and "forwchar" routines. Error if you try to
- * move beyond the buffers.
+ * performed by the "back_grapheme" and "forw_grapheme" routines.
+ * Error if you try to move beyond the buffers.
  */
 int backword(int f, int n)
 {
         if (n < 0)
                 return forwword(f, -n);
-        if (!backchar(FALSE, 1))
+        if (back_grapheme(FALSE, 1) <= 0)
                 return FALSE;
         while (n--) {
                 while (inword() == FALSE) {
-                        if (!backchar(FALSE, 1))
+                        if (back_grapheme(FALSE, 1) <= 0)
                                 return FALSE;
                 }
                 while ((inword() != FALSE) || zw_break) {
-                        if (!backchar(FALSE, 1))
+                        if (back_grapheme(FALSE, 1) <= 0)
                                 return FALSE;
                 }
         }
-        return (forwchar(FALSE, 1) != 0);   /* Count => T/F */
+        return (forw_grapheme(FALSE, 1) > 0);   /* Success count => T/F */
 }
 
 /*
  * Move the cursor forward by the specified number of words. All of the motion
- * is done by "forwchar". Error if you try and move beyond the buffer's end.
+ * is done by "forw_grapheme".
+ * Error if you try and move beyond the buffer's end.
  */
 int forwword(int f, int n)
 {
@@ -111,13 +112,13 @@ int forwword(int f, int n)
         int state1 = using_ggr_style? FALSE: TRUE;
         int prev_zw_break = 0;
         while ((inword() == state1) || (!state1 && prev_zw_break)) {
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
         prev_zw_break = zw_break;
         while ((inword() == !state1) || (!state1 && zw_break)) {
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
@@ -175,13 +176,13 @@ int upperword(int f, int n)
         return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE) || prev_zw_break) {
             ensure_case(UPPERCASE);
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
@@ -202,13 +203,13 @@ int lowerword(int f, int n)
         return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE)  || prev_zw_break) {
             ensure_case(LOWERCASE);
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
@@ -230,17 +231,17 @@ int capword(int f, int n)
         return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
         }
         int prev_zw_break = zw_break;
         if (inword() != FALSE) {
             ensure_case(UPPERCASE);
-            if (forwchar(FALSE, 1) == 0)
+            if (forw_grapheme(FALSE, 1) <= 0)
                 return FALSE;
             while ((inword() != FALSE) || prev_zw_break) {
                 ensure_case(LOWERCASE);
-                if (forwchar(FALSE, 1) == 0)
+                if (forw_grapheme(FALSE, 1) <= 0)
                     return FALSE;
             }
         }
@@ -253,8 +254,8 @@ int capword(int f, int n)
  * the right number of words. Put dot back where it was and issue the kill
  * command for the right number of characters. With a zero argument, just
  * kill one word and no whitespace. Bound to "M-D".
- * GGR - forwchar()/backchar() now move by graphemes, so we need to
- *       track the byte count (which they now return).
+ * GGR - forw_grapheme()/back_grapheme() now move by graphemes, so we need
+ *       to track the byte count (which they now return).
  */
 int delfword(int f, int n)
 {
@@ -285,8 +286,8 @@ int delfword(int f, int n)
 
         /* get us into a word.... */
         while (inword() == FALSE) {
-                moved = forwchar(FALSE, 1);
-                if (!moved) return FALSE;
+                moved = forw_grapheme(FALSE, 1);
+                if (moved <= 0) return FALSE;
                 size += moved;
         }
 
@@ -294,8 +295,8 @@ int delfword(int f, int n)
                 /* skip one word, no whitespace! */
                 int prev_zw_break = 0;
                 while ((inword() == TRUE) || prev_zw_break) {
-                        moved = forwchar(FALSE, 1);
-                        if (!moved) return FALSE;
+                        moved = forw_grapheme(FALSE, 1);
+                        if (moved <= 0) return FALSE;
                         size += moved;
                         prev_zw_break = zw_break;
                 }
@@ -305,16 +306,16 @@ int delfword(int f, int n)
 
                         /* if we are at EOL; skip to the beginning of the next */
                         while (curwp->w_doto == llength(curwp->w_dotp)) {
-                                moved = forwchar(FALSE, 1);
-                                if (!moved) return FALSE;
+                                moved = forw_grapheme(FALSE, 1);
+                                if (moved <= 0) return FALSE;
                                 ++size;     /* Will move one to next line */
                         }
 
                         /* move forward till we are at the end of the word */
                         int prev_zw_break = 0;
                         while ((inword() == TRUE) || prev_zw_break) {
-                                moved = forwchar(FALSE, 1);
-                                if (!moved) return FALSE;
+                                moved = forw_grapheme(FALSE, 1);
+                                if (moved <= 0) return FALSE;
                                 size += moved;
                                 prev_zw_break = zw_break;
                         }
@@ -322,8 +323,8 @@ int delfword(int f, int n)
                         /* if there are more words, skip the interword stuff */
                         if (n != 0)
                                 while (inword() == FALSE) {
-                                        moved = forwchar(FALSE, 1);
-                                        if (!moved) return FALSE;
+                                        moved = forw_grapheme(FALSE, 1);
+                                        if (moved <= 0) return FALSE;
                                         size += moved;
                                 }
                 }
@@ -338,8 +339,8 @@ int delfword(int f, int n)
  * Kill backwards by "n" words. Move backwards by the desired number of words,
  * counting the characters. When dot is finally moved to its resting place,
  * fire off the kill command. Bound to "M-Rubout" and to "M-Backspace".
- * GGR - forwchar()/backchar() now move by graphemes, so we need to
- *       track the byte count (which they now return).
+ * GGR - forw_grapheme()/back_grapheme() now move by graphemes, so we need
+ *       to track the byte count (which they now return).
  */
 int delbword(int f, int n)
 {
@@ -365,23 +366,23 @@ int delbword(int f, int n)
         thisflag |= CFKILL;     /* this command is a kill */
 
         int moved;
-        moved = backchar(FALSE, 1);
-        if (!moved) return FALSE;
+        moved = back_grapheme(FALSE, 1);
+        if (moved <= 0) return FALSE;
         size = moved;
         while (n--) {
                 while (inword() == FALSE) {
-                        moved = backchar(FALSE, 1);
-                        if (!moved) return FALSE;
+                        moved = back_grapheme(FALSE, 1);
+                        if (moved <= 0) return FALSE;
                         size += moved;
                 }
                 while ((inword() != FALSE) || zw_break) {
-                        moved = backchar(FALSE, 1);
-                        if (!moved) goto bckdel;
+                        moved = back_grapheme(FALSE, 1);
+                        if (moved <= 0) goto bckdel;
                         size += moved;
                 }
         }
-        moved = forwchar(FALSE, 1);
-        if (!moved) return FALSE;
+        moved = forw_grapheme(FALSE, 1);
+        if (moved <= 0) return FALSE;
         size -= moved;
 
 /* GGR

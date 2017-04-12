@@ -296,10 +296,10 @@ int narrow(int f, int n)
         /* move forward to the end of this region
            (a long number of bytes perhaps) */
         while (creg.r_size > (long)32000) {
-                forwchar(TRUE, 32000);
+                forw_grapheme(TRUE, 32000);
                 creg.r_size -= (long)32000;
         }
-        forwchar(TRUE, (int)creg.r_size);
+        forw_grapheme(TRUE, (int)creg.r_size);
         curwp->w_doto = 0;              /* only full lines! */
 
         /* archive the bottom fragment */

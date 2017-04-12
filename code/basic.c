@@ -83,23 +83,23 @@ int gotobol(int f, int n)
  * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
  * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
- * the way results in it returning 0.
- * If "n" is less than zero call "forwchar" to actually do the move.
+ * the way results in it returning minus the actual move (NEW!).
+ * If "n" is less than zero call "forw_grapheme" to actually do the move.
  * Otherwise compute the new cursor location.
  * Error if you try and move out of the buffer.
  * Set the flag if the line pointer for dot changes.
  */
-int backchar(int f, int n)
+int back_grapheme(int f, int n)
 {
         struct line *lp;
 
         if (n < 0)
-                return forwchar(f, -n);
+                return forw_grapheme(f, -n);
         int moved = 0;
         while (n--) {
                 if (curwp->w_doto == 0) {
                         if ((lp = lback(curwp->w_dotp)) == curbp->b_linep)
-                                return 0;
+                                return -moved;
                         curwp->w_dotp = lp;
                         curwp->w_doto = llength(lp);
                         curwp->w_flag |= WFMOVE;
@@ -131,22 +131,22 @@ int gotoeol(int f, int n)
  * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
  * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
- * the way results in it returning 0.
- * If "n" is less than zero call "backchar" to actually do the move.
+ * the way results in it returning minus the actual move (NEW!).
+ * If "n" is less than zero call "back_grapheme" to actually do the move.
  * Otherwise compute the new cursor location, and move ".".
  * Error if you try and move off the end of the buffer.
  * Set the flag if the line pointer for dot changes.
  */
-int forwchar(int f, int n)
+int forw_grapheme(int f, int n)
 {
         if (n < 0)
-                return backchar(f, -n);
+                return back_grapheme(f, -n);
         int moved = 0;
         while (n--) {
                 int len = llength(curwp->w_dotp);
                 if (curwp->w_doto == len) {
                         if (curwp->w_dotp == curbp->b_linep)
-                                return 0;
+                                return -moved;
                         curwp->w_dotp = lforw(curwp->w_dotp);
                         curwp->w_doto = 0;
                         curwp->w_flag |= WFMOVE;
@@ -311,7 +311,7 @@ int backline(int f, int n)
  */
 int gotobop(int f, int n)
 {
-        int suc;  /* success of last backchar (now bytes moved) */
+        int suc;  /* success of last back_grapheme (now bytes moved) */
 
         if (n < 0) /* the other way... */
                 return gotoeop(f, -n);
@@ -319,9 +319,9 @@ int gotobop(int f, int n)
         while (n-- > 0) {  /* for each one asked for */
 
                 /* first scan back until we are in a word */
-                suc = backchar(FALSE, 1);
-                while (!inword() && suc)
-                        suc = backchar(FALSE, 1);
+                suc = back_grapheme(FALSE, 1);
+                while (!inword() && (suc > 0))
+                        suc = back_grapheme(FALSE, 1);
                 curwp->w_doto = 0;      /* and go to the B-O-Line */
 
                 /* and scan back until we hit a <NL><NL> or <NL><TAB>
@@ -333,9 +333,9 @@ int gotobop(int f, int n)
                                 break;
 
                 /* and then forward until we are in a word */
-                suc = forwchar(FALSE, 1);
-                while (suc && !inword())
-                        suc = forwchar(FALSE, 1);
+                suc = forw_grapheme(FALSE, 1);
+                while ((suc > 0) && !inword())
+                        suc = forw_grapheme(FALSE, 1);
         }
         curwp->w_flag |= WFMOVE;        /* force screen update */
         return TRUE;
@@ -350,16 +350,16 @@ int gotobop(int f, int n)
  */
 int gotoeop(int f, int n)
 {
-        int suc;  /* success of last backchar (now bytes moved) */
+        int suc;  /* success of last back_grapheme (now bytes moved) */
 
         if (n < 0)  /* the other way... */
                 return gotobop(f, -n);
 
         while (n-- > 0) {  /* for each one asked for */
                 /* first scan forward until we are in a word */
-                suc = forwchar(FALSE, 1);
-                while (!inword() && suc)
-                        suc = forwchar(FALSE, 1);
+                suc = forw_grapheme(FALSE, 1);
+                while (!inword() && (suc > 0))
+                        suc = forw_grapheme(FALSE, 1);
                 curwp->w_doto = 0;      /* and go to the B-O-Line */
                 if (suc)        /* of next line if not at EOF */
                         curwp->w_dotp = lforw(curwp->w_dotp);
@@ -374,9 +374,9 @@ int gotoeop(int f, int n)
                 }
 
                 /* and then backward until we are in a word */
-                suc = backchar(FALSE, 1);
-                while (suc && !inword()) {
-                        suc = backchar(FALSE, 1);
+                suc = back_grapheme(FALSE, 1);
+                while ((suc > 0) && !inword()) {
+                        suc = back_grapheme(FALSE, 1);
                 }
                 curwp->w_doto = llength(curwp->w_dotp); /* and to the EOL */
         }
