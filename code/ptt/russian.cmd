@@ -1,78 +1,27 @@
+;
+; NOTE: that ~ is the escape char, so needs to be doubled.
+; Comment lines start with ; trailing comments are *not* allowed.
+; Leading ^ ties the match to the start of a word.
+; These (mostly) work in either upper or lower case (caseset-on).
 store-pttable russian
-   ШЦH   Щ
-   Шцh   Щ
-   SHЦH  Щ
-   Shцh  Щ
-   SHCH  Щ
-   Shch  Щ
-; Next two are Cyrllic С
-   СH    Ш 
-   Сh    Ш 
-   SH    Ш 
-   Sh    Ш 
-   ЦH    Ч
-   Цh    Ч
-   CH    Ч
-   Ch    Ч
-   ЫU    Ю
-   Ыu    Ю
-   YU    Ю
-   Yu    Ю
-   ЫA    Я
-   Ыa    Я
-   YA    Я
-   Ya    Я
-   ЫO    Ё
-   Ыo    Ё
-   YO    Ё
-   Yo    Ё
-   ЗH    Ж
-   Зh    Ж
-   ZH    Ж
-   Zh    Ж
-   КH    Х
-   Кh    Х
-   KH    Х
-   Kh    Х
-   Е'    Э
-   E'    Э
-   A     А
-   B     Б
-   V     В
-   G     Г
-   D     Д
-   E     Е
-   Z     З
-   I     И
-   J     Й
-   K     К
-   L     Л
-   M     М
-   N     Н
-   O     О
-   P     П
-   R     Р
-; Next one is Cyrllic С
-   S     С
-   T     Т
-   U     У
-   F     Ф
-   X     Х
-   Y     Ы
-   C     Ц
-   Q     Э 
+; Need caseset-off here to stop recursive match eating
+; sucessive ` or ' (so ```` only produces 1 Ъ as it keeps matching ъ`
+; when ignorinfg case)
+   caseset-off
    ъ`    Ъ
+   ь'    Ь
+   caseset-on
    ``    Ъ
    Y     Ы
-   ь'    Ь
    ''    Ь
    шцh   щ
    shцh  щ
    shch  щ
-; Next one is Cyrllic с
+; Next map-from is Cyrllic с
    сh    ш
    цh    ч
-   ch    ч    
+; Next map-from is Latin с
+   ch    ч
    ыu    ю
    yu    ю
    ыa    я
@@ -101,7 +50,7 @@ store-pttable russian
    o     о
    p     п
    r     р
-; Next one is Cyrllic с
+; Next map-to is Cyrllic с
    s     с
    t     т
    u     у
