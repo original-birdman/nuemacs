@@ -381,6 +381,15 @@ int lgetchar(unicode_t *c)
 int lgetgrapheme(struct grapheme *gp, int utf8_len_only)
 {
         int len = llength(curwp->w_dotp);
+/* Fudge in NL if at eol.
+ * ldelchar needs to know there is one char to step over
+ */
+        if (curwp->w_doto == len) {
+            gp->uc = 0x0a;
+            gp->cdm = 0;
+            gp->ex = NULL;
+            return 1;
+        }
         char *buf = curwp->w_dotp->l_text;
         int used = utf8_to_unicode(buf, curwp->w_doto, len, &(gp->uc));
         gp->cdm = 0;
