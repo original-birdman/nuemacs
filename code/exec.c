@@ -325,7 +325,6 @@ void ptt_free(struct buffer *bp) {
 /* GGR
  * Compile the contents of a buffer into a ptt_remap structure
  */
-static struct buffer *ptt = NULL;
 static int ptt_compile(struct buffer *bp) {
 
 /* Free up any previously-compiled table */
@@ -334,6 +333,7 @@ static int ptt_compile(struct buffer *bp) {
 
 /* Read through the lines of the buffer */
 
+    int caseset = 1;        /* Default is on */
     struct line *hlp = bp->b_linep;
     char lbuf[NLINE];       /* Could be dynamic... */
     char tok[NLINE];
@@ -357,6 +357,30 @@ static int ptt_compile(struct buffer *bp) {
             from_start = tok;
         }
         strcpy(from_string, from_start);
+        if (!strcmp("caseset-on", from_string)) {
+            caseset = CASESET_ON;
+            continue;
+        }
+        else if (!strcmp("caseset-capinit1", from_string)) {
+            caseset = CASESET_CAPI_ONE;
+            continue;
+        }
+        else if (!strcmp("caseset-capinitall", from_string)) {
+            caseset = CASESET_CAPI_ALL;
+            continue;
+        }
+        else if (!strcmp("caseset-lowinit1", from_string)) {
+            caseset = CASESET_LOWI_ONE;
+            continue;
+        }
+        else if (!strcmp("caseset-lowinitall", from_string)) {
+            caseset = CASESET_LOWI_ALL;
+            continue;
+        }
+        else if (!strcmp("caseset-off", from_string)) {
+            caseset = CASESET_OFF;
+            continue;
+        }
         while(*rp != '\0') {
             rp = token(rp, tok, NLINE);
             if (tok[0] == '\0') break;
@@ -383,13 +407,34 @@ static int ptt_compile(struct buffer *bp) {
         }
         lastp = new;
         new->nextp = NULL;
+/* Force to lower case once now...if handling case-matching.
+ * Note that upper- and lower-case characters may have different
+ * utf8 byte counts!
+ */
         new->from_len = strlen(from_string);
-        new->from = malloc(new->from_len+1);
-        strcpy(new->from, from_string);
+        if (caseset != CASESET_OFF) {
+            new->from = tolower_utf8(from_string, new->from_len,
+                 &(new->from_len), &(new->from_len_uc));
+        }
+        else {
+            new->from = malloc(new->from_len+1);
+            strcpy(new->from, from_string);
+            new->from_len_uc = uclen_utf8(new->from);
+        }
+/* Input comes in as unicode chars, so we need to save the last one
+ * *as unicode*!.
+ * We don't save the full grapheme, as you can only type one character
+ * at a time.
+ */
+        int start_at = prev_utf8_offset(new->from, new->from_len, FALSE);
+        (void)utf8_to_unicode(new->from, start_at, new->from_len,
+              &(new->final_uc));
         new->to = malloc(to_len+1);
         strncpy(new->to, to_string, to_len);
         new->to[to_len] = '\0';
+        new->to_len_uc = uclen_utf8(new->to);
         new->bow_only = bow;
+        new->caseset = caseset;
     }
     if (lastp == NULL) return FALSE;
     ptt = bp;
@@ -477,7 +522,7 @@ int toggle_ptmode(int f, int n) {
 }
 
 /* GGR
- * Handle a typed-character when PHON mode is on
+ * Handle a typed-character (unicode) when PHON mode is on
  */
 int ptt_handler(int c) {
 
@@ -485,22 +530,47 @@ int ptt_handler(int c) {
     if (!ptt->ptt_headp && !ptt_compile(ptt))
         return FALSE;
 
-/* We insert the character for testing... */
+/* We are sent unicode characters
+ * So insert the unicode character before testing...
+ */
 
     int orig_doto = curwp->w_doto;
     if (linsert(1, c) != TRUE) return FALSE;
 
     for (struct ptt_ent *ptr = ptt->ptt_headp; ptr; ptr = ptr->nextp) {
-        if (ptr->from[ptr->from_len-1] != c) continue;
-        if (curwp->w_doto < ptr->from_len) continue;
-        if (strncmp(&curwp->w_dotp->l_text[curwp->w_doto - ptr->from_len],
-                    ptr->from, ptr->from_len)) continue;
+        int wc = c;             /* A working copy */
+        if (ptr->caseset != CASESET_OFF) wc = utf8proc_tolower(wc);
+        if (ptr->final_uc != wc) continue;
+
+/* We need to know where <n> unicode chars back starts */
+        int start_at = unicode_back_utf8(ptr->from_len_uc,
+             curwp->w_dotp->l_text, curwp->w_doto);
+        if (ptr->caseset != CASESET_OFF) {
+/*
+ * Need a unicode-case insensitive strncmp!!!
+ * Also, since we can't guarantee that a case-changed string will be
+ * the length we need to step back the right number of unicode chars first.
+ */
+            if (start_at < 0) continue; /* Insufficient chars */
+            if (nocasecmp_utf8(curwp->w_dotp->l_text,
+                 start_at, curwp->w_dotp->l_used,
+                 ptr->from, 0, ptr->from_len)) continue;
+        }
+        else {
+/*
+ * We need to check there are sufficient chars to check, then
+ * just compare the bytes.
+ */
+            if (curwp->w_doto < ptr->from_len) continue;
+            if (strncmp(curwp->w_dotp->l_text+start_at,
+                 ptr->from, ptr->from_len)) continue;
+        }
         if (ptr->bow_only && (curwp->w_doto > ptr->from_len)) { /* Not BOL */
 /* Need to step back to the start of the preceding grapheme and get the
  * base Unicode char from there.
  */
             int offs = prev_utf8_offset(curwp->w_dotp->l_text,
-                 curwp->w_doto - ptr->from_len, TRUE);
+                 start_at, TRUE);
             unicode_t prev_uc;
             (void)utf8_to_unicode(curwp->w_dotp->l_text,
                  offs, curwp->w_dotp->l_used, &prev_uc);
@@ -510,13 +580,80 @@ int ptt_handler(int c) {
             if (uc_class[0] == 'L') continue;
         }
 
-/* We have to replace the string with the translation */
-        curwp->w_doto -= ptr->from_len;
+/* We have to replace the string with the translation.
+ * If we are doing caseseting on the replacement then we
+ * need to know the case of the first character.
+ */
+        curwp->w_doto = start_at;
+        int edit_case = 0;
+        int set_case;
+        if (ptr->caseset != CASESET_OFF) {
+            unicode_t fc;
+            (void)utf8_to_unicode(curwp->w_dotp->l_text, start_at,
+                 curwp->w_dotp->l_used, &fc);
+            int need_edit_type;
+            if (ptr->caseset == CASESET_LOWI_ALL ||
+                ptr->caseset == CASESET_LOWI_ONE) {
+                need_edit_type = UTF8PROC_CATEGORY_LL;
+                set_case = LOWERCASE;
+            }
+            else {
+                need_edit_type = UTF8PROC_CATEGORY_LU;
+                set_case = UPPERCASE;
+            }
+            if (utf8proc_category(fc) == need_edit_type)
+                edit_case = 1;
+        }
         ldelete(ptr->from_len, FALSE);
         linstr(ptr->to);
+
+/* We might need to re-case the just-added string.
+ * NOTE that we have added everything in the case that the user supplied,
+ * and we only change things if the user "from" started with a capital.
+ */
+
+        if (edit_case && (ptr->caseset != CASESET_OFF)) {
+            int count = ptr->to_len_uc;
+            curwp->w_doto = start_at;
+            ensure_case(set_case);
+            forwchar(FALSE, 1);
+            if (ptr->caseset == CASESET_CAPI_ONE) { /* Just step over chars */
+                while (--count) {       /* First already done */
+                    if (forwchar(FALSE, 1) == FALSE) /* !?! */
+                        break;
+                }
+            }
+            else if (ptr->caseset == CASESET_ON) {   /* Do the lot */
+/* Like upperword(), but with known char count */
+                while (--count) {       /* First already done */
+                    if (forwchar(FALSE, 1) == FALSE) /* !?! */
+                        break;
+                    ensure_case(set_case);
+                }
+            }
+            else if ((ptr->caseset == CASESET_CAPI_ALL) ||
+                     (ptr->caseset == CASESET_LOWI_ALL)) { /* Do per-word */
+/* Like capword(), but with known char count */
+                int was_inword = inword();
+                while (--count) {       /* First already done */
+                    if (forwchar(FALSE, 1) == FALSE) /* !?! */
+                        break;
+                    int now_in_word = inword();
+                    if (now_in_word && !was_inword) {
+                        ensure_case(set_case);
+                    }
+                    was_inword = now_in_word;
+                }
+            }
+
+        }
         return TRUE;
     }
-/* We have to delete the added character before returning */
+/* We have to delete the added character before returning.
+ * NOTE!!!  ldelchar() will actually delete a grapheme!
+ * But we've just inserted the unichar we are deleting, so it can't
+ * consist of multiple unicode chars - and we'll only delete the one.
+ */
     curwp->w_doto = orig_doto;
     ldelchar(1, FALSE);
     return FALSE;

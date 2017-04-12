@@ -4,6 +4,8 @@
 #include "efunc.h"
 #include "utf8.h"
 
+#include "utf8proc.h"
+
 /*
  * utf8_to_unicode()
  *
@@ -129,16 +131,18 @@ int
 
         int offs = offset;
         offs += utf8_to_unicode(buf, offs, max_offset, &c);
-        while(1) {      /* Look for any attached zero-width modifiers */
-            int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
-            if (grapheme_start && !zerowidth_type(c)) break;
-            offs += next_incr;
+        if (grapheme_start) {
+            while(1) {      /* Look for any attached zero-width modifiers */
+                int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
+                if (!zerowidth_type(c)) break;
+                offs += next_incr;
+            }
         }
         return offs;
 }
 
 /* Step back a byte at a time.
- * If the first byte isn't a utf8 continuation byte (10xxxxxx0 that is it.
+ * If the first byte isn't a utf8 continuation byte (10xxxxxx) that is it.
  * It it *is* a continuation byte look back another byte, up to 3
  * times. If we then find a utf8 leading byte (that is a correct one for
  * the length we have found) we use that.
@@ -352,4 +356,91 @@ unicode_t display_for(unicode_t uc) {
         if (uc <= remap[rc].end)  return repchar;
     }
     return uc;
+}
+
+/* Convert a utf8 sequence to lower case.
+ * Returns the result in a malloc'ed buffer.
+ *  in:         input utf8 bytes
+ *  inlen:      input byte length (-1 == it's null terminated)
+ *  resbytes:   set resulting string length in bytes, if not NULL
+ *  resunicode: set resulting string length in unicode chars, if not NULL
+ */
+
+char *tolower_utf8(char *in, int inlen, int *resbytes, int *resunicode) {
+    char work[NLINE+4];     /* Working buffer */
+    unicode_t uc;
+
+    if (inlen < 0) inlen = strlen(in);
+    int ix = 0, wx = 0;
+    int tlen = 0, uclen = 0;
+    char *res = NULL;
+    int res_st = 0;
+    while (ix < inlen) {
+        ix += utf8_to_unicode(in, ix, inlen, &uc);
+        uc = utf8proc_tolower(uc);
+        int add = unicode_to_utf8(uc, work+wx);
+        tlen += add;
+        wx += add;
+/* Iff we are about to fill up work[], flush it to the result */
+        if (wx > NLINE) {
+            res = realloc(res, tlen+1);     /* Allow for the NUL */
+            memcpy(res+res_st, work, wx);
+            res_st += wx;
+            wx = 0;
+        }
+        uclen++;
+    }
+/* Flush any remaining chars */
+    if (wx > 0) {
+        res = realloc(res, tlen+1);     /* Allow for the NUL */
+        memcpy(res+res_st, work, wx);
+    }
+    *(res+tlen) = '\0';
+    if (resbytes) *resbytes = tlen;
+    if (resunicode) *resunicode = uclen;
+    return res;
+}
+
+/* Get the number of unicode chars in a NUL-terminated utf8 string.
+ */
+unsigned int uclen_utf8(char *str) {
+
+    unsigned int len = 0;
+    int offs = 0;
+    while (*(str+offs)) {       /* Until we reach the NUL */
+        len++;
+        offs = next_utf8_offset(str, offs, offs+10, FALSE);
+    }
+    return len;
+}
+
+/* Compare two utf8 buffers case-insensitvely.
+ * This assumes that the second buffer is already lowercased.
+ */
+int nocasecmp_utf8(char *tbuf, int t_start, int t_maxlen,
+              char *lbuf, int l_start, int l_maxlen) {
+
+    unicode_t tc, lc;
+    while (t_start < t_maxlen && l_start < l_maxlen) {
+        t_start += utf8_to_unicode(tbuf, t_start, t_maxlen, &tc);
+        l_start += utf8_to_unicode(lbuf, l_start, l_maxlen, &lc);
+        tc = utf8proc_tolower(tc);
+        if (tc != lc) return ((tc>lc)-(tc<lc));
+    }
+    return 0;
+}
+
+/* Determine the offset within a buffer when you go back <n> unicode
+ * chars.
+ * Returns -1 if you try to go back beyond the start of the buffer.
+ */
+int unicode_back_utf8(int n_back, char *buf, int offset) {
+
+    if (n_back <= 0) return offset;
+    while (offset) {       /* Until we reach the BOL */
+        offset = prev_utf8_offset(buf, offset, FALSE);
+        if (--n_back <= 0) break;
+    }
+    if (n_back != 0) return -1;
+    return offset;
 }

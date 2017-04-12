@@ -408,26 +408,36 @@ struct window {
  */
 
 #if PROC
+#define CASESET_LOWI_ALL -4
+#define CASESET_LOWI_ONE -3
+#define CASESET_CAPI_ALL -2
+#define CASESET_CAPI_ONE -1
+#define CASESET_OFF       0
+#define CASESET_ON        1
 struct ptt_ent {
     struct ptt_ent *nextp;
     char *from;
     char *to;
-    int from_len;
-    int bow_only;
+    unicode_t final_uc;         /* Last char in from, as unicode */
+    int from_len;               /* in bytes */
+    int from_len_uc;            /* in unicode */
+    int to_len_uc;              /* in unicode */
+    int bow_only;               /* Only match at beginning of word */
+    int caseset;                /* Casing for replacement */
 };
 #endif
 struct buffer {
         struct buffer *b_bufp;  /* Link to next struct buffer   */
-        struct line *b_dotp;    /* Link to "." struct line structure   */
+        struct line *b_dotp;    /* Link to "." struct line structure */
         struct line *b_markp;   /* The same as the above two,   */
-        struct line *b_linep;   /* Link to the header struct line      */
+        struct line *b_linep;   /* Link to the header struct line */
         struct line *b_topline; /* Link to narrowed top text    */
         struct line *b_botline; /* Link to narrowed bottom text */
 #if PROC
         struct ptt_ent *ptt_headp;
         int b_type;             /* Type of buffer */
 #endif
-        int b_doto;             /* Offset of "." in above struct line  */
+        int b_doto;             /* Offset of "." in above struct line */
         int b_marko;            /* but for the "mark"           */
         int b_mode;             /* editor mode of this buffer   */
         char b_active;          /* window activated flag        */
