@@ -326,10 +326,20 @@ void ptt_free(struct buffer *bp) {
  * Compile the contents of a buffer into a ptt_remap structure
  */
 static int ptt_compile(struct buffer *bp) {
+    char ml_display_code[32];
 
-/* Free up any previously-compiled table */
+/* Free up any previously-compiled table and get a default display code */
 
     ptt_free(bp);
+
+    unicode_t uc1, uc2;
+    int mlen = strlen(bp->b_bname);
+    int offs = 1;                   /* Skip the leading / */
+    offs += utf8_to_unicode(bp->b_bname, 1, mlen, &uc1);
+    (void)utf8_to_unicode(bp->b_bname, offs, mlen, &uc2);
+    offs = unicode_to_utf8(uc1, ml_display_code);
+    offs += unicode_to_utf8(uc2, ml_display_code+offs);
+    ml_display_code[offs] = '\0';
 
 /* Read through the lines of the buffer */
 
@@ -361,24 +371,36 @@ static int ptt_compile(struct buffer *bp) {
             caseset = CASESET_ON;
             continue;
         }
-        else if (!strcmp("caseset-capinit1", from_string)) {
+        if (!strcmp("caseset-capinit1", from_string)) {
             caseset = CASESET_CAPI_ONE;
             continue;
         }
-        else if (!strcmp("caseset-capinitall", from_string)) {
+        if (!strcmp("caseset-capinitall", from_string)) {
             caseset = CASESET_CAPI_ALL;
             continue;
         }
-        else if (!strcmp("caseset-lowinit1", from_string)) {
+        if (!strcmp("caseset-lowinit1", from_string)) {
             caseset = CASESET_LOWI_ONE;
             continue;
         }
-        else if (!strcmp("caseset-lowinitall", from_string)) {
+        if (!strcmp("caseset-lowinitall", from_string)) {
             caseset = CASESET_LOWI_ALL;
             continue;
         }
-        else if (!strcmp("caseset-off", from_string)) {
+        if (!strcmp("caseset-off", from_string)) {
             caseset = CASESET_OFF;
+            continue;
+        }
+        if (!strcmp("display-code", from_string)) {
+            rp = token(rp, tok, NLINE);
+            if (tok[0] != '\0')  {
+                mlen = strlen(tok);
+                offs = utf8_to_unicode(tok, 0, mlen, &uc1);
+                (void)utf8_to_unicode(tok, offs, mlen, &uc2);
+                offs = unicode_to_utf8(uc1, ml_display_code);
+                offs += unicode_to_utf8(uc2, ml_display_code+offs);
+                ml_display_code[offs] = '\0';
+            }
             continue;
         }
         while(*rp != '\0') {
@@ -400,8 +422,11 @@ static int ptt_compile(struct buffer *bp) {
         }
         if (to_len == 0) continue;
         struct ptt_ent *new = malloc(sizeof(struct ptt_ent));
-        if (lastp == NULL)
+        if (lastp == NULL) {
             bp->ptt_headp = new;
+            strcpy(bp->ptt_headp->display_code, "P-");
+            strcpy(bp->ptt_headp->display_code+2, ml_display_code);
+        }
         else {
             lastp->nextp = new;
         }
@@ -438,6 +463,7 @@ static int ptt_compile(struct buffer *bp) {
     }
     if (lastp == NULL) return FALSE;
     ptt = bp;
+    mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
     return TRUE;
 }
 
@@ -494,6 +520,7 @@ int set_pttable(int f, int n) {
         return TRUE;    /* Don't abort start-up file */
     }
     ptt = bp;               /* This does not actually activate it */
+    mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
     return TRUE;
 }
 

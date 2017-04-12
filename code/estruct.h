@@ -422,8 +422,10 @@ struct ptt_ent {
     int from_len;               /* in bytes */
     int from_len_uc;            /* in unicode */
     int to_len_uc;              /* in unicode */
+/* The following fields are only set for the head */
     int bow_only;               /* Only match at beginning of word */
     int caseset;                /* Casing for replacement */
+    char display_code[32];      /* Only 2 graphemes, though */
 };
 #endif
 struct buffer {
@@ -461,7 +463,7 @@ struct buffer {
 #define BFNAROW 0x08            /* buffer has been narrowed - GGR */
 
 /*      mode flags      */
-//GGR ?? #define        NUMMODES        10      /* # of defined modes           */
+
 #define NUMMODES        9       /* # of defined modes           */
 
 #define MDWRAP  0x0001          /* word wrap                    */

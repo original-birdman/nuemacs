@@ -617,6 +617,19 @@ static void show_line(struct line *lp)
         }
 }
 
+/* Map a char string with (possibly) utf8 sequences in it to unicode
+ * for vtputc.
+ */
+static void show_utf8(char *utf8p)
+{
+        int i = 0, len = strlen(utf8p);
+        while (i < len) {
+                unicode_t c;
+                i += utf8_to_unicode(utf8p, i, len, &c);
+                vtputc(c);
+        }
+}
+
 /*
  * updone:
  *      update the current line to the virtual screen
@@ -1335,9 +1348,7 @@ static void modeline(struct window *wp)
                         strcat(tline, mode2name[i]);
                 }
         strcat(tline, MLpost " ");
-
-        cp = &tline[0];
-        while ((c = *cp++) != 0) vtputc(c);
+        show_utf8(tline);
 
         if (bp->b_fname[0] != 0 && strcmp(bp->b_bname, bp->b_fname) != 0)
         {
