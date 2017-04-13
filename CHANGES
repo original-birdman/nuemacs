@@ -538,9 +538,9 @@ spawn.c
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.112
+    Update to version GGR4.111
 
-==========
+========== GGR4.112
 
 main.c
     Fix the -e/-v handling once we get to looking for files on the
@@ -571,7 +571,7 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.112
 
-==========
+========== GGR4.113
 word.c
     Fix the re-allocation need check for wbuf to cater for char vs.
     unicode_t sizes.
@@ -621,7 +621,7 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.113
 
-==========
+========== GGR4.114
 
 epath.h
    Set DFLT_PATH to the "standard" locations of /opt/local/etc/ then
@@ -670,7 +670,7 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.114
 
-==========
+========== GGR4.115
 
 ptt/czech.cmd
    Fix the z~ mapping.
@@ -829,5 +829,139 @@ Makefile
 version.h
 etc/uemacs.hlp
     Update to version GGR4.115
+
+========== GGR4.116
+
+Makefile
+    Allow for version numbering on any local utf8proc directory name.
+
+edef.h
+efunc.h
+random.c
+    Disable toggling Phon mode on via adjustmode() if no pt_table is
+    yet defined.
+    Made adjustmode() static.
+
+eval.c
+evar.h
+    Add inmb system variable, so macros can check for being, and disable
+    use, in the minibuffer.
+
+etc/uemacs.rc
+    Change toggle-lmode/toggle-gmode to check $inmb and simplified(?)
+    code.
+    Added "P" (Phon) as a valid mode to toggle.
+    Standardized mode chars to be those used by buffer displays.
+
+etc/uemacs.rc
+    Make the file-hooks macro look at the filename for the buffer, not
+    the buffer name, as it was failing on long filenames where the
+    buffer name is truncated.
+
+utf8.c
+    Remove a bug introduced in GGR4.109 (why?  - unknown) that prevented
+    unicode 0x80-0xbf being converted to utf8.
+
+word.c
+efunc.h
+    Expose the ensure_case() function so that it can be used by the ptt
+    code in exec.c
+
+etc/uemacs.rc
+    Tidy up (remove debug code...) of toggle-lmode/toggle-gmode change.
+
+basic.c
+display.c
+utf8.c
+    Change utf8_to_unicode() so that it checks the incoming args and
+    returns a value of 0, with a returned codepoint of 0, if the index
+    is outside the given len range,
+    Corrected getgoal() [basic.c], mlwrite_ap() and mlputs() [display.c]
+    to ensure they don't call utf8_to_unicode() with index >= len.
+
+exec.c
+globals.c
+utf8.c
+estruct.h
+utf8.h
+    NOTE: globals.c was erroneously checked in as part of commit:
+    Add code to handle casing options in Phonetic Translation tables.
+     4cd83b90cab79e240492f882be91436b5d304db8
+    These can now do case modification of the replacement text.
+    The tables can contain these commands:
+        caseset-on          [which is the default setting]
+        caseset-capinit1
+        caseset-capinitall
+        caseset-lowinit1
+        caseset-lowinitall
+        caseset-off
+    Each applies to all following replacement rules until the next
+    caseset-* command or the end of the table is reached,
+    For caseset-off the replaced text is treated verbatim and it will do
+    a verbatim replacement on a match.
+    For the other cases the replaced text is checked case-insensitively.
+    For caseset-on it will force upper-case of the replacement on a
+    match if the first character in the replaced string is uppercase.
+    For caseset-cap* it will uppercase the first character of the string
+    (capinit1) or all words (capinitall).  The caseset-low* are similar,
+    but force lowercase if the first character of the replaced string is
+    lowercase.
+    tolower_utf8(), uclen_utf8(), nocasecmp_utf8() and unicode_back_utf8()
+    functions added [utf8.c]
+
+line.c
+    As utf8_to_unicode() now checks its args, lgetgrapheme() now needs
+    to check for being at EOL and return a NL grapheme, so ldelchar()
+    knows there is 1 byte to step over.
+
+basic.c
+exec.c
+random.c
+word.c
+    Fix for delfword()/delbword(). These use forwchar()/backchar() to
+    move over the section to delete, but these functions now move by
+    grapheme, so you can no longer just count the number of calls and
+    delete that number of bytes.
+    Changed forwchar()/backchar() to return the number of bytes moved
+    and fixed all callers accordingly.
+
+ptt/czech.cmd
+ptt/russian.cmd
+    Edited to take account of the caseset-* commands to simplify/shorten
+    tables.
+
+basic.c
+eval.c
+exec.c
+isearch.c
+line.c
+names.c
+random.c
+region.c
+search.c
+word.c
+ebind.h
+efunc.h
+    Rename forwchar()/backchar() to forw_grapheme() and back_grapheme()
+    as that is what they (now) do, and this should help to avoid
+    confusion.
+    Changed the return value of both functions on an incomplete move to
+    be minus the actual move. Adjusted callers accordingly.
+
+
+display.c
+exec.c
+estruct.h
+    Added display-code option to ptt tables to let you give a
+    2-character code to display in the mode line when it is on. It is
+    preceded by "P-" and defaults to the first two characters of the
+    table name.
+    Added an internal function, show_utf8(), to display.c to handle
+    utf8 strings in the modeline.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.116
 
 ==========

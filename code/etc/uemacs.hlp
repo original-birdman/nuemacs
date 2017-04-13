@@ -1,4 +1,4 @@
-=>                   uEmacs/PK GGR4.115 Help Index     (09 April 2017)
+=>                   uEmacs/PK GGR4.116 Help Index     (13 April 2017)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -208,6 +208,32 @@ store-pttable <ptt-name>
     Define a phonetic translation table.  When this is switched on any
     typing that results in the completion of from1 (from2, ...) will
     result in that text being replaced with to1 (to2, ...).
+
+    The tables can contain these commands:
+        caseset-on          [which is the default setting]
+        caseset-capinit1
+        caseset-capinitall
+        caseset-lowinit1
+        caseset-lowinitall
+        caseset-off
+    Each applies to all following replacement rules until the next
+    caseset-* command or the end of the table is reached,
+    For caseset-off the replaced text is treated verbatim and it will do
+    a verbatim replacement on a match.
+    For the other cases the replaced text is checked case-insensitively.
+    For caseset-on it will force upper-case of the replacement on a
+    match if the first character in the replaced string is uppercase.
+    For caseset-cap* it will uppercase the first character of the string
+    (capinit1) or all words (capinitall).  The caseset-low* are similar,
+    but force lowercase if the first character of the replaced string is
+    lowercase.
+
+    They may also contain:
+        display-code XX
+
+    where XX is a 2-character code to display in the mode line when it
+    is on.  It is preceded by "P-" and defaults to the first two
+    characters of the table name.
 
 toggle-ptmode
     This turns pttable usage on and off.  Normally it just toggles the

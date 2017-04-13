@@ -3,10 +3,13 @@
 ; Comment lines start with ; trailing comments are *not* allowed.
 ; Leading ^ ties the match to the start of a word.
 ; These (mostly) work in either upper or lower case (caseset-on).
+;
 store-pttable russian
-; Need caseset-off here to stop recursive match eating
-; sucessive ` or ' (so ```` only produces 1 Ъ as it keeps matching ъ`
-; when ignorinfg case)
+;
+; Need caseset-off here to stop recursive match eating sucessive
+; ` or ' (so ```` only produces 1 Ъ as it keeps matching ъ`
+; when ignoring case)
+;
    caseset-off
    ъ`    Ъ
    ь'    Ь
