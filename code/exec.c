@@ -464,6 +464,7 @@ static int ptt_compile(struct buffer *bp) {
     if (lastp == NULL) return FALSE;
     ptt = bp;
     mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
+    curwp->w_flag |= WFMODE;
     return TRUE;
 }
 
@@ -521,6 +522,7 @@ int set_pttable(int f, int n) {
     }
     ptt = bp;               /* This does not actually activate it */
     mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
+    curwp->w_flag |= WFMODE;
     return TRUE;
 }
 
