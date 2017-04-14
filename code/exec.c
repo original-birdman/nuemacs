@@ -1052,6 +1052,7 @@ failexit:                       freewhile(scanner);
                         if (dirnum == DENDM) {
                                 if (ptt_storing) {
                                     ptt_compile(bstore);
+                                    ptt_storing = 0;
                                 }
                                 mstore = FALSE;
                                 bstore = NULL;
