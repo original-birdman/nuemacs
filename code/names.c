@@ -158,6 +158,9 @@ struct name_bind names[] = {
 #if     WORDPRO
         {"next-paragraph", gotoeop},
 #endif
+#if PROC
+        {"next-pttable", next_pttable},     /* GGR */
+#endif
         {"next-window", nextwind},
         {"next-word", forwword},
         {"nop", nullproc},

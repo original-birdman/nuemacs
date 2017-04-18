@@ -270,6 +270,7 @@ extern int storemac(int f, int n);
 extern void ptt_free(struct buffer *);
 extern int storepttable(int, int);
 extern int set_pttable(int, int);
+extern int next_pttable(int, int);
 extern int toggle_ptmode(int, int);
 extern int ptt_handler(int);
 extern int storeproc(int f, int n);

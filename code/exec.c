@@ -323,6 +323,17 @@ void ptt_free(struct buffer *bp) {
 }
 
 /* GGR
+ * Sets the pttable to use if PHON mode is on and sets the modeline
+ * text to display when it is.
+ */
+static void use_pttable(struct buffer *bp) {
+    ptt = bp;
+    mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
+    curwp->w_flag |= WFMODE;
+}
+
+
+/* GGR
  * Compile the contents of a buffer into a ptt_remap structure
  */
 static int ptt_compile(struct buffer *bp) {
@@ -462,9 +473,7 @@ static int ptt_compile(struct buffer *bp) {
         new->caseset = caseset;
     }
     if (lastp == NULL) return FALSE;
-    ptt = bp;
-    mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
-    curwp->w_flag |= WFMODE;
+    use_pttable(bp);
     return TRUE;
 }
 
@@ -520,9 +529,32 @@ int set_pttable(int f, int n) {
         sleep(1);
         return TRUE;    /* Don't abort start-up file */
     }
-    ptt = bp;               /* This does not actually activate it */
-    mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
-    curwp->w_flag |= WFMODE;
+    use_pttable(bp);    /* This does not actually activate it */
+    return TRUE;
+}
+
+/* GGR
+ * Move to the next pttable.
+ * A bit like nextbuffer().
+ */
+int next_pttable(int f, int n) {
+
+    if (f == FALSE) n = 1;
+    if (n < 1) return FALSE;
+    if (ptt == NULL) return FALSE;
+
+    struct buffer *bp, *tmp_ptt = ptt;
+    while (n-- > 0) {
+        bp = tmp_ptt;
+        bp = bp->b_bufp;                /* Start at next buffer */
+        if (bp == NULL) bp = bheadp;
+        while (bp != ptt && bp->b_type != BTPHON) {
+            bp = bp->b_bufp;            /* Onto next buffer */
+            if (bp == NULL) bp = bheadp;
+        }
+        tmp_ptt = bp;
+    }
+    use_pttable(tmp_ptt);
     return TRUE;
 }
 
