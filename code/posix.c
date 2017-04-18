@@ -149,79 +149,61 @@ void ttflush(void)
 }
 
 /*
- * Read a character from the terminal, performing no editing and doing no echo
- * at all. More complex in VMS that almost anyplace else, which figures. Very
- * simple on CPM, because the system can do exactly what you want.
+ * Read a character from the terminal, performing no editing and doing no
+ * echo at all.
+ * We expect the characters to come in as utf8 strings (i.e. a byte at
+ * a time) and we convert these to unicode (with soem special CSI handling).
+ * We expect any multi-byte character produced by a keyboard to dump
+ * all bytes in one go, but we do allow for a small delay in them
+ * arriving for processign into one unicode character.
  */
+#include <poll.h>
+static struct pollfd ue_wait = { 0, POLLIN, 0 };
+
 int ttgetc(void)
 {
-        static char buffer[32];
-        static int pending;
-        unicode_t c;
-        int count, bytes = 1, expected;
+    static char buffer[32];
+    static int pending;
+    unicode_t c;
+    int count, bytes = 1, expected;
 
-        count = pending;
-        if (!count) {
-                count = read(0, buffer, sizeof(buffer));
-                if (count <= 0)
-                        return 0;
-                pending = count;
+    count = pending;
+    if (!count) {
+        count = read(0, buffer, sizeof(buffer));
+        if (count <= 0) return 0;
+        pending = count;
+    }
+
+    c = (unsigned char) buffer[0];
+    if (c < 0xc0 && !(c == 0x1b))   /* ASCII or Latin-1(??) - Not Esc */
+        goto done;
+
+/* Work out how many bytes we expect in total for this unicode char */
+    if (c == 0x1b)     expected = 2;
+    else if (c < 0xe0) expected = 2;
+    else if (c < 0xf0) expected = 3;
+    else               expected = 4;
+
+/* Special character - try to fill buffer */
+    while (pending < expected) {
+        int chars_waiting = poll(&ue_wait, 1, 100);
+        if (chars_waiting <= 0) break;
+        pending += read(0, buffer + count, sizeof(buffer) - count);
+    }
+    if (pending > 1) {
+        unsigned char second = buffer[1];
+        if (c == 0x1b && second == '[') { /* Turn ESC+'[' into CSI */
+            bytes = 2;
+            c = 0x9b;
+            goto done;
         }
-
-        c = (unsigned char) buffer[0];
-        if (c >= 32 && c < 128)
-                goto done;
-
-        /*
-         * Lazy. We don't bother calculating the exact
-         * expected length. We want at least two characters
-         * for the special character case (ESC+[) and for
-         * the normal short UTF8 sequence that starts with
-         * the 110xxxxx pattern.
-         *
-         * But if we have any of the other patterns, just
-         * try to get more characters. At worst, that will
-         * just result in a barely perceptible 0.1 second
-         * delay for some *very* unusual utf8 character
-         * input.
-         */
-        expected = 2;
-        if ((c & 0xe0) == 0xe0)
-                expected = 6;
-
-        /* Special character - try to fill buffer */
-        if (count < expected) {
-                int n;
-                ntermios.c_cc[VMIN] = 0;
-                ntermios.c_cc[VTIME] = 1;               /* A .1 second lag */
-                tcsetattr(0, TCSANOW, &ntermios);
-
-                n = read(0, buffer + count, sizeof(buffer) - count);
-
-                /* Undo timeout */
-                ntermios.c_cc[VMIN] = 1;
-                ntermios.c_cc[VTIME] = 0;
-                tcsetattr(0, TCSANOW, &ntermios);
-
-                if (n > 0)
-                        pending += n;
-        }
-        if (pending > 1) {
-                unsigned char second = buffer[1];
-
-                /* Turn ESC+'[' into CSI */
-                if (c == 27 && second == '[') {
-                        bytes = 2;
-                        c = 128+27;
-                        goto done;
-                }
-        }
-        bytes = utf8_to_unicode(buffer, 0, pending, &c);
+    }
+    bytes = utf8_to_unicode(buffer, 0, pending, &c);
 
 done:
-        pending -= bytes;
-        memmove(buffer, buffer+bytes, pending);
-        return c;
+    pending -= bytes;
+    memmove(buffer, buffer+bytes, pending);
+    return c;
 }
 
 /* typahead:    Check to see if any characters are already in the
