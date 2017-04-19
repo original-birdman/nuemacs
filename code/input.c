@@ -461,12 +461,6 @@ proc_ctlxc:
 static jmp_buf winch_env;
 typedef void (*sighandler_t)(int);
 
-/* We define a value for this before the "goto abort" to avoid a
- * "may be used uninitialized" warning in gcc4.
- * It won't be actually used when NULL.
- */
-static sighandler_t display_handler = NULL;    
-
 void sigwinch_handler(int signr) {
 /* Jump back to getstring to clean up and leave */
     if (signr == SIGWINCH) longjmp(winch_env, 1);
@@ -509,7 +503,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     sigemptyset(&sigwinch_set);
     sigaddset(&sigwinch_set, SIGWINCH);
     sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
-#endif                            
+#endif
 
 /* GGR NOTE!!
  * We want to ensure that we don't return with garbage in buf, but we
@@ -566,6 +560,13 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
     mberase();
 
 #ifdef SIGWINCH
+
+/* We define a value for this before the "goto abort" to avoid a
+ * "may be used uninitialized" warning in gcc4.
+ * It won't be actually used when NULL.
+ */
+    sighandler_t display_handler = NULL;
+
     int winch_seen = 0;
     if (setjmp(winch_env)) {
         winch_seen = 1;
@@ -573,12 +574,12 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
         buf = "";               /* Don't return garbage */
         goto abort;
     }
-    
+
     struct sigaction sigact, oldact;
-    sigact.sa_handler = sigwinch_handler;        
+    sigact.sa_handler = sigwinch_handler;
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = 0;            /* No SA_RESTART for this one! */
-    sigaction(SIGWINCH, &sigact, &oldact);    
+    sigaction(SIGWINCH, &sigact, &oldact);
     display_handler = oldact.sa_handler;
 /* Now we can enable the signal */
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
@@ -815,13 +816,13 @@ abort:  /* Make sure we're still in our minibuffer */
 #ifdef SIGWINCH
 /* We need to re-instate the original handler now... */
 
-    sigact.sa_handler = display_handler;        
+    sigact.sa_handler = display_handler;
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = SA_RESTART;   /* This does do restarts */
     sigaction(SIGWINCH, &sigact, NULL);
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 
-/* If we saw the signal, resend it now that we've tidied up the 
+/* If we saw the signal, resend it now that we've tidied up the
  * minibuffer code.
  */
     if (winch_seen) raise(SIGWINCH);
