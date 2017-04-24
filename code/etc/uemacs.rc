@@ -161,12 +161,12 @@ store-procedure lr-justify          ; Left and right justify paragraph
   clear-message-line
 !endm
 ;
-store-procedure toggle-lmode            ; toggle local mode
+store-procedure _mytoggle-mode          ; toggle local/global mode
     !if $inmb
         write-message "Command not allowed in mini-buffer"
         !finish
     !endif
-    write-message "Toggle mode (WCPEVOMYA): "
+    write-message &cat &cat "Toggle " %type-mode " mode (WCPEVOMYA): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
@@ -223,86 +223,33 @@ store-procedure toggle-lmode            ; toggle local mode
     !finish
 ;
 *doit
-    !if &band $cmode %bit
-        set %mfunc delete-mode
-        set %report &cat %what " mode toggled off"
+    set %report &cat %type-mode &cat " " &cat %what " mode toggled "
+    !if &band %test-mode %bit
+        set %mfunc %del-func
+        set %how off
     !else 
-        set %mfunc add-mode
-        set %report &cat %what " mode toggled on"
+        set %mfunc %add-func
+        set %how on
     !endif
     %mfunc %what
-    write-message %report
+    write-message &cat %report %how
     !finish
 !endm
-;
+
+store-procedure toggle-lmode            ; toggle local mode
+    set %test-mode $cmode
+    set %type-mode local
+    set %add-func add-mode
+    set %del-func delete-mode
+    execute-procedure _mytoggle-mode
+!endm
+
 store-procedure toggle-gmode            ; toggle global mode
-    write-message "Toggle global mode (WCPEVOMYA): "
-    set %report " "
-    set %modesel &upper &gtkey
-    !if &or &seq %modesel "" &seq %modesel "~n"
-        write-message "[Aborted]"
-        !finish
-    !endif
-;
-    !if &seq %modesel "W"
-        set %bit 1
-        set %what "WRAP"
-        !goto doit
-    !endif
-    !if &seq %modesel "C"
-        set %bit 2
-        set %what "CMODE"
-        !goto doit
-    !endif
-    !if &seq %modesel "P"
-        set %bit 4
-        set %what "PHON"
-        !goto doit
-    !endif
-    !if &seq %modesel "E"
-        set %bit 8
-        set %what "EXACT"
-        !goto doit
-    !endif
-    !if &seq %modesel "V"
-        set %bit 16
-        set %what "VIEW"
-        !goto doit
-    !endif
-    !if &seq %modesel "O"
-        set %bit 32
-        set %what "OVER"
-        !goto doit
-    !endif
-    !if &seq %modesel "M"
-        set %bit 64
-        set %what "MAGIC"
-        !goto doit
-    !endif
-    !if &seq %modesel "Y"
-        set %bit 128
-        set %what "CRYPT"
-        !goto doit
-    !endif
-    !if &seq %modesel "A"
-        set %bit 256
-        set %what "ASAVE"
-        !goto doit
-    !endif
-    write-message "Unknown global mode"
-    !finish
-;
-*doit
-    !if &band $gmode %bit
-        set %mfunc delete-global-mode
-        set %report &cat %what " mode toggled off globally"
-    !else 
-        set %mfunc add-global-mode
-        set %report &cat %what " mode toggled on globally"
-    !endif
-    %mfunc %what
-    write-message %report
-    !finish
+    set %test-mode $gmode
+    set %type-mode global
+    set %add-func add-global-mode
+    set %del-func delete-global-mode
+    execute-procedure _mytoggle-mode
 !endm
 ;
 store-procedure del-sp-right            ; delete space right
@@ -327,7 +274,7 @@ bind-to-key detab-line                  ^X^D
 bind-to-key handle-tab                  ^X^I
 ;
 bind-to-key insert-file                 ^XI
-buffer-to-key centre-line              ^XL
+buffer-to-key centre-line               ^XL
 bind-to-key save-file                   ^XS
 buffer-to-key toggle-lmode              ^XT
 bind-to-key fill-all-paragraphs         ^X.
@@ -338,6 +285,7 @@ bind-to-key help                        ^X?
 buffer-to-key rm-dflt-repl              M-^D
 bind-to-key incremental-search          M-^I
 buffer-to-key lr-justify                M-^J    ; Previously Esc-J in 3.9e
+unbind-key                              M-^T
 bind-to-key i-shell                     M-^U
 bind-to-key yank-minibuffer             M-^Y
 ;
@@ -372,5 +320,4 @@ char-replace U+0800 U+10000
 ; Single UTF-16 surrogates
 char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
 ;
-bind-to-key toggle-ptmode               M-^P
 set $discmd TRUE
