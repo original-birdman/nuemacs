@@ -13,10 +13,9 @@ store-pttable russian
    caseset-off
    ъ`    Ъ
    ь'    Ь
+   `     ъ
+   '     ь
    caseset-on
-   ``    Ъ
-   Y     Ы
-   ''    Ь
    шцh   щ
    shцh  щ
    shch  щ
@@ -35,6 +34,7 @@ store-pttable russian
    zh    ж
    кh    х
    kh    х
+; Next is Cryliic small IE
    е'    э
    e'    э
    a     а
@@ -42,6 +42,7 @@ store-pttable russian
    v     в
    g     г
    d     д
+; Next is Latin e => Cryliic small IE
    e     е
    z     з
    i     и
@@ -60,8 +61,6 @@ store-pttable russian
    f     ф
    x     х
    c     ц
-   `     ъ
    y     ы
-   '     ь
    q     э
 !endm
