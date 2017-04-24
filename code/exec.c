@@ -610,7 +610,8 @@ int ptt_handler(int c) {
 /*
  * Need a unicode-case insensitive strncmp!!!
  * Also, since we can't guarantee that a case-changed string will be
- * the length we need to step back the right number of unicode chars first.
+ * the same length, we need to step back the right number of unicode
+ * chars first.
  */
             if (start_at < 0) continue; /* Insufficient chars */
             if (nocasecmp_utf8(curwp->w_dotp->l_text,
@@ -642,7 +643,7 @@ int ptt_handler(int c) {
         }
 
 /* We have to replace the string with the translation.
- * If we are doing caseseting on the replacement then we
+ * If we are doing case-setting on the replacement then we
  * need to know the case of the first character.
  */
         curwp->w_doto = start_at;

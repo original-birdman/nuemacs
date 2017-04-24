@@ -511,7 +511,6 @@ int fillpara(int f, int n)
                 mlwrite("No fill column set");
                 return FALSE;
         }
-        justflag = FALSE;
 
 /* GGR */
         rtol = 1;           /* Direction of first padding pass */

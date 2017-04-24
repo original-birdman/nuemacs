@@ -81,7 +81,6 @@ extern char *fline;             /* dynamic return line */
 extern int flen;                /* current length of fline */
 extern int rval;                /* return value of a subprocess */
 extern int nullflag;
-extern int justflag;            /* justify, don't fill */
 extern int overlap;             /* line overlap in forw/back page */
 extern int scrollcount;         /* number of lines to scroll */
 

@@ -17,18 +17,20 @@
 #include "line.h"
 #include "utf8.h"
 
-/* GGR - A consistent "real" line length - without PKcode justflag.  */
-static int ctrulen(void)
+/* GGR - This was ctrulen - get a consistent "real" line length.
+ * However, it was only ever use to check for an empty line.
+ * So it's been renamed and simplified.
+ * It's not empty if we have any byte other than a space or tab
+ */
+static int curline_empty(void)
 {
-    int end;
     char c;
-
-    end = llength(curwp->w_dotp);
-    while (end > 0 &&
-           ((justflag == TRUE) ||
-           ((c = lgetc(curwp->w_dotp, (end - 1))) == ' ' || c == TAB)))
-	--end;
-    return(end);
+    int end = llength(curwp->w_dotp);
+    for (int ci = 0; ci < end; ci++) {
+        c = lgetc(curwp->w_dotp, ci);
+        if (c != ' ' || c != '\t') return FALSE;
+    }
+    return TRUE;
 }
 
 /*
@@ -327,7 +329,7 @@ int gotobop(int f, int n)
                 /* and scan back until we hit a <NL><NL> or <NL><TAB>
                    or a <NL><SPACE>                                     */
                 while (lback(curwp->w_dotp) != curbp->b_linep)
-                        if (ctrulen() != 0)     /* GGR */
+                        if (!curline_empty())   /* GGR */
                                 curwp->w_dotp = lback(curwp->w_dotp);
                         else
                                 break;
@@ -350,7 +352,7 @@ int gotobop(int f, int n)
  */
 int gotoeop(int f, int n)
 {
-        int suc;  /* success of last back_grapheme (now bytes moved) */
+        int suc;  /* success of last forw_grapheme (now bytes moved) */
 
         if (n < 0)  /* the other way... */
                 return gotobop(f, -n);
@@ -361,13 +363,13 @@ int gotoeop(int f, int n)
                 while (!inword() && (suc > 0))
                         suc = forw_grapheme(FALSE, 1);
                 curwp->w_doto = 0;      /* and go to the B-O-Line */
-                if (suc)        /* of next line if not at EOF */
+                if (suc)                /* of next line if not at EOF */
                         curwp->w_dotp = lforw(curwp->w_dotp);
 
                 /* and scan forword until we hit a <NL><NL> or <NL><TAB>
                    or a <NL><SPACE>                                     */
                 while (curwp->w_dotp != curbp->b_linep) {
-                        if (ctrulen() != 0)     /* GGR */
+                        if (!curline_empty())   /* GGR */
                                 curwp->w_dotp = lforw(curwp->w_dotp);
                         else
                                 break;

@@ -4,12 +4,16 @@
 #include "utf8.h"
 
 /*
- * All text is kept in circularly linked lists of "struct line" structures. These
- * begin at the header line (which is the blank line beyond the end of the
- * buffer). This line is pointed to by the "struct buffer". Each line contains a the
+ * All text is kept in circularly linked lists of "struct line" structures.
+ * These begin at the header line (which is the blank line beyond the
+ * end of the buffer).
+ * This line is pointed to by the "struct buffer". Each line contains a the
  * number of bytes in the line (the "used" size), the size of the text array,
- * and the text. The end of line is not stored as a byte; it's implied. Future
- * additions will include update hints, and a list of marks into the line.
+ * and the text. The end of line is not stored as a byte; it's implied.
+ * It should also be possible for a line to end with zero-width space
+ * marker!!!
+ * Future additions will include update hints, and a list of marks
+ * into the line.
  */
 struct line {
         struct line *l_fp;      /* Link to the next line        */

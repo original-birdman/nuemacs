@@ -80,7 +80,6 @@ char *fline = NULL;             /* dynamic return line */
 int flen = 0;                   /* current allocated size of fline */
 int rval = 0;                   /* return value of a subprocess */
 int nullflag = FALSE;           /* accept null characters */
-int justflag = FALSE;           /* justify, don't fill */
 int overlap = 0;                /* line overlap in forw/back page */
 int scrollcount = 1;            /* number of lines to scroll */
 
