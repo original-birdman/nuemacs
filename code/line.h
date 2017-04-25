@@ -42,6 +42,7 @@ extern int ldelete(long n, int kflag);
 extern int ldelchar(long n, int kflag);
 extern int lgetchar(unicode_t *);
 extern int lgetgrapheme(struct grapheme *, int);
+extern int lputgrapheme(struct grapheme *gp);
 extern char *getctext(void);
 extern int putctext(char *iline);
 extern int ldelnewline(void);

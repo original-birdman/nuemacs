@@ -378,40 +378,64 @@ int lgetchar(unicode_t *c)
 /* Get the grapheme structure for what point is looking at.
  * Returns the number of bytes used up by the utf8 string.
  */
-int lgetgrapheme(struct grapheme *gp, int utf8_len_only)
-{
-        int len = llength(curwp->w_dotp);
+int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
+    int len = llength(curwp->w_dotp);
+
 /* Fudge in NL if at eol.
  * ldelchar needs to know there is one char to step over
+ * Also, return nothing if out of range(!).
  */
-        if (curwp->w_doto == len) {
-            gp->uc = 0x0a;
-            gp->cdm = 0;
-            gp->ex = NULL;
-            return 1;
-        }
-        char *buf = curwp->w_dotp->l_text;
-        int used = utf8_to_unicode(buf, curwp->w_doto, len, &(gp->uc));
+    if (curwp->w_doto == len) {
+        gp->uc = 0x0a;
         gp->cdm = 0;
         gp->ex = NULL;
-        unicode_t uc;
-        int xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
-        if (!zerowidth_type(uc)) {
-            return used;
-        }
-        used += xtra;
-        gp->cdm = uc;
-        for (int xc = 0;;xc++) {
-            xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
-            if (!zerowidth_type(uc)) break;
-            used += xtra;
-            if (!utf8_len_only) {
-                gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
-                gp->ex[xc] = uc;
-                gp->ex[xc+1] = END_UCLIST;
-            }
-        }
+        return 1;
+    }
+    if (curwp->w_doto >= len) {
+        gp->uc = 0;
+        gp->cdm = 0;
+        gp->ex = NULL;
+        return 0;
+    }
+    char *buf = curwp->w_dotp->l_text;
+    int used = utf8_to_unicode(buf, curwp->w_doto, len, &(gp->uc));
+    gp->cdm = 0;
+    gp->ex = NULL;
+    unicode_t uc;
+    int xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
+    if (!zerowidth_type(uc)) {
         return used;
+    }
+    used += xtra;
+    gp->cdm = uc;
+    for (int xc = 0;;xc++) {
+        xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
+        if (!zerowidth_type(uc)) break;
+        used += xtra;
+        if (!utf8_len_only) {
+            gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
+            gp->ex[xc] = uc;
+            gp->ex[xc+1] = END_UCLIST;
+        }
+    }
+    return used;
+}
+
+/* Put the grapheme structure into the buffer at the current point.
+ * Just a simple matter of running linsert() on each unicode char.
+ */
+int lputgrapheme(struct grapheme *gp) {
+
+    int status = linsert(1, gp->uc);
+    if (gp->cdm == 0) return status;
+    status = linsert(1, gp->cdm);
+    if (gp->ex == NULL) return status;
+    int xc = 0;
+    while (gp->ex[xc] != END_UCLIST) {
+        status = linsert(1, gp->ex[xc]);
+        if (status) return status;
+    }
+    return status;
 }
 
 /*
