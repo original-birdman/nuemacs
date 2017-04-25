@@ -273,123 +273,124 @@ int listbuffers(int f, int n)
 }
 
 /*
- * This routine rebuilds the
- * text in the special secret buffer
- * that holds the buffer list. It is called
- * by the list buffers command. Return TRUE
- * if everything works. Return FALSE if there
- * is an error (if there is no memory). Iflag
- * indicates wether to list hidden buffers.
+ * This routine rebuilds the text in the special secret buffer
+ * that holds the buffer list.
+ * It is called by the list buffers command.
+ * Return TRUE if everything works.
+ * Return FALSE if there is an error (if there is no memory).
+ * Iflag indicates wether to list hidden buffers.
  *
  * int iflag;           list hidden buffer flag
  */
 #define MAXLINE MAXCOL
 int makelist(int iflag)
 {
-        char *cp1;
-        char *cp2;
-        int c;
-        struct buffer *bp;
-        struct line *lp;
-        int s;
-        int i;
-        long nbytes;            /* # of bytes in current buffer */
-        char b[7 + 1];
-        char line[MAXLINE];
+    char *cp1;
+    char *cp2;
+    int c;
+    struct buffer *bp;
+    struct line *lp;
+    int s;
+    int i;
+    long nbytes;                        /* # of bytes in current buffer */
+    char b[7 + 1];
+    char line[MAXLINE];
 
-        blistp->b_flag &= ~BFCHG;       /* Don't complain!      */
-        if ((s = bclear(blistp)) != TRUE)       /* Blow old text away   */
-                return s;
-        strcpy(blistp->b_fname, "");
-        if (addline("ACT MODES        Size Buffer        File") == FALSE
-            || addline("--- -----        ---- ------        ----") ==
-            FALSE)
-                return FALSE;
-        bp = bheadp;            /* For all buffers      */
+    blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
+    if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
+        return s;
+    strcpy(blistp->b_fname, "");
+    if (addline("ACT MODES          Size Buffer        File") == FALSE
+     || addline("--- -----          ---- ------        ----") == FALSE)
+        return FALSE;
+    bp = bheadp;                        /* For all buffers      */
 
-        /* build line to report global mode settings */
-        cp1 = &line[0];
-        *cp1++ = ' ';
-        *cp1++ = ' ';
-        *cp1++ = ' ';
-        *cp1++ = ' ';
+/* Build line to report global mode settings */
 
-        /* output the mode codes */
-        for (i = 0; i < NUMMODES; i++)
-                if (gmode & (1 << i))
-                        *cp1++ = modecode[i];
-                else
-                        *cp1++ = '.';
-        strcpy(cp1, "         Global Modes");
-        if (addline(line) == FALSE)
-                return FALSE;
+    cp1 = &line[0];
+    for (i = 0; i < 4; i++) *cp1++ = ' ';
 
-        /* output the list of buffers */
-        while (bp != NULL) {
-                /* skip invisable buffers if iflag is false */
-                if (((bp->b_flag & BFINVS) != 0) && (iflag != TRUE)) {
-                        bp = bp->b_bufp;
-                        continue;
-                }
-                cp1 = &line[0]; /* Start at left edge   */
+/* Output the mode codes */
 
-                /* output status of ACTIVE flag (has the file been read in? */
-                if (bp->b_active == TRUE)       /* "@" if activated       */
-                        *cp1++ = '@';
-                else
-                        *cp1++ = ' ';
+    for (i = 0; i < NUMMODES; i++)
+        *cp1++ = (gmode & (1 << i))? modecode[i]: '.';
+    strcpy(cp1, "           Global Modes");
+    if (addline(line) == FALSE) return FALSE;
 
-                /* output status of changed flag */
-                if ((bp->b_flag & BFCHG) != 0)  /* "*" if changed       */
-                        *cp1++ = '*';
-                else
-                        *cp1++ = ' ';
+/* Output the list of buffers */
 
-                /* report if the file is truncated */
-                if ((bp->b_flag & BFTRUNC) != 0)
-                        *cp1++ = '#';
-                else
-                        *cp1++ = ' ';
-
-                *cp1++ = ' ';   /* space */
-
-                /* output the mode codes */
-                for (i = 0; i < NUMMODES; i++) {
-                        if (bp->b_mode & (1 << i))
-                                *cp1++ = modecode[i];
-                        else
-                                *cp1++ = '.';
-                }
-                *cp1++ = ' ';   /* Gap.                 */
-                nbytes = 0L;    /* Count bytes in buf.  */
-                lp = lforw(bp->b_linep);
-                while (lp != bp->b_linep) {
-                        nbytes += (long) llength(lp) + 1L;
-                        lp = lforw(lp);
-                }
-                ltoa(b, 7, nbytes);     /* 6 digit buffer size. */
-                cp2 = &b[0];
-                while ((c = *cp2++) != 0)
-                        *cp1++ = c;
-                *cp1++ = ' ';   /* Gap.                 */
-                cp2 = &bp->b_bname[0];  /* Buffer name          */
-                while ((c = *cp2++) != 0)
-                        *cp1++ = c;
-                cp2 = &bp->b_fname[0];  /* File name            */
-                if (*cp2 != 0) {
-                        while (cp1 < &line[3 + 1 + 5 + 1 + 6 + 4 + NBUFN])
-                                *cp1++ = ' ';
-                        while ((c = *cp2++) != 0) {
-                                if (cp1 < &line[MAXLINE - 1])
-                                        *cp1++ = c;
-                        }
-                }
-                *cp1 = 0;       /* Add to the buffer.   */
-                if (addline(line) == FALSE)
-                        return FALSE;
-                bp = bp->b_bufp;
+    while (bp != NULL) {
+/* Skip invisable buffers if iflag is false */
+        if (((bp->b_flag & BFINVS) != 0) && (iflag != TRUE)) {
+            bp = bp->b_bufp;
+            continue;
         }
-        return TRUE;            /* All done             */
+        cp1 = &line[0];                 /* Start at left edge   */
+
+/* Output status of ACTIVE flag (has the file been read in? */
+
+        *cp1++ = (bp->b_active == TRUE)? '@': ' ';
+
+/* Output status of changed flag */
+
+        *cp1++ = ((bp->b_flag & BFCHG) != 0)? '*': ' ';
+
+/* Report if the file is truncated */
+
+        *cp1++ = ((bp->b_flag & BFTRUNC) != 0)? '#': ' ';
+        *cp1++ = ' ';                   /* space */
+
+/* Output the mode codes */
+
+        for (i = 0; i < NUMMODES; i++)
+            *cp1++ = (bp->b_mode & (1 << i))?  modecode[i]: '.';
+
+        *cp1++ = ' ';                   /* Gap.                 */
+        nbytes = 0L;                    /* Count bytes in buf.  */
+        lp = lforw(bp->b_linep);
+        while (lp != bp->b_linep) {
+            nbytes += (long) llength(lp) + 1L;
+            lp = lforw(lp);
+        }
+        ltoa(b, 9, nbytes);             /* 9 digit buffer size. */
+        cp2 = b;
+        while ((c = *cp2++) != 0) *cp1++ = c;
+        *cp1++ = ' ';                   /* Gap.                 */
+        cp2 = &bp->b_bname[0];          /* Buffer name          */
+        while ((c = *cp2++) != 0)
+            *cp1++ = c;
+        cp2 = &bp->b_fname[0];          /* File name            */
+        if (*cp2 != 0) {
+/*
+ * We'll assume an 80-column width for determining whether the
+ * filename will fit.
+ * The column data so far is 3+1+9+1+9+1+14 == 38.
+ * If the buffername has reached >37 or the filename is > 40 we'll print
+ * the filename on the next line...
+ */
+
+            if (((cp1 - line) > 37) || (strlen(cp2) > 40)) {
+                *cp1++ = ' ';
+                *cp1++ = 0xe2;      /* Carriage return symbol */
+                *cp1++ = 0x86;      /* U+2185                 */
+                *cp1++ = 0xb5;      /* as utf-8               */
+                *cp1 = 0;           /* Add to the buffer.   */
+                if (addline(line) == FALSE) return FALSE;
+                cp1 = line;
+                for (i = 0; i < 5; i++) *cp1++ = ' ';
+            }
+            else {
+                while (cp1 < line+38) *cp1++ = ' ';
+            }
+            while ((c = *cp2++) != 0) {
+                if (cp1 < &line[MAXLINE - 1]) *cp1++ = c;
+            }
+        }
+        *cp1 = 0;       /* Add to the buffer.   */
+        if (addline(line) == FALSE) return FALSE;
+        bp = bp->b_bufp;
+    }
+    return TRUE;            /* All done             */
 }
 
 void ltoa(char *buf, int width, long num)

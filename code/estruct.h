@@ -212,10 +212,13 @@
 
 /* Internal constants. */
 
-/* GGR - Increase NFILEN(80), NLINE(256) and NSTRING(128) to 513 each */
+/* GGR - Increase
+ * NFILEN(80), NLINE(256) and NSTRING(128) to 513 each
+ * NBUFN(16) to 32
+ */
 #define NBINDS  256             /* max # of bound keys          */
 #define NFILEN  513             /* # of bytes, file name        */
-#define NBUFN   16              /* # of bytes, buffer name      */
+#define NBUFN   32              /* # of bytes, buffer name      */
 #define NLINE   513             /* # of bytes, input line       */
 #define NSTRING 513             /* # of bytes, string buffers   */
 #define NKBDM   256             /* # of strokes, keyboard macro */
