@@ -9,7 +9,7 @@
 #define EVAR_H_
 
 /* Max #chars in a var name. */
-#define NVSIZE  10
+#define NVSIZE  32
 
 /* Structure to hold user variables and their definitions. */
 struct user_variable {
