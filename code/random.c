@@ -1403,28 +1403,25 @@ int leaveone(int f, int n)  /* delete all but one white around cursor */
     return(FALSE);
 }
 
-int whitedelete(int f, int n)
-{
-int c;
-int status;
+int whitedelete(int f, int n) {
+    int c;
+    int status;
 
     status = FALSE;
-    /* use forwdel and backdel so *they* take care of VIEW etc */
+/* Use forwdel and backdel so *they* take care of VIEW etc */
     while (curwp->w_doto != 0 &&
          ((c = lgetc(curwp->w_dotp, (curwp->w_doto)-1)) == ' '
          || c == '\t')) {
-         if (!backdel(f, n))
-              return(FALSE);
+         if (!backdel(0, 1)) return FALSE;
          status = TRUE;
     }
     while (curwp->w_doto != llength(curwp->w_dotp) &&
          ((c = lgetc(curwp->w_dotp, curwp->w_doto)) == ' '
          || c == '\t')) {
-         if (!forwdel(f, n))
-              return(FALSE);
+         if (!forwdel(0, 1)) return FALSE;
          status = TRUE;
     }
-    return(status);
+    return status;
 }
 
 int quotedcount(int f, int n)
