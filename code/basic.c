@@ -20,7 +20,7 @@
 /* GGR - This was ctrulen - get a consistent "real" line length.
  * However, it was only ever use to check for an empty line.
  * So it's been renamed and simplified.
- * It's not empty if we have any byte other than a space or tab
+ * It's not empty if we have any *byte* other than a space or tab
  */
 static int curline_empty(void)
 {
@@ -304,86 +304,97 @@ int backline(int f, int n)
 }
 
 #if     WORDPRO
+
+/* The inword() test has been replaced with this, as we really want to
+ * be skipping whitespace, not skipping over words. Things like
+ * punctuation need to be counted too.
+ */
+static int at_whitespace(void) {
+    struct grapheme gi;
+
+    (void)lgetgrapheme(&gi, 1);         /* Don't get extras */
+    if (gi.cdm != 0) return FALSE;
+    switch (gi.uc) {
+    case ' ':
+    case '\t':
+    case '\n':
+        return TRUE;
+    }
+    return FALSE;
+}
+
 /*
- * go back to the beginning of the current paragraph
- * here we look for a <NL><NL> or <NL><TAB> or <NL><SPACE>
- * combination to delimit the beginning of a paragraph
+ * Go back to the beginning of the current paragraph.
+ * Here we look for an empty line to delimit the beginning of a paragraph.
  *
  * int f, n;            default Flag & Numeric argument
  */
 int gotobop(int f, int n)
 {
-        int suc;  /* success of last back_grapheme (now bytes moved) */
+    int suc;        /* Bytes moved by last back_grapheme() */
 
-        if (n < 0) /* the other way... */
-                return gotoeop(f, -n);
+    if (n < 0)      /* the other way... */
+        return gotoeop(f, -n);
 
-        while (n-- > 0) {  /* for each one asked for */
+    while (n-- > 0) {   /* For each one asked for */
 
-                /* first scan back until we are in a word */
-                suc = back_grapheme(FALSE, 1);
-                while (!inword() && (suc > 0))
-                        suc = back_grapheme(FALSE, 1);
-                curwp->w_doto = 0;      /* and go to the B-O-Line */
+/* First scan back until we are in a word... */
+        suc = back_grapheme(FALSE, 1);
+        while ((suc > 0) && at_whitespace()) suc = back_grapheme(FALSE, 1);
+        curwp->w_doto = 0;          /* ...and go to the B-O-Line */
 
-                /* and scan back until we hit a <NL><NL> or <NL><TAB>
-                   or a <NL><SPACE>                                     */
-                while (lback(curwp->w_dotp) != curbp->b_linep)
-                        if (!curline_empty())   /* GGR */
-                                curwp->w_dotp = lback(curwp->w_dotp);
-                        else
-                                break;
-
-                /* and then forward until we are in a word */
-                suc = forw_grapheme(FALSE, 1);
-                while ((suc > 0) && !inword())
-                        suc = forw_grapheme(FALSE, 1);
+/* Then scan back until we hit an empty line or B-O-buffer... */
+        while (lback(curwp->w_dotp) != curbp->b_linep) {
+            if (!curline_empty())
+                curwp->w_dotp = lback(curwp->w_dotp);
+            else
+                break;
         }
-        curwp->w_flag |= WFMOVE;        /* force screen update */
-        return TRUE;
+
+/* ...and then forward until we are looking at a word */
+        suc = 1;
+        while ((suc > 0) && at_whitespace()) suc = forw_grapheme(FALSE, 1);
+    }
+    curwp->w_flag |= WFMOVE;        /* Force screen update */
+    return TRUE;
 }
 
 /*
  * Go forword to the end of the current paragraph
- * here we look for a <NL><NL> or <NL><TAB> or <NL><SPACE>
- * combination to delimit the beginning of a paragraph
+ * Here we look for an empty line to delimit the beginning of a paragraph.
  *
  * int f, n;            default Flag & Numeric argument
  */
 int gotoeop(int f, int n)
 {
-        int suc;  /* success of last forw_grapheme (now bytes moved) */
+    int suc;        /* Bytes moved by last back_grapheme() */
 
-        if (n < 0)  /* the other way... */
-                return gotobop(f, -n);
+    if (n < 0)      /* the other way... */
+        return gotobop(f, -n);
 
-        while (n-- > 0) {  /* for each one asked for */
-                /* first scan forward until we are in a word */
-                suc = forw_grapheme(FALSE, 1);
-                while (!inword() && (suc > 0))
-                        suc = forw_grapheme(FALSE, 1);
-                curwp->w_doto = 0;      /* and go to the B-O-Line */
-                if (suc)                /* of next line if not at EOF */
-                        curwp->w_dotp = lforw(curwp->w_dotp);
+    while (n-- > 0) {  /* for each one asked for */
+/* First scan forward until we are in/looking at a word... */
+        suc = 1;
+        while ((suc > 0) && at_whitespace()) suc = forw_grapheme(FALSE, 1);
+        curwp->w_doto = 0;          /* ...and go to the B-O-Line */
+        if (suc)                    /* of next line if not at EOF */
+            curwp->w_dotp = lforw(curwp->w_dotp);
 
-                /* and scan forword until we hit a <NL><NL> or <NL><TAB>
-                   or a <NL><SPACE>                                     */
-                while (curwp->w_dotp != curbp->b_linep) {
-                        if (!curline_empty())   /* GGR */
-                                curwp->w_dotp = lforw(curwp->w_dotp);
-                        else
-                                break;
-                }
-
-                /* and then backward until we are in a word */
-                suc = back_grapheme(FALSE, 1);
-                while ((suc > 0) && !inword()) {
-                        suc = back_grapheme(FALSE, 1);
-                }
-                curwp->w_doto = llength(curwp->w_dotp); /* and to the EOL */
+/* Then scan forword until we hit an empty line or E-O-Buffer... */
+        while (curwp->w_dotp != curbp->b_linep) {
+            if (!curline_empty())   /* GGR */
+                curwp->w_dotp = lforw(curwp->w_dotp);
+            else
+                break;
         }
-        curwp->w_flag |= WFMOVE;  /* force screen update */
-        return TRUE;
+
+/* ...and then backward until we are in a word */
+        suc = back_grapheme(FALSE, 1);
+        while ((suc > 0) && at_whitespace()) suc = back_grapheme(FALSE, 1);
+        curwp->w_doto = llength(curwp->w_dotp); /* and to the EOL */
+    }
+    curwp->w_flag |= WFMOVE;  /* force screen update */
+    return TRUE;
 }
 #endif
 
