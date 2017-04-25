@@ -160,68 +160,63 @@ int getcline(void)
 
 /*
  * Return current column.  Stop at first non-blank given TRUE argument.
+ * Column counting needs to take into account zero-widths, and also the
+ * 2/3-column displays for control characters done by vtputc().
  */
 int getccol(int bflg)
 {
-        int i, col;
-        struct line *dlp = curwp->w_dotp;
-        int byte_offset = curwp->w_doto;
-        int len = llength(dlp);
+    int i, col;
+    struct line *dlp = curwp->w_dotp;
+    int byte_offset = curwp->w_doto;
+    int len = llength(dlp);
 
-        col = i = 0;
-        while (i < byte_offset) {
-                unicode_t c;
-
-                i += utf8_to_unicode(dlp->l_text, i, len, &c);
-                if (zerowidth_type(c)) continue;
-                if (c != ' ' && c != '\t' && bflg)
-                        break;
-                if (c == '\t')
-                        col |= tabmask;
-                else if (c < 0x20 || c == 0x7F)
-                        ++col;
-                else if (c >= 0xc0 && c <= 0xa0)
-                        col += 2;
-                ++col;
-        }
-        return col;
+    col = i = 0;
+    while (i < byte_offset) {
+        unicode_t c;
+        i += utf8_to_unicode(dlp->l_text, i, len, &c);
+/* We check non-space before zero-width here as a zero-width non-space
+ * is still a non-space.
+ */
+        if (c != ' ' && c != '\t' && bflg) break;
+        if (zerowidth_type(c)) continue;
+        if (c == '\t') col |= tabmask;
+        else if (c < 0x20 || c == 0x7F) ++col;      /* Use 2 cols */
+        else if (c >= 0x80 && c <= 0xa0) col += 2;  /* Use 3 cols */
+        ++col;
+    }
+    return col;
 }
 
 /*
  * Set current column.
+ * Column counting needs to take into account zero-widths, and also the
+ * 2/3-column displays for control characters done by vtputc().
  *
  * int pos;             position to set cursor
  */
 int setccol(int pos)
 {
-        int c;          /* character being scanned */
-        int i;          /* index into current line */
-        int col;        /* current cursor column   */
-        int llen;       /* length of line in bytes */
+    int i;          /* index into current line */
+    int col;        /* current cursor column   */
+    struct line *dlp = curwp->w_dotp;
 
-        col = 0;
-        llen = llength(curwp->w_dotp);
+    col = i = 0;
+    int len = llength(dlp);
 
-        /* scan the line until we are at or past the target column */
-        for (i = 0; i < llen; ++i) {
-                /* upon reaching the target, drop out */
-                if (col >= pos)
-                        break;
+/* Scan the line until we are at or past the target column */
+    while (i < len) {
+        if (col >= pos) break;  /* Upon reaching the target, drop out */
+        unicode_t c;
+        i += utf8_to_unicode(dlp->l_text, i, len, &c);
+        if (zerowidth_type(c)) continue;
+        if (c == '\t') col |= tabmask;
+        else if (c < 0x20 || c == 0x7F) ++col;      /* Use 2 cols */
+        else if (c >= 0x80 && c <= 0xa0) col += 2;  /* Use 3 cols */
+        ++col;
+    }
+    curwp->w_doto = i;              /* Set us at the new position... */
+    return col >= pos;              /* ..and tell whether we made it */
 
-                /* advance one character */
-                c = lgetc(curwp->w_dotp, i);
-                if (c == '\t')
-                        col |= tabmask;
-                else if (c < 0x20 || c == 0x7F)
-                        ++col;
-                ++col;
-        }
-
-        /* set us at the new position */
-        curwp->w_doto = i;
-
-        /* and tell weather we made it */
-        return col >= pos;
 }
 
 /*
