@@ -732,41 +732,31 @@ char *itoa(int i)
  */
 int gettyp(char *token)
 {
-        char c; /* first char in token */
+    char c;         /* first char in token */
 
-        /* grab the first char (this is all we need) */
-        c = *token;
+    c = *token;     /* grab the first char (all we check) */
 
-        /* no blanks!!! */
-        if (c == 0)
-                return TKNUL;
+    if (c == 0) return TKNUL;      /* no blanks!!! */
 
-        /* a numeric literal? */
-        if (c >= '0' && c <= '9')
-                return TKLIT;
+/* A numeric literal? *GGR* allow for -ve ones too */
 
-        switch (c) {
-        case '"':
-                return TKSTR;
+    if (c >= '0' && c <= '9') return TKLIT;
+    if (c == '-') {
+        char c2 = token[1];
+        if (c2 >= '0' && c2 <= '9') return TKLIT;
+    }
 
-        case '!':
-                return TKDIR;
-        case '@':
-                return TKARG;
-        case '#':
-                return TKBUF;
-        case '$':
-                return TKENV;
-        case '%':
-                return TKVAR;
-        case '&':
-                return TKFUN;
-        case '*':
-                return TKLBL;
-
-        default:
-                return TKCMD;
-        }
+    switch (c) {
+    case '"':   return TKSTR;
+    case '!':   return TKDIR;
+    case '@':   return TKARG;
+    case '#':   return TKBUF;
+    case '$':   return TKENV;
+    case '%':   return TKVAR;
+    case '&':   return TKFUN;
+    case '*':   return TKLBL;
+    default:    return TKCMD;
+    }
 }
 
 /*
