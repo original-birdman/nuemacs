@@ -474,382 +474,6 @@ int fillwhole(int f, int n)
         return(status);
 }
 
-/* Space factor needed for a unicode array copied from a char array */
-#define MFACTOR sizeof(unicode_t)/sizeof(char)
-
-/*
- * Fill the current paragraph according to the current
- * fill column
- *
- * f and n - deFault flag and Numeric argument
- */
-int fillpara(int f, int n)
-{
-        unicode_t c;            /* current char during scan    */
-        unicode_t *wbuf       ; /* buffer for current word     */
-        size_t wbuf_ents;       /* Number of elements needed.. */
-        int *space_ind;         /* Where the spaces are */
-        int nspaces;            /* How many spaces there are */
-
-        int wordlen;            /* length of current word       */
-        int clength;            /* position on line during fill */
-        int i;                  /* index during word copy       */
-        int newlength;          /* tentative new line length    */
-        int eopflag;            /* Are we at the End-Of-Paragraph? */
-        int firstflag;          /* first word? (needs no space) */
-        struct line *eopline;   /* pointer to line just past EOP */
-        int eosflag;            /* was the last char a period?  */
-        int trailing_eos;       /* Was last event to add an eos space? */
-/* GGR added vars - to allow for padding to right-justify */
-        int gap;        /* number of spaces to pad with */
-        int rtol;       /* Pass direction */
-        int startline, endline;
-
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if (fillcol == 0) {     /* no fill column set */
-                mlwrite("No fill column set");
-                return FALSE;
-        }
-
-/* GGR */
-        rtol = 1;           /* Direction of first padding pass */
-
-        /* record the pointer to the line just past the EOP */
-        gotoeop(FALSE, 1);
-        eopline = lforw(curwp->w_dotp);
-/* GGR - if empty buffer we can get caught, so... */
-        endline = getcline();
-
-        /* and back top the beginning of the paragraph */
-        gotobop(FALSE, 1);
-/* GGR - ...check for the results of such a state */
-        startline = getcline();
-        if (endline < startline)
-                return(TRUE);
-
-        /* initialize various info */
-        clength = curwp->w_doto;
-        if (clength && curwp->w_dotp->l_text[0] == TAB)
-                clength = 8;
-        wordlen = 0;
-        eosflag = FALSE;
-        trailing_eos = 0;
-
-        /* scan through lines, filling words */
-        firstflag = TRUE;
-        eopflag = FALSE;
-
-/* GGR
- * wbuf needs to be sufficiently long to contain all of the longest
- * line (plus 1, for luck...) in case there is no word-break in it.
- * So we allocate it dynamically.
- */
-        wbuf_ents = llength(curwp->w_dotp) + 1;
-        wbuf = malloc(MFACTOR*wbuf_ents);
-        if (n > 1) {            /* We've been asked to right-justify */
-                space_ind = malloc(sizeof(int)*(wbuf_ents+1)/2);
-        }
-        else {
-                space_ind = NULL;   /* no right-justify */
-        }
-        nspaces = 0;
-        while (!eopflag) {
-                int bytes = 1;
-
-                /* get the next character in the paragraph */
-                if (curwp->w_doto == llength(curwp->w_dotp)) {
-                        c = ' ';
-                        if (lforw(curwp->w_dotp) == eopline)
-                                eopflag = TRUE;
-/* GGR  - Reallocate buffer if more space needed.
- *        Remember we are using unicode_t, while llength is char
- *        Make sure we check the *next* line length
- */
-                        if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
-                            wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
-                            wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
-                            if (space_ind) {    /* We're padding */
-                                space_ind = realloc(space_ind, sizeof(int)*(wbuf_ents+1)/2);
-                            }
-                        }
-                } else
-                        bytes = lgetchar(&c);
-
-                /* and then delete it */
-                ldelete(bytes, FALSE);
-
-                /* if not a separator, just add it in */
-                if (c != ' ' && c != '\t') {
-/* GGR - Handle any defined punctuation characters */
-                        eosflag = 0;
-                        if (eos_list) {     /* Some eos defined */
-                                for (unicode_t *eosch = eos_list;
-                                    *eosch != END_UCLIST; eosch++) {
-                                        if (c == *eosch) {
-                                                eosflag = 1;
-                                                break;
-                                        }
-                                }
-                        }
-
-/* GGR - dynamically sized, so this assignment can always be done */
-                        wbuf[wordlen++] = c;
-                } else if (wordlen) {
-                        /* at a word break with a word waiting */
-                        /* calculate tentative new length with word added */
-                        newlength = clength + 1 + wordlen;
-                        if (newlength <= fillcol) {
-                                /* add word to current line */
-                                if (!firstflag) {
-                                        if (space_ind) { /* GGR */
-/* We need to save the doto location, not clength, to allow for unicode */
-                                                space_ind[nspaces] = curwp->w_doto;
-                                                nspaces++;
-                                        }
-                                        linsert(1, ' ');        /* the space */
-                                        ++clength;
-                                }
-                                firstflag = FALSE;
-                        } else {
-
-/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-/* GGR - implement Esc n Esc q - justify right edges too..       */
-/* Now written in a manner to handle unicode chars....           */
-/* We can only do it if we've actually found some spaces         */
-
-if (nspaces) {
-/* Remember where we are on the line.
- * Also, was the last char added to line a space after a dot?
- * Ignore if so.
- */
-    int end_doto = curwp->w_doto;
-    gap = fillcol - clength;    /* How much we need to add (in columns) */
-    if (trailing_eos) {         /* Back one char and increase gap */
-        end_doto--;
-        gap++;
-        trailing_eos = 0;       /* We'll remove it... */
-    }
-    while (gap > 0) {
-        if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
-            curwp->w_doto = space_ind[ns];
-            linsert(1, ' ');
-            end_doto++;     /* A space is one byte... */
-            rtol = 0;       /* So next pass goes other way */
-            if (--gap <= 0) break;
-            for (int ni = ns; ni < nspaces; ni++) {
-                space_ind[ni]++;
-            }
-        }
-        if (gap <= 0) break;
-        for (int ns = 0; ns < nspaces; ns++) {
-            curwp->w_doto = space_ind[ns];
-            linsert(1, ' ');
-            end_doto++;     /* A space is one byte... */
-            rtol = 1;       /* So next pass goes other way */
-            if (--gap <= 0) break;
-            for (int ni = ns; ni < nspaces; ni++) {
-                space_ind[ni]++;
-            }
-        }
-    }
-/* Fix up our location in the line to be where we were, plus added spaces */
-    curwp->w_doto = end_doto;
-}
-/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-/* Possibly start a new line... */
-                                if (!firstflag) {   /* GGR */
-                                    if (trailing_eos) backdel(FALSE, 1);
-                                    lnewline();
-                                }
-                                firstflag = FALSE;
-                                clength = 0;
-                                nspaces = 0;
-                        }
-/* ...and add the word in in either case */
-                        for (i = 0; i < wordlen; i++) {
-                                linsert(1, wbuf[i]);
-                                ++clength;
-                        }
-                        wordlen = 0;
-
-/* Add any requested trailing eos space, if there is room
- */
-                        if (eosflag && clength < fillcol) {
-                                linsert(1, ' ');
-                                ++clength;
-                                trailing_eos = 1;
-                        }
-                        else trailing_eos = 0;
-                }
-        }
-        /* If we arrive at eop with trailing_eos set, remove the space */
-        if (trailing_eos) backdel(FALSE, 1);
-
-        /* and add a last newline for the end of our new paragraph */
-        lnewline();
-        free(wbuf);     /* GGR - mustn't forget these... */
-        if (space_ind) free(space_ind);
-        return TRUE;
-}
-
-/* Fill the current paragraph according to the current
- * fill column and cursor position
- *
- * int f, n;            deFault flag and Numeric argument
- */
-int justpara(int f, int n)
-{
-        unicode_t c;            /* current char durring scan    */
-        unicode_t *wbuf;        /* buffer for current word      */
-        size_t wbuf_ents;
-        int wordlen;            /* length of current word       */
-        int clength;            /* position on line during fill */
-        int i;                  /* index during word copy       */
-        int newlength;          /* tentative new line length    */
-        int eopflag;            /* Are we at the End-Of-Paragraph? */
-        int firstflag;          /* first word? (needs no space) */
-        struct line *eopline;   /* pointer to line just past EOP */
-        int leftmarg;           /* left marginal */
-        int startline, endline;
-        int eosflag;            /* was the last char a period?  */
-        int trailing_eos;       /* Was last event to add an eos space? */
-
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if (fillcol == 0) {             /* no fill column set */
-                mlwrite("No fill column set");
-                return FALSE;
-        }
-/* GGR - have to cater for tabs...can't use w_doto */
-        leftmarg = getccol(FALSE);
-        if (leftmarg + 10 > fillcol) {
-                mlwrite("Column too narrow");
-                return FALSE;
-        }
-
-        /* record the pointer to the line just past the EOP */
-        gotoeop(FALSE, 1);
-        eopline = lforw(curwp->w_dotp);
-/* GGR - if empty buffer we can get caught, so... */
-        endline = getcline();
-
-        /* and back top the beginning of the paragraph */
-        gotobop(FALSE, 1);
-/* GGR - ...check for the results of such a state */
-        startline = getcline();
-        if (endline < startline)
-                return(TRUE);
-
-/* GGR - need to get rid of any leading whitespace, then pad first line
- * here, at bop */
-        (void)whitedelete(1, 1);    /* Don't care whether there was any */
-        curwp->w_doto = 0;          /* If bop == bof, would be 1. (!?!) */
-        for (i = 0; i < leftmarg; i++)
-                linsert(1, ' ');
-        curwp->w_doto = clength = leftmarg;
-
-/* GGR
- * wbuf needs to be sufficiently long to contain all of the longest
- * line (plus 1, for luck...) in case there is no word-break in it.
- */
-        wbuf_ents = llength(curwp->w_dotp) + 1;
-        wbuf = malloc(MFACTOR*wbuf_ents);
-        eosflag = FALSE;
-        trailing_eos = 0;
-
-        wordlen = 0;
-
-        /* scan through lines, filling words */
-        firstflag = TRUE;
-        eopflag = FALSE;
-        while (!eopflag) {
-                int bytes = 1;
-
-                /* get the next character in the paragraph */
-                if (curwp->w_doto == llength(curwp->w_dotp)) {
-                        c = ' ';
-                        if (lforw(curwp->w_dotp) == eopline)
-                                eopflag = TRUE;
-/* GGR  - Reallocate buffer if more space needed
- *        Make sure we check the *next* line length
- */
-                        if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
-                            wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
-                            wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
-                        }
-                } else
-                        bytes = lgetchar(&c);
-
-                /* and then delete it */
-                ldelete(bytes, FALSE);
-
-                /* if not a separator, just add it in */
-                if (c != ' ' && c != '\t') {
-/* GGR - Handle any defined punctuation characters */
-                        eosflag = 0;
-                        if (eos_list) {     /* Some eos defined */
-                                for (unicode_t *eosch = eos_list;
-                                    *eosch != END_UCLIST; eosch++) {
-                                        if (c == *eosch) {
-                                                eosflag = 1;
-                                                break;
-                                        }
-                                }
-                        }
-
-/* GGR - dynamically sized, so this assignment can always be done */
-                        wbuf[wordlen++] = c;
-                } else if (wordlen) {
-                        /* at a word break with a word waiting */
-                        /* calculate tentitive new length with word added */
-                        newlength = clength + 1 + wordlen;
-                        if (newlength <= fillcol) {
-                                /* add word to current line */
-                                if (!firstflag) {
-                                        linsert(1, ' ');    /* the space */
-                                        ++clength;
-                                }
-                                firstflag = FALSE;
-                        } else {
-                                /* start a new line */
-                                if (trailing_eos) backdel(FALSE, 1);
-                                lnewline();
-                                for (i = 0; i < leftmarg; i++)
-                                        linsert(1, ' ');
-                                clength = leftmarg;
-                        }
-
-                        /* and add the word in in either case */
-                        for (i = 0; i < wordlen; i++) {
-                                linsert(1, wbuf[i]);
-                                ++clength;
-                        }
-                        if (eosflag && clength < fillcol) {  /* GGR added */
-                                linsert(1, ' ');
-                                ++clength;
-                                trailing_eos = 1;
-                        }
-                        else trailing_eos = 0;
-                        wordlen = 0;
-                }
-        }
-        /* If we arrive at eop with trailing_eos set, remove the space */
-        if (trailing_eos) backdel(FALSE, 1);
-
-        /* and add a last newline for the end of our new paragraph */
-        lnewline();
-
-        forwword(FALSE, 1);
-        if (llength(curwp->w_dotp) > leftmarg)
-                curwp->w_doto = leftmarg;
-        else
-                curwp->w_doto = llength(curwp->w_dotp);
-
-        free(wbuf);     /* GGR - mustn't forget this... */
-        return TRUE;
-}
-
 /*
  * delete n paragraphs starting with the current one
  *
@@ -1007,4 +631,383 @@ int eos_chars(int f, int n)
         }
 /* Do nothing on anything else - allows you to abort once you've started. */
         return status;              /* Whatever mlreply returned */
+}
+
+/* Space factor needed for a unicode array copied from a char array */
+#define MFACTOR sizeof(unicode_t)/sizeof(char)
+
+/*
+ * Generic filling routine to be called by various front-ends.
+ * Fills the text between point and end of paragraph.
+ * given parameters.
+ *  indent      l/h indent to use (NOT on first line!!)
+ *  width       column at which to wrap
+ *  f_ctl       various other conditions, determined by caller.
+ */
+struct filler_control {
+    int justify;
+};
+int filler(int indent, int width, struct filler_control *f_ctl) {
+
+    unicode_t *wbuf       ; /* buffer for current word     */
+    size_t wbuf_ents;       /* Number of elements needed.. */
+    int *space_ind;         /* Where the spaces are */
+    int nspaces;            /* How many spaces there are */
+
+    int wordlen;            /* graphemes in current word    */
+    int wi;                 /* unicde index in current word */
+    int clength;            /* position on line during fill */
+    int i;                  /* index during word copy       */
+    int pending_space;      /* Number of pending spaces     */
+    int newlength;          /* tentative new line length    */
+    int eosflag;            /* was the last char a period?  */
+
+    int gap;                /* number of spaces to pad with */
+    int rtol;               /* Pass direction */
+    struct region f_region; /* Formatting region */
+
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+            return rdonly();        /* we are in read only mode     */
+
+    if (fillcol == 0) {             /* no fill column set */
+        mlwrite("No fill column set");
+        return FALSE;
+    }
+    rtol = 1;           /* Direction of first padding pass */
+
+/* Since mark might be within the current paragraph its status after
+ * this is undefined, so we cn play with it.
+ */
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = curwp->w_doto;
+    if (!gotoeop(FALSE, 1)) return FALSE;
+    if (!getregion(&f_region)) return FALSE;
+
+/* The region must not be empty. This also caters for an empty buffer. */
+
+    if (f_region.r_size <= 0) return FALSE;
+
+/* Go to the start of the region */
+
+    curwp->w_dotp = f_region.r_linep;
+    curwp->w_doto = f_region.r_offset;
+
+/* Initialize various info */
+
+    clength = getccol(FALSE);   /* Less than r_offset if multibyte char */
+    eosflag = 0;
+    pending_space = 0;
+
+/*
+ * wbuf needs to be sufficiently long to contain all of the longest
+ * line (plus 1, for luck...) in case there is no word-break in it.
+ * So we allocate it dynamically.
+ */
+    wbuf_ents = llength(curwp->w_dotp) + 1;
+    wbuf = malloc(MFACTOR*wbuf_ents);
+    wordlen = wi = 0;
+
+/* If we've been asked to right-justify we need some space */
+    space_ind = f_ctl->justify? malloc(sizeof(int)*(wbuf_ents+1)/2): NULL;
+    nspaces = 0;
+
+    long togo = f_region.r_size + 1;    /* Need final end-of-line */
+    while (togo > 0) {
+
+/* Get the next character.
+ * lgetgrapheme will return a NL at the end of line
+ * If we get to end end-of-line without having got any word chars since the
+ * previous end-of-line then we are at the end of a paragraph
+ */
+        struct grapheme gi;
+        int bytes = lgetgrapheme(&gi, 0);
+        if (bytes <= 0) {           /* We are in trouble... */
+            mlforce("ERROR: cannot continue filling.");            return FALSE;
+        }
+        if (gi.uc == '\n') {
+            gi.uc = ' ';
+
+/* Reallocate buffer if more space needed.
+ * Remember we are using unicode_t, while llength is char
+ * Make sure we check the *next* line length
+ */
+            if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
+                 wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
+                 wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
+                if (space_ind) {    /* We're padding */
+                     space_ind =
+                          realloc(space_ind, sizeof(int)*(wbuf_ents+1)/2);
+                }
+            }
+        }
+
+/* Delete what we have read and note we've handled bytes*/
+
+        ldelete(bytes, FALSE);
+        togo -= bytes;
+
+/* If not a separator, just add it in */
+
+        int at_whitespace = (gi.cdm == 0 ) && (gi.uc == ' ' || gi.uc == '\t');
+        if (!at_whitespace) {                       /* A word "char" */
+
+/* Handle any defined punctuation characters */
+            eosflag = 0;
+            if (eos_list) {     /* Some eos defined */
+                for (unicode_t *eosch = eos_list;
+                     *eosch != END_UCLIST; eosch++) {
+                    if (gi.cdm == 0 && gi.uc == *eosch) {
+                        eosflag = 1;
+                        break;
+                    }
+                }
+            }
+            wbuf[wi++] = gi.uc; /* Dynamically sized, so these    */
+            if (gi.cdm != 0) {  /* assignments can always be done */
+                wbuf[wi++] = gi.cdm;
+                if (gi.ex) {
+                    int xc = 0;
+                    while (gi.ex[xc] != END_UCLIST)
+                        wbuf[wi++] = gi.ex[xc];
+                }
+            }
+            wordlen++;
+/* Free-up any allocated grapheme space...and on to next char */
+            if (gi.ex != NULL) free(gi.ex);
+            continue;
+        }
+
+/* We are at a word-break (whitespace). Do we have a word waiting?
+ * Calculate tentative new length with word added. If it is > fillcol
+ * then push a newline before flushing the waiting word.
+ * We also flush if there are no bytes left or if we are forcing a
+ * newline between paragraphs.
+ */
+        if (!wordlen) continue;     /* Multiple spaces */
+
+        newlength = clength + pending_space + wordlen;
+        if (newlength <= fillcol) {
+/* We'll just add the word to the current line */
+            if (pending_space) {
+                if (space_ind) {
+/* We need to save the doto location, not clength, to allow for unicode */
+                     space_ind[nspaces] = curwp->w_doto;
+                     nspaces++;
+                }
+            }
+        } else {        /* Need to add a newline before adding word */
+            if (nspaces && togo) {
+/* Justify the right edges too..
+ * Now written in a manner to handle unicode chars....
+ * We can only do it if we've actually found some spaces and only want to
+ * do it if we aren't forcing a newline (end of paragraph) and have
+ * more characters to process (not at end of region).
+ *
+ * Remember where we are on the line.
+ */
+                int end_doto = curwp->w_doto;
+                gap = fillcol - clength;    /* How much we need to add (in columns) */
+                while (gap > 0) {
+                    if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
+                        curwp->w_doto = space_ind[ns];
+                        linsert(1, ' ');
+                        end_doto++;     /* A space is one byte... */
+                        rtol = 0;       /* So next pass goes other way */
+                        if (--gap <= 0) break;
+                        for (int ni = ns; ni < nspaces; ni++) {
+                            space_ind[ni]++;
+                        }
+                    }
+                    if (gap <= 0) break;
+                    for (int ns = 0; ns < nspaces; ns++) {
+                        curwp->w_doto = space_ind[ns];
+                        linsert(1, ' ');
+                        end_doto++;     /* A space is one byte... */
+                        rtol = 1;       /* So next pass goes other way */
+                        if (--gap <= 0) break;
+                        for (int ni = ns; ni < nspaces; ni++) {
+                            space_ind[ni]++;
+                        }
+                    }
+                }
+                nspaces = 0;
+/* Fix up our location in the line to be where we were, plus added spaces */
+                curwp->w_doto = end_doto;
+            }
+            lnewline();
+            pending_space = 0;
+            for (int i = 0; i < indent; i++) linsert(1, ' ');
+            clength = indent;
+/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+        }
+/* Possibly add space(s) */
+        if (pending_space) linsert(pending_space, ' ');
+
+/* ...and add in the word in either case */
+        for (i = 0; i < wi; i++) {
+            linsert(1, wbuf[i]);
+        }
+        clength += wordlen + pending_space;
+        wordlen = wi = 0;
+        pending_space = 1 + eosflag;
+    }
+
+/* And add a last newline for the end of our new paragraph */
+    lnewline();
+    free(wbuf);     /* Mustn't forget these... */
+    if (space_ind) free(space_ind);
+    return TRUE;
+}
+
+/*
+ * Fill the current paragraph according to the current
+ * fill column.
+ * Leave any leading whitespace in the paragraph in place.
+ *
+ * f and n - deFault flag and Numeric argument
+ */
+
+int fillpara(int f, int n) {
+    struct filler_control fp_ctl;
+    fp_ctl.justify = 0;
+    if (n < 0) {
+        n = -n;
+        fp_ctl.justify = 1;
+    }
+    if (n == 0) n = 1;
+    int status;
+    while (n--) {
+        forwword(FALSE, 1);
+        if (!gotobop(FALSE, 1)) return FALSE;
+        status = filler(0, fillcol, &fp_ctl);
+        if (status != TRUE) break;
+    }
+    return status;
+}
+
+/* Fill the current paragraph using the current column as
+ * the indent.
+ * Remove any exisiting leading whitespace in the paragraph.
+ *
+ * int f, n;            deFault flag and Numeric argument
+ */
+int justpara(int f, int n)
+{
+    struct filler_control fp_ctl;
+    fp_ctl.justify = 0;
+    if (n < 0) {
+        n = -n;
+        fp_ctl.justify = 1;
+    }
+    if (n == 0) n = 1;
+
+/* Have to cater for tabs and multibyte chars...can't use w_doto */
+    int leftmarg = getccol(FALSE);
+    if (leftmarg + 10 > fillcol) {
+        mlwrite("Column too narrow");
+        return FALSE;
+    }
+    int status;
+    while (n--) {
+/* We need to get rid of any leading whitespace, then pad first line
+ * here, at bop */
+        gotoeol(FALSE, 1);          /* In case we are already at bop */
+        gotobop(FALSE, 1);
+        (void)whitedelete(1, 1);    /* Don't care whether there was any */
+        curwp->w_doto = 0;          /* Should be 0 anyway... */
+        for (int i = 0; i < leftmarg; i++) linsert(1, ' ');
+        status = filler(leftmarg, fillcol, &fp_ctl);
+        if (status != TRUE) break;
+/* Position cursor at indent column in next paragraph */
+        forwword(FALSE, 1);
+        if (llength(curwp->w_dotp) > leftmarg)
+            curwp->w_doto = leftmarg;
+        else
+            curwp->w_doto = llength(curwp->w_dotp);
+    }
+
+    return status;
+}
+
+/* Reformat the paragraphs containing the region into a list.
+ *
+ * For the moment we'll force the the format...to:
+ * " nn. "  (5 chars).
+ *
+ * int f, n;            deFault flag and Numeric argument
+ */
+int makelist_region(int f, int n)
+{
+    char label[10];
+    struct region f_region; /* Formatting region */
+    struct filler_control fp_ctl;
+    fp_ctl.justify = 0;
+    if (n < 0) {
+        n = -n;
+        fp_ctl.justify = 1;
+    }
+    if (n == 0) n = 1;
+
+/* We will be working on the defined region (mark to/from point) so
+ * get that.
+ */
+    if (!getregion(&f_region)) return FALSE;
+
+/* The region must not be empty. This also caters for an empty buffer. */
+
+    if (f_region.r_size <= 0) return FALSE;
+
+/* We have to figure out where to stop.
+ * The buffer lines may be re-allocated during the reformat, so we
+ * count the paragraphs now and loop that many times.
+ *
+ * Start by getting to the end of the paragraph containing the end of
+ * the region.
+ */
+
+    long togo = f_region.r_size + f_region.r_offset;
+    struct line *flp = curwp->w_dotp;
+    while (togo > 0) {
+        togo -= llength(flp) + 1;       /* Incl newline */
+        flp = lforw(flp);
+    }                                   /* Exit line after end para */
+    gotoeop(FALSE, 1);
+    struct line *eopline = curwp->w_dotp;
+
+/* Now we go back to the beginning and advance by end of paragraphs
+ * until we find the one we just found. This gives us the loop count.
+ */
+
+    curwp->w_dotp = f_region.r_linep;
+    curwp->w_doto = f_region.r_offset;
+    int pc = 0;
+    while(1) {
+        pc++;
+        gotoeop(FALSE, 1);
+        if (eopline == curwp->w_dotp) break;
+    }
+
+/* Back to the start and get to start of the paragraph */
+
+    curwp->w_dotp = f_region.r_linep;
+    curwp->w_doto = f_region.r_offset;
+    gotoeol(FALSE, 1);          /* In case we are already at bop */
+    gotobop(FALSE, 1);
+
+    int status = FALSE;
+    int ix = 0;
+    while (pc--) {                  /* Loop for paragraph count */
+        (void)whitedelete(1, 1);    /* Don't care whether there was any */
+        ix++;                       /* Insert the counter */
+        int cc = snprintf(label, 10, " %2d. ", ix);
+        curwp->w_doto = 0;          /* Should be 0 anyway... */
+        for (int i = 0; i < cc; i++) linsert(1, label[i]);
+        status = filler(5, fillcol, &fp_ctl);
+
+/* Onto the next paragraph */
+
+        if (forwword(FALSE, 1)) gotobol(FALSE, 1);
+        if (status != TRUE) break;
+    }
+    return status;
 }

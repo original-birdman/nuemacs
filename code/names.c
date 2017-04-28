@@ -145,6 +145,9 @@ struct name_bind names[] = {
         {"kill-to-end-of-line", killtext},
         {"leave-one-white", leaveone},      /* GGR */
         {"list-buffers", listbuffers},
+#if     WORDPRO
+        {"makelist-region", makelist_region},   /* GGR */
+#endif
         {"meta-prefix", metafn},
         {"move-window-down", mvdnwind},
         {"move-window-up", mvupwind},
