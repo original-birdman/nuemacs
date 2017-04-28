@@ -885,8 +885,8 @@ utf8.c
 estruct.h
 utf8.h
     NOTE: globals.c was erroneously checked in as part of commit:
-    Add code to handle casing options in Phonetic Translation tables.
      4cd83b90cab79e240492f882be91436b5d304db8
+    Add code to handle casing options in Phonetic Translation tables.
     These can now do case modification of the replacement text.
     The tables can contain these commands:
         caseset-on          [which is the default setting]
@@ -963,5 +963,88 @@ estruct.h
 version.h
 etc/uemacs.hlp
     Update to version GGR4.116
+
+========== GGR4.117
+
+exec.c
+    Set the WFMODE mode on the buffer after setting the ptt table, so
+    that the modeline gets updated with the change, if it is in use.
+
+exec.c
+    Unset ptt_storing after compiling a pttable in dobuf().
+
+exec.c
+names.c
+efunc.h
+    Added next-pttable function, to cycle through pttables.
+
+posix.c
+    Correct the number of characters to wait for.
+    Only wait if we are at the start of an extended utf8 sequence, or
+    have an Escape character.
+    Replace the tcsetattr() call (doesn't seem to timeout on Ubuntu under
+    Windows on Windows10?) with poll().
+
+input.c
+    Make display_handler dynamic, not static, so that it can handle
+    recursion in the minibuffer.
+
+basic.c
+globals.c
+word.c
+edef.h
+    Remove (unused) justflag from ctrulen(), renamed it to
+    curline_empty() (which is how it is used) and simplified it.
+
+etc/uemacs.rc
+    Combined local and global toggle mode macros.
+    Unbound Esc-^T (newwidth) as it is no longer needed with SIGWINCH
+    handling and just messes up the display.
+
+ptt/russian.cmd
+    Fixes. Put non-alpha entries into caseset-off section and remove an
+    uppercase setting (Y -> Ы) accidentally left in.
+
+buffer.c
+estruct.h
+    Change the size of a buffer name (NBUFN) from 16 to 32. This is
+    really to allow longer procedure names. makelist() in buffer.c was
+    changed accordingly.
+
+evar.h
+    Change NVSIZE from 10 to 32. We aren't memory constrained nowadays.
+
+random.c
+    Update setccol() to handle zerowidth characters, and fix getccol().
+    Reformatted (tidied) code of both.
+
+line.c
+line.h
+    Updated lgetgrapheme() to return nothing if point is beyond end of
+    line (shouldn't happen, but might in testing things that manipulate
+    w_doto field).
+    Added lputgrapheme() (currently unused...).
+
+basic.c
+    Fixed gotobop() and gotoeop() to check for whitespace, not inword(),
+    and made them work properly at beginning/end of buffer.
+
+random.c
+    Fix forwdel() and backdel() calls in whitedelete to use (0, 1), not
+    pass on the incoming f and n args!
+
+eval.c
+    Fix gettyp() to test for, and allow, negative numeric arg.
+
+names.c
+word.c
+efunc.h
+etc/uemacs.rc
+    Combined the paragraph filling routines (fillpara() and justpara())
+    into one main function (filler()) and make the old routines
+    front-end this.
+    Added makelist-region funtions, which is bound to M-^Q.
+    Ammended the lr-justify macro to work with the new fillpara().
+    Bound  to M-^P in etc/uemacs.rc.
 
 ==========

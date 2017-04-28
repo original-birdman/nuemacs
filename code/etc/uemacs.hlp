@@ -1,4 +1,4 @@
-=>                   uEmacs/PK GGR4.116 Help Index     (13 April 2017)
+=>                   uEmacs/PK GGR4.117 Help Index     (29 April 2017)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -90,7 +90,7 @@ Set fill column .......   ^X  F         Entab line ............   ^X ^E
 Fill paragraph ........ Meta  Q         Change screen size .... Meta ^D
 Justify paragraph ..... Meta  J         Change screen width ... Meta ^T
 Left and right Justify  Meta ^J         Narrow to region ......   ^X  <
-                                        Widen from region .....   ^X  >
+Make list from region   Meta ^Q         Widen from region .....   ^X  >
 -------------------------------------------------------------------------------
 =>                      WINDOW COMMANDS
 Split current window ..   ^X  2         Next window ...........   ^X  O
@@ -178,7 +178,7 @@ Shell and variable expansion is handled.
 -------------------------------------------------------------------------------
 =>                      MACRO functions
 eos-chars <string of characters>
-    This defines which characters to treat as end of sentence one,s so
+    This defines which characters to treat as end of sentence ones so
     that they have an extra space appended when justifying paragraphs.
     The default is none.
 
