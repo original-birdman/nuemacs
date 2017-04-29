@@ -293,7 +293,7 @@ int makelist(int iflag)
     int s;
     int i;
     long nbytes;                        /* # of bytes in current buffer */
-    char b[7 + 1];
+    char b[9+1];                        /* field width for nbytes + NL */
     char line[MAXLINE];
 
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
@@ -393,14 +393,18 @@ int makelist(int iflag)
     return TRUE;            /* All done             */
 }
 
+/* This is being put into a 9-char (+NL) field, but could actually
+ * have 10 chars...
+ */
 void ltoa(char *buf, int width, long num)
 {
-        buf[width] = 0;         /* End of string.       */
-        while (num >= 10) {     /* Conditional digits.  */
+        buf[width] = 0;                 /* End of string.       */
+        while (num >= 10 && width) {    /* Conditional digits.  */
                 buf[--width] = (int) (num % 10L) + '0';
                 num /= 10L;
         }
-        buf[--width] = (int) num + '0'; /* Always 1 digit.      */
+        if (width) buf[--width] = (int) num + '0';  /* If room */
+        else buf[0] = '+';                          /* if not */
         while (width != 0)      /* Pad with blanks.     */
                 buf[--width] = ' ';
 }
