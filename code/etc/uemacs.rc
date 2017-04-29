@@ -227,7 +227,7 @@ store-procedure _mytoggle-mode          ; toggle local/global mode
     !if &band %test-mode %bit
         set %mfunc %del-func
         set %how off
-    !else 
+    !else
         set %mfunc %add-func
         set %how on
     !endif
@@ -289,6 +289,7 @@ bind-to-key next-pttable                M-^P
 bind-to-key makelist-region             M-^Q
 unbind-key                              M-^T
 bind-to-key i-shell                     M-^U
+bind-to-key execute-file                M-^X
 bind-to-key yank-minibuffer             M-^Y
 ;
 bind-to-key search-reverse              M-R

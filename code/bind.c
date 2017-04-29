@@ -843,8 +843,9 @@ unsigned int stock(char *keyname)
                 keyname += 2;
         }
 
-        /* control-x as well... (but not with FN) */
-        if (*keyname == '^' && *(keyname + 1) == 'X' && !(c & SPEC)) {
+        /* control-x as well... (but not with FN *OR* META!!) */
+        if (*keyname == '^' && *(keyname + 1) == 'X'
+             && !(c & SPEC) && !(c & META)) {
                 c |= CTLX;
                 keyname += 2;
         }
