@@ -852,8 +852,10 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
         pending_space = 1 + eosflag;
     }
 
-/* And add a last newline for the end of our new paragraph */
-    lnewline();
+/* And add a last newline for the end of our new paragraph, unless at
+ * end of last paragraph, in which case just got to last line */
+    if (lforw(curwp->w_dotp) != curbp->b_linep) lnewline();
+    else gotoeob(FALSE, 1);
     free(wbuf);     /* Mustn't forget these... */
     if (space_ind) free(space_ind);
     return TRUE;
@@ -875,7 +877,7 @@ int fillpara(int f, int n) {
         fp_ctl.justify = 1;
     }
     if (n == 0) n = 1;
-    int status;
+    int status = FALSE;
     while (n--) {
         forwword(FALSE, 1);
         if (!gotobop(FALSE, 1)) return FALSE;
@@ -907,7 +909,7 @@ int justpara(int f, int n)
         mlwrite("Column too narrow");
         return FALSE;
     }
-    int status;
+    int status = FALSE;
     while (n--) {
 /* We need to get rid of any leading whitespace, then pad first line
  * here, at bop */
@@ -920,10 +922,7 @@ int justpara(int f, int n)
         if (status != TRUE) break;
 /* Position cursor at indent column in next paragraph */
         forwword(FALSE, 1);
-        if (llength(curwp->w_dotp) > leftmarg)
-            curwp->w_doto = leftmarg;
-        else
-            curwp->w_doto = llength(curwp->w_dotp);
+        setccol(leftmarg);
     }
 
     return status;
