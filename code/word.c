@@ -929,15 +929,15 @@ int justpara(int f, int n)
 }
 
 /* Reformat the paragraphs containing the region into a list.
- *
- * For the moment we'll force the the format...to:
- * " nn. "  (5 chars).
+ * This is actually called via front-ends which set the format
+ * to use. It must not be made user-callable.
  *
  * int f, n;            deFault flag and Numeric argument
  */
-int makelist_region(int f, int n)
+static const char *lbl_fmt;
+static int region_listmaker(int f, int n)
 {
-    char label[10];
+    char label[80];
     struct region f_region; /* Formatting region */
     struct filler_control fp_ctl;
     fp_ctl.justify = 0;
@@ -963,12 +963,13 @@ int makelist_region(int f, int n)
  * Start by getting to the end of the paragraph containing the end of
  * the region.
  */
-
+    curwp->w_dotp = f_region.r_linep;
+    curwp->w_doto = f_region.r_offset;
     long togo = f_region.r_size + f_region.r_offset;
     struct line *flp = curwp->w_dotp;
     while (togo > 0) {
         togo -= llength(flp) + 1;       /* Incl newline */
-        flp = lforw(flp);
+        curwp->w_dotp = flp = lforw(flp);
     }                                   /* Exit line after end para */
     gotoeop(FALSE, 1);
     struct line *eopline = curwp->w_dotp;
@@ -998,15 +999,47 @@ int makelist_region(int f, int n)
     while (pc--) {                  /* Loop for paragraph count */
         (void)whitedelete(1, 1);    /* Don't care whether there was any */
         ix++;                       /* Insert the counter */
-        int cc = snprintf(label, 10, " %2d. ", ix);
+        int cc = snprintf(label, 10, lbl_fmt, ix);
         curwp->w_doto = 0;          /* Should be 0 anyway... */
         for (int i = 0; i < cc; i++) linsert(1, label[i]);
-        status = filler(5, fillcol, &fp_ctl);
+        status = filler(cc, fillcol, &fp_ctl);
 
 /* Onto the next paragraph */
 
         if (forwword(FALSE, 1)) gotobol(FALSE, 1);
         if (status != TRUE) break;
     }
+    return status;
+}
+
+/* Reformat the paragraphs containing the region into a list.
+ * This forces the user variable for the labelling to be " o "
+ * (the number-formatting in region_listmaker() will have no effect).
+ *
+ * int f, n;            deFault flag and Numeric argument
+ */
+int makelist_region(int f, int n)
+{
+    static const char *label = " o ";
+    lbl_fmt = label;
+    int status = region_listmaker(f, n);
+    return status;
+}
+
+/* Reformat the paragraphs containing the region into a list.
+ * This uses the user variable %list-indent-text for the label.
+ * This may have AT MOST one numeric variable template.
+ *
+ * int f, n;            deFault flag and Numeric argument
+ */
+int numberlist_region(int f, int n)
+{
+    char *rqd_val = gtusr("list-indent-text");
+    if (rqd_val == errorm) {
+        mlforce("%list-indent-text is not set!");
+        return FALSE;
+    }
+    lbl_fmt = rqd_val;
+    int status = region_listmaker(f, n);
     return status;
 }

@@ -146,7 +146,8 @@ struct name_bind names[] = {
         {"leave-one-white", leaveone},      /* GGR */
         {"list-buffers", listbuffers},
 #if     WORDPRO
-        {"makelist-region", makelist_region},   /* GGR */
+        {"makelist-region", makelist_region},       /* GGR */
+        {"numberlist-region", numberlist_region},   /* GGR */
 #endif
         {"meta-prefix", metafn},
         {"move-window-down", mvdnwind},

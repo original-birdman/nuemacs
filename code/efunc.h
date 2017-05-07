@@ -28,6 +28,7 @@ extern int justpara(int f, int n);
 extern int killpara(int f, int n);
 extern int wordcount(int f, int n);
 extern int makelist_region(int, int);
+extern int numberlist_region(int, int);
 
 extern int fillwhole(int, int);
 extern int eos_chars(int f, int n);

@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 29 Apr 2017
+;                       Last Update: 08 May 2017
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -277,6 +277,7 @@ bind-to-key insert-file                 ^XI
 buffer-to-key centre-line               ^XL
 bind-to-key save-file                   ^XS
 buffer-to-key toggle-lmode              ^XT
+bind-to-key numberlist-region           ^X/
 bind-to-key fill-all-paragraphs         ^X.
 bind-to-key narrow-to-region            ^X<
 bind-to-key widen-from-region           ^X>
@@ -286,7 +287,6 @@ buffer-to-key rm-dflt-repl              M-^D
 bind-to-key incremental-search          M-^I
 buffer-to-key lr-justify                M-^J    ; Previously Esc-J in 3.9e
 bind-to-key next-pttable                M-^P
-bind-to-key makelist-region             M-^Q
 unbind-key                              M-^T
 bind-to-key i-shell                     M-^U
 bind-to-key execute-file                M-^X
@@ -295,6 +295,7 @@ bind-to-key yank-minibuffer             M-^Y
 bind-to-key search-reverse              M-R
 buffer-to-key toggle-gmode              M-T
 bind-to-key fill-paragraph              M-Q
+bind-to-key makelist-region             M-/
 bind-to-key white-delete                M-\
 ; The SP on the following line denotes "space"
 bind-to-key leave-one-white             M-SP
@@ -316,11 +317,18 @@ bind-to-key set-mark                    FNH
 4 handle-tab
 add-global-mode "wrap"
 add-global-mode "exact"
+
 ; Our end-of-sentence chars
 eos-chars ".!?"
+
 ; Replacement character users
 char-replace U+0800 U+10000
+
+; Default for numberlist-region
+set %list-indent-text " %2d. "
+
 ; Single UTF-16 surrogates
 char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
+
 ;
 set $discmd TRUE
