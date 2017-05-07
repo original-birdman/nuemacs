@@ -1009,6 +1009,24 @@ static int region_listmaker(int f, int n)
         if (forwword(FALSE, 1)) gotobol(FALSE, 1);
         if (status != TRUE) break;
     }
+
+/* We've lost mark by the time we get here, but we need to think about what
+ * ctl-C (reexec) will do.
+ * If we leave things as they are it will reformat the preceding paragraph
+ * - again. So we'll have two labels on it.
+ * So we'll set the mark to be one-char ahead, which means that ctl-C
+ * will reformat the next paragraph, which makes more sense.
+ * But note that this will *not* propagate any current paragraph counter!
+ */
+
+    struct line *here_dotp = curwp->w_dotp;
+    int here_doto = curwp->w_doto;
+    forw_grapheme(0, 1);
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = curwp->w_doto;
+    curwp->w_dotp = here_dotp;
+    curwp->w_doto = here_doto;
+
     return status;
 }
 
