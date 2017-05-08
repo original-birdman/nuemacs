@@ -1,4 +1,4 @@
-=>                   uEmacs/PK GGR4.117 Help Index     (29 April 2017)
+=>                   uEmacs/PK GGR4.117 Help Index     (08 May 2017)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -16,6 +16,7 @@
 .. Functions
 .. System variables
 .. File name completion
+.. MACRO functions and user variables
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
 Notations: ^X means <Ctrl> and X. The <Meta> key is <Esc> on most systems.
@@ -90,7 +91,8 @@ Set fill column .......   ^X  F         Entab line ............   ^X ^E
 Fill paragraph ........ Meta  Q         Change screen size .... Meta ^D
 Justify paragraph ..... Meta  J         Change screen width ... Meta ^T
 Left and right Justify  Meta ^J         Narrow to region ......   ^X  <
-Make list from region   Meta ^Q         Widen from region .....   ^X  >
+Make list from region   Meta  /         Widen from region .....   ^X  >
+Number list from region   ^X  /
 -------------------------------------------------------------------------------
 =>                      WINDOW COMMANDS
 Split current window ..   ^X  2         Next window ...........   ^X  O
@@ -176,7 +178,7 @@ in the minibuffer and the longest common part is retained for you to add
 to. The minibuffer is an editable buffer line.
 Shell and variable expansion is handled.
 -------------------------------------------------------------------------------
-=>                      MACRO functions
+=>                MACRO functions and user variables
 eos-chars <string of characters>
     This defines which characters to treat as end of sentence ones so
     that they have an extra space appended when justifying paragraphs.
@@ -245,3 +247,11 @@ toggle-ptmode
 
 set-pttable <ptt-name>
     Make <ptt-name> the currently-active pttable.
+
+%list-indent-text
+    This is a user variable that is used by the numberlist-region macro
+    to determine that label used on the first line of a paragraph (and
+    hence defines the indent for the rest of the paragraph).
+    It is a printf format string that may contain AT MOST one numeric
+    field descriptor.
+    The default setting in uemacs.rc is " %2d. ".
