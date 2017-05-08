@@ -1043,8 +1043,58 @@ etc/uemacs.rc
     Combined the paragraph filling routines (fillpara() and justpara())
     into one main function (filler()) and make the old routines
     front-end this.
-    Added makelist-region funtions, which is bound to M-^Q.
-    Ammended the lr-justify macro to work with the new fillpara().
+    Added makelist-region function, which is bound to M-^Q.
+    Amended the lr-justify macro to work with the new fillpara().
     Bound  to M-^P in etc/uemacs.rc.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.117
+
+========== GGR4.118
+
+word.c
+    Initialize status to FALSE in justpara() and fillpara() to avoid
+    compiler warnings about possible undefined use.
+    Don't add a newline in filler() if at end-of-buffer.
+    Got to column, not byte offset, at end of buffer in justpara().
+
+bind.c
+etc/uemacs.rc
+    Fix stock() to allow binding to M-^X in a command-file (could already
+    bind it interactively).
+    Bind execute-file to M-^X.
+
+buffer.c
+    Fix ltoa() to handle files >1GB by putting "+" in col1 of the size
+    (not worth widening field, as such a size will not be common).
+    Also correct array size definitions to match the new sizes.
+
+names.c
+word.c
+efunc.h
+etc/uemacs.rc
+    Change makelist-region to use " o " as the label, and added
+    numberlist-region to fill with (possibly) numbered paragraphs using
+    the template stored in the user variable %list-indent-text.
+    Fixed the region scan so that it works properly.
+    In uemacs.rc, rebound makelist-region from M-^Q to M-/, bound
+    numberlist-region to ^X-/ and set a default value of " %2d. " for
+    %list-indent-text.
+
+word.c
+    After region_listmaker has run (for *list-region functions) set the
+    mark to one character ahead of point, otherwise ctl-C will reformat
+    the preceding paragpraph - again. 
+
+etc/uemacs.rc
+    Added notes for makelist-region and numberlist-region and a
+    description for the %list-indent-text user variable setting.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.118
 
 ==========

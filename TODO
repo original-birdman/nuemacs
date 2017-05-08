@@ -1,7 +1,4 @@
 Make word-split chars configurable (forwword, backword but *not*
 fillpara).  i.e.  make inword() list configurable (as the comment there
-says it should be).  Or make it use lgetglyph, and treat as a word-char
-anything whose base is a word-char.  Or both...
-
-Handle zero-width word separator in forwword and justpara (etc.). 
-Related to lgetglyph bit above.
+says it should be).  Or make it use lgetgrapheme, and treat as a
+word-char anything whose base is a word-char.  Or both...

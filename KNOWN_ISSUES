@@ -1,16 +1,4 @@
-At 4.113:
-
-BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!!
-fillpara() and justpara() don't know about zero-width characters.
-These routines also need to be combined into one, with a variety of
-front-ends.
-
-BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!!
-forwword() and backword() don't know about anything other than ASCII
-word characters. Should(?) handle unicode ones.
-Similar failing applies to the upperword(), lowerword() and capword()
-functions.
-
+At 4.118:
 
 RETHINK??? RETHINK??? RETHINK??? RETHINK??? RETHINK??? RETHINK???
 Might not be a bug - just needs a think...

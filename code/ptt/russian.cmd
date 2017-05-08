@@ -19,7 +19,7 @@ store-pttable russian
    шцh   щ
    shцh  щ
    shch  щ
-; Next map-from is Cyrllic с
+; Next map-from is Cyrillic с
    сh    ш
    цh    ч
 ; Next map-from is Latin с
@@ -54,7 +54,7 @@ store-pttable russian
    o     о
    p     п
    r     р
-; Next map-to is Cyrllic с
+; Next map-to is Cyrillic с
    s     с
    t     т
    u     у
