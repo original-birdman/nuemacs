@@ -74,7 +74,7 @@ char *gtfun(char *fname)
 
 
         /* and now evaluate it! */
-        switch (fnum) {
+        switch (funcs[fnum].tag) {
         case UFADD:
                 return itoa(atoi(arg1) + atoi(arg2));
         case UFSUB:
@@ -207,12 +207,12 @@ char *gtenv(char *vname)
         int vnum;       /* ordinal number of var refrenced */
 
         /* scan the list, looking for the referenced name */
-        for (vnum = 0; vnum < ARRAY_SIZE(envars); vnum++)
-                if (strcmp(vname, envars[vnum]) == 0)
+        for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
+                if (strcmp(vname, evl[vnum].var) == 0)
                         break;
 
         /* return errorm on a bad reference */
-        if (vnum == ARRAY_SIZE(envars))
+        if (vnum == ARRAY_SIZE(evl))
 #if     ENVFUNC
         {
                 char *ename = getenv(vname);
@@ -227,7 +227,7 @@ char *gtenv(char *vname)
 #endif
 
         /* otherwise, fetch the appropriate value */
-        switch (vnum) {
+        switch (evl[vnum].tag) {
         case EVFILLCOL:
                 return itoa(fillcol);
         case EVPAGELEN:
@@ -470,8 +470,8 @@ fvar:
         switch (var[0]) {
 
         case '$':               /* check for legal enviromnent var */
-                for (vnum = 0; vnum < ARRAY_SIZE(envars); vnum++)
-                        if (strcmp(&var[1], envars[vnum]) == 0) {
+                for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
+                        if (strcmp(&var[1], evl[vnum].var) == 0) {
                                 vtype = TKENV;
                                 break;
                         }
