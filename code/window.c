@@ -191,48 +191,48 @@ int mvupwind(int f, int n)
  * the buffer structures right if the distruction of a window makes a buffer
  * become undisplayed.
  */
-int onlywind(int f, int n)
-{
-        struct window *wp;
-        struct line *lp;
-        int i;
+int onlywind(int f, int n) {
+    struct window *wp;
+    struct line *lp;
+    int i;
 
-        if (mbstop())       /* GGR - disallow in minibuffer */
-                  return(FALSE);
+    if (mbstop()) return(FALSE);    /* GGR - disallow in minibuffer */
 
-        while (wheadp != curwp) {
-                wp = wheadp;
-                wheadp = wp->w_wndp;
-                if (--wp->w_bufp->b_nwnd == 0) {
-                        wp->w_bufp->b_dotp = wp->w_dotp;
-                        wp->w_bufp->b_doto = wp->w_doto;
-                        wp->w_bufp->b_markp = wp->w_markp;
-                        wp->w_bufp->b_marko = wp->w_marko;
-                }
-                free((char *) wp);
+    while (wheadp != curwp) {
+        wp = wheadp;
+        wheadp = wp->w_wndp;
+        if (--wp->w_bufp->b_nwnd == 0) {
+            wp->w_bufp->b_dotp = wp->w_dotp;
+            wp->w_bufp->b_doto = wp->w_doto;
+            wp->w_bufp->b_markp = wp->w_markp;
+            wp->w_bufp->b_marko = wp->w_marko;
+            wp->w_bufp->b_fcol = wp->w_fcol;
         }
-        while (curwp->w_wndp != NULL) {
-                wp = curwp->w_wndp;
-                curwp->w_wndp = wp->w_wndp;
-                if (--wp->w_bufp->b_nwnd == 0) {
-                        wp->w_bufp->b_dotp = wp->w_dotp;
-                        wp->w_bufp->b_doto = wp->w_doto;
-                        wp->w_bufp->b_markp = wp->w_markp;
-                        wp->w_bufp->b_marko = wp->w_marko;
-                }
-                free((char *) wp);
+        free((char *) wp);
+    }
+    while (curwp->w_wndp != NULL) {
+        wp = curwp->w_wndp;
+        curwp->w_wndp = wp->w_wndp;
+        if (--wp->w_bufp->b_nwnd == 0) {
+            wp->w_bufp->b_dotp = wp->w_dotp;
+            wp->w_bufp->b_doto = wp->w_doto;
+            wp->w_bufp->b_markp = wp->w_markp;
+            wp->w_bufp->b_marko = wp->w_marko;
+            wp->w_bufp->b_fcol = wp->w_fcol;
         }
-        lp = curwp->w_linep;
-        i = curwp->w_toprow;
-        while (i != 0 && lback(lp) != curbp->b_linep) {
-                --i;
-                lp = lback(lp);
-        }
-        curwp->w_toprow = 0;
-        curwp->w_ntrows = term.t_nrow - 1;
-        curwp->w_linep = lp;
-        curwp->w_flag |= WFMODE | WFHARD;
-        return TRUE;
+        free((char *) wp);
+    }
+    lp = curwp->w_linep;
+    i = curwp->w_toprow;
+    while (i != 0 && lback(lp) != curbp->b_linep) {
+        --i;
+        lp = lback(lp);
+    }
+    curwp->w_toprow = 0;
+    curwp->w_ntrows = term.t_nrow - 1;
+    curwp->w_linep = lp;
+    curwp->w_flag |= WFMODE | WFHARD;
+    return TRUE;
 }
 
 /*
@@ -241,76 +241,68 @@ int onlywind(int f, int n)
  *
  * int f, n;    arguments are ignored for this command
  */
-int delwind(int f, int n)
-{
-        struct window *wp;      /* window to recieve deleted space */
-        struct window *lwp;     /* ptr window before curwp */
-        int target;             /* target line to search for */
+int delwind(int f, int n) {
+    struct window *wp;      /* window to recieve deleted space */
+    struct window *lwp;     /* ptr window before curwp */
+    int target;             /* target line to search for */
 
-        if (mbstop())           /* GGR - disallow in minibuffer */
-                  return(FALSE);
+    if (mbstop()) return(FALSE);    /* GGR - disallow in minibuffer */
 
-        /* if there is only one window, don't delete it */
-        if (wheadp->w_wndp == NULL) {
-                mlwrite("Can not delete this window");
-                return FALSE;
-        }
+/* If there is only one window, don't delete it */
+    if (wheadp->w_wndp == NULL) {
+        mlwrite("Can not delete this window");
+        return FALSE;
+    }
 
-        /* find window before curwp in linked list */
-        wp = wheadp;
-        lwp = NULL;
+/* Find window before curwp in linked list */
+    wp = wheadp;
+    lwp = NULL;
+    while (wp != NULL) {
+        if (wp == curwp) break;
+        lwp = wp;
+        wp = wp->w_wndp;
+    }
+
+/* Find recieving window and give up our space */
+    wp = wheadp;
+    if (curwp->w_toprow == 0) {
+/* Find the next window down */
+        target = curwp->w_ntrows + 1;
         while (wp != NULL) {
-                if (wp == curwp)
-                        break;
-                lwp = wp;
-                wp = wp->w_wndp;
+            if (wp->w_toprow == target) break;
+            wp = wp->w_wndp;
         }
+        if (wp == NULL) return FALSE;
+        wp->w_toprow = 0;
+        wp->w_ntrows += target;
+    } else {
+/* Find the next window up */
+        target = curwp->w_toprow - 1;
+        while (wp != NULL) {
+            if ((wp->w_toprow + wp->w_ntrows) == target) break;
+            wp = wp->w_wndp;
+        }
+        if (wp == NULL) return FALSE;
+        wp->w_ntrows += 1 + curwp->w_ntrows;
+    }
 
-        /* find recieving window and give up our space */
-        wp = wheadp;
-        if (curwp->w_toprow == 0) {
-                /* find the next window down */
-                target = curwp->w_ntrows + 1;
-                while (wp != NULL) {
-                        if (wp->w_toprow == target)
-                                break;
-                        wp = wp->w_wndp;
-                }
-                if (wp == NULL)
-                        return FALSE;
-                wp->w_toprow = 0;
-                wp->w_ntrows += target;
-        } else {
-                /* find the next window up */
-                target = curwp->w_toprow - 1;
-                while (wp != NULL) {
-                        if ((wp->w_toprow + wp->w_ntrows) == target)
-                                break;
-                        wp = wp->w_wndp;
-                }
-                if (wp == NULL)
-                        return FALSE;
-                wp->w_ntrows += 1 + curwp->w_ntrows;
-        }
-
-        /* get rid of the current window */
-        if (--curwp->w_bufp->b_nwnd == 0) {
-                curwp->w_bufp->b_dotp = curwp->w_dotp;
-                curwp->w_bufp->b_doto = curwp->w_doto;
-                curwp->w_bufp->b_markp = curwp->w_markp;
-                curwp->w_bufp->b_marko = curwp->w_marko;
-        }
-        if (lwp == NULL)
-                wheadp = curwp->w_wndp;
-        else
-                lwp->w_wndp = curwp->w_wndp;
-        free((char *) curwp);
-        curwp = wp;
-        wp->w_flag |= WFHARD;
-        curbp = wp->w_bufp;
-        cknewwindow();
-        upmode();
-        return TRUE;
+/* Get rid of the current window */
+    if (--curwp->w_bufp->b_nwnd == 0) {
+        curwp->w_bufp->b_dotp = curwp->w_dotp;
+        curwp->w_bufp->b_doto = curwp->w_doto;
+        curwp->w_bufp->b_markp = curwp->w_markp;
+        curwp->w_bufp->b_marko = curwp->w_marko;
+        curwp->w_bufp->b_fcol = curwp->w_fcol;
+    }
+    if (lwp == NULL) wheadp = curwp->w_wndp;
+    else             lwp->w_wndp = curwp->w_wndp;
+    free((char *) curwp);
+    curwp = wp;
+    wp->w_flag |= WFHARD;
+    curbp = wp->w_bufp;
+    cknewwindow();
+    upmode();
+    return TRUE;
 }
 
 /*
@@ -322,77 +314,75 @@ int delwind(int f, int n)
  *
  * int f, n;    default flag and numeric argument
  */
-int splitwind(int f, int n)
-{
-        struct window *wp;
-        struct line *lp;
-        int ntru;
-        int ntrl;
-        int ntrd;
-        struct window *wp1;
-        struct window *wp2;
+int splitwind(int f, int n) {
+    struct window *wp;
+    struct line *lp;
+    int ntru;
+    int ntrl;
+    int ntrd;
+    struct window *wp1;
+    struct window *wp2;
 
-        if (curwp->w_ntrows < 3) {
-                mlwrite("Cannot split a %d line window", curwp->w_ntrows);
-                return FALSE;
-        }
-        wp = xmalloc(sizeof(struct window));
-        ++curbp->b_nwnd;        /* Displayed twice.     */
-        wp->w_bufp = curbp;
-        wp->w_dotp = curwp->w_dotp;
-        wp->w_doto = curwp->w_doto;
-        wp->w_markp = curwp->w_markp;
-        wp->w_marko = curwp->w_marko;
-        wp->w_flag = 0;
-        wp->w_force = 0;
+    if (curwp->w_ntrows < 3) {
+        mlwrite("Cannot split a %d line window", curwp->w_ntrows);
+        return FALSE;
+    }
+    wp = xmalloc(sizeof(struct window));
+    ++curbp->b_nwnd;                        /* Displayed twice.     */
+    wp->w_bufp = curbp;
+    wp->w_dotp = curwp->w_dotp;
+    wp->w_doto = curwp->w_doto;
+    wp->w_markp = curwp->w_markp;
+    wp->w_marko = curwp->w_marko;
+    wp->w_fcol = curwp->w_fcol;
+    wp->w_flag = 0;
+    wp->w_force = 0;
 #if     COLOR
-        /* set the colors of the new window */
-        wp->w_fcolor = gfcolor;
-        wp->w_bcolor = gbcolor;
+/* Set the colors of the new window */
+    wp->w_fcolor = gfcolor;
+    wp->w_bcolor = gbcolor;
 #endif
-        ntru = (curwp->w_ntrows - 1) / 2;       /* Upper size           */
-        ntrl = (curwp->w_ntrows - 1) - ntru;    /* Lower size           */
-        lp = curwp->w_linep;
-        ntrd = 0;
-        while (lp != curwp->w_dotp) {
-                ++ntrd;
-                lp = lforw(lp);
+    ntru = (curwp->w_ntrows - 1) / 2;       /* Upper size           */
+    ntrl = (curwp->w_ntrows - 1) - ntru;    /* Lower size           */
+    lp = curwp->w_linep;
+    ntrd = 0;
+    while (lp != curwp->w_dotp) {
+        ++ntrd;
+        lp = lforw(lp);
+    }
+    lp = curwp->w_linep;
+    if (((f == FALSE) && (ntrd <= ntru)) || ((f == TRUE) && (n == 1))) {
+/* Old is upper window. */
+        if (ntrd == ntru) lp = lforw(lp);   /* Hit mode line.       */
+        curwp->w_ntrows = ntru;
+        wp->w_wndp = curwp->w_wndp;
+        curwp->w_wndp = wp;
+        wp->w_toprow = curwp->w_toprow + ntru + 1;
+        wp->w_ntrows = ntrl;
+    } else {
+/* Old is lower window  */
+        wp1 = NULL;
+        wp2 = wheadp;
+        while (wp2 != curwp) {
+            wp1 = wp2;
+            wp2 = wp2->w_wndp;
         }
-        lp = curwp->w_linep;
-        if (((f == FALSE) && (ntrd <= ntru)) || ((f == TRUE) && (n == 1))) {
-                /* Old is upper window. */
-                if (ntrd == ntru)       /* Hit mode line.       */
-                        lp = lforw(lp);
-                curwp->w_ntrows = ntru;
-                wp->w_wndp = curwp->w_wndp;
-                curwp->w_wndp = wp;
-                wp->w_toprow = curwp->w_toprow + ntru + 1;
-                wp->w_ntrows = ntrl;
-        } else {                /* Old is lower window  */
-                wp1 = NULL;
-                wp2 = wheadp;
-                while (wp2 != curwp) {
-                        wp1 = wp2;
-                        wp2 = wp2->w_wndp;
-                }
-                if (wp1 == NULL)
-                        wheadp = wp;
-                else
-                        wp1->w_wndp = wp;
-                wp->w_wndp = curwp;
-                wp->w_toprow = curwp->w_toprow;
-                wp->w_ntrows = ntru;
-                ++ntru;         /* Mode line.           */
-                curwp->w_toprow += ntru;
-                curwp->w_ntrows = ntrl;
-                while (ntru--)
-                        lp = lforw(lp);
-        }
-        curwp->w_linep = lp;    /* Adjust the top lines */
-        wp->w_linep = lp;       /* if necessary.        */
-        curwp->w_flag |= WFMODE | WFHARD;
-        wp->w_flag |= WFMODE | WFHARD;
-        return TRUE;
+        if (wp1 == NULL) wheadp = wp;
+        else             wp1->w_wndp = wp;
+        wp->w_wndp = curwp;
+        wp->w_toprow = curwp->w_toprow;
+        wp->w_ntrows = ntru;
+        ++ntru;                             /* Mode line.           */
+        curwp->w_toprow += ntru;
+        curwp->w_ntrows = ntrl;
+        while (ntru--)
+        lp = lforw(lp);
+    }
+    curwp->w_linep = lp;                    /* Adjust the top lines */
+    wp->w_linep = lp;                       /* if necessary.        */
+    curwp->w_flag |= WFMODE | WFHARD;
+    wp->w_flag |= WFMODE | WFHARD;
+    return TRUE;
 }
 
 /*
@@ -601,86 +591,77 @@ int restwnd(int f, int n)
  * int f;       default flag
  * int n;       numeric argument
  */
-int newsize(int f, int n)
-{
-        struct window *wp;      /* current window being examined */
-        struct window *nextwp;  /* next window to scan */
-        struct window *lastwp;  /* last window scanned */
-        int lastline;           /* screen line of last line of current window */
+int newsize(int f, int n) {
+    struct window *wp;      /* current window being examined */
+    struct window *nextwp;  /* next window to scan */
+    struct window *lastwp;  /* last window scanned */
+    int lastline;           /* screen line of last line of current window */
 
-        /* if the command defaults, assume the largest */
-        if (f == FALSE)
-                n = term.t_mrow + 1;
+/* If the command defaults, assume the largest */
+    if (f == FALSE) n = term.t_mrow + 1;
 
-        /* make sure it's in range */
-        if (n < 3 || n > term.t_mrow + 1) {
-                mlwrite("%%Screen size out of range");
-                return FALSE;
-        }
+/* make sure it's in range */
+    if (n < 3 || n > term.t_mrow + 1) {
+        mlwrite("%%Screen size out of range");
+        return FALSE;
+    }
 
-        if (term.t_nrow == n - 1)
-                return TRUE;
-        else if (term.t_nrow < n - 1) {
-
-                /* go to the last window */
-                wp = wheadp;
-                while (wp->w_wndp != NULL)
-                        wp = wp->w_wndp;
-
-                /* and enlarge it as needed */
-                wp->w_ntrows = n - wp->w_toprow - 2;
-                wp->w_flag |= WFHARD | WFMODE;
-
-        } else {
-
-                /* rebuild the window structure */
-                nextwp = wheadp;
-                wp = NULL;
-                lastwp = NULL;
-                while (nextwp != NULL) {
-                        wp = nextwp;
-                        nextwp = wp->w_wndp;
-
-                        /* get rid of it if it is too low */
-                        if (wp->w_toprow > n - 2) {
-
-                                /* save the point/mark if needed */
-                                if (--wp->w_bufp->b_nwnd == 0) {
-                                        wp->w_bufp->b_dotp = wp->w_dotp;
-                                        wp->w_bufp->b_doto = wp->w_doto;
-                                        wp->w_bufp->b_markp = wp->w_markp;
-                                        wp->w_bufp->b_marko = wp->w_marko;
-                                }
-
-                                /* update curwp and lastwp if needed */
-                                if (wp == curwp)
-                                        curwp = wheadp;
-                                curbp = curwp->w_bufp;
-                                if (lastwp != NULL)
-                                        lastwp->w_wndp = NULL;
-
-                                /* free the structure */
-                                free((char *) wp);
-                                wp = NULL;
-
-                        } else {
-                                /* need to change this window size? */
-                                lastline = wp->w_toprow + wp->w_ntrows - 1;
-                                if (lastline >= n - 2) {
-                                        wp->w_ntrows =
-                                            n - wp->w_toprow - 2;
-                                        wp->w_flag |= WFHARD | WFMODE;
-                                }
-                        }
-
-                        lastwp = wp;
-                }
-        }
-
-        /* screen is garbage */
-        term.t_nrow = n - 1;
-        sgarbf = TRUE;
+    if (term.t_nrow == n - 1)
         return TRUE;
+    else if (term.t_nrow < n - 1) {
+/* Go to the last window... */
+        wp = wheadp;
+        while (wp->w_wndp != NULL) wp = wp->w_wndp;
+
+/* ...and enlarge it as needed */
+        wp->w_ntrows = n - wp->w_toprow - 2;
+        wp->w_flag |= WFHARD | WFMODE;
+    } else {
+/* Rebuild the window structure */
+        nextwp = wheadp;
+        wp = NULL;
+        lastwp = NULL;
+        while (nextwp != NULL) {
+            wp = nextwp;
+            nextwp = wp->w_wndp;
+
+/* Get rid of it if it is too low */
+            if (wp->w_toprow > n - 2) {
+
+/* Save the point/mark if needed */
+                if (--wp->w_bufp->b_nwnd == 0) {
+                    wp->w_bufp->b_dotp = wp->w_dotp;
+                    wp->w_bufp->b_doto = wp->w_doto;
+                    wp->w_bufp->b_markp = wp->w_markp;
+                    wp->w_bufp->b_marko = wp->w_marko;
+                    wp->w_bufp->b_fcol = wp->w_fcol;
+                }
+
+/* Update curwp and lastwp if needed */
+                if (wp == curwp) curwp = wheadp;
+                curbp = curwp->w_bufp;
+                if (lastwp != NULL) lastwp->w_wndp = NULL;
+
+/* Free the structure */
+                free((char *) wp);
+                wp = NULL;
+
+            } else {
+/* Need to change this window size? */
+                lastline = wp->w_toprow + wp->w_ntrows - 1;
+                if (lastline >= n - 2) {
+                    wp->w_ntrows = n - wp->w_toprow - 2;
+                    wp->w_flag |= WFHARD | WFMODE;
+                }
+            }
+            lastwp = wp;
+        }
+    }
+
+/* screen is garbage */
+    term.t_nrow = n - 1;
+    sgarbf = TRUE;
+    return TRUE;
 }
 
 /*

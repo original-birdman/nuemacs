@@ -154,62 +154,59 @@ static int resetkey(void)
  * char fname[];        file name to find
  * int lockfl;          check the file for locks?
  */
-int getfile(char *fname, int lockfl)
-{
-        struct buffer *bp;
-        struct line *lp;
-        int i;
-        int s;
-        char bname[NBUFN];      /* buffer name to put file */
+int getfile(char *fname, int lockfl) {
+    struct buffer *bp;
+    struct line *lp;
+    int i;
+    int s;
+    char bname[NBUFN];      /* buffer name to put file */
 
 #if     MSDOS
-        mklower(fname);         /* msdos isn't case sensitive */
+    mklower(fname);         /* msdos isn't case sensitive */
 #endif
-        for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-                if ((bp->b_flag & BFINVS) == 0
-                    && strcmp(bp->b_fname, fname) == 0) {
-                        swbuffer(bp);
-                        lp = curwp->w_dotp;
-                        i = curwp->w_ntrows / 2;
-                        while (i-- && lback(lp) != curbp->b_linep)
-                                lp = lback(lp);
-                        curwp->w_linep = lp;
-                        curwp->w_flag |= WFMODE | WFHARD;
-                        cknewwindow();
-                        mlwrite(MLpre "Old buffer" MLpost);
-                        return TRUE;
-                }
+    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+        if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
+            swbuffer(bp);
+            lp = curwp->w_dotp;
+            i = curwp->w_ntrows / 2;
+            while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
+            curwp->w_linep = lp;
+            curwp->w_flag |= WFMODE | WFHARD;
+            cknewwindow();
+            mlwrite(MLpre "Old buffer" MLpost);
+            return TRUE;
         }
-        makename(bname, fname); /* New buffer name.     */
-        while ((bp = bfind(bname, FALSE, 0)) != NULL) {
-                /* old buffer name conflict code */
-                s = mlreply("Buffer name: ", bname, NBUFN);
-                if (s == ABORT) /* ^G to just quit      */
-                        return s;
-                if (s == FALSE) {       /* CR to clobber it     */
-                        makename(bname, fname);
-                        break;
-                }
+    }
+    makename(bname, fname); /* New buffer name.     */
+    while ((bp = bfind(bname, FALSE, 0)) != NULL) {
+/* Old buffer name conflict code */
+        s = mlreply("Buffer name: ", bname, NBUFN);
+        if (s == ABORT) return s;   /* ^G to just quit      */
+        if (s == FALSE) {           /* CR to clobber it     */
+            makename(bname, fname);
+            break;
         }
-        if (bp == NULL && (bp = bfind(bname, TRUE, 0)) == NULL) {
-                mlwrite("Cannot create buffer");
-                return FALSE;
-        }
-        if (--curbp->b_nwnd == 0) {     /* Undisplay.           */
-                curbp->b_dotp = curwp->w_dotp;
-                curbp->b_doto = curwp->w_doto;
-                curbp->b_markp = curwp->w_markp;
-                curbp->b_marko = curwp->w_marko;
-        }
-        if (!inmb)  /* GGR - remember last buffer */
-                strcpy(savnam, curbp->b_bname);
+    }
+    if (bp == NULL && (bp = bfind(bname, TRUE, 0)) == NULL) {
+        mlwrite("Cannot create buffer");
+        return FALSE;
+    }
+    if (--curbp->b_nwnd == 0) {     /* Undisplay.           */
+        curbp->b_dotp = curwp->w_dotp;
+        curbp->b_doto = curwp->w_doto;
+        curbp->b_markp = curwp->w_markp;
+        curbp->b_marko = curwp->w_marko;
+        curbp->b_fcol = curwp->w_fcol;
+    }
+/* GGR - remember last buffer */
+    if (!inmb) strcpy(savnam, curbp->b_bname);
 
-        curbp = bp;             /* Switch to it.        */
-        curwp->w_bufp = bp;
-        curbp->b_nwnd++;
-        s = readin(fname, lockfl);      /* Read it in.          */
-        cknewwindow();
-        return s;
+    curbp = bp;                     /* Switch to it.        */
+    curwp->w_bufp = bp;
+    curbp->b_nwnd++;
+    s = readin(fname, lockfl);      /* Read it in.          */
+    cknewwindow();
+    return s;
 }
 
 /*
@@ -585,100 +582,95 @@ int filename(int f, int n)
  * buffer, Called by insert file command. Return the final
  * status of the read.
  */
-int ifile(char *fname)
-{
-        struct line *lp0;
-        struct line *lp1;
-        struct line *lp2;
-        struct buffer *bp;
-        int s;
-        int nline;
-        char mesg[NSTRING];
+int ifile(char *fname) {
+    struct line *lp0;
+    struct line *lp1;
+    struct line *lp2;
+    struct buffer *bp;
+    int s;
+    int nline;
+    char mesg[NSTRING];
 
-        bp = curbp;             /* Cheap.               */
-        bp->b_flag |= BFCHG;    /* we have changed      */
-        bp->b_flag &= ~BFINVS;  /* and are not temporary */
+    bp = curbp;             /* Cheap.               */
+    bp->b_flag |= BFCHG;    /* we have changed      */
+    bp->b_flag &= ~BFINVS;  /* and are not temporary */
 
 /* If this is a translation table, remove any compiled data */
 
-        if ((bp->b_type == BTPHON) && bp->ptt_headp)
-            ptt_free(bp);
+    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
 
-        pathexpand = FALSE;     /* GGR */
+    pathexpand = FALSE;     /* GGR */
 
-        if ((s = ffropen(fname)) == FIOERR)     /* Hard file open.      */
-                goto out;
-        if (s == FIOFNF) {      /* File not found.      */
-                mlwrite(MLpre "No such file" MLpost);
-                return FALSE;
-        }
-        mlwrite(MLpre "Inserting file" MLpost);
+    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
+    if (s == FIOFNF) {      /* File not found.      */
+        mlwrite(MLpre "No such file" MLpost);
+        return FALSE;
+    }
+    mlwrite(MLpre "Inserting file" MLpost);
 
 #if     CRYPT
-        s = resetkey();
-        if (s != TRUE)
-                return s;
+    s = resetkey();
+    if (s != TRUE) return s;
 #endif
-        /* back up a line and save the mark here */
-        curwp->w_dotp = lback(curwp->w_dotp);
-        curwp->w_doto = 0;
-        curwp->w_markp = curwp->w_dotp;
-        curwp->w_marko = 0;
+/* Back up a line and save the mark here */
+    curwp->w_dotp = lback(curwp->w_dotp);
+    curwp->w_doto = 0;
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = 0;
 
-        nline = 0;
-        while ((s = ffgetline()) == FIOSUC) {
+    nline = 0;
+    while ((s = ffgetline()) == FIOSUC) {
 /* GGR - ftrulen to handle encrypted files(?) */
-                if ((lp1 = lalloc(ftrulen)) == NULL) {
-                        s = FIOMEM;     /* Keep message on the  */
-                        break;  /* display.             */
-                }
-                lp0 = curwp->w_dotp;    /* line previous to insert */
-                lp2 = lp0->l_fp;        /* line after insert */
+        if ((lp1 = lalloc(ftrulen)) == NULL) {
+            s = FIOMEM;     /* Keep message on the  */
+            break;  /* display.             */
+        }
+        lp0 = curwp->w_dotp;    /* line previous to insert */
+        lp2 = lp0->l_fp;        /* line after insert */
 
-                /* re-link new line between lp0 and lp2 */
-                lp2->l_bp = lp1;
-                lp0->l_fp = lp1;
-                lp1->l_bp = lp0;
-                lp1->l_fp = lp2;
+/* Re-link new line between lp0 and lp2 */
+        lp2->l_bp = lp1;
+        lp0->l_fp = lp1;
+        lp1->l_bp = lp0;
+        lp1->l_fp = lp2;
 
-                /* and advance and write out the current line */
-                curwp->w_dotp = lp1;
+/* And advance and write out the current line */
+        curwp->w_dotp = lp1;
 /* GGR - ftrulen to handle encrypted files(?) */
-                lfillchars(lp1, ftrulen, fline);
-                ++nline;
-                if (!(nline % 300) && !silent)      /* GGR */
-                        mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
+        lfillchars(lp1, ftrulen, fline);
+        ++nline;
+        if (!(nline % 300) && !silent)      /* GGR */
+             mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
 
-        }
-        ffclose();              /* Ignore errors. */
-        curwp->w_markp = lforw(curwp->w_markp);
-        strcpy(mesg, MLpre);
-        if (s == FIOERR) {
-                strcat(mesg, "I/O ERROR, ");
-                curbp->b_flag |= BFTRUNC;
-        }
-        if (s == FIOMEM) {
-                strcat(mesg, "OUT OF MEMORY, ");
-                curbp->b_flag |= BFTRUNC;
-        }
-        sprintf(&mesg[strlen(mesg)], "Inserted %d line", nline);
-        if (nline > 1)
-                strcat(mesg, "s");
-        strcat(mesg, MLpost);
-        mlwrite(mesg);
+    }
+    ffclose();              /* Ignore errors. */
+    curwp->w_markp = lforw(curwp->w_markp);
+    strcpy(mesg, MLpre);
+    if (s == FIOERR) {
+        strcat(mesg, "I/O ERROR, ");
+        curbp->b_flag |= BFTRUNC;
+    }
+    if (s == FIOMEM) {
+        strcat(mesg, "OUT OF MEMORY, ");
+        curbp->b_flag |= BFTRUNC;
+    }
+    sprintf(&mesg[strlen(mesg)], "Inserted %d line", nline);
+    if (nline > 1) strcat(mesg, "s");
+    strcat(mesg, MLpost);
+    mlwrite(mesg);
 
-      out:
-        /* advance to the next line and mark the window for changes */
-        curwp->w_dotp = lforw(curwp->w_dotp);
-        curwp->w_flag |= WFHARD | WFMODE;
+out:
+/* Advance to the next line and mark the window for changes */
+    curwp->w_dotp = lforw(curwp->w_dotp);
+    curwp->w_flag |= WFHARD | WFMODE;
 
-        /* copy window parameters back to the buffer structure */
-        curbp->b_dotp = curwp->w_dotp;
-        curbp->b_doto = curwp->w_doto;
-        curbp->b_markp = curwp->w_markp;
-        curbp->b_marko = curwp->w_marko;
+/* Copy window parameters back to the buffer structure */
+    curbp->b_dotp = curwp->w_dotp;
+    curbp->b_doto = curwp->w_doto;
+    curbp->b_markp = curwp->w_markp;
+    curbp->b_marko = curwp->w_marko;
+    curbp->b_fcol = curwp->w_fcol;
 
-        if (s == FIOERR)        /* False if error.      */
-                return FALSE;
-        return TRUE;
+    if (s == FIOERR) return FALSE;      /* False if error. */
+    return TRUE;
 }

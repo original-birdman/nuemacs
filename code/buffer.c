@@ -85,56 +85,58 @@ int nextbuffer(int f, int n)
 /*
  * make buffer BP current
  */
-int swbuffer(struct buffer *bp)
-{
-        struct window *wp;
+int swbuffer(struct buffer *bp) {
+    struct window *wp;
 
 /* Save last name so we can switch back to it on empty MB reply */
-        if (!inmb) strcpy(savnam, curbp->b_bname);
+    if (!inmb) strcpy(savnam, curbp->b_bname);
 
-        if (--curbp->b_nwnd == 0) {     /* Last use.            */
-                curbp->b_dotp = curwp->w_dotp;
-                curbp->b_doto = curwp->w_doto;
-                curbp->b_markp = curwp->w_markp;
-                curbp->b_marko = curwp->w_marko;
-        }
-        curbp = bp;             /* Switch.              */
-        if (curbp->b_active != TRUE) {  /* buffer not active yet */
-                /* read it in and activate it */
-                readin(curbp->b_fname, TRUE);
-                curbp->b_dotp = lforw(curbp->b_linep);
-                curbp->b_doto = 0;
-                curbp->b_active = TRUE;
-                curbp->b_mode |= gmode; /* P.K. */
+    if (--curbp->b_nwnd == 0) {     /* Last use. */
+        curbp->b_dotp = curwp->w_dotp;
+        curbp->b_doto = curwp->w_doto;
+        curbp->b_markp = curwp->w_markp;
+        curbp->b_marko = curwp->w_marko;
+        curbp->b_fcol = curwp->w_fcol;
+    }
+    curbp = bp;                     /* Switch. */
+    if (curbp->b_active != TRUE) {  /* buffer not active yet */
+/* Read it in and activate it */
+        readin(curbp->b_fname, TRUE);
+        curbp->b_dotp = lforw(curbp->b_linep);
+        curbp->b_doto = 0;
+        curbp->b_active = TRUE;
+        curbp->b_mode |= gmode;     /* P.K. */
 /* GGR - handle file-hooks */
-                struct buffer *sb;
-                if ((sb=bfind("/file-hooks", FALSE, 0)) != NULL)
-                        dobuf(sb);
-        }
-        curwp->w_bufp = bp;
-        curwp->w_linep = bp->b_linep;   /* For macros, ignored. */
-        curwp->w_flag |= WFMODE | WFFORCE | WFHARD;     /* Quite nasty. */
-        if (bp->b_nwnd++ == 0) {        /* First use.           */
-                curwp->w_dotp = bp->b_dotp;
-                curwp->w_doto = bp->b_doto;
-                curwp->w_markp = bp->b_markp;
-                curwp->w_marko = bp->b_marko;
-                cknewwindow();
-                return TRUE;
-        }
-        wp = wheadp;            /* Look for old.        */
-        while (wp != NULL) {
-                if (wp != curwp && wp->w_bufp == bp) {
-                        curwp->w_dotp = wp->w_dotp;
-                        curwp->w_doto = wp->w_doto;
-                        curwp->w_markp = wp->w_markp;
-                        curwp->w_marko = wp->w_marko;
-                        break;
-                }
-                wp = wp->w_wndp;
-        }
+        struct buffer *sb;
+        if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL)
+            dobuf(sb);
+    }
+    curwp->w_bufp = bp;
+    curwp->w_linep = bp->b_linep;   /* For macros, ignored. */
+    curwp->w_flag |= WFMODE | WFFORCE | WFHARD;     /* Quite nasty. */
+    if (bp->b_nwnd++ == 0) {        /* First use.           */
+        curwp->w_dotp = bp->b_dotp;
+        curwp->w_doto = bp->b_doto;
+        curwp->w_markp = bp->b_markp;
+        curwp->w_marko = bp->b_marko;
+        curwp->w_fcol = bp->b_fcol;
         cknewwindow();
         return TRUE;
+    }
+    wp = wheadp;                    /* Look for old.        */
+    while (wp != NULL) {
+        if (wp != curwp && wp->w_bufp == bp) {
+            curwp->w_dotp = wp->w_dotp;
+            curwp->w_doto = wp->w_doto;
+            curwp->w_markp = wp->w_markp;
+            curwp->w_marko = wp->w_marko;
+            curwp->w_fcol = wp->w_fcol;
+            break;
+        }
+        wp = wp->w_wndp;
+    }
+    cknewwindow();
+    return TRUE;
 }
 
 /*
@@ -235,41 +237,41 @@ int namebuffer(int f, int n)
  */
 int listbuffers(int f, int n)
 {
-        struct window *wp;
-        struct buffer *bp;
-        int s;
+    struct window *wp;
+    struct buffer *bp;
+    int s;
 
-        if (mbstop())   /* GGR - disallow in minibuffer */
-                return(FALSE);
+/* GGR - disallow in minibuffer */
+    if (mbstop()) return(FALSE);
 
-        if ((s = makelist(f)) != TRUE)
-                return s;
-        if (blistp->b_nwnd == 0) {      /* Not on screen yet.   */
-                if ((wp = wpopup()) == NULL)
-                        return FALSE;
-                bp = wp->w_bufp;
-                if (--bp->b_nwnd == 0) {
-                        bp->b_dotp = wp->w_dotp;
-                        bp->b_doto = wp->w_doto;
-                        bp->b_markp = wp->w_markp;
-                        bp->b_marko = wp->w_marko;
-                }
-                wp->w_bufp = blistp;
-                ++blistp->b_nwnd;
+    if ((s = makelist(f)) != TRUE) return s;
+
+    if (blistp->b_nwnd == 0) {      /* Not on screen yet.   */
+        if ((wp = wpopup()) == NULL) return FALSE;
+        bp = wp->w_bufp;
+        if (--bp->b_nwnd == 0) {
+            bp->b_dotp = wp->w_dotp;
+            bp->b_doto = wp->w_doto;
+            bp->b_markp = wp->w_markp;
+            bp->b_marko = wp->w_marko;
+            bp->b_fcol = wp->w_fcol;
         }
-        wp = wheadp;
-        while (wp != NULL) {
-                if (wp->w_bufp == blistp) {
-                        wp->w_linep = lforw(blistp->b_linep);
-                        wp->w_dotp = lforw(blistp->b_linep);
-                        wp->w_doto = 0;
-                        wp->w_markp = NULL;
-                        wp->w_marko = 0;
-                        wp->w_flag |= WFMODE | WFHARD;
-                }
-                wp = wp->w_wndp;
+        wp->w_bufp = blistp;
+        ++blistp->b_nwnd;
+    }
+    wp = wheadp;
+    while (wp != NULL) {
+        if (wp->w_bufp == blistp) {
+            wp->w_linep = lforw(blistp->b_linep);
+            wp->w_dotp = lforw(blistp->b_linep);
+            wp->w_doto = 0;
+            wp->w_markp = NULL;
+            wp->w_marko = 0;
+            wp->w_flag |= WFMODE | WFHARD;
         }
-        return TRUE;
+        wp = wp->w_wndp;
+    }
+    return TRUE;
 }
 
 /*
@@ -465,87 +467,84 @@ int anycb(void)
  * and the "cflag" is TRUE, create it. The "bflag" is
  * the settings for the flags in in buffer.
  */
-struct buffer *bfind(char *bname, int cflag, int bflag)
-{
-        struct buffer *bp;
-        struct buffer *sb;      /* buffer to insert after */
-        struct line *lp;
+struct buffer *bfind(char *bname, int cflag, int bflag) {
+    struct buffer *bp;
+    struct buffer *sb;      /* buffer to insert after */
+    struct line *lp;
 
 /* GGR Add a check on the sent namelength, given that we are going
  * to copy it into a structure if we create a new buffer.
  */
-        if (strlen(bname) >= NBUFN) {   /* We need a NUL too */
-            mlforce("Buffer name too long: %s. Ignored.", bname);
-            sleep(1);
+    if (strlen(bname) >= NBUFN) {   /* We need a NUL too */
+        mlforce("Buffer name too long: %s. Ignored.", bname);
+        sleep(1);
+        return NULL;
+    }
+    bp = bheadp;
+    while (bp != NULL) {
+        if (strcmp(bname, bp->b_bname) == 0) return bp;
+        bp = bp->b_bufp;
+    }
+    if (cflag != FALSE) {
+        if ((bp = (struct buffer *)malloc(sizeof(struct buffer))) == NULL)
+            return NULL;
+        if ((lp = lalloc(0)) == NULL) {
+            free((char *) bp);
             return NULL;
         }
-        bp = bheadp;
-        while (bp != NULL) {
-                if (strcmp(bname, bp->b_bname) == 0)
-                        return bp;
-                bp = bp->b_bufp;
+/* Find the place in the list to insert this buffer */
+        if (bheadp == NULL || strcmp(bheadp->b_bname, bname) > 0) {
+            bp->b_bufp = bheadp;        /* insert at the beginning */
+            bheadp = bp;
+        } else {
+            sb = bheadp;
+            while (sb->b_bufp != NULL) {
+                if (strcmp(sb->b_bufp->b_bname, bname) > 0) break;
+                sb = sb->b_bufp;
+            }
+
+/* And insert it */
+            bp->b_bufp = sb->b_bufp;
+            sb->b_bufp = bp;
         }
-        if (cflag != FALSE) {
-                if ((bp = (struct buffer *)malloc(sizeof(struct buffer))) == NULL)
-                        return NULL;
-                if ((lp = lalloc(0)) == NULL) {
-                        free((char *) bp);
-                        return NULL;
-                }
-                /* find the place in the list to insert this buffer */
-                if (bheadp == NULL || strcmp(bheadp->b_bname, bname) > 0) {
-                        /* insert at the beginning */
-                        bp->b_bufp = bheadp;
-                        bheadp = bp;
-                } else {
-                        sb = bheadp;
-                        while (sb->b_bufp != NULL) {
-                                if (strcmp(sb->b_bufp->b_bname, bname) > 0)
-                                        break;
-                                sb = sb->b_bufp;
-                        }
 
-                        /* and insert it */
-                        bp->b_bufp = sb->b_bufp;
-                        sb->b_bufp = bp;
-                }
-
-                /* and set up the other buffer fields */
-                bp->b_topline = NULL;   /* GGR - for widen and  */
-                bp->b_botline = NULL;   /* GGR - shrink windows */
-                bp->b_active = TRUE;
-                bp->b_dotp = lp;
-                bp->b_doto = 0;
-                bp->b_markp = NULL;
-                bp->b_marko = 0;
-                bp->b_flag = bflag;
-                bp->b_mode = gmode;
-                bp->b_nwnd = 0;
-                bp->b_linep = lp;
-                strcpy(bp->b_fname, "");
-                strcpy(bp->b_bname, bname);
+/* And set up the other buffer fields */
+        bp->b_topline = NULL;   /* GGR - for widen and  */
+        bp->b_botline = NULL;   /* GGR - shrink windows */
+        bp->b_active = TRUE;
+        bp->b_dotp = lp;
+        bp->b_doto = 0;
+        bp->b_markp = NULL;
+        bp->b_marko = 0;
+        bp->b_fcol = 0;
+        bp->b_flag = bflag;
+        bp->b_mode = gmode;
+        bp->b_nwnd = 0;
+        bp->b_linep = lp;
+        strcpy(bp->b_fname, "");
+        strcpy(bp->b_bname, bname);
 #if     CRYPT
-                bp->b_key[0] = 0;
+        bp->b_key[0] = 0;
 #endif
 #if PROC
-                bp->ptt_headp = NULL;
-                bp->b_type = BTNORM;
+        bp->ptt_headp = NULL;
+        bp->b_type = BTNORM;
 #endif
-                lp->l_fp = lp;
-                lp->l_bp = lp;
+        lp->l_fp = lp;
+        lp->l_bp = lp;
 
 /* GGR - file-hooks
  * find the pointer to that buffer.  If it's not there, forget it.
  * If it *is*, run it; ignore errors here...
  */
-                if (!inmb && ((sb=bfind("/file-hooks", FALSE, 0)) != NULL)) {
-                        struct buffer *savbp = curbp;
-                        curbp = bp;
-                        dobuf(sb);
-                        curbp = savbp;
-                }   /* end of file-hooks */
-        }
-        return bp;
+        if (!inmb && ((sb=bfind("/file-hooks", FALSE, 0)) != NULL)) {
+            struct buffer *savbp = curbp;
+            curbp = bp;
+            dobuf(sb);
+            curbp = savbp;
+        }   /* end of file-hooks */
+    }
+    return bp;
 }
 
 /*
@@ -558,23 +557,22 @@ struct buffer *bfind(char *bname, int cflag, int bflag)
  * that are required. Return TRUE if everything
  * looks good.
  */
-int bclear(struct buffer *bp)
-{
-        struct line *lp;
-        int s;
+int bclear(struct buffer *bp) {
+    struct line *lp;
+    int s;
 
-        if ((bp->b_flag & BFINVS) == 0  /* Not scratch buffer.  */
-            && (bp->b_flag & BFCHG) != 0        /* Something changed    */
-            && (s = mlyesno("Discard changes")) != TRUE)
-                return s;
-        bp->b_flag &= ~BFCHG;   /* Not changed          */
-        while ((lp = lforw(bp->b_linep)) != bp->b_linep)
-                lfree(lp);
-        bp->b_dotp = bp->b_linep;       /* Fix "."              */
-        bp->b_doto = 0;
-        bp->b_markp = NULL;     /* Invalidate "mark"    */
-        bp->b_marko = 0;
-        return TRUE;
+    if ((bp->b_flag & BFINVS) == 0      /* Not scratch buffer.  */
+        && (bp->b_flag & BFCHG) != 0    /* Something changed    */
+        && (s = mlyesno("Discard changes")) != TRUE)
+            return s;
+    bp->b_flag &= ~BFCHG;               /* Not changed          */
+    while ((lp = lforw(bp->b_linep)) != bp->b_linep) lfree(lp);
+    bp->b_dotp = bp->b_linep;           /* Fix "."              */
+    bp->b_doto = 0;
+    bp->b_markp = NULL;                 /* Invalidate "mark"    */
+    bp->b_marko = 0;
+    bp->b_fcol = 0;
+    return TRUE;
 }
 
 /*
@@ -582,9 +580,8 @@ int bclear(struct buffer *bp)
  *
  * int f, n;            unused command arguments
  */
-int unmark(int f, int n)
-{
-        curbp->b_flag &= ~BFCHG;
-        curwp->w_flag |= WFMODE;
-        return TRUE;
+int unmark(int f, int n) {
+    curbp->b_flag &= ~BFCHG;
+    curwp->w_flag |= WFMODE;
+    return TRUE;
 }

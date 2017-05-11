@@ -383,6 +383,7 @@ struct window {
         char w_fcolor;          /* current forground color      */
         char w_bcolor;          /* current background color     */
 #endif
+        int w_fcol;             /* first column displayed       */
 };
 
 #define WFFORCE 0x01            /* Window needs forced reframe  */
@@ -445,6 +446,7 @@ struct buffer {
         int b_doto;             /* Offset of "." in above struct line */
         int b_marko;            /* but for the "mark"           */
         int b_mode;             /* editor mode of this buffer   */
+        int b_fcol;             /* first col to display         */
         char b_active;          /* window activated flag        */
         char b_nwnd;            /* Count of windows on buffer   */
         char b_flag;            /* Flags                        */

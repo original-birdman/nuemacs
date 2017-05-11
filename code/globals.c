@@ -41,7 +41,6 @@ int ttrow = HUGE;               /* Row location of HW cursor */
 int ttcol = HUGE;               /* Column location of HW cursor */
 int lbound = 0;                 /* leftmost column of current line
                                    being displayed */
-int taboff = 0;                 /* tab offset for display       */
 int metac = CONTROL | '[';      /* current meta character */
 int ctlxc = CONTROL | 'X';      /* current control X prefix char */
 int reptc = CONTROL | 'U';      /* current universal repeat char */
@@ -81,7 +80,7 @@ int flen = 0;                   /* current allocated size of fline */
 int rval = 0;                   /* return value of a subprocess */
 int nullflag = FALSE;           /* accept null characters */
 int overlap = 0;                /* line overlap in forw/back page */
-int scrollcount = 1;            /* number of lines to scroll */
+int scrolljump = 1;             /* number of lines to scroll */
 
 /* uninitialized global definitions */
 
@@ -155,3 +154,6 @@ char *input_waiting  = NULL;
 int keytab_alloc_ents = 0;
 
 struct buffer *ptt = NULL;
+
+int hscroll = FALSE;
+int hjump = 1;

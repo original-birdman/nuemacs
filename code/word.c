@@ -33,42 +33,42 @@ static int zw_break = 0;
  */
 int wrapword(int f, int n)
 {
-        int cnt;        /* size of word wrapped to next line */
-        int c;          /* charector temporary */
+    int cnt;        /* size of word wrapped to next line */
+    int c;          /* charector temporary */
 
-        /* backup from the <NL> 1 char */
-        if (back_grapheme(0, 1) <= 0)
-                return FALSE;
+/* Backup from the <NL> 1 char */
+    if (back_grapheme(0, 1) <= 0) return FALSE;
 
-        /* back up until we aren't in a word,
-           make sure there is a break in the line */
-        cnt = 0;
-        while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) != ' ')
-               && (c != '\t')) {
-                cnt++;
-                if (back_grapheme(0, 1) <= 0)
-                        return FALSE;
-                /* if we make it to the beginning, start a new line */
-                if (curwp->w_doto == 0) {
-                        gotoeol(FALSE, 0);
-                        return lnewline();
-                }
+/* Back up until we aren't in a word, make sure there's a break in the line */
+    cnt = 0;
+    while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) != ' ')
+         && (c != '\t')) {
+        cnt++;
+        if (back_grapheme(0, 1) <= 0) return FALSE;
+/* If we make it to the beginning, start a new line */
+        if (curwp->w_doto == 0) {
+            gotoeol(FALSE, 0);
+            return lnewline();
         }
+    }
 
-        /* delete the forward white space */
-        if (!forwdel(0, 1))
-                return FALSE;
+/* Delete the forward white space */
+    if (!forwdel(0, 1)) return FALSE;
 
-        /* put in a end of line */
-        if (!lnewline())
-                return FALSE;
+/* Put in a end of line */
+    if (!lnewline()) return FALSE;
 
-        /* and past the first word */
-        while (cnt-- > 0) {
-                if (forw_grapheme(FALSE, 1) <= 0)
-                        return FALSE;
-        }
-        return TRUE;
+/* And past the first word */
+    while (cnt-- > 0) {
+        if (forw_grapheme(FALSE, 1) <= 0) return FALSE;
+    }
+
+/* Make sure the display is not horizontally scrolled */
+    if (curwp->w_fcol != 0) {
+        curwp->w_fcol = 0;
+        curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
+    }
+    return TRUE;
 }
 
 /*
@@ -858,6 +858,13 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
     else gotoeob(FALSE, 1);
     free(wbuf);     /* Mustn't forget these... */
     if (space_ind) free(space_ind);
+
+/* Make sure the display is not horizontally scrolled */
+    if (curwp->w_fcol != 0) {
+        curwp->w_fcol = 0;
+        curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
+    }
+
     return TRUE;
 }
 

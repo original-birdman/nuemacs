@@ -343,12 +343,13 @@ int buildlist(int type, char *mstring)
         /* let us know this is in progress */
         mlwrite(MLpre "Building binding list" MLpost);
 
-        /* disconect the current buffer */
+        /* disconnect the current buffer */
         if (--curbp->b_nwnd == 0) {     /* Last use.            */
                 curbp->b_dotp = curwp->w_dotp;
                 curbp->b_doto = curwp->w_doto;
                 curbp->b_markp = curwp->w_markp;
                 curbp->b_marko = curwp->w_marko;
+                curbp->b_fcol = curwp->w_fcol;
         }
 
         /* connect the current window to this buffer */

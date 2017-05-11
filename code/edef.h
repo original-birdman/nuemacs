@@ -48,7 +48,6 @@ extern int ttrow;               /* Row location of HW cursor */
 extern int ttcol;               /* Column location of HW cursor */
 extern int lbound;              /* leftmost column of current line
                                    being displayed */
-extern int taboff;              /* tab offset for display       */
 extern int metac;               /* current meta character */
 extern int ctlxc;               /* current control X prefix char */
 extern int reptc;               /* current universal repeat char */
@@ -82,7 +81,7 @@ extern int flen;                /* current length of fline */
 extern int rval;                /* return value of a subprocess */
 extern int nullflag;
 extern int overlap;             /* line overlap in forw/back page */
-extern int scrollcount;         /* number of lines to scroll */
+extern int scrolljump;          /* number of lines to jump on scroll */
 
 /* Uninitialized global external declarations. */
 
@@ -144,3 +143,6 @@ extern char *input_waiting;     /* Input ready (for execproc) */
 extern int keytab_alloc_ents;   /* Allocated number of keytab entries */
 
 extern struct buffer *ptt;      /* Global pt table */
+
+extern int hscroll;             /* TRUE when we are scrolling horizontally */
+extern int hjump;               /* How much to jump on horizontal scroll */

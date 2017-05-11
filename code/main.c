@@ -515,36 +515,36 @@ loop:
  * as an argument, because the main routine may have been told to read in a
  * file by default, and we want the buffer name to be right.
  */
-void edinit(char *bname)
-{
-        struct buffer *bp;
-        struct window *wp;
+void edinit(char *bname) {
+    struct buffer *bp;
+    struct window *wp;
 
-        bp = bfind(bname, TRUE, 0);             /* First buffer         */
-        blistp = bfind("/List", TRUE, BFINVS); /* Buffer list buffer   */
-        wp = (struct window *)malloc(sizeof(struct window)); /* First window */
-        if (bp == NULL || wp == NULL || blistp == NULL)
-                exit(1);
-        curbp = bp;             /* Make this current    */
-        wheadp = wp;
-        curwp = wp;
-        wp->w_wndp = NULL;      /* Initialize window    */
-        wp->w_bufp = bp;
-        bp->b_nwnd = 1;         /* Displayed.           */
-        wp->w_linep = bp->b_linep;
-        wp->w_dotp = bp->b_linep;
-        wp->w_doto = 0;
-        wp->w_markp = NULL;
-        wp->w_marko = 0;
-        wp->w_toprow = 0;
+    bp = bfind(bname, TRUE, 0);             /* First buffer         */
+    blistp = bfind("/List", TRUE, BFINVS);  /* Buffer list buffer   */
+    wp = (struct window *)malloc(sizeof(struct window));    /* First window */
+    if (bp == NULL || wp == NULL || blistp == NULL) exit(1);
+    curbp = bp;             /* Make this current    */
+    wheadp = wp;
+    curwp = wp;
+    wp->w_wndp = NULL;                      /* Initialize window    */
+    wp->w_bufp = bp;
+    bp->b_nwnd = 1;                         /* Displayed.           */
+    wp->w_linep = bp->b_linep;
+    wp->w_dotp = bp->b_linep;
+    wp->w_doto = 0;
+    wp->w_markp = NULL;
+    wp->w_marko = 0;
+    wp->w_toprow = 0;
 #if     COLOR
-        /* initalize colors to global defaults */
-        wp->w_fcolor = gfcolor;
-        wp->w_bcolor = gbcolor;
+/* initalize colors to global defaults */
+    wp->w_fcolor = gfcolor;
+    wp->w_bcolor = gbcolor;
 #endif
-        wp->w_ntrows = term.t_nrow - 1; /* "-1" for mode line.  */
-        wp->w_force = 0;
-        wp->w_flag = WFMODE | WFHARD;   /* Full.                */
+    wp->w_fcol = 0;
+    wp->w_ntrows = term.t_nrow - 1;         /* "-1" for mode line.  */
+    wp->w_force = 0;
+    wp->w_flag = WFMODE | WFHARD;           /* Full.                */
+    return;
 }
 
 /*

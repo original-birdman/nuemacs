@@ -19,15 +19,15 @@ struct user_variable {
 
 /* The tags for environment variable - used in struct evlist */
 enum ev_val {
-    EVFILLCOL, EVPAGELEN,  EVCURCOL,   EVCURLINE, EVRAM,
-    EVFLICKER, EVCURWIDTH, EVCBUFNAME, EVCFNAME,  EVSRES,
-    EVDEBUG,   EVSTATUS,   EVPALETTE,  EVASAVE,   EVACOUNT,
-    EVLASTKEY, EVCURCHAR,  EVDISCMD,   EVVERSION, EVPROGNAME,
-    EVSEED,    EVDISINP,   EVWLINE,    EVCWLINE,  EVTARGET,
-    EVSEARCH,  EVREPLACE,  EVMATCH,    EVKILL,    EVCMODE,
-    EVGMODE,   EVTPAUSE,   EVPENDING,  EVLWIDTH,  EVLINE,
-    EVGFLAGS,  EVRVAL,     EVTAB,      EVOVERLAP, EVSCROLLCOUNT,
-    EVSCROLL,  EVINMB,
+    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVRAM,
+    EVFLICKER,  EVCURWIDTH, EVCBUFNAME, EVCFNAME,   EVSRES,
+    EVDEBUG,    EVSTATUS,   EVPALETTE,  EVASAVE,    EVACOUNT,
+    EVLASTKEY,  EVCURCHAR,  EVDISCMD,   EVVERSION,  EVPROGNAME,
+    EVSEED,     EVDISINP,   EVWLINE,    EVCWLINE,   EVTARGET,
+    EVSEARCH,   EVREPLACE,  EVMATCH,    EVKILL,     EVCMODE,
+    EVGMODE,    EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,
+    EVGFLAGS,   EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
+    EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 };
 
 /* List of recognized environment variables. */
@@ -36,50 +36,55 @@ static struct evlist {
     char *var;
     enum ev_val tag;
 } evl[] = {
- { "fillcol",   EVFILLCOL},     /* current fill column */
- { "pagelen",   EVPAGELEN},     /* number of lines used by editor */
- { "curcol",    EVCURCOL},      /* current column pos of cursor */
- { "curline",   EVCURLINE},     /* current line in file */
- { "ram",       EVRAM},         /* ram in use by malloc */
- { "flicker",   EVFLICKER},     /* flicker supression */
- { "curwidth",  EVCURWIDTH},    /* current screen width */
- { "cbufname",  EVCBUFNAME},    /* current buffer name */
- { "cfname",    EVCFNAME},      /* current file name */
- { "sres",      EVSRES},        /* current screen resolution */
- { "debug",     EVDEBUG},       /* macro debugging */
- { "status",    EVSTATUS},      /* returns the status of the last command */
- { "palette",   EVPALETTE},     /* current palette string */
- { "asave",     EVASAVE},       /* # of chars between auto-saves */
- { "acount",    EVACOUNT},      /* # of chars until next auto-save */
- { "lastkey",   EVLASTKEY},     /* last keyboard char struck */
- { "curchar",   EVCURCHAR},     /* current character under the cursor */
- { "discmd",    EVDISCMD},      /* display commands on command line */
- { "version",   EVVERSION},     /* current version number */
- { "progname",  EVPROGNAME},    /* returns current prog name - "MicroEMACS" */
- { "seed",      EVSEED},        /* current random number seed */
- { "disinp",    EVDISINP},      /* display command line input characters */
- { "wline",     EVWLINE},       /* # of lines in current window */
- { "cwline",    EVCWLINE},      /* current screen line in window */
- { "target",    EVTARGET},      /* target for line moves */
- { "search",    EVSEARCH},      /* search pattern */
- { "replace",   EVREPLACE},     /* replacement pattern */
- { "match",     EVMATCH},       /* last matched magic pattern */
- { "kill",      EVKILL},        /* kill buffer (read only) */
- { "cmode",     EVCMODE},       /* mode of current buffer */
- { "gmode",     EVGMODE},       /* global modes */
- { "tpause",    EVTPAUSE},      /* length to pause for paren matching */
- { "pending",   EVPENDING},     /* type ahead pending flag */
- { "lwidth",    EVLWIDTH},      /* width of current line */
- { "line",      EVLINE},        /* text of current line */
- { "gflags",    EVGFLAGS},      /* global internal emacs flags */
- { "rval",      EVRVAL},        /* child process return value */
- { "tab",       EVTAB},         /* tab 4 or 8 */
- { "overlap",   EVOVERLAP},     /* Overlap on next/prev page */
- { "jump",      EVSCROLLCOUNT}, /* Number of lines to scroll */
+ { "fillcol",   EVFILLCOL },    /* current fill column */
+ { "pagelen",   EVPAGELEN },    /* number of lines used by editor */
+ { "curcol",    EVCURCOL },     /* current column pos of cursor */
+ { "curline",   EVCURLINE },    /* current line in file */
+ { "ram",       EVRAM },        /* ram in use by malloc */
+ { "flicker",   EVFLICKER },    /* flicker supression */
+ { "curwidth",  EVCURWIDTH },   /* current screen width */
+ { "cbufname",  EVCBUFNAME },   /* current buffer name */
+ { "cfname",    EVCFNAME },     /* current file name */
+ { "sres",      EVSRES },       /* current screen resolution */
+ { "debug",     EVDEBUG },      /* macro debugging */
+ { "status",    EVSTATUS },     /* returns the status of the last command */
+ { "palette",   EVPALETTE },    /* current palette string */
+ { "asave",     EVASAVE },      /* # of chars between auto-saves */
+ { "acount",    EVACOUNT },     /* # of chars until next auto-save */
+ { "lastkey",   EVLASTKEY },    /* last keyboard char struck */
+ { "curchar",   EVCURCHAR },    /* current character under the cursor */
+ { "discmd",    EVDISCMD },     /* display commands on command line */
+ { "version",   EVVERSION },    /* current version number */
+ { "progname",  EVPROGNAME },   /* returns current prog name - "MicroEMACS" */
+ { "seed",      EVSEED },       /* current random number seed */
+ { "disinp",    EVDISINP },     /* display command line input characters */
+ { "wline",     EVWLINE },      /* # of lines in current window */
+ { "cwline",    EVCWLINE },     /* current screen line in window */
+ { "target",    EVTARGET },     /* target for line moves */
+ { "search",    EVSEARCH },     /* search pattern */
+ { "replace",   EVREPLACE },    /* replacement pattern */
+ { "match",     EVMATCH },      /* last matched magic pattern */
+ { "kill",      EVKILL },       /* kill buffer (read only) */
+ { "cmode",     EVCMODE },      /* mode of current buffer */
+ { "gmode",     EVGMODE },      /* global modes */
+ { "tpause",    EVTPAUSE },     /* length to pause for paren matching */
+ { "pending",   EVPENDING },    /* type ahead pending flag */
+ { "lwidth",    EVLWIDTH },     /* width of current line */
+ { "line",      EVLINE },       /* text of current line */
+ { "gflags",    EVGFLAGS },     /* global internal emacs flags */
+ { "rval",      EVRVAL },       /* child process return value */
+ { "tab",       EVTAB },        /* tab 4 or 8 */
+ { "overlap",   EVOVERLAP },    /* Overlap on next/prev page */
+ { "jump",      EVSCROLLJUMP }, /* Number of lines jump on scroll */
 #if SCROLLCODE
- { "scroll",    EVSCROLL},      /* scroll enabled */
+ { "scroll",    EVSCROLL },     /* scroll enabled */
 #endif
- { "inmb",      EVINMB},        /* In mini-buffer (read only) */
+ { "inmb",      EVINMB },       /* In mini-buffer (read only) */
+
+ { "fcol",      EVFCOL },       /* first displayed column in curent window */
+ { "hjump",     EVHJUMP },      /* horizontal screen jump size */
+ { "hscroll",   EVHSCROLL },    /* horizontal scrolling flag */
+
 };
 
 /* The tags for user functions - used in struct evlist */
@@ -106,7 +111,7 @@ enum function_type {
 struct user_function {
     char *f_name;
     enum function_type f_type;
-    enum uf_val tag;    
+    enum uf_val tag;
 };
 
 static struct user_function funcs[] = {

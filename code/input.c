@@ -596,17 +596,22 @@ loop:
     lastflag = saveflag;
 
     savdoto = curwp->w_doto;
-    curwp->w_doto  = 0;
+    curwp->w_doto = 0;
     linstr(procopy);
     curwp->w_doto = savdoto + prolen;
 
-/* Fix up the screen */
+/* Fix up the screen - we do NOT want horizontal scrollign in the mb */
+
+    int real_hscroll;
+    real_hscroll = hscroll;
+    hscroll = FALSE;
     update(FALSE);
     if (typahead()) {
             mbupdate();
     }
+    hscroll = real_hscroll;
 
-    curwp->w_doto  = 0;
+    curwp->w_doto = 0;
     ldelete((long)prolen, FALSE);
     curwp->w_doto = savdoto;
 

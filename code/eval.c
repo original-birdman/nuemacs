@@ -36,141 +36,104 @@ void varinit(void)
  */
 char *gtfun(char *fname)
 {
-        int fnum;               /* index to function to eval */
-        int status;             /* return status */
-        char *tsp;              /* temporary string pointer */
-        char arg1[NSTRING];     /* value of first argument */
-        char arg2[NSTRING];     /* value of second argument */
-        char arg3[NSTRING];     /* value of third argument */
-        static char result[2 * NSTRING];        /* string result */
+    int fnum;               /* index to function to eval */
+    int status;             /* return status */
+    char *tsp;              /* temporary string pointer */
+    char arg1[NSTRING];     /* value of first argument */
+    char arg2[NSTRING];     /* value of second argument */
+    char arg3[NSTRING];     /* value of third argument */
+    static char result[2 * NSTRING];        /* string result */
 
-        /* look the function up in the function table */
-        fname[3] = 0;           /* only first 3 chars significant */
-        mklower(fname);         /* and let it be upper or lower case */
-        for (fnum = 0; fnum < ARRAY_SIZE(funcs); fnum++)
-                if (strcmp(fname, funcs[fnum].f_name) == 0)
-                        break;
+/* Look the function up in the function table */
+    fname[3] = 0;           /* only first 3 chars significant */
+    mklower(fname);         /* and let it be upper or lower case */
+    for (fnum = 0; fnum < ARRAY_SIZE(funcs); fnum++)
+        if (strcmp(fname, funcs[fnum].f_name) == 0) break;
 
-        /* return errorm on a bad reference */
-        if (fnum == ARRAY_SIZE(funcs))
-                return errorm;
+/* Return errorm on a bad reference */
+    if (fnum == ARRAY_SIZE(funcs)) return errorm;
 
-        /* if needed, retrieve the first argument */
-        if (funcs[fnum].f_type >= MONAMIC) {
-                if ((status = macarg(arg1)) != TRUE)
-                        return errorm;
+/* If needed, retrieve the first argument */
+    if (funcs[fnum].f_type >= MONAMIC) {
+        if ((status = macarg(arg1)) != TRUE) return errorm;
 
-                /* if needed, retrieve the second argument */
-                if (funcs[fnum].f_type >= DYNAMIC) {
-                        if ((status = macarg(arg2)) != TRUE)
-                                return errorm;
+/* If needed, retrieve the second argument */
+        if (funcs[fnum].f_type >= DYNAMIC) {
+            if ((status = macarg(arg2)) != TRUE) return errorm;
 
-                        /* if needed, retrieve the third argument */
-                        if (funcs[fnum].f_type >= TRINAMIC)
-                                if ((status = macarg(arg3)) != TRUE)
-                                        return errorm;
-                }
+/* If needed, retrieve the third argument */
+            if (funcs[fnum].f_type >= TRINAMIC)
+                if ((status = macarg(arg3)) != TRUE) return errorm;
         }
+    }
 
 
-        /* and now evaluate it! */
-        switch (funcs[fnum].tag) {
-        case UFADD:
-                return itoa(atoi(arg1) + atoi(arg2));
-        case UFSUB:
-                return itoa(atoi(arg1) - atoi(arg2));
-        case UFTIMES:
-                return itoa(atoi(arg1) * atoi(arg2));
-        case UFDIV:
-                return itoa(atoi(arg1) / atoi(arg2));
-        case UFMOD:
-                return itoa(atoi(arg1) % atoi(arg2));
-        case UFNEG:
-                return itoa(-atoi(arg1));
-        case UFCAT:
-                strcpy(result, arg1);
-                return strcat(result, arg2);
-        case UFLEFT:
-                return strncpy(result, arg1, atoi(arg2));
-        case UFRIGHT:
-                return (strcpy(result,
-                               &arg1[(strlen(arg1) - atoi(arg2))]));
-        case UFMID:
-                return (strncpy(result, &arg1[atoi(arg2) - 1],
-                                atoi(arg3)));
-        case UFNOT:
-                return ltos(stol(arg1) == FALSE);
-        case UFEQUAL:
-                return ltos(atoi(arg1) == atoi(arg2));
-        case UFLESS:
-                return ltos(atoi(arg1) < atoi(arg2));
-        case UFGREATER:
-                return ltos(atoi(arg1) > atoi(arg2));
-        case UFSEQUAL:
-                return ltos(strcmp(arg1, arg2) == 0);
-        case UFSLESS:
-                return ltos(strcmp(arg1, arg2) < 0);
-        case UFSGREAT:
-                return ltos(strcmp(arg1, arg2) > 0);
-        case UFIND:
-                return strcpy(result, getval(arg1));
-        case UFAND:
-                return ltos(stol(arg1) && stol(arg2));
-        case UFOR:
-                return ltos(stol(arg1) || stol(arg2));
-        case UFLENGTH:
-                return itoa(strlen(arg1));
-        case UFUPPER:
-                strcpy(result, arg1);
-                return mkupper(result);
-        case UFLOWER:
-                strcpy(result, arg1);
-                return mklower(result);
-        case UFTRUTH:
-                return ltos(atoi(arg1) == 42);
-        case UFASCII:
-                return itoa((int) arg1[0]);
-        case UFCHR:
-                result[0] = atoi(arg1);
-                result[1] = 0;
-                return result;
-        case UFGTKEY:
-                result[0] = tgetc();
-                result[1] = 0;
-                return result;
-        case UFRND:
-                return itoa((ernd() % abs(atoi(arg1))) + 1);
-        case UFABS:
-                return itoa(abs(atoi(arg1)));
-        case UFSINDEX:
-                return itoa(sindex(arg1, arg2));
-        case UFENV:
+/* And now evaluate it! */
+    switch (funcs[fnum].tag) {
+    case UFADD:         return itoa(atoi(arg1) + atoi(arg2));
+    case UFSUB:         return itoa(atoi(arg1) - atoi(arg2));
+    case UFTIMES:       return itoa(atoi(arg1) * atoi(arg2));
+    case UFDIV:         return itoa(atoi(arg1) / atoi(arg2));
+    case UFMOD:         return itoa(atoi(arg1) % atoi(arg2));
+    case UFNEG:         return itoa(-atoi(arg1));
+    case UFCAT:
+        strcpy(result, arg1);
+        return strcat(result, arg2);
+    case UFLEFT:        return strncpy(result, arg1, atoi(arg2));
+    case UFRIGHT:
+        return (strcpy(result, &arg1[(strlen(arg1) - atoi(arg2))]));
+    case UFMID:
+        return (strncpy(result, &arg1[atoi(arg2) - 1], atoi(arg3)));
+    case UFNOT:         return ltos(stol(arg1) == FALSE);
+    case UFEQUAL:       return ltos(atoi(arg1) == atoi(arg2));
+    case UFLESS:        return ltos(atoi(arg1) < atoi(arg2));
+    case UFGREATER:     return ltos(atoi(arg1) > atoi(arg2));
+    case UFSEQUAL:      return ltos(strcmp(arg1, arg2) == 0);
+    case UFSLESS:       return ltos(strcmp(arg1, arg2) < 0);
+    case UFSGREAT:      return ltos(strcmp(arg1, arg2) > 0);
+    case UFIND:         return strcpy(result, getval(arg1));
+    case UFAND:         return ltos(stol(arg1) && stol(arg2));
+    case UFOR:          return ltos(stol(arg1) || stol(arg2));
+    case UFLENGTH:      return itoa(strlen(arg1));
+    case UFUPPER:
+        strcpy(result, arg1);
+        return mkupper(result);
+    case UFLOWER:
+        strcpy(result, arg1);
+        return mklower(result);
+    case UFTRUTH:       return ltos(atoi(arg1) == 42);
+    case UFASCII:       return itoa((int) arg1[0]);
+    case UFCHR:
+        result[0] = atoi(arg1);
+        result[1] = 0;
+        return result;
+    case UFGTKEY:
+        result[0] = tgetc();
+        result[1] = 0;
+        return result;
+    case UFRND:         return itoa((ernd() % abs(atoi(arg1))) + 1);
+    case UFABS:         return itoa(abs(atoi(arg1)));
+    case UFSINDEX:      return itoa(sindex(arg1, arg2));
+    case UFENV:
 #if     ENVFUNC
-                tsp = getenv(arg1);
-                return tsp == NULL ? "" : tsp;
+        tsp = getenv(arg1);
+        return tsp == NULL ? "" : tsp;
 #else
-                return "";
+        return "";
 #endif
-        case UFBIND:
-                return transbind(arg1);
-        case UFEXIST:
-                return ltos(fexist(arg1));
-        case UFFIND:
-                tsp = flook(arg1, TRUE, ONPATH);
-                return tsp == NULL ? "" : tsp;
-        case UFBAND:
-                return itoa(atoi(arg1) & atoi(arg2));
-        case UFBOR:
-                return itoa(atoi(arg1) | atoi(arg2));
-        case UFBXOR:
-                return itoa(atoi(arg1) ^ atoi(arg2));
-        case UFBNOT:
-                return itoa(~atoi(arg1));
-        case UFXLATE:
-                return xlat(arg1, arg2, arg3);
-        }
+    case UFBIND:        return transbind(arg1);
+    case UFEXIST:       return ltos(fexist(arg1));
+    case UFFIND:
+        tsp = flook(arg1, TRUE, ONPATH);
+        return tsp == NULL ? "" : tsp;
+    case UFBAND:        return itoa(atoi(arg1) & atoi(arg2));
+    case UFBOR:         return itoa(atoi(arg1) | atoi(arg2));
+    case UFBXOR:        return itoa(atoi(arg1) ^ atoi(arg2));
+    case UFBNOT:        return itoa(~atoi(arg1));
+    case UFXLATE:       return xlat(arg1, arg2, arg3);
+    }
 
-        exit(-11);              /* never should get here */
+    exit(-11);              /* never should get here */
 }
 
 /*
@@ -204,128 +167,89 @@ extern char *getkill(void);
  */
 char *gtenv(char *vname)
 {
-        int vnum;       /* ordinal number of var refrenced */
+    int vnum;       /* ordinal number of var refrenced */
 
-        /* scan the list, looking for the referenced name */
-        for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
-                if (strcmp(vname, evl[vnum].var) == 0)
-                        break;
+/* Scan the list, looking for the referenced name */
+    for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
+        if (strcmp(vname, evl[vnum].var) == 0) break;
 
-        /* return errorm on a bad reference */
-        if (vnum == ARRAY_SIZE(evl))
+/* Return errorm on a bad reference */
+    if (vnum == ARRAY_SIZE(evl))
 #if     ENVFUNC
-        {
-                char *ename = getenv(vname);
-
-                if (ename != NULL)
-                        return ename;
-                else
-                        return errorm;
-        }
+    {
+        char *ename = getenv(vname);
+        if (ename != NULL)
+            return ename;
+        else
+            return errorm;
+    }
 #else
-                return errorm;
+    return errorm;
 #endif
 
-        /* otherwise, fetch the appropriate value */
-        switch (evl[vnum].tag) {
-        case EVFILLCOL:
-                return itoa(fillcol);
-        case EVPAGELEN:
-                return itoa(term.t_nrow + 1);
-        case EVCURCOL:
-                return itoa(getccol(FALSE));
-        case EVCURLINE:
-                return itoa(getcline());
-        case EVRAM:
-                return itoa((int) (envram / 1024l));
-        case EVFLICKER:
-                return ltos(flickcode);
-        case EVCURWIDTH:
-                return itoa(term.t_ncol);
-        case EVCBUFNAME:
-                return curbp->b_bname;
-        case EVCFNAME:
-                return curbp->b_fname;
-        case EVSRES:
-                return sres;
-        case EVDEBUG:
-                return ltos(macbug);
-        case EVSTATUS:
-                return ltos(cmdstatus);
-        case EVPALETTE:
-                return palstr;
-        case EVASAVE:
-                return itoa(gasave);
-        case EVACOUNT:
-                return itoa(gacount);
-        case EVLASTKEY:
-                return itoa(lastkey);
-        case EVCURCHAR:
-                return (curwp->w_dotp->l_used ==
-                        curwp->w_doto ? itoa('\n') :
-                        itoa(lgetc(curwp->w_dotp, curwp->w_doto)));
-        case EVDISCMD:
-                return ltos(discmd);
-        case EVVERSION:
-                return VERSION;
-        case EVPROGNAME:
-                return PROGRAM_NAME_LONG;
-        case EVSEED:
-                return itoa(seed);
-        case EVDISINP:
-                return ltos(disinp);
-        case EVWLINE:
-                return itoa(curwp->w_ntrows);
-        case EVCWLINE:
-                return itoa(getwpos());
-        case EVTARGET:
-                saveflag = lastflag;
-                return itoa(curgoal);
-        case EVSEARCH:
-                return pat;
-        case EVREPLACE:
-                return rpat;
-        case EVMATCH:
-                return (patmatch == NULL) ? "" : patmatch;
-        case EVKILL:
-                return getkill();
-        case EVCMODE:
-                return itoa(curbp->b_mode);
-        case EVGMODE:
-                return itoa(gmode);
-        case EVTPAUSE:
-                return itoa(term.t_pause);
-        case EVPENDING:
+/* Otherwise, fetch the appropriate value */
+    switch (evl[vnum].tag) {
+    case EVFILLCOL:         return itoa(fillcol);
+    case EVPAGELEN:         return itoa(term.t_nrow + 1);
+    case EVCURCOL:          return itoa(getccol(FALSE));
+    case EVCURLINE:         return itoa(getcline());
+    case EVRAM:             return itoa((int) (envram / 1024l));
+    case EVFLICKER:         return ltos(flickcode);
+    case EVCURWIDTH:        return itoa(term.t_ncol);
+    case EVCBUFNAME:        return curbp->b_bname;
+    case EVCFNAME:          return curbp->b_fname;
+    case EVSRES:            return sres;
+    case EVDEBUG:           return ltos(macbug);
+    case EVSTATUS:          return ltos(cmdstatus);
+    case EVPALETTE:         return palstr;
+    case EVASAVE:           return itoa(gasave);
+    case EVACOUNT:          return itoa(gacount);
+    case EVLASTKEY:         return itoa(lastkey);
+    case EVCURCHAR:
+        return (curwp->w_dotp->l_used == curwp->w_doto ?
+            itoa('\n') :
+            itoa(lgetc(curwp->w_dotp, curwp->w_doto)));
+    case EVDISCMD:          return ltos(discmd);
+    case EVVERSION:         return VERSION;
+    case EVPROGNAME:        return PROGRAM_NAME_LONG;
+    case EVSEED:            return itoa(seed);
+    case EVDISINP:          return ltos(disinp);
+    case EVWLINE:           return itoa(curwp->w_ntrows);
+    case EVCWLINE:          return itoa(getwpos());
+    case EVTARGET:
+        saveflag = lastflag;
+        return itoa(curgoal);
+    case EVSEARCH:          return pat;
+    case EVREPLACE:         return rpat;
+    case EVMATCH:           return (patmatch == NULL) ? "" : patmatch;
+    case EVKILL:            return getkill();
+    case EVCMODE:           return itoa(curbp->b_mode);
+    case EVGMODE:           return itoa(gmode);
+    case EVTPAUSE:          return itoa(term.t_pause);
+    case EVPENDING:
 #if     TYPEAH
-                return ltos(typahead());
+        return ltos(typahead());
 #else
-                return falsem;
+        return falsem;
 #endif
-        case EVLWIDTH:
-                return itoa(llength(curwp->w_dotp));
-        case EVLINE:
-                return getctext();
-        case EVGFLAGS:
-                return itoa(gflags);
-        case EVRVAL:
-                return itoa(rval);
-        case EVTAB:
-                return itoa(tabmask + 1);
-        case EVOVERLAP:
-                return itoa(overlap);
-        case EVSCROLLCOUNT:
-                return itoa(scrollcount);
+    case EVLWIDTH:          return itoa(llength(curwp->w_dotp));
+    case EVLINE:            return getctext();
+    case EVGFLAGS:          return itoa(gflags);
+    case EVRVAL:            return itoa(rval);
+    case EVTAB:             return itoa(tabmask + 1);
+    case EVOVERLAP:         return itoa(overlap);
+    case EVSCROLLJUMP:      return itoa(scrolljump);
 #if SCROLLCODE
-        case EVSCROLL:
-                return ltos(term.t_scroll != NULL);
+    case EVSCROLL:          return ltos(term.t_scroll != NULL);
 #else
-        case EVSCROLL:
-                return ltos(0);
+    case EVSCROLL:          return ltos(0);
 #endif
-        case EVINMB:
-                return itoa(inmb);
-        }
-        exit(-12);              /* again, we should never get here */
+    case EVINMB:            return itoa(inmb);
+    case EVFCOL:            return(itoa(curwp->w_fcol));
+    case EVHSCROLL:         return(ltos(hscroll));
+    case EVHJUMP:           return(itoa(hjump));
+    }
+    exit(-12);              /* again, we should never get here */
 }
 
 /*
@@ -519,172 +443,182 @@ fvar:
  */
 int svar(struct variable_description *var, char *value)
 {
-        int vnum;       /* ordinal number of var refrenced */
-        int vtype;      /* type of variable to set */
-        int status;     /* status return */
-        int c;          /* translated character */
-        char *sp;       /* scratch string pointer */
+    int vnum;       /* ordinal number of var referenced */
+    int vtype;      /* type of variable to set */
+    int status;     /* status return */
+    int c;          /* translated character */
+    char *sp;       /* scratch string pointer */
 
-        /* simplify the vd structure (we are gonna look at it a lot) */
-        vnum = var->v_num;
-        vtype = var->v_type;
+/* simplify the vd structure (we are gonna look at it a lot) */
+    vnum = var->v_num;
+    vtype = var->v_type;
 
-        /* and set the appropriate value */
-        status = TRUE;
-        switch (vtype) {
-        case TKVAR:             /* set a user variable */
-                if (uv[vnum].u_value != NULL)
-                        free(uv[vnum].u_value);
-                sp = malloc(strlen(value) + 1);
-                if (sp == NULL)
-                {
-                        uv[vnum].u_value = NULL;    /* GGR */
-                        return FALSE;
-                }
-                strcpy(sp, value);
-                uv[vnum].u_value = sp;
-                break;
-
-        case TKENV:             /* set an environment variable */
-                status = TRUE;  /* by default */
-                switch (vnum) {
-                case EVFILLCOL:
-                        fillcol = atoi(value);
-                        break;
-                case EVPAGELEN:
-                        status = newsize(TRUE, atoi(value));
-                        break;
-                case EVCURCOL:
-                        status = setccol(atoi(value));
-                        break;
-                case EVCURLINE:
-                        status = gotoline(TRUE, atoi(value));
-                        break;
-                case EVRAM:
-                        break;
-                case EVFLICKER:
-                        flickcode = stol(value);
-                        break;
-                case EVCURWIDTH:
-                        status = newwidth(TRUE, atoi(value));
-                        break;
-                case EVCBUFNAME:
-                        strcpy(curbp->b_bname, value);
-                        curwp->w_flag |= WFMODE;
-                        break;
-                case EVCFNAME:
-                        strcpy(curbp->b_fname, value);
-                        curwp->w_flag |= WFMODE;
-                        break;
-                case EVSRES:
-                        status = TTrez(value);
-                        break;
-                case EVDEBUG:
-                        macbug = stol(value);
-                        break;
-                case EVSTATUS:
-                        cmdstatus = stol(value);
-                        break;
-                case EVASAVE:
-                        gasave = atoi(value);
-                        break;
-                case EVACOUNT:
-                        gacount = atoi(value);
-                        break;
-                case EVLASTKEY:
-                        lastkey = atoi(value);
-                        break;
-                case EVCURCHAR:
-                        ldelchar(1, FALSE);     /* delete 1 char */
-                        c = atoi(value);
-                        if (c == '\n')
-                                lnewline();
-                        else
-                                linsert(1, c);
-                        back_grapheme(FALSE, 1);
-                        break;
-                case EVDISCMD:
-                        discmd = stol(value);
-                        break;
-                case EVVERSION:
-                        break;
-                case EVPROGNAME:
-                        break;
-                case EVSEED:
-                        seed = atoi(value);
-                        break;
-                case EVDISINP:
-                        disinp = stol(value);
-                        break;
-                case EVWLINE:
-                        status = resize(TRUE, atoi(value));
-                        break;
-                case EVCWLINE:
-                        status = forwline(TRUE, atoi(value) - getwpos());
-                        break;
-                case EVTARGET:
-                        curgoal = atoi(value);
-                        thisflag = saveflag;
-                        break;
-                case EVSEARCH:
-                        strcpy(pat, value);
-                        rvstrcpy(tap, pat);
-#if     MAGIC
-                        mcclear();
-#endif
-                        break;
-                case EVREPLACE:
-                        strcpy(rpat, value);
-                        break;
-                case EVMATCH:
-                        break;
-                case EVKILL:
-                        break;
-                case EVCMODE:
-                        curbp->b_mode = atoi(value);
-                        curwp->w_flag |= WFMODE;
-                        break;
-                case EVGMODE:
-                        gmode = atoi(value);
-                        break;
-                case EVTPAUSE:
-                        term.t_pause = atoi(value);
-                        break;
-                case EVPENDING:
-                        break;
-                case EVLWIDTH:
-                        break;
-                case EVLINE:
-                        putctext(value);
-                case EVGFLAGS:
-                        gflags = atoi(value);
-                        break;
-                case EVRVAL:
-                        break;
-                case EVTAB:
-                        tabmask = atoi(value) - 1;
-                        if (tabmask != 0x07 && tabmask != 0x03)
-                                tabmask = 0x07;
-                        curwp->w_flag |= WFHARD;
-                        break;
-                case EVOVERLAP:
-                        overlap = atoi(value);
-                        break;
-                case EVSCROLLCOUNT:
-                        scrollcount = atoi(value);
-                        break;
-                case EVSCROLL:
-#if SCROLLCODE
-                        if (!stol(value))
-                                term.t_scroll = NULL;
-#endif
-                        break;
-                }
-                break;
-                case EVINMB:
-                        break;
+/* and set the appropriate value */
+    status = TRUE;
+    switch (vtype) {
+    case TKVAR:             /* set a user variable */
+        if (uv[vnum].u_value != NULL) free(uv[vnum].u_value);
+        sp = malloc(strlen(value) + 1);
+        if (sp == NULL) {
+            uv[vnum].u_value = NULL;    /* GGR */
+            return FALSE;
         }
-        return status;
+        strcpy(sp, value);
+        uv[vnum].u_value = sp;
+        break;
+
+    case TKENV:             /* set an environment variable */
+        status = TRUE;  /* by default */
+        switch (vnum) {
+        case EVFILLCOL:
+            fillcol = atoi(value);
+            break;
+        case EVPAGELEN:
+            status = newsize(TRUE, atoi(value));
+            break;
+        case EVCURCOL:
+            status = setccol(atoi(value));
+            break;
+        case EVCURLINE:
+            status = gotoline(TRUE, atoi(value));
+            break;
+        case EVRAM:
+            break;
+        case EVFLICKER:
+            flickcode = stol(value);
+            break;
+        case EVCURWIDTH:
+            status = newwidth(TRUE, atoi(value));
+            break;
+        case EVCBUFNAME:
+            strcpy(curbp->b_bname, value);
+            curwp->w_flag |= WFMODE;
+            break;
+        case EVCFNAME:
+            strcpy(curbp->b_fname, value);
+            curwp->w_flag |= WFMODE;
+            break;
+        case EVSRES:
+            status = TTrez(value);
+            break;
+        case EVDEBUG:
+            macbug = stol(value);
+            break;
+        case EVSTATUS:
+            cmdstatus = stol(value);
+            break;
+        case EVASAVE:
+            gasave = atoi(value);
+            break;
+        case EVACOUNT:
+            gacount = atoi(value);
+            break;
+        case EVLASTKEY:
+            lastkey = atoi(value);
+            break;
+        case EVCURCHAR:
+            ldelchar(1, FALSE);     /* delete 1 char */
+            c = atoi(value);
+            if (c == '\n') lnewline();
+            else           linsert(1, c);
+            back_grapheme(FALSE, 1);
+            break;
+        case EVDISCMD:
+            discmd = stol(value);
+            break;
+        case EVVERSION:
+            break;
+        case EVPROGNAME:
+            break;
+        case EVSEED:
+            seed = atoi(value);
+            break;
+        case EVDISINP:
+            disinp = stol(value);
+            break;
+        case EVWLINE:
+            status = resize(TRUE, atoi(value));
+            break;
+        case EVCWLINE:
+            status = forwline(TRUE, atoi(value) - getwpos());
+            break;
+        case EVTARGET:
+            curgoal = atoi(value);
+            thisflag = saveflag;
+            break;
+        case EVSEARCH:
+            strcpy(pat, value);
+            rvstrcpy(tap, pat);
+#if     MAGIC
+            mcclear();
+#endif
+            break;
+        case EVREPLACE:
+            strcpy(rpat, value);
+            break;
+        case EVMATCH:
+            break;
+        case EVKILL:
+            break;
+        case EVCMODE:
+            curbp->b_mode = atoi(value);
+            curwp->w_flag |= WFMODE;
+            break;
+        case EVGMODE:
+            gmode = atoi(value);
+            break;
+        case EVTPAUSE:
+            term.t_pause = atoi(value);
+            break;
+        case EVPENDING:
+            break;
+        case EVLWIDTH:
+            break;
+        case EVLINE:
+            putctext(value);
+        case EVGFLAGS:
+            gflags = atoi(value);
+            break;
+        case EVRVAL:
+            break;
+        case EVTAB:
+            tabmask = atoi(value) - 1;
+            if (tabmask != 0x07 && tabmask != 0x03)
+            tabmask = 0x07;
+            curwp->w_flag |= WFHARD;
+            break;
+        case EVOVERLAP:
+            overlap = atoi(value);
+            break;
+        case EVSCROLLJUMP:
+            scrolljump = atoi(value);
+            break;
+        case EVSCROLL:
+#if SCROLLCODE
+            if (!stol(value))
+            term.t_scroll = NULL;
+#endif
+            break;
+        case EVINMB:
+            break;
+        case EVFCOL:
+            curwp->w_fcol = atoi(value);
+            if (curwp->w_fcol < 0) curwp->w_fcol = 0;
+            curwp->w_flag |= WFHARD | WFMODE;
+            break;
+        case EVHSCROLL:
+            hscroll = stol(value);
+            lbound = 0;
+            break;
+        case EVHJUMP:
+            hjump = atoi(value);
+            if (hjump < 1) hjump = 1;
+            if (hjump > term.t_ncol - 1) hjump = term.t_ncol - 1;
+            break;
+        }
+        break;
+    }
+    return status;
 }
 
 /*
