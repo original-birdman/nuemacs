@@ -115,6 +115,16 @@ int forwsearch(int f, int n)
          */
         if ((status = readpattern("Search", &pat[0], TRUE)) == TRUE) {
                 do {
+
+/* We are going forwards so check for eob as otherwise the rest
+ * of this code (magical and ordinary) loops us round to the start
+ * and searches from there.
+ */
+                        if (curwp->w_dotp == curbp->b_linep) {
+                                status = FALSE;
+                                break;
+                        }
+
 #if     MAGIC
                         if ((magical
                              && curwp->w_bufp->b_mode & MDMAGIC) != 0)
