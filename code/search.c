@@ -54,15 +54,36 @@
  *      whether or not to make use of the array.  And, put in the
  *      appropriate new structures and variables.
  *
+ *      4 November 1987 Geoff Gibbs
+ *      5 January 1988 Geoff Gibbs move it to 3.9e
+ *
+ *      Fast version using simplified version of Boyer and Moore
+ *      Software-Practice and Experience, vol 10, 501-506 (1980)
+ *      mods to scanner() and readpattern(),
+ *      add fbound() and setpattern(), also define FAST, (or not).
+ *      scanner() should be callable as before, provided setpattern()
+ *      has been called first.
  *      Modified by Petri Kutvonen
  */
+#define FAST 1
 
 #include <stdio.h>
+
+#if     FAST
+#include <ctype.h>
+#endif
 
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
+
+#if     FAST
+static int patlenadd;
+static int deltaf[HICHAR],deltab[HICHAR];
+static int lastchfjump, lastchbjump;
+static int fbound(int, struct line **, int *, int);
+#endif
 
 #if defined(MAGIC)
 /*
@@ -511,6 +532,235 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline, int *p
 }
 #endif
 
+#if FAST
+/*
+ * scanner -- Search for a pattern in either direction.  If found,
+ *      reset the "." to be at the start or just after the match string,
+ *      and (perhaps) repaint the display.
+ *      Fast version using simplified version of Boyer and Moore
+ *      Software-Practice and Experience, vol 10, 501-506 (1980)
+ */
+int scanner(const char *patrn, int direct, int beg_or_end) {
+        int c;                          /* character at current position */
+        const char *patptr;             /* pointer into pattern */
+        struct line *curline;           /* current line during scan */
+        int curoff;                     /* position within current line */
+        struct line *scanline;          /* current line during scanning */
+        int scanoff;                    /* position in scanned line */
+        int jump;                       /* next offset */
+
+        /* If we are going in reverse, then the 'end' is actually
+         * the beginning of the pattern.  Toggle it.
+         */
+
+        beg_or_end ^= direct;
+
+        /* Set up local pointers to global ".".
+         */
+        curline = curwp->w_dotp;
+        curoff = curwp->w_doto;
+
+        /* Scan each character until we hit the head link record.
+         * Get the character resolving newlines, offset
+         * by the pattern length, i.e. the last character of the
+         * potential match.
+         */
+
+        jump = patlenadd;
+
+        while (!fbound(jump, &curline, &curoff, direct))
+        {
+                /* Save the current position in case we match
+                 * the search string at this point.
+                 */
+
+                matchline = curline;
+                matchoff = curoff;
+                        /* Setup scanning pointers. */
+                scanline = curline;
+                scanoff = curoff;
+                patptr = &patrn[0];
+
+                /* Scan through the pattern for a match.
+                 */
+                while (*patptr != '\0')
+                {
+                        c = nextch(&scanline, &scanoff, direct);
+
+/*
+ * Debugging info, show the character and the remains of the string
+ * it is being compared with.
+ *
+ *      strcpy(tpat, "matching ");
+ *      expandp(&c, &tpat[strlen(tpat)], NPAT/2);
+ *      expandp(patptr, &tpat[strlen(tpat)], NPAT/2);
+ *      mlwrite(tpat);
+ */
+                        if (!eq(c, *patptr++))
+                        {
+                                jump = (direct == FORWARD)
+                                        ? lastchfjump
+                                        : lastchbjump;
+                                goto fail;
+                        }
+                }
+
+                /* A SUCCESSFULL MATCH!!!
+                 * reset the global "." pointers
+                 */
+                if (beg_or_end == PTEND)        /* at end of string */
+                {
+                        curwp->w_dotp = scanline;
+                        curwp->w_doto = scanoff;
+                }
+                else            /* at beginning of string */
+                {
+                        curwp->w_dotp = matchline;
+                        curwp->w_doto = matchoff;
+                }
+
+                curwp->w_flag |= WFMOVE; /* Flag that we have moved.*/
+                return TRUE;
+
+fail:;                  /* continue to search */
+        }
+
+        return FALSE;   /* We could not find a match */
+}
+
+/*
+ * fbound -- Return information depending on whether we may search no
+ *      further.  Beginning of file and end of file are the obvious
+ *      cases, but we may want to add further optional boundry restrictions
+ *      in future, a' la VMS EDT.  At the moment, just return TRUE or
+ *      FALSE depending on if a boundry is hit (ouch),
+ *      when we have found a matching trailing character.
+ */
+
+static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
+        int spare, curoff;
+        struct line *curline;
+
+        curline = *pcurline;
+        curoff = *pcuroff;
+
+        if (dir == FORWARD)
+        {
+            while (jump != 0)
+            {
+                curoff += jump;
+                spare = curoff - llength(curline);
+                while (spare > 0)
+                {
+                        curline = lforw(curline);/* skip to next line */
+                        curoff = spare - 1;
+                        spare = curoff - llength(curline);
+                        if (curline == curbp->b_linep)
+                                        return TRUE;    /* hit end of buffer */
+                }
+                if (spare == 0)
+                {
+                        jump = deltaf[(int) '\n'];
+                }
+                else
+                {
+                        jump = deltaf[(int) lgetc(curline, curoff)];
+                }
+            }
+/* the last character matches, so back up to start of possible match */
+
+            curoff -= patlenadd;
+            while (curoff < 0)
+            {
+                curline = lback(curline);/* skip back a line */
+                curoff += llength(curline) + 1;
+            }
+
+        }
+        else                    /* Reverse.*/
+        {
+            jump++;             /* allow for offset in reverse */
+            while (jump != 0)
+            {
+                curoff -= jump;
+                while (curoff < 0)
+                {
+                        curline = lback(curline);       /* skip back a line */
+                        curoff += llength(curline) + 1;
+                        if (curline == curbp->b_linep)
+                                        return TRUE;    /* hit end of buffer */
+                }
+                if (curoff == llength(curline))
+                {
+                        jump = deltab[(int) '\n'];
+                }
+                else
+                {
+                        jump = deltab[(int) lgetc(curline, curoff)];
+                }
+            }
+/* the last character matches, so back up to start of possible match */
+
+            curoff += matchlen;
+            spare = curoff - llength(curline);
+            while (spare > 0)
+            {
+                curline = lforw(curline);/* skip back a line */
+                curoff = spare - 1;
+                spare = curoff - llength(curline);
+            }
+
+        }
+
+        *pcurline = curline;
+        *pcuroff = curoff;
+        return FALSE;
+}
+
+/*      Settting up search jump tables.
+ *      the default for any character to jump
+ *      is the pattern length
+ */
+void setpattern(const char apat[], const char tap[]) {
+        int i;
+
+        patlenadd = matchlen - 1;
+
+        for (i = 0; i < HICHAR; i++)
+        {
+                deltaf[i] = matchlen;
+                deltab[i] = matchlen;
+        }
+/*      Now put in the characters contained
+ *      in the pattern, duplicating the CASE
+ */
+        for (i = 0; i < patlenadd; i++)
+        {
+                deltaf[(int) apat[i]] = patlenadd - i;
+                if (isalpha (apat[i]))
+                    deltaf[(int) (apat[i] ^ DIFCASE)] = patlenadd - i;
+                deltab[(int) tap[i]] = patlenadd - i;
+                if (isalpha (tap[i]))
+                    deltab[(int) (tap[i] ^ DIFCASE)] = patlenadd - i;
+        }
+/*      The last character will have the pattern length
+ *      unless there are duplicates of it. Get the number to
+ *      jump from the arrays delta, and overwrite with zeroes in delta
+ *      duplicating the CASE.
+ */
+        lastchfjump = patlenadd + deltaf[(int) apat[patlenadd]];
+        deltaf[(int) apat[patlenadd]] = 0;
+        if (isalpha (apat[patlenadd]))
+                deltaf[(int) (apat[patlenadd] ^ DIFCASE)] = 0;
+        lastchbjump = patlenadd + deltab[(int) apat[0]];
+        deltab[(int) apat[0]] = 0;
+        if (isalpha (apat[0]))
+                deltab[(int) (apat[0] ^ DIFCASE)] = 0;
+
+}
+
+#else   /* use the original slow algorithm */
+
 /*
  * scanner -- Search for a pattern in either direction.  If found,
  *      reset the "." to be at the start or just after the match string,
@@ -590,6 +840,7 @@ int scanner(const char *patrn, int direct, int beg_or_end)
 
         return FALSE;           /* We could not find a match */
 }
+#endif
 
 /*
  * eq -- Compare two characters.  The "bc" comes from the buffer, "pc"
@@ -633,7 +884,7 @@ static int readpattern(char *prompt, char *apat, int srch)
         strcat(tpat, MLpost ": ");
 
         /* Read a pattern.  Either we get one,
-         * or we just get the META charater, and use the previous pattern.
+         * or we just get the META character, and use the previous pattern.
          * Then, if it's the search string, make a reversed pattern.
          * *Then*, make the meta-pattern, if we are defined that way.
          */
@@ -645,6 +896,9 @@ static int readpattern(char *prompt, char *apat, int srch)
                          */
                         rvstrcpy(tap, apat);
                         mlenold = matchlen = strlen(apat);
+#if     FAST
+                        setpattern(apat, tap);
+#endif
                 }
 #if     MAGIC
                 /* Only make the meta-pattern if in magic mode,
