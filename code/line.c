@@ -225,30 +225,23 @@ static int linsert_byte(int n, int c)
  * linstr -- Insert a string at the current point
  */
 
-int linstr(char *instr)
-{
-        int status = TRUE;
-        char tmpc;
+int linstr(char *instr) {
+    int status = TRUE;
+    char tmpc;
 
-        if (instr != NULL)
-                while ((tmpc = *instr) && status == TRUE) {
-                        status =
-/* GML - linsert will insert unicode
- *        but we've been sent a (utf8) string!
- */
-#if 0
-                            (tmpc == '\n' ? lnewline() : linsert(1, tmpc));
-#endif
-                            (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
+    if (instr != NULL)
+        while ((tmpc = *instr) && status == TRUE) {
+/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
+            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
 
-                        /* Insertion error? */
-                        if (status != TRUE) {
-                                mlwrite("%%Out of memory while inserting");
-                                break;
-                        }
-                        instr++;
-                }
-        return status;
+/* Insertion error? */
+            if (status != TRUE) {
+                mlwrite("%%Out of memory while inserting");
+                break;
+            }
+            instr++;
+        }
+    return status;
 }
 
 int linsert(int n, int c)
