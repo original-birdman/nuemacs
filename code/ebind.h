@@ -92,8 +92,11 @@ struct key_tab init_keytab[] = {
         {FUNC_KMAP, CTLX | 'A', {setvar}                },
         {FUNC_KMAP, CTLX | 'B', {usebuffer}             },
         {FUNC_KMAP, CTLX | 'C', {spawncli}              },
+/* Seems to screw-up the tty, so disable */
+#if 0
 #if     BSD | __hpux | SVR4
         {FUNC_KMAP, CTLX | 'D', {bktoshell}             },
+#endif
 #endif
         {FUNC_KMAP, CTLX | 'E', {ctlxe}                 },
         {FUNC_KMAP, CTLX | 'F', {setfillcol}            },
