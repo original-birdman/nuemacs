@@ -81,11 +81,11 @@ int deskey(int f, int n)
         mlputs(outseq);
         mlputs(" ");
 
-        /* find the right ->function */
+        /* find the right function */
         if ((ptr = getfname(getbind(c, &pbp))) == NULL)
                 ptr = "Not Bound";
 
-        /* output the command sequence */
+        /* output the function name */
         mlputs(ptr);
 
         /* Add buffer-name, if set */
@@ -288,9 +288,12 @@ int unbindchar(int c)
  * bring up a fake buffer and list the key bindings
  * into it with view mode
  */
-int desbind(int f, int n)
+int desbind(int f, int n) {
+        if (mbstop())              /* GGR - disallow in minibuffer */
+                return(FALSE);
+
 #if     APROP
-{
+
         buildlist(TRUE, "");
         return TRUE;
 }
@@ -316,18 +319,15 @@ int apro(int f, int n)
  * int type;            true = full list,   false = partial list
  * char *mstring;       match string if a partial list
  */
-int buildlist(int type, char *mstring)
+int buildlist(int type, char *mstring) {
 #endif
-{
+
         struct window *wp;         /* scanning pointer to windows */
         struct key_tab *ktp;       /* pointer into the command table */
         struct name_bind *nptr;    /* pointer into the name binding table */
         struct buffer *bp;         /* buffer to put binding list into */
         int cpos;                  /* current position to use in outseq */
         char outseq[80];           /* output buffer for keystroke sequence */
-
-        if (mbstop())              /* GGR - disallow in minibuffer */
-                return(FALSE);
 
         /* split the current window to make room for the binding list */
         if (splitwind(FALSE, 1) == FALSE)
