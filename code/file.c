@@ -209,6 +209,28 @@ int getfile(char *fname, int lockfl) {
     return s;
 }
 
+/* GGR routine to handle file-hooks in one place.
+ * We now look for /file-hooks.<<sfx>> first.
+ * And now done in readin() only
+ */
+static void handle_filehooks(char *fname) {
+    struct buffer *sb;
+    int fh_found = 0;
+    char *sfx = strrchr(fname, '.');
+    if (sfx && strlen(sfx) <= 19) {     /* Max is 32, incl NUL */
+        sfx++;                          /* Skip over '.' */
+        char sfx_bname[NBUFN];
+        strcpy(sfx_bname, "/file-hooks-");
+        strcat(sfx_bname, sfx);
+        if ((sb = bfind(sfx_bname, FALSE, 0)) != NULL) {
+            fh_found = 1;
+            dobuf(sb);
+        }
+    }
+    if (!fh_found && (sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
+    return;
+}
+
 /*
  * Read file "fname" into the current buffer, blowing away any text
  * found there.  Called by both the read and find commands.  Return
@@ -259,6 +281,11 @@ int readin(char *fname, int lockfl)
  * On a Mac it will crash...
  */
         if (bp->b_fname != fname) strcpy(bp->b_fname, fname);
+
+/* GGR - lockfl is TRUE for the cases where we want file-hooks to run.
+ * Accidental, but convenient.
+ */
+        if (lockfl) handle_filehooks(fname);
 
         /* let a user macro get hold of things...if he wants */
         execute(META | SPEC | 'R', FALSE, 1);

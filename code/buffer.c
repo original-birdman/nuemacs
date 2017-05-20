@@ -106,10 +106,6 @@ int swbuffer(struct buffer *bp) {
         curbp->b_doto = 0;
         curbp->b_active = TRUE;
         curbp->b_mode |= gmode;     /* P.K. */
-/* GGR - handle file-hooks */
-        struct buffer *sb;
-        if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL)
-            dobuf(sb);
     }
     curwp->w_bufp = bp;
     curwp->w_linep = bp->b_linep;   /* For macros, ignored. */
@@ -532,17 +528,6 @@ struct buffer *bfind(char *bname, int cflag, int bflag) {
 #endif
         lp->l_fp = lp;
         lp->l_bp = lp;
-
-/* GGR - file-hooks
- * find the pointer to that buffer.  If it's not there, forget it.
- * If it *is*, run it; ignore errors here...
- */
-        if (!inmb && ((sb=bfind("/file-hooks", FALSE, 0)) != NULL)) {
-            struct buffer *savbp = curbp;
-            curbp = bp;
-            dobuf(sb);
-            curbp = savbp;
-        }   /* end of file-hooks */
     }
     return bp;
 }
