@@ -75,8 +75,6 @@ char falsem[] = "FALSE";        /* false litereal               */
 int cmdstatus = TRUE;           /* last command status          */
 char palstr[49] = "";           /* palette string               */
 int saveflag = 0;               /* Flags, saved with the $target var */
-char *fline = NULL;             /* dynamic return line */
-int flen = 0;                   /* current allocated size of fline */
 int rval = 0;                   /* return value of a subprocess */
 int nullflag = FALSE;           /* accept null characters */
 int overlap = 0;                /* line overlap in forw/back page */
@@ -100,6 +98,8 @@ char sres[NBUFN];               /* current screen resolution    */
 char pat[NPAT+1];               /* Search pattern               */
 char tap[NPAT+1];               /* Reversed pattern array.      */
 char rpat[NPAT+1];              /* replacement pattern          */
+
+struct line *fline;             /* dynamic return line */
 
 /* The variable matchlen holds the length of the matched
  * string - used by the replace functions.
@@ -133,7 +133,6 @@ char outline[NSTRING];          /* global string to hold debug line text */
 /* GGR - Additional initializations */
 int  clast           = META|SPEC|'C';
 int  flast           = TRUE;
-int  ftrulen         = 0;
 int  inreex          = FALSE;
 
 int  allow_current   = 0;

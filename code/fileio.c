@@ -6,13 +6,25 @@
  *      modified by Petri Kutvonen
  */
 
-#include        <stdio.h>
-#include        "estruct.h"
-#include        "edef.h"
-#include        "efunc.h"
+#include <stdio.h>
+#include <unistd.h>
+#include "estruct.h"
+#include "edef.h"
+#include "efunc.h"
+#include "line.h"
 
 static FILE *ffp;                       /* File pointer, all functions. */
 static int eofflag;                     /* end-of-file flag */
+
+/* The cache.
+ * Used for reading and writing as only one can be active at any one time.
+ */
+#define CSIZE 8192
+static struct {
+    char buf[CSIZE];
+    int rst;                /* Read pointer */
+    int len;                /* Valid tot chars (write) or past rst (read) */
+} cache;
 
 /*
  * Open a file for reading.
@@ -34,6 +46,10 @@ int ffropen(char *fn) {
  */
         if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
     }
+
+    cache.rst = cache.len = 0;
+    fline = NULL;
+
     eofflag = FALSE;
     return FIOSUC;
 }
@@ -62,6 +78,8 @@ int ffwopen(char *fn) {
  */
         if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
     }
+    cache.rst = cache.len = 0;
+
     return FIOSUC;
 }
 
@@ -69,10 +87,8 @@ int ffwopen(char *fn) {
  * Close a file. Should look at the status in all systems.
  */
 int ffclose(void) {
-    if (fline) {        /* free this since we do not need it anymore */
-        free(fline);
-        fline = NULL;
-    }
+
+    fline = NULL;
     eofflag = FALSE;
 
 #if MSDOS & CTRLZ
@@ -97,20 +113,13 @@ int ffclose(void) {
  * ffputline() call with a NULL buf arg to flush the last part of the cache.
  */
 
-/* The write cache */
-#define CSIZE 8192
-static struct {
-    int len;
-    char buf[CSIZE];
-} wcache = {0, ""};
-
 /* Routine to flush the cache */
-static int flush_wcache(void) {
+static int flush_write_cache(void) {
 #if CRYPT
-    if (cryptflag) myencrypt(wcache.buf, wcache.len);
+    if (cryptflag) myencrypt(cache.buf, cache.len);
 #endif
-    fwrite(wcache.buf, sizeof(*wcache.buf), wcache.len, ffp);
-    wcache.len = 0;
+    fwrite(cache.buf, sizeof(*cache.buf), cache.len, ffp);
+    cache.len = 0;
     if (ferror(ffp)) {
         mlwrite("Write I/O error");
         return FIOERR;
@@ -123,19 +132,19 @@ int ffputline(char *buf, int nbuf) {
 
     static int doing_newline = 0;
     if (buf == NULL) {      /* Just flush what is left... */
-        return flush_wcache();
+        return flush_write_cache();
     }
 
     while(nbuf > 0) {
         int to_fill;
-        if ((wcache.len + nbuf) <= CSIZE) to_fill = nbuf;
-        else to_fill = CSIZE - wcache.len;
-        memcpy(wcache.buf+wcache.len, buf, to_fill);
+        if ((cache.len + nbuf) <= CSIZE) to_fill = nbuf;
+        else to_fill = CSIZE - cache.len;
+        memcpy(cache.buf+cache.len, buf, to_fill);
         nbuf -= to_fill;        /* bytes left */
-        wcache.len += to_fill;  /* valid in cache */
+        cache.len += to_fill;  /* valid in cache */
         buf += to_fill;         /* new start of input */
         if (nbuf > 0) {         /* More to go, so flush cache */
-            int status = flush_wcache();
+            int status = flush_write_cache();
             if (status != FIOSUC) return status;
         }
     }
@@ -160,68 +169,64 @@ int ffputline(char *buf, int nbuf) {
  * Check for I/O errors too. Return status.
  */
 
-/* The read cache */
-#define CSIZE 8192
-static struct {
-    int rst;                /* Read start */
-    int len;                /* Valid chars left beyond Read start */
-    char buf[CSIZE];
-} rcache = {0, 0, ""};
-
 /* Helper routine to add text into fline, re-allocating it if required */
 static int add_to_fline(char *buf, int len) {
-    if (len == 0) return TRUE;
-    if (len >= (flen - ftrulen)) {       /* Need a bigger fline */
-        flen += len;
-        fline = realloc(fline, flen);
-        if (fline == NULL) return FALSE;
+
+    int newlen = -1;
+    if (fline == NULL) {
+        newlen = len;
     }
-    memcpy(fline+ftrulen, rcache.buf+rcache.rst, len);
-    ftrulen += len;         /* Record the real size of the line */
-    rcache.rst += len;      /* Advance cache read-pointer */
-    rcache.len -= len;      /* Decrement left_to-read counter */
+    else if (len >= (fline->l_size - fline->l_used)) {
+        newlen = len + fline->l_used;
+    }
+    if (newlen >= 0) {      /* Need a new/bigger fline */
+        struct line *nl = lalloc(newlen);
+        if (nl == NULL) return FALSE;
+        if (fline) {
+            nl->l_used = fline->l_used;
+            memcpy(nl->l_text, fline->l_text, fline->l_used);
+            free(fline);
+        }
+        else
+            nl->l_used = 0; /* Need to set to how much is in there *now* */
+        fline = nl;
+    }
+    memcpy(fline->l_text+fline->l_used, cache.buf+cache.rst, len);
+    fline->l_used += len;   /* Record the real size of the line */
+    cache.rst += len;       /* Advance cache read-pointer */
+    cache.len -= len;       /* Decrement left-to-read counter */
     return TRUE;
 }
 
 /* The actual callable function */
 int ffgetline(void) {
 
-/* Dump fline if it ended up too big */
-    if (flen > NSTRING) {
-        free(fline);
-        fline = NULL;
-    }
-
-/* If we don't have an fline, allocate one */
-    if (fline == NULL)
-        if ((fline = malloc(flen = NSTRING)) == NULL) return FIOMEM;
-
-/* We keep track of the number of actually-added bytes in fline */
-
-    ftrulen = 0;
+    fline = NULL;       /* Start afresh */
 
 /* Do we have a newline in our cache */
 
     char *nlp = NULL;
     while (!nlp) {
-        nlp = memchr(rcache.buf+rcache.rst, '\n', rcache.len);
+        nlp = memchr(cache.buf+cache.rst, '\n', cache.len);
         if (!nlp) {
-            if (!add_to_fline(rcache.buf+rcache.rst, rcache.len))
+            if (!add_to_fline(cache.buf+cache.rst, cache.len))
                 return FIOMEM;      /* Only reason for failure */
-            rcache.len = fread(rcache.buf, sizeof(*rcache.buf),
-                sizeof(rcache.buf), ffp);
-            rcache.rst = 0;
+            cache.len = fread(cache.buf, sizeof(*cache.buf),
+                sizeof(cache.buf), ffp);
+            cache.rst = 0;
 /* If we are at the end...return it.
  * But - if we still have cached data then there was no final
  * newline, but we still have to return that, and warn about the
  * missing newline.
  */
-            if (eofflag && (rcache.len == 0)) {
-                if (ftrulen && !cryptflag)
-                    mlwrite("Newline absent from end of file. Added.");
-                return ftrulen? FIOSUC: FIOEOF;
+            if (eofflag && (cache.len == 0)) {
+                if (fline->l_used) {
+                    mlforce("Newline absent from end of file. Added.");
+                    sleep(1);
+                }
+                return fline->l_used? FIOSUC: FIOEOF;
             }
-            if (rcache.len != sizeof(rcache.buf)) { /* short read - why? */
+            if (cache.len != sizeof(cache.buf)) { /* short read - why? */
                 if (feof(ffp)) {
                     eofflag = TRUE;
                 }
@@ -231,14 +236,14 @@ int ffgetline(void) {
                 }
             }
 #if CRYPT
-            if (cryptflag) myencrypt(rcache.buf, rcache.len);
+            if (cryptflag) myencrypt(cache.buf, cache.len);
 #endif
         }
     }
-    int cc = (nlp - rcache.buf) - rcache.rst;
-    if (!add_to_fline(rcache.buf, cc)) return FIOMEM;
-    rcache.rst++;       /* Step over newline */
-    rcache.len--;       /* Step over newline */
+    int cc = nlp - (cache.buf+cache.rst);
+    if (!add_to_fline(cache.buf+cache.rst, cc)) return FIOMEM;
+    cache.rst++;        /* Step over newline */
+    cache.len--;        /* Step over newline */
 
     return FIOSUC;
 }

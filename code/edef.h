@@ -76,8 +76,7 @@ extern char falsem[];           /* false litereal               */
 extern int cmdstatus;           /* last command status          */
 extern char palstr[];           /* palette string               */
 extern int saveflag;            /* Flags, saved with the $target var */
-extern char *fline;             /* dynamic return line */
-extern int flen;                /* current length of fline */
+extern struct line *fline;      /* dynamic return line */
 extern int rval;                /* return value of a subprocess */
 extern int nullflag;
 extern int overlap;             /* line overlap in forw/back page */
@@ -126,7 +125,6 @@ extern int nlast;               /* "n" option to last command */
 extern int inreex;              /* Set when re-executing */
 
 extern unicode_t *eos_list;     /* List of end-of-sentence characters */
-extern int ftrulen;             /* current real length of fline */
 extern int inmb;                /* Set when in minibuffer */
 extern char lastmb[];           /* Contents of last minibuffer */
 extern int pathexpand;          /* Whether to expand paths */

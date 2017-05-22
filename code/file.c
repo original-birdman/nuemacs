@@ -233,131 +233,114 @@ static void handle_filehooks(char *fname) {
 
 /*
  * Read file "fname" into the current buffer, blowing away any text
- * found there.  Called by both the read and find commands.  Return
- * the final status of the read.  Also called by the mainline, to
- * read in a file specified on the command line as an argument.
+ * found there - called by both the read and find commands.
+ * Return the final status of the read.
+ * Also called by the main routine to read in a file specified on the
+ * command line as an argument.
  * The command bound to M-FNR is called after the buffer is set up
  * and before it is read.
  *
  * char fname[];        name of file to read
  * int lockfl;          check for file locks?
  */
-int readin(char *fname, int lockfl)
-{
-        struct line *lp1;
-        struct line *lp2;
-        struct window *wp;
-        struct buffer *bp;
-        int s;
-        int nline;
-        char mesg[NSTRING];
+int readin(char *fname, int lockfl) {
+    struct line *lp1;
+    struct line *lp2;
+    struct window *wp;
+    struct buffer *bp;
+    int s;
+    int nline;
+    char mesg[NSTRING];
 
-#if     FILOCK && (BSD || SVR4)
-        if (lockfl && lockchk(fname) == ABORT)
-        {
-                s = FIOFNF;
-                bp = curbp;
-                strcpy(bp->b_fname, "");
-                goto out;
-        }
+#if FILOCK && (BSD || SVR4)
+    if (lockfl && lockchk(fname) == ABORT) {
+        s = FIOFNF;
+        bp = curbp;
+        strcpy(bp->b_fname, "");
+        goto out;
+    }
 #endif
-#if     CRYPT
-        s = resetkey();
-        if (s != TRUE)
-                return s;
+#if CRYPT
+    s = resetkey();
+    if (s != TRUE) return s;
 #endif
-        bp = curbp;                         /* Cheap.        */
-        if ((s = bclear(bp)) != TRUE)       /* Might be old. */
-                return s;
-        bp->b_flag &= ~(BFINVS | BFCHG);
+    bp = curbp;                             /* Cheap.        */
+    if ((s = bclear(bp)) != TRUE) return s; /* Might be old. */
+    bp->b_flag &= ~(BFINVS | BFCHG);
 
 /* If this is a translation table, remove any compiled data */
 
-        if ((bp->b_type == BTPHON) && bp->ptt_headp)
-            ptt_free(bp);
+    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
 
 /* If activating an inactive buffer, these may be the same and the
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
  */
-        if (bp->b_fname != fname) strcpy(bp->b_fname, fname);
+    if (bp->b_fname != fname) strcpy(bp->b_fname, fname);
 
 /* GGR - lockfl is TRUE for the cases where we want file-hooks to run.
  * Accidental, but convenient.
  */
-        if (lockfl) handle_filehooks(fname);
+    if (lockfl) handle_filehooks(fname);
 
-        /* let a user macro get hold of things...if he wants */
-        execute(META | SPEC | 'R', FALSE, 1);
+/* let a user macro get hold of things...if he wants */
+    execute(META | SPEC | 'R', FALSE, 1);
 
-        if ((s = ffropen(fname)) == FIOERR) /* Hard file open. */
-                goto out;
+    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
+    if (s == FIOFNF) {                              /* File not found. */
+        mlwrite(MLpre "New file" MLpost);
+        goto out;
+    }
 
-        if (s == FIOFNF) {                  /* File not found. */
-                mlwrite(MLpre "New file" MLpost);
-                goto out;
+/* Read the file in */
+    if (!silent) mlwrite(MLpre "Reading file" MLpost);  /* GGR */
+    nline = 0;
+    while ((s = ffgetline()) == FIOSUC) {
+        if (nline > MAXNLINE) {
+            s = FIOMEM;
+            break;
         }
+        lp1 = fline;                    /* Allocated by ffgetline() */
+        lp2 = lback(curbp->b_linep);
+        lp2->l_fp = lp1;
+        lp1->l_fp = curbp->b_linep;
+        lp1->l_bp = lp2;
+        curbp->b_linep->l_bp = lp1;
+        ++nline;
+        if (!(nline % 300) && !silent)  /* GGR */
+            mlwrite(MLpre "Reading file" MLpost " : %d lines", nline);
+    }
+    ffclose();                          /* Ignore errors. */
+    strcpy(mesg, MLpre);
+    if (s == FIOERR) {
+        strcat(mesg, "I/O ERROR, ");
+        curbp->b_flag |= BFTRUNC;
+    }
+    if (s == FIOMEM) {
+        strcat(mesg, "OUT OF MEMORY, ");
+        curbp->b_flag |= BFTRUNC;
+    }
+    sprintf(&mesg[strlen(mesg)], "Read %d line", nline);
+    if (nline != 1) strcat(mesg, "s");
+    strcat(mesg, MLpost);
+    if (!silent) {                      /* GGR */
+        mlwrite(mesg);
+        if (s == FIOMEM) sleep(1);      /* Let it be seen */
+    }
 
-        /* read the file in */
-        if (!silent)    /* GGR */
-                mlwrite(MLpre "Reading file" MLpost);
-        nline = 0;
-        while ((s = ffgetline()) == FIOSUC) {
-/* GGR - ftrulen is the real length of the line */
-                if ((lp1 = lalloc(ftrulen)) == NULL) {
-                        s = FIOMEM;     /* Keep message on */
-                        break;          /* the display.    */
-                }
-                if (nline > MAXNLINE) {
-                        s = FIOMEM;
-                        break;
-                }
-                lp2 = lback(curbp->b_linep);
-                lp2->l_fp = lp1;
-                lp1->l_fp = curbp->b_linep;
-                lp1->l_bp = lp2;
-                curbp->b_linep->l_bp = lp1;
-                lfillchars(lp1, ftrulen, fline);
-                ++nline;
-                if (!(nline % 300) && !silent)  /* GGR */
-                        mlwrite(MLpre "Reading file" MLpost " : %d lines",
-                             nline);
-
+out:
+    for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+        if (wp->w_bufp == curbp) {
+            wp->w_linep = lforw(curbp->b_linep);
+            wp->w_dotp = lforw(curbp->b_linep);
+            wp->w_doto = 0;
+            wp->w_markp = NULL;
+            wp->w_marko = 0;
+            wp->w_flag |= WFMODE | WFHARD;
         }
-        ffclose();              /* Ignore errors.       */
-        strcpy(mesg, MLpre);
-        if (s == FIOERR) {
-                strcat(mesg, "I/O ERROR, ");
-                curbp->b_flag |= BFTRUNC;
-        }
-        if (s == FIOMEM) {
-                strcat(mesg, "OUT OF MEMORY, ");
-                curbp->b_flag |= BFTRUNC;
-        }
-        sprintf(&mesg[strlen(mesg)], "Read %d line", nline);
-        if (nline != 1)
-                strcat(mesg, "s");
-        strcat(mesg, MLpost);
-        if (!silent) {          /* GGR */
-              mlwrite(mesg);
-              if (s == FIOMEM)
-                    sleep(1);   /* Let it be seen */
-        }
-
-      out:
-        for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-                if (wp->w_bufp == curbp) {
-                        wp->w_linep = lforw(curbp->b_linep);
-                        wp->w_dotp = lforw(curbp->b_linep);
-                        wp->w_doto = 0;
-                        wp->w_markp = NULL;
-                        wp->w_marko = 0;
-                        wp->w_flag |= WFMODE | WFHARD;
-                }
-        }
-        if (s == FIOERR || s == FIOFNF) /* False if error.      */
-                return FALSE;
-        return TRUE;
+    }
+    if (s == FIOERR || s == FIOFNF) return FALSE;   /* False if error. */
+    return TRUE;
 }
 
 /*
@@ -522,53 +505,46 @@ int filesave(int f, int n)
 }
 
 /*
- * This function performs the details of file
- * writing. Uses the file management routines in the
- * "fileio.c" package. The number of lines written is
- * displayed. Sadly, it looks inside a struct line; provide
- * a macro for this. Most of the grief is error
- * checking of some sort.
+ * This function performs the details of file writing.
+ * Uses the file management routines in the "fileio.c" package.
+ * The number of lines written is displayed.
+ * Most of the grief is error checking of some sort.
  */
-int writeout(char *fn)
-{
-        int s;
-        struct line *lp;
-        int nline;
+int writeout(char *fn) {
+    int s;
+    struct line *lp;
+    int nline;
 
-#if     CRYPT
-        s = resetkey();
-        if (s != TRUE)
-                return s;
+#if CRYPT
+    s = resetkey();
+    if (s != TRUE) return s;
 #endif
 
-        if ((s = ffwopen(fn)) != FIOSUC) {      /* Open writes message. */
-                return FALSE;
-        }
-        mlwrite(MLpre "Writing..." MLpost);     /* tell us were writing */
-        lp = lforw(curbp->b_linep);     /* First line.          */
-        nline = 0;              /* Number of lines.     */
-        while (lp != curbp->b_linep) {
-                if ((s = ffputline(&lp->l_text[0], llength(lp))) != FIOSUC)
-                        break;
-                ++nline;
-                if (!(nline % 300) && !silent)  /* GGR */
-                        mlwrite(MLpre "Writing..." MLpost " : %d lines",nline);
-                lp = lforw(lp);
-        }
-        if (s == FIOSUC) {      /* No write error.      */
-                ffputline(NULL, 0); /* Must flush the write cache */
-                s = ffclose();
-                if (s == FIOSUC) {      /* No close error.      */
-                        if (nline == 1)
-                                mlwrite(MLpre "Wrote 1 line" MLpost);
-                        else
-                                mlwrite(MLpre "Wrote %d lines" MLpost, nline);
-                }
-        } else                  /* Ignore close error   */
-                ffclose();      /* if a write error.    */
-        if (s != FIOSUC)        /* Some sort of error.  */
-                return FALSE;
-        return TRUE;
+    if ((s = ffwopen(fn)) != FIOSUC) return FALSE;  /* Open writes message */
+
+    mlwrite(MLpre "Writing..." MLpost);     /* tell us were writing */
+    lp = lforw(curbp->b_linep);             /* First line.          */
+    nline = 0;                              /* Number of lines.     */
+    while (lp != curbp->b_linep) {
+        if ((s = ffputline(lp->l_text, llength(lp))) != FIOSUC) break;
+        ++nline;
+        if (!(nline % 300) && !silent)      /* GGR */
+            mlwrite(MLpre "Writing..." MLpost " : %d lines",nline);
+        lp = lforw(lp);
+    }
+    if (s == FIOSUC) {                      /* No write error.      */
+        ffputline(NULL, 0);                 /* Must flush write cache!! */
+        s = ffclose();
+        if (s == FIOSUC) {                  /* No close error.      */
+            if (nline == 1)
+                mlwrite(MLpre "Wrote 1 line" MLpost);
+            else
+                mlwrite(MLpre "Wrote %d lines" MLpost, nline);
+            }
+    } else                                  /* Ignore close error   */
+        ffclose();                          /* if a write error.    */
+    if (s != FIOSUC) return FALSE;          /* Some sort of error.  */
+    return TRUE;
 }
 
 /*
@@ -628,8 +604,8 @@ int ifile(char *fname) {
 
     pathexpand = FALSE;     /* GGR */
 
-    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
-    if (s == FIOFNF) {      /* File not found.      */
+    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
+    if (s == FIOFNF) {                              /* File not found */
         mlwrite(MLpre "No such file" MLpost);
         return FALSE;
     }
@@ -647,11 +623,7 @@ int ifile(char *fname) {
 
     nline = 0;
     while ((s = ffgetline()) == FIOSUC) {
-/* GGR - ftrulen to handle encrypted files(?) */
-        if ((lp1 = lalloc(ftrulen)) == NULL) {
-            s = FIOMEM;     /* Keep message on the  */
-            break;  /* display.             */
-        }
+        lp1 = fline;            /* Allocate by ffgetline..*/
         lp0 = curwp->w_dotp;    /* line previous to insert */
         lp2 = lp0->l_fp;        /* line after insert */
 
@@ -663,8 +635,6 @@ int ifile(char *fname) {
 
 /* And advance and write out the current line */
         curwp->w_dotp = lp1;
-/* GGR - ftrulen to handle encrypted files(?) */
-        lfillchars(lp1, ftrulen, fline);
         ++nline;
         if (!(nline % 300) && !silent)      /* GGR */
              mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
