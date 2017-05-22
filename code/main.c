@@ -99,7 +99,7 @@ fputs(
 , stdout);
 #endif
 fputs(
-"      -n           accept null chars"                    NL \
+"      -n           accept null chars (now always true)"  NL \
 "      -r           restrictive use"                      NL \
 "      -s<str>      initial search string"                NL \
 "      -v           view only (no edit)"                  NL \
@@ -109,6 +109,223 @@ fputs(
 , stdout);
   exit(status);
 }
+
+/* EXPERIMENTAL KBD MACRO CODE */
+
+/* Create a new keyboard-macro buffer */
+
+static int create_kbdmacro_buffer(void) {
+    if ((kbdmac_bp = bfind(kbdmacro_buffer, TRUE, BFINVS)) == NULL) {
+        mlwrite("Cannot create keyboard macro buffer!");
+        return FALSE;
+    }
+    kbdmac_bp->b_type = BTPROC;     /* Mark the buffer type */
+    struct buffer *obp = curbp;
+    if (!swbuffer(kbdmac_bp)) {
+        mlwrite("create: cannot reach keyboard macro buffer!");
+        return FALSE;
+    }
+    linstr("write-message \"No keyboard macro yet defined\"");
+    return swbuffer(obp);
+}
+
+static char kbd_text[1024];
+static int kbd_idx;
+static int must_quote;
+
+enum KDBM_direction { GetTo_KDBM, OutOf_KDBM };
+
+extern int reframe(struct window *);
+static int kbdmac_buffer_toggle(enum KDBM_direction mode, char *who) {
+    static enum KDBM_direction last_mode = OutOf_KDBM;  /* This must toggle */
+    static struct buffer *obp;
+    static int saved_nw;
+
+    switch(mode) {
+    case GetTo_KDBM:
+        if (last_mode == GetTo_KDBM) goto out_of_phase;
+        last_mode = GetTo_KDBM;
+        obp = curbp;                    /* Save whence we came */
+        saved_nw = kbdmac_bp->b_nwnd;   /* Mark as "not viewed" */
+        kbdmac_bp->b_nwnd = 0;
+        if (!swbuffer(kbdmac_bp)) {
+            mlwrite("%s: cannot reach keyboard macro buffer!", who);
+            kbdmac_bp->b_nwnd = saved_nw;
+            kbdmode = STOP;
+            return FALSE;
+        }
+        return TRUE;
+    case OutOf_KDBM:
+        if (last_mode == OutOf_KDBM) goto out_of_phase;
+        last_mode = OutOf_KDBM;
+        int status = swbuffer(obp);
+        kbdmac_bp->b_nwnd = saved_nw;
+        return status;
+    }
+out_of_phase:                       /* Can only get here on error */
+    mlforce("Keyboard macro collection out of phase - aborted.");
+    kbdmode = STOP;
+    return FALSE;
+}
+
+
+static int start_kbdmacro(void) {
+    if (!kbdmac_bp) {
+        mlwrite("start: no keyboard macro buffer!");
+        return FALSE;
+    }
+
+    bclear(kbdmac_bp);
+    kbd_idx = must_quote = 0;
+    if (!kbdmac_buffer_toggle(GetTo_KDBM, "start")) return FALSE;
+    linstr("; keyboard macro\n");
+    return kbdmac_buffer_toggle(OutOf_KDBM, "start");
+}
+
+/* Would be nice to be able to count consecutive calls to certain
+ * functions (forward-character, next-line, etc.) and just use
+ * one call with a numeric arg.
+ */
+
+void addchar_kbdmacro(char addch) {
+
+    char cc = addch & 0xff;
+    char xc = 0;
+    switch(cc) {
+    case 8:   xc = 'b'; break;
+    case 9:   xc = 't'; break;
+    case 10:  xc = 'n'; break;
+    case 12:  xc = 'f'; break;
+    case 13:  xc = 'r'; break;
+    case '~': xc = '~'; break;      /* It *does* handle this */
+    case '"': xc = '"';             /* AND DROP THROUGH!! */
+    case ' ': must_quote = 1; break;
+    }
+    if (xc != 0) {
+        kbd_text[kbd_idx++] = '~';
+        cc = xc;
+    }
+    kbd_text[kbd_idx++] = cc;
+    return;
+}
+
+/* Flush any pending text so as to be insert raw.
+ * Needs to handle spaces and token()'s special characters.
+ * functions (forward-character, next-line, etc.) and just use
+ * one call with a numeric arg.
+ */
+static void flush_kbd_text(void) {
+    lnewline();
+    linstr("insert-raw-string ");
+    if (must_quote) linsert(1, '"');
+    kbd_text[kbd_idx] = '\0';
+    linstr(kbd_text);
+    if (must_quote) linsert(1, '"');
+    kbd_idx = must_quote = 0;
+    return;
+}
+
+static int func_rpt_cnt = 0;
+static void set_narg_kbdmacro(int n) {
+    func_rpt_cnt = n;
+    return;
+}
+int addto_kbdmacro(char *text, int new_command, int do_quote) {
+    if (!kbdmac_bp) {
+        mlwrite("addto: no keyboard macro buffer!");
+        return FALSE;
+    }
+    if (!kbdmac_buffer_toggle(GetTo_KDBM, "addto")) return FALSE;
+
+/* If there is any pending text we need to flush it first */
+    if (kbd_idx) flush_kbd_text();
+    if (new_command) {
+        lnewline();
+        if (func_rpt_cnt) {
+            linstr(itoa(func_rpt_cnt));
+            linsert(1, ' ');
+            func_rpt_cnt = 0;
+        }
+    }
+    else linsert(1, ' ');
+    if (!do_quote) linstr(text);
+    else {
+        int qreq = 0;
+        for (char *tp = text; *tp; tp++) {
+            if (*tp == ' ') {
+                qreq = 1;
+                break;
+            }
+        }
+        if (qreq) linsert(1, '"');
+        for (char *tp = text; *tp; tp++) {
+            char cc = *tp & 0xff;
+            char xc = 0;
+            switch(cc) {
+            case 8:   xc = 'b'; break;
+            case 9:   xc = 't'; break;
+            case 10:  xc = 'n'; break;
+            case 12:  xc = 'f'; break;
+            case 13:  xc = 'r'; break;
+            case '~': xc = '~'; break;      /* It *does* handle this */
+            }
+            if (xc != 0) {
+                linsert(1, '~');
+                cc = xc;
+            }
+            linsert(1, cc);
+	}
+        if (qreq) linsert(1, '"');
+    }
+    return kbdmac_buffer_toggle(OutOf_KDBM, "addto");
+}
+
+static int end_kbdmacro(void) {
+    if (!kbdmac_bp) {
+        mlwrite("end: no keyboard macro buffer!");
+        return FALSE;
+    }
+    if (!kbdmac_buffer_toggle(GetTo_KDBM, "end")) return FALSE;
+
+/* If there is any pending text we need to flush it first */
+    if (kbd_idx) flush_kbd_text();
+    lnewline();
+    return kbdmac_buffer_toggle(OutOf_KDBM, "end");
+}
+
+int macro_helper(int f, int n) {
+    if (mbstop()) return FALSE;
+    char tag[2];                        /* Just char + NULL needed */
+    int status = mlreplyall("helper:", tag, 1);
+    if (status != TRUE) return status;  /* Only act on +ve response */
+    switch(tag[0]) {
+    case '}':
+    case ']':
+    case ')':
+        return insbrace(n, tag[0]);
+    case '#':   return inspound();
+    }
+    return FALSE;
+}
+
+#if 0
+No longer needed, but leave as exmaple of function prop lookups */
+/* Check whether a function takes any args */
+
+static int takes_args(fn_t look4) {
+
+    struct name_bind *ffp;  /* Entry in name binding table */
+
+/* Scan through the table, returning any match */
+
+    ffp = &names[0];
+    while (ffp->n_func != NULL) {
+        if (ffp->n_func == look4) return ffp->opt.has_text_args;
+        ++ffp;
+    }
+    return 0;                   /* ??? */
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -294,6 +511,14 @@ int main(int argc, char **argv)
         /* Initialize the editor. */
         vtinit();               /* Display */
         edinit("main");         /* Buffers, windows */
+
+/* Set this up before running init files */
+
+        if (!create_kbdmacro_buffer()) {    /* Set this up */
+            sleep(2);
+            vttidy();
+            exit(1);
+        }
 
 /* GGR - Now process initialisation files before processing rest of comline */
         silent = TRUE;
@@ -553,59 +778,82 @@ void edinit(char *bname) {
  * and arranges to move it to the "lastflag", so that the next command can
  * look at it. Return the status of command.
  */
+
 int execute(int c, int f, int n)
 {
-        int status;
-        fn_t execfunc;
-        char *pbp;
+    int status;
+    fn_t execfunc;
+    char *pbp;
 
-        /* if the keystroke is a bound function...do it */
+/* If the keystroke is a bound function...do it */
 
-        execfunc = getbind(c, &pbp);
-        if (execfunc != NULL) {
-                thisflag = 0;
+    execfunc = getbind(c, &pbp);
+    if (execfunc != NULL) {
+        if (execfunc == nullproc) return(TRUE);
+
+        thisflag = 0;
 /* GGR - implement re-execute */
-                if (inreex) {
-                        if ((execfunc == fisearch) || (execfunc == forwsearch))
-                             execfunc = forwhunt;
-                        if ((execfunc == risearch) || (execfunc == backsearch))
-                             execfunc = backhunt;
-                }
-                else if ((execfunc != reexecute) && (execfunc != nullproc)
+        if (inreex) {
+            if ((execfunc == fisearch) || (execfunc == forwsearch))
+                execfunc = forwhunt;
+            if ((execfunc == risearch) || (execfunc == backsearch))
+                execfunc = backhunt;
+        }
+        else if ((execfunc != reexecute) && (execfunc != nullproc)
                         && (kbdmode != PLAY)) {
-                        clast = c;
-                        flast = f;
-                        nlast = n;
-                }
-                if (pbp != NULL) input_waiting = pbp;
-                else input_waiting = NULL;
-                status = (*execfunc) (f, n);
-                input_waiting = NULL;
-                lastflag = thisflag;
-/* GGR - abort keyboard macro at point of error */
-                if ((kbdmode == PLAY) & !status) kbdmode = STOP;
-
-                return status;
+            clast = c;
+            flast = f;
+            nlast = n;
         }
 
-        /*
-         * If a space was typed, fill column is defined, the argument is non-
-         * negative, wrap mode is enabled, and we are now past fill column,
-         * and we are not read-only, perform word wrap.
-         */
-        if (c == ' ' && (curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
-            n >= 0 && getccol(FALSE) > fillcol &&
-            (curwp->w_bufp->b_mode & MDVIEW) == FALSE)
+        if (!inmb && kbdmode == RECORD) {
+            if (execfunc == namedcmd) {     /* Use next function directly... */
+                if ((f > 0) && (n != 1))    /* ...but record any count */
+                    set_narg_kbdmacro(n);
+            }
+            else if (execfunc == nullproc || execfunc == ctlxe ||
+                     execfunc == ctlxrp   || execfunc == quote ||
+                     execfunc == reexecute) {
+                ;                           /* Ignore it */
+            }
+            else {                          /* Record it */
+                if ((f > 0) && (n != 1)) set_narg_kbdmacro(n);
+                addto_kbdmacro(getfname(execfunc), 1, 0);
+            }
+        }
+        if (pbp != NULL) {
+            input_waiting = pbp;
+            if (!inmb && kbdmode == RECORD)
+                 addto_kbdmacro(input_waiting, 0, 0);
+        }
+        else input_waiting = NULL;
+
+        status = (*execfunc) (f, n);
+        input_waiting = NULL;
+        lastflag = thisflag;
+/* GGR - abort keyboard macro at point of error */
+        if ((kbdmode == PLAY) & !status) kbdmode = STOP;
+        return status;
+    }
+
+/*
+ * If a space was typed, fill column is defined, the argument is non-
+ * negative, wrap mode is enabled, and we are now past fill column,
+ * and we are not read-only, perform word wrap.
+ */
+    if (c == ' ' && (curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
+          n >= 0 && getccol(FALSE) > fillcol &&
+         (curwp->w_bufp->b_mode & MDVIEW) == FALSE)
                 execute(META | SPEC | 'W', FALSE, 1);
 
-        if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
+    if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
 #if     IBMPC
-            || (c >= 0x80 && c <= 0xFE)) {
+        || (c >= 0x80 && c <= 0xFE)) {
 #else
 #if     BSD || USG       /* 8BIT P.K. */
-            || (c >= 0xA0 && c <= 0x10FFFF)) {
+        || (c >= 0xA0 && c <= 0x10FFFF)) {
 #else
-            ) {
+        ) {
 #endif
 #endif
 
@@ -614,56 +862,73 @@ int execute(int c, int f, int n)
  * If this returns TRUE then the character has been handled such that
  * we do not need to insert it.
  */
-                if (curbp->b_mode & MDPHON) {
-                    if (ptt_handler(c)) return TRUE;
-                }
+        if (curbp->b_mode & MDPHON) {
+            if (ptt_handler(c)) return TRUE;
+        }
 
-                if (n <= 0) {   /* Fenceposts.          */
-                        lastflag = 0;
-                        return n < 0 ? FALSE : TRUE;
-                }
-                thisflag = 0;   /* For the future.      */
+        if (n <= 0) {   /* Fenceposts.          */
+            lastflag = 0;
+            return n < 0 ? FALSE : TRUE;
+        }
+        thisflag = 0;   /* For the future.      */
 
-                /* if we are in overwrite mode, not at eol,
-                   and next char is not a tab or we are at a tab stop,
-                   delete a char forword                        */
-                if (curwp->w_bufp->b_mode & MDOVER &&
-                    curwp->w_doto < curwp->w_dotp->l_used &&
-                    (lgetc(curwp->w_dotp, curwp->w_doto) != '\t' ||
-                     (curwp->w_doto) % 8 == 7))
-                        ldelchar(1, FALSE);
+/* If we are in overwrite mode, not at eol, and next char is not a tab
+ * or we are at a tab stop, delete a char forword
+ */
+        if (curwp->w_bufp->b_mode & MDOVER &&
+            curwp->w_doto < curwp->w_dotp->l_used &&
+            (lgetc(curwp->w_dotp, curwp->w_doto) != '\t' ||
+            (curwp->w_doto) % 8 == 7))
+                ldelchar(1, FALSE);
 
-                /* do the appropriate insertion */
-                if (c == '}' && (curbp->b_mode & MDCMOD) != 0)
-                        status = insbrace(n, c);
-                else if (c == '#' && (curbp->b_mode & MDCMOD) != 0)
-                        status = inspound();
-                else
-                        status = linsert(n, c);
+/* Do the appropriate insertion */
+        if (c == '}' && (curbp->b_mode & MDCMOD) != 0) {
+            status = insbrace(n, c);
+            if (!inmb && kbdmode == RECORD) {
+                if ((f > 0) && (n != 1))    /* Record any count */
+                    set_narg_kbdmacro(n);
+                addto_kbdmacro("macro-helper", 1, 0);
+                addto_kbdmacro("}", 0, 0);
+            }
+        }
+        else if (c == '#' && (curbp->b_mode & MDCMOD) != 0) {
+            status = inspound();
+            if (!inmb && kbdmode == RECORD) {
+                 addto_kbdmacro("macro-helper", 1, 0);
+                 addto_kbdmacro("#", 0, 0);
+            }
+	}
+        else {
+            status = linsert(n, c);
+            if (!inmb && kbdmode == RECORD) {
+                int nc = 1;
+                if ((f > 0) && (n > 1)) nc = n;
+                while(nc--) addchar_kbdmacro(c);
+	    }
+	}
 
 #if     CFENCE
-                /* check for CMODE fence matching */
-                if ((c == '}' || c == ')' || c == ']') &&
-                    (curbp->b_mode & MDCMOD) != 0)
-                        fmatch(c);
+/* Check for CMODE fence matching */
+         if ((c == '}' || c == ')' || c == ']') &&
+            (curbp->b_mode & MDCMOD) != 0)
+                fmatch(c);
 #endif
 
-                /* check auto-save mode */
-                if (curbp->b_mode & MDASAVE)
-                        if (--gacount == 0) {
-                                /* and save the file if needed */
-                                upscreen(FALSE, 0);
-                                filesave(FALSE, 0);
-                                gacount = gasave;
-                        }
+/* Check auto-save mode */
+        if (curbp->b_mode & MDASAVE)
+            if (--gacount == 0) {   /* And save the file if needed */
+                upscreen(FALSE, 0);
+                filesave(FALSE, 0);
+                gacount = gasave;
+            }
 
-                lastflag = thisflag;
-                return status;
-        }
-        TTbeep();
-        mlwrite(MLpre "Key not bound" MLpost);  /* complain             */
-        lastflag = 0;                           /* Fake last flags.     */
-        return FALSE;
+        lastflag = thisflag;
+        return status;
+    }
+    TTbeep();
+    mlwrite(MLpre "Key not bound" MLpost);  /* complain             */
+    lastflag = 0;                           /* Fake last flags.     */
+    return FALSE;
 }
 
 /*
@@ -744,17 +1009,31 @@ int quit(int f, int n)
  * Error if not at the top level in keyboard processing. Set up variables and
  * return.
  */
-int ctlxlp(int f, int n)
-{
-        if (kbdmode != STOP) {
-                mlwrite("%%Macro already active");
-                return FALSE;
+int ctlxlp(int f, int n) {
+    if (kbdmode != STOP) {
+        mlwrite("%%Macro already active");
+        return FALSE;
+    }
+    if (strcmp(curbp->b_bname, kbdmacro_buffer) == 0) {
+        mlwrite("%%Cannot collect macro when in keyboard macro buffer");
+        return FALSE;
+    }
+
+#if GMLTEST
+    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
+        if (strcmp( wp->w_bufp->b_bname, kbdmacro_buffer) == 0) {
+            mlwrite("%%Cannot collect macro while macro buffer is visible");
+            return FALSE;
         }
-        mlwrite(MLpre "Start macro" MLpost);
-        kbdptr = &kbdm[0];
-        kbdend = kbdptr;
-        kbdmode = RECORD;
-        return TRUE;
+    }
+#endif
+
+    mlwrite(MLpre "Start macro" MLpost);
+    kbdptr = &kbdm[0];
+    kbdend = kbdptr;
+    kbdmode = RECORD;
+    start_kbdmacro();
+    return TRUE;
 }
 
 /*
@@ -770,6 +1049,7 @@ int ctlxrp(int f, int n)
         if (kbdmode == RECORD) {
                 mlwrite(MLpre "End macro" MLpost);
                 kbdmode = STOP;
+                end_kbdmacro();
         }
         return TRUE;
 }

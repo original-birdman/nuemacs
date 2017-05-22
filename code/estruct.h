@@ -443,6 +443,7 @@ struct buffer {
         struct ptt_ent *ptt_headp;
         int b_type;             /* Type of buffer */
 #endif
+        int b_exec_level;       /* Recursion level */
         int b_doto;             /* Offset of "." in above struct line */
         int b_marko;            /* but for the "mark"           */
         int b_mode;             /* editor mode of this buffer   */
@@ -570,6 +571,10 @@ struct key_tab {
 struct name_bind {
         char *n_name;            /* name of function key */
         fn_t n_func;             /* function name is bound to */
+        struct {
+            unsigned int skip_in_macro :1;
+            unsigned int not_mb :1;
+        } opt;
 };
 
 /* The editor holds deleted text chunks in the struct kill buffer. The

@@ -177,12 +177,13 @@ store-procedure _mytoggle-mode          ; toggle local/global mode
     !if &seq %modesel "H"
         !if $hscroll
             set %how off
-        !else  
+        !else
             set %how on
         !endif
         set %report "(GLOBAL) horizontal scrolling toggled "
         set $hscroll &not $hscroll
         !goto report
+    !endif
 ;
     !if &seq %modesel "W"
         set %bit 1
@@ -340,6 +341,9 @@ set %list-indent-text " %2d. "
 
 ; Single UTF-16 surrogates
 char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
+
+; Testing for new keyboard macro code
+buffer-to-key /kbd_macro    ^XV
 
 ;
 set $discmd TRUE

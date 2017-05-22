@@ -11,236 +11,238 @@
 #include "line.h"
 
 struct name_bind names[] = {
-        {"abort-command", ctrlg},
-        {"add-mode", setemode},
-        {"add-global-mode", setgmode},
+        {"abort-command", ctrlg, {0, 0}},
+        {"add-mode", setemode, {0, 1}},
+        {"add-global-mode", setgmode, {0, 1}},
 #if     APROP
-        {"apropos", apro},
+        {"apropos", apro, {0, 1}},
 #endif
-        {"backward-character", back_grapheme},
-        {"begin-macro", ctlxlp},
-        {"beginning-of-file", gotobob},
-        {"beginning-of-line", gotobol},
-        {"bind-to-key", bindtokey},
-        {"buffer-position", showcpos},
-        {"buffer-to-key", buffertokey},     /* GGR */
-        {"case-region-lower", lowerregion},
-        {"case-region-upper", upperregion},
-        {"case-word-capitalize", capword},
-        {"case-word-lower", lowerword},
-        {"case-word-upper", upperword},
-        {"change-file-name", filename},
-        {"change-screen-size", newsize},
-        {"change-screen-width", newwidth},
-        {"char-replace", char_replace},     /* GGR */
-        {"clear-and-redraw", redraw},
-        {"clear-message-line", clrmes},
-        {"copy-region", copyregion},
+        {"backward-character", back_grapheme, {0, 0}},
+        {"begin-macro", ctlxlp, {0, 0}},
+        {"beginning-of-file", gotobob, {0, 0}},
+        {"beginning-of-line", gotobol, {0, 0}},
+        {"bind-to-key", bindtokey, {0, 0}},
+        {"buffer-position", showcpos, {0, 0}},
+        {"buffer-to-key", buffertokey, {0, 0}},     /* GGR */
+        {"case-region-lower", lowerregion, {0, 0}},
+        {"case-region-upper", upperregion, {0, 0}},
+        {"case-word-capitalize", capword, {0, 0}},
+        {"case-word-lower", lowerword, {0, 0}},
+        {"case-word-upper", upperword, {0, 0}},
+        {"change-file-name", filename, {0, 0}},
+        {"change-screen-size", newsize, {0, 0}},
+        {"change-screen-width", newwidth, {0, 0}},
+        {"char-replace", char_replace, {0, 0}},     /* GGR */
+        {"clear-and-redraw", redraw, {0, 0}},
+        {"clear-message-line", clrmes, {0, 0}},
+        {"copy-region", copyregion, {0, 0}},
 #if     WORDPRO
-        {"count-words", wordcount},
+        {"count-words", wordcount, {0, 0}},
 #endif
-        {"ctlx-prefix", cex},
-        {"delete-blank-lines", deblank},
-        {"delete-buffer", killbuffer},
-        {"delete-mode", delmode},
-        {"delete-global-mode", delgmode},
-        {"delete-next-character", forwdel},
-        {"delete-next-word", delfword},
-        {"delete-other-windows", onlywind},
-        {"delete-previous-character", backdel},
-        {"delete-previous-word", delbword},
-        {"delete-window", delwind},
-        {"describe-bindings", desbind},
-        {"describe-key", deskey},
+        {"ctlx-prefix", cex, {0, 0}},
+        {"delete-blank-lines", deblank, {0, 0}},
+        {"delete-buffer", killbuffer, {0, 0}},
+        {"delete-mode", delmode, {0, 1}},
+        {"delete-global-mode", delgmode, {0, 1}},
+        {"delete-next-character", forwdel, {0, 0}},
+        {"delete-next-word", delfword, {0, 0}},
+        {"delete-other-windows", onlywind, {0, 1}},
+        {"delete-previous-character", backdel, {0, 0}},
+        {"delete-previous-word", delbword, {0, 0}},
+        {"delete-window", delwind, {0, 1}},
+        {"describe-bindings", desbind, {0, 1}},
+        {"describe-key", deskey, {0, 0}},
 #if     AEDIT
-        {"detab-line", detab},
+        {"detab-line", detab, {0, 0}},
 #endif
-        {"end-macro", ctlxrp},
-        {"end-of-file", gotoeob},
-        {"end-of-line", gotoeol},
-        {"eos-chars", eos_chars},           /* GGR */
+        {"end-macro", ctlxrp, {0, 0}},
+        {"end-of-file", gotoeob, {0, 0}},
+        {"end-of-line", gotoeol, {0, 0}},
+        {"eos-chars", eos_chars, {0, 0}},           /* GGR */
 #if     AEDIT
-        {"entab-line", entab},
+        {"entab-line", entab, {0, 0}},
 #endif
-        {"exchange-point-and-mark", swapmark},
-        {"execute-buffer", execbuf},
-        {"execute-command-line", execcmd},
-        {"execute-file", execfile},
-        {"execute-macro", ctlxe},
-        {"execute-macro-1", cbuf1},
-        {"execute-macro-2", cbuf2},
-        {"execute-macro-3", cbuf3},
-        {"execute-macro-4", cbuf4},
-        {"execute-macro-5", cbuf5},
-        {"execute-macro-6", cbuf6},
-        {"execute-macro-7", cbuf7},
-        {"execute-macro-8", cbuf8},
-        {"execute-macro-9", cbuf9},
-        {"execute-macro-10", cbuf10},
-        {"execute-macro-11", cbuf11},
-        {"execute-macro-12", cbuf12},
-        {"execute-macro-13", cbuf13},
-        {"execute-macro-14", cbuf14},
-        {"execute-macro-15", cbuf15},
-        {"execute-macro-16", cbuf16},
-        {"execute-macro-17", cbuf17},
-        {"execute-macro-18", cbuf18},
-        {"execute-macro-19", cbuf19},
-        {"execute-macro-20", cbuf20},
-        {"execute-macro-21", cbuf21},
-        {"execute-macro-22", cbuf22},
-        {"execute-macro-23", cbuf23},
-        {"execute-macro-24", cbuf24},
-        {"execute-macro-25", cbuf25},
-        {"execute-macro-26", cbuf26},
-        {"execute-macro-27", cbuf27},
-        {"execute-macro-28", cbuf28},
-        {"execute-macro-29", cbuf29},
-        {"execute-macro-30", cbuf30},
-        {"execute-macro-31", cbuf31},
-        {"execute-macro-32", cbuf32},
-        {"execute-macro-33", cbuf33},
-        {"execute-macro-34", cbuf34},
-        {"execute-macro-35", cbuf35},
-        {"execute-macro-36", cbuf36},
-        {"execute-macro-37", cbuf37},
-        {"execute-macro-38", cbuf38},
-        {"execute-macro-39", cbuf39},
-        {"execute-macro-40", cbuf40},
-        {"execute-named-command", namedcmd},
+        {"exchange-point-and-mark", swapmark, {0, 0}},
+        {"execute-buffer", execbuf, {0, 0}},
+        {"execute-command-line", execcmd, {0, 0}},
+        {"execute-file", execfile, {0, 0}},
+        {"execute-macro", ctlxe, {1, 0}},
+        {"execute-macro-1", cbuf1, {0, 0}},
+        {"execute-macro-2", cbuf2, {0, 0}},
+        {"execute-macro-3", cbuf3, {0, 0}},
+        {"execute-macro-4", cbuf4, {0, 0}},
+        {"execute-macro-5", cbuf5, {0, 0}},
+        {"execute-macro-6", cbuf6, {0, 0}},
+        {"execute-macro-7", cbuf7, {0, 0}},
+        {"execute-macro-8", cbuf8, {0, 0}},
+        {"execute-macro-9", cbuf9, {0, 0}},
+        {"execute-macro-10", cbuf10, {0, 0}},
+        {"execute-macro-11", cbuf11, {0, 0}},
+        {"execute-macro-12", cbuf12, {0, 0}},
+        {"execute-macro-13", cbuf13, {0, 0}},
+        {"execute-macro-14", cbuf14, {0, 0}},
+        {"execute-macro-15", cbuf15, {0, 0}},
+        {"execute-macro-16", cbuf16, {0, 0}},
+        {"execute-macro-17", cbuf17, {0, 0}},
+        {"execute-macro-18", cbuf18, {0, 0}},
+        {"execute-macro-19", cbuf19, {0, 0}},
+        {"execute-macro-20", cbuf20, {0, 0}},
+        {"execute-macro-21", cbuf21, {0, 0}},
+        {"execute-macro-22", cbuf22, {0, 0}},
+        {"execute-macro-23", cbuf23, {0, 0}},
+        {"execute-macro-24", cbuf24, {0, 0}},
+        {"execute-macro-25", cbuf25, {0, 0}},
+        {"execute-macro-26", cbuf26, {0, 0}},
+        {"execute-macro-27", cbuf27, {0, 0}},
+        {"execute-macro-28", cbuf28, {0, 0}},
+        {"execute-macro-29", cbuf29, {0, 0}},
+        {"execute-macro-30", cbuf30, {0, 0}},
+        {"execute-macro-31", cbuf31, {0, 0}},
+        {"execute-macro-32", cbuf32, {0, 0}},
+        {"execute-macro-33", cbuf33, {0, 0}},
+        {"execute-macro-34", cbuf34, {0, 0}},
+        {"execute-macro-35", cbuf35, {0, 0}},
+        {"execute-macro-36", cbuf36, {0, 0}},
+        {"execute-macro-37", cbuf37, {0, 0}},
+        {"execute-macro-38", cbuf38, {0, 0}},
+        {"execute-macro-39", cbuf39, {0, 0}},
+        {"execute-macro-40", cbuf40, {0, 0}},
+        {"execute-named-command", namedcmd, {1, 0}},
 #if     PROC
-        {"execute-procedure", execproc},
+        {"execute-procedure", execproc, {0, 1}},
 #endif
-        {"execute-program", execprg},
-        {"exit-emacs", quit},
+        {"execute-program", execprg, {0, 1}},
+        {"exit-emacs", quit, {0, 1}},
 #if     WORDPRO
-        {"fill-paragraph", fillpara},
-        {"fill-all-paragraphs", fillwhole}, /* GGR */
+        {"fill-paragraph", fillpara, {0, 0}},
+        {"fill-all-paragraphs", fillwhole, {0, 0}}, /* GGR */
 #endif
-        {"filter-buffer", filter_buffer},
-        {"find-file", filefind},
-        {"forward-character", forw_grapheme},
-        {"ggr-style", ggr_style},           /* GGR */
-        {"goto-line", gotoline},
+        {"filter-buffer", filter_buffer, {0, 0}},
+        {"find-file", filefind, {0, 0}},
+        {"forward-character", forw_grapheme, {0, 0}},
+        {"ggr-style", ggr_style, {0, 0}},           /* GGR */
+        {"goto-line", gotoline, {0, 0}},
 #if     CFENCE
-        {"goto-matching-fence", getfence},
+        {"goto-matching-fence", getfence, {0, 0}},
 #endif
-        {"grow-window", enlargewind},
-        {"handle-tab", insert_tab},
-        {"hunt-forward", forwhunt},
-        {"hunt-backward", backhunt},
-        {"help", help},
-        {"i-shell", spawncli},
+        {"grow-window", enlargewind, {0, 1}},
+        {"handle-tab", insert_tab, {0, 0}},
+        {"hunt-forward", forwhunt, {0, 0}},
+        {"hunt-backward", backhunt, {0, 0}},
+        {"help", help, {0, 1}},
+        {"i-shell", spawncli, {0, 1}},
 #if     ISRCH
-        {"incremental-search", fisearch},
+        {"incremental-search", fisearch, {0, 1}},
 #endif
-        {"insert-file", insfile},
-        {"insert-space", insspace},
-        {"insert-string", istring},
+        {"insert-file", insfile, {0, 0}},
+        {"insert-space", insspace, {0, 0}},
+        {"insert-string", istring, {0, 0}},
+        {"insert-raw-string", rawstring, {0, 0}},
 #if     WORDPRO
-        {"justify-paragraph", justpara},
-        {"kill-paragraph", killpara},
+        {"justify-paragraph", justpara, {0, 0}},
+        {"kill-paragraph", killpara, {0, 0}},
 #endif
-        {"kill-region", killregion},
-        {"kill-to-end-of-line", killtext},
-        {"leave-one-white", leaveone},      /* GGR */
-        {"list-buffers", listbuffers},
+        {"kill-region", killregion, {0, 0}},
+        {"kill-to-end-of-line", killtext, {0, 0}},
+        {"leave-one-white", leaveone, {0, 0}},      /* GGR */
+        {"list-buffers", listbuffers, {0, 1}},
+        {"macro-helper", macro_helper, {0, 1}},     /* GGR */
 #if     WORDPRO
-        {"makelist-region", makelist_region},       /* GGR */
-        {"numberlist-region", numberlist_region},   /* GGR */
+        {"makelist-region", makelist_region, {0, 0}},       /* GGR */
+        {"numberlist-region", numberlist_region, {0, 0}},   /* GGR */
 #endif
-        {"meta-prefix", metafn},
-        {"move-window-down", mvdnwind},
-        {"move-window-up", mvupwind},
-        {"name-buffer", namebuffer},
-        {"narrow-to-region", narrow},       /* GGR */
-        {"newline", insert_newline},
-        {"newline-and-indent", indent},
-        {"next-buffer", nextbuffer},
-        {"next-line", forwline},
-        {"next-page", forwpage},
+        {"meta-prefix", metafn, {0, 0}},
+        {"move-window-down", mvdnwind, {0, 0}},
+        {"move-window-up", mvupwind, {0, 0}},
+        {"name-buffer", namebuffer, {0, 0}},
+        {"narrow-to-region", narrow, {0, 1}},       /* GGR */
+        {"newline", insert_newline, {0, 0}},
+        {"newline-and-indent", indent, {0, 0}},
+        {"next-buffer", nextbuffer, {0, 0}},
+        {"next-line", forwline, {0, 0}},
+        {"next-page", forwpage, {0, 0}},
 #if     WORDPRO
-        {"next-paragraph", gotoeop},
+        {"next-paragraph", gotoeop, {0, 0}},
 #endif
 #if PROC
-        {"next-pttable", next_pttable},     /* GGR */
+        {"next-pttable", next_pttable, {0, 0}},     /* GGR */
 #endif
-        {"next-window", nextwind},
-        {"next-word", forwword},
-        {"nop", nullproc},
-        {"open-line", openline},
-        {"overwrite-string", ovstring},
-        {"pipe-command", pipecmd},
-        {"previous-line", backline},
-        {"previous-page", backpage},
+        {"next-window", nextwind, {0, 1}},
+        {"next-word", forwword, {0, 0}},
+        {"nop", nullproc, {1, 0}},
+        {"open-line", openline, {0, 0}},
+        {"overwrite-string", ovstring, {0, 0}},
+        {"pipe-command", pipecmd, {0, 1}},
+        {"previous-line", backline, {0, 0}},
+        {"previous-page", backpage, {0, 0}},
 #if     WORDPRO
-        {"previous-paragraph", gotobop},
+        {"previous-paragraph", gotobop, {0, 0}},
 #endif
-        {"previous-window", prevwind},
-        {"previous-word", backword},
-        {"query-replace-string", qreplace},
-        {"quick-exit", quickexit},
-        {"quote-character", quote},
-        {"quoted-count", quotedcount},      /* GGR */
-        {"read-file", fileread},
-        {"redraw-display", reposition},
-        {"reexecute", reexecute},           /* GGR */
-        {"resize-window", resize},
-        {"restore-window", restwnd},
-        {"replace-string", sreplace},
+        {"previous-window", prevwind, {0, 1}},
+        {"previous-word", backword, {0, 0}},
+        {"query-replace-string", qreplace, {0, 1}},
+        {"quick-exit", quickexit, {0, 1}},
+        {"quote-character", quote, {1, 0}},
+        {"quoted-count", quotedcount, {0, 0}},      /* GGR */
+        {"read-file", fileread, {0, 0}},
+        {"redraw-display", reposition, {0, 0}},
+        {"reexecute", reexecute, {0, 0}},           /* GGR */
+        {"resize-window", resize, {0, 1}},
+        {"restore-window", restwnd, {0, 0}},
+        {"replace-string", sreplace, {0, 0}},
 #if     ISRCH
-        {"reverse-incremental-search", risearch},
+        {"reverse-incremental-search", risearch, {0, 1}},
 #endif
 #if     PROC
-        {"run", execproc},
+        {"run", execproc, {0, 0}},
 #endif
-        {"save-file", filesave},
-        {"save-window", savewnd},
-        {"scroll-next-up", scrnextup},
-        {"scroll-next-down", scrnextdw},
-        {"search-forward", forwsearch},
-        {"search-reverse", backsearch},
-        {"select-buffer", usebuffer},
-        {"set", setvar},
+        {"save-file", filesave, {0, 0}},
+        {"save-window", savewnd, {0, 0}},
+        {"scroll-next-up", scrnextup, {0, 0}},
+        {"scroll-next-down", scrnextdw, {0, 0}},
+        {"search-forward", forwsearch, {0, 0}},
+        {"search-reverse", backsearch, {0, 0}},
+        {"select-buffer", usebuffer, {0, 0}},
+        {"set", setvar, {0, 0}},
 #if     CRYPT
-        {"set-encryption-key", set_encryption_key},
+        {"set-encryption-key", set_encryption_key, {0, 0}},
 #endif
-        {"set-fill-column", setfillcol},
-        {"set-mark", setmark},
+        {"set-fill-column", setfillcol, {0, 0}},
+        {"set-mark", setmark, {0, 0}},
 #if PROC
-        {"set-pttable", set_pttable},       /* GGR */
+        {"set-pttable", set_pttable, {0, 0}},       /* GGR */
 #endif
-        {"shell-command", spawn},
-        {"shrink-window", shrinkwind},
-        {"split-current-window", splitwind},
-        {"store-macro", storemac},
+        {"shell-command", spawn, {0, 1}},
+        {"shrink-window", shrinkwind, {0, 1}},
+        {"split-current-window", splitwind, {0, 1}},
+        {"store-macro", storemac, {0, 0}},
 #if     PROC
-        {"store-procedure", storeproc},
-        {"store-pttable", storepttable},    /* GGR */
+        {"store-procedure", storeproc, {0, 0}},
+        {"store-pttable", storepttable, {0, 0}},    /* GGR */
 #endif
 #if     BSD | __hpux | SVR4
-        {"suspend-emacs", bktoshell},
+        {"suspend-emacs", bktoshell, {0, 0}},
 #endif
 #if PROC
-        {"toggle-ptmode", toggle_ptmode},   /* GGR */
+        {"toggle-ptmode", toggle_ptmode, {0, 1}},   /* GGR */
 #endif
-        {"transpose-characters", twiddle},
+        {"transpose-characters", twiddle, {0, 0}},
 #if     AEDIT
-        {"trim-line", trim},
+        {"trim-line", trim, {0, 0}},
 #endif
-        {"type-tab", typetab},              /* GGR */
-        {"unbind-key", unbindkey},
-        {"universal-argument", unarg},
-        {"unmark-buffer", unmark},
-        {"update-screen", upscreen},
-        {"view-file", viewfile},
-        {"white-delete", whitedelete},      /* GGR */
-        {"widen-from-region", widen},       /* GGR */
-        {"wrap-word", wrapword},
-        {"write-file", filewrite},
-        {"write-message", writemsg},
-        {"yank", yank},
-        {"yank-minibuffer", yankmb},        /* GGR */
+        {"type-tab", typetab, {0, 0}},              /* GGR */
+        {"unbind-key", unbindkey, {0, 0}},
+        {"universal-argument", unarg, {0, 0}},
+        {"unmark-buffer", unmark, {0, 0}},
+        {"update-screen", upscreen, {0, 0}},
+        {"view-file", viewfile, {0, 0}},
+        {"white-delete", whitedelete, {0, 0}},      /* GGR */
+        {"widen-from-region", widen, {0, 0}},       /* GGR */
+        {"wrap-word", wrapword, {0, 0}},
+        {"write-file", filewrite, {0, 0}},
+        {"write-message", writemsg, {0, 0}},
+        {"yank", yank, {0, 0}},
+        {"yank-minibuffer", yankmb, {0, 0}},        /* GGR */
 
         {"", NULL}
 };

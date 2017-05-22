@@ -309,6 +309,7 @@ int quote(int f, int n)
                 } while (s == TRUE && --n);
                 return s;
         }
+        if (!inmb && kbdmode == RECORD) addchar_kbdmacro(c);
         return linsert(n, c);
 }
 
@@ -1119,7 +1120,7 @@ int writemsg(int f, int n)
         char *sp;               /* pointer into buf to expand %s */
         char *np;               /* ptr into nbuf */
         int status;
-        char buf[NPAT];         /* buffer to recieve message into */
+        char buf[NPAT];         /* buffer to receive message into */
         char nbuf[NPAT * 2];    /* buffer to expand string into */
 
         if ((status =
@@ -1308,27 +1309,18 @@ int fmatch(int ch)
         return TRUE;
 }
 
-/*
- * ask for and insert a string into the current
- * buffer at the current point
- * GGR
- * Treats response as a set of tokens, allowing unicode (U+xxxx) and utf8
- * (0x..) characters to be entered.
- * You can enter ASCII words (i.e. space-separated ones) within "..".
- *
- * int f, n;            ignored arguments
+/* A string getter for istring and rawstring, as they only differ in the
+ * routine they use to prompt for and get the input.
  */
-int istring(int f, int n)
-{
+typedef int (*mlfn_t)(char *, char *, int);
+
+int string_getter(int f, int n, mlfn_t ml_func) {
     int status;                     /* status return code */
     char tstring[NLINE + 1];        /* string to add */
 
-/* ask for string to insert */
-/* GGR
- * Our mlreplyt returns only on CR
- *          mlreplyt("String to insert<META>: ", tstring, NPAT, metac);
- */
-    status = mlreply("String/unicode chars: ", tstring, NLINE);
+/* ask for string to insert, using the requested funtion */
+
+    status = ml_func("String/unicode chars: ", tstring, NLINE);
     if (status != TRUE)
         return status;
 
@@ -1361,6 +1353,27 @@ int istring(int f, int n)
 
     while (n-- && (status = linstr(nstring)));
     return status;
+}
+
+/* Ask for and insert a string into the current buffer at current point
+ * GGR
+ * Treats response as a set of tokens, allowing unicode (U+xxxx) and utf8
+ * (0x..) characters to be entered.
+ * You can enter ASCII words (i.e. space-separated ones) within "..".
+ *
+ * int f, n;            ignored arguments
+ */
+int istring(int f, int n) {
+    return string_getter(f, n, mlreply);
+}
+
+/*
+ * Ask for a raw string and insert into current buffer at current point
+ * Intended for use by macros.
+ * It's istring, but uses mlreplyall() to get the text.
+ */
+int rawstring(int f, int n) {
+    return string_getter(f, n, mlreplyall);
 }
 
 /*
@@ -1424,32 +1437,31 @@ int whitedelete(int f, int n) {
     return status;
 }
 
-int quotedcount(int f, int n)
-{
-int savedpos;
-int count;
-int doubles;
+int quotedcount(int f, int n) {
+    int savedpos;
+    int count;
+    int doubles;
 
     if (curbp->b_mode&MDVIEW)       /* don't allow this command if  */
          return(rdonly());          /* we are in read only mode     */
     doubles = 0;
     savedpos = curwp->w_doto;
     while (curwp->w_doto > 0) {
-         if (lgetc(curwp->w_dotp, --(curwp->w_doto)) == '\'') {
-              /* Is it a doubled real quote? */
-              if ((curwp->w_doto != 0) &&
-                  (lgetc(curwp->w_dotp, (curwp->w_doto - 1)) == '\'')) {
-                  --curwp->w_doto;
-                  ++doubles;
-              }
-              else {
-                  count = savedpos - curwp->w_doto - 1 - doubles;
-                  curwp->w_doto = savedpos;
-                  linstr("',");
-                  linstr(itoa(count));
-                  return(TRUE);
-              }
-         }
+        if (lgetc(curwp->w_dotp, --(curwp->w_doto)) == '\'') {
+/* Is it a doubled real quote? */
+            if ((curwp->w_doto != 0) &&
+                (lgetc(curwp->w_dotp, (curwp->w_doto - 1)) == '\'')) {
+                --curwp->w_doto;
+                ++doubles;
+            }
+            else {
+                count = savedpos - curwp->w_doto - 1 - doubles;
+                curwp->w_doto = savedpos;
+                linstr("',");
+                linstr(itoa(count));
+                return(TRUE);
+            }
+        }
     }
     curwp->w_doto = savedpos;
     mlwrite("Bad quoting!");
@@ -1461,8 +1473,7 @@ int doubles;
  * Set GGR mode global var if given non-default argument (n > 1).
  * Otherwise, switch it off,
  */
-int ggr_style(int f, int n)
-{
-        using_ggr_style = (n > 1);
-        return TRUE;
+int ggr_style(int f, int n) {
+    using_ggr_style = (n > 1);
+    return TRUE;
 }

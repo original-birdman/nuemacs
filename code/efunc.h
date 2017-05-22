@@ -110,6 +110,7 @@ extern int writemsg(int f, int n);
 extern int getfence(int f, int n);
 extern int fmatch(int ch);
 extern int istring(int f, int n);
+extern int rawstring(int f, int n);
 extern int ovstring(int f, int n);
 extern int leaveone(int f, int n);
 extern int whitedelete(int f, int n);
@@ -117,6 +118,9 @@ extern int quotedcount(int f, int n);
 extern int ggr_style (int f, int n);
 
 /* main.c */
+extern int addto_kbdmacro(char *, int, int);
+extern void addchar_kbdmacro(char);
+extern int macro_helper(int, int);
 extern void edinit(char *bname);
 extern int execute(int c, int f, int n);
 extern int quickexit(int f, int n);

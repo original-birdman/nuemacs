@@ -138,129 +138,126 @@ int ctoec(int c)
  * that pressing a <SPACE> will attempt to complete an unfinished command
  * name if it is unique.
  */
-fn_t getname(void)
-{
-        int cpos;               /* current column on screen output */
-        int c;
-        char *sp;               /* pointer to string for output */
-        struct name_bind *ffp;  /* first ptr to entry in name binding table */
-        struct name_bind *cffp; /* current ptr to entry in name binding table */
-        struct name_bind *lffp; /* last ptr to entry in name binding table */
-        char buf[NSTRING];      /* buffer to hold tentative command name */
+fn_t getname(void) {
+    int cpos;               /* current column on screen output */
+    int c;
+    char *sp;               /* pointer to string for output */
+    struct name_bind *ffp;  /* first ptr to entry in name binding table */
+    struct name_bind *cffp; /* current ptr to entry in name binding table */
+    struct name_bind *lffp; /* last ptr to entry in name binding table */
+    char buf[NSTRING];      /* buffer to hold tentative command name */
 
-        /* starting at the beginning of the string buffer */
-        cpos = 0;
+/* starting at the beginning of the string buffer */
+    cpos = 0;
 
-        /* if we are executing a command line get the next arg and match it */
-        if (clexec) {
-                if (macarg(buf) != TRUE)
-                        return NULL;
-                return fncmatch(&buf[0]);
+/* If we are executing a command line get the next arg and match it */
+    if (clexec) {
+        if (macarg(buf) != TRUE) return NULL;
+        return fncmatch(buf);
+    }
+
+/* Build a name string from the keyboard */
+    while (TRUE) {
+        c = tgetc();
+
+/* If we are at the end, just match it */
+        if (c == 0x0d) {
+            buf[cpos] = 0;  /* and match it off */
+            if (kbdmode == RECORD)
+                addto_kbdmacro(getfname(fncmatch(buf)), 1, 0);
+            return fncmatch(buf);
         }
-
-        /* build a name string from the keyboard */
-        while (TRUE) {
-                c = tgetc();
-
-                /* if we are at the end, just match it */
-                if (c == 0x0d) {
-                        buf[cpos] = 0;
-
-                        /* and match it off */
-                        return fncmatch(&buf[0]);
-
-                } else if (c == ectoc(abortc)) {        /* Bell, abort */
-                        ctrlg(FALSE, 0);
-                        TTflush();
-                        return NULL;
-
-                } else if (c == 0x7F || c == 0x08) {    /* rubout/erase */
-                        if (cpos != 0) {
-                                TTputc('\b');           /* Local handling */
-                                TTputc(' ');
-                                TTputc('\b');
-                                --ttcol;
-                                --cpos;
-                                TTflush();
+        else if (c == ectoc(abortc)) {        /* Bell, abort */
+            ctrlg(FALSE, 0);
+            TTflush();
+            return NULL;
+        }
+        else if (c == 0x7F || c == 0x08) {    /* rubout/erase */
+            if (cpos != 0) {
+                TTputc('\b');           /* Local handling */
+                TTputc(' ');
+                TTputc('\b');
+                --ttcol;
+                --cpos;
+                TTflush();
+            }
+        } else if (c == 0x15) { /* C-U, kill */
+            while (cpos != 0) {
+                TTputc('\b');
+                TTputc(' ');
+                TTputc('\b');
+                --cpos;
+                --ttcol;
+            }
+            TTflush();
+        }
+        else if (c == ' ' || c == 0x1b || c == 0x09) {
+/* Attempt a completion */
+            buf[cpos] = 0;  /* terminate it for us */
+            ffp = &names[0];        /* scan for matches */
+            while (ffp->n_func != NULL) {
+                if (strncmp(buf, ffp->n_name, strlen(buf)) == 0) {
+/* A possible match! More than one? */
+                    if ((ffp + 1)->n_func == NULL ||
+                        (strncmp(buf, (ffp + 1)->n_name, strlen(buf)) != 0)) {
+/* No...we match, print it */
+                        sp = ffp->n_name + cpos;
+                        while (*sp) {
+                            ttput1c(*sp++);
+                            if (!zerowidth_type(*sp)) ttcol++;
                         }
-
-                } else if (c == 0x15) { /* C-U, kill */
-                        while (cpos != 0) {
-                                TTputc('\b');
-                                TTputc(' ');
-                                TTputc('\b');
-                                --cpos;
-                                --ttcol;
-                        }
-
                         TTflush();
-
-                } else if (c == ' ' || c == 0x1b || c == 0x09) {
-/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-/* GGR - rewritten to tab indent of 4 for this section... */
-                /* attempt a completion */
-                    buf[cpos] = 0;  /* terminate it for us */
-                    ffp = &names[0];        /* scan for matches */
-                    while (ffp->n_func != NULL) {
-                        if (strncmp(buf, ffp->n_name, strlen(buf)) == 0) {
-                            /* a possible match! More than one? */
-                            if ((ffp + 1)->n_func == NULL ||
-                                (strncmp(buf, (ffp + 1)->n_name,
-                                              strlen(buf)) != 0)) {
-                                /* no...we match, print it */
-                                sp = ffp->n_name + cpos;
-                                while (*sp) {
-                                    ttput1c(*sp++);
-                                    if (!zerowidth_type(*sp)) ttcol++;
-                                }
-                                TTflush();
-                                return ffp->n_func;
-                            } else {
+                        if (kbdmode == RECORD)
+                            addto_kbdmacro(getfname(fncmatch(ffp->n_name)),
+                                 1, 0);
+                        return ffp->n_func;
+                    }
+                    else {
 /* << << << << << << << << << << << << << << << << << */
 /* try for a partial match against the list
  * first scan down until we no longer match the current input
  */
-                                lffp = (ffp + 1);
-                                while ((lffp + 1)->n_func != NULL) {
-                                    if (strncmp(buf, (lffp+1)->n_name,
-                                        strlen(buf)) != 0) break;
-                                    ++lffp;
-                                }
+                        lffp = (ffp + 1);
+                        while ((lffp + 1)->n_func != NULL) {
+                            if (strncmp(buf, (lffp+1)->n_name,
+                                 strlen(buf)) != 0) break;
+                            ++lffp;
+                        }
 /* and now, attempt to partial complete the string, char at a time */
-                                while (TRUE) {
-                                    /* add the next char in */
-                                    buf[cpos] = ffp->n_name[cpos];
-                                    /* scan through the candidates */
-                                    cffp = ffp + 1;
-                                    while (cffp <= lffp) {
-                                        if (cffp->n_name[cpos] != buf[cpos])
-                                            goto onward;
-                                        ++cffp;
-                                    }
-
-                                    /* add the character */
-                                    ttput1c(buf[cpos++]);
-                                    if (!zerowidth_type(buf[cpos])) ttcol++;
-                                }
-/* << << << << << << << << << << << << << << << << << */
+                        while (TRUE) {
+/* Add the next char in */
+                            buf[cpos] = ffp->n_name[cpos];
+/* Scan through the candidates */
+                            cffp = ffp + 1;
+                            while (cffp <= lffp) {
+                                if (cffp->n_name[cpos] != buf[cpos])
+                                     goto onward;
+                                ++cffp;
                             }
+/* Add the character */
+                            ttput1c(buf[cpos++]);
+                            if (!zerowidth_type(buf[cpos])) ttcol++;
                         }
-                        ++ffp;
+/* << << << << << << << << << << << << << << << << << */
                     }
-                    /* no match.....beep and onward */
-                    TTbeep();
-onward:
-                    TTflush();
-/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-                } else {
-                        if (cpos < NSTRING - 1 && c > ' ') {
-                                buf[cpos++] = c;
-                                ttput1c(c);
-                                if (!zerowidth_type(c)) ttcol++;
-                        }
-                        TTflush();
                 }
+                ++ffp;
+            }
+/* No match.....beep and onward */
+            TTbeep();
+onward:
+            TTflush();
+/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
         }
+        else {
+            if (cpos < NSTRING - 1 && c > ' ') {
+                buf[cpos++] = c;
+                ttput1c(c);
+                if (!zerowidth_type(c)) ttcol++;
+            }
+            TTflush();
+        }
+    }
 }
 
 /*      tgetc:  Get a key from the terminal driver, resolve any keyboard
@@ -467,8 +464,7 @@ void sigwinch_handler(int signr) {
 }
 #endif
 
-int getstring(char *prompt, char *buf, int nbuf, int eolchar)
-{
+int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     struct buffer *bp;
     struct buffer *cb;
     char mbname[NBUFN];
@@ -555,8 +551,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar)
         strcpy(procopy, prompt);
     prolen = strlen(procopy);
 
-    if (mpresf)
-        mlerase();
+    if (mpresf) mlerase();
     mberase();
 
 #ifdef SIGWINCH
@@ -628,12 +623,8 @@ loop:
         if (lp->l_used < NSTRING-1) {
             memcpy(tstring, sp, lp->l_used);
             tstring[lp->l_used] = '\0';
-            if (bufexpand) {
-                expanded = comp_buffer(tstring, choices);
-            }
-            else {
-                expanded = comp_file(tstring, choices);
-            }
+            if (bufexpand) expanded = comp_buffer(tstring, choices);
+            else           expanded = comp_file(tstring, choices);
             if (expanded) {
                 savdoto = curwp->w_doto;
                 curwp->w_doto = 0;
@@ -671,8 +662,7 @@ loop:
         c = basec;              /* strip the META */
         while ((c >= '0' && c <= '9') || (c == '-')) {
             if (c == '-') {     /* already hit a minus or digit? */
-                if ((mflag == -1) || (n != 0))
-                    break;
+                if ((mflag == -1) || (n != 0)) break;
                 mflag = -1;
             }
             else {
@@ -697,17 +687,14 @@ loop:
         mlwrite("Arg: 4");
         while (((c=getcmd()) >='0' && c<='9') || c==reptc || c=='-'){
             if (c == reptc)
-                if ((n > 0) == ((n*4) > 0))
-                    n = n*4;
-                else
-                    n = 1;
+                if ((n > 0) == ((n*4) > 0)) n = n*4;
+                else n = 1;
 /*
  * If dash, and start of argument string, set arg.
  * to -1.  Otherwise, insert it.
  */
             else if (c == '-') {
-                if (mflag)
-                    break;
+                if (mflag) break;
                 n = 0;
                 mflag = -1;
             }
@@ -729,8 +716,7 @@ loop:
  * the special argument "^U -" to an effective "^U -1".
  */
         if (mflag == -1) {
-            if (n == 0)
-                n++;
+            if (n == 0) n++;
             n = -n;
         }
     }
@@ -745,7 +731,7 @@ loop:
         goto abort;
     }
 
-/* ...and execute the command */
+/* ...and execute the command. DON'T MACRO_CAPTURE THIS!! */
 
     execute(c, f, n);
     if (mpresf) {
@@ -771,17 +757,22 @@ submit:     /* Tidy up */
 /* Need to copy to return buffer and, if not empty,
  * to save as last minibuffer.
  */
-
     int retlen = size;          /* Without terminating NUL */
     if (retlen >= nbuf) retlen = nbuf - 1;
-    memcpy(buf, sp, retlen);   /* No NUL sent here */
+    memcpy(buf, sp, retlen);    /* No NUL sent here */
     buf[retlen] = '\0';         /* Here it is... */
     if (retlen) {
         if (retlen >= NSTRING) retlen = NSTRING - 1;
         memcpy(lastmb, sp, retlen);
         lastmb[retlen] = '\0';
+
     }
     else status = FALSE;        /* Empty input... */
+
+/* Record the result if we are recording a keyboard macro, but only
+ * at first level of the minibuffer (i.e. the "true" result).
+ */
+    if (kbdmode == RECORD && mbdepth == 1) addto_kbdmacro(buf, 0, 1);
 
 abort:  /* Make sure we're still in our minibuffer */
 
