@@ -303,7 +303,7 @@ int readin(char *fname, int lockfl)
                 mlwrite(MLpre "Reading file" MLpost);
         nline = 0;
         while ((s = ffgetline()) == FIOSUC) {
-/* GGR - ftrulen to handle encrypted files(?) */
+/* GGR - ftrulen is the real length of the line */
                 if ((lp1 = lalloc(ftrulen)) == NULL) {
                         s = FIOMEM;     /* Keep message on */
                         break;          /* the display.    */
@@ -317,7 +317,6 @@ int readin(char *fname, int lockfl)
                 lp1->l_fp = curbp->b_linep;
                 lp1->l_bp = lp2;
                 curbp->b_linep->l_bp = lp1;
-/* GGR - ftrulen to handle encrypted files(?) */
                 lfillchars(lp1, ftrulen, fline);
                 ++nline;
                 if (!(nline % 300) && !silent)  /* GGR */
@@ -557,6 +556,7 @@ int writeout(char *fn)
                 lp = lforw(lp);
         }
         if (s == FIOSUC) {      /* No write error.      */
+                ffputline(NULL, 0); /* Must flush the write cache */
                 s = ffclose();
                 if (s == FIOSUC) {      /* No close error.      */
                         if (nline == 1)

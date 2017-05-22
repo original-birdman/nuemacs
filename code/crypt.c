@@ -150,7 +150,7 @@ int set_encryption_key(int f, int n) {
  * unsigned len;        number of characters in the buffer
  *
  **********/
-
+static int debug;
 void myencrypt(char *bptr, unsigned len) {
     int cc; /* current character being considered */
 
@@ -160,30 +160,32 @@ void myencrypt(char *bptr, unsigned len) {
     if (!bptr) {            /* is there anything here to encrypt? */
         key = len;          /* set the new key */
         salt = len;         /* set the new salt */
+debug = 0;
         return;
     }
+debug++;
 /* We got though every *byte* in the buffer.
  * Leave anything below space alone and map the rest into their own
  * range, which also means we can never generate a newline, which would
- * really mess things up! So the raneg is 32(' ')->255 == 224 bytes.
+ * really mess things up! So the range is 32(' ')->255 == 224 bytes.
  */
     while (len--) {
         cc = (unsigned char)*bptr;  /* treat as unsigned... */
-        if (cc >= ' ') {            /* only if above space */
+
+/* We now read/write in block, so can en/decrypt any byte. */
 
 /* If the upper bit (bit 29) is set, feed it back into the key.
  * This assures us that the starting key affects the entire message.
  */
-            key &= 0x1FFFFFFFL;     /* strip off overflow */
-            if (key & 0x10000000L) key ^= 0x0040A001L;  /* feedback */
+        key &= 0x1FFFFFFFL;     /* strip off overflow */
+        if (key & 0x10000000L) key ^= 0x0040A001L;  /* feedback */
 
 /* Down-bias the character, perform a Beaufort encipherment, and
  * up-bias the character again.
  * We need to check that the result is non-negative before the up-bias.
  */
-            cc = (key % 224) - (cc - ' ');
-            if (cc < 0) cc += 224;
-            cc += ' ';
+        cc = (key & 0xff) - cc;
+        while (cc < 0) cc += 256;
 
 /* The salt will spice up the key a little bit, helping to obscure any
  * patterns in the clear text, particularly when all the characters (or
@@ -192,13 +194,12 @@ void myencrypt(char *bptr, unsigned len) {
  * too radically.
  * It is always a good idea to chop off cyclics to prime values.
  */
-            if (++salt >= 20857) salt = 0;  /* prime modulus */
+        if (++salt >= 20857) salt = 0;  /* prime modulus */
 
 /* Our autokey (a special case of the running key) is being generated
  * by a weighted checksum of clear text, cipher text, and salt.
  */
-            key = key + key + (cc ^ (unsigned char)*bptr) + salt;
-        }
+        key = key + key + (cc + (unsigned char)*bptr) + salt;
         *bptr++ = cc;   /* put character back into buffer */
     }
     return;
