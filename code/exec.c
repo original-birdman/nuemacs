@@ -484,7 +484,7 @@ static int ptt_compile(struct buffer *bp) {
  */
 static int ptt_storing = 0;
 int storepttable(int f, int n) {
-    int status = storeproc(f, n);
+    int status = storeproc(0, 0);
     if (status != TRUE) return status;
 
 /* Mark that we need to compile the buffer */
@@ -559,7 +559,7 @@ int next_pttable(int f, int n) {
 }
 
 /* GGR
- * Toogle the Phonetic Translation table on/off for the current buffer.
+ * Toggle the Phonetic Translation table on/off for the current buffer.
  */
 int toggle_ptmode(int f, int n) {
     if (mbstop())           /* Disallow in minibuffer */
@@ -827,27 +827,31 @@ int execproc(int f, int n)
  *
  * int f, n;            default flag and numeric arg
  */
-int execbuf(int f, int n)
-{
-        struct buffer *bp;      /* ptr to buffer to execute */
-        int status;             /* status return */
-        char bufn[NSTRING];     /* name of buffer to execute */
+int execbuf(int f, int n) {
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+    char bufn[NSTRING];     /* name of buffer to execute */
 
-        /* find out what buffer the user wants to execute */
-        if ((status = mlreply("Execute buffer: ", bufn, NBUFN)) != TRUE)
-                return status;
+/* Find out what buffer the user wants to execute */
+    if ((status = mlreply("Execute buffer: ", bufn, NBUFN)) != TRUE)
+        return status;
 
-        /* find the pointer to that buffer */
-        if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-                mlwrite("No such buffer");
-                return FALSE;
-        }
+    if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
+        mlwrite("%%Cannot run keyboard macro when collecting it");
+        return FALSE;
+    }
 
-        /* and now execute it as asked */
-        while (n-- > 0)
-                if ((status = dobuf(bp)) != TRUE)
-                        return status;
-        return TRUE;
+/* Find the pointer to that buffer */
+    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
+        mlwrite("No such buffer");
+        return FALSE;
+    }
+
+/* And now execute it as asked */
+    while (n-- > 0)
+        if ((status = dobuf(bp)) != TRUE)
+            return status;
+    return TRUE;
 }
 
 /*
@@ -873,429 +877,402 @@ int execbuf(int f, int n)
  *
  * struct buffer *bp;           buffer to execute
  */
-int dobuf(struct buffer *bp)
-{
-        int status;             /* status return */
-        struct line *lp;        /* pointer to line to execute */
-        struct line *hlp;       /* pointer to line header */
-        struct line *glp;       /* line to goto */
-        struct line *mp;        /* Macro line storage temp */
-        int dirnum;             /* directive index */
-        int linlen;             /* length of line to execute */
-        int i;                  /* index */
-        int c;                  /* temp character */
-        int force;              /* force TRUE result? */
-        struct window *wp;              /* ptr to windows to scan */
-        struct while_block *whlist;     /* ptr to !WHILE list */
-        struct while_block *scanner;    /* ptr during scan */
-        struct while_block *whtemp;     /* temporary ptr to a struct while_block */
-        char *einit;            /* initial value of eline */
-        char *eline;            /* text of line to execute */
-        char tkn[NSTRING];      /* buffer to evaluate an expresion in */
-        int return_stat = TRUE; /* What we expect to do */
+int dobuf(struct buffer *bp) {
+    int status;             /* status return */
+    struct line *lp;        /* pointer to line to execute */
+    struct line *hlp;       /* pointer to line header */
+    struct line *glp;       /* line to goto */
+    struct line *mp;        /* Macro line storage temp */
+    int dirnum;             /* directive index */
+    int linlen;             /* length of line to execute */
+    int i;                  /* index */
+    int c;                  /* temp character */
+    int force;              /* force TRUE result? */
+    struct window *wp;              /* ptr to windows to scan */
+    struct while_block *whlist;     /* ptr to !WHILE list */
+    struct while_block *scanner;    /* ptr during scan */
+    struct while_block *whtemp;     /* temporary ptr to a struct while_block */
+    char *einit;            /* initial value of eline */
+    char *eline;            /* text of line to execute */
+    char tkn[NSTRING];      /* buffer to evaluate an expresion in */
+    int return_stat = TRUE; /* What we expect to do */
 
 #if     DEBUGM
-        char *sp;               /* temp for building debug string */
-        char *ep;               /* ptr to end of outline */
+    char *sp;               /* temp for building debug string */
+    char *ep;               /* ptr to end of outline */
 #endif
 
-        /* clear IF level flags/while ptr */
-        execlevel = 0;
-        whlist = NULL;
-        scanner = NULL;
+/* GGR - Only allow recursion up to a certain level... */
 
-        /* scan the buffer to execute, building WHILE header blocks */
-        hlp = bp->b_linep;
-        lp = hlp->l_fp;
-        while (lp != hlp) {
-                /* scan the current line */
-                eline = lp->l_text;
-                i = lp->l_used;
+#define MAX_RECURSE 10
 
-                /* trim leading whitespace */
-                while (i-- > 0 && (*eline == ' ' || *eline == '\t'))
-                        ++eline;
+    if (bp->b_exec_level > MAX_RECURSE) {
+        mlwrite("%%Maximum recursion level, %d, exceeded!", MAX_RECURSE);
+        return FALSE;
+    }
+    bp->b_exec_level++;
 
-                /* if theres nothing here, don't bother */
-                if (i <= 0)
-                        goto nxtscan;
+/* Clear IF level flags/while ptr */
+    execlevel = 0;
+    whlist = NULL;
+    scanner = NULL;
 
-                /* if is a while directive, make a block... */
-                if (eline[0] == '!' && eline[1] == 'w' && eline[2] == 'h') {
-                        whtemp = (struct while_block *)malloc(sizeof(struct while_block));
-                        if (whtemp == NULL) {
-noram:                          mlwrite("%%Out of memory during while scan");
-failexit:                       freewhile(scanner);
-                                freewhile(whlist);
-                                return FALSE;
-                        }
-                        whtemp->w_begin = lp;
-                        whtemp->w_type = BTWHILE;
-                        whtemp->w_next = scanner;
-                        scanner = whtemp;
-                }
+/* Scan the buffer to execute, building WHILE header blocks */
+    hlp = bp->b_linep;
+    lp = hlp->l_fp;
+    while (lp != hlp) {
+/* Scan the current line */
+        eline = lp->l_text;
+        i = lp->l_used;
 
-                /* if is a BREAK directive, make a block... */
-                if (eline[0] == '!' && eline[1] == 'b' && eline[2] == 'r') {
-                        if (scanner == NULL) {
-                                mlwrite
-                                    ("%%!BREAK outside of any !WHILE loop");
-                                goto failexit;
-                        }
-                        whtemp = (struct while_block *)malloc(sizeof(struct while_block));
-                        if (whtemp == NULL)
-                                goto noram;
-                        whtemp->w_begin = lp;
-                        whtemp->w_type = BTBREAK;
-                        whtemp->w_next = scanner;
-                        scanner = whtemp;
-                }
+/* Trim leading whitespace */
+        while (i-- > 0 && (*eline == ' ' || *eline == '\t')) ++eline;
 
-                /* if it is an endwhile directive, record the spot... */
-                if (eline[0] == '!' && strncmp(&eline[1], "endw", 4) == 0) {
-                        if (scanner == NULL) {
-                                mlwrite
-                                    ("%%!ENDWHILE with no preceding !WHILE in '%s'",
-                                     bp->b_bname);
-                                goto failexit;
-                        }
-                        /* move top records from the scanner list to the
-                           whlist until we have moved all BREAK records
-                           and one WHILE record */
-                        do {
-                                scanner->w_end = lp;
-                                whtemp = whlist;
-                                whlist = scanner;
-                                scanner = scanner->w_next;
-                                whlist->w_next = whtemp;
-                        } while (whlist->w_type == BTBREAK);
-                }
+/* If there's nothing here, don't bother */
+        if (i <= 0) goto nxtscan;
 
-                nxtscan:          /* on to the next line */
-                lp = lp->l_fp;
+/* If is a while directive, make a block... */
+        if (eline[0] == '!' && eline[1] == 'w' && eline[2] == 'h') {
+            whtemp = (struct while_block *)malloc(sizeof(struct while_block));
+            if (whtemp == NULL) {
+noram:          mlwrite("%%Out of memory during while scan");
+failexit:       freewhile(scanner);
+                goto failexit2;
+            }
+            whtemp->w_begin = lp;
+            whtemp->w_type = BTWHILE;
+            whtemp->w_next = scanner;
+            scanner = whtemp;
         }
 
-        /* while and endwhile should match! */
-        if (scanner != NULL) {
-                mlwrite("%%!WHILE with no matching !ENDWHILE in '%s'",
-                        bp->b_bname);
+/* If is a BREAK directive, make a block... */
+        if (eline[0] == '!' && eline[1] == 'b' && eline[2] == 'r') {
+            if (scanner == NULL) {
+                mlwrite("%%!BREAK outside of any !WHILE loop");
                 goto failexit;
+            }
+            whtemp = (struct while_block *)malloc(sizeof(struct while_block));
+            if (whtemp == NULL) goto noram;
+            whtemp->w_begin = lp;
+            whtemp->w_type = BTBREAK;
+            whtemp->w_next = scanner;
+            scanner = whtemp;
         }
 
-        /* let the first command inherit the flags from the last one.. */
-        thisflag = lastflag;
+/* If it is an endwhile directive, record the spot... */
+        if (eline[0] == '!' && strncmp(&eline[1], "endw", 4) == 0) {
+            if (scanner == NULL) {
+                mlwrite("%%!ENDWHILE with no preceding !WHILE in '%s'",
+                     bp->b_bname);
+                goto failexit;
+            }
+/* move top records from the scanner list to the whlist until we have
+ * moved all BREAK records and one WHILE record.
+ */
+            do {
+                scanner->w_end = lp;
+                whtemp = whlist;
+                whlist = scanner;
+                scanner = scanner->w_next;
+                whlist->w_next = whtemp;
+            } while (whlist->w_type == BTBREAK);
+        }
 
-        /* starting at the beginning of the buffer */
-        hlp = bp->b_linep;
-        lp = hlp->l_fp;
-        while (lp != hlp) {
-                /* allocate eline and copy macro line to it */
-                linlen = lp->l_used;
-                if ((einit = eline = malloc(linlen + 1)) == NULL) {
-                        mlwrite("%%Out of Memory during macro execution");
-                        freewhile(whlist);
-                        return FALSE;
-                }
-                memcpy(eline, lp->l_text, linlen);
-                eline[linlen] = 0;      /* make sure it ends */
+        nxtscan:          /* on to the next line */
+        lp = lp->l_fp;
+    }
 
-                /* trim leading whitespace */
-                while (*eline == ' ' || *eline == '\t')
-                        ++eline;
+/* While and endwhile should match! */
+    if (scanner != NULL) {
+        mlwrite("%%!WHILE with no matching !ENDWHILE in '%s'", bp->b_bname);
+        goto failexit;
+    }
 
-                /* dump comments and blank lines */
-                if (*eline == ';' || *eline == 0)
-                        goto onward;
+/* Let the first command inherit the flags from the last one.. */
+    thisflag = lastflag;
+
+/* Starting at the beginning of the buffer */
+    hlp = bp->b_linep;
+    lp = hlp->l_fp;
+    while (lp != hlp) {
+/* Allocate eline and copy macro line to it */
+        linlen = lp->l_used;
+        if ((einit = eline = malloc(linlen + 1)) == NULL) {
+            mlwrite("%%Out of Memory during macro execution");
+            goto failexit2;
+        }
+        memcpy(eline, lp->l_text, linlen);
+        eline[linlen] = 0;      /* make sure it ends */
+
+/* trim leading whitespace */
+        while (*eline == ' ' || *eline == '\t') ++eline;
+
+/* dump comments and blank lines */
+        if (*eline == ';' || *eline == 0) goto onward;
 
 #if     DEBUGM
-                /* if $debug == TRUE, every line to execute
-                   gets echoed and a key needs to be pressed to continue
-                   ^G will abort the command */
+/* If $debug == TRUE, every line to execute gets echoed and a key needs
+ * to be pressed to continue.
+ * ^G will abort the command.
+ */
 
-                if (macbug) {
-                        strcpy(outline, "<<<");
+        if (macbug) {
+            strcpy(outline, "<<<");
 
-                        /* debug macro name */
-                        strcat(outline, bp->b_bname);
-                        strcat(outline, ":");
+/* Debug macro name */
+            strcat(outline, bp->b_bname);
+            strcat(outline, ":");
 
-                        /* debug if levels */
-                        strcat(outline, itoa(execlevel));
-                        strcat(outline, ":");
+/* Debug if levels */
+            strcat(outline, itoa(execlevel));
+            strcat(outline, ":");
 
-                        /* and lastly the line */
-                        /* GGR - if line > 80 chars, chop it */
-                        if (strlen(eline) > 80)
-                                strncat(outline, eline, 80);
-                        else
-                                strcat(outline, eline);
-                        strcat(outline, ">>>");
+/* and lastly the line. GGR - if line > 80 chars, chop it */
+            if (strlen(eline) > 80) strncat(outline, eline, 80);
+            else                    strcat(outline, eline);
+            strcat(outline, ">>>");
 
-                        /* change all '%' to ':' so mlwrite won't expect arguments */
-                        sp = outline;
-                        while (*sp)
-                                if (*sp++ == '%') {
-                                        /* advance to the end */
-                                        ep = --sp;
-                                        while (*ep++);
-                                        /* null terminate the string one out */
-                                        *(ep + 1) = 0;
-                                        /* copy backwards */
-                                        while (ep-- > sp)
-                                                *(ep + 1) = *ep;
-
-                                        /* and advance sp past the new % */
-                                        sp += 2;
-                                }
-
-                        /* write out the debug line */
-                        mlforce(outline);
-                        update(TRUE);
-
-                        /* and get the keystroke */
-                        if ((c = get1key()) == abortc) {
-                                mlforce(MLpre "Macro aborted" MLpost);
-                                freewhile(whlist);
-                                return FALSE;
-                        }
-
-                        if (c == metac)
-                                macbug = FALSE;
+/* Change all '%' to ':' so mlwrite won't expect arguments */
+            sp = outline;
+            while (*sp)
+                if (*sp++ == '%') {
+                    ep = --sp;          /* Advance to the end */
+                    while (*ep++);
+                    *(ep + 1) = 0;      /* Null terminate the string */
+                    while (ep-- > sp)   /* copy backwards */
+                        *(ep + 1) = *ep;
+                    sp += 2;            /* and advance sp past the new % */
                 }
+
+/* Write out the debug line */
+            mlforce(outline);
+            update(TRUE);
+
+/* And get the keystroke */
+            if ((c = get1key()) == abortc) {
+                mlforce(MLpre "Macro aborted" MLpost);
+                goto failexit2;
+            }
+
+            if (c == metac) macbug = FALSE;
+        }
 #endif
 
-                /* Parse directives here.... */
-                dirnum = -1;
-                if (*eline == '!') {
-                        /* Find out which directive this is */
-                        ++eline;
-                        for (dirnum = 0; dirnum < NUMDIRS; dirnum++)
-                                if (strncmp(eline, dname[dirnum],
-                                            strlen(dname[dirnum])) == 0)
-                                        break;
+/* Parse directives here.... */
+        dirnum = -1;
+        if (*eline == '!') {
+/* Find out which directive this is */
+            ++eline;
+            for (dirnum = 0; dirnum < NUMDIRS; dirnum++)
+                if (strncmp(eline, dname[dirnum],
+                    strlen(dname[dirnum])) == 0)
+                break;
 
-                        /* and bitch if it's illegal */
-                        if (dirnum == NUMDIRS) {
-                                mlwrite("%%Unknown Directive");
-                                freewhile(whlist);
-                                return FALSE;
-                        }
+/* and bitch if it's illegal */
+            if (dirnum == NUMDIRS) {
+                mlwrite("%%Unknown Directive");
+                goto failexit2;
+            }
 
-                        /* service only the !ENDM macro here */
-                        if (dirnum == DENDM) {
-                                if (ptt_storing) {
-                                    ptt_compile(bstore);
-                                    ptt_storing = 0;
-                                }
-                                mstore = FALSE;
-                                bstore = NULL;
-                                goto onward;
-                        }
-
-                        /* restore the original eline.... */
-                        --eline;
+/* service only the !ENDM macro here */
+            if (dirnum == DENDM) {
+                if (ptt_storing) {
+                    ptt_compile(bstore);
+                    ptt_storing = 0;
                 }
+                mstore = FALSE;
+                bstore = NULL;
+                goto onward;
+            }
 
-                /* if macro store is on, just salt this away */
-                if (mstore) {
-                        /* allocate the space for the line */
-                        linlen = strlen(eline);
-                        if ((mp = lalloc(linlen)) == NULL) {
-                                mlwrite
-                                    ("Out of memory while storing macro");
-                                return FALSE;
-                        }
-
-                        /* copy the text into the new line */
-                        lfillchars(mp, linlen, eline);
-
-                        /* attach the line to the end of the buffer */
-                        bstore->b_linep->l_bp->l_fp = mp;
-                        mp->l_bp = bstore->b_linep->l_bp;
-                        bstore->b_linep->l_bp = mp;
-                        mp->l_fp = bstore->b_linep;
-                        goto onward;
-                }
-
-
-                force = FALSE;
-
-                /* dump comments */
-                if (*eline == '*')
-                        goto onward;
-
-                /* now, execute directives */
-                if (dirnum != -1) {
-                        /* skip past the directive */
-                        while (*eline && *eline != ' ' && *eline != '\t')
-                                ++eline;
-                        execstr = eline;
-
-                        switch (dirnum) {
-                        case DIF:       /* IF directive */
-                                /* grab the value of the logical exp */
-                                if (execlevel == 0) {
-                                        if (macarg(tkn) != TRUE)
-                                                goto eexec;
-                                        if (stol(tkn) == FALSE)
-                                                ++execlevel;
-                                } else
-                                        ++execlevel;
-                                goto onward;
-
-                        case DWHILE:    /* WHILE directive */
-                                /* grab the value of the logical exp */
-                                if (execlevel == 0) {
-                                        if (macarg(tkn) != TRUE)
-                                                goto eexec;
-                                        if (stol(tkn) == TRUE)
-                                                goto onward;
-                                }
-                                /* drop down and act just like !BREAK */
-
-                        case DBREAK:    /* BREAK directive */
-                                if (dirnum == DBREAK && execlevel)
-                                        goto onward;
-
-                                /* jump down to the endwhile */
-                                /* find the right while loop */
-                                whtemp = whlist;
-                                while (whtemp) {
-                                        if (whtemp->w_begin == lp)
-                                                break;
-                                        whtemp = whtemp->w_next;
-                                }
-
-                                if (whtemp == NULL) {
-                                        mlwrite
-                                            ("%%Internal While loop error");
-                                        freewhile(whlist);
-                                        return FALSE;
-                                }
-
-                                /* reset the line pointer back.. */
-                                lp = whtemp->w_end;
-                                goto onward;
-
-                        case DELSE:     /* ELSE directive */
-                                if (execlevel == 1)
-                                        --execlevel;
-                                else if (execlevel == 0)
-                                        ++execlevel;
-                                goto onward;
-
-                        case DENDIF:    /* ENDIF directive */
-                                if (execlevel)
-                                        --execlevel;
-                                goto onward;
-
-                        case DGOTO:     /* GOTO directive */
-                                /* .....only if we are currently executing */
-                                if (execlevel == 0) {
-
-                                        /* grab label to jump to */
-                                        eline =
-                                            token(eline, golabel, NPAT);
-                                        linlen = strlen(golabel);
-                                        glp = hlp->l_fp;
-                                        while (glp != hlp) {
-                                                if (*glp->l_text == '*' &&
-                                                    (strncmp
-                                                     (&glp->l_text[1],
-                                                      golabel,
-                                                      linlen) == 0)) {
-                                                        lp = glp;
-                                                        goto onward;
-                                                }
-                                                glp = glp->l_fp;
-                                        }
-                                        mlwrite("%%No such label");
-                                        freewhile(whlist);
-                                        return FALSE;
-                                }
-                                goto onward;
-
-                        case DRETURN:   /* RETURN directive */
-                                if (execlevel == 0)
-                                        goto eexec;
-                                goto onward;
-
-                        case DENDWHILE: /* ENDWHILE directive */
-                                if (execlevel) {
-                                        --execlevel;
-                                        goto onward;
-                                } else {
-                                        /* find the right while loop */
-                                        whtemp = whlist;
-                                        while (whtemp) {
-                                                if (whtemp->w_type ==
-                                                    BTWHILE
-                                                    && whtemp->w_end == lp)
-                                                        break;
-                                                whtemp = whtemp->w_next;
-                                        }
-
-                                        if (whtemp == NULL) {
-                                                mlwrite
-                                                    ("%%Internal While loop error");
-                                                freewhile(whlist);
-                                                return FALSE;
-                                        }
-
-                                        /* reset the line pointer back.. */
-                                        lp = whtemp->w_begin->l_bp;
-                                        goto onward;
-                                }
-
-                        case DFORCE:    /* FORCE directive */
-                                force = TRUE;
-                                break;  /* GGR: Must drop down!! */
-
-                        case DFINISH:   /* FINISH directive */
-                                if (execlevel == 0) {
-                                        return_stat = FALSE;
-                                        goto eexec;
-                                }
-                                goto onward;
-                        }
-                }
-
-                /* execute the statement */
-                status = docmd(eline);
-                if (force)      /* force the status */
-                        status = TRUE;
-
-                /* check for a command error */
-                if (status != TRUE) {
-                        /* look if buffer is showing */
-                        wp = wheadp;
-                        while (wp != NULL) {
-                                if (wp->w_bufp == bp) {
-                                        /* and point it */
-                                        wp->w_dotp = lp;
-                                        wp->w_doto = 0;
-                                        wp->w_flag |= WFHARD;
-                                }
-                                wp = wp->w_wndp;
-                        }
-                        /* in any case set the buffer . */
-                        bp->b_dotp = lp;
-                        bp->b_doto = 0;
-                        free(einit);
-                        execlevel = 0;
-                        freewhile(whlist);
-                        return status;
-                }
-
-              onward:           /* on to the next line */
-                free(einit);
-                lp = lp->l_fp;
+/* Restore the original eline.... */
+            --eline;
         }
 
-      eexec:                    /* exit the current function */
-        execlevel = 0;
-        freewhile(whlist);
-        return return_stat;
+/* If macro store is on, just salt this away */
+        if (mstore) {
+/* Allocate the space for the line */
+            linlen = strlen(eline);
+            if ((mp = lalloc(linlen)) == NULL) {
+                mlwrite ("Out of memory while storing macro");
+                bp->b_exec_level--;
+                return FALSE;
+            }
+
+/* Copy the text into the new line */
+            lfillchars(mp, linlen, eline);
+
+/* Attach the line to the end of the buffer */
+            bstore->b_linep->l_bp->l_fp = mp;
+            mp->l_bp = bstore->b_linep->l_bp;
+            bstore->b_linep->l_bp = mp;
+            mp->l_fp = bstore->b_linep;
+            goto onward;
+        }
+
+
+        force = FALSE;
+
+/* Dump comments */
+        if (*eline == '*') goto onward;
+
+/* Now, execute directives */
+        if (dirnum != -1) {
+/* Skip past the directive */
+            while (*eline && *eline != ' ' && *eline != '\t') ++eline;
+            execstr = eline;
+
+            switch (dirnum) {
+            case DIF:       /* IF directive */
+/* Grab the value of the logical exp */
+                if (execlevel == 0) {
+                    if (macarg(tkn) != TRUE) goto eexec;
+                    if (stol(tkn) == FALSE) ++execlevel;
+                }
+                else ++execlevel;
+                goto onward;
+
+            case DWHILE:    /* WHILE directive */
+/* Grab the value of the logical exp */
+                if (execlevel == 0) {
+                    if (macarg(tkn) != TRUE) goto eexec;
+                    if (stol(tkn) == TRUE) goto onward;
+                }
+/* Drop down and act just like !BREAK */
+
+            case DBREAK:    /* BREAK directive */
+                if (dirnum == DBREAK && execlevel) goto onward;
+
+/* Jump down to the endwhile
+ * Find the right while loop
+ */
+                whtemp = whlist;
+                while (whtemp) {
+                    if (whtemp->w_begin == lp) break;
+                    whtemp = whtemp->w_next;
+                }
+
+                if (whtemp == NULL) {
+                    mlwrite ("%%Internal While loop error");
+                    goto failexit2;
+                }
+
+/* Reset the line pointer back.. */
+                lp = whtemp->w_end;
+                goto onward;
+
+            case DELSE:     /* ELSE directive */
+                if (execlevel == 1) --execlevel;
+                else if (execlevel == 0) ++execlevel;
+                goto onward;
+
+            case DENDIF:    /* ENDIF directive */
+                if (execlevel) --execlevel;
+                goto onward;
+
+            case DGOTO:     /* GOTO directive */
+/* .....only if we are currently executing */
+                if (execlevel == 0) {
+/* Grab label to jump to */
+                    eline = token(eline, golabel, NPAT);
+                    linlen = strlen(golabel);
+                    glp = hlp->l_fp;
+                    while (glp != hlp) {
+                        if (*glp->l_text == '*' &&
+                            (strncmp(&glp->l_text[1], golabel, linlen) == 0)) {
+                            lp = glp;
+                            goto onward;
+                        }
+                        glp = glp->l_fp;
+                    }
+                    mlwrite("%%No such label");
+                    goto failexit2;
+                }
+                goto onward;
+
+            case DRETURN:   /* RETURN directive */
+                if (execlevel == 0) goto eexec;
+                goto onward;
+
+            case DENDWHILE: /* ENDWHILE directive */
+                if (execlevel) {
+                    --execlevel;
+                    goto onward;
+                }
+                else {
+/* Find the right while loop */
+                    whtemp = whlist;
+                    while (whtemp) {
+                        if (whtemp->w_type == BTWHILE &&
+                            whtemp->w_end == lp) break;
+                        whtemp = whtemp->w_next;
+                    }
+
+                    if (whtemp == NULL) {
+                        mlwrite ("%%Internal While loop error");
+                        goto failexit2;
+                    }
+
+/* reset the line pointer back.. */
+                    lp = whtemp->w_begin->l_bp;
+                    goto onward;
+                }
+
+            case DFORCE:    /* FORCE directive */
+                force = TRUE;
+                break;  /* GGR: Must drop down!! */
+
+            case DFINISH:   /* FINISH directive */
+                if (execlevel == 0) {
+                    return_stat = FALSE;
+                    goto eexec;
+                }
+                goto onward;
+            }
+        }
+
+/* Execute the statement */
+        status = docmd(eline);
+        if (force) status = TRUE;       /* force the status */
+
+/* Check for a command error */
+        if (status != TRUE) {
+/* Look if buffer is showing */
+            wp = wheadp;
+            while (wp != NULL) {
+                if (wp->w_bufp == bp) { /* And point it */
+                    wp->w_dotp = lp;
+                    wp->w_doto = 0;
+                    wp->w_flag |= WFHARD;
+                }
+                wp = wp->w_wndp;
+            }
+/* In any case set the buffer . */
+            bp->b_dotp = lp;
+            bp->b_doto = 0;
+            free(einit);
+            execlevel = 0;
+            freewhile(whlist);
+            bp->b_exec_level--;
+            return status;
+        }
+
+onward:                 /* On to the next line */
+        free(einit);
+        lp = lp->l_fp;
+    }
+
+eexec:                  /* Exit the current function */
+    execlevel = 0;
+    freewhile(whlist);
+    bp->b_exec_level--;
+    return return_stat;
+
+/* This sequence is used for several exits, so only write it once */
+failexit2:
+    freewhile(whlist);
+    bp->b_exec_level--;
+    return FALSE;
 }
 
 /*
@@ -1412,225 +1389,184 @@ int dofile(char *fname)
  * int f, n;            default flag and numeric arg
  * int bufnum;          number of buffer to execute
  */
-int cbuf(int f, int n, int bufnum)
-{
-        struct buffer *bp;      /* ptr to buffer to execute */
-        int status;             /* status return */
-        static char bufname[] = "/Macro xx";
+int cbuf(int f, int n, int bufnum) {
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+    static char bufname[] = "/Macro xx";
 
-        /* make the buffer name */
-        bufname[7] = '0' + (bufnum / 10);
-        bufname[8] = '0' + (bufnum % 10);
+/* Make the buffer name */
+    bufname[7] = '0' + (bufnum / 10);
+    bufname[8] = '0' + (bufnum % 10);
 
-        /* find the pointer to that buffer */
-        if ((bp = bfind(bufname, FALSE, 0)) == NULL) {
-                mlwrite("Macro not defined");
-                return FALSE;
-        }
+/* Find the pointer to that buffer */
+    if ((bp = bfind(bufname, FALSE, 0)) == NULL) {
+        mlwrite("Macro not defined");
+        return FALSE;
+    }
 
-        /* and now execute it as asked */
-        while (n-- > 0)
-                if ((status = dobuf(bp)) != TRUE)
-                        return status;
-        return TRUE;
+/* and now execute it as asked */
+    while (n-- > 0)
+        if ((status = dobuf(bp)) != TRUE)
+            return status;
+    return TRUE;
 }
 
-int cbuf1(int f, int n)
-{
-        return cbuf(f, n, 1);
+int cbuf1(int f, int n) {
+    return cbuf(f, n, 1);
 }
 
-int cbuf2(int f, int n)
-{
-        return cbuf(f, n, 2);
+int cbuf2(int f, int n) {
+    return cbuf(f, n, 2);
 }
 
-int cbuf3(int f, int n)
-{
-        return cbuf(f, n, 3);
+int cbuf3(int f, int n) {
+    return cbuf(f, n, 3);
 }
 
-int cbuf4(int f, int n)
-{
-        return cbuf(f, n, 4);
+int cbuf4(int f, int n) {
+    return cbuf(f, n, 4);
 }
 
-int cbuf5(int f, int n)
-{
-        return cbuf(f, n, 5);
+int cbuf5(int f, int n) {
+    return cbuf(f, n, 5);
 }
 
-int cbuf6(int f, int n)
-{
-        return cbuf(f, n, 6);
+int cbuf6(int f, int n) {
+    return cbuf(f, n, 6);
 }
 
-int cbuf7(int f, int n)
-{
-        return cbuf(f, n, 7);
+int cbuf7(int f, int n) {
+    return cbuf(f, n, 7);
 }
 
-int cbuf8(int f, int n)
-{
-        return cbuf(f, n, 8);
+int cbuf8(int f, int n) {
+    return cbuf(f, n, 8);
 }
 
-int cbuf9(int f, int n)
-{
-        return cbuf(f, n, 9);
+int cbuf9(int f, int n) {
+    return cbuf(f, n, 9);
 }
 
-int cbuf10(int f, int n)
-{
-        return cbuf(f, n, 10);
+int cbuf10(int f, int n) {
+    return cbuf(f, n, 10);
 }
 
-int cbuf11(int f, int n)
-{
-        return cbuf(f, n, 11);
+int cbuf11(int f, int n) {
+    return cbuf(f, n, 11);
 }
 
-int cbuf12(int f, int n)
-{
-        return cbuf(f, n, 12);
+int cbuf12(int f, int n) {
+    return cbuf(f, n, 12);
 }
 
-int cbuf13(int f, int n)
-{
-        return cbuf(f, n, 13);
+int cbuf13(int f, int n) {
+    return cbuf(f, n, 13);
 }
 
-int cbuf14(int f, int n)
-{
-        return cbuf(f, n, 14);
+int cbuf14(int f, int n) {
+    return cbuf(f, n, 14);
 }
 
-int cbuf15(int f, int n)
-{
-        return cbuf(f, n, 15);
+int cbuf15(int f, int n) {
+    return cbuf(f, n, 15);
 }
 
-int cbuf16(int f, int n)
-{
-        return cbuf(f, n, 16);
+int cbuf16(int f, int n) {
+    return cbuf(f, n, 16);
 }
 
-int cbuf17(int f, int n)
-{
-        return cbuf(f, n, 17);
+int cbuf17(int f, int n) {
+    return cbuf(f, n, 17);
 }
 
-int cbuf18(int f, int n)
-{
-        return cbuf(f, n, 18);
+int cbuf18(int f, int n) {
+    return cbuf(f, n, 18);
 }
 
-int cbuf19(int f, int n)
-{
-        return cbuf(f, n, 19);
+int cbuf19(int f, int n) {
+    return cbuf(f, n, 19);
 }
 
-int cbuf20(int f, int n)
-{
-        return cbuf(f, n, 20);
+int cbuf20(int f, int n) {
+    return cbuf(f, n, 20);
 }
 
-int cbuf21(int f, int n)
-{
-        return cbuf(f, n, 21);
+int cbuf21(int f, int n) {
+    return cbuf(f, n, 21);
 }
 
-int cbuf22(int f, int n)
-{
-        return cbuf(f, n, 22);
+int cbuf22(int f, int n) {
+    return cbuf(f, n, 22);
 }
 
-int cbuf23(int f, int n)
-{
-        return cbuf(f, n, 23);
+int cbuf23(int f, int n) {
+    return cbuf(f, n, 23);
 }
 
-int cbuf24(int f, int n)
-{
-        return cbuf(f, n, 24);
+int cbuf24(int f, int n) {
+    return cbuf(f, n, 24);
 }
 
-int cbuf25(int f, int n)
-{
-        return cbuf(f, n, 25);
+int cbuf25(int f, int n) {
+    return cbuf(f, n, 25);
 }
 
-int cbuf26(int f, int n)
-{
-        return cbuf(f, n, 26);
+int cbuf26(int f, int n) {
+    return cbuf(f, n, 26);
 }
 
-int cbuf27(int f, int n)
-{
-        return cbuf(f, n, 27);
+int cbuf27(int f, int n) {
+    return cbuf(f, n, 27);
 }
 
-int cbuf28(int f, int n)
-{
-        return cbuf(f, n, 28);
+int cbuf28(int f, int n) {
+    return cbuf(f, n, 28);
 }
 
-int cbuf29(int f, int n)
-{
-        return cbuf(f, n, 29);
+int cbuf29(int f, int n) {
+    return cbuf(f, n, 29);
 }
 
-int cbuf30(int f, int n)
-{
-        return cbuf(f, n, 30);
+int cbuf30(int f, int n) {
+    return cbuf(f, n, 30);
 }
 
-int cbuf31(int f, int n)
-{
-        return cbuf(f, n, 31);
+int cbuf31(int f, int n) {
+    return cbuf(f, n, 31);
 }
 
-int cbuf32(int f, int n)
-{
-        return cbuf(f, n, 32);
+int cbuf32(int f, int n) {
+    return cbuf(f, n, 32);
 }
 
-int cbuf33(int f, int n)
-{
-        return cbuf(f, n, 33);
+int cbuf33(int f, int n) {
+    return cbuf(f, n, 33);
 }
 
-int cbuf34(int f, int n)
-{
-        return cbuf(f, n, 34);
+int cbuf34(int f, int n) {
+    return cbuf(f, n, 34);
 }
 
-int cbuf35(int f, int n)
-{
-        return cbuf(f, n, 35);
+int cbuf35(int f, int n) {
+    return cbuf(f, n, 35);
 }
 
-int cbuf36(int f, int n)
-{
-        return cbuf(f, n, 36);
+int cbuf36(int f, int n) {
+    return cbuf(f, n, 36);
 }
 
-int cbuf37(int f, int n)
-{
-        return cbuf(f, n, 37);
+int cbuf37(int f, int n) {
+    return cbuf(f, n, 37);
 }
 
-int cbuf38(int f, int n)
-{
-        return cbuf(f, n, 38);
+int cbuf38(int f, int n) {
+    return cbuf(f, n, 38);
 }
 
-int cbuf39(int f, int n)
-{
-        return cbuf(f, n, 39);
+int cbuf39(int f, int n) {
+    return cbuf(f, n, 39);
 }
 
-int cbuf40(int f, int n)
-{
-        return cbuf(f, n, 40);
+int cbuf40(int f, int n) {
+    return cbuf(f, n, 40);
 }
