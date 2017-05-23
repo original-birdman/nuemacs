@@ -1,4 +1,4 @@
-=>                   uEmacs/PK GGR4.118 Help Index     (08 May 2017)
+=>                   uEmacs/PK GGR4.119 Help Index     (23 May 2017)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -133,7 +133,8 @@ Execute program .......   ^X  $     ::  * Not under VMS.
 =>                      MACRO COMMANDS
 Begin macro ...........   ^X  (
 End macro .............   ^X  )
-Execute macro .........   ^X  E
+Execute macro .........   ^X  E         (replay keys)
+Execute macro .........   ^X  V         (replay commands - experimental)
 Store macro ........... not bound
 Execute macro nn ...... not bound
 Store procedure ....... not bound

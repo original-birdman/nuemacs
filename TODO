@@ -2,3 +2,34 @@ Make word-split chars configurable (forwword, backword but *not*
 fillpara).  i.e.  make inword() list configurable (as the comment there
 says it should be).  Or make it use lgetgrapheme, and treat as a
 word-char anything whose base is a word-char.  Or both...
+
+========== Search Issues!!! ==========
+
+Normal search
+
+  1. Must check what follows an apparent match - can't be a combining
+     diacritical mark (but a zero-width joiner is OK!).
+     NOTE: that for reverse searching this means looking at what
+     precedes the test (in a way...).
+
+  2. Has to be able to handle case-insensitive Unicode matches.
+
+
+Magic search
+
+  1. Has to be able to handle Unicode char range (bitmaps).
+
+  2. Has to be able to handle case-insensitive Unicode matches.
+
+  3. Possibly allow a range for a base char with a constant set of
+     extended parts?
+
+
+General Notes:
+
+DIFCASE and CHCASE need to go (estruct.h and search.c).
+Also all of:
+
+ LASTUL LASTLL isupper  isxletter isxlower isxupper  [estruct.h only]
+ isletter                       [estruct.h, search.c, word.c]
+ islower                        [estruct.h, search.c, input.c]

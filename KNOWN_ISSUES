@@ -1,4 +1,4 @@
-At 4.118:
+At 4.119:
 
 RETHINK??? RETHINK??? RETHINK??? RETHINK??? RETHINK??? RETHINK???
 Might not be a bug - just needs a think...
@@ -11,6 +11,7 @@ at first-before fillcol?
 Perhaps do wrapping if wrap-mode was on at *both* the kill and yank
 stages (so need to have a way of tagging the kill buffers).
 
-MISSING? MISSING? MISSING? MISSING? MISSING? MISSING? MISSING? MISSING?
-Horizontal scrolling (which was in 3.9e).
-Did anyone ever use it?
+BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! BUG!! 
+There are issues with search in non-ASCII files.
+See the TODO file.
+

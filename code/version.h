@@ -2,9 +2,9 @@
 #define VERSION_H_
 
 #define PROGRAM_NAME "uemacs"
-#define PROGRAM_NAME_LONG "uEmacs/Pk"
+#define PROGRAM_NAME_LONG "nuEmacs"
 
-#define VERSION "GGR4.118"
+#define VERSION "GGR4.119"
 
 /* Print the version string. */
 void version(void);

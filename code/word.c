@@ -615,7 +615,7 @@ int eos_chars(int f, int n)
 /* We'll get the buffer length in characters, then allocate that number of
  * unicode chars. It might be more than we need (if there is a utf8
  * multi-byte character in there) but it's not going to be that big.
- * Actually we'll allocate one extra an put an illegal value at the end.
+ * Actually we'll allocate one extra and put an illegal value at the end.
  */
                 int len = strlen(buf);
                 eos_list = realloc(eos_list, sizeof(unicode_t)*(len + 1));

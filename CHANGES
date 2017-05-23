@@ -439,7 +439,7 @@ utf8.h
     unicode character.
 
 word.c
-    Changed to end-of-sentence coding to use END_UCLIST as an end
+    Changed the end-of-sentence coding to use END_UCLIST as an end
     marker rather than 0xffffffff (for consistency).
 
 test-files/combining-diacritics
@@ -1086,9 +1086,9 @@ etc/uemacs.rc
 word.c
     After region_listmaker has run (for *list-region functions) set the
     mark to one character ahead of point, otherwise ctl-C will reformat
-    the preceding paragpraph - again. 
+    the preceding paragraph - again.
 
-etc/uemacs.rc
+etc/uemacs.hlp
     Added notes for makelist-region and numberlist-region and a
     description for the %list-indent-text user variable setting.
 
@@ -1096,5 +1096,152 @@ etc/uemacs.rc
 version.h
 etc/uemacs.hlp
     Update to version GGR4.118
+
+========== GGR4.119
+
+eval.c
+evar.h
+    Replaced the separate structure and tagging for environment
+    variables and user functions (which had actually lead to an error if
+    SCROLLCODE was not set!) with enums and in-structure settings.
+
+bind.c
+buffer.c
+display.c
+eval.c
+file.c
+globals.c
+input.c
+main.c
+window.c
+word.c
+edef.h
+estruct.h
+evar.h
+etc/uemacs.rc
+    Re-added the horizontal scrolling code, having found it in an old
+    version of 3.10 source from 1992.
+    Reformatted several functions involved to use a 4-space indent.
+    Renamed scrollcount to scrolljump. [display.c, eval.c, globals.c,
+    edef.h, evar.h]
+    Made update() re-entrant (by restoring incoming displaying value,
+    not FALSE, at end) so that updpos() can call it (since it calls
+    updpos()) to ensure we get an update as the cursor gets to the
+    screen edge.
+    Switch off horizontal scrolling around update() in the minibuffer
+    [getstring() in input.c]
+
+search.c
+    Add a check in forwsearch() for being at end-of-buffer and fail if
+    so.  If not the rest of the search code (both magical - mcscanner()
+    and ordinary - scanner()) wraps round to the start and searches from
+    there.
+
+search.c
+    Add the FAST search algorithm from 3.10 that was missed during the
+    original GGR migration. It was in 3.9e (5 January 1988 comment).
+    Defined FAST so as to use it.
+    Note that the entire search code is still ASCII-centric.
+
+buffer,c
+file.c
+    Added code to look for file-hooks-<<sfx>> function ahead of
+    file-hooks, and to execute the first found.
+    Moved the file-hooks running from swbuffer() and bfind() as the
+    latter is reached before the filename is set when reading in a new
+    file. The code is now in readin() and only run if lockfl is TRUE
+    (which is an accidental convenience).
+    So file-hooks now run for file loaded by filefind (^XF).
+    They no longer run for files opened in VIEW mode (but that's fine,
+    as none of the modes affects VIEW mode).
+
+crypt.c
+    Re-done to encrypt more than just ASCII codes (which meant that
+    multi-byte utf8 characters were being left unchanged!).
+    Now encrypts all bytes above and including space. This means we can
+    never generate a newline, which would mess things up badly.
+    Simplified the mod coding - mod95 function no longer required.
+
+fileio.c
+    Changed ffputline() to work in chunks, so it doesn't call fputc()
+    (and possibly myencrypt()) once for each character written.
+    Tidied up the whole file to 4-column indenting.
+
+bind.c
+    Moved mbstop() from buildlist() into desbind().
+
+ebind.h
+    Removed (temporarily?) the ^XD binding to bktoshell, as it messes up
+    the tty (leaves it in raw mode?) and so is unusable.
+
+line.c
+    linstr() tidied up.  Removed the old linsert() code (in an "#if 0"
+    section) and indented to a tab-stop of 4.
+
+buffer.c
+exec.c
+    Check for excessive macro recursion.
+    Also fixed the storeproc() call in storepttable() [exec.c] to not
+    pass on the f and n args, as that could end up calling a numbered
+    macro! Re-indented some code to a 4 tab-stop.
+
+crypt.c
+file.c
+fileio.c
+    Extended to encrypt all bytes. This required uemacs to be able to
+    handle NUL characters on input, so ffputline() and ffgetline() were
+    modified to do this. They also now work on 8kB blocks, rather than
+    per-character, which significantly speeds up read/writing on large
+    files.
+    This makes the -n option a no-op.
+
+globals.c
+input.c
+main.c
+names.c
+random.c
+edef.h
+efunc.h
+estruct.h
+etc/uemacs.rc
+    A buffer (//kbd_macro) is now filled with the macro code for the
+    keyboard macro as it is created. This allows you to edit it and/or
+    save it to file for later execution.
+    Various functions now need to add their result to the macro buffer.
+    The running of this buffer has been bound to ^XV. The ^XE replay of
+    the key strokes is currently unaltered, but these key-bidings may
+    swap once this has moved beyond the experimental stage.
+    Added insert-raw-string and macro-helper functions to enable this.
+
+        modified:   edef.h
+        modified:   file.c
+        modified:   fileio.c
+        modified:   globals.c
+
+
+file.c
+fileio.c
+globals.c
+edef.h
+    Since ffputline() and ffgetline() now work via a cache there is no
+    longer any need to run input into fline then copy it all into a
+    struct line (which was done to avoid either doing a realloc on every
+    character input or allocating unnecessarily large buffers for short
+    lines). So modified ffgetline() callers to let ffgetline() call
+    lalloc(), which it will mostly do once it knows the final line size
+    and will reallocate and copy-over if required, and removed the
+    related lfillchars() calls.
+    Combined the read and write caches for ffputline() and ffgetline()
+    since only one can ever be active at any one time.
+    Removed ftrulen and fline, changed fline to be struct line *.
+
+../KNOWN_ISSUES
+../TODO
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Notes about the non-ASCII search problem (for the next release?)
+    Changed the PROGRAM_NAME_LONG from uEmacs/Pk to nuEmacs.
+    Update to version GGR4.119.
 
 ==========
