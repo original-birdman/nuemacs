@@ -20,11 +20,8 @@
  */
 int set_encryption_key(int f, int n) {
     int status;             /* return status */
-    int odisinp;            /* original vlaue of disinp */
+    int odisinp;            /* original value of disinp */
     char key[NPAT];         /* new encryption string */
-
-    char keycop[NPAT];      /* GGR */
-    int lcop;               /* GGR */
 
 /* Turn command input echo off */
     odisinp = disinp;
@@ -32,10 +29,15 @@ int set_encryption_key(int f, int n) {
 
 /* Get the string to use as an encrytion string */
     status = mlreply("Encryption String: ", key, NPAT - 1);
+    mlwrite(" ");           /* clear it off the bottom line */
     disinp = odisinp;
     if (status != TRUE) return status;
 
+#if PARANOID
 /* GGR - catenate it until at least 63 chars */
+    char keycop[NPAT];      /* GGR */
+    int lcop;               /* GGR */
+
     strcpy(keycop, key);
     lcop = strlen(key);
     while (lcop < 63) {
@@ -43,14 +45,19 @@ int set_encryption_key(int f, int n) {
         strcat(key, keycop);
         lcop += lcop;
     }
+#endif
 
-/* and encrypt it */
+/* Encrypt it.
+ * However, we now encrypt all bytes, so the result here could contain
+ * a NUL byte. Hence we need to get (and store) the length first, and
+ * remember to use that in any copying (including elsewhere in uemacs).
+ */
+    curbp->b_keylen = strlen(key);
     myencrypt((char *) NULL, 0);
-    myencrypt(key, strlen(key));
+    myencrypt(key, curbp->b_keylen);
 
-/* and save it off */
-    strcpy(curbp->b_key, key);
-    mlwrite(" ");           /* clear it off the bottom line */
+/* Now save it off */
+    memcpy(curbp->b_key, key, curbp->b_keylen);
     return TRUE;
 }
 
@@ -154,7 +161,8 @@ static int debug;
 void myencrypt(char *bptr, unsigned len) {
     int cc; /* current character being considered */
 
-    static long key = 0;    /* 29 bit encipherment key */
+//    static int32_t key = 0; /* 29 bit encipherment key */
+    static int key = 0; /* 29 bit encipherment key */
     static int salt = 0;    /* salt to spice up key with */
 
     if (!bptr) {            /* is there anything here to encrypt? */
@@ -170,36 +178,37 @@ debug++;
  * really mess things up! So the range is 32(' ')->255 == 224 bytes.
  */
     while (len--) {
-        cc = (unsigned char)*bptr;  /* treat as unsigned... */
+        cc = (unsigned char)*bptr;  /* Get the next char - unsigned */
 
 /* We now read/write in block, so can en/decrypt any byte. */
 
-/* If the upper bit (bit 29) is set, feed it back into the key.
- * This assures us that the starting key affects the entire message.
+/* Feed the upper few bits of the key back into itself.
+ * This ensures that the starting key affects the entire message.
+ * We also ensure tha the key only occupies teh lower 29-bits at most.
+ * This is so that the aritmetic calculation later which impliments
+ * our autokey, won't overflow, making the key go negative.
+ * Machine behavior in these cases does not tend to be portable.
  */
-        key &= 0x1FFFFFFFL;     /* strip off overflow */
-        if (key & 0x10000000L) key ^= 0x0040A001L;  /* feedback */
+        key = (key & 0x1FFFFFFF) ^ ((key >> 29) & 0x03);
 
-/* Down-bias the character, perform a Beaufort encipherment, and
- * up-bias the character again.
- * We need to check that the result is non-negative before the up-bias.
+/* Perform a Beaufort encipherment.
+ * Just pick up the final 8-bits (we may have gone -ve here).
  */
-        cc = (key & 0xff) - cc;
-        while (cc < 0) cc += 256;
+        cc = ((key & 0xff) - cc) & 0xff;
 
 /* The salt will spice up the key a little bit, helping to obscure any
  * patterns in the clear text, particularly when all the characters (or
  * long sequences of them) are the same.
- * We do  not want the salt to go negative, or it will affect the key
+ * We do not want the salt to go negative, or it will affect the key
  * too radically.
  * It is always a good idea to chop off cyclics to prime values.
  */
         if (++salt >= 20857) salt = 0;  /* prime modulus */
 
 /* Our autokey (a special case of the running key) is being generated
- * by a weighted checksum of clear text, cipher text, and salt.
+ * by a weighted checksum of cipher text, (unsigned) clear text and salt.
  */
-        key = key + key + (cc + (unsigned char)*bptr) + salt;
+        key = key + key + (cc ^ (unsigned char)*bptr) + salt;
         *bptr++ = cc;   /* put character back into buffer */
     }
     return;

@@ -13,6 +13,8 @@
 #include "efunc.h"
 #include "line.h"
 
+#include "utf8proc.h"
+
 static FILE *ffp;                       /* File pointer, all functions. */
 static int eofflag;                     /* end-of-file flag */
 
@@ -25,6 +27,16 @@ static struct {
     int rst;                /* Read pointer */
     int len;                /* Valid tot chars (write) or past rst (read) */
 } cache;
+
+/*
+ * Save the first FILE_START_LEN bytes of each file written for
+ * binary/text checking (excludes any newlines).
+ */
+#define FILE_START_LEN 100
+static struct {
+    int vlen;
+    char buf[FILE_START_LEN];
+} file_start;
 
 /*
  * Open a file for reading.
@@ -48,6 +60,7 @@ int ffropen(char *fn) {
     }
 
     cache.rst = cache.len = 0;
+    curbp->b_EOLmissing = 0;        /* Unset this on open */
     fline = NULL;
 
     eofflag = FALSE;
@@ -79,6 +92,7 @@ int ffwopen(char *fn) {
         if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
     }
     cache.rst = cache.len = 0;
+    file_start.vlen = 0;
 
     return FIOSUC;
 }
@@ -111,7 +125,66 @@ int ffclose(void) {
  * and the "nbuf" is its length, less the free newline. Return the status.
  * Now done using a write-cache, so our caller needs to do a final
  * ffputline() call with a NULL buf arg to flush the last part of the cache.
+ *
+ * NOTE!!!
+ * We wish to handle files which didn't have a newline at the EOF in a
+ * helpful manner.
+ * If the file actually had a newlien tehre we have no problem - we just
+ * put one there while writing out.
+ * If it didn;t have one then the b_EOLmissing flags will have been set.
+ * There are three possibly cases:
+ *
+ *  1. We have a text file.
+ *     => We want to add a newline.
+ *  2. We have a CRYPT file .  i.e. we read in a CRYPT file ot a normal
+ *     buffer, switched on CRYPT and are now writing it back out again
+ *     (as real text). the final newline here is not real, and if we
+ *     write it out then it will get decrypted to an arbitrary character
+ *     => We do not want to add a newline.
+ *  3. We have an arbitrary binary file. (Let's leave aside why you would be
+ *     editing this in uemacs.)
+ *     > We want to add a newline.
+ *
+ * We can detect 2. by checking for cryptflag && curbp->b_EOLmissing.
+ * We also need to code make a heuristic check between a text and binary file.
  */
+
+int file_is_binary(void) {
+
+    int bi = 0;
+    int uc_total = 0, uc_text = 0;
+    while (bi < file_start.vlen) {
+        unicode_t uc;
+        unsigned int ub =
+             utf8_to_unicode(file_start.buf, bi, file_start.vlen, &uc);
+        if (ub <= 0) break;
+        bi += ub;
+        const utf8proc_property_t *utf8prpty = utf8proc_get_property(uc);
+        uc_total++;
+/* Count the "text" characters */
+        switch(utf8prpty->category) {
+        case UTF8PROC_CATEGORY_LU:      /* Letter, uppercase */
+        case UTF8PROC_CATEGORY_LL:      /* Letter, lowercase */
+        case UTF8PROC_CATEGORY_LT:      /* Letter, titlecase */
+        case UTF8PROC_CATEGORY_LM:      /* Letter, modifier */
+        case UTF8PROC_CATEGORY_LO:      /* Letter, other */
+        case UTF8PROC_CATEGORY_ND:      /* Number, decimal digit */
+        case UTF8PROC_CATEGORY_NL:      /* Number, letter */
+        case UTF8PROC_CATEGORY_NO:      /* Number, other */
+        case UTF8PROC_CATEGORY_PC:      /* Punctuation, connector */
+        case UTF8PROC_CATEGORY_PD:      /* Punctuation, dash */
+        case UTF8PROC_CATEGORY_PS:      /* Punctuation, open */
+        case UTF8PROC_CATEGORY_PE:      /* Punctuation, close */
+        case UTF8PROC_CATEGORY_PI:      /* Punctuation, initial quote */
+        case UTF8PROC_CATEGORY_PF:      /* Punctuation, final quote */
+        case UTF8PROC_CATEGORY_PO:      /* Punctuation, other */
+        case UTF8PROC_CATEGORY_ZS:      /* Separator, space */
+            uc_text++;
+        }
+    }
+/* We'll say it's binary if <80% of the unicode characters are text */
+    return (uc_text < (4*uc_total)/5);
+}
 
 /* Routine to flush the cache */
 static int flush_write_cache(void) {
@@ -127,13 +200,61 @@ static int flush_write_cache(void) {
     return FIOSUC;
 }
 
-/* The actual callable function */
+/* The actual callable function.
+ * We don't know whether to add the newline at the EOF until we get there
+ * and the only time we know that is when we are called with a NULL
+ * buffer to do the final flush.
+ * So what we do is out put a newline *before* the line text we have
+ * been sent and use the otherwise unused cache.rst variable to note
+ * that we've seen the first line.
+ */
 int ffputline(char *buf, int nbuf) {
 
     static int doing_newline = 0;
+    int status;
+
+/* Now add the newline, which we won't have been sent
+ * It's convenient to do this via a recursive call, provided we
+ * note that we are doing it, so don't continue to do so...
+ */
     if (buf == NULL) {      /* Just flush what is left... */
+        char *reason = NULL;
+        if (curbp->b_EOLmissing) {
+            if (cryptflag) reason = "crypt";
+            else if (file_is_binary()) reason = "binary";
+        }
+        if (reason) {       /* Do we have a reason to skip the final NL? */
+            mlforce("Removed \"added\" trailing newline for %s file", reason);
+            sleep(1);
+        }
+        else {
+            if (cache.rst != 0 && !doing_newline) {
+                doing_newline = 1;
+                status = ffputline("\n", 1);
+                doing_newline = 0;
+                if (status != FIOSUC) return status;
+            }
+        }
         return flush_write_cache();
     }
+
+/* Save the first FILE_START_LEN bytes sent in */
+
+    if ((FILE_START_LEN - file_start.vlen) > 0) {
+        int cc = FILE_START_LEN - file_start.vlen;
+        if (nbuf < cc) cc = nbuf;       /* Don't copy more that we have! */
+        memcpy(file_start.buf+file_start.vlen, buf, cc);
+        file_start.vlen += cc;
+    }
+
+/* If not the first call for an output file, add a newline */
+    if (cache.rst != 0 && !doing_newline) {
+        doing_newline = 1;
+        status = ffputline("\n", 1);
+        doing_newline = 0;
+        if (status != FIOSUC) return status;
+    }
+    cache.rst = 1;              /* Set the "seen first line" flag */
 
     while(nbuf > 0) {
         int to_fill;
@@ -144,22 +265,11 @@ int ffputline(char *buf, int nbuf) {
         cache.len += to_fill;  /* valid in cache */
         buf += to_fill;         /* new start of input */
         if (nbuf > 0) {         /* More to go, so flush cache */
-            int status = flush_write_cache();
+            status = flush_write_cache();
             if (status != FIOSUC) return status;
         }
     }
-
-/* Now add the newline, which we won't have been sent
- * It's convenient to do this via a recursive call, provided we
- * note that we are doing it, so don't continue to do so...
- */
-    int status = FIOSUC;
-    if (!doing_newline) {
-        doing_newline = 1;
-        status = ffputline("\n", 1);
-        doing_newline = 0;
-    }
-    return status;
+    return FIOSUC;
 }
 
 /*
@@ -221,7 +331,8 @@ int ffgetline(void) {
  */
             if (eofflag && (cache.len == 0)) {
                 if (fline->l_used) {
-                    mlforce("Newline absent from end of file. Added.");
+                    curbp->b_EOLmissing = 1;
+                    mlforce("Newline absent at end of file. Added....");
                     sleep(1);
                 }
                 return fline->l_used? FIOSUC: FIOEOF;

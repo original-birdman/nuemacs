@@ -448,6 +448,10 @@ struct buffer {
         int b_marko;            /* but for the "mark"           */
         int b_mode;             /* editor mode of this buffer   */
         int b_fcol;             /* first col to display         */
+        int b_EOLmissing;       /* When read in... */
+#if     CRYPT
+        int b_keylen;           /* encrypted key len            */
+#endif
         char b_active;          /* window activated flag        */
         char b_nwnd;            /* Count of windows on buffer   */
         char b_flag;            /* Flags                        */

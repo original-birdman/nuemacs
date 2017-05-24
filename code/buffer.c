@@ -521,6 +521,8 @@ struct buffer *bfind(char *bname, int cflag, int bflag) {
         strcpy(bp->b_bname, bname);
 #if     CRYPT
         bp->b_key[0] = 0;
+        bp->b_keylen = 0;
+        bp->b_EOLmissing = 0;
 #endif
 #if PROC
         bp->ptt_headp = NULL;

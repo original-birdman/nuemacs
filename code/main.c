@@ -460,7 +460,9 @@ int main(int argc, char **argv)
                         case 'k':       /* -k<key> for code key */
                         case 'K':
                                 /* GGR only if given a key.. */
-                                if (strlen(opt) > 0) {
+                                /* The leading ; *is* needed! */
+                                ;int olen = strlen(opt);
+                                if (olen > 0 && olen < NPAT) {
                                     cryptflag = TRUE;
                                     strcpy(ekey, opt);
                                 }
@@ -567,9 +569,10 @@ int main(int argc, char **argv)
 #if     CRYPT
                 if (cryptflag) {
                         bp->b_mode |= MDCRYPT;
+                        bp->b_keylen = strlen(ekey);
                         myencrypt((char *) NULL, 0);
-                        myencrypt(ekey, strlen(ekey));
-                        strncpy(bp->b_key, ekey, NPAT);
+                        myencrypt(ekey, bp->b_keylen);
+                        memcpy(bp->b_key, ekey, bp->b_keylen);
                 }
 #endif
                 argv++;

@@ -116,35 +116,33 @@ int viewfile(int f, int n)
 }
 
 #if     CRYPT
-static int resetkey(void)
-{                       /* reset the encryption key if needed */
-        int s;          /* return status */
+static int resetkey(void) { /* Reset the encryption key if needed */
+    int s;              /* return status */
 
-        /* turn off the encryption flag */
-        cryptflag = FALSE;
+    cryptflag = FALSE;  /* Turn off the encryption flag */
 
-        /* if we are in crypt mode */
-        if (curbp->b_mode & MDCRYPT) {
-                if (curbp->b_key[0] == 0) {
-                        s = set_encryption_key(FALSE, 0);
-                        if (s != TRUE)
-                                return s;
-                }
-
-                /* let others know... */
-                cryptflag = TRUE;
-
-                /* and set up the key to be used! */
-                /* de-encrypt it */
-                myencrypt((char *) NULL, 0);
-                myencrypt(curbp->b_key, strlen(curbp->b_key));
-
-                /* re-encrypt it...seeding it to start */
-                myencrypt((char *) NULL, 0);
-                myencrypt(curbp->b_key, strlen(curbp->b_key));
+    if (curbp->b_mode & MDCRYPT) {  /* If we are in crypt mode */
+        if (curbp->b_keylen == 0) {
+            s = set_encryption_key(FALSE, 0);
+            if (s != TRUE) return s;
         }
+        cryptflag = TRUE;           /* let others know... */
 
-        return TRUE;
+/* Set up the key to be used! */
+        myencrypt(NULL, 0);
+        myencrypt(curbp->b_key, curbp->b_keylen);
+
+/* curbp->b_key is encrypted when you set it, and since this is done in
+ * place we've just decrypted it. So we re-encrypt it.
+ * Since this uses a symmetric cipher the running key ends up the same
+ * Taking a copy would mean we could do only one set of encrypting, but
+ * would then leave us with the decrypted key in memory, and we're trying
+ *  to avoid that...
+ */
+        myencrypt(NULL, 0);
+        myencrypt(curbp->b_key, curbp->b_keylen);
+    }
+    return TRUE;
 }
 #endif
 
