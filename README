@@ -36,6 +36,15 @@ Other changes so far made are:
   o allows you to define key-sequences (phonetic translation tables)
     that get mapped, on input, to other strings.
     Useful for utf8 input form an ASCII keyboard.
+  o Added horizontal scrolling (from 3.10e).
+  o Changed file encryption so it now encrypts all bytes, not just
+    ASCII ones.
+  o Input and ouput now buffered into an 8kB block, significantly
+    speeding up file processing,
+  o keyboard macros are collected as commands in a buffer rather than
+    just as keystrokes.
+  o run any file-hooks (and file-hooks-<<sfx>>) user macros when a file
+    is read in
 
 Other changes to be made are:
   o better handle utf8 strings (ongoing...),

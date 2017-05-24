@@ -955,7 +955,7 @@ estruct.h
     Added display-code option to ptt tables to let you give a
     2-character code to display in the mode line when it is on. It is
     preceded by "P-" and defaults to the first two characters of the
-    table name.
+d     table name.
     Added an internal function, show_utf8(), to display.c to handle
     utf8 strings in the modeline.
 
@@ -1243,5 +1243,46 @@ etc/uemacs.hlp
     Notes about the non-ASCII search problem (for the next release?)
     Changed the PROGRAM_NAME_LONG from uEmacs/Pk to nuEmacs.
     Update to version GGR4.119.
+
+========== GGR4.120
+
+   Updates for encrypting files so as to make encryption compatible with
+   JASSPA uemacs.
+buffer.c
+estruct.h
+    Define and initialize b_keylen and b_EOLmissing in struct buffer.
+crypt.c
+   So no longer catenates your key to itself until it is at least 63
+   chars long (the code is still there and can be enabled by setting
+   PARANOID in the compile options).
+file.c
+   Use curbp->b_keylen, not strlen(curbp->b_key), as the key is
+   self-encrypted and hence may contain a NUL.
+fileio.c
+   Handle the case of binary and crypt file which have no newline at the
+   EOF.  We don't want to write these out if they weren't there
+   originally.
+   Added a heuristic test for where a file is binary.
+   Newlines are now added *before* a line is written, except for the
+   first call for a file write-out, and the final one is (probably)
+   written in the flush call.
+main.c
+   Check that any command line given encryption key is not longer than a
+   valid key length before copying it into the buffer.
+   Save the keylength of the plaintext version as b_keylen.
+
+buffer.c
+file.c
+   Moved the copy in of global modes in swbuffer() to be before the
+   readin() call, as that runs file-hooks, which may well wish to set
+   modes.
+   Change file-hooks running order to be file-hooks then file-hooks-sfx,
+   with each being run if it exists.
+
+../README
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.120.
 
 ==========
