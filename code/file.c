@@ -208,24 +208,20 @@ int getfile(char *fname, int lockfl) {
 }
 
 /* GGR routine to handle file-hooks in one place.
- * We now look for /file-hooks.<<sfx>> first.
+ * We now look for /file-hooks.<<sfx>> after /file-hooks.
  * And now done in readin() only
  */
 static void handle_filehooks(char *fname) {
     struct buffer *sb;
-    int fh_found = 0;
+    if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
     char *sfx = strrchr(fname, '.');
-    if (sfx && strlen(sfx) <= 19) {     /* Max is 32, incl NUL */
+    if (sfx && strlen(sfx) <= 19) {     /* Max bufname is 32, incl NUL */
         sfx++;                          /* Skip over '.' */
         char sfx_bname[NBUFN];
         strcpy(sfx_bname, "/file-hooks-");
         strcat(sfx_bname, sfx);
-        if ((sb = bfind(sfx_bname, FALSE, 0)) != NULL) {
-            fh_found = 1;
-            dobuf(sb);
-        }
+        if ((sb = bfind(sfx_bname, FALSE, 0)) != NULL) dobuf(sb);
     }
-    if (!fh_found && (sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
     return;
 }
 
