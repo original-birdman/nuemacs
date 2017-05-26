@@ -37,14 +37,14 @@ int wrapword(int f, int n)
     int c;          /* charector temporary */
 
 /* Backup from the <NL> 1 char */
-    if (back_grapheme(0, 1) <= 0) return FALSE;
+    if (back_grapheme(1) <= 0) return FALSE;
 
 /* Back up until we aren't in a word, make sure there's a break in the line */
     cnt = 0;
     while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) != ' ')
          && (c != '\t')) {
         cnt++;
-        if (back_grapheme(0, 1) <= 0) return FALSE;
+        if (back_grapheme(1) <= 0) return FALSE;
 /* If we make it to the beginning, start a new line */
         if (curwp->w_doto == 0) {
             gotoeol(FALSE, 0);
@@ -60,7 +60,7 @@ int wrapword(int f, int n)
 
 /* And past the first word */
     while (cnt-- > 0) {
-        if (forw_grapheme(FALSE, 1) <= 0) return FALSE;
+        if (forw_grapheme(1) <= 0) return FALSE;
     }
 
 /* Make sure the display is not horizontally scrolled */
@@ -80,19 +80,19 @@ int backword(int f, int n)
 {
         if (n < 0)
                 return forwword(f, -n);
-        if (back_grapheme(FALSE, 1) <= 0)
+        if (back_grapheme(1) <= 0)
                 return FALSE;
         while (n--) {
                 while (inword() == FALSE) {
-                        if (back_grapheme(FALSE, 1) <= 0)
+                        if (back_grapheme(1) <= 0)
                                 return FALSE;
                 }
                 while ((inword() != FALSE) || zw_break) {
-                        if (back_grapheme(FALSE, 1) <= 0)
+                        if (back_grapheme(1) <= 0)
                                 return FALSE;
                 }
         }
-        return (forw_grapheme(FALSE, 1) > 0);   /* Success count => T/F */
+        return (forw_grapheme(1) > 0);      /* Success count => T/F */
 }
 
 /*
@@ -112,13 +112,13 @@ int forwword(int f, int n)
         int state1 = using_ggr_style? FALSE: TRUE;
         int prev_zw_break = 0;
         while ((inword() == state1) || (!state1 && prev_zw_break)) {
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
         prev_zw_break = zw_break;
         while ((inword() == !state1) || (!state1 && zw_break)) {
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
@@ -176,13 +176,13 @@ int upperword(int f, int n)
         return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE) || prev_zw_break) {
             ensure_case(UPPERCASE);
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
@@ -203,13 +203,13 @@ int lowerword(int f, int n)
         return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE)  || prev_zw_break) {
             ensure_case(LOWERCASE);
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
             prev_zw_break = zw_break;
         }
@@ -231,17 +231,17 @@ int capword(int f, int n)
         return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
         }
         int prev_zw_break = zw_break;
         if (inword() != FALSE) {
             ensure_case(UPPERCASE);
-            if (forw_grapheme(FALSE, 1) <= 0)
+            if (forw_grapheme(1) <= 0)
                 return FALSE;
             while ((inword() != FALSE) || prev_zw_break) {
                 ensure_case(LOWERCASE);
-                if (forw_grapheme(FALSE, 1) <= 0)
+                if (forw_grapheme(1) <= 0)
                     return FALSE;
             }
         }
@@ -286,7 +286,7 @@ int delfword(int f, int n)
 
         /* get us into a word.... */
         while (inword() == FALSE) {
-                moved = forw_grapheme(FALSE, 1);
+                moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 size += moved;
         }
@@ -295,7 +295,7 @@ int delfword(int f, int n)
                 /* skip one word, no whitespace! */
                 int prev_zw_break = 0;
                 while ((inword() == TRUE) || prev_zw_break) {
-                        moved = forw_grapheme(FALSE, 1);
+                        moved = forw_grapheme(1);
                         if (moved <= 0) return FALSE;
                         size += moved;
                         prev_zw_break = zw_break;
@@ -306,7 +306,7 @@ int delfword(int f, int n)
 
                         /* if we are at EOL; skip to the beginning of the next */
                         while (curwp->w_doto == llength(curwp->w_dotp)) {
-                                moved = forw_grapheme(FALSE, 1);
+                                moved = forw_grapheme(1);
                                 if (moved <= 0) return FALSE;
                                 ++size;     /* Will move one to next line */
                         }
@@ -314,7 +314,7 @@ int delfword(int f, int n)
                         /* move forward till we are at the end of the word */
                         int prev_zw_break = 0;
                         while ((inword() == TRUE) || prev_zw_break) {
-                                moved = forw_grapheme(FALSE, 1);
+                                moved = forw_grapheme(1);
                                 if (moved <= 0) return FALSE;
                                 size += moved;
                                 prev_zw_break = zw_break;
@@ -323,7 +323,7 @@ int delfword(int f, int n)
                         /* if there are more words, skip the interword stuff */
                         if (n != 0)
                                 while (inword() == FALSE) {
-                                        moved = forw_grapheme(FALSE, 1);
+                                        moved = forw_grapheme(1);
                                         if (moved <= 0) return FALSE;
                                         size += moved;
                                 }
@@ -366,22 +366,22 @@ int delbword(int f, int n)
         thisflag |= CFKILL;     /* this command is a kill */
 
         int moved;
-        moved = back_grapheme(FALSE, 1);
+        moved = back_grapheme(1);
         if (moved <= 0) return FALSE;
         size = moved;
         while (n--) {
                 while (inword() == FALSE) {
-                        moved = back_grapheme(FALSE, 1);
+                        moved = back_grapheme(1);
                         if (moved <= 0) return FALSE;
                         size += moved;
                 }
                 while ((inword() != FALSE) || zw_break) {
-                        moved = back_grapheme(FALSE, 1);
+                        moved = back_grapheme(1);
                         if (moved <= 0) goto bckdel;
                         size += moved;
                 }
         }
-        moved = forw_grapheme(FALSE, 1);
+        moved = forw_grapheme(1);
         if (moved <= 0) return FALSE;
         size -= moved;
 
@@ -1028,7 +1028,7 @@ static int region_listmaker(int f, int n)
 
     struct line *here_dotp = curwp->w_dotp;
     int here_doto = curwp->w_doto;
-    forw_grapheme(0, 1);
+    forw_grapheme(1);
     curwp->w_markp = curwp->w_dotp;
     curwp->w_marko = curwp->w_doto;
     curwp->w_dotp = here_dotp;

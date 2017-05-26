@@ -64,7 +64,7 @@ int risearch(int f, int n)
 
         /* Make sure the search doesn't match where we already are:   */
 
-        back_grapheme(TRUE, 1);          /* Back up a character            */
+        back_grapheme(1);           /* Back up a character            */
 
         if (!(isearch(f, -n))) {            /* Call ISearch backwards */
                                             /* If error in search:    */
@@ -185,7 +185,7 @@ int isearch(int f, int n)
                         col = echo_char(pat[cpos], col);
                 if (c == IS_REVERSE) {      /* forward search?        */
                         n = -1;             /* No, search in reverse  */
-                        back_grapheme(TRUE, 1);  /* Be defensive about EOB */
+                        back_grapheme(1);   /* Be defensive about EOB */
                 } else
                         n = 1;              /* Yes, search forward    */
                 status = scanmore(pat, n);      /* Do the search         */

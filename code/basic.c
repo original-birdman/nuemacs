@@ -90,13 +90,17 @@ int gotobol(int f, int n)
  * Otherwise compute the new cursor location.
  * Error if you try and move out of the buffer.
  * Set the flag if the line pointer for dot changes.
+ * The macro-callable backchar() (as macros need something that returns
+ * TRUE/FALSE) is a write-through to this, with the "f" arg ignored (it
+ * has never done anything).
+ * Internal calls should be to back_grapheme() *not* bachchar().
  */
-int back_grapheme(int f, int n)
+int back_grapheme(int n)
 {
         struct line *lp;
 
         if (n < 0)
-                return forw_grapheme(f, -n);
+                return forw_grapheme(-n);
         int moved = 0;
         while (n--) {
                 if (curwp->w_doto == 0) {
@@ -119,6 +123,11 @@ int back_grapheme(int f, int n)
         return moved;
 }
 
+/* We still need a bindable function that returns TRUE/FALSE */
+int backchar(int f, int n) {
+    return (back_grapheme(n) > 0);
+}
+
 /*
  * Move the cursor to the end of the current line. Trivial. No errors.
  */
@@ -138,11 +147,15 @@ int gotoeol(int f, int n)
  * Otherwise compute the new cursor location, and move ".".
  * Error if you try and move off the end of the buffer.
  * Set the flag if the line pointer for dot changes.
+ * The macro-callable forwchar() (as macros need something that returns
+ * TRUE/FALSE) is a write-through to this, with the "f" arg ignored (it
+ * has never done anything).
+ * Internal calls should be to forw_grapheme() *not* forwchar().
  */
-int forw_grapheme(int f, int n)
+int forw_grapheme(int n)
 {
         if (n < 0)
-                return back_grapheme(f, -n);
+                return back_grapheme(-n);
         int moved = 0;
         while (n--) {
                 int len = llength(curwp->w_dotp);
@@ -166,6 +179,11 @@ int forw_grapheme(int f, int n)
                 }
         }
         return moved;
+}
+
+/* We still need a bindable/macro function that returns TRUE/FALSE */
+int forwchar(int f, int n) {
+    return (forw_grapheme(n) > 0);
 }
 
 /*
@@ -339,8 +357,8 @@ int gotobop(int f, int n)
     while (n-- > 0) {   /* For each one asked for */
 
 /* First scan back until we are in a word... */
-        suc = back_grapheme(FALSE, 1);
-        while ((suc > 0) && at_whitespace()) suc = back_grapheme(FALSE, 1);
+        suc = back_grapheme(1);
+        while ((suc > 0) && at_whitespace()) suc = back_grapheme(1);
         curwp->w_doto = 0;          /* ...and go to the B-O-Line */
 
 /* Then scan back until we hit an empty line or B-O-buffer... */
@@ -353,7 +371,7 @@ int gotobop(int f, int n)
 
 /* ...and then forward until we are looking at a word */
         suc = 1;
-        while ((suc > 0) && at_whitespace()) suc = forw_grapheme(FALSE, 1);
+        while ((suc > 0) && at_whitespace()) suc = forw_grapheme(1);
     }
     curwp->w_flag |= WFMOVE;        /* Force screen update */
     return TRUE;
@@ -375,7 +393,7 @@ int gotoeop(int f, int n)
     while (n-- > 0) {  /* for each one asked for */
 /* First scan forward until we are in/looking at a word... */
         suc = 1;
-        while ((suc > 0) && at_whitespace()) suc = forw_grapheme(FALSE, 1);
+        while ((suc > 0) && at_whitespace()) suc = forw_grapheme(1);
         curwp->w_doto = 0;          /* ...and go to the B-O-Line */
         if (suc)                    /* of next line if not at EOF */
             curwp->w_dotp = lforw(curwp->w_dotp);
@@ -389,8 +407,8 @@ int gotoeop(int f, int n)
         }
 
 /* ...and then backward until we are in a word */
-        suc = back_grapheme(FALSE, 1);
-        while ((suc > 0) && at_whitespace()) suc = back_grapheme(FALSE, 1);
+        suc = back_grapheme(1);
+        while ((suc > 0) && at_whitespace()) suc = back_grapheme(1);
         curwp->w_doto = llength(curwp->w_dotp); /* and to the EOL */
     }
     curwp->w_flag |= WFMOVE;  /* force screen update */

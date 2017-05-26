@@ -392,7 +392,7 @@ int detab(int f, int n)
                                          (tabmask + 1) -
                                          (curwp->w_doto & tabmask));
                         }
-                        forw_grapheme(FALSE, 1);
+                        forw_grapheme(1);
                 }
 
                 /* advance/or back to the next line */
@@ -440,7 +440,7 @@ int entab(int f, int n)
                                         /* there is a bug here dealing with
                                            mixed space/tabed lines.......
                                            it will get fixed                */
-                                        back_grapheme(TRUE, ccol - fspace);
+                                        back_grapheme(ccol - fspace);
                                         ldelete((long) (ccol - fspace),
                                                 FALSE);
                                         linsert(1, '\t');
@@ -467,7 +467,7 @@ int entab(int f, int n)
                                 fspace = -1;
                                 break;
                         }
-                        forw_grapheme(FALSE, 1);
+                        forw_grapheme(1);
                 }
 
                 /* advance/or back to the next line */
@@ -545,7 +545,7 @@ int openline(int f, int n)
                 s = lnewline();
         } while (s == TRUE && --i);
         if (s == TRUE)                          /* Then back up overtop */
-                s = (back_grapheme(f, n) > 0);  /* of them all.         */
+                s = (back_grapheme(n) > 0);     /* of them all.         */
         return s;
 }
 
@@ -687,7 +687,7 @@ int insbrace(int n, int c)
         oldoff = curwp->w_doto;
 
         count = 1;
-        back_grapheme(FALSE, 1);
+        back_grapheme(1);
 
         while (count > 0) {
                 if (curwp->w_doto == llength(curwp->w_dotp))
@@ -700,7 +700,7 @@ int insbrace(int n, int c)
                 if (ch == oc)
                         --count;
 
-                back_grapheme(FALSE, 1);
+                back_grapheme(1);
                 if (boundry(curwp->w_dotp, curwp->w_doto, REVERSE))
                         break;
         }
@@ -715,7 +715,7 @@ int insbrace(int n, int c)
         /* aller au debut de la ligne apres la tabulation */
         while ((ch = lgetc(curwp->w_dotp, curwp->w_doto)) == ' '
                || ch == '\t')
-                forw_grapheme(FALSE, 1);
+                forw_grapheme(1);
 
         /* delete back first */
         target = getccol(FALSE);    /* c'est l'indent que l'on doit avoir */
@@ -904,7 +904,7 @@ int backdel(int f, int n)
                         kdelete();
                 thisflag |= CFKILL;
         }
-        s = (back_grapheme(f, n) > 0);
+        s = (back_grapheme(n) > 0);
         if (s == TRUE)
                 s = ldelchar(n, f);
         return s;
@@ -1202,9 +1202,9 @@ int getfence(int f, int n)
         /* set up for scan */
         count = 1;
         if (sdir == REVERSE)
-                back_grapheme(FALSE, 1);
+                back_grapheme(1);
         else
-                forw_grapheme(FALSE, 1);
+                forw_grapheme(1);
 
         /* scan until we find it, or reach the end of file */
         while (count > 0) {
@@ -1217,9 +1217,9 @@ int getfence(int f, int n)
                 if (c == ofence)
                         --count;
                 if (sdir == FORWARD)
-                        forw_grapheme(FALSE, 1);
+                        forw_grapheme(1);
                 else
-                        back_grapheme(FALSE, 1);
+                        back_grapheme(1);
                 if (boundry(curwp->w_dotp, curwp->w_doto, sdir))
                         break;
         }
@@ -1227,9 +1227,9 @@ int getfence(int f, int n)
         /* if count is zero, we have a match, move the sucker */
         if (count == 0) {
                 if (sdir == FORWARD)
-                        back_grapheme(FALSE, 1);
+                        back_grapheme(1);
                 else
-                        forw_grapheme(FALSE, 1);
+                        forw_grapheme(1);
                 curwp->w_flag |= WFMOVE;
                 return TRUE;
         }
@@ -1276,7 +1276,7 @@ int fmatch(int ch)
         /* find the top line and set up for scan */
         toplp = curwp->w_linep->l_bp;
         count = 1;
-        back_grapheme(FALSE, 2);
+        back_grapheme(2);
 
         /* scan back until we find it, or reach past the top of the window */
         while (count > 0 && curwp->w_dotp != toplp) {
@@ -1288,7 +1288,7 @@ int fmatch(int ch)
                         ++count;
                 if (c == opench)
                         --count;
-                back_grapheme(FALSE, 1);
+                back_grapheme(1);
                 if (curwp->w_dotp == curwp->w_bufp->b_linep->l_fp &&
                     curwp->w_doto == 0)
                         break;
@@ -1298,7 +1298,7 @@ int fmatch(int ch)
         /* there is a real machine dependant timing problem here we have
            yet to solve......... */
         if (count == 0) {
-                forw_grapheme(FALSE, 1);
+                forw_grapheme(1);
                 for (i = 0; i < term.t_pause; i++)
                         update(FALSE);
         }

@@ -1110,7 +1110,7 @@ static int replaces(int kind, int f, int n)
 
                         case 'N':
                         case 'n':       /* no, onword */
-                                forw_grapheme(FALSE, 1);
+                                forw_grapheme(1);
                                 continue;
 
                         case '!':       /* yes/stop asking */
@@ -1135,7 +1135,7 @@ static int replaces(int kind, int f, int n)
 
                                 /* Delete the new string.
                                  */
-                                back_grapheme(FALSE, rlength);
+                                back_grapheme(rlength);
                                 matchline = curwp->w_dotp;
                                 matchoff = curwp->w_doto;
                                 status = delins(rlength, patmatch, FALSE);
@@ -1147,7 +1147,7 @@ static int replaces(int kind, int f, int n)
                                  * reprompt.
                                  */
                                 --numsub;
-                                back_grapheme(FALSE, mlenold);
+                                back_grapheme(mlenold);
                                 matchline = curwp->w_dotp;
                                 matchoff = curwp->w_doto;
                                 goto pprompt;

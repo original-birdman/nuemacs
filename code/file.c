@@ -208,7 +208,7 @@ int getfile(char *fname, int lockfl) {
 }
 
 /* GGR routine to handle file-hooks in one place.
- * We now look for /file-hooks.<<sfx>> after /file-hooks.
+ * We now look for /file-hooks-<<sfx>> after /file-hooks.
  * And now done in readin() only
  */
 static void handle_filehooks(char *fname) {
