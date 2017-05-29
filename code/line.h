@@ -33,6 +33,7 @@ struct line {
 extern void lfree(struct line *lp);
 extern void lchange(int flag);
 extern int insspace(int f, int n);
+extern int linsert_byte(int, int);
 extern int linstr(char *instr);
 extern int linsert(int n, int c);
 extern int lowrite(int c);

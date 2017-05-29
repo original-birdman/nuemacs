@@ -128,7 +128,7 @@ void lchange(int flag)
  */
 int insspace(int f, int n)
 {
-        linsert(n, ' ');
+        linsert_byte(n, ' ');
         back_grapheme(n);
         return TRUE;
 }
@@ -143,7 +143,7 @@ int insspace(int f, int n)
  * well, and FALSE on errors.
  */
 
-static int linsert_byte(int n, int c)
+int linsert_byte(int n, int c)
 {
         char *cp1;
         char *cp2;
