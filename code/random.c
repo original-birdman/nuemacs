@@ -1312,15 +1312,27 @@ int fmatch(int ch)
 /* A string getter for istring and rawstring, as they only differ in the
  * routine they use to prompt for and get the input.
  */
+enum istr_type { RAW_STR, COOKED_STR };
 typedef int (*mlfn_t)(char *, char *, int);
 
-int string_getter(int f, int n, mlfn_t ml_func) {
+int string_getter(int f, int n, enum istr_type call_type) {
     int status;                     /* status return code */
     char tstring[NLINE + 1];        /* string to add */
+    mlfn_t ml_func;
+    char *prompt;
 
 /* ask for string to insert, using the requested funtion */
 
-    status = ml_func("String/unicode chars: ", tstring, NLINE);
+    if (call_type == RAW_STR) {
+        ml_func = mlreplyall;
+        prompt = "String: ";
+    }
+    else {
+        ml_func = mlreply;
+        prompt = "String/unicode chars: ";
+    }
+
+    status = ml_func(prompt, tstring, NLINE);
     if (status != TRUE)
         return status;
 
@@ -1331,11 +1343,11 @@ int string_getter(int f, int n, mlfn_t ml_func) {
     while(*rp != '\0') {
         rp = token(rp, tok, NLINE);
         if (tok[0] == '\0') break;
-        if (!strncmp(tok, "0x", 2)) {
+        if ((call_type == COOKED_STR) && !strncmp(tok, "0x", 2)) {
             long add = strtol(tok+2, NULL, 16);
             nstring[nlen++] = add;
         }
-        else if (tok[0] == 'U' && tok[1] == '+') {
+        else if ((call_type == COOKED_STR) && tok[0] == 'U' && tok[1] == '+') {
             int val = strtol(tok+2, NULL, 16);
             int incr = unicode_to_utf8(val, nstring+nlen);
             nlen += incr;
@@ -1364,7 +1376,7 @@ int string_getter(int f, int n, mlfn_t ml_func) {
  * int f, n;            ignored arguments
  */
 int istring(int f, int n) {
-    return string_getter(f, n, mlreply);
+    return string_getter(f, n, COOKED_STR);
 }
 
 /*
@@ -1373,7 +1385,7 @@ int istring(int f, int n) {
  * It's istring, but uses mlreplyall() to get the text.
  */
 int rawstring(int f, int n) {
-    return string_getter(f, n, mlreplyall);
+    return string_getter(f, n, RAW_STR);
 }
 
 /*
