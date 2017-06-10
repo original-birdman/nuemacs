@@ -133,18 +133,18 @@ static char kbd_text[1024];
 static int kbd_idx;
 static int must_quote;
 
-enum KDBM_direction { GetTo_KDBM, OutOf_KDBM };
+enum KBDM_direction { GetTo_KBDM, OutOf_KBDM };
 
 extern int reframe(struct window *);
-static int kbdmac_buffer_toggle(enum KDBM_direction mode, char *who) {
-    static enum KDBM_direction last_mode = OutOf_KDBM;  /* This must toggle */
+static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
+    static enum KBDM_direction last_mode = OutOf_KBDM;  /* This must toggle */
     static struct buffer *obp;
     static int saved_nw;
 
     switch(mode) {
-    case GetTo_KDBM:
-        if (last_mode == GetTo_KDBM) goto out_of_phase;
-        last_mode = GetTo_KDBM;
+    case GetTo_KBDM:
+        if (last_mode == GetTo_KBDM) goto out_of_phase;
+        last_mode = GetTo_KBDM;
         obp = curbp;                    /* Save whence we came */
         saved_nw = kbdmac_bp->b_nwnd;   /* Mark as "not viewed" */
         kbdmac_bp->b_nwnd = 0;
@@ -155,9 +155,9 @@ static int kbdmac_buffer_toggle(enum KDBM_direction mode, char *who) {
             return FALSE;
         }
         return TRUE;
-    case OutOf_KDBM:
-        if (last_mode == OutOf_KDBM) goto out_of_phase;
-        last_mode = OutOf_KDBM;
+    case OutOf_KBDM:
+        if (last_mode == OutOf_KBDM) goto out_of_phase;
+        last_mode = OutOf_KBDM;
         int status = swbuffer(obp);
         kbdmac_bp->b_nwnd = saved_nw;
         return status;
@@ -177,9 +177,9 @@ static int start_kbdmacro(void) {
 
     bclear(kbdmac_bp);
     kbd_idx = must_quote = 0;
-    if (!kbdmac_buffer_toggle(GetTo_KDBM, "start")) return FALSE;
+    if (!kbdmac_buffer_toggle(GetTo_KBDM, "start")) return FALSE;
     linstr("; keyboard macro\n");
-    return kbdmac_buffer_toggle(OutOf_KDBM, "start");
+    return kbdmac_buffer_toggle(OutOf_KBDM, "start");
 }
 
 /* Would be nice to be able to count consecutive calls to certain
@@ -187,11 +187,14 @@ static int start_kbdmacro(void) {
  * one call with a numeric arg.
  */
 
+/* This records an added character
+ * Needs to handle spaces and token()'s special characters.
+ */
 void addchar_kbdmacro(char addch) {
 
     char cc = addch & 0xff;
     char xc = 0;
-    switch(cc) {
+    switch(cc) {        /* Handle what token in exec.c handles */
     case 8:   xc = 'b'; break;
     case 9:   xc = 't'; break;
     case 10:  xc = 'n'; break;
@@ -210,17 +213,31 @@ void addchar_kbdmacro(char addch) {
 }
 
 /* Flush any pending text so as to be insert raw.
- * Needs to handle spaces and token()'s special characters.
- * functions (forward-character, next-line, etc.) and just use
- * one call with a numeric arg.
+ * Needs to handle spaces, token()'s special characters and NULs
  */
 static void flush_kbd_text(void) {
     lnewline();
     linstr("insert-raw-string ");
-    if (must_quote) linsert(1, '"');
+    if (must_quote) linsert_byte(1, '"');
     kbd_text[kbd_idx] = '\0';
-    linstr(kbd_text);
-    if (must_quote) linsert(1, '"');
+/* This loop may look odd, but if we have NUL bytes to insert it means
+ * that it works as if we haven't yet added enough it must be because
+ * we've hit a NUL, so process that and continue on from there.
+ */
+    int added = 0;
+    while(1) {
+        linstr(kbd_text+added);
+        added += strlen(kbd_text+added);
+        if (added >= kbd_idx) break;
+        if (must_quote) linsert_byte(1, '"');
+        lnewline();
+        linstr("macro-helper 0");
+        lnewline();
+        linstr("insert-raw-string ");
+        added++;
+        if (must_quote) linsert_byte(1, '"');
+    }
+    if (must_quote) linsert_byte(1, '"');
     kbd_idx = must_quote = 0;
     return;
 }
@@ -235,7 +252,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
         mlwrite("addto: no keyboard macro buffer!");
         return FALSE;
     }
-    if (!kbdmac_buffer_toggle(GetTo_KDBM, "addto")) return FALSE;
+    if (!kbdmac_buffer_toggle(GetTo_KBDM, "addto")) return FALSE;
 
 /* If there is any pending text we need to flush it first */
     if (kbd_idx) flush_kbd_text();
@@ -243,11 +260,11 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
         lnewline();
         if (func_rpt_cnt) {
             linstr(itoa(func_rpt_cnt));
-            linsert(1, ' ');
+            linsert_byte(1, ' ');
             func_rpt_cnt = 0;
         }
     }
-    else linsert(1, ' ');
+    else linsert_byte(1, ' ');
     if (!do_quote) linstr(text);
     else {
         int qreq = 0;
@@ -257,7 +274,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
                 break;
             }
         }
-        if (qreq) linsert(1, '"');
+        if (qreq) linsert_byte(1, '"');
         for (char *tp = text; *tp; tp++) {
             char cc = *tp & 0xff;
             char xc = 0;
@@ -270,14 +287,14 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
             case '~': xc = '~'; break;      /* It *does* handle this */
             }
             if (xc != 0) {
-                linsert(1, '~');
+                linsert_byte(1, '~');
                 cc = xc;
             }
-            linsert(1, cc);
+            linsert_byte(1, cc);
 	}
-        if (qreq) linsert(1, '"');
+        if (qreq) linsert_byte(1, '"');
     }
-    return kbdmac_buffer_toggle(OutOf_KDBM, "addto");
+    return kbdmac_buffer_toggle(OutOf_KBDM, "addto");
 }
 
 static int end_kbdmacro(void) {
@@ -285,12 +302,12 @@ static int end_kbdmacro(void) {
         mlwrite("end: no keyboard macro buffer!");
         return FALSE;
     }
-    if (!kbdmac_buffer_toggle(GetTo_KDBM, "end")) return FALSE;
+    if (!kbdmac_buffer_toggle(GetTo_KBDM, "end")) return FALSE;
 
 /* If there is any pending text we need to flush it first */
     if (kbd_idx) flush_kbd_text();
     lnewline();
-    return kbdmac_buffer_toggle(OutOf_KDBM, "end");
+    return kbdmac_buffer_toggle(OutOf_KBDM, "end");
 }
 
 int macro_helper(int f, int n) {
@@ -304,6 +321,7 @@ int macro_helper(int f, int n) {
     case ')':
         return insbrace(n, tag[0]);
     case '#':   return inspound();
+    case '0':   return linsert_byte(n, 0);  /* Insert a NUL */
     }
     return FALSE;
 }
@@ -902,7 +920,7 @@ int execute(int c, int f, int n)
             }
 	}
         else {
-            status = linsert(n, c);
+            status = linsert_byte(n, c);    /* We get utf-8, not Unicode */
             if (!inmb && kbdmode == RECORD) {
                 int nc = 1;
                 if ((f > 0) && (n > 1)) nc = n;
