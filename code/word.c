@@ -970,14 +970,24 @@ static int region_listmaker(int f, int n)
  * Start by getting to the end of the paragraph containing the end of
  * the region.
  */
-    curwp->w_dotp = f_region.r_linep;
-    curwp->w_doto = f_region.r_offset;
+    struct line *flp = f_region.r_linep;
     long togo = f_region.r_size + f_region.r_offset;
-    struct line *flp = curwp->w_dotp;
-    while (togo > 0) {
-        togo -= llength(flp) + 1;       /* Incl newline */
-        curwp->w_dotp = flp = lforw(flp);
-    }                                   /* Exit line after end para */
+    while (1) {
+        long left = togo - (llength(flp) + 1);   /* Incl newline */
+        if (left < 0) break;
+        togo = left;
+        flp = lforw(flp);
+    }
+    curwp->w_dotp = flp;                /* Fix up line and ... */
+    curwp->w_doto = togo;               /* ... offset for end-of-range */
+
+/* We want to get to EOP, but if we are at the end of the last line
+ * (which is a likely marking scenario for a region) we don't want to go
+ * to the next paragraph!
+ * So we first go back a word.
+ * This also means we can put the mark *between* paragraphs.....
+ */
+    backword(FALSE, 1);
     gotoeop(FALSE, 1);
     struct line *eopline = curwp->w_dotp;
 
@@ -994,11 +1004,13 @@ static int region_listmaker(int f, int n)
         if (eopline == curwp->w_dotp) break;
     }
 
-/* Back to the start and get to start of the paragraph */
-
+/* Back to the start and get to start of the paragraph.
+ * To handle already being at the bop, or on an empty line, we
+ * actually go to eop first.
+ */
     curwp->w_dotp = f_region.r_linep;
     curwp->w_doto = f_region.r_offset;
-    gotoeol(FALSE, 1);          /* In case we are already at bop */
+    gotoeop(FALSE, 1);              /* In case we are already at bop */
     gotobop(FALSE, 1);
 
     int status = FALSE;
