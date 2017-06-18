@@ -11,98 +11,98 @@ Makefile:
    Change the PROGRAM build from em to uemacs
 
 epath.h:
-    Fix a left-over from build testing - change the startup file name
-    from  nuemacs.rc to uemacs.rc
+   Fix a left-over from build testing - change the startup file name
+   from  nuemacs.rc to uemacs.rc
 
 word.c
-    Change justpara() so that it can handle unicode characters, based on
-    the fillpara() code from merging.
-    Get the correct indent from column, not byte offset.
-    Handle leading whitespace in the paragraph to reformat.
-    Make the temporary buffer dynamically allocated, to cater for long
-    strings with no spaces.
-    Add punctuation handling in ggr-mode.
+   Change justpara() so that it can handle unicode characters, based on
+   the fillpara() code from merging.
+   Get the correct indent from column, not byte offset.
+   Handle leading whitespace in the paragraph to reformat.
+   Make the temporary buffer dynamically allocated, to cater for long
+   strings with no spaces.
+   Add punctuation handling in ggr-mode.
 
 etc/uemacs.rc
-    Bind EscR to search-reverse (not the default replace-string).
+   Bind EscR to search-reverse (not the default replace-string).
 
 etc/uemacs.hlp
-    Put back that Metas that had been changed to Esc.
+   Put back that Metas that had been changed to Esc.
 
 complet.c
-    Replace strncpy() calls to populate choices with memcpy(), as we
-    have to nul-terminate manually anyway.
+   Replace strncpy() calls to populate choices with memcpy(), as we
+   have to nul-terminate manually anyway.
 
 eval.c
 exec.c
 input.c
-    Replace strncpy() calls followed by "manual" nul-termination with
-    memcpy() ones.
+   Replace strncpy() calls followed by "manual" nul-termination with
+   memcpy() ones.
 
 lock.c
-    Replace strncpy() call into tmpname with just strcpy(), as fname
-    can't be more the NFILEN anyway.
+   Replace strncpy() call into tmpname with just strcpy(), as fname
+   can't be more the NFILEN anyway.
 
 README
 readme.39e
-    Moved both to the archive directory.
+   Moved both to the archive directory.
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.101
+   Update to version GGR4.101
 
 ========== GGR4.102 [22 Feb 2017]
 
 word.c
-    Right-justification in fillpara() was leaving an extra space at eol
-    after a punctuation mark.
-    Increment gap as well if dotflag is set.
+   Right-justification in fillpara() was leaving an extra space at eol
+   after a punctuation mark.
+   Increment gap as well if dotflag is set.
 
 word.c
-    justify-paragraph (Esc-J) changes had stopped it working at the
-    start of a buffer and if there was no whitespace at the start of the
-    paragraph.
-    Ignore whitedelete() result and force w_doto to 0 (since at the
-    start of the buffer it seems to end up as 1).
+   justify-paragraph (Esc-J) changes had stopped it working at the
+   start of a buffer and if there was no whitespace at the start of the
+   paragraph.
+   Ignore whitedelete() result and force w_doto to 0 (since at the
+   start of the buffer it seems to end up as 1).
 
 buffer,c
-    Just entering <CR> when prompted for "Use buffer:" (^XB) used to
-    take you back to the last one, but now takes you to "main".
-    Add back a save of b_name to savnam in swbuffer() missed in the
-    migration.
+   Just entering <CR> when prompted for "Use buffer:" (^XB) used to
+   take you back to the last one, but now takes you to "main".
+   Add back a save of b_name to savnam in swbuffer() missed in the
+   migration.
 
 tcap.c
 display.c
-    Add test for SCROLLCODE around some declarations to avoid
-    compilation warnings if this is turned off.
+   Add test for SCROLLCODE around some declarations to avoid
+   compilation warnings if this is turned off.
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.102
+   Update to version GGR4.102
 
 ========== GGR4.103 [22 Feb 2017]
 
 display.c
-    Fix a display issue on de-extending a line (coming back to <~col 80
-    after having gone beyond there on a long line).
-    Looks like a code migration issue.  The loop in upddex() contained
-    the 3.9e code, but with the now-absent w_fcol changed to w_fcolor,
-    which was set to 7 resulting in an off-by-7 on the redisplay (the
-    underlying data was OK, so a redisplay fixed things).
-    Replaced with the 4.1 code (but kept the GGR fix on the loop
-    constraint).
+   Fix a display issue on de-extending a line (coming back to <~col 80
+   after having gone beyond there on a long line).
+   Looks like a code migration issue.  The loop in upddex() contained
+   the 3.9e code, but with the now-absent w_fcol changed to w_fcolor,
+   which was set to 7 resulting in an off-by-7 on the redisplay (the
+   underlying data was OK, so a redisplay fixed things).
+   Replaced with the 4.1 code (but kept the GGR fix on the loop
+   constraint).
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.103
+   Update to version GGR4.103
 
 ========== GGR4.104 [22 Feb 2017]
 
 input.c
-    Ensure that getstring doesn't return a garbage buffer, regardless of
-    returned status.
-    But beware that some callers use the output buffer as a temporary
-    prompt buffer!
+   Ensure that getstring doesn't return a garbage buffer, regardless of
+   returned status.
+   But beware that some callers use the output buffer as a temporary
+   prompt buffer!
 
 edef.h
 efunc.h
@@ -110,40 +110,40 @@ globals.c
 names.c
 word.c
 etc/uemacs.rc
-    Add eos_chars() function, eos_list global list and eos-chars
-    macro-callable function to set eos_list.
-    Use the eos_list in both justpara() and fillpara() for end of
-    sentence character handling (an additional space) and remove any
-    such added space from the final sentence of a paragraph.
-    Define the standard GGR setting ( .!? ) in uemacs.rc.
+   Add eos_chars() function, eos_list global list and eos-chars
+   macro-callable function to set eos_list.
+   Use the eos_list in both justpara() and fillpara() for end of
+   sentence character handling (an additional space) and remove any
+   such added space from the final sentence of a paragraph.
+   Define the standard GGR setting ( .!? ) in uemacs.rc.
 
 .gitignore
-    Added core
+   Added core
 
 archive/example.rc
-    Added.
+   Added.
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.104
+   Update to version GGR4.104
 
 ========== GGR4.105 [25 Feb2017]
 
 docs/utf8.info
 test-files/combining-diacritics
-    Added
+   Added
 
 Makefile
-    Replace "-D_BSD_SOURCE -D_SVID_SOURCE" with "-D_DEFAULT_SOURCE" in
-    DEFINES for Linux. Some distros warn about this.
+   Replace "-D_BSD_SOURCE -D_SVID_SOURCE" with "-D_DEFAULT_SOURCE" in
+   DEFINES for Linux. Some distros warn about this.
 
 basic.c
-    Use next_utf8_offset()/prev_utf8_offset() to find start of utf8
-    characters.
+   Use next_utf8_offset()/prev_utf8_offset() to find start of utf8
+   characters.
 
 display.c
-    In updpos() we need to allow for the same number of characters
-    used by vtputc() for *all* non-printing characters.
+   In updpos() we need to allow for the same number of characters
+   used by vtputc() for *all* non-printing characters.
 
 globals.c
 names.c
@@ -152,105 +152,105 @@ word.c
 edef.h
 efunc.h
 etc/uemacs.rc
-    Rename *ggr.mode to *ggr.style, as it isn't a mode.
+   Rename *ggr.mode to *ggr.style, as it isn't a mode.
 
 random.c
-    Tidy up the current position display code in showcpos().
+   Tidy up the current position display code in showcpos().
 
 utf8.c
 utf8.h
-    Use MAX_UTF8_LEN for max length of a utf8 sequence. Which, since
-    2003, is 4 (not 6).
-    Add next_utf8_offset() and prev_utf8_offset() functions.
-    Removed is_beginning_utf8().
+   Use MAX_UTF8_LEN for max length of a utf8 sequence. Which, since
+   2003, is 4 (not 6).
+   Add next_utf8_offset() and prev_utf8_offset() functions.
+   Removed is_beginning_utf8().
 
 word.c
-    Change prompt in eos_chars() and display current setting.
+   Change prompt in eos_chars() and display current setting.
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.105
+   Update to version GGR4.105
 
 ========== GGR4.106 [26 Feb 2017]
 
 Makefile
-    Add back "-D_BSD_SOURCE -D_SVID_SOURCE" while keeping
-    "-D_DEFAULT_SOURCE" in DEFINES for Linux.
-    Both need to be there for a transitional period.
-    Also added "-D_DEFAULT_SOURCE" to the non-Linux branches as the
-    uemacs code itself doesn't use any of them so is just setting them
-    for system header files, which can use them or not as they see fit.
+   Add back "-D_BSD_SOURCE -D_SVID_SOURCE" while keeping
+   "-D_DEFAULT_SOURCE" in DEFINES for Linux.
+   Both need to be there for a transitional period.
+   Also added "-D_DEFAULT_SOURCE" to the non-Linux branches as the
+   uemacs code itself doesn't use any of them so is just setting them
+   for system header files, which can use them or not as they see fit.
 
 archive/original-git.log
-    The log of changes from the original pK4.0.15 git repository.
+   The log of changes from the original pK4.0.15 git repository.
 
 etc/uemacs.rc
-    Add a description of some environment variable settings and set
-    $overlap to 2 (which was the value used by 3.9e).
+   Add a description of some environment variable settings and set
+   $overlap to 2 (which was the value used by 3.9e).
 
 fileio.c
 file.c
-    Check for strcpy()ing a name to itself, which happens when
-    activating an inactive buffer.
-    The action of strcpy() is undefined for overlapping strings.
-    On a Mac it will crash...
+   Check for strcpy()ing a name to itself, which happens when
+   activating an inactive buffer.
+   The action of strcpy() is undefined for overlapping strings.
+   On a Mac it will crash...
 
 display.c
-    Change the unexplained 4 in several malloc()s to be sizeof(unicode_t).
+   Change the unexplained 4 in several malloc()s to be sizeof(unicode_t).
 
 basic.c
-    Correct the fix in forwpage() to stop before we loop round, and
-    hence stay on the last line, not go one past it.
-    (Incorrectly merged from 3.9e.)
+   Correct the fix in forwpage() to stop before we loop round, and
+   hence stay on the last line, not go one past it.
+   (Incorrectly merged from 3.9e.)
 
 input.c
-    Remove a redundant set of braces around (c == (CONTROL|'I')) as
-    otherwise the Mac compiler warns about a possible intended
-    assignment.
+   Remove a redundant set of braces around (c == (CONTROL|'I')) as
+   otherwise the Mac compiler warns about a possible intended
+   assignment.
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.106
+   Update to version GGR4.106
 
 ========== GGR4.107...
 
 README
 CHANGES
 KNOWN_ISSUES
-    Added README, moved CHANGES and BUGS (=> KNOWN_ISSUES) up to main
-    directory.
+   Added README, moved CHANGES and BUGS (=> KNOWN_ISSUES) up to main
+   directory.
 
 random.c
-    In cinsert(), skip over trailing blank space when looking for a
-    trailing '{' and keep correct indent count (not one less for blank
-    lines).
+   In cinsert(), skip over trailing blank space when looking for a
+   trailing '{' and keep correct indent count (not one less for blank
+   lines).
 
 charset.h
 efunc.h
 estruct.h
-    Add #ifndef lines to allow for multiple inclusion.
+   Add #ifndef lines to allow for multiple inclusion.
 
 bind.c
 input.c
 efunc.h
-    Change ostring() calls to mlputs and some tidying.
-    Remove unused outstring and (now) unused ostring code and
-    declarations.
+   Change ostring() calls to mlputs and some tidying.
+   Remove unused outstring and (now) unused ostring code and
+   declarations.
 
 input.c
-    getname() code re-indented to make it readable.
-    Changed a while() loop to for().
-    Increment ttcol during TTputc calls in the expansion code.
+   getname() code re-indented to make it readable.
+   Changed a while() loop to for().
+   Increment ttcol during TTputc calls in the expansion code.
 
 word.c
-    Ensure that text comes back in the original order after multiple
-    successive delete-previous-word calls.
+   Ensure that text comes back in the original order after multiple
+   successive delete-previous-word calls.
 
 main.c
-    Extended usage() to list all available options.
-    Added -h (for --help) and -V (for --version) options.
-    Allow options to be given as separate tokens.
-    Add -d option for specifying config/help directories.
+   Extended usage() to list all available options.
+   Added -h (for --help) and -V (for --version) options.
+   Allow options to be given as separate tokens.
+   Add -d option for specifying config/help directories.
 
 bind.c
 eval.c
@@ -261,64 +261,64 @@ spawn.c
 edef.h
 efunc.h
 epath.h
-    Redo code that looks for start-up/help files etc.
-    Add INTABLE and INPATH modes to flook(). Fix calls in bind.c,
-    eval.c, exec.c, spawn.c
-    to use the appropriate setting.
-    Only look in current directory in flook() is the insecure (-i)
-    command line option has been given.
-    Add set_pathname() to bind.c to allow the command-line processing to
-    alter the directory path to one given location.
-    Add -i (insecure) command line option and associated global flag.
-    Alter the structure set-ups in epath.h.  You can now set the default
-    table values by defining DFLT_PATH in the compilation options.  The
-    help and start-up file names are now uemacs.hlp and uemacs.rc in all
-    cases.
+   Redo code that looks for start-up/help files etc.
+   Add INTABLE and INPATH modes to flook(). Fix calls in bind.c,
+   eval.c, exec.c, spawn.c
+   to use the appropriate setting.
+   Only look in current directory in flook() is the insecure (-i)
+   command line option has been given.
+   Add set_pathname() to bind.c to allow the command-line processing to
+   alter the directory path to one given location.
+   Add -i (insecure) command line option and associated global flag.
+   Alter the structure set-ups in epath.h.  You can now set the default
+   table values by defining DFLT_PATH in the compilation options.  The
+   help and start-up file names are now uemacs.hlp and uemacs.rc in all
+   cases.
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.107
+   Update to version GGR4.107
 
 ========== GGR4.108...
 
 display.c
-    Add NULL as missing 3rd arg (unused) in updateline() for MEMMAP &
-    !SCROLLCODE call.
+   Add NULL as missing 3rd arg (unused) in updateline() for MEMMAP &
+   !SCROLLCODE call.
 
 input.c
-    Extend the VT220 conditional code inclusion to cover the
-        if (c == 128+27) // goto handle_CSI;
-    given that the target label is VT220 dependent.
+   Extend the VT220 conditional code inclusion to cover the
+      if (c == 128+27) // goto handle_CSI;
+   given that the target label is VT220 dependent.
 
 input.c
-    #ifdef for MSC not MSDOS when checking mbdepth against MAXDEPTH.
+   #ifdef for MSC not MSDOS when checking mbdepth against MAXDEPTH.
 
 word.c
-    Define "int c" within the #ifndef GGR_MODE block.
+   Define "int c" within the #ifndef GGR_MODE block.
 
 tcap.c
-    Move includes of curses.h and term.h to be within the #if TERMCAP
-    block.
+   Move includes of curses.h and term.h to be within the #if TERMCAP
+   block.
 
 display.c
 globals.c
 edef.h
-    Make chg_width and chg_height global (also used by spawn.c).
+   Make chg_width and chg_height global (also used by spawn.c).
 
 spawn.c
-    Moved code to force full window redraw into force_resize() and call
-    this before returning from any function with a system() call.
+   Moved code to force full window redraw into force_resize() and call
+   this before returning from any function with a system() call.
 
 termio.c
-    Fix ANSI prototyping on some functions.
+   Fix ANSI prototyping on some functions.
 
 utf8.c
-    Fix prev_utf8_offset() to use char for marker and valmask, so we
-    don't end up sign-extending into an int and failing tests.
+   Fix prev_utf8_offset() to use char for marker and valmask, so we
+   don't end up sign-extending into an int and failing tests.
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.108
+   Update to version GGR4.108
 
 ========== GGR4.109...
 The Great Glyphing code change...
@@ -331,176 +331,176 @@ their callers) in display.c, but handling of zerowidth entities
 extends elsewhere too.
 
 Makefile
-    Use gnu99, not c99 as the --std.
+   Use gnu99, not c99 as the --std.
 
 basic.c
-    Skip over zerowidth characters in getgoal().
-    Tell next_utf8_offset(), prev_utf8_offset() to go to the start of a
-    glyph (i.e skip over zerowidth chars).
+   Skip over zerowidth characters in getgoal().
+   Tell next_utf8_offset(), prev_utf8_offset() to go to the start of a
+   glyph (i.e skip over zerowidth chars).
 
 bind.c
-    In bindtokey() and unbindkey() don't write out the message line
-    (mini-buffer) prompts if we are processing start-up files.
+   In bindtokey() and unbindkey() don't write out the message line
+   (mini-buffer) prompts if we are processing start-up files.
 
 display.c
-    Explicitly initialize scrflags to 0.
-    Move vtcol and vtrow to local static storage (display.c is the only
-    user).
-    Change struct video to have an array of struct glyph rather than
-    unicode_t at the end. Changed parameters to affected routines.
-    Added set_glyph(), extend_glyph() clone_glyph(), glyph_same(),
-    glyph_same_array(), is_space(), TTputglyph() and TTput1char() as
-    static functions.
-    Add ttput1c() for external callers to reach TTput1char().
-    Change vtinit() to setup a struct glyph array for the *whole*
-    vscreen and pscreen arrays (not just the currently in use).
-    Make the input to vtputc() an *unsigned* int.
-    vtputc() now checks for a unicode character over the maximum allowed,
-    and display the replacement character for it.
-    vtputc() will extend any preceding character glyph on finding a
-    zerowidth one.
-    vtputc(), vteeol(), updgar(), scrolls(), updext() now call
-    set_glyph() to add a character to vscreen.
-    scrolls(), texttest() use glyph_same_array() and updateline() uses
-    glyph_same() to check for a display change.
-    endofline() and updateline() now use is_space() to check for a
-    space, so we can cater for any added zerowidth modifiers.
-    TTputc() calls were replace with TTputglyph()/TTput1char() ones and
-    those functions adjust ttcol.
-    Added a missing third arg (as NULL) to another updateline() call.
-    Removed use of n as a column counter in modeline(), as vtcol is
-    already doing it. Also "unblocked" a code section to remove an
-    unnecessary extra level of indentation.
-    Use clone_glyph to move vscreen glyphs to pscreen ones in
-    updateline().
-    Use sigaction(), not signal(), to set-up signals (portability).
+   Explicitly initialize scrflags to 0.
+   Move vtcol and vtrow to local static storage (display.c is the only
+   user).
+   Change struct video to have an array of struct glyph rather than
+   unicode_t at the end. Changed parameters to affected routines.
+   Added set_glyph(), extend_glyph() clone_glyph(), glyph_same(),
+   glyph_same_array(), is_space(), TTputglyph() and TTput1char() as
+   static functions.
+   Add ttput1c() for external callers to reach TTput1char().
+   Change vtinit() to setup a struct glyph array for the *whole*
+   vscreen and pscreen arrays (not just the currently in use).
+   Make the input to vtputc() an *unsigned* int.
+   vtputc() now checks for a unicode character over the maximum allowed,
+   and display the replacement character for it.
+   vtputc() will extend any preceding character glyph on finding a
+   zerowidth one.
+   vtputc(), vteeol(), updgar(), scrolls(), updext() now call
+   set_glyph() to add a character to vscreen.
+   scrolls(), texttest() use glyph_same_array() and updateline() uses
+   glyph_same() to check for a display change.
+   endofline() and updateline() now use is_space() to check for a
+   space, so we can cater for any added zerowidth modifiers.
+   TTputc() calls were replace with TTputglyph()/TTput1char() ones and
+   those functions adjust ttcol.
+   Added a missing third arg (as NULL) to another updateline() call.
+   Removed use of n as a column counter in modeline(), as vtcol is
+   already doing it. Also "unblocked" a code section to remove an
+   unnecessary extra level of indentation.
+   Use clone_glyph to move vscreen glyphs to pscreen ones in
+   updateline().
+   Use sigaction(), not signal(), to set-up signals (portability).
 
 edef.h
-    Removed vtrow and vtcol (now local to display.c).
+   Removed vtrow and vtcol (now local to display.c).
 
 efunc.h
-    Added ttput1c() and mlreplyall(). Removed (unused) do_backtrace().
+   Added ttput1c() and mlreplyall(). Removed (unused) do_backtrace().
 
 estruct.h
-    Include utf8.h.
-    Define END_UCLIST.
-    Lined up comments.
+   Include utf8.h.
+   Define END_UCLIST.
+   Lined up comments.
 
 etc/uemacs.rc
-    Added some char-replace settings.
+   Added some char-replace settings.
 
 globals.c
-    Removed vtrow and vtcol (now local to display.c).
+   Removed vtrow and vtcol (now local to display.c).
 
 input.c
-    Added mlreplyall() to get all of the function args in one go when
-    called from a start-up script.
-    Some TTputc() calls changed to ttput1c().
-    Add a SIGWINCH (if defined) handler for getstring to abort the
-    minibuffer if it occurs.  Being in a minibuffer confuses the redraw.
-    Needs various signal block to ensure we don't pass though
-    set-up/take-down code twice.
+   Added mlreplyall() to get all of the function args in one go when
+   called from a start-up script.
+   Some TTputc() calls changed to ttput1c().
+   Add a SIGWINCH (if defined) handler for getstring to abort the
+   minibuffer if it occurs.  Being in a minibuffer confuses the redraw.
+   Needs various signal block to ensure we don't pass though
+   set-up/take-down code twice.
 
 line.c
 line.h
-    Added lgetglyph() to get the struct glyph for the current character
-    (or just its length).
-    Changed ldelchar() to use lgetglyph() for how many bytes to remove.
+   Added lgetglyph() to get the struct glyph for the current character
+   (or just its length).
+   Changed ldelchar() to use lgetglyph() for how many bytes to remove.
 
 main.c
-    Some TTputc() calls changed to ttput1c().
-    Removed the no longer used #define maindef
-    Use sigaction(), not signal(), to set-up signals (portability).
+   Some TTputc() calls changed to ttput1c().
+   Removed the no longer used #define maindef
+   Use sigaction(), not signal(), to set-up signals (portability).
 
 names.c
-    Added "char-replace" => char_replace() function mapping.
+   Added "char-replace" => char_replace() function mapping.
 
 random.c
-    In showcpos() use lgetglyph() to get the full glyph data for the
-    current character. Display the number of bytes (and unicode
-    characters( used in the glyph if more than one.
-    Update getccol() to handle zerowidth characters.
-    Modified twiddle() to handle multibyte and zerowidth characters.
+   In showcpos() use lgetglyph() to get the full glyph data for the
+   current character. Display the number of bytes (and unicode
+   characters( used in the glyph if more than one.
+   Update getccol() to handle zerowidth characters.
+   Modified twiddle() to handle multibyte and zerowidth characters.
 
 spawn.c
-    Some TTputc() calls changed to ttput1c().
+   Some TTputc() calls changed to ttput1c().
 
 utf8.c
 utf8.h
-    Modified utf8_to_unicode() to check that the resulting character is
-    not more than the maximum utf8 allows.
-    next_utf8_offset() and prev_utf8_offset() now have an option to skip
-    over zerowidth characters.
-    Added zerowidth_type() function and associated data structure.
-    Added char_replace() function to map non- (or poorly) represented
-    characters to a (user-configurable) replacement one. The list of
-    what to map is also user-configurable.
-    Added display_for() to work out what should be displayed for a given
-    unicode character.
+   Modified utf8_to_unicode() to check that the resulting character is
+   not more than the maximum utf8 allows.
+   next_utf8_offset() and prev_utf8_offset() now have an option to skip
+   over zerowidth characters.
+   Added zerowidth_type() function and associated data structure.
+   Added char_replace() function to map non- (or poorly) represented
+   characters to a (user-configurable) replacement one. The list of
+   what to map is also user-configurable.
+   Added display_for() to work out what should be displayed for a given
+   unicode character.
 
 word.c
-    Changed the end-of-sentence coding to use END_UCLIST as an end
-    marker rather than 0xffffffff (for consistency).
+   Changed the end-of-sentence coding to use END_UCLIST as an end
+   marker rather than 0xffffffff (for consistency).
 
 test-files/combining-diacritics
-    Added a few more lines
+   Added a few more lines
 
 test-files/1ffff
 test-files/3uc-test
 test-files/3uc-together
 test-files/3uc-together-twiddle
 test-files/overrun.txt
-    Added some small test files. May extend/document more later.
+   Added some small test files. May extend/document more later.
 
 TODO
-    Added to the top-level, as a reminder....
+   Added to the top-level, as a reminder....
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.109
+   Update to version GGR4.109
 
 ========== GGR4.110
 
 tcap.c
-    Change tcapkclose() to not send TE for the systems where it has just
-    sent it in tcapclose().
+   Change tcapkclose() to not send TE for the systems where it has just
+   sent it in tcapclose().
 
 bind.c
-    If flook is sent a pathname, check just that and don't look in HOME,
-    along PATH or in the table.
+   If flook is sent a pathname, check just that and don't look in HOME,
+   along PATH or in the table.
 
 spawn.c
-    Forbid the running of external commands when you are in the
-    minibuffer (spawncli(), spawn(), execprg() and pipecmd()).
-    There's a forced redraw on return, which ends up clearing the
-    minibuffer data, while displaying its status in the status line.
+   Forbid the running of external commands when you are in the
+   minibuffer (spawncli(), spawn(), execprg() and pipecmd()).
+   There's a forced redraw on return, which ends up clearing the
+   minibuffer data, while displaying its status in the status line.
 
 estruct.h
-    Set XONXOFF and NATIONL to 0 if GGR_MODE is defined.
+   Set XONXOFF and NATIONL to 0 if GGR_MODE is defined.
 
 posix.c
-    Add turning off of IXON if XONXOFF is not set (as done in termio.c).
-    Enables ctl-Q and ctl-S to be usable for commands.
+   Add turning off of IXON if XONXOFF is not set (as done in termio.c).
+   Enables ctl-Q and ctl-S to be usable for commands.
 
 bind.c
 names.c
 efunc.h
-    Added an include-file command (for use in start-up files) to include
-    another file for processing at that point.
+   Added an include-file command (for use in start-up files) to include
+   another file for processing at that point.
 
 word.c
-    Fix justpara() and fillpara() when adding an eos space at the end of
-    a line in the middle of a paragraph.
+   Fix justpara() and fillpara() when adding an eos space at the end of
+   a line in the middle of a paragraph.
 
 main.c
-    Redo command line parsing.
-    Add options:
-        -c<filepath> replacement for default rc file
-        -x<filepath> an additional rc file
+   Redo command line parsing.
+   Add options:
+      -c<filepath> replacement for default rc file
+      -x<filepath> an additional rc file
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.110
+   Update to version GGR4.110
 
 ========== GGR4.111
 
@@ -508,83 +508,83 @@ bind.c
 exec.c
 names.c
 efunc.h
-    Merge the include-file code added in GGR4.110 with execute-file, as
-    they are essentially the same.
+   Merge the include-file code added in GGR4.110 with execute-file, as
+   they are essentially the same.
 
 main.c
-    Further command line handling tidying up.
-    Fix -v/-e option handling when mixed in with filenames.
-    Remove second startup file check (after handling filenames) and the
-    now-redundant startflag variable.
+   Further command line handling tidying up.
+   Fix -v/-e option handling when mixed in with filenames.
+   Remove second startup file check (after handling filenames) and the
+   now-redundant startflag variable.
 
 display.c
 spawn.c
-    Fix up for screen refresh on return from external commands.
-    Call newscreensize() at beginning and end of update(). Add a new arg
-    to it to stop it calling update() when it is called from the start
-    of update(). This ensures that term.t_nrow and term.t_ncol are set
-    to "correct" values before we set off. [display.c]
-    In updgar() and updupd() only update the minibuffer line when we are
-    actually using the minibuffer. This allows us to remove the added
-    mberase() call at the end of newscreensize(). [display.c]
+   Fix up for screen refresh on return from external commands.
+   Call newscreensize() at beginning and end of update(). Add a new arg
+   to it to stop it calling update() when it is called from the start
+   of update(). This ensures that term.t_nrow and term.t_ncol are set
+   to "correct" values before we set off. [display.c]
+   In updgar() and updupd() only update the minibuffer line when we are
+   actually using the minibuffer. This allows us to remove the added
+   mberase() call at the end of newscreensize(). [display.c]
 
-    Add get_orig_size() to save the original screen size before
-    system() calls.
-    force_resize() checks the current col/rows and only sets the chg*
-    variables to force a redraw if things have changed and also to set
-    term.t_nrow and term.t_ncol back to what they were, not to 0, which
-    can cause redraw issues in display.c.
-    Renamed to check_for_resize(). [spawn.c]
+   Add get_orig_size() to save the original screen size before
+   system() calls.
+   force_resize() checks the current col/rows and only sets the chg*
+   variables to force a redraw if things have changed and also to set
+   term.t_nrow and term.t_ncol back to what they were, not to 0, which
+   can cause redraw issues in display.c.
+   Renamed to check_for_resize(). [spawn.c]
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.111
+   Update to version GGR4.111
 
 ========== GGR4.112
 
 main.c
-    Fix the -e/-v handling once we get to looking for files on the
-    command line. You can use -v/-e to toggle view mode on/off as you go
-    through the file list.
+   Fix the -e/-v handling once we get to looking for files on the
+   command line. You can use -v/-e to toggle view mode on/off as you go
+   through the file list.
 
 display.c
 file.c
 main.c
 region.c
-    Add in some buffer-narrowing code missed in the GGR migration to
-    prevent you saving a narrowed buffer without first being queried.
-    [display.c, file.c]
-    In quickexit(), add back the mlwrite("\n") call when Saving files.
-    This lets the user see which is affected if there is a narrowed
-    buffer involved.  Also, if the user aborts redraw the screen to
-    remove these filenames.  [display.c]
-    When narrowing a region, move whichever of mark and point is further
-    through the file to the start of the next line if they are not at
-    the start of a line.  So you get any line if you are in the middle
-    of it (this already happens to whichever is first in the file).
-    When rewidening, redraw the screen with the start of the narrowed
-    region in the middle of the window, which makes it more obvious that the
-    other text has returned.
-    [region.c]
+   Add in some buffer-narrowing code missed in the GGR migration to
+   prevent you saving a narrowed buffer without first being queried.
+   [display.c, file.c]
+   In quickexit(), add back the mlwrite("\n") call when Saving files.
+   This lets the user see which is affected if there is a narrowed
+   buffer involved.  Also, if the user aborts redraw the screen to
+   remove these filenames.  [display.c]
+   When narrowing a region, move whichever of mark and point is further
+   through the file to the start of the next line if they are not at
+   the start of a line.  So you get any line if you are in the middle
+   of it (this already happens to whichever is first in the file).
+   When rewidening, redraw the screen with the start of the narrowed
+   region in the middle of the window, which makes it more obvious that the
+   other text has returned.
+   [region.c]
 
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.112
+   Update to version GGR4.112
 
 ========== GGR4.113
 word.c
-    Fix the re-allocation need check for wbuf to cater for char vs.
-    unicode_t sizes.
+   Fix the re-allocation need check for wbuf to cater for char vs.
+   unicode_t sizes.
 
 tcap.c
-    Make curses.h and term.h inclusion conditional, so CygWin and MinGW
-    builds can work.
+   Make curses.h and term.h inclusion conditional, so CygWin and MinGW
+   builds can work.
 
 display.c
 efunc.h
-    Allow mlforce() to take a variable number of args by changing
-    mlwrite() to mlwrite_ap() and making both mlwrite() and mlforce()
-    front ends to that.
+   Allow mlforce() to take a variable number of args by changing
+   mlwrite() to mlwrite_ap() and making both mlwrite() and mlforce()
+   front ends to that.
 
 bind.c
 buffer.c
@@ -595,31 +595,31 @@ estruct.h
 exec.c
 globals.c
 main.c
-     Make the key table dynamically assigned (so no longer a fixed
-     maximum number of bindings) and enable key binding to user-defined
-     procedures.
-     Add checks for given buffer/procedure name being too long. Silent
-     truncation to 14/15 characters could result in running an
-     unintended procedure.
-     Change "special" buffer names from *name* to /name, since the
-     latter leaves more room for "name" and also cannot be generated
-     from a filename.
+   Make the key table dynamically assigned (so no longer a fixed
+   maximum number of bindings) and enable key binding to user-defined
+   procedures.
+   Add checks for given buffer/procedure name being too long. Silent
+   truncation to 14/15 characters could result in running an
+   unintended procedure.
+   Change "special" buffer names from *name* to /name, since the
+   latter leaves more room for "name" and also cannot be generated
+   from a filename.
 
 etc/uemacs.rc
-     Updated to use the new buffer-to-key binding implemented above.
-     This runs the user-defined store-procedure methods directly.
-     Entries from the 40 hard-wired store-macro names are no longer
-     used.
+   Updated to use the new buffer-to-key binding implemented above.
+   This runs the user-defined store-procedure methods directly.
+   Entries from the 40 hard-wired store-macro names are no longer
+   used.
 
 main.c
-     Fix -v/-V handling for consistency.
+   Fix -v/-V handling for consistency.
 
 ../CHANGES
 ../KNOWN_ISSUES
 ../README
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.113
+   Update to version GGR4.113
 
 ========== GGR4.114
 
@@ -632,8 +632,8 @@ buffer.c
 exec.c
 file.c
 line.h
-   Added lfillchars macro to fill line text buffer using memcpy() rather
-   than looping one char at a time.
+   Added lfillchars macro to fill line text buffer using memcpy()
+   rather than looping one char at a time.
 
 line.c
    linstr() takes a char * arg, but was passing this on to linsert(),
@@ -668,7 +668,7 @@ ptt/czech.cmd
 ../README
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.114
+   Update to version GGR4.114
 
 ========== GGR4.115
 
@@ -687,7 +687,7 @@ exec.c
    make use of the Julia language utf8/unicode library
       https://julialang.org/utf8proc/
    to detect character types.
-
+ 
       This first test was to determine the character type for a
       beginning-of-word test in phonetic translation table handling.
 
@@ -696,10 +696,10 @@ exec.c
 
 Simplify the code by removing various ifdefs by noting that we always
 want:
-    PKCODE = 1                  // We are extending the pK version
-    GGR_MODE = 1                // We really are extending the pK version
-    EBCDIC = 0, ASCII = 1       // We're using Unicode
-    VMS = 0                     // No longer of use...
+   PKCODE = 1              // We are extending the pK version
+   GGR_MODE = 1            // We really are extending the pK version
+   EBCDIC = 0, ASCII = 1      // We're using Unicode
+   VMS = 0                // No longer of use...
 This will simplify the switch to using the Julia language utf8/unicode
 library generally.
 
@@ -760,7 +760,7 @@ edef.h
 estruct.h
    Removed PKCODE assuming it to be set.
    Except for:
-      Enable "#" for truncated files. [display.c]
+     Enable "#" for truncated files. [display.c]
 
 basic.c
 word.c
@@ -807,128 +807,128 @@ etc/uemacs.rc
    the main start-up file.
 
 etc/uemacs.hlp
-    Added some information at the end about recent additions to macros
-    (eos-chars, char-replace, pttables, use defined procedure key
-    binding.
+   Added some information at the end about recent additions to macros
+   (eos-chars, char-replace, pttables, use defined procedure key
+   binding.
 
 Makefile
-    Added code to enable finding the Julia utf8proc lib, and exit with
-    an error if unable to find it.
+   Added code to enable finding the Julia utf8proc lib, and exit with
+   an error if unable to find it.
 
 ../PREREQUISITE
 ../README
-    Added a specific note about the use of the Julia utf8proc lib and
-    also commented on it in the README file.
+   Added a specific note about the use of the Julia utf8proc lib and
+   also commented on it in the README file.
 
 Makefile
-    Added code to look for curses term.h.
-    Probably specifc to Oleg's router distros, but could be extended
-    for others as necessary.
+   Added code to look for curses term.h.
+   Probably specifc to Oleg's router distros, but could be extended
+   for others as necessary.
 
 ../CHANGES
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.115
+   Update to version GGR4.115
 
 ========== GGR4.116
 
 Makefile
-    Allow for version numbering on any local utf8proc directory name.
+   Allow for version numbering on any local utf8proc directory name.
 
 edef.h
 efunc.h
 random.c
-    Disable toggling Phon mode on via adjustmode() if no pt_table is
-    yet defined.
-    Made adjustmode() static.
+   Disable toggling Phon mode on via adjustmode() if no pt_table is
+   yet defined.
+   Made adjustmode() static.
 
 eval.c
 evar.h
-    Add inmb system variable, so macros can check for being, and disable
-    use, in the minibuffer.
+   Add inmb system variable, so macros can check for being, and disable
+   use, in the minibuffer.
 
 etc/uemacs.rc
-    Change toggle-lmode/toggle-gmode to check $inmb and simplified(?)
-    code.
-    Added "P" (Phon) as a valid mode to toggle.
-    Standardized mode chars to be those used by buffer displays.
+   Change toggle-lmode/toggle-gmode to check $inmb and simplified(?)
+   code.
+   Added "P" (Phon) as a valid mode to toggle.
+   Standardized mode chars to be those used by buffer displays.
 
 etc/uemacs.rc
-    Make the file-hooks macro look at the filename for the buffer, not
-    the buffer name, as it was failing on long filenames where the
-    buffer name is truncated.
+   Make the file-hooks macro look at the filename for the buffer, not
+   the buffer name, as it was failing on long filenames where the
+   buffer name is truncated.
 
 utf8.c
-    Remove a bug introduced in GGR4.109 (why?  - unknown) that prevented
-    unicode 0x80-0xbf being converted to utf8.
+   Remove a bug introduced in GGR4.109 (why?  - unknown) that prevented
+   unicode 0x80-0xbf being converted to utf8.
 
 word.c
 efunc.h
-    Expose the ensure_case() function so that it can be used by the ptt
-    code in exec.c
+   Expose the ensure_case() function so that it can be used by the ptt
+   code in exec.c
 
 etc/uemacs.rc
-    Tidy up (remove debug code...) of toggle-lmode/toggle-gmode change.
+   Tidy up (remove debug code...) of toggle-lmode/toggle-gmode change.
 
 basic.c
 display.c
 utf8.c
-    Change utf8_to_unicode() so that it checks the incoming args and
-    returns a value of 0, with a returned codepoint of 0, if the index
-    is outside the given len range,
-    Corrected getgoal() [basic.c], mlwrite_ap() and mlputs() [display.c]
-    to ensure they don't call utf8_to_unicode() with index >= len.
+   Change utf8_to_unicode() so that it checks the incoming args and
+   returns a value of 0, with a returned codepoint of 0, if the index
+   is outside the given len range,
+   Corrected getgoal() [basic.c], mlwrite_ap() and mlputs() [display.c]
+   to ensure they don't call utf8_to_unicode() with index >= len.
 
 exec.c
 globals.c
 utf8.c
 estruct.h
 utf8.h
-    NOTE: globals.c was erroneously checked in as part of commit:
-     4cd83b90cab79e240492f882be91436b5d304db8
-    Add code to handle casing options in Phonetic Translation tables.
-    These can now do case modification of the replacement text.
-    The tables can contain these commands:
-        caseset-on          [which is the default setting]
-        caseset-capinit1
-        caseset-capinitall
-        caseset-lowinit1
-        caseset-lowinitall
-        caseset-off
-    Each applies to all following replacement rules until the next
-    caseset-* command or the end of the table is reached,
-    For caseset-off the replaced text is treated verbatim and it will do
-    a verbatim replacement on a match.
-    For the other cases the replaced text is checked case-insensitively.
-    For caseset-on it will force upper-case of the replacement on a
-    match if the first character in the replaced string is uppercase.
-    For caseset-cap* it will uppercase the first character of the string
-    (capinit1) or all words (capinitall).  The caseset-low* are similar,
-    but force lowercase if the first character of the replaced string is
-    lowercase.
-    tolower_utf8(), uclen_utf8(), nocasecmp_utf8() and unicode_back_utf8()
-    functions added [utf8.c]
+   NOTE: globals.c was erroneously checked in as part of commit:
+    4cd83b90cab79e240492f882be91436b5d304db8
+   Add code to handle casing options in Phonetic Translation tables.
+   These can now do case modification of the replacement text.
+   The tables can contain these commands:
+      caseset-on        [which is the default setting]
+      caseset-capinit1
+      caseset-capinitall
+      caseset-lowinit1
+      caseset-lowinitall
+      caseset-off
+   Each applies to all following replacement rules until the next
+   caseset-* command or the end of the table is reached,
+   For caseset-off the replaced text is treated verbatim and it will do
+   a verbatim replacement on a match.
+   For the other cases the replaced text is checked case-insensitively.
+   For caseset-on it will force upper-case of the replacement on a
+   match if the first character in the replaced string is uppercase.
+   For caseset-cap* it will uppercase the first character of the string
+   (capinit1) or all words (capinitall).  The caseset-low* are similar,
+   but force lowercase if the first character of the replaced string is
+   lowercase.
+   tolower_utf8(), uclen_utf8(), nocasecmp_utf8() and unicode_back_utf8()
+   functions added [utf8.c]
 
 line.c
-    As utf8_to_unicode() now checks its args, lgetgrapheme() now needs
-    to check for being at EOL and return a NL grapheme, so ldelchar()
-    knows there is 1 byte to step over.
+   As utf8_to_unicode() now checks its args, lgetgrapheme() now needs
+   to check for being at EOL and return a NL grapheme, so ldelchar()
+   knows there is 1 byte to step over.
 
 basic.c
 exec.c
 random.c
 word.c
-    Fix for delfword()/delbword(). These use forwchar()/backchar() to
-    move over the section to delete, but these functions now move by
-    grapheme, so you can no longer just count the number of calls and
-    delete that number of bytes.
-    Changed forwchar()/backchar() to return the number of bytes moved
-    and fixed all callers accordingly.
+   Fix for delfword()/delbword(). These use forwchar()/backchar() to
+   move over the section to delete, but these functions now move by
+   grapheme, so you can no longer just count the number of calls and
+   delete that number of bytes.
+   Changed forwchar()/backchar() to return the number of bytes moved
+   and fixed all callers accordingly.
 
 ptt/czech.cmd
 ptt/russian.cmd
-    Edited to take account of the caseset-* commands to simplify/shorten
-    tables.
+   Edited to take account of the caseset-* commands to simplify/shorten
+   tables.
 
 basic.c
 eval.c
@@ -942,168 +942,168 @@ search.c
 word.c
 ebind.h
 efunc.h
-    Rename forwchar()/backchar() to forw_grapheme() and back_grapheme()
-    as that is what they (now) do, and this should help to avoid
-    confusion.
-    Changed the return value of both functions on an incomplete move to
-    be minus the actual move. Adjusted callers accordingly.
+   Rename forwchar()/backchar() to forw_grapheme() and back_grapheme()
+   as that is what they (now) do, and this should help to avoid
+   confusion.
+   Changed the return value of both functions on an incomplete move to
+   be minus the actual move. Adjusted callers accordingly.
 
 
 display.c
 exec.c
 estruct.h
-    Added display-code option to ptt tables to let you give a
-    2-character code to display in the mode line when it is on. It is
-    preceded by "P-" and defaults to the first two characters of the
-d     table name.
-    Added an internal function, show_utf8(), to display.c to handle
-    utf8 strings in the modeline.
+   Added display-code option to ptt tables to let you give a
+   2-character code to display in the mode line when it is on. It is
+   preceded by "P-" and defaults to the first two characters of the
+d    table name.
+   Added an internal function, show_utf8(), to display.c to handle
+   utf8 strings in the modeline.
 
 ../CHANGES
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.116
+   Update to version GGR4.116
 
 ========== GGR4.117
 
 exec.c
-    Set the WFMODE mode on the buffer after setting the ptt table, so
-    that the modeline gets updated with the change, if it is in use.
+   Set the WFMODE mode on the buffer after setting the ptt table, so
+   that the modeline gets updated with the change, if it is in use.
 
 exec.c
-    Unset ptt_storing after compiling a pttable in dobuf().
+   Unset ptt_storing after compiling a pttable in dobuf().
 
 exec.c
 names.c
 efunc.h
-    Added next-pttable function, to cycle through pttables.
+   Added next-pttable function, to cycle through pttables.
 
 posix.c
-    Correct the number of characters to wait for.
-    Only wait if we are at the start of an extended utf8 sequence, or
-    have an Escape character.
-    Replace the tcsetattr() call (doesn't seem to timeout on Ubuntu under
-    Windows on Windows10?) with poll().
+   Correct the number of characters to wait for.
+   Only wait if we are at the start of an extended utf8 sequence, or
+   have an Escape character.
+   Replace the tcsetattr() call (doesn't seem to timeout on Ubuntu under
+   Windows on Windows10?) with poll().
 
 input.c
-    Make display_handler dynamic, not static, so that it can handle
-    recursion in the minibuffer.
+   Make display_handler dynamic, not static, so that it can handle
+   recursion in the minibuffer.
 
 basic.c
 globals.c
 word.c
 edef.h
-    Remove (unused) justflag from ctrulen(), renamed it to
-    curline_empty() (which is how it is used) and simplified it.
+   Remove (unused) justflag from ctrulen(), renamed it to
+   curline_empty() (which is how it is used) and simplified it.
 
 etc/uemacs.rc
-    Combined local and global toggle mode macros.
-    Unbound Esc-^T (newwidth) as it is no longer needed with SIGWINCH
-    handling and just messes up the display.
+   Combined local and global toggle mode macros.
+   Unbound Esc-^T (newwidth) as it is no longer needed with SIGWINCH
+   handling and just messes up the display.
 
 ptt/russian.cmd
-    Fixes. Put non-alpha entries into caseset-off section and remove an
-    uppercase setting (Y -> Ы) accidentally left in.
+   Fixes. Put non-alpha entries into caseset-off section and remove an
+   uppercase setting (Y -> Ы) accidentally left in.
 
 buffer.c
 estruct.h
-    Change the size of a buffer name (NBUFN) from 16 to 32. This is
-    really to allow longer procedure names. makelist() in buffer.c was
-    changed accordingly.
+   Change the size of a buffer name (NBUFN) from 16 to 32. This is
+   really to allow longer procedure names. makelist() in buffer.c was
+   changed accordingly.
 
 evar.h
-    Change NVSIZE from 10 to 32. We aren't memory constrained nowadays.
+   Change NVSIZE from 10 to 32. We aren't memory constrained nowadays.
 
 random.c
-    Update setccol() to handle zerowidth characters, and fix getccol().
-    Reformatted (tidied) code of both.
+   Update setccol() to handle zerowidth characters, and fix getccol().
+   Reformatted (tidied) code of both.
 
 line.c
 line.h
-    Updated lgetgrapheme() to return nothing if point is beyond end of
-    line (shouldn't happen, but might in testing things that manipulate
-    w_doto field).
-    Added lputgrapheme() (currently unused...).
+   Updated lgetgrapheme() to return nothing if point is beyond end of
+   line (shouldn't happen, but might in testing things that manipulate
+   w_doto field).
+   Added lputgrapheme() (currently unused...).
 
 basic.c
-    Fixed gotobop() and gotoeop() to check for whitespace, not inword(),
-    and made them work properly at beginning/end of buffer.
+   Fixed gotobop() and gotoeop() to check for whitespace, not inword(),
+   and made them work properly at beginning/end of buffer.
 
 random.c
-    Fix forwdel() and backdel() calls in whitedelete to use (0, 1), not
-    pass on the incoming f and n args!
+   Fix forwdel() and backdel() calls in whitedelete to use (0, 1), not
+   pass on the incoming f and n args!
 
 eval.c
-    Fix gettyp() to test for, and allow, negative numeric arg.
+   Fix gettyp() to test for, and allow, negative numeric arg.
 
 names.c
 word.c
 efunc.h
 etc/uemacs.rc
-    Combined the paragraph filling routines (fillpara() and justpara())
-    into one main function (filler()) and make the old routines
-    front-end this.
-    Added makelist-region function, which is bound to M-^Q.
-    Amended the lr-justify macro to work with the new fillpara().
-    Bound  to M-^P in etc/uemacs.rc.
+   Combined the paragraph filling routines (fillpara() and justpara())
+   into one main function (filler()) and make the old routines
+   front-end this.
+   Added makelist-region function, which is bound to M-^Q.
+   Amended the lr-justify macro to work with the new fillpara().
+   Bound  to M-^P in etc/uemacs.rc.
 
 ../CHANGES
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.117
+   Update to version GGR4.117
 
 ========== GGR4.118
 
 word.c
-    Initialize status to FALSE in justpara() and fillpara() to avoid
-    compiler warnings about possible undefined use.
-    Don't add a newline in filler() if at end-of-buffer.
-    Got to column, not byte offset, at end of buffer in justpara().
+   Initialize status to FALSE in justpara() and fillpara() to avoid
+   compiler warnings about possible undefined use.
+   Don't add a newline in filler() if at end-of-buffer.
+   Got to column, not byte offset, at end of buffer in justpara().
 
 bind.c
 etc/uemacs.rc
-    Fix stock() to allow binding to M-^X in a command-file (could already
-    bind it interactively).
-    Bind execute-file to M-^X.
+   Fix stock() to allow binding to M-^X in a command-file (could already
+   bind it interactively).
+   Bind execute-file to M-^X.
 
 buffer.c
-    Fix ltoa() to handle files >1GB by putting "+" in col1 of the size
-    (not worth widening field, as such a size will not be common).
-    Also correct array size definitions to match the new sizes.
+   Fix ltoa() to handle files >1GB by putting "+" in col1 of the size
+   (not worth widening field, as such a size will not be common).
+   Also correct array size definitions to match the new sizes.
 
 names.c
 word.c
 efunc.h
 etc/uemacs.rc
-    Change makelist-region to use " o " as the label, and added
-    numberlist-region to fill with (possibly) numbered paragraphs using
-    the template stored in the user variable %list-indent-text.
-    Fixed the region scan so that it works properly.
-    In uemacs.rc, rebound makelist-region from M-^Q to M-/, bound
-    numberlist-region to ^X-/ and set a default value of " %2d. " for
-    %list-indent-text.
+   Change makelist-region to use " o " as the label, and added
+   numberlist-region to fill with (possibly) numbered paragraphs using
+   the template stored in the user variable %list-indent-text.
+   Fixed the region scan so that it works properly.
+   In uemacs.rc, rebound makelist-region from M-^Q to M-/, bound
+   numberlist-region to ^X-/ and set a default value of " %2d. " for
+   %list-indent-text.
 
 word.c
-    After region_listmaker has run (for *list-region functions) set the
-    mark to one character ahead of point, otherwise ctl-C will reformat
-    the preceding paragraph - again.
+   After region_listmaker has run (for *list-region functions) set the
+   mark to one character ahead of point, otherwise ctl-C will reformat
+   the preceding paragraph - again.
 
 etc/uemacs.hlp
-    Added notes for makelist-region and numberlist-region and a
-    description for the %list-indent-text user variable setting.
+   Added notes for makelist-region and numberlist-region and a
+   description for the %list-indent-text user variable setting.
 
 ../CHANGES
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.118
+   Update to version GGR4.118
 
 ========== GGR4.119
 
 eval.c
 evar.h
-    Replaced the separate structure and tagging for environment
-    variables and user functions (which had actually lead to an error if
-    SCROLLCODE was not set!) with enums and in-structure settings.
+   Replaced the separate structure and tagging for environment
+   variables and user functions (which had actually lead to an error if
+   SCROLLCODE was not set!) with enums and in-structure settings.
 
 bind.c
 buffer.c
@@ -1119,81 +1119,81 @@ edef.h
 estruct.h
 evar.h
 etc/uemacs.rc
-    Re-added the horizontal scrolling code, having found it in an old
-    version of 3.10 source from 1992.
-    Reformatted several functions involved to use a 4-space indent.
-    Renamed scrollcount to scrolljump. [display.c, eval.c, globals.c,
-    edef.h, evar.h]
-    Made update() re-entrant (by restoring incoming displaying value,
-    not FALSE, at end) so that updpos() can call it (since it calls
-    updpos()) to ensure we get an update as the cursor gets to the
-    screen edge.
-    Switch off horizontal scrolling around update() in the minibuffer
-    [getstring() in input.c]
+   Re-added the horizontal scrolling code, having found it in an old
+   version of 3.10 source from 1992.
+   Reformatted several functions involved to use a 4-space indent.
+   Renamed scrollcount to scrolljump. [display.c, eval.c, globals.c,
+   edef.h, evar.h]
+   Made update() re-entrant (by restoring incoming displaying value,
+   not FALSE, at end) so that updpos() can call it (since it calls
+   updpos()) to ensure we get an update as the cursor gets to the
+   screen edge.
+   Switch off horizontal scrolling around update() in the minibuffer
+   [getstring() in input.c]
 
 search.c
-    Add a check in forwsearch() for being at end-of-buffer and fail if
-    so.  If not the rest of the search code (both magical - mcscanner()
-    and ordinary - scanner()) wraps round to the start and searches from
-    there.
+   Add a check in forwsearch() for being at end-of-buffer and fail if
+   so.  If not the rest of the search code (both magical - mcscanner()
+   and ordinary - scanner()) wraps round to the start and searches from
+   there.
 
 search.c
-    Add the FAST search algorithm from 3.10 that was missed during the
-    original GGR migration. It was in 3.9e (5 January 1988 comment).
-    Defined FAST so as to use it.
-    Note that the entire search code is still ASCII-centric.
+   Add the FAST search algorithm from 3.10 that was missed during the
+   original GGR migration. It was in 3.9e (5 January 1988 comment).
+   Defined FAST so as to use it.
+   Note that the entire search code is still ASCII-centric.
 
 buffer,c
 file.c
-    Added code to look for file-hooks-<<sfx>> function ahead of
-    file-hooks, and to execute the first found.
-    Moved the file-hooks running from swbuffer() and bfind() as the
-    latter is reached before the filename is set when reading in a new
-    file. The code is now in readin() and only run if lockfl is TRUE
-    (which is an accidental convenience).
-    So file-hooks now run for file loaded by filefind (^XF).
-    They no longer run for files opened in VIEW mode (but that's fine,
-    as none of the modes affects VIEW mode).
+   Added code to look for file-hooks-<<sfx>> function ahead of
+   file-hooks, and to execute the first found.
+   Moved the file-hooks running from swbuffer() and bfind() as the
+   latter is reached before the filename is set when reading in a new
+   file. The code is now in readin() and only run if lockfl is TRUE
+   (which is an accidental convenience).
+   So file-hooks now run for file loaded by filefind (^XF).
+   They no longer run for files opened in VIEW mode (but that's fine,
+   as none of the modes affects VIEW mode).
 
 crypt.c
-    Re-done to encrypt more than just ASCII codes (which meant that
-    multi-byte utf8 characters were being left unchanged!).
-    Now encrypts all bytes above and including space. This means we can
-    never generate a newline, which would mess things up badly.
-    Simplified the mod coding - mod95 function no longer required.
+   Re-done to encrypt more than just ASCII codes (which meant that
+   multi-byte utf8 characters were being left unchanged!).
+   Now encrypts all bytes above and including space. This means we can
+   never generate a newline, which would mess things up badly.
+   Simplified the mod coding - mod95 function no longer required.
 
 fileio.c
-    Changed ffputline() to work in chunks, so it doesn't call fputc()
-    (and possibly myencrypt()) once for each character written.
-    Tidied up the whole file to 4-column indenting.
+   Changed ffputline() to work in chunks, so it doesn't call fputc()
+   (and possibly myencrypt()) once for each character written.
+   Tidied up the whole file to 4-column indenting.
 
 bind.c
-    Moved mbstop() from buildlist() into desbind().
+   Moved mbstop() from buildlist() into desbind().
 
 ebind.h
-    Removed (temporarily?) the ^XD binding to bktoshell, as it messes up
-    the tty (leaves it in raw mode?) and so is unusable.
+   Removed (temporarily?) the ^XD binding to bktoshell, as it messes up
+   the tty (leaves it in raw mode?) and so is unusable.
 
 line.c
-    linstr() tidied up.  Removed the old linsert() code (in an "#if 0"
-    section) and indented to a tab-stop of 4.
+   linstr() tidied up.  Removed the old linsert() code (in an "#if 0"
+   section) and indented to a tab-stop of 4.
 
 buffer.c
 exec.c
-    Check for excessive macro recursion.
-    Also fixed the storeproc() call in storepttable() [exec.c] to not
-    pass on the f and n args, as that could end up calling a numbered
-    macro! Re-indented some code to a 4 tab-stop.
+   Check for excessive macro recursion.
+   Also fixed the storeproc() call in storepttable() [exec.c] to not
+   pass on the f and n args, as that could end up calling a numbered
+   macro! Re-indented some code to a 4 tab-stop.
 
 crypt.c
 file.c
 fileio.c
-    Extended to encrypt all bytes. This required uemacs to be able to
-    handle NUL characters on input, so ffputline() and ffgetline() were
-    modified to do this. They also now work on 8kB blocks, rather than
-    per-character, which significantly speeds up read/writing on large
-    files.
-    This makes the -n option a no-op.
+   Extended to encrypt all bytes. This required uemacs to be able to
+   handle NUL characters on input, so ffputline() and ffgetline() were
+   modified to do this. They also now work on 8kB blocks, rather than
+   per-character, which significantly speeds up read/writing on large
+   files.
+   This makes the -n option a no-op.
 
 globals.c
 input.c
@@ -1204,45 +1204,45 @@ edef.h
 efunc.h
 estruct.h
 etc/uemacs.rc
-    A buffer (//kbd_macro) is now filled with the macro code for the
-    keyboard macro as it is created. This allows you to edit it and/or
-    save it to file for later execution.
-    Various functions now need to add their result to the macro buffer.
-    The running of this buffer has been bound to ^XV. The ^XE replay of
-    the key strokes is currently unaltered, but these key-bidings may
-    swap once this has moved beyond the experimental stage.
-    Added insert-raw-string and macro-helper functions to enable this.
+   A buffer (//kbd_macro) is now filled with the macro code for the
+   keyboard macro as it is created. This allows you to edit it and/or
+   save it to file for later execution.
+   Various functions now need to add their result to the macro buffer.
+   The running of this buffer has been bound to ^XV. The ^XE replay of
+   the key strokes is currently unaltered, but these key-bidings may
+   swap once this has moved beyond the experimental stage.
+   Added insert-raw-string and macro-helper functions to enable this.
 
-        modified:   edef.h
-        modified:   file.c
-        modified:   fileio.c
-        modified:   globals.c
+      modified:   edef.h
+      modified:   file.c
+      modified:   fileio.c
+      modified:   globals.c
 
 
 file.c
 fileio.c
 globals.c
 edef.h
-    Since ffputline() and ffgetline() now work via a cache there is no
-    longer any need to run input into fline then copy it all into a
-    struct line (which was done to avoid either doing a realloc on every
-    character input or allocating unnecessarily large buffers for short
-    lines). So modified ffgetline() callers to let ffgetline() call
-    lalloc(), which it will mostly do once it knows the final line size
-    and will reallocate and copy-over if required, and removed the
-    related lfillchars() calls.
-    Combined the read and write caches for ffputline() and ffgetline()
-    since only one can ever be active at any one time.
-    Removed ftrulen and fline, changed fline to be struct line *.
+   Since ffputline() and ffgetline() now work via a cache there is no
+   longer any need to run input into fline then copy it all into a
+   struct line (which was done to avoid either doing a realloc on every
+   character input or allocating unnecessarily large buffers for short
+   lines). So modified ffgetline() callers to let ffgetline() call
+   lalloc(), which it will mostly do once it knows the final line size
+   and will reallocate and copy-over if required, and removed the
+   related lfillchars() calls.
+   Combined the read and write caches for ffputline() and ffgetline()
+   since only one can ever be active at any one time.
+   Removed ftrulen and fline, changed fline to be struct line *.
 
 ../KNOWN_ISSUES
 ../TODO
 ../CHANGES
 version.h
 etc/uemacs.hlp
-    Notes about the non-ASCII search problem (for the next release?)
-    Changed the PROGRAM_NAME_LONG from uEmacs/Pk to nuEmacs.
-    Update to version GGR4.119.
+   Notes about the non-ASCII search problem (for the next release?)
+   Changed the PROGRAM_NAME_LONG from uEmacs/Pk to nuEmacs.
+   Update to version GGR4.119.
 
 ========== GGR4.120
 
@@ -1250,7 +1250,7 @@ etc/uemacs.hlp
    JASSPA uemacs.
 buffer.c
 estruct.h
-    Define and initialize b_keylen and b_EOLmissing in struct buffer.
+   Define and initialize b_keylen and b_EOLmissing in struct buffer.
 crypt.c
    So no longer catenates your key to itself until it is at least 63
    chars long (the code is still there and can be enabled by setting
@@ -1283,6 +1283,53 @@ file.c
 ../CHANGES
 version.h
 etc/uemacs.hlp
-    Update to version GGR4.120.
+   Update to version GGR4.120.
 
-==========
+========== GGR4.121
+
+basic.c
+eval.c
+exec.c
+file.c
+isearch.c
+line.c
+names.c
+random.c
+region.c
+search.c
+word.c
+ebind.h
+efunc.h
+   Restore forwchar()/backchar() functions for use by macros (as these
+   require functions to return just TRUE or FALSE).
+   These are just call-throughs to forw_grapheme() and back_grapheme(),
+   which have now lost the unused "f" arg.
+   Adjusted callers accordingly (all internal usage calls *_grapheme() not
+   *char().
+
+line.c
+line.h
+   Externalize the linsert_byte() call, as it's more efficient than
+   linsert() when you know you have a byte, not a Unicode char.
+
+random.c
+   Changed string_getter() so that it doesn't process the results for
+   rawstring() beyond unquoting a token.
+   Modified istring() and rawstring() calls as a result.
+
+main.c
+   Modified the flush_kbd_text() so that text insertion can handle NUL
+   characters.
+   Extended the macro_helper() call to insert a NUL when given a 0 arg.
+   Changed some linsert() calls to linsert_byte().
+
+word.c
+   Fix region_listmaker() to get the correct paragraph count. 
+   It was getting one too many of you were already at beyond the last
+   character in a paragraph (at end-of-line).
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.121.
+
