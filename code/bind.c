@@ -25,9 +25,6 @@ int help(int f, int n)
         struct buffer *bp;      /* buffer pointer to help */
         char *fname = NULL;     /* ptr to file returned by flook() */
 
-        if (mbstop())           /* GGR - disallow in minibuffer */
-                return(FALSE);
-
         /* first check if we are already here */
         bp = bfind(init_files.help, FALSE, BFINVS); /* GGR - epath.h setting */
 
@@ -289,8 +286,6 @@ int unbindchar(int c)
  * into it with view mode
  */
 int desbind(int f, int n) {
-        if (mbstop())              /* GGR - disallow in minibuffer */
-                return(FALSE);
 
 #if     APROP
 
@@ -302,9 +297,6 @@ int apro(int f, int n)
 {                               /* Apropos (List functions that match a substring) */
         char mstring[NSTRING];  /* string to match cmd names to */
         int status;             /* status return */
-
-        if (mbstop())           /* GGR - disallow in minibuffer */
-                return(FALSE);
 
         status = mlreply("Apropos string: ", mstring, NSTRING - 1);
         if (status != TRUE)

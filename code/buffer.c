@@ -238,9 +238,6 @@ int listbuffers(int f, int n)
     struct buffer *bp;
     int s;
 
-/* GGR - disallow in minibuffer */
-    if (mbstop()) return(FALSE);
-
     if ((s = makelist(f)) != TRUE) return s;
 
     if (blistp->b_nwnd == 0) {      /* Not on screen yet.   */

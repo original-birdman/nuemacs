@@ -59,9 +59,6 @@ int nextwind(int f, int n)
         struct window *wp;
         int nwindows;   /* total number of windows */
 
-        if (mbstop())   /* GGR - disallow in minibuffer */
-                  return(FALSE);
-
         if (f) {
 
                 /* first count the # of windows */
@@ -104,9 +101,6 @@ int prevwind(int f, int n)
 {
         struct window *wp1;
         struct window *wp2;
-
-        if (mbstop())   /* GGR - disallow in minibuffer */
-                  return(FALSE);
 
         /* if we have an argument, we mean the nth window from the bottom */
         if (f)
@@ -196,8 +190,6 @@ int onlywind(int f, int n) {
     struct line *lp;
     int i;
 
-    if (mbstop()) return(FALSE);    /* GGR - disallow in minibuffer */
-
     while (wheadp != curwp) {
         wp = wheadp;
         wheadp = wp->w_wndp;
@@ -245,8 +237,6 @@ int delwind(int f, int n) {
     struct window *wp;      /* window to recieve deleted space */
     struct window *lwp;     /* ptr window before curwp */
     int target;             /* target line to search for */
-
-    if (mbstop()) return(FALSE);    /* GGR - disallow in minibuffer */
 
 /* If there is only one window, don't delete it */
     if (wheadp->w_wndp == NULL) {
@@ -397,9 +387,6 @@ int enlargewind(int f, int n)
         struct line *lp;
         int i;
 
-        if (mbstop())   /* GGR - disallow in minibuffer */
-                  return(FALSE);
-
         if (n < 0)
                 return shrinkwind(f, -n);
         if (wheadp->w_wndp == NULL) {
@@ -451,9 +438,6 @@ int shrinkwind(int f, int n)
         struct line *lp;
         int i;
 
-        if (mbstop())   /* GGR - disallow in minibuffer */
-                  return(FALSE);
-
         if (n < 0)
                 return enlargewind(f, -n);
         if (wheadp->w_wndp == NULL) {
@@ -503,9 +487,6 @@ int shrinkwind(int f, int n)
 int resize(int f, int n)
 {
         int clines;             /* current # of lines in window */
-
-        if (mbstop())           /* GGR - disallow in minibuffer */
-                  return(FALSE);
 
         /* must have a non-default argument, else ignore call */
         if (f == FALSE)

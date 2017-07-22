@@ -970,9 +970,6 @@ static int adjustmode(int kind, int global)
         char prompt[50];        /* string to prompt user with */
         char cbuf[NPAT];        /* buffer to recieve mode name into */
 
-        if (mbstop())           /* Disallow in minibuffer */
-               return(FALSE);
-
         /* build the proper prompt string */
         if (global)
                 strcpy(prompt, "Global mode to ");

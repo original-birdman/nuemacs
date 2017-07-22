@@ -54,9 +54,6 @@ int risearch(int f, int n)
         struct line *curline;       /* Current line on entry        */
         int curoff;                 /* Current offset on entry      */
 
-        if (mbstop())               /* GGR - disallow in minibuffer */
-                return(FALSE);
-
         /* remember the initial . on entry: */
 
         curline = curwp->w_dotp;    /* Save the current line pointer  */
@@ -87,9 +84,6 @@ int fisearch(int f, int n)
 {
         struct line *curline;           /* Current line on entry    */
         int curoff;                     /* Current offset on entry  */
-
-        if (mbstop())                   /* GGR - disallow in minibuffer */
-                return(FALSE);
 
         /* remember the initial . on entry: */
 

@@ -53,6 +53,10 @@ void check_for_resize(void) {
  * Create a subjob with a copy of the command intrepreter in it. When the
  * command interpreter exits, mark the screen as garbage so that you do a full
  * repaint. Bound to "^X C".
+ *
+ * Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
  */
 int spawncli(int f, int n)
 {
@@ -63,12 +67,6 @@ int spawncli(int f, int n)
         /* don't allow this command if restricted */
         if (restflag)
                 return resterr();
-
-/* Don't allow this in the minibuffer, as there's a forced redraw on
- * return, which ends up clearing the minibuffer data, while displaying
- * its status in the status line
- */
-        if (mbstop()) return FALSE;
 
 #ifdef SIGWINCH
         get_orig_size();
@@ -133,6 +131,10 @@ void rtfrmshell(void)
  * Run a one-liner in a subjob. When the command returns, wait for a single
  * character to be typed, then mark the screen as garbage so a full repaint is
  * done. Bound to "C-X !".
+ *
+ * Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
  */
 int spawn(int f, int n)
 {
@@ -142,12 +144,6 @@ int spawn(int f, int n)
         /* don't allow this command if restricted */
         if (restflag)
                 return resterr();
-
-/* Don't allow this in the minibuffer, as there's a forced redraw on
- * return, which ends up clearing the minibuffer data, while displaying
- * its status in the status line
- */
-        if (mbstop()) return FALSE;
 
 #ifdef SIGWINCH
         get_orig_size();
@@ -196,6 +192,10 @@ int spawn(int f, int n)
  * Run an external program with arguments. When it returns, wait for a single
  * character to be typed, then mark the screen as garbage so a full repaint is
  * done. Bound to "C-X $".
+ *
+ * Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
  */
 
 int execprg(int f, int n)
@@ -206,12 +206,6 @@ int execprg(int f, int n)
         /* don't allow this command if restricted */
         if (restflag)
                 return resterr();
-
-/* Don't allow this in the minibuffer, as there's a forced redraw on
- * return, which ends up clearing the minibuffer data, while displaying
- * its status in the status line
- */
-        if (mbstop()) return FALSE;
 
 #ifdef SIGWINCH
         get_orig_size();
@@ -257,6 +251,10 @@ int execprg(int f, int n)
 /*
  * Pipe a one line command into a window
  * Bound to ^X @
+ *
+ * Don't allow this in the minibuffer, as there's a forced redraw on
+ * return, which ends up clearing the minibuffer data, while displaying
+ * its status in the status line
  */
 int pipecmd(int f, int n)
 {
@@ -277,12 +275,6 @@ int pipecmd(int f, int n)
         /* don't allow this command if restricted */
         if (restflag)
                 return resterr();
-
-/* Don't allow this in the minibuffer, as there's a forced redraw on
- * return, which ends up clearing the minibuffer data, while displaying
- * its status in the status line
- */
-        if (mbstop()) return FALSE;
 
 #ifdef SIGWINCH
         get_orig_size();

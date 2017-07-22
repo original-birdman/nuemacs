@@ -980,8 +980,6 @@ int sreplace(int f, int n)
  */
 int qreplace(int f, int n)
 {
-        if (mbstop())   /* GGR - disallow in minibuffer */
-                return(FALSE);
         return replaces(TRUE, f, n);
 }
 

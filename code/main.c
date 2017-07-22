@@ -311,7 +311,6 @@ static int end_kbdmacro(void) {
 }
 
 int macro_helper(int f, int n) {
-    if (mbstop()) return FALSE;
     char tag[2];                        /* Just char + NULL needed */
     int status = mlreplyall("helper:", tag, 1);
     if (status != TRUE) return status;  /* Only act on +ve response */
@@ -963,9 +962,6 @@ int quickexit(int f, int n)
         struct buffer *bp;      /* scanning pointer to buffers */
         struct buffer *oldcb;   /* original current buffer */
         int status;
-
-        if (mbstop())           /* GGR - disallow in minibuffer */
-                return(FALSE);
 
         oldcb = curbp;          /* save in case we fail */
 

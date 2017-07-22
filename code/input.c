@@ -860,16 +860,6 @@ int yankmb(int f, int n)
         return (TRUE);
 }
 
-int mbstop()
-{
-        if (inmb) {
-                mlwrite("Command not allowed in the minibuffer");
-                return(TRUE);
-        }
-        else
-                return(FALSE);
-}
-
 #if MSDOS | BSD | USG
 static char *tmpnam(dum)
 char *dum;

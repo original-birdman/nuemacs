@@ -573,8 +573,6 @@ int next_pttable(int f, int n) {
  * Toggle the Phonetic Translation table on/off for the current buffer.
  */
 int toggle_ptmode(int f, int n) {
-    if (mbstop())           /* Disallow in minibuffer */
-        return(FALSE);
     if (!ptt) {
         mlforce("No phonetic translation tables are yet defined!");
         return FALSE;

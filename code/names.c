@@ -237,7 +237,7 @@ struct name_bind names[] = {
         {"update-screen", upscreen, {0, 0}},
         {"view-file", viewfile, {0, 0}},
         {"white-delete", whitedelete, {0, 0}},      /* GGR */
-        {"widen-from-region", widen, {0, 0}},       /* GGR */
+        {"widen-from-region", widen, {0, 1}},       /* GGR */
         {"wrap-word", wrapword, {0, 0}},
         {"write-file", filewrite, {0, 0}},
         {"write-message", writemsg, {0, 0}},

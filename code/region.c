@@ -225,9 +225,6 @@ int narrow(int f, int n)
         struct window *wp;      /* windows to fix up pointers in as well */
         struct region creg;     /* region boundry structure */
 
-        if (mbstop())
-                return(FALSE);
-
         /* find the proper buffer and make sure we aren't already narrow */
         bp = curwp->w_bufp;     /* find the right buffer */
         if (bp->b_flag&BFNAROW) {
