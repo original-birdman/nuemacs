@@ -687,7 +687,7 @@ exec.c
    make use of the Julia language utf8/unicode library
       https://julialang.org/utf8proc/
    to detect character types.
- 
+
       This first test was to determine the character type for a
       beginning-of-word test in phonetic translation table handling.
 
@@ -1324,7 +1324,7 @@ main.c
    Changed some linsert() calls to linsert_byte().
 
 word.c
-   Fix region_listmaker() to get the correct paragraph count. 
+   Fix region_listmaker() to get the correct paragraph count.
    It was getting one too many of you were already at beyond the last
    character in a paragraph (at end-of-line).
 
@@ -1333,3 +1333,307 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.121.
 
+========== GGR4.122
+
+main.c
+   Don't update lastflag on a status display (i.e. showcpos()).
+----------
+
+buffer.c
+file.c
+globals.c
+edef.h
+   Set a flag before getfile() calls in filefind() and viewfile()
+   [file.c] and readin() in swbuffer() [buffer.c] to say that we want to
+   run file-hooks - don't use the lockfl value.
+   Allows us to run file-hooks on view-file.
+----------
+
+ Fixes to handle double-width (or more) characters by using
+ utf8proc_charwidth() for the column increment, not 1.
+
+test-files/fillpara.long_jap.txt
+   Test file
+basic.c
+   newcol in getgoal()
+display.c
+   curcol in updpos()
+   Step back over any NUL graphemes when placing extended-line $ marker.
+   [vtputc()]
+   Pad the "unused" graphemes of multi-width characters with NUL. [vtputc()]
+   When moving into a line extension, change any NULs following a
+   multi-width character at the start of line to be spaces for correct
+   alignment. [updext()]
+random.c
+   col in getccol().
+   col in setccol().
+word.c
+   wordlen in filler().
+----------
+
+estruct.h
+search.c
+   Searching for utf8 chars (i.e. ones with a first byte >= 0x80) was
+   failing as the search table was taking this to be a signed char!
+   Defined a ch_as_uc() macro in estruct.h to cast to unsigned char, and
+   used this where relevant.
+crypt.c
+line.c
+posix.c
+utf8.c
+   Altered some (unsigned char) castings to use the ch_as_uc() macro.
+----------
+
+  Various changes to the minibuffer code so that PHON mode may be set
+  there (to enable easier searching).  This meant that the minibuffer
+  needed its own modeline display (to show PHON mode on/off, and which
+  language).  At the same time I added code to names.c to allow
+  searching by function address which enables us to use the per-function
+  flags set there to allow/dis-allow usage in the minibuffer, rather
+  than checking in each routine and calling mbstop() from there.
+
+----- Details -----
+
+Makefile
+   Added idxsorter.c to the build and refreshed depends lists.
+
+bind.c
+   Added not_in_mb() call.
+   getbind() now checks if in minibuffer and if call is allowed. If not
+   it switches it to not_in_mb().
+
+display.c
+   Added mb_update() to display a modeline for the minibuffer, and set
+   modeline() to call it if we are in the minibuffer.
+
+edef.h
+globals.c
+   Added mb_info and not_in_mb_funcname definitions.
+
+efunc.h
+   Added not_in_mb(), init_namelookup(0 and func_info() definitions.
+
+exec.c
+   namedcmd() now checks if in minibuffer and if call is allowed.  If
+   not it switches it to not_in_mb().
+
+input.c
+   Modified getstring() to show a modeline for the minibuffer. We also
+   now return *all* of the minibuffer (not just the current line) as the
+   value, which allows you to search for strings with newlines in.
+   The ctl-I filename expansion only work on the current (visible) line
+   contents, though.
+
+main.c
+   Added call to init_namelookup().
+
+names.c
+   Added init_namelookup() and func_info() to enable searching for
+   function info by function address.
+
+etc/uemacs.rc
+   Remove minibuffer check from _mytoggle-mode
+
+idxsorter.c
+idxsorter.h
+   Added sorting code.
+
+NOTE!!!
+   The indexed sorting code works, but could be improved.
+   It currently sorts pointers as character arrays (which means it needs
+   to know the endianness). Ideally it would sort these as numeric
+   fields (and also then allow sorting of signed data).
+----------
+
+bind.c
+buffer.c
+exec.c
+input.c
+isearch.c
+main.c
+names.c
+random.c
+region.c
+search.c
+spawn.c
+window.c
+efunc.h
+    Removed calls/references to mbstop().
+    toggle-ptmode, add-mode, add-global-mode, delete-mode and
+    delete-global-mode are now enabled in the minibuffer.
+----------
+
+bind.c
+idxsorter.c
+main.c
+names.c
+efunc.h
+idxsorter.h
+    Updated idxsort_fields() (in idxsorter.c) to handle numbers (signed,
+    unsigned and pointers) "properly". It can also now sort
+    NUL-terminated C-strings from in-memory pointers.
+    Used this to provide quick lookups for key-bindings [bind.c] and
+    function name lookups [names.c]
+----------
+
+input.c
+    Added MDPHON to the list of modes allowed to persist in the minibuffer.
+----------
+
+  Added further indexing, and also code to delay indexing of bindings
+  when processing a command buffer (which may well have multiple
+  rebindings in it).
+
+----- Details -----
+
+bind.c
+    Add indexed binary search for key mapping to bindtokey() and
+    unbindchar() (previously only buffertokey() had it!)
+    Move index_bindings() to be earlier in the file.
+    Add key_index_valid global to trigger indexing rather then calling
+    index_bindings(). As a result made index_bindings() a static function.
+    Add pause_key_index_update global to delay indexing.
+    Add back code to get_key_tab() to do a linear search when the index
+    is invalid, but indexing is being delayed.
+exec.c
+    Set pause_key_index_update to 1 in dobuf() and restore original
+    value on exit.
+globals.c
+    Add pause_key_index_update and initialize to 0.
+main.c
+    Add key_index_valid global to trigger indexing rather then calling
+    index_bindings().
+ebind.h
+    Add key_index_valid and initialize to 0.
+edef.h
+    Add key_index_valid and pause_key_index_update.
+efunc.h
+    Removed index_bindings() declaration. It is now internal to bind.c.
+----------
+
+bind.c
+exec.c
+globals.c
+edef.h
+efunc.h
+    Remember the keystroke for a "not in minibuffer" command and display
+    that in the error message too.
+----------
+
+  Reworked getbind() to return a pointer to an information structure,
+  rather than just a function address. This makes better use of the
+  indexing.
+
+----- Details -----
+
+bind.c
+    Renamed get_key_tab() to getbind() and changed callers of getbind()
+    accordingly.  (Removed original getbind()).
+    Removed getfname() and fncmatch() - no longer needed.
+    Moved not_in_mb_error() to main.c
+
+exec.c
+    Fixed docmd() for to use name_info() not fncmatch().
+
+input.c
+    Fixed docmd() for to use name_info() not fncmatch().
+    Corrected some fname->fnc->fname oddities in keyboard macro calls -
+    just use fname directly.
+
+main.c
+    Modified to use new getbind() calls (mostly in execute()).
+    Copied over not_in_mb_error() from bind.c.
+    extend_keytab() now copies in init_keytab entries individually and
+    sets the fi information pointer for each.
+
+names.c
+    Added back the final NULL entry to names[].  The binding listing
+    code expects it to be there.
+
+ebind.h
+    Changed init_keytab[] to just be a list of key -> function items.
+
+efunc.h
+    Removed getfname() and fncmatch() declarations and changed getbind().
+
+estruct.h
+   Added name_bind pointer to key_tab structure.
+   Added key_tab_init structure definition.
+----------
+
+spawn.c
+    Fixed bktoshell by calling rtfrmshell(). It appears that the handler
+    for SIGCONT doesn't get called on returning with "fg".
+ebind.h
+    Re-enabled the bktoshell key binding.
+----------
+
+  Move the minibuffer prompt back into the minibuffer. It didn't look
+  right there, and would have become really odd with split windows once
+  the modeline used for it was changed to that of the active window.
+
+----- Details -----
+
+bind.c
+    Fix deskey so it display in the minibuffer.
+
+display.c
+    Put the minibuffer modeline handling back into modeline() and
+    removed mb_update().
+    The minibuffer now uses the active window modeline (which makes a
+    difference with split windows). It displays abbreviated mode flags
+    for the minibuffer, and also notes when it is multi-line.
+
+globals.c
+edef.h
+    Modified mb_info structure fields.
+
+input.c
+    Put back the code to have the prompt in the minibuffer itself.
+
+main.c
+    Check for "skip_in_macro" before checking for namedcmd.
+
+names.c
+    The binary chop method in func_info() was changed to be one which
+    always finds the first entry for any duplicated keys.
+----------
+
+  More indexing bits. Including adding the concept of a "next" index to
+  the index sorting. Used this for building the keybinding list.
+
+----- Details -----
+
+bind.c
+    Add indexing of the keytab data by function, and also create a
+    "next" index for it (index_keystr(), next_getbyfnc(), getbyfnc()).
+    Fix bindtokey() and buffertokey() to check the need extend_keytab()
+    correctly, now that we are using indexed lookups.
+    Modify buildlist() to use index routine calls while building the
+    function list.
+
+efunc.h
+    Add nxti_name_info() declaration.
+
+idxsorter.c
+idxsorter.h
+    Add make_next_idx() function.
+
+main.c
+    Don't declare an internal keytab_alloc_ents in main - there's a
+    global of the same name!  Now named init_ents.
+
+names.c
+    Remove the end NULL entry from names[] (no longer needed as we use
+    indexing to go through the entries).
+    Create a "next" index for name_index[].
+    Remove extraneous code lines (errant copy&paste?) at the end of
+    func_info().
+----------
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.122.
+
+==========
