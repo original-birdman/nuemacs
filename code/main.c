@@ -325,25 +325,6 @@ int macro_helper(int f, int n) {
     return FALSE;
 }
 
-#if 0
-No longer needed, but leave as exmaple of function prop lookups */
-/* Check whether a function takes any args */
-
-static int takes_args(fn_t look4) {
-
-    struct name_bind *ffp;  /* Entry in name binding table */
-
-/* Scan through the table, returning any match */
-
-    ffp = &names[0];
-    while (ffp->n_func != NULL) {
-        if (ffp->n_func == look4) return ffp->opt.has_text_args;
-        ++ffp;
-    }
-    return 0;                   /* ??? */
-}
-#endif
-
 int main(int argc, char **argv)
 {
         int c = -1;             /* command character */
@@ -404,7 +385,7 @@ int main(int argc, char **argv)
  * next KEYTAB_INCR boundary.
  */
         init_namelookup();
-        int n_init_keys = sizeof(init_keytab)/sizeof(struct key_tab);
+        int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
         int keytab_alloc_ents = n_init_keys + 2 + KEYTAB_INCR;
         keytab_alloc_ents /= KEYTAB_INCR;
         keytab_alloc_ents *= KEYTAB_INCR;
@@ -639,23 +620,24 @@ loop:
 
 #if TYPEAH
         if (typahead()) {
-                newc = getcmd();
-                update(FALSE);
-                do {
-                        fn_t execfunc;
-                        char *pbp;
-
-                        if (c == newc && (execfunc = getbind(c, &pbp)) != NULL
-                            && execfunc != insert_newline
-                            && execfunc != insert_tab)
-                                newc = getcmd();
-                        else
-                                break;
-                } while (typahead());
-                c = newc;
+            newc = getcmd();
+            update(FALSE);
+            do {
+                if (c == newc) {
+                    struct key_tab *ktp = getbind(c);
+                    if (ktp) {
+                        fn_t execfunc = ktp->hndlr.k_fp;
+                        if (execfunc != insert_newline
+                             && execfunc != insert_tab)
+                            newc = getcmd();
+                    }
+                }
+                else break;
+            } while (typahead());
+            c = newc;
         } else {
-                update(FALSE);
-                c = getcmd();
+            update(FALSE);
+            c = getcmd();
         }
 #else
         /* Fix up the screen    */
@@ -794,25 +776,42 @@ void edinit(char *bname) {
     return;
 }
 
+/* What gets called if we try to run something in the minibuffer which
+ * we shouldn't.
+ * Requires not_in_mb to have been filled out.
+ */
+int not_in_mb_error(int f, int n) {
+    char vis_key_paras[23];
+    if (not_in_mb.keystroke != -1) {
+        char vis_key[20];
+        cmdstr(not_in_mb.keystroke, vis_key);
+        snprintf(vis_key_paras, 22, "(%s)", vis_key);
+    }
+    mlwrite("%s%s not allowed in the minibuffer!!",
+         not_in_mb.funcname, vis_key_paras);
+    return(TRUE);
+}
+
 /*
  * This is the general command execution routine. It handles the fake binding
  * of all the keys to "self-insert". It also clears out the "thisflag" word,
  * and arranges to move it to the "lastflag", so that the next command can
  * look at it. Return the status of command.
  */
-
-int execute(int c, int f, int n)
-{
+int execute(int c, int f, int n) {
     int status;
-    fn_t execfunc;
-    char *pbp;
 
 /* If the keystroke is a bound function...do it */
 
-    execfunc = getbind(c, &pbp);
-    if (execfunc != NULL) {
+    struct key_tab *ktp = getbind(c);
+    if (ktp) {
+        fn_t execfunc = ktp->hndlr.k_fp;
         if (execfunc == nullproc) return(TRUE);
-
+        if (inmb && ktp->fi->opt.not_mb) {
+            not_in_mb.funcname = ktp->fi->n_name;
+            not_in_mb.keystroke = c;
+            execfunc = not_in_mb_error;
+        }
         thisflag = 0;
 /* GGR - implement re-execute */
         if (inreex) {
@@ -833,18 +832,17 @@ int execute(int c, int f, int n)
                 if ((f > 0) && (n != 1))    /* ...but record any count */
                     set_narg_kbdmacro(n);
             }
-            else if (execfunc == nullproc || execfunc == ctlxe ||
-                     execfunc == ctlxrp   || execfunc == quote ||
-                     execfunc == reexecute) {
+            else if (ktp->fi->opt.skip_in_macro) {
                 ;                           /* Ignore it */
             }
             else {                          /* Record it */
                 if ((f > 0) && (n != 1)) set_narg_kbdmacro(n);
-                addto_kbdmacro(getfname(execfunc), 1, 0);
+                addto_kbdmacro(ktp->fi->n_name, 1, 0);
             }
         }
-        if (pbp != NULL) {
-            input_waiting = pbp;
+        if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
+            execfunc = execproc;    /* Run this instead... */
+            input_waiting = ktp->hndlr.pbp;
             if (!inmb && kbdmode == RECORD)
                  addto_kbdmacro(input_waiting, 0, 0);
         }
@@ -1284,8 +1282,8 @@ int reexecute(int f, int n)
  * If input arg is non-zero use that, otherwise extend by the
  * defined increment and update keytab_alloc_ents.
  */
-static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}};
-static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}};
+static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}, NULL};
+static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}, NULL};
 
 void extend_keytab(int n_ents) {
 
@@ -1299,11 +1297,22 @@ void extend_keytab(int n_ents) {
         keytab_alloc_ents = n_ents;
     }
     keytab = realloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
+    if (init_from == 0) {           /* Add in starting data */
+        int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
+        struct key_tab *ktp = keytab;
+        for (int n = 0; n < n_init_keys; n++, ktp++) {
+            ktp->k_type = FUNC_KMAP;    /* All init ones are this */
+            ktp->k_code = init_keytab[n].k_code;
+            ktp->hndlr.k_fp = init_keytab[n].k_fp;
+            ktp->fi = func_info(ktp->hndlr.k_fp);
+        }
+        init_from = n_init_keys;    /* Only need to add tags from here */
+    }
+/* Add in marker tags for (new) free entries */
     for (int i = init_from; i < keytab_alloc_ents - 1; i++)
         keytab[i] = endl_keytab;
     keytab[keytab_alloc_ents - 1] = ends_keytab;
 
-    if (init_from == 0) memcpy(keytab, init_keytab, sizeof(init_keytab));
     key_index_valid = 0;    /* Rebuild index before using it. */
 
     return;

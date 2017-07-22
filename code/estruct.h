@@ -577,6 +577,11 @@ struct key_tab {
             fn_t k_fp;          /* Routine to handle it, or... */
             char *pbp;          /* ...procedure buffer name */
         } hndlr;
+        struct name_bind *fi;   /* Function info */
+};
+struct key_tab_init {           /* Initializing data */
+        int k_code;             /* Key code */
+        fn_t k_fp;              /* Routine to handle it */
 };
 
 /* Structure for the name binding table. */

@@ -87,7 +87,6 @@ int docmd(char *cline)
 {
         int f;                  /* default argument flag */
         int n;                  /* numeric repeat value */
-        fn_t fnc;               /* function to execute */
         int status;             /* return status of function */
         int oldcle;             /* old contents of clexec flag */
         char *oldestr;          /* original exec string */
@@ -130,7 +129,8 @@ int docmd(char *cline)
         }
 
         /* and match the token to see if it exists */
-        if ((fnc = fncmatch(tkn)) == NULL) {
+        struct name_bind *nbp = name_info(tkn);
+        if (nbp == NULL) {
                 mlwrite(MLpre "No such Function" MLpost);
                 execstr = oldestr;
                 return FALSE;
@@ -139,7 +139,7 @@ int docmd(char *cline)
         /* save the arguments and go execute the command */
         oldcle = clexec;        /* save old clexec flag */
         clexec = TRUE;          /* in cline execution */
-        status = (*fnc) (f, n); /* call the function */
+        status = (nbp->n_func)(f, n); /* call the function */
         cmdstatus = status;     /* save the status */
         clexec = oldcle;        /* restore clexec flag */
         execstr = oldestr;

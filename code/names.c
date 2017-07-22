@@ -1,8 +1,8 @@
 /* Name to function binding table.
  *
  * This table gives the names of all the bindable functions
- * end their C function address. These are used for the bind-to-key
- * function.
+ * their C function address and additional property flags.
+ * These are used for the bind-to-key function.
 */
 
 #include "estruct.h"
@@ -243,8 +243,8 @@ struct name_bind names[] = {
         {"write-message", writemsg, {0, 0}},
         {"yank", yank, {0, 0}},
         {"yank-minibuffer", yankmb, {0, 0}},        /* GGR */
-
-        {"", NULL}
+/* End marker - used by buildlist */
+        {"", NULL, {0, 0}}
 };
 
 /* Routine to produce an array index for names sorted by:
@@ -256,9 +256,10 @@ struct name_bind names[] = {
 #include <stddef.h>
 #include "idxsorter.h"
 
+/* The -1 here is because we don't want to index the final NULL entry */
+static int needed = sizeof(names)/sizeof(struct name_bind) - 1;
 static int *func_index;
 static int *name_index;
-static int needed = sizeof(names)/sizeof(struct name_bind);
 
 void init_namelookup(void) {
     struct fields fdef;
@@ -279,6 +280,7 @@ void init_namelookup(void) {
     return;
 }
 
+/* Lookup by function call address */
 struct name_bind *func_info(fn_t func) {
     int first = 0;
     int last = needed - 1;
@@ -294,9 +296,11 @@ struct name_bind *func_info(fn_t func) {
     return &names[func_index[middle]];
 }
 
+/* Lookup by function name */
 struct name_bind *name_info(char *name) {
     int first = 0;
     int last = needed - 1;
+
     int middle = (first + last)/2;
 
     while (first <= last) {

@@ -151,7 +151,9 @@ fn_t getname(void) {
 /* If we are executing a command line get the next arg and match it */
     if (clexec) {
         if (macarg(buf) != TRUE) return NULL;
-        return fncmatch(buf);
+        struct name_bind *nbp = name_info(buf);
+        if (nbp) return nbp->n_func;
+        return NULL;
     }
 
 /* Build a name string from the keyboard */
@@ -161,9 +163,12 @@ fn_t getname(void) {
 /* If we are at the end, just match it */
         if (c == 0x0d) {
             buf[cpos] = 0;  /* and match it off */
-            if (kbdmode == RECORD)
-                addto_kbdmacro(getfname(fncmatch(buf)), 1, 0);
-            return fncmatch(buf);
+            struct name_bind *nbp = name_info(buf);
+            if (nbp) {
+                if (kbdmode == RECORD) addto_kbdmacro(buf, 1, 0);
+                return nbp->n_func;
+            }
+            return NULL;
         }
         else if (c == ectoc(abortc)) {        /* Bell, abort */
             ctrlg(FALSE, 0);
@@ -190,7 +195,9 @@ fn_t getname(void) {
             TTflush();
         }
         else if (c == ' ' || c == 0x1b || c == 0x09) {
-/* Attempt a completion */
+/* Attempt a completion.
+ * Because of the completion code we can't use the sorted index...
+ */
             buf[cpos] = 0;  /* terminate it for us */
             ffp = &names[0];        /* scan for matches */
             while (ffp->n_func != NULL) {
@@ -206,8 +213,7 @@ fn_t getname(void) {
                         }
                         TTflush();
                         if (kbdmode == RECORD)
-                            addto_kbdmacro(getfname(fncmatch(ffp->n_name)),
-                                 1, 0);
+                            addto_kbdmacro(ffp->n_name, 1, 0);
                         return ffp->n_func;
                     }
                     else {
