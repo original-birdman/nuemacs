@@ -736,7 +736,7 @@ loop:
 
 /* Whatever dumb modes, they've put on, allow only the sensible... */
 
-    curbp->b_mode &= (MDEXACT|MDOVER|MDMAGIC);
+    curbp->b_mode &= (MDEXACT|MDOVER|MDMAGIC|MDPHON);
     goto loop;
 
 submit:     /* Tidy up */
