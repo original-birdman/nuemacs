@@ -905,7 +905,7 @@ int dobuf(struct buffer *bp) {
     char *eline;            /* text of line to execute */
     char tkn[NSTRING];      /* buffer to evaluate an expresion in */
     int return_stat = TRUE; /* What we expect to do */
-
+    int orig_pause_key_index_update;    /* State on entry - to be restored */
 #if     DEBUGM
     char *sp;               /* temp for building debug string */
     char *ep;               /* ptr to end of outline */
@@ -920,6 +920,8 @@ int dobuf(struct buffer *bp) {
         return FALSE;
     }
     bp->b_exec_level++;
+    orig_pause_key_index_update = pause_key_index_update;
+    pause_key_index_update = 1;
 
 /* Clear IF level flags/while ptr */
     execlevel = 0;
@@ -1105,6 +1107,7 @@ failexit:       freewhile(scanner);
             if ((mp = lalloc(linlen)) == NULL) {
                 mlwrite ("Out of memory while storing macro");
                 bp->b_exec_level--;
+                pause_key_index_update = orig_pause_key_index_update;
                 return FALSE;
             }
 
@@ -1263,6 +1266,7 @@ failexit:       freewhile(scanner);
             execlevel = 0;
             freewhile(whlist);
             bp->b_exec_level--;
+            pause_key_index_update = orig_pause_key_index_update;
             return status;
         }
 
@@ -1275,12 +1279,14 @@ eexec:                  /* Exit the current function */
     execlevel = 0;
     freewhile(whlist);
     bp->b_exec_level--;
+    pause_key_index_update = orig_pause_key_index_update;
     return return_stat;
 
 /* This sequence is used for several exits, so only write it once */
 failexit2:
     freewhile(whlist);
     bp->b_exec_level--;
+    pause_key_index_update = orig_pause_key_index_update;
     return FALSE;
 }
 

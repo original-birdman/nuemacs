@@ -30,6 +30,7 @@ extern char *modename[];        /* text names of modes          */
 extern char *mode2name[];       /* text names of modes          */
 extern char modecode[];         /* letters to represent modes   */
 extern struct key_tab *keytab;  /* key bind to functions table  */
+extern int key_index_valid;     /* Whether idx index for keytab is valid */
 extern struct name_bind names[];/* name to function table */
 extern int gmode;               /* global editor mode           */
 extern int gflags;              /* global control flag          */
@@ -158,3 +159,5 @@ struct mb_info {
 extern struct mb_info mb_info;
 
 extern char *not_in_mb_funcname;
+
+extern int pause_key_index_update;  /* If set, don't update keytab index */

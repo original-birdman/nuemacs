@@ -165,3 +165,5 @@ int run_filehooks = 0;
 struct mb_info mb_info = {  NULL, 0, "" };
 
 char *not_in_mb_funcname;
+
+int pause_key_index_update = 0;

@@ -1304,7 +1304,7 @@ void extend_keytab(int n_ents) {
     keytab[keytab_alloc_ents - 1] = ends_keytab;
 
     if (init_from == 0) memcpy(keytab, init_keytab, sizeof(init_keytab));
-    index_bindings();
+    key_index_valid = 0;    /* Rebuild index before using it. */
 
     return;
 }

@@ -217,7 +217,6 @@ extern void set_pathname(char *);
 extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
 extern int not_in_mb(int, int);
-extern void index_bindings(void);
 extern fn_t getbind(int, char **);
 extern char *getfname(fn_t);
 extern fn_t fncmatch(char *);

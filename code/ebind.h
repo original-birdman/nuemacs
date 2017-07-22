@@ -22,6 +22,8 @@
  */
 #define KEYTAB_INCR 32
 
+int key_index_valid = 0;
+
 struct key_tab *keytab;
 struct key_tab init_keytab[] = {
         {FUNC_KMAP, CONTROL | 'A', {gotobol}            },
