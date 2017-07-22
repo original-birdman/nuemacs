@@ -397,18 +397,18 @@ int main(int argc, char **argv)
 
 /* Set up the initial keybindings.  Must be done early, before any
  * command line processing.
+ * NOTE that we must initialize the namelooup indexing first, i.e. before
+ * calling extend_keytab().
  * We need to allow for the additonal ENDL_KMAP and ENDS_KMAP entries,
  * which mark the End-of-List and End-of-Structure, and round up to the
  * next KEYTAB_INCR boundary.
  */
+        init_namelookup();
         int n_init_keys = sizeof(init_keytab)/sizeof(struct key_tab);
         int keytab_alloc_ents = n_init_keys + 2 + KEYTAB_INCR;
         keytab_alloc_ents /= KEYTAB_INCR;
         keytab_alloc_ents *= KEYTAB_INCR;
         extend_keytab(keytab_alloc_ents);
-        memcpy(keytab, init_keytab, sizeof(init_keytab));
-
-        init_namelookup();
 
 /* GGR Command line parsing substantially reorganised. It now consists of two
  * separate loops. The first loop processes all optional arguments (command
@@ -1302,6 +1302,9 @@ void extend_keytab(int n_ents) {
     for (int i = init_from; i < keytab_alloc_ents - 1; i++)
         keytab[i] = endl_keytab;
     keytab[keytab_alloc_ents - 1] = ends_keytab;
+
+    if (init_from == 0) memcpy(keytab, init_keytab, sizeof(init_keytab));
+    index_bindings();
 
     return;
 }

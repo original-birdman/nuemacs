@@ -198,6 +198,8 @@ int bindtokey(int f, int n)
         mpresf = TRUE;                  /* GGR */
         TTflush();
 
+        index_bindings();
+
         return TRUE;
 }
 
@@ -278,6 +280,9 @@ int unbindchar(int c)
         ktp->k_code = 0;
         ktp->hndlr.k_fp = NULL;
         ktp->k_type = ENDL_KMAP;
+
+        index_bindings();
+
         return TRUE;
 }
 
@@ -746,78 +751,124 @@ int not_in_mb(int f, int n) {
     return(TRUE);
 }
 
+/* (Re)Index the key bindings...
+ */
+#include <stddef.h>
+#include "idxsorter.h"
+
+static int *key_index = NULL;
+static int key_index_allocated = 0;
+static int kt_ents;     /* Actual populated entries */
+
+void index_bindings(void) {
+    if (key_index_allocated < keytab_alloc_ents) {
+        key_index = realloc(key_index, keytab_alloc_ents*sizeof(int));
+        key_index_allocated = keytab_alloc_ents;
+    }
+    struct fields fdef;
+    fdef.offset = offsetof(struct key_tab, k_code);
+    fdef.type = 'I';
+    fdef.len = sizeof(int);
+
+/* The allocated keytab conatins markers at the end, which we do not
+ * want to index...
+ * The last one will be a ENDS_KMAP, and we skip over any preceding
+ * ENDL_KMAP entries.
+ */
+
+    int ki = key_index_allocated - 2;
+    while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
+    kt_ents = ki + 1;
+    idxsort_fields((unsigned char *)keytab, key_index,
+         sizeof(struct key_tab), kt_ents, 1, &fdef);
+    return;
+}
+
 /*
  * This function looks a key binding up in the binding table
- * GGR - it now sets the buffer name for PROC_KMAP entries
+ * and returns the key_tab entry address.
+ * This was originally getbind, but has been modifed to return
+ * the key_tab entry address, and getbind() now calls this.
  *
  * int c;               key to find what is bound to it
  */
-fn_t getbind(int c, char **pbp)
-{
-        struct key_tab *ktp;
+static struct key_tab *get_key_tab(int c) {
 
-/* Look through the key table. */
+/* Look through the key table. We can now binary-chop this... */
 
-        for (ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
-                if (ktp->k_code == c) {
-                    if (ktp->k_type == FUNC_KMAP) {
-                        *pbp = NULL;
-                        if (inmb) {
-                            struct name_bind *fi = func_info(ktp->hndlr.k_fp);
-                            if (fi && fi->opt.not_mb) {
-                                not_in_mb_funcname = fi->n_name;
-                                return not_in_mb;
-                            }
-                        }
-                        return ktp->hndlr.k_fp;
-                    }
-                    else if (ktp->k_type == PROC_KMAP) {
-                        *pbp = ktp->hndlr.pbp;
-                        return execproc;
-                    }
-                }
-        }
-        *pbp = NULL;
+    int first = 0;
+    int last = kt_ents - 1;
+    int middle = (first + last)/2;
+
+    while (first <= last) {
+        if (keytab[key_index[middle]].k_code < c) first = middle + 1;
+        else if (keytab[key_index[middle]].k_code == c) break;
+        else last = middle - 1;
+        middle = (first + last)/2;
+    }
+    if (first > last) {
         return NULL;        /* No such binding */
+    }
+    return &keytab[key_index[middle]];
+}
+
+/*
+ * This function looks a key binding up in the binding table
+ * GGR - it now sets the buffer name for PROC_KMAP entries
+ * It also now calls get_key_tab() to find the entry...
+ *
+ * int c;               key to find what is bound to it
+ */
+fn_t getbind(int c, char **pbp) {
+
+    struct key_tab *ktp = get_key_tab(c);
+    if (!ktp) {
+        *pbp = NULL;
+        return NULL;
+    }
+
+    if (ktp->k_type == FUNC_KMAP) {
+        *pbp = NULL;
+        if (inmb) {
+            struct name_bind *fi = func_info(ktp->hndlr.k_fp);
+            if (fi && fi->opt.not_mb) {
+                not_in_mb_funcname = fi->n_name;
+                return not_in_mb;
+            }
+        }
+        return ktp->hndlr.k_fp;
+    }
+    else if (ktp->k_type == PROC_KMAP) {
+        *pbp = ktp->hndlr.pbp;
+        return execproc;
+    }
+    *pbp = NULL;
+    return NULL;        /* Unknown binding type(!?) */
 }
 
 /*
  * getfname:
  *      This function takes a ptr to function and gets the name
  *      associated with it.
+ *      Lookup now indexed...
  */
-char *getfname(fn_t func)
-{
-        struct name_bind *nptr; /* pointer into the name binding table */
-
-        /* skim through the table, looking for a match */
-        nptr = &names[0];
-        while (nptr->n_func != NULL) {
-                if (nptr->n_func == func)
-                        return nptr->n_name;
-                ++nptr;
-        }
-        return NULL;
+char *getfname(fn_t func) {
+    struct name_bind *nptr = func_info(func);
+    if (nptr) return nptr->n_name;
+    return NULL;
 }
 
 /*
  * match fname to a function in the names table
  * and return any match or NULL if none
+ * Lookup now indexed
  *
  * char *fname;         name to attempt to match
  */
-int (*fncmatch(char *fname)) (int, int)
-{
-        struct name_bind *ffp;  /* pointer to entry in name binding table */
-
-        /* scan through the table, returning any match */
-        ffp = &names[0];
-        while (ffp->n_func != NULL) {
-                if (strcmp(fname, ffp->n_name) == 0)
-                        return ffp->n_func;
-                ++ffp;
-        }
-        return NULL;
+fn_t fncmatch(char *fname) {
+    struct name_bind *nptr = name_info(fname);
+    if (nptr) return nptr->n_func;
+    return NULL;
 }
 
 /*
@@ -908,7 +959,6 @@ int buffertokey(int f, int n)
 {
     unsigned int c;         /* command key to bind */
     struct key_tab *ktp;    /* pointer into the command table */
-    int found;              /* matched command flag */
     char bname[NBUFN+1];    /* buffer name */
     char outseq[80];        /* output buffer for keystroke sequence */
     struct buffer *bp;      /* ptr to buffer to execute */
@@ -958,23 +1008,16 @@ int buffertokey(int f, int n)
 
 /* Search the table to see if it exists */
 
-    ktp = keytab;
-    found = FALSE;
-    while (ktp->k_type != ENDL_KMAP) {
-        if (ktp->k_code == c) {
-            found = TRUE;
-            break;
-        }
-        ++ktp;
-    }
-
-    if (found) {                    /* If it exists, change it... */
+    ktp = get_key_tab(c);
+    if (ktp) {              /* If it exists, change it... */
         if (ktp->k_type == FUNC_KMAP) /* Need to allocate space for name */
             ktp->hndlr.pbp = malloc(NBUFN);
         destp = ktp;
     }
-    else {                          /* ...else add it at the end */
-        ktp->k_code = c;            /* set keycode */
+    else {                  /* ...else add it at the end */
+        ktp = keytab;
+        while (ktp->k_type != ENDL_KMAP) ++ktp;
+        ktp->k_code = c;    /* set keycode */
         ktp->hndlr.pbp = malloc(NBUFN);
         destp = ktp;
 
@@ -1000,6 +1043,8 @@ int buffertokey(int f, int n)
 
     mpresf = TRUE;                  /* GGR */
     TTflush();
+
+    index_bindings();
 
     return TRUE;
 }

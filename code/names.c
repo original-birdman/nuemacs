@@ -247,43 +247,65 @@ struct name_bind names[] = {
         {"", NULL}
 };
 
-/* Routine to produce an array index for names sorted by function call
+/* Routine to produce an array index for names sorted by:
+ *      a) function call (addr)
+ *      b) function name
  * To be called from main() at start-up time.
  */
 
 #include <stddef.h>
 #include "idxsorter.h"
 
+static int *func_index;
 static int *name_index;
 static int needed = sizeof(names)/sizeof(struct name_bind);
 
 void init_namelookup(void) {
-    name_index = malloc((needed+1)*sizeof(int));
     struct fields fdef;
+
     fdef.offset = offsetof(struct name_bind, n_func);
     fdef.type = 'P';
     fdef.len = sizeof(fn_t);
+    func_index = malloc((needed+1)*sizeof(int));
+    idxsort_fields((unsigned char *)names, func_index,
+          sizeof(struct name_bind), needed, 1, &fdef);
+
+    fdef.offset = offsetof(struct name_bind, n_name);
+    fdef.type = 'S';
+    fdef.len = 0;
+    name_index = malloc((needed+1)*sizeof(int));
     idxsort_fields((unsigned char *)names, name_index,
           sizeof(struct name_bind), needed, 1, &fdef);
     return;
 }
 
 struct name_bind *func_info(fn_t func) {
-    int first = 1;
-    int last = needed + 1;
+    int first = 0;
+    int last = needed - 1;
     int middle = (first + last)/2;
 
     while (first <= last) {
-        if (names[name_index[middle]-1].n_func < func) first = middle + 1;
-        else if (names[name_index[middle]-1].n_func == func) break;
+        if (names[func_index[middle]].n_func < func) first = middle + 1;
+        else if (names[func_index[middle]].n_func == func) break;
         else last = middle - 1;
         middle = (first + last)/2;
     }
-    if (first > last) {
-// For debugging - these need unistd.h + stdio.h
-//        mlwrite("NOT FOUND!!");
-//        sleep(3);
-        return NULL;
+    if (first > last) return NULL;
+    return &names[func_index[middle]];
+}
+
+struct name_bind *name_info(char *name) {
+    int first = 0;
+    int last = needed - 1;
+    int middle = (first + last)/2;
+
+    while (first <= last) {
+        int res = strcmp(names[name_index[middle]].n_name, name);
+        if (res < 0) first = middle + 1;
+        else if (res == 0) break;
+        else last = middle - 1;
+        middle = (first + last)/2;
     }
-    return &names[name_index[middle]-1];
+    if (first > last) return NULL;
+    return &names[name_index[middle]];
 }

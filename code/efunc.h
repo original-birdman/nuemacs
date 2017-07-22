@@ -217,6 +217,7 @@ extern void set_pathname(char *);
 extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
 extern int not_in_mb(int, int);
+extern void index_bindings(void);
 extern fn_t getbind(int, char **);
 extern char *getfname(fn_t);
 extern fn_t fncmatch(char *);
@@ -416,4 +417,5 @@ extern int comp_buffer(char *, char *);
 /* names.c */
 extern void init_namelookup(void);
 extern struct name_bind *func_info(fn_t);
+extern struct name_bind *name_info(char *);
 #endif
