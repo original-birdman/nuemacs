@@ -243,8 +243,6 @@ struct name_bind names[] = {
         {"write-message", writemsg, {0, 0}},
         {"yank", yank, {0, 0}},
         {"yank-minibuffer", yankmb, {0, 0}},        /* GGR */
-/* End marker - used by buildlist */
-        {"", NULL, {0, 0}}
 };
 
 /* Routine to produce an array index for names sorted by:
@@ -256,10 +254,10 @@ struct name_bind names[] = {
 #include <stddef.h>
 #include "idxsorter.h"
 
-/* The -1 here is because we don't want to index the final NULL entry */
-static int needed = sizeof(names)/sizeof(struct name_bind) - 1;
+static int needed = sizeof(names)/sizeof(struct name_bind);
 static int *func_index;
 static int *name_index;
+static int *next_name_index;
 
 void init_namelookup(void) {
     struct fields fdef;
@@ -277,6 +275,10 @@ void init_namelookup(void) {
     name_index = malloc((needed+1)*sizeof(int));
     idxsort_fields((unsigned char *)names, name_index,
           sizeof(struct name_bind), needed, 1, &fdef);
+
+/* We want to step through this one, so need a next index too */
+    next_name_index = malloc((needed+1)*sizeof(int));
+    make_next_idx(name_index, next_name_index, needed);
     return;
 }
 
@@ -298,15 +300,6 @@ struct name_bind *func_info(fn_t func) {
     }
     if (names[func_index[first]].n_func != func) return NULL;
     return &names[func_index[first]];
-
-    while (first <= last) {
-        if (names[func_index[middle]].n_func < func) first = middle + 1;
-        else if (names[func_index[middle]].n_func == func) break;
-        else last = middle - 1;
-        middle = (first + last)/2;
-    }
-    if (first > last) return NULL;
-    return &names[func_index[middle]];
 }
 
 /* Lookup by function name.
@@ -327,4 +320,20 @@ struct name_bind *name_info(char *name) {
     }
     if (first > last) return NULL;
     return &names[name_index[middle]];
+}
+
+/* A function to allow you to step through the index in order.
+ * For each input index, it returns the next one.
+ * If given -1, it will return the first item and when there are no
+ * further entries it will return -1.
+ * If the index is out of range it will return -2.
+ */
+int nxti_name_info(int ci) {
+    if (ci == -1) return name_index[0];
+    if ((ci >= 0) && (ci < needed)) {
+        int ni = next_name_index[ci];
+        if (ni >= 0) return ni;
+        return -1;
+    }
+    return -2;
 }

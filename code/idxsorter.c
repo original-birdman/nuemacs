@@ -328,3 +328,19 @@ we_are_done:
 #endif
     return 0;
 }
+
+/* Having the index lets you find a matching entry with a binary chop.
+ * But having done that you may well wish to step through entries
+ * from there, but all you have is a physical entry identifier.
+ * So you need another index, with the key being the physical
+ * (not logical) record number of your current item.
+ * We can generate this from the "sorting" index.
+ * The final entry has a next of -1 to indicate "no further entry".
+ */
+
+void make_next_idx(int *index, int *next_index, int nents) {
+    for (int i = 0; i < (nents - 1); i++)
+        next_index[index[i]] = index[i+1];
+    next_index[index[nents - 1]] = -1;
+    return;
+}

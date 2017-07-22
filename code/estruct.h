@@ -586,7 +586,7 @@ struct key_tab_init {           /* Initializing data */
 
 /* Structure for the name binding table. */
 struct name_bind {
-        char *n_name;            /* name of function key */
+        char *n_name;            /* name of function */
         fn_t n_func;             /* function name is bound to */
         struct {
             unsigned int skip_in_macro :1;

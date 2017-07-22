@@ -386,10 +386,10 @@ int main(int argc, char **argv)
  */
         init_namelookup();
         int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
-        int keytab_alloc_ents = n_init_keys + 2 + KEYTAB_INCR;
-        keytab_alloc_ents /= KEYTAB_INCR;
-        keytab_alloc_ents *= KEYTAB_INCR;
-        extend_keytab(keytab_alloc_ents);
+        int init_ents = n_init_keys + 2 + KEYTAB_INCR;
+        init_ents /= KEYTAB_INCR;
+        init_ents *= KEYTAB_INCR;
+        extend_keytab(init_ents);
 
 /* GGR Command line parsing substantially reorganised. It now consists of two
  * separate loops. The first loop processes all optional arguments (command

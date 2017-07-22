@@ -102,6 +102,8 @@ static int *key_index = NULL;
 static int key_index_allocated = 0;
 static int kt_ents;     /* Actual populated entries */
 
+static int keystr_index_valid = 0;
+
 static void index_bindings(void) {
     if (key_index_allocated < keytab_alloc_ents) {
         key_index = realloc(key_index, keytab_alloc_ents*sizeof(int));
@@ -123,9 +125,84 @@ static void index_bindings(void) {
     kt_ents = ki + 1;
     idxsort_fields((unsigned char *)keytab, key_index,
          sizeof(struct key_tab), kt_ents, 1, &fdef);
-    key_index_valid = 1;    /* Index is now usable */
+    key_index_valid = 1;    /* This index is now usable... */
+    keystr_index_valid = 0; /* ... But the other one isn't */
     return;
 }
+
+/* Dumping the key bindings needs to map the function to the keystroke
+ * We'll index it rather than it having to do a linear search of each
+ * item for every function.
+ * Once we get here we know there are kt_ents entries.
+ */
+
+static int *keystr_index = NULL;
+static int *next_keystr_index = NULL;
+static void index_keystr(void) {
+    keystr_index = realloc(keystr_index, kt_ents*sizeof(int));
+    struct fields fdef;
+    fdef.offset = offsetof(struct key_tab, hndlr.k_fp);
+    fdef.type = 'P';
+    fdef.len = sizeof(fn_t);
+
+    idxsort_fields((unsigned char *)keytab, keystr_index,
+             sizeof(struct key_tab), kt_ents, 1, &fdef);
+
+/* Having the index lets you find a matching entry. Vut we also want to
+ * be able to find the next item aftre the one we have.
+ * For that you need another index, with the key being the physical
+ * (not logical) record number of your current item.
+ * We can generate this from the index we've just made.
+ * The final entry has a next of -1 to indicate "no further entry".
+ */
+    next_keystr_index = realloc(next_keystr_index, kt_ents*sizeof(int));
+    make_next_idx(keystr_index, next_keystr_index, kt_ents);
+    keystr_index_valid = 1; /* This index is now usable */
+    return;
+}
+
+/* A function to allow you to step through the index in order.
+ * For each input record pointer, it returns the next one.
+ * If given NULL, it will return the first item and when there are no
+ * further entries it will return NULL.
+ * If the pointer is out of range it will also return NULL.
+ */
+struct key_tab *next_getbyfnc(struct key_tab *cp) {
+    if (!keystr_index_valid) index_keystr();
+    if (cp == NULL) return &keytab[keystr_index[0]];
+/* Convert pointer to index and work from that... */
+    int ci = cp - keytab;
+    if ((ci >= 0) && (ci < kt_ents)) {
+        int ni = next_keystr_index[ci];
+        if (ni >= 0) return &keytab[ni];
+    }
+    return NULL;
+}
+
+/* This function looks up a function call in the binding table.
+ */
+struct key_tab *getbyfnc(fn_t func) {
+    if (!keystr_index_valid) index_keystr();
+
+/* Lookup by function call.
+ * NOTE: that we use a binary chop that ensures we find the first
+ * entry of any multiple ones.
+ */
+    int first = 0;
+    int last = kt_ents - 1;
+    int middle;
+
+    while (first != last) {
+        middle = (first + last)/2;
+/* middle is too low, so try from middle + 1 */
+        if (keytab[keystr_index[middle]].hndlr.k_fp < func) first = middle + 1;
+/* middle is at or beyond start, so set last here */
+        else last = middle;
+    }
+    if (keytab[keystr_index[first]].hndlr.k_fp != func) return NULL;
+    return &keytab[keystr_index[first]];
+}
+
 
 /*
  * This function looks a key binding up in the binding table
@@ -244,20 +321,29 @@ int bindtokey(int f, int n)
         }
         destp = ktp;
     }
-    else {  /* ...else add it at the end - quicker to search backwards */
-        int ki = key_index_allocated - 2;   /* Skip ENDS_KMAP */
-        while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
+    else {  /* ...else add a new one at the end */
+        int ki;
+        if (key_index_valid) {  /* We know the valid entry count */
+            ki = kt_ents - 1;   /* The last used entry */
+        }
+        else {                  /* re-indexing is paused ... */
+/* We have to search - quicker to search backwards from end */
+            ki = keytab_alloc_ents - 2;   /* Skip ENDS_KMAP */
+            while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
+        }
         ktp = &keytab[ki+1];
         ktp->k_code = c;    /* set keycode */
         destp = ktp;
 
-/* If the list is not exhausted the next one will also be an End-of-List.
+/* The next entry will alway be an End-of-List.
+ * If the list is not exhausted the one after will also be an End-of-List.
  * If it is an End-of-Structure we need to extend, and if we do that we
  * need to handle destp, in case the realloc() moves things.
  * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
  */
-        ++ktp;
+        ktp += 2;
         if (ktp->k_type == ENDS_KMAP) {
+            ktp->k_type = ENDL_KMAP;        /* Change to end-of-list */
             int destp_offs = destp - keytab;
             int ktp_offs = ktp - keytab;
             extend_keytab(0);
@@ -427,12 +513,9 @@ int buildlist(int type, char *mstring) {
     wp->w_markp = NULL;
     wp->w_marko = 0;
 
-/* Build the contents of this window, inserting it line by line */
-    nptr = &names[0];
-    while (nptr->n_func != NULL) {  /* For each function.... */
-
+    for (int ni = nxti_name_info(-1); ni >= 0; ni = nxti_name_info(ni)) {
 /* Add in the command name */
-        strcpy(outseq, nptr->n_name);
+        strcpy(outseq, names[ni].n_name);
         cpos = strlen(outseq);
 
 #if     APROP
@@ -444,22 +527,21 @@ int buildlist(int type, char *mstring) {
  * NOTE: that this search is not indexed, as this would be the only use
  * of it, and it's not a commonly used functions.
  */
-        ktp = keytab;
-        while (ktp->k_type != ENDL_KMAP) {
-            if ((ktp->k_type == FUNC_KMAP) &&
-                 (ktp->hndlr.k_fp == nptr->n_func)) {
+        ktp = getbyfnc(names[ni].n_func);
+        while (ktp) {
 /* Pad out some spaces */
-                while (cpos < 28) outseq[cpos++] = ' ';
+            while (cpos < 28) outseq[cpos++] = ' ';
 
 /* Add in the command sequence */
-                cmdstr(ktp->k_code, outseq+cpos);
-                strcat(outseq, "\n");
+            cmdstr(ktp->k_code, outseq+cpos);
+            strcat(outseq, "\n");
 
 /* and add it as a line into the buffer */
-                if (linstr(outseq) != TRUE) return FALSE;
-                cpos = 0;       /* and clear the line */
-            }
-            ++ktp;
+            if (linstr(outseq) != TRUE) return FALSE;
+            cpos = 0;       /* and clear the line */
+/* Look for any more keybindings ot this function */
+            ktp = next_getbyfnc(ktp);
+            if (ktp->hndlr.k_fp != names[ni].n_func) ktp = NULL;
         }
 
 /* if no key was bound, we need to dump it anyway */
@@ -473,11 +555,14 @@ int buildlist(int type, char *mstring) {
 fail:   ++nptr;
     }
 
-/* Now we go through all the key_table looking for proc buf bindings */
-
+/* Now we go through all the key_table looking for proc buf bindings.
+ * There's no point trying to do these in any specific order, as they
+ * aren't sorted by procedure buffer name (only by the char * that
+ * points to it).
+ */
     cpos = 0;
     int found = 0;
-    for(ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
+    for (ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
         if (ktp->k_type == PROC_KMAP) {
             if (!found) {
                 if (linstr("\nProcedure bindings\n") != TRUE) return FALSE;
@@ -945,10 +1030,17 @@ int buffertokey(int f, int n)
             ktp->hndlr.pbp = malloc(NBUFN);
         destp = ktp;
     }
-    else {  /* ...else add it at the end - quicker to search backwards */
-        int ki = key_index_allocated - 2;   /* Skip ENDS_KMAP */
-        while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
-        ktp = &keytab[ki+1];    /* Always an ENDL_KMAP to use... */
+    else {  /* ...else add a new one at the end */
+        int ki;
+        if (key_index_valid) {  /* We know the valid entry count */
+            ki = kt_ents - 1;   /* The last used entry */
+        }
+        else {                  /* re-indexing is paused ... */
+/* We have to search - quicker to search backwards from end */
+            ki = keytab_alloc_ents - 2;   /* Skip ENDS_KMAP */
+            while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
+        }
+        ktp = &keytab[ki+1];    /* Step forward to an ENDL_KMAP to use... */
         ktp->k_code = c;        /* set keycode */
         ktp->hndlr.pbp = malloc(NBUFN);
         destp = ktp;
@@ -958,7 +1050,7 @@ int buffertokey(int f, int n)
  * need to handle destp, in case the realloc() moves things.
  * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
  */
-        ++ktp;
+        ktp += 2;
         if (ktp->k_type == ENDS_KMAP) {
             ktp->k_type = ENDL_KMAP;        /* Change to end-of-list */
             int destp_offs = destp - keytab;

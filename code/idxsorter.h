@@ -9,3 +9,4 @@ struct fields {
 /* The function call itself */
 
 int idxsort_fields(unsigned char *, int[], int , int , int , struct fields *);
+void make_next_idx(int *, int *, int);

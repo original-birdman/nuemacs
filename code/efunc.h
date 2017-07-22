@@ -202,6 +202,7 @@ extern int yankmb(int f, int n);
 /* bind.c */
 extern int help(int f, int n);
 extern int deskey(int f, int n);
+extern struct key_tab *getbind(int);
 extern int bindtokey(int f, int n);
 extern int unbindkey(int f, int n);
 extern int unbindchar(int c);
@@ -217,7 +218,6 @@ extern void set_pathname(char *);
 extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
 extern int not_in_mb_error(int, int);
-extern struct key_tab *getbind(int);
 extern unsigned int stock(char *keyname);
 extern char *transbind(char *skey);
 extern int buffertokey(int, int);
@@ -415,4 +415,6 @@ extern int comp_buffer(char *, char *);
 extern void init_namelookup(void);
 extern struct name_bind *func_info(fn_t);
 extern struct name_bind *name_info(char *);
+extern int nxti_name_info(int);
+
 #endif
