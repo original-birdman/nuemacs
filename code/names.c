@@ -12,8 +12,8 @@
 
 struct name_bind names[] = {
         {"abort-command", ctrlg, {0, 0}},
-        {"add-mode", setemode, {0, 1}},
-        {"add-global-mode", setgmode, {0, 1}},
+        {"add-mode", setemode, {0, 0}},
+        {"add-global-mode", setgmode, {0, 0}},
 #if     APROP
         {"apropos", apro, {0, 1}},
 #endif
@@ -42,8 +42,8 @@ struct name_bind names[] = {
         {"ctlx-prefix", cex, {0, 0}},
         {"delete-blank-lines", deblank, {0, 0}},
         {"delete-buffer", killbuffer, {0, 0}},
-        {"delete-mode", delmode, {0, 1}},
-        {"delete-global-mode", delgmode, {0, 1}},
+        {"delete-mode", delmode, {0, 0}},
+        {"delete-global-mode", delgmode, {0, 0}},
         {"delete-next-character", forwdel, {0, 0}},
         {"delete-next-word", delfword, {0, 0}},
         {"delete-other-windows", onlywind, {0, 1}},
@@ -224,7 +224,7 @@ struct name_bind names[] = {
         {"suspend-emacs", bktoshell, {0, 0}},
 #endif
 #if PROC
-        {"toggle-ptmode", toggle_ptmode, {0, 1}},   /* GGR */
+        {"toggle-ptmode", toggle_ptmode, {0, 0}},   /* GGR */
 #endif
         {"transpose-characters", twiddle, {0, 0}},
 #if     AEDIT
@@ -246,3 +246,44 @@ struct name_bind names[] = {
 
         {"", NULL}
 };
+
+/* Routine to produce an array index for names sorted by function call
+ * To be called from main() at start-up time.
+ */
+
+#include <stddef.h>
+#include "idxsorter.h"
+
+static int *name_index;
+static int needed = sizeof(names)/sizeof(struct name_bind);
+
+void init_namelookup(void) {
+    name_index = malloc((needed+1)*sizeof(int));
+    struct fields fdef;
+    fdef.offset = offsetof(struct name_bind, n_func);
+    fdef.type = 'P';
+    fdef.len = sizeof(fn_t);
+    idxsort_fields((unsigned char *)names, name_index,
+          sizeof(struct name_bind), needed, 1, &fdef);
+    return;
+}
+
+struct name_bind *func_info(fn_t func) {
+    int first = 1;
+    int last = needed + 1;
+    int middle = (first + last)/2;
+
+    while (first <= last) {
+        if (names[name_index[middle]-1].n_func < func) first = middle + 1;
+        else if (names[name_index[middle]-1].n_func == func) break;
+        else last = middle - 1;
+        middle = (first + last)/2;
+    }
+    if (first > last) {
+// For debugging - these need unistd.h + stdio.h
+//        mlwrite("NOT FOUND!!");
+//        sleep(3);
+        return NULL;
+    }
+    return &names[name_index[middle]-1];
+}

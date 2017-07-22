@@ -149,3 +149,12 @@ extern char kbdmacro_buffer[];  /* The name of the keyboard macro buffer */
 extern struct buffer *kbdmac_bp;    /* keyboard macro buffer */
 
 extern int run_filehooks;       /* Set when we want them run */
+
+struct mb_info {
+    char *main_buffername;      /* Name of active buffer */
+    int mbdepth;                /* Current depth of minibuffer */
+    char procopy[NSTRING];      /* Minibuffer prompt */
+};
+extern struct mb_info mb_info;
+
+extern char *not_in_mb_funcname;

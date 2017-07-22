@@ -409,6 +409,8 @@ int main(int argc, char **argv)
         extend_keytab(keytab_alloc_ents);
         memcpy(keytab, init_keytab, sizeof(init_keytab));
 
+        init_namelookup();
+
 /* GGR Command line parsing substantially reorganised. It now consists of two
  * separate loops. The first loop processes all optional arguments (command
  * keywords and associated options if any) and stops on reaching the first

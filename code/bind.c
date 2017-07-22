@@ -749,6 +749,11 @@ void cmdstr(int c, char *seq)
         *ptr = 0;                   /* terminate the string */
 }
 
+int not_in_mb(int f, int n) {
+    mlwrite("%s not allowed in the minibuffer!!", not_in_mb_funcname);
+    return(TRUE);
+}
+
 /*
  * This function looks a key binding up in the binding table
  * GGR - it now sets the buffer name for PROC_KMAP entries
@@ -765,6 +770,13 @@ fn_t getbind(int c, char **pbp)
                 if (ktp->k_code == c) {
                     if (ktp->k_type == FUNC_KMAP) {
                         *pbp = NULL;
+                        if (inmb) {
+                            struct name_bind *fi = func_info(ktp->hndlr.k_fp);
+                            if (fi && fi->opt.not_mb) {
+                                not_in_mb_funcname = fi->n_name;
+                                return not_in_mb;
+                            }
+                        }
                         return ktp->hndlr.k_fp;
                     }
                     else if (ktp->k_type == PROC_KMAP) {

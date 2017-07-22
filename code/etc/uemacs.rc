@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 22 May 2017
+;                       Last Update: 12 July 2017
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -162,10 +162,6 @@ store-procedure lr-justify          ; Left and right justify paragraph
 !endm
 ;
 store-procedure _mytoggle-mode          ; toggle local/global mode
-    !if $inmb
-        write-message "Command not allowed in mini-buffer"
-        !finish
-    !endif
     write-message &cat &cat "Toggle " %type-mode " mode (HWCPEVOMYA): "
     set %report " "
     set %modesel &upper &gtkey

@@ -849,7 +849,7 @@ void updgar(void)
 
 /* GGR - include the last row, so <=, (for mini-buffer) */
         int lrow;
-        if (inmb) lrow = term.t_nrow +1;
+        if (inmb) lrow = term.t_nrow + 1;
         else      lrow = term.t_nrow;
         for (i = 0; i < lrow; ++i) {
                 vscreen[i]->v_flag |= VFCHG;
@@ -1318,6 +1318,46 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 }
 #endif
 
+/* mb_update
+ * Just update the modeline and minibuffer while in getstring()
+ * Will be called with curwp for the minibuffer.
+ */
+
+void mb_update(struct window *wp) {
+    int n = wp->w_toprow -1;            /* Location. */
+    vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;    /* Redraw next time. */
+#if     COLOR
+/* GGR - use configured colors, not 0 and 7 */
+    vscreen[n]->v_rfcolor = gbcolor;    /* chosen for on */
+    vscreen[n]->v_rbcolor = gfcolor;    /* chosen..... */
+#endif
+    vtmove(n, 0);           /* Seek to right line. */
+
+    char mbprompt[20];
+    sprintf(mbprompt, "MB%d>> ", mb_info.mbdepth);
+    show_utf8(mbprompt);
+    show_utf8(mb_info.procopy);
+    vtputc(' ');
+
+    vtputc(MLpre[0]);                   /* Need it as a char */
+/* Display modes...as single chars */
+    int using_phon = 0;
+    struct buffer *bp = wp->w_bufp;     /* For further info... */
+    for (int i = 0; i < NUMMODES; i++)  /* add in the mode flags */
+        if (bp->b_mode & (1 << i)) {
+            if (modecode[i] == 'P') using_phon = 1;
+            else vtputc(modecode[i]);
+        }
+    if (using_phon) show_utf8(ptt->ptt_headp->display_code);
+    vtputc(MLpost[0]);                  /* Need it as a char */
+
+/* Display the main buffername if it is set */
+    if (mb_info.main_buffername[0]) show_utf8(mb_info.main_buffername);
+
+    vteeol();
+    return;
+}
+
 /*
  * Redisplay the mode line for the window pointed to by the "wp". This is the
  * only routine that has any idea of how the modeline is formatted. You can
@@ -1334,6 +1374,10 @@ static void modeline(struct window *wp)
     int firstm;             /* is this the first mode? */
     char tline[NLINE];      /* buffer for part of mode line */
 
+    if (inmb) {
+        mb_update(wp);
+        return;
+    }
     int n = wp->w_toprow + wp->w_ntrows;            /* Location. */
     vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;    /* Redraw next time. */
 #if     COLOR
@@ -1468,10 +1512,7 @@ static void modeline(struct window *wp)
     }
 
     cp = msg;
-    while ((c = *cp++) != 0) {
-        vtputc(c);
-        ++n;
-    }
+    while ((c = *cp++) != 0) vtputc(c);
 }
 
 void upmode(void)

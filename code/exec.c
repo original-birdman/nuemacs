@@ -34,6 +34,17 @@ int namedcmd(int f, int n)
                 return FALSE;
         }
 
+/* Check whether the given command is allowed in the minibuffer, if that
+ * is where we are
+ */
+        if (inmb) {
+            struct name_bind *fi = func_info(kfunc);
+            if (fi && fi->opt.not_mb) {
+                not_in_mb_funcname = fi->n_name;
+                kfunc = not_in_mb;      /* Change what we call... */
+            }
+        }
+
         /* and then execute the command */
         return kfunc(f, n);
 }

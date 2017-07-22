@@ -20,8 +20,6 @@
 #endif
 #include "line.h"
 
-static int mbdepth = 0;
-
 #if MSDOS | BSD | USG
 static int tmpnamincr = 0;
 #define tmpnam our_tmpnam
@@ -442,7 +440,7 @@ proc_ctlxc:
 }
 
 /* GGR
- * A version of getstring in which the  minibuffer is a true buffer!
+ * A version of getstring in which the minibuffer is a true buffer!
  */
 
 /* If the window size changes whilst this is running the display will end
@@ -479,13 +477,10 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     char *sp;               /* string pointer into line */
     char tstring[NSTRING];
     char choices[1000];     /* MUST be > max likely window width */
-    short savdoto;
-    int prolen;
     int status;
     int savclast;
     int savflast;
     int savnlast;
-    char procopy[NSTRING];
 
     struct window wsave;
 
@@ -507,7 +502,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
  * temporary buffer for the prompt!
  */
 #if MSC
-    if (mbdepth >= MAXDEPTH) {
+    if (mb_info.mbdepth >= MAXDEPTH) {
         TTbeep();
         buf = "";               /* Ensure we never return garbage */
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
@@ -522,6 +517,10 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     strcpy(mbname, mbnameptr);
     cb = curbp;
 
+/* Update main screen before entering minibuffer */
+
+    update(FALSE);
+
     inmb = TRUE;
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
         inmb = FALSE;
@@ -535,24 +534,26 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     savflast = flast;
     savnlast = nlast;
 
+/* Remember the original buffer name if at level 1 */
+
+    mb_info.mbdepth++;
+    struct buffer *tbp = curwp->w_bufp;
+    if (mb_info.mbdepth == 1) mb_info.main_buffername = tbp->b_fname;
+
+/* Get the PHON state from the current buffer, so we can carry it to
+ * the next minibuffer.
+ * We *don't* caryy back any change on return!
+ */
+    int using_phon = tbp->b_mode & MDPHON;
+
     wsave = *curwp;             /* Structure copy - save */
     swbuffer(bp);
 
     curwp->w_toprow = term.t_nrow;
     curwp->w_ntrows = 1;
-    curbp->b_mode = MDEXACT;    /* start-up just with EXACT mode */
-
-    mbdepth++;
-    if (mbdepth > 1) {
-        strcpy(procopy, itoa(mbdepth));
-        strcat(procopy, prompt);
-    }
-    else
-        strcpy(procopy, prompt);
-    prolen = strlen(procopy);
-
-    if (mpresf) mlerase();
-    mberase();
+/* Set the starting mode */
+    if (using_phon) curbp->b_mode = MDEXACT | MDPHON;
+    else            curbp->b_mode = MDEXACT;
 
 #ifdef SIGWINCH
 
@@ -590,31 +591,25 @@ loop:
     execute(META|SPEC|'C', FALSE, 1);
     lastflag = saveflag;
 
-    savdoto = curwp->w_doto;
-    curwp->w_doto = 0;
-    linstr(procopy);
-    curwp->w_doto = savdoto + prolen;
-
-/* Fix up the screen - we do NOT want horizontal scrollign in the mb */
+/* Fix up the screen - we do NOT want horizontal scrolling in the mb */
 
     int real_hscroll;
     real_hscroll = hscroll;
     hscroll = FALSE;
-    update(FALSE);
-    if (typahead()) {
-            mbupdate();
-    }
-    hscroll = real_hscroll;
 
-    curwp->w_doto = 0;
-    ldelete((long)prolen, FALSE);
-    curwp->w_doto = savdoto;
+    strcpy(mb_info.procopy, prompt);
+    curwp->w_flag |= WFMODE;    /* Need to update the modeline... */
+
+    mbupdate();                 /* Will set modeline to prompt... */
+
+    hscroll = real_hscroll;
 
 /* Get the next command (character) from the keyboard */
     c = getcmd();
 
 /* Filename expansion code:
  * a list of matches is temporarily displayed in the minibuffer.
+ * THIS ONLY USES THE TEXT ON THE CURRENT LINE, and uses ALL OF IT.
  */
     if (c == (CONTROL|'I')) {
         lp = curwp->w_dotp;
@@ -626,7 +621,6 @@ loop:
             if (bufexpand) expanded = comp_buffer(tstring, choices);
             else           expanded = comp_file(tstring, choices);
             if (expanded) {
-                savdoto = curwp->w_doto;
                 curwp->w_doto = 0;
                 ldelete((long) lp->l_used, FALSE);
                 linstr(tstring);
@@ -748,23 +742,32 @@ loop:
 submit:     /* Tidy up */
     status = TRUE;
 
-/* Find the contents of the current line and its length */
+/* Find the contents of the current buffer, and its length, including
+ * newlines to join lines, but excluding the final newline.
+ * Only do this upto the requested return length.
+ */
 
-    lp = curwp->w_dotp;
-    sp = lp->l_text;
-    size = lp->l_used;
+    struct line *mblp = lforw(bp->b_linep);
+    int sofar = 0;
+    int maxadd = nbuf - 1;
+    while (mblp != bp->b_linep && sofar < maxadd) {
+        if (sofar != 0) buf[sofar++] = '\n';    /* Add NL if not first */
+        int add = llength(mblp);
+        if ((sofar + add) > maxadd) add = maxadd - sofar;
+        memcpy(buf+sofar, mblp->l_text, add);
+        sofar += add;
+        mblp = lforw(mblp);
+    }
+    buf[sofar] = '\0';          /* Add the NUL */
 
 /* Need to copy to return buffer and, if not empty,
  * to save as last minibuffer.
  */
-    int retlen = size;          /* Without terminating NUL */
-    if (retlen >= nbuf) retlen = nbuf - 1;
-    memcpy(buf, sp, retlen);    /* No NUL sent here */
-    buf[retlen] = '\0';         /* Here it is... */
+    int retlen = sofar;         /* Without terminating NUL */
     if (retlen) {
         if (retlen >= NSTRING) retlen = NSTRING - 1;
-        memcpy(lastmb, sp, retlen);
-        lastmb[retlen] = '\0';
+        retlen++;               /* Terminating NULL is actually there */
+        memcpy(lastmb, buf, retlen);
 
     }
     else status = FALSE;        /* Empty input... */
@@ -772,7 +775,7 @@ submit:     /* Tidy up */
 /* Record the result if we are recording a keyboard macro, but only
  * at first level of the minibuffer (i.e. the "true" result).
  */
-    if (kbdmode == RECORD && mbdepth == 1) addto_kbdmacro(buf, 0, 1);
+    if (kbdmode == RECORD && mb_info.mbdepth == 1) addto_kbdmacro(buf, 0, 1);
 
 abort:  /* Make sure we're still in our minibuffer */
 
@@ -786,12 +789,13 @@ abort:  /* Make sure we're still in our minibuffer */
 
     swbuffer(bp);
     unmark(TRUE, 1);
-    mbdepth--;
+    mb_info.mbdepth--;
 
     swbuffer(cb);
     *curwp = wsave;             /* Structure copy - restore */
+    curwp->w_flag |= WFMODE;    /* Forces modeline redraw */
 
-    if (!mbdepth) inmb = FALSE;
+    if (!mb_info.mbdepth) inmb = FALSE;
 
 #if (MSDOS & (LATTICE | MSC)) | BSD | USG
     free(mbnameptr);            /* free the space */

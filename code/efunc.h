@@ -217,6 +217,7 @@ extern void set_pathname(char *);
 #define INTABLE 2
 extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
+extern int not_in_mb(int, int);
 extern fn_t getbind(int, char **);
 extern char *getfname(fn_t);
 extern fn_t fncmatch(char *);
@@ -413,4 +414,7 @@ extern char *undolock(char *fname);
 extern int comp_file(char *, char *);
 extern int comp_buffer(char *, char *);
 
+/* names.c */
+extern void init_namelookup(void);
+extern struct name_bind *func_info(fn_t);
 #endif
