@@ -116,6 +116,7 @@ int bktoshell(int f, int n)
         kill(pid,SIGTSTP);
 ******************************/
         kill(0, SIGTSTP);
+        rtfrmshell();           /* fg seems to get us back to here... */
         return TRUE;
 }
 

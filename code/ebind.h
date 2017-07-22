@@ -100,10 +100,8 @@ struct key_tab_init init_keytab[] = {
         {CTLX|'B',          usebuffer       },
         {CTLX|'C',          spawncli        },
 /* Seems to screw-up the tty, so disable */
-#if 0
 #if     BSD|__hpux|SVR4
         {CTLX|'D',          bktoshell       },
-#endif
 #endif
         {CTLX|'E',          ctlxe           },
         {CTLX|'F',          setfillcol      },
