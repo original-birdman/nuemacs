@@ -828,12 +828,11 @@ int execute(int c, int f, int n) {
         }
 
         if (!inmb && kbdmode == RECORD) {
-            if (execfunc == namedcmd) {     /* Use next function directly... */
-                if ((f > 0) && (n != 1))    /* ...but record any count */
-                    set_narg_kbdmacro(n);
-            }
-            else if (ktp->fi->opt.skip_in_macro) {
-                ;                           /* Ignore it */
+            if (ktp->fi->opt.skip_in_macro) {   /* Quick skip... */
+                if (execfunc == namedcmd) {     /* Use next func directly.. */
+                    if ((f > 0) && (n != 1))    /* ...but record any count */
+                        set_narg_kbdmacro(n);
+                }
             }
             else {                          /* Record it */
                 if ((f > 0) && (n != 1)) set_narg_kbdmacro(n);

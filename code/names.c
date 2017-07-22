@@ -55,7 +55,7 @@ struct name_bind names[] = {
 #if     AEDIT
         {"detab-line", detab, {0, 0}},
 #endif
-        {"end-macro", ctlxrp, {0, 0}},
+        {"end-macro", ctlxrp, {1, 0}},
         {"end-of-file", gotoeob, {0, 0}},
         {"end-of-line", gotoeol, {0, 0}},
         {"eos-chars", eos_chars, {0, 0}},           /* GGR */
@@ -109,7 +109,7 @@ struct name_bind names[] = {
         {"execute-macro-40", cbuf40, {0, 0}},
         {"execute-named-command", namedcmd, {1, 0}},
 #if     PROC
-        {"execute-procedure", execproc, {0, 1}},
+        {"execute-procedure", execproc, {0, 0}},
 #endif
         {"execute-program", execprg, {0, 1}},
         {"exit-emacs", quit, {0, 1}},
@@ -186,7 +186,7 @@ struct name_bind names[] = {
         {"quoted-count", quotedcount, {0, 0}},      /* GGR */
         {"read-file", fileread, {0, 0}},
         {"redraw-display", reposition, {0, 0}},
-        {"reexecute", reexecute, {0, 0}},           /* GGR */
+        {"reexecute", reexecute, {1, 0}},           /* GGR */
         {"resize-window", resize, {0, 1}},
         {"restore-window", restwnd, {0, 0}},
         {"replace-string", sreplace, {0, 0}},
@@ -280,11 +280,24 @@ void init_namelookup(void) {
     return;
 }
 
-/* Lookup by function call address */
+/* Lookup by function call address.
+ * NOTE: that we use a binary chop that ensures we find the first
+ * entry of any multiple ones.
+ */
 struct name_bind *func_info(fn_t func) {
     int first = 0;
     int last = needed - 1;
-    int middle = (first + last)/2;
+    int middle;
+
+    while (first != last) {
+        middle = (first + last)/2;
+/* middle is too low, so try from middle + 1 */
+        if (names[func_index[middle]].n_func < func) first = middle + 1;
+/* middle is at or beyond start, so set last here */
+        else last = middle;
+    }
+    if (names[func_index[first]].n_func != func) return NULL;
+    return &names[func_index[first]];
 
     while (first <= last) {
         if (names[func_index[middle]].n_func < func) first = middle + 1;
@@ -296,19 +309,21 @@ struct name_bind *func_info(fn_t func) {
     return &names[func_index[middle]];
 }
 
-/* Lookup by function name */
+/* Lookup by function name.
+ * NOTE: that we don't need a binary chop that ensures we find the first
+ * entry of any multiple ones, as there can't be such entries!
+ */
 struct name_bind *name_info(char *name) {
     int first = 0;
     int last = needed - 1;
 
-    int middle = (first + last)/2;
-
+    int middle;
     while (first <= last) {
+        middle = (first + last)/2;
         int res = strcmp(names[name_index[middle]].n_name, name);
         if (res < 0) first = middle + 1;
         else if (res == 0) break;
         else last = middle - 1;
-        middle = (first + last)/2;
     }
     if (first > last) return NULL;
     return &names[name_index[middle]];

@@ -84,11 +84,12 @@ int deskey(int f, int n) {      /* describe the command for a certain key */
     mlputs(ptr);
 
 /* Add buffer-name, if relevant */
-    if (ktp->k_type == PROC_KMAP) {
+    if (ktp && ktp->k_type == PROC_KMAP) {
         mlputs(" ");
         mlputs(ktp->hndlr.pbp);
     }
-    mpresf = TRUE;      /* GGR */
+    if (inmb) TTflush();    /* Need this if we are in the minibuffer */
+    mpresf = TRUE;          /* GGR */
     return TRUE;
 }
 
@@ -153,8 +154,10 @@ struct key_tab *getbind(int c) {
         }
         index_bindings();
     }
-/* Look through the key table. We can now binary-chop this... */
-
+/* Look through the key table. We can now binary-chop this...
+ * NOTE: that we don't a binary chop that ensures we find the first
+ * entry of any multiple ones, as there can't be such entries!
+ */
     int first = 0;
     int last = kt_ents - 1;
     int middle = (first + last)/2;
@@ -382,98 +385,93 @@ int apro(int f, int n)
  */
 int buildlist(int type, char *mstring) {
 #endif
+    struct window *wp;         /* scanning pointer to windows */
+    struct key_tab *ktp;       /* pointer into the command table */
+    struct name_bind *nptr;    /* pointer into the name binding table */
+    struct buffer *bp;         /* buffer to put binding list into */
+    int cpos;                  /* current position to use in outseq */
+    char outseq[80];           /* output buffer for keystroke sequence */
 
-        struct window *wp;         /* scanning pointer to windows */
-        struct key_tab *ktp;       /* pointer into the command table */
-        struct name_bind *nptr;    /* pointer into the name binding table */
-        struct buffer *bp;         /* buffer to put binding list into */
-        int cpos;                  /* current position to use in outseq */
-        char outseq[80];           /* output buffer for keystroke sequence */
+/* Split the current window to make room for the binding list */
+    if (splitwind(FALSE, 1) == FALSE) return FALSE;
 
-        /* split the current window to make room for the binding list */
-        if (splitwind(FALSE, 1) == FALSE)
-                return FALSE;
+/* and get a buffer for it */
+    bp = bfind("/Binding list", TRUE, 0);
+    if (bp == NULL || bclear(bp) == FALSE) {
+        mlwrite("Can not display binding list");
+        return FALSE;
+    }
 
-        /* and get a buffer for it */
-        bp = bfind("/Binding list", TRUE, 0);
-        if (bp == NULL || bclear(bp) == FALSE) {
-                mlwrite("Can not display binding list");
-                return FALSE;
-        }
+/* Let us know this is in progress */
+    mlwrite(MLpre "Building binding list" MLpost);
 
-        /* let us know this is in progress */
-        mlwrite(MLpre "Building binding list" MLpost);
+/* Disconnect the current buffer */
+    if (--curbp->b_nwnd == 0) {     /* Last use.            */
+        curbp->b_dotp = curwp->w_dotp;
+        curbp->b_doto = curwp->w_doto;
+        curbp->b_markp = curwp->w_markp;
+        curbp->b_marko = curwp->w_marko;
+        curbp->b_fcol = curwp->w_fcol;
+    }
 
-        /* disconnect the current buffer */
-        if (--curbp->b_nwnd == 0) {     /* Last use.            */
-                curbp->b_dotp = curwp->w_dotp;
-                curbp->b_doto = curwp->w_doto;
-                curbp->b_markp = curwp->w_markp;
-                curbp->b_marko = curwp->w_marko;
-                curbp->b_fcol = curwp->w_fcol;
-        }
+/* Connect the current window to this buffer */
+    curbp = bp;             /* make this buffer current in current window */
+    bp->b_mode = 0;         /* no modes active in binding list */
+    bp->b_nwnd++;           /* mark us as more in use */
+    wp = curwp;
+    wp->w_bufp = bp;
+    wp->w_linep = bp->b_linep;
+    wp->w_flag = WFHARD | WFFORCE;
+    wp->w_dotp = bp->b_dotp;
+    wp->w_doto = bp->b_doto;
+    wp->w_markp = NULL;
+    wp->w_marko = 0;
 
-        /* connect the current window to this buffer */
-        curbp = bp;             /* make this buffer current in current window */
-        bp->b_mode = 0;         /* no modes active in binding list */
-        bp->b_nwnd++;           /* mark us as more in use */
-        wp = curwp;
-        wp->w_bufp = bp;
-        wp->w_linep = bp->b_linep;
-        wp->w_flag = WFHARD | WFFORCE;
-        wp->w_dotp = bp->b_dotp;
-        wp->w_doto = bp->b_doto;
-        wp->w_markp = NULL;
-        wp->w_marko = 0;
+/* Build the contents of this window, inserting it line by line */
+    nptr = &names[0];
+    while (nptr->n_func != NULL) {  /* For each function.... */
 
-        /* build the contents of this window, inserting it line by line */
-        nptr = &names[0];
-        while (nptr->n_func != NULL) {
-
-                /* add in the command name */
-                strcpy(outseq, nptr->n_name);
-                cpos = strlen(outseq);
+/* Add in the command name */
+        strcpy(outseq, nptr->n_name);
+        cpos = strlen(outseq);
 
 #if     APROP
-                /* if we are executing an apropos command..... */
-                if (type == FALSE &&
-                    /* and current string doesn't include the search string */
-                    strinc(outseq, mstring) == FALSE)
-                        goto fail;
+/* If we are executing an apropos command.....
+ * ...and current string doesn't include the search string */
+        if (type == FALSE && strinc(outseq, mstring) == FALSE) goto fail;
 #endif
-                /* search down any keys bound to this */
-                ktp = keytab;
-                while (ktp->k_type != ENDL_KMAP) {
-                        if ((ktp->k_type == FUNC_KMAP) &&
-                            (ktp->hndlr.k_fp == nptr->n_func)) {
-                                /* pad out some spaces */
-                                while (cpos < 28)
-                                        outseq[cpos++] = ' ';
+/* Search down for any keys bound to this.
+ * NOTE: that this search is not indexed, as this would be the only use
+ * of it, and it's not a commonly used functions.
+ */
+        ktp = keytab;
+        while (ktp->k_type != ENDL_KMAP) {
+            if ((ktp->k_type == FUNC_KMAP) &&
+                 (ktp->hndlr.k_fp == nptr->n_func)) {
+/* Pad out some spaces */
+                while (cpos < 28) outseq[cpos++] = ' ';
 
-                                /* add in the command sequence */
-                                cmdstr(ktp->k_code, outseq+cpos);
-                                strcat(outseq, "\n");
+/* Add in the command sequence */
+                cmdstr(ktp->k_code, outseq+cpos);
+                strcat(outseq, "\n");
 
-                                /* and add it as a line into the buffer */
-                                if (linstr(outseq) != TRUE)
-                                        return FALSE;
-
-                                cpos = 0;       /* and clear the line */
-                        }
-                        ++ktp;
-                }
-
-                /* if no key was bound, we need to dump it anyway */
-                if (cpos > 0) {
-                        outseq[cpos++] = '\n';
-                        outseq[cpos] = 0;
-                        if (linstr(outseq) != TRUE)
-                                return FALSE;
-                }
-
-fail:           /* and on to the next name */
-                ++nptr;
+/* and add it as a line into the buffer */
+                if (linstr(outseq) != TRUE) return FALSE;
+                cpos = 0;       /* and clear the line */
+            }
+            ++ktp;
         }
+
+/* if no key was bound, we need to dump it anyway */
+        if (cpos > 0) {
+            outseq[cpos++] = '\n';
+            outseq[cpos] = 0;
+            if (linstr(outseq) != TRUE) return FALSE;
+        }
+
+/* ...and on to the next name */
+fail:   ++nptr;
+    }
 
 /* Now we go through all the key_table looking for proc buf bindings */
 
@@ -499,18 +497,17 @@ fail:           /* and on to the next name */
         cpos = 0;       /* and clear the line */
     }
 
-
-        curwp->w_bufp->b_mode |= MDVIEW;    /* put this buffer view mode */
-        curbp->b_flag &= ~BFCHG;            /* don't flag this as a change */
-        wp->w_dotp = lforw(bp->b_linep);    /* back to the beginning */
-        wp->w_doto = 0;
-        wp = wheadp;                        /* and update ALL mode lines */
-        while (wp != NULL) {
-                wp->w_flag |= WFMODE;
-                wp = wp->w_wndp;
-        }
-        mlwrite("");                        /* clear the mode line */
-        return TRUE;
+    curwp->w_bufp->b_mode |= MDVIEW;    /* put this buffer view mode */
+    curbp->b_flag &= ~BFCHG;            /* don't flag this as a change */
+    wp->w_dotp = lforw(bp->b_linep);    /* back to the beginning */
+    wp->w_doto = 0;
+    wp = wheadp;                        /* and update ALL mode lines */
+    while (wp != NULL) {
+        wp->w_flag |= WFMODE;
+        wp = wp->w_wndp;
+    }
+    mlwrite("");                        /* clear the mode line */
+    return TRUE;
 }
 
 #if     APROP

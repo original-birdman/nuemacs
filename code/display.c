@@ -1318,51 +1318,12 @@ static int updateline(int row, struct video *vp1, struct video *vp2)
 }
 #endif
 
-/* mb_update
- * Just update the modeline and minibuffer while in getstring()
- * Will be called with curwp for the minibuffer.
- */
-
-void mb_update(struct window *wp) {
-    int n = wp->w_toprow -1;            /* Location. */
-    vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;    /* Redraw next time. */
-#if     COLOR
-/* GGR - use configured colors, not 0 and 7 */
-    vscreen[n]->v_rfcolor = gbcolor;    /* chosen for on */
-    vscreen[n]->v_rbcolor = gfcolor;    /* chosen..... */
-#endif
-    vtmove(n, 0);           /* Seek to right line. */
-
-    char mbprompt[20];
-    sprintf(mbprompt, "MB%d>> ", mb_info.mbdepth);
-    show_utf8(mbprompt);
-    show_utf8(mb_info.procopy);
-    vtputc(' ');
-
-    vtputc(MLpre[0]);                   /* Need it as a char */
-/* Display modes...as single chars */
-    int using_phon = 0;
-    struct buffer *bp = wp->w_bufp;     /* For further info... */
-    for (int i = 0; i < NUMMODES; i++)  /* add in the mode flags */
-        if (bp->b_mode & (1 << i)) {
-            if (modecode[i] == 'P') using_phon = 1;
-            else vtputc(modecode[i]);
-        }
-    if (using_phon) show_utf8(ptt->ptt_headp->display_code);
-    vtputc(MLpost[0]);                  /* Need it as a char */
-
-/* Display the main buffername if it is set */
-    if (mb_info.main_buffername[0]) show_utf8(mb_info.main_buffername);
-
-    vteeol();
-    return;
-}
-
 /*
  * Redisplay the mode line for the window pointed to by the "wp". This is the
  * only routine that has any idea of how the modeline is formatted. You can
  * change the modeline format by hacking at this routine. Called by "update"
  * any time there is a dirty window.
+ * The minibuffer modeline is different, but still handled here.
  */
 static void modeline(struct window *wp)
 {
@@ -1374,12 +1335,12 @@ static void modeline(struct window *wp)
     int firstm;             /* is this the first mode? */
     char tline[NLINE];      /* buffer for part of mode line */
 
-    if (inmb) {
-        mb_update(wp);
-        return;
-    }
-    int n = wp->w_toprow + wp->w_ntrows;            /* Location. */
-    vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;    /* Redraw next time. */
+/* Determine where the modeline actually is...*/
+    int n;
+    if (inmb) n = mb_info.main_wp->w_toprow + mb_info.main_wp->w_ntrows;
+    else      n = wp->w_toprow + wp->w_ntrows;  /* Normal location. */
+    vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;/* Redraw next time. */
+
 #if     COLOR
 /* GGR - use configured colors, not 0 and 7 */
     vscreen[n]->v_rfcolor = gbcolor;    /* chosen for on */
@@ -1396,39 +1357,74 @@ static void modeline(struct window *wp)
 #endif
         lchar = '-';
 
-    bp = wp->w_bufp;
-    if ((bp->b_flag & BFTRUNC) != 0)
-        vtputc('#');
-    else
-        vtputc(lchar);
+/* For the minibuffer, wp->w_bufp is the minibuffer.
+ * No point in showing its changed state, etc., but there is
+ * a use in reporting when it is multi-line.
+ */
+    if (inmb) bp = mb_info.main_bp;
+    else      bp = wp->w_bufp;
 
-    if ((bp->b_flag & BFCHG) != 0)  /* "*" if changed. */
-        vtputc('*');
-    else
+    if (inmb) {
+        char mbprompt[20];
         vtputc(lchar);
+        vtputc(lchar);
+        sprintf(mbprompt, " miniBf%d", mb_info.mbdepth);
+        cp = mbprompt;
+        while ((c = *cp++) != 0) vtputc(c);
+/* If next, next from the buffer topmarker doesn't take us back there
+ * then we have multiple lines in the minibuffer.  Note this...
+ */
+        struct buffer *mbp = wp->w_bufp;    /* Need this one here */
+        if (lforw(lforw(mbp->b_linep)) != mbp->b_linep) {
+            cp = " (multiline!)";
+            while ((c = *cp++) != 0) vtputc(c);
+        }
 
-    if ((bp->b_flag&BFNAROW) != 0) {    /* GGR "<" if narrowed */
-        vtputc('<');
-    } else {
-        vtputc(lchar);
+        vtputc('{');        /* Use this for the mini-buffer modes */
+/* Display modes...as single chars */
+        int using_phon = 0;
+        for (int i = 0; i < NUMMODES; i++)  /* add in the mode flags */
+            if (mbp->b_mode & (1 << i)) {
+                if (modecode[i] == 'P') using_phon = 1;
+                else vtputc(modecode[i]);
+            }
+        if (using_phon) show_utf8(ptt->ptt_headp->display_code);
+        vtputc('}');
+        vtputc('>');
+        vtputc('>');
+        vtputc(' ');
     }
+    else {      /* A "normal" buffer */
+        if ((bp->b_flag & BFTRUNC) != 0)
+            vtputc('#');
+        else
+            vtputc(lchar);
 
-    strcpy(tline, " ");
-    strcat(tline, PROGRAM_NAME_LONG);
-    strcat(tline, " ");
+        if ((bp->b_flag & BFCHG) != 0)  /* "*" if changed. */
+            vtputc('*');
+        else
+            vtputc(lchar);
+
+        if ((bp->b_flag&BFNAROW) != 0)  /* GGR "<" if narrowed */
+            vtputc('<');
+        else
+            vtputc(lchar);
+
+        strcpy(tline, " ");
+        strcat(tline, PROGRAM_NAME_LONG);
+        strcat(tline, " ");
 
 /* GGR - only if no filename (space issue) */
-    if (bp->b_fname[0] == 0) {
-        strcat(tline, " ");
-        strcat(tline, VERSION);
+        if (bp->b_fname[0] == 0) {
+            strcat(tline, " ");
+            strcat(tline, VERSION);
+        }
+        strcat(tline, ": ");
+        cp = tline;
+        while ((c = *cp++) != 0) vtputc(c);
     }
-    strcat(tline, ": ");
-    cp = &tline[0];
+    cp = bp->b_bname;
     while ((c = *cp++) != 0) vtputc(c);
-
-    cp = &bp->b_bname[0];
-    while ((c = *cp++) != 0) vtputc(c);
-
     strcpy(tline, " " MLpre);
 
 /* Are we horizontally scrolled? */
@@ -1437,7 +1433,6 @@ static void modeline(struct window *wp)
         strcat(tline, "> ");
     }
 
-
 /* Display the modes */
 
     firstm = TRUE;
@@ -1445,20 +1440,27 @@ static void modeline(struct window *wp)
         firstm = FALSE;
         strcat(tline, "Truncated");
     }
+    struct window *mwp;
+    if (inmb) mwp = mb_info.main_wp;
+    else      mwp = wp;
     for (i = 0; i < NUMMODES; i++)  /* add in the mode flags */
-        if (wp->w_bufp->b_mode & (1 << i)) {
+        if (mwp->w_bufp->b_mode & (1 << i)) {
             if (firstm != TRUE) strcat(tline, " ");
             firstm = FALSE;
             strcat(tline, mode2name[i]);
         }
     strcat(tline, MLpost " ");
-    show_utf8(tline);
+    cp = tline;
+    while ((c = *cp++) != 0) vtputc(c);
 
+/* Display the buffername if set. This can contain utf8...
+ * For the minibuffer this will be the main buffer name .
+ */
     if (bp->b_fname[0] != 0 && strcmp(bp->b_bname, bp->b_fname) != 0) {
-        cp = &bp->b_fname[0];
-        while ((c = *cp++) != 0) vtputc(c);
+        show_utf8(bp->b_fname);
         vtputc(' ');
     }
+
 /* Pad to full width. */
     while (vtcol < term.t_ncol) vtputc(lchar);
 
@@ -1680,7 +1682,7 @@ void mlforce(const char *fmt, ...) {
 
         oldcmd = discmd;        /* save the discmd value */
         discmd = TRUE;          /* and turn display on */
-        mlwrite_ap(fmt, ap);       /* write the string out */
+        mlwrite_ap(fmt, ap);    /* write the string out */
         va_end(ap);
         discmd = oldcmd;        /* and restore the original setting */
 }
@@ -1867,9 +1869,9 @@ void mberase(void)
 /* GGR
  *    function to update *just* the minibuffer window
  */
-void mbupdate(void)
-{
+void mbupdate(void) {
     mbonly = TRUE;
     update(TRUE);
     mbonly = FALSE;
+    return;
 }

@@ -488,6 +488,10 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     int savflast;
     int savnlast;
 
+    short savdoto;
+    int prolen;
+    char procopy[NSTRING];
+
     struct window wsave;
 
     short bufexpand, expanded;
@@ -543,8 +547,16 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 /* Remember the original buffer name if at level 1 */
 
     mb_info.mbdepth++;
+    wsave = *curwp;             /* Structure copy - save */
     struct buffer *tbp = curwp->w_bufp;
-    if (mb_info.mbdepth == 1) mb_info.main_buffername = tbp->b_fname;
+    if (mb_info.mbdepth == 1) {
+        mb_info.main_bp = curbp;    /* For main buffer info in modeline */
+        mb_info.main_wp = &wsave;   /* Used to position modeline */
+    }
+    strcpy(procopy, prompt);
+    prolen = strlen(procopy);
+    if (mpresf) mlerase();
+    mberase();
 
 /* Get the PHON state from the current buffer, so we can carry it to
  * the next minibuffer.
@@ -552,7 +564,6 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
  */
     int using_phon = tbp->b_mode & MDPHON;
 
-    wsave = *curwp;             /* Structure copy - save */
     swbuffer(bp);
 
     curwp->w_toprow = term.t_nrow;
@@ -597,18 +608,25 @@ loop:
     execute(META|SPEC|'C', FALSE, 1);
     lastflag = saveflag;
 
+/* Prepend the prompt to the beginning of the visible line */
+    savdoto = curwp->w_doto;
+    curwp->w_doto = 0;
+    linstr(procopy);
+    curwp->w_doto = savdoto + prolen;
+
 /* Fix up the screen - we do NOT want horizontal scrolling in the mb */
 
     int real_hscroll;
     real_hscroll = hscroll;
     hscroll = FALSE;
-
-    strcpy(mb_info.procopy, prompt);
     curwp->w_flag |= WFMODE;    /* Need to update the modeline... */
-
     mbupdate();                 /* Will set modeline to prompt... */
-
     hscroll = real_hscroll;
+
+/* Rremove the prompt from the beginning of the visible line */
+    curwp->w_doto = 0;
+    ldelete((long)prolen, FALSE);
+    curwp->w_doto = savdoto;
 
 /* Get the next command (character) from the keyboard */
     c = getcmd();
@@ -627,6 +645,7 @@ loop:
             if (bufexpand) expanded = comp_buffer(tstring, choices);
             else           expanded = comp_file(tstring, choices);
             if (expanded) {
+                savdoto = curwp->w_doto;
                 curwp->w_doto = 0;
                 ldelete((long) lp->l_used, FALSE);
                 linstr(tstring);
