@@ -162,8 +162,8 @@ struct buffer *kbdmac_bp = NULL;
 
 int run_filehooks = 0;
 
-struct mb_info mb_info = {  NULL, 0, "" };
+struct mb_info mb_info = { NULL, 0, "" };
 
-char *not_in_mb_funcname;
+struct not_in_mb not_in_mb = { NULL, 0 };
 
 int pause_key_index_update = 0;

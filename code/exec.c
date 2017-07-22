@@ -40,8 +40,9 @@ int namedcmd(int f, int n)
         if (inmb) {
             struct name_bind *fi = func_info(kfunc);
             if (fi && fi->opt.not_mb) {
-                not_in_mb_funcname = fi->n_name;
-                kfunc = not_in_mb;      /* Change what we call... */
+                not_in_mb.funcname = fi->n_name;
+                not_in_mb.keystroke = -1;   /* No keystroke... */
+                kfunc = not_in_mb_error;    /* Change what we call... */
             }
         }
 

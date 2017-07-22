@@ -216,7 +216,7 @@ extern void set_pathname(char *);
 #define INTABLE 2
 extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
-extern int not_in_mb(int, int);
+extern int not_in_mb_error(int, int);
 extern fn_t getbind(int, char **);
 extern char *getfname(fn_t);
 extern fn_t fncmatch(char *);

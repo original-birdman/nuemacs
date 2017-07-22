@@ -810,8 +810,15 @@ void cmdstr(int c, char *seq)
         *ptr = 0;                   /* terminate the string */
 }
 
-int not_in_mb(int f, int n) {
-    mlwrite("%s not allowed in the minibuffer!!", not_in_mb_funcname);
+int not_in_mb_error(int f, int n) {
+    char vis_key_paras[23];
+    if (not_in_mb.keystroke != -1) {
+        char vis_key[20];
+        cmdstr(not_in_mb.keystroke, vis_key);
+        snprintf(vis_key_paras, 22, "(%s)", vis_key);
+    }
+    mlwrite("%s%s not allowed in the minibuffer!!",
+         not_in_mb.funcname, vis_key_paras);
     return(TRUE);
 }
 
@@ -835,8 +842,9 @@ fn_t getbind(int c, char **pbp) {
         if (inmb) {
             struct name_bind *fi = func_info(ktp->hndlr.k_fp);
             if (fi && fi->opt.not_mb) {
-                not_in_mb_funcname = fi->n_name;
-                return not_in_mb;
+                not_in_mb.funcname = fi->n_name;
+                not_in_mb.keystroke = c;
+                return not_in_mb_error;
             }
         }
         return ktp->hndlr.k_fp;

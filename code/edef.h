@@ -158,6 +158,10 @@ struct mb_info {
 };
 extern struct mb_info mb_info;
 
-extern char *not_in_mb_funcname;
+struct not_in_mb {
+    char *funcname;
+    int keystroke;
+} not_in_mb;
+extern struct not_in_mb not_in_mb;
 
 extern int pause_key_index_update;  /* If set, don't update keytab index */
