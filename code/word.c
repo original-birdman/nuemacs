@@ -722,7 +722,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
         struct grapheme gi;
         int bytes = lgetgrapheme(&gi, 0);
         if (bytes <= 0) {           /* We are in trouble... */
-            mlforce("ERROR: cannot continue filling.");            return FALSE;
+            mlforce("ERROR: cannot continue filling.");
+            return FALSE;
         }
         if (gi.uc == '\n') {
             gi.uc = ' ';
@@ -732,8 +733,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * Make sure we check the *next* line length
  */
             if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
-                 wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
-                 wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
+                wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
+                wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
                 if (space_ind) {    /* We're padding */
                      space_ind =
                           realloc(space_ind, sizeof(int)*(wbuf_ents+1)/2);
@@ -771,7 +772,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
                         wbuf[wi++] = gi.ex[xc];
                 }
             }
-            wordlen++;
+            wordlen += utf8proc_charwidth(gi.uc);
 /* Free-up any allocated grapheme space...and on to next char */
             if (gi.ex != NULL) free(gi.ex);
             continue;

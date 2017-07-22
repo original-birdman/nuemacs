@@ -1,0 +1,6 @@
+With $fillcol set to 72 the following four lines should all start at "x"
+x あああああああああああああああああああああああああああああああああああ
+x aaaaああaaaaああaaaaああaaaaああaaaaああaaaaああaaaaああaaaaああaaaaあ
+x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaああああああ
+x あああああああああああああああああaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaああああああand this one should end it, string with "aaa...".

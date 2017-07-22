@@ -21,6 +21,8 @@
 #include "wrapper.h"
 #include "utf8.h"
 
+#include "utf8proc.h"
+
 static int mbonly = FALSE;      /* GGR - minibuffer only */
 static int taboff = 0;          /* tab offset for display       */
 
@@ -321,13 +323,22 @@ static void vtputc(unsigned int c) {
 /* Only extend a grapheme if we have a prev-char within screen width */
         if (vtcol > 0 && (vtcol <= term.t_ncol)) {
             extend_grapheme(&(vp->v_text[vtcol-1]), c);
-            return;     /* Nothing else do do... */
         }
+        return;     /* Nothing else do do... */
     }
 
     if (vtcol >= term.t_ncol) {
         ++vtcol;
-        set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
+/* We have to cater for a multi-width character at eol - so must step
+ * back over any NUL graphemes.
+ */
+        for (int dcol = term.t_ncol - 1; dcol >= 0; dcol--) {
+            if (vp->v_text[dcol].uc == '$') break;  /* Quick repeat exit */
+            if (vp->v_text[dcol].uc != 0) {
+                set_grapheme(&(vp->v_text[dcol]), '$');
+                break;
+            }
+        }
         return;
     }
 
@@ -338,7 +349,7 @@ static void vtputc(unsigned int c) {
         return;
     }
 
-/* NOTE: Unicode has characters for displaying Control Charcaters
+/* NOTE: Unicode has characters for displaying Control Characters
  *  U+2400 to U+241F (so 2400+c)
  */
     if (c < 0x20) {
@@ -347,7 +358,7 @@ static void vtputc(unsigned int c) {
         return;
     }
 
-/* NOTE: Unicode has a characters for displaying Delete.
+/* NOTE: Unicode has a character for displaying Delete.
  *  U+2421
  */
     if (c == 0x7f) {
@@ -364,8 +375,25 @@ static void vtputc(unsigned int c) {
         return;
     }
 
-    if (vtcol >= 0) set_grapheme(&(vp->v_text[vtcol]), c);
-    ++vtcol;
+    int cw = utf8proc_charwidth(c);
+    if (vtcol >= 0) {
+        set_grapheme(&(vp->v_text[vtcol]), c);
+/* This code assumes that a NUL byte will not be displayed */
+        int pvcol = vtcol;
+        for (int nulpad = cw - 1; nulpad > 0; nulpad--) {
+            pvcol++;
+            set_grapheme(&(vp->v_text[pvcol]), 0);
+        }
+    }
+/* If vtcol is -ve, but will be +ve after the cw increment we need to space
+ * pad the start of the display
+ */
+    else {
+        for (int pcol = vtcol + cw; pcol > 0; pcol--) {
+            set_grapheme(&(vp->v_text[pcol-1]), ' ');
+        }
+    }
+    vtcol += cw;
 }
 
 /*
@@ -724,7 +752,7 @@ void updpos(void) {
         else if (c < 0x20 || c == 0x7f) ++curcol;       /* ^X */
         else if (c >= 0x80 && c <= 0xa0) curcol += 2;   /* \nn */
         else if (zerowidth_type(c)) curcol--;           /* */
-        ++curcol;                                       /* All get this */
+        curcol += utf8proc_charwidth(c);                /* All get this */
     }
 
 /* Adjust by the current first column position */
@@ -1078,8 +1106,14 @@ static void updext(void) {
     vteeol();
     taboff = 0;
 
-/* And put a '$' in column 1 */
+/* And put a '$' in column 1. but if this is a multi-width character we also
+ * need to change any following NULs to spaces
+ */
+    int cw = utf8proc_charwidth(vscreen[currow]->v_text[0].uc);
     set_grapheme(&(vscreen[currow]->v_text[0]), '$');
+    for (int pcol = cw - 1; pcol > 0; pcol--) {
+        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
+    }
 }
 
 /*

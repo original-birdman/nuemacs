@@ -17,6 +17,8 @@
 #include "line.h"
 #include "utf8.h"
 
+#include "utf8proc.h"
+
 /* GGR - This was ctrulen - get a consistent "real" line length.
  * However, it was only ever use to check for an empty line.
  * So it's been renamed and simplified.
@@ -61,7 +63,7 @@ static int getgoal(struct line *dlp)
                 else if (c >= 0x80 && c <= 0xa0)
                         newcol += 2;
 
-                ++newcol;
+                newcol += utf8proc_charwidth(c);
                 if (newcol > curgoal)
                         break;
                 col = newcol;

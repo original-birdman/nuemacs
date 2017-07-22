@@ -13,6 +13,8 @@
 #include "efunc.h"
 #include "line.h"
 
+#include "utf8proc.h"
+
 int tabsize; /* Tab size (0: use real tabs) */
 
 /*
@@ -182,7 +184,7 @@ int getccol(int bflg)
         if (c == '\t') col |= tabmask;
         else if (c < 0x20 || c == 0x7F) ++col;      /* Use 2 cols */
         else if (c >= 0x80 && c <= 0xa0) col += 2;  /* Use 3 cols */
-        ++col;
+        col += utf8proc_charwidth(c);
     }
     return col;
 }
@@ -212,7 +214,7 @@ int setccol(int pos)
         if (c == '\t') col |= tabmask;
         else if (c < 0x20 || c == 0x7F) ++col;      /* Use 2 cols */
         else if (c >= 0x80 && c <= 0xa0) col += 2;  /* Use 3 cols */
-        ++col;
+        col += utf8proc_charwidth(c);
     }
     curwp->w_doto = i;              /* Set us at the new position... */
     return col >= pos;              /* ..and tell whether we made it */
