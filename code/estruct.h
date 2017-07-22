@@ -15,6 +15,14 @@
 #define MAXCOL  500
 #define MAXROW  500
 
+/* Various bits of code use chars as indices.
+ * Ensure these are treated as unsigned.
+ * Could use a compile option (-funsigned-char for gcc) but
+ * that puts the logic into the build files rather than the actual code.
+ * So use this macro to cast it when you wnat it as an int (0-255).
+ */
+#define ch_as_uc(bc) ((unsigned char)(bc))
+
 /* The character with which to start/end message line info */
 #define MLpre  "["
 #define MLpost "]"

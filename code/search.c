@@ -664,7 +664,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
                 }
                 else
                 {
-                        jump = deltaf[(int) lgetc(curline, curoff)];
+                        jump = deltaf[ch_as_uc(lgetc(curline, curoff))];
                 }
             }
 /* the last character matches, so back up to start of possible match */
@@ -736,26 +736,26 @@ void setpattern(const char apat[], const char tap[]) {
  */
         for (i = 0; i < patlenadd; i++)
         {
-                deltaf[(int) apat[i]] = patlenadd - i;
+                deltaf[ch_as_uc(apat[i])] = patlenadd - i;
                 if (isalpha (apat[i]))
-                    deltaf[(int) (apat[i] ^ DIFCASE)] = patlenadd - i;
-                deltab[(int) tap[i]] = patlenadd - i;
+                    deltaf[ch_as_uc(apat[i] ^ DIFCASE)] = patlenadd - i;
+                deltab[ch_as_uc(tap[i])] = patlenadd - i;
                 if (isalpha (tap[i]))
-                    deltab[(int) (tap[i] ^ DIFCASE)] = patlenadd - i;
+                    deltab[ch_as_uc(tap[i] ^ DIFCASE)] = patlenadd - i;
         }
 /*      The last character will have the pattern length
  *      unless there are duplicates of it. Get the number to
  *      jump from the arrays delta, and overwrite with zeroes in delta
  *      duplicating the CASE.
  */
-        lastchfjump = patlenadd + deltaf[(int) apat[patlenadd]];
-        deltaf[(int) apat[patlenadd]] = 0;
+        lastchfjump = patlenadd + deltaf[ch_as_uc(apat[patlenadd])];
+        deltaf[ch_as_uc(apat[patlenadd])] = 0;
         if (isalpha (apat[patlenadd]))
-                deltaf[(int) (apat[patlenadd] ^ DIFCASE)] = 0;
-        lastchbjump = patlenadd + deltab[(int) apat[0]];
-        deltab[(int) apat[0]] = 0;
+                deltaf[ch_as_uc(apat[patlenadd] ^ DIFCASE)] = 0;
+        lastchbjump = patlenadd + deltab[ch_as_uc(apat[0])];
+        deltab[ch_as_uc(apat[0])] = 0;
         if (isalpha (apat[0]))
-                deltab[(int) (apat[0] ^ DIFCASE)] = 0;
+                deltab[ch_as_uc(apat[0] ^ DIFCASE)] = 0;
 
 }
 

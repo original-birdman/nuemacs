@@ -174,7 +174,7 @@ int ttgetc(void)
         pending = count;
     }
 
-    c = (unsigned char) buffer[0];
+    c = ch_as_uc(buffer[0]);
     if (c < 0xc0 && !(c == 0x1b))   /* ASCII or Latin-1(??) - Not Esc */
         goto done;
 
@@ -191,7 +191,7 @@ int ttgetc(void)
         pending += read(0, buffer + count, sizeof(buffer) - count);
     }
     if (pending > 1) {
-        unsigned char second = buffer[1];
+        char second = buffer[1];
         if (c == 0x1b && second == '[') { /* Turn ESC+'[' into CSI */
             bytes = 2;
             c = 0x9b;

@@ -178,7 +178,7 @@ debug++;
  * really mess things up! So the range is 32(' ')->255 == 224 bytes.
  */
     while (len--) {
-        cc = (unsigned char)*bptr;  /* Get the next char - unsigned */
+        cc = ch_as_uc(*bptr);   /* Get the next char - unsigned */
 
 /* We now read/write in block, so can en/decrypt any byte. */
 
@@ -208,7 +208,7 @@ debug++;
 /* Our autokey (a special case of the running key) is being generated
  * by a weighted checksum of cipher text, (unsigned) clear text and salt.
  */
-        key = key + key + (cc ^ (unsigned char)*bptr) + salt;
+        key = key + key + (cc ^ ch_as_uc(*bptr)) + salt;
         *bptr++ = cc;   /* put character back into buffer */
     }
     return;

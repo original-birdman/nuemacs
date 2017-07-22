@@ -250,7 +250,7 @@ int linsert(int n, int c)
         int bytes = unicode_to_utf8(c, utf8), i;
 
         if (bytes == 1)
-                return linsert_byte(n, (unsigned char) utf8[0]);
+                return linsert_byte(n, ch_as_uc(utf8[0]));
         for (i = 0; i < n; i++) {
                 int j;
                 for (j = 0; j < bytes; j++) {
