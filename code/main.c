@@ -851,7 +851,7 @@ int execute(int c, int f, int n)
 
         status = (*execfunc) (f, n);
         input_waiting = NULL;
-        lastflag = thisflag;
+        if (execfunc != showcpos) lastflag = thisflag;
 /* GGR - abort keyboard macro at point of error */
         if ((kbdmode == PLAY) & !status) kbdmode = STOP;
         return status;
