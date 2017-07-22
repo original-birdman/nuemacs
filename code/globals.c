@@ -159,3 +159,5 @@ int hjump = 1;
 
 char kbdmacro_buffer[] = "//kbd_macro";
 struct buffer *kbdmac_bp = NULL;
+
+int run_filehooks = 0;

@@ -147,3 +147,5 @@ extern int hjump;               /* How much to jump on horizontal scroll */
 
 extern char kbdmacro_buffer[];  /* The name of the keyboard macro buffer */
 extern struct buffer *kbdmac_bp;    /* keyboard macro buffer */
+
+extern int run_filehooks;       /* Set when we want them run */

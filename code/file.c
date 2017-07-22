@@ -82,12 +82,13 @@ int insfile(int f, int n)
 int filefind(int f, int n)
 {
         char fname[NFILEN];     /* file user wishes to find */
-        int s;          /* status return */
+        int s;                  /* status return */
         if (restflag)           /* don't allow this command if restricted */
                 return resterr();
         if ((s = mlreply("Find file: ", fname, NFILEN)) != TRUE) {
                 return s;
         }
+        run_filehooks = 1;      /* set flag */
         return getfile(fname, TRUE);
 }
 
@@ -101,6 +102,7 @@ int viewfile(int f, int n)
                 return resterr();
         if ((s = mlreply("View file: ", fname, NFILEN)) != TRUE)
                 return s;
+        run_filehooks = 1;      /* set flag */
         s = getfile(fname, FALSE);
         if (s) {                /* if we succeed, put it in view mode */
                 curwp->w_bufp->b_mode |= MDVIEW;
@@ -213,6 +215,7 @@ int getfile(char *fname, int lockfl) {
  */
 static void handle_filehooks(char *fname) {
     struct buffer *sb;
+    run_filehooks = 0;                  /* reset flag */
     if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
     char *sfx = strrchr(fname, '.');
     if (sfx && strlen(sfx) <= 19) {     /* Max bufname is 32, incl NUL */
@@ -272,10 +275,8 @@ int readin(char *fname, int lockfl) {
  */
     if (bp->b_fname != fname) strcpy(bp->b_fname, fname);
 
-/* GGR - lockfl is TRUE for the cases where we want file-hooks to run.
- * Accidental, but convenient.
- */
-    if (lockfl) handle_filehooks(fname);
+/* GGR - run filehooks on this iff the caller sets the flag */
+    if (run_filehooks) handle_filehooks(fname);
 
 /* let a user macro get hold of things...if he wants */
     execute(META | SPEC | 'R', FALSE, 1);

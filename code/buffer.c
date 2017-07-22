@@ -102,6 +102,7 @@ int swbuffer(struct buffer *bp) {
     if (curbp->b_active != TRUE) {  /* buffer not active yet */
         curbp->b_mode |= gmode;     /* readin() runs file-hooks, so set now */
 /* Read it in and activate it */
+        run_filehooks = 1;          /* set flag */
         readin(curbp->b_fname, TRUE);
         curbp->b_dotp = lforw(curbp->b_linep);
         curbp->b_doto = 0;
