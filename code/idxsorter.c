@@ -13,29 +13,28 @@
  *  Produce an index of the records that gives the sorted order
  *  of the defined fields.
  *  The ordering is done on a byte-by-byte basis.
- *  This is based on original character-field sorting code, but
- *  has been extended to handle integer fields (signed or unsigned 16, 32 or
- *  64-byte integers) and pointers (which are "just" unsigned integers).
- *  It can also handle NUL-terminated C-strings in memory - set the type to
- *  S and it will continue to dereference (returning NUL for short
- *  strings) for the longest actual string.
+ *  This is based on original character-field sorting code written in
+ *  FORTRAN by Dr Tootil, but has been extended to handle integer fields
+ *  (signed or unsigned 16, 32 or 64-byte integers) and pointers (which
+ *  are "just" unsigned integers).
+ *  It can also handle char *pointers to NUL-terminated C-strings in
+ *  memory - set the type to S and it will continue to dereference
+ *  (returning NUL for short  strings) for the longest actual string.
  *
  *  The code has also been altered so that the index array no longer needs
  *  1 more element than there are records, and the field descriptions are
- *  now passed in as a structure (more C-ish, and required for specifying
- *  the type of field).
+ *  now passed in as a structure (more C-ish, and allowing the specifying
+ *  of the type of field).
  *
  *  The index array counts records from 1 while working (as 0 is end-of-chain
- *  and -ve marks a stable entry).
- *  Attempting to adjust to 0-based When the final index[] array is being
- *  set did not work!!! (Presumably a result of closed loops?).
- *  So an additional pass over the array to decrement each entry
- *  is provided as an option.  (I may revist the direct approach...).
+ *  and -ve marks a stable entry). Since 0-based indexing is more convenient
+ *  and natural for C-code, an adjustment to 0-based is made in the final
+ *  fix-up loop. This is a compile-time option.
  *
  *  NOTE that the code never actually compares pairs of records!
  *  It works by looking at the nth character of each record in turn and
- *  creating links in index[] to all records with the same character
- *  using the fl_ch structure data to do so.
+ *  creating links (within sub-chains...) in index[] to all records with the
+ *  same character  using the fl_ch structure data to do so.
  *  If a pass on the nth characters has nothing to do then the sort is
  *  completed (even if there are more characters then they can't affect
  *  the result).
@@ -54,6 +53,7 @@
  */
 
 /* Set this to 1 for 0-based (C) result or 0 to leave as 1-based (FORTRAN)
+ * This could be made a calling-option, if you ever so wished it.
  */
 #define INDEX_ADJUST 1
 
@@ -94,7 +94,8 @@ static inline unsigned char get_ibyte(
             for (int ofs = 0; ofs <= offset; ofs++) {
                 if (*(fp+ofs) == 0) return 0;
             }
-            *cstr_done = 0; /* Reset terminator */
+/* If we return a "real" character we need to reset the loop terminator */
+            *cstr_done = 0;
             return *(fp+offset);
         }
         return *(ip+offset);            /* Index into char array */
@@ -285,14 +286,18 @@ search_for_more:
  * This is done by going through the chain in the logical order while
  * counting records off from 0 down (you'll see why in a moment!) and
  * replacing link values with this physical record number.
+ * NOTE: that this leaves you with an index[] where every entry is negative.
  */
 
 we_are_done:
     link = -elem0;
     int fi = 0;
+/* Beyond here we don't have to deal with elem0! So no need to use
+ * the get_index/set_index macros - just rememeber to use [n-1]...
+ */
     while (link) {
-        new_link = abs(get_index(link));
-        set_index(link, --fi);
+        new_link = abs(index[link-1]);
+        index[link-1] = --fi;
         link = new_link;
     }
 
@@ -305,27 +310,34 @@ we_are_done:
  * possible to have closed loop in this process - work out why for your home
  * exercise!). If the latter. search from the chain base for the next
  * unconverted region and repeat!
+ * The sort-by-link code uses a 1-based index (not just because it was
+ * written in FORTRAN originally, but because that allows 0 to be
+ * end-of-chain.
+ * We wish to make this 0-based for our C-code caller, so we make the change
+ * when we set results during this permutation.
+ * The while (link) loop above has turned everything into a -ve number,
+ * so setting 0 as a value here is OK, provided the loop test just checks
+ * for -ve numbers.
  */
+
     chain_base = 0;
-#if INDEX_ADJUST
-    int orig_rec_count = rec_count;
-#endif
     while (rec_count) {
-        while (get_index(++chain_base) > 0);    /* Look for 0 or -ve one */
-        link = -get_index(chain_base);
+        while (index[chain_base++] >= 0);   /* Looking for -ve one */
+        link = -index[chain_base-1];
         record_number = chain_base;
         while (1) {
-            new_link = -get_index(link);
-            set_index(link, record_number);
+            new_link = -index[link-1];
+#if INDEX_ADJUST
+            index[link-1] = record_number - 1;
+#else
+            index[link-1] = record_number;
+#endif
             record_number = link;
             link = new_link;
             rec_count--;
             if (record_number == chain_base) break;
         }
     }
-#if INDEX_ADJUST
-    while (orig_rec_count--) index[orig_rec_count]--;
-#endif
     return 0;
 }
 
