@@ -111,6 +111,10 @@ static int biteq(int bc, char *cclmap);
 static char *clearbits(void);
 static void setbit(int bc, char *cclmap);
 
+/* Forward function declarations */
+static int mcscanner(struct magic *, int, int);
+static int scanner(const char *, int, int);
+
 /*
  * forwsearch -- Search forward.  Get a search string from the user, and
  *      search for the string.  If found, reset the "." to be just after
@@ -715,6 +719,29 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
         *pcurline = curline;
         *pcuroff = curoff;
         return FALSE;
+}
+
+/* Entry point for isearch.
+ * This needs to set-up the patterns for the search to work.
+ */
+int scanmore(char *patrn, int dir) {
+    int sts;                /* search status              */
+
+    rvstrcpy(tap, patrn);   /* Put reversed string in tap */
+    mlenold = matchlen = strlen(patrn);
+    setpattern(patrn, tap);
+
+    if (dir < 0)            /* reverse search?            */
+        sts = scanner(tap, REVERSE, PTBEG);
+    else                    /* Nope. Go forward           */
+        sts = scanner(patrn, FORWARD, PTEND);
+
+    if (!sts) {
+        TTputc(BELL);   /* Feep if search fails       */
+        TTflush();      /* see that the feep feeps    */
+    }
+
+    return sts;             /* else, don't even try       */
 }
 
 /*      Settting up search jump tables.

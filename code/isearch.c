@@ -314,37 +314,6 @@ int checknext(char chr, char *patrn, int dir)
 }
 
 /*
- * This hack will search for the next occurrence of <pat> in the buffer, either
- * forward or backward.  It is called with the status of the prior search
- * attempt, so that it knows not to bother if it didn't work last time.  If
- * we can't find any more matches, "point" is left where it was before.  If
- * we do find a match, "point" will be at the end of the matched string for
- * forward searches and at the beginning of the matched string for reverse
- * searches.
- *
- * char *patrn;                 string to scan for
- * int dir;                     direction to search
- */
-int scanmore(char *patrn, int dir)
-/* search forward or back for a pattern */
-{
-        int sts;                /* search status              */
-
-        if (dir < 0) {          /* reverse search?            */
-                rvstrcpy(tap, patrn);   /* Put reversed string in tap */
-                sts = scanner(tap, REVERSE, PTBEG);
-        } else                  /* Nope. Go forward           */
-                sts = scanner(patrn, FORWARD, PTEND);
-
-        if (!sts) {
-                TTputc(BELL);   /* Feep if search fails       */
-                TTflush();      /* see that the feep feeps    */
-        }
-
-        return sts;             /* else, don't even try       */
-}
-
-/*
  * The following is a worker subroutine used by the reverse search.  It
  * compares the pattern string with the characters at "." for equality. If
  * any characters mismatch, it will return FALSE.
