@@ -1636,4 +1636,33 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.122.
 
+========== GGR4.123 [24 July 2017]
+
+idxsorter.c
+    Fix the index to be 0-based during the final permutation loop,
+    rather than using a special "decrement-by-one" loop.
+----------
+
+efunc.h
+isearch.c
+search.c
+    Fix incremental searching (which must have been failing for ages).
+    scanmore() was moved form isearch.c to search.c, as it needs to set
+    up the patterns and set mlenold and matchlen.
+
+----------
+basic.c
+display.c
+random.c
+line.h
+    Fix column counting when displaying a tab character, and remember to
+    add the '$' at the right-hand column to indicate an over-long line.
+    Missed/messed up in the double-width display changes.
+    Created a macro for the common column-updating code.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.123.
+
 ==========
