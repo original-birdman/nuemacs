@@ -339,6 +339,7 @@ static void vtputc(unsigned int c) {
                 break;
             }
         }
+        set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
         return;
     }
 
@@ -743,16 +744,7 @@ void updpos(void) {
         unicode_t c;
         int bytes = utf8_to_unicode(lp->l_text, i, curwp->w_doto, &c);
         i += bytes;
-
-/* GGR - when counting columns we need to allow for *all* displays of
- *   non-printing characters as multiple chars in vtputc()!
- *   And tabs, and those with no width at all!!
- */
-        if (c == '\t') curcol |= tabmask;               /* Round up */
-        else if (c < 0x20 || c == 0x7f) ++curcol;       /* ^X */
-        else if (c >= 0x80 && c <= 0xa0) curcol += 2;   /* \nn */
-        else if (zerowidth_type(c)) curcol--;           /* */
-        curcol += utf8proc_charwidth(c);                /* All get this */
+        update_screenpos_for_char(curcol, c);
     }
 
 /* Adjust by the current first column position */

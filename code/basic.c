@@ -40,37 +40,19 @@ static int curline_empty(void)
  * column, return the best choice for the offset. The offset is returned.
  * Used by "C-N" and "C-P".
  */
-static int getgoal(struct line *dlp)
-{
-        int col;
-        int newcol;
-        int dbo;
-        int len = llength(dlp);
+static int getgoal(struct line *dlp) {
+    int col = 0;
+    int dbo = 0;
+    int len = llength(dlp);
 
-        col = 0;
-        dbo = 0;
-        while (dbo < len) {
-            unicode_t c;
-            int width = utf8_to_unicode(dlp->l_text, dbo, len, &c);
-            if (!zerowidth_type(c)) {
-                newcol = col;
-
-                /* Take tabs, ^X and \xx hex characters into account */
-                if (c == '\t')
-                        newcol |= tabmask;
-                else if (c < 0x20 || c == 0x7F)
-                        ++newcol;
-                else if (c >= 0x80 && c <= 0xa0)
-                        newcol += 2;
-
-                newcol += utf8proc_charwidth(c);
-                if (newcol > curgoal)
-                        break;
-                col = newcol;
-            }
-            dbo += width;
-        }
-        return dbo;
+    while (dbo < len) {
+        unicode_t c;
+        int width = utf8_to_unicode(dlp->l_text, dbo, len, &c);
+        update_screenpos_for_char(col, c);
+        if (col > curgoal) break;
+        dbo += width;
+    }
+    return dbo;
 }
 
 /*

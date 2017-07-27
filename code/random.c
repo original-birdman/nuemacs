@@ -165,8 +165,7 @@ int getcline(void)
  * Column counting needs to take into account zero-widths, and also the
  * 2/3-column displays for control characters done by vtputc().
  */
-int getccol(int bflg)
-{
+int getccol(int bflg) {
     int i, col;
     struct line *dlp = curwp->w_dotp;
     int byte_offset = curwp->w_doto;
@@ -176,15 +175,9 @@ int getccol(int bflg)
     while (i < byte_offset) {
         unicode_t c;
         i += utf8_to_unicode(dlp->l_text, i, len, &c);
-/* We check non-space before zero-width here as a zero-width non-space
- * is still a non-space.
- */
+/* Check non-space first, if we are looking for it */
         if (c != ' ' && c != '\t' && bflg) break;
-        if (zerowidth_type(c)) continue;
-        if (c == '\t') col |= tabmask;
-        else if (c < 0x20 || c == 0x7F) ++col;      /* Use 2 cols */
-        else if (c >= 0x80 && c <= 0xa0) col += 2;  /* Use 3 cols */
-        col += utf8proc_charwidth(c);
+        update_screenpos_for_char(col, c);
     }
     return col;
 }
