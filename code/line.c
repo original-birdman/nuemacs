@@ -718,47 +718,57 @@ int kinsert(int c)
  * is done by the standard insert routines. All you do is run the loop, and
  * check for errors. Bound to "C-Y".
  */
-int yank(int f, int n)
-{
-        int c;
-        int i;
-        char *sp;                       /* pointer into string to insert */
-        struct kill *kp;                /* pointer into kill buffer */
+int yank(int f, int n) {
+    int c;
+    int i;
+    char *sp;                       /* pointer into string to insert */
+    struct kill *kp;                /* pointer into kill buffer */
 
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if (n < 0)
-                return FALSE;
-        /* make sure there is something to yank */
-        if (kbufh == NULL)
-                return TRUE;            /* not an error, just nothing */
+/* Don't allow this command if we are in read only mode */
+
+    if (curbp->b_mode & MDVIEW) return rdonly();
+    if (n < 0) return FALSE;
+
+/* Make sure there is something to yank */
+    if (kbufh == NULL) return TRUE; /* not an error, just nothing */
+
+/* We need to handle the case of being at the start of an empty buffer.
+ * If we just let things run and yank (say) 2 complete lines, the mark and
+ * dot will be at the start of the third line. With SCROLLCODE set this
+ * will be on-screen so nothing gets redrawn - the added text is left
+ * positioned just off the top of the screen; which is a bit disconcerting.
+ * So if the next line is the same as the previous line (which can only
+ * happen if we are in a single-line buffer, when both point to the headp)
+ * and empty we insert a space then remove it later. This odd(?) method
+ * also ensures that the mark we set stays in teh correct place.
+ */
+    int do_dummy_space = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
+    if (do_dummy_space) insspace(0, 1);
 
 /* GGR - set a mark so we can rekill if we want - we don't
  * want a message, so don't use setmark()..
  */
-        curwp->w_markp = curwp->w_dotp;
-        curwp->w_marko = curwp->w_doto;
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = curwp->w_doto;
 
-        /* for each time.... */
-        while (n--) {
-                kp = kbufh;
-                while (kp != NULL) {
-                        if (kp->d_next == NULL)
-                                i = kused;
-                        else
-                                i = KBLOCK;
-                        sp = kp->d_chunk;
-                        while (i--) {
-                                if ((c = *sp++) == '\n') {
-                                        if (lnewline() == FALSE)
-                                                return FALSE;
-                                } else {
-                                        if (linsert_byte(1, c) == FALSE)
-                                                return FALSE;
-                                }
-                        }
-                        kp = kp->d_next;
+/* For each time.... */
+    while (n--) {
+        kp = kbufh;
+        while (kp != NULL) {
+            if (kp->d_next == NULL) i = kused;
+            else                    i = KBLOCK;
+            sp = kp->d_chunk;
+            while (i--) {
+                if ((c = *sp++) == '\n') {
+                    if (lnewline() == FALSE) return FALSE;
                 }
+                else {
+                    if (linsert_byte(1, c) == FALSE) return FALSE;
+                }
+            }
+            kp = kp->d_next;
         }
-        return TRUE;
+    }
+    if (do_dummy_space) ldelchar(1, FALSE);
+    return TRUE;
 }
