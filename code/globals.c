@@ -78,7 +78,7 @@ int saveflag = 0;               /* Flags, saved with the $target var */
 int rval = 0;                   /* return value of a subprocess */
 int nullflag = FALSE;           /* accept null characters */
 int overlap = 0;                /* line overlap in forw/back page */
-int scrolljump = 1;             /* number of lines to scroll */
+int scrolljump = 0;             /* no. lines to scroll (0 == centre screen) */
 
 /* uninitialized global definitions */
 
