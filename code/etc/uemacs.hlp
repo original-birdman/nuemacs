@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.123 Help Index     (27 July 2017)
+=>                   nuEmacs GGR4.124 Help Index     (28 August 2017)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -158,7 +158,7 @@ Tabulator (4, 8)....... $tab            Current file name ..... $cfname
 Screen resolution ..... $sres       ::  NORMAL, CGA, EGA, VGA
 Display commands ...... $discmd     ::  TRUE, FALSE
 Scrolling enabled ..... $scroll     ::  TRUE, FALSE, can only be reset
-Scrolling movement .... $jump       ::  # lines, default 1, 0 = 1/2 page
+Scrolling movement .... $jump       ::  # lines, default 0, 0 = 1/2 page
 Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS

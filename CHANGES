@@ -1665,4 +1665,34 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.123.
 
+========== GGR4.124 [28 Aug 2017]
+
+buffer.c
+    Return on abort, don't used saved name [usebuffer()].
+    Add do_savnam check before saving buffer name [swbuffer()].
+globals.c
+edef.h
+    Add do_savnam, initialized to 1.
+main.c
+    Change create_kbdmacro_buffer() to call kbdmac_buffer_toggle()
+    to get to/from the macro buffer.
+    Set do_savnam to 0 (and restore it to 1) around swbuffer() calls
+    and save/restore curwp data across a GetTo/OutOf call pair
+    [kbdmac_buffer_toggle()].
+    Call end_kbdmacro() if recording a macro [ctrlg()].
+    Set kbdmode = STOP in end_kbdmacro().
+
+globals.c
+    Initialize scrolljump to 0, not 1.
+
+line.c
+    If the buffer is empty add a dummy space before restoring text and
+    remove it afterwards. Without this the restored text is left off the
+    top of the screen and the mark ends up moving with dot [yank()].
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.124.
+
 ==========
