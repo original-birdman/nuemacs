@@ -31,7 +31,7 @@ int usebuffer(int f, int n)
 
 /* GGR - handle saved buffer name in minibuffer */
         if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
-                if (!inmb)
+                if (!inmb && s != ABORT)
                         strcpy(bufn, savnam);
                 else
                         return(s);
@@ -89,7 +89,7 @@ int swbuffer(struct buffer *bp) {
     struct window *wp;
 
 /* Save last name so we can switch back to it on empty MB reply */
-    if (!inmb) strcpy(savnam, curbp->b_bname);
+    if (!inmb && do_savnam) strcpy(savnam, curbp->b_bname);
 
     if (--curbp->b_nwnd == 0) {     /* Last use. */
         curbp->b_dotp = curwp->w_dotp;

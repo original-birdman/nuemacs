@@ -142,6 +142,8 @@ char lastmb[NSTRING] = "";
 int  nlast           = 1;
 int  pathexpand      = TRUE;
 char savnam[NBUFN]   = "main";
+int do_savnam        = 1;
+
 int  silent          = FALSE;
 int  using_ggr_style = 0;
 

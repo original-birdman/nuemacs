@@ -112,6 +112,51 @@ fputs(
 
 /* EXPERIMENTAL KBD MACRO CODE */
 
+static char kbd_text[1024];
+static int kbd_idx;
+static int must_quote;
+
+enum KBDM_direction { GetTo_KBDM, OutOf_KBDM };
+
+static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
+    static enum KBDM_direction last_mode = OutOf_KBDM;  /* This must toggle */
+    static struct buffer *obp;
+    static int saved_nw;
+    static struct window wsave;
+
+    do_savnam = 0;
+    switch(mode) {
+    case GetTo_KBDM:
+        if (last_mode == GetTo_KBDM) goto out_of_phase;
+        last_mode = GetTo_KBDM;
+        obp = curbp;                    /* Save whence we came */
+        wsave = *curwp;                 /* Structure copy - save */
+        saved_nw = kbdmac_bp->b_nwnd;   /* Mark as "not viewed" */
+        kbdmac_bp->b_nwnd = 0;
+        if (!swbuffer(kbdmac_bp)) {
+            mlwrite("%s: cannot reach keyboard macro buffer!", who);
+            kbdmac_bp->b_nwnd = saved_nw;
+            kbdmode = STOP;
+            do_savnam = 1;
+            return FALSE;
+        }
+        return TRUE;
+    case OutOf_KBDM:
+        if (last_mode == OutOf_KBDM) goto out_of_phase;
+        last_mode = OutOf_KBDM;
+        int status = swbuffer(obp);
+        *curwp = wsave;             /* Structure copy - restore */
+        kbdmac_bp->b_nwnd = saved_nw;
+        do_savnam = 1;
+        return status;
+    }
+out_of_phase:                       /* Can only get here on error */
+    mlforce("Keyboard macro collection out of phase - aborted.");
+    do_savnam = 1;
+    kbdmode = STOP;
+    return FALSE;
+}
+
 /* Create a new keyboard-macro buffer */
 
 static int create_kbdmacro_buffer(void) {
@@ -120,54 +165,10 @@ static int create_kbdmacro_buffer(void) {
         return FALSE;
     }
     kbdmac_bp->b_type = BTPROC;     /* Mark the buffer type */
-    struct buffer *obp = curbp;
-    if (!swbuffer(kbdmac_bp)) {
-        mlwrite("create: cannot reach keyboard macro buffer!");
-        return FALSE;
-    }
+    if (!kbdmac_buffer_toggle(GetTo_KBDM, "init")) return FALSE;
     linstr("write-message \"No keyboard macro yet defined\"");
-    return swbuffer(obp);
+    return kbdmac_buffer_toggle(OutOf_KBDM, "init");
 }
-
-static char kbd_text[1024];
-static int kbd_idx;
-static int must_quote;
-
-enum KBDM_direction { GetTo_KBDM, OutOf_KBDM };
-
-extern int reframe(struct window *);
-static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
-    static enum KBDM_direction last_mode = OutOf_KBDM;  /* This must toggle */
-    static struct buffer *obp;
-    static int saved_nw;
-
-    switch(mode) {
-    case GetTo_KBDM:
-        if (last_mode == GetTo_KBDM) goto out_of_phase;
-        last_mode = GetTo_KBDM;
-        obp = curbp;                    /* Save whence we came */
-        saved_nw = kbdmac_bp->b_nwnd;   /* Mark as "not viewed" */
-        kbdmac_bp->b_nwnd = 0;
-        if (!swbuffer(kbdmac_bp)) {
-            mlwrite("%s: cannot reach keyboard macro buffer!", who);
-            kbdmac_bp->b_nwnd = saved_nw;
-            kbdmode = STOP;
-            return FALSE;
-        }
-        return TRUE;
-    case OutOf_KBDM:
-        if (last_mode == OutOf_KBDM) goto out_of_phase;
-        last_mode = OutOf_KBDM;
-        int status = swbuffer(obp);
-        kbdmac_bp->b_nwnd = saved_nw;
-        return status;
-    }
-out_of_phase:                       /* Can only get here on error */
-    mlforce("Keyboard macro collection out of phase - aborted.");
-    kbdmode = STOP;
-    return FALSE;
-}
-
 
 static int start_kbdmacro(void) {
     if (!kbdmac_bp) {
@@ -307,6 +308,7 @@ static int end_kbdmacro(void) {
 /* If there is any pending text we need to flush it first */
     if (kbd_idx) flush_kbd_text();
     lnewline();
+    kbdmode = STOP;
     return kbdmac_buffer_toggle(OutOf_KBDM, "end");
 }
 
@@ -1064,7 +1066,6 @@ int ctlxrp(int f, int n)
         }
         if (kbdmode == RECORD) {
                 mlwrite(MLpre "End macro" MLpost);
-                kbdmode = STOP;
                 end_kbdmacro();
         }
         return TRUE;
@@ -1097,7 +1098,7 @@ int ctlxe(int f, int n)
 int ctrlg(int f, int n)
 {
         TTbeep();
-        kbdmode = STOP;
+        if (kbdmode == RECORD) end_kbdmacro();
         mlwrite(MLpre "Aborted" MLpost);
         return ABORT;
 }
