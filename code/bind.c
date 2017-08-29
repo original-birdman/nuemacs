@@ -148,8 +148,8 @@ static void index_keystr(void) {
     idxsort_fields((unsigned char *)keytab, keystr_index,
              sizeof(struct key_tab), kt_ents, 1, &fdef);
 
-/* Having the index lets you find a matching entry. Vut we also want to
- * be able to find the next item aftre the one we have.
+/* Having the index lets you find a matching entry. But we also want to
+ * be able to find the next item after the one we have.
  * For that you need another index, with the key being the physical
  * (not logical) record number of your current item.
  * We can generate this from the index we've just made.
@@ -195,7 +195,8 @@ struct key_tab *getbyfnc(fn_t func) {
     while (first != last) {
         middle = (first + last)/2;
 /* middle is too low, so try from middle + 1 */
-        if (keytab[keystr_index[middle]].hndlr.k_fp < func) first = middle + 1;
+        if ((void*)keytab[keystr_index[middle]].hndlr.k_fp < (void*)func)
+            first = middle + 1;
 /* middle is at or beyond start, so set last here */
         else last = middle;
     }
@@ -473,7 +474,6 @@ int buildlist(int type, char *mstring) {
 #endif
     struct window *wp;         /* scanning pointer to windows */
     struct key_tab *ktp;       /* pointer into the command table */
-    struct name_bind *nptr;    /* pointer into the name binding table */
     struct buffer *bp;         /* buffer to put binding list into */
     int cpos;                  /* current position to use in outseq */
     char outseq[80];           /* output buffer for keystroke sequence */
@@ -523,10 +523,7 @@ int buildlist(int type, char *mstring) {
  * ...and current string doesn't include the search string */
         if (type == FALSE && strinc(outseq, mstring) == FALSE) goto fail;
 #endif
-/* Search down for any keys bound to this.
- * NOTE: that this search is not indexed, as this would be the only use
- * of it, and it's not a commonly used functions.
- */
+/* Search down for any keys bound to this. */
         ktp = getbyfnc(names[ni].n_func);
         while (ktp) {
 /* Pad out some spaces */
@@ -552,7 +549,7 @@ int buildlist(int type, char *mstring) {
         }
 
 /* ...and on to the next name */
-fail:   ++nptr;
+fail:   ;
     }
 
 /* Now we go through all the key_table looking for proc buf bindings.

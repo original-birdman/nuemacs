@@ -294,7 +294,8 @@ struct name_bind *func_info(fn_t func) {
     while (first != last) {
         middle = (first + last)/2;
 /* middle is too low, so try from middle + 1 */
-        if (names[func_index[middle]].n_func < func) first = middle + 1;
+        if ((void*)names[func_index[middle]].n_func < (void*)func)
+             first = middle + 1;
 /* middle is at or beyond start, so set last here */
         else last = middle;
     }
