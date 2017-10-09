@@ -1695,4 +1695,26 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.124.
 
+========== GGR4.125
+
+bind.c
+    Cast function pointers to void* before order comparison to remove
+    warning on Mac. [getbyfnc()]
+    Remove unused nptr variable. [buildlist()]
+names.c
+    Cast function pointers to void* before order comparison to remove
+    warning on Mac. [func_info()]
+
+display.c
+    Simplify ex section code in extend_grapheme().
+    DO NOT free any target ex field in clone_grapheme() as this is
+    always a vscreen to pscreen copy, and we deal with alloc/free in the
+    vscreen side. Also don't allocate one-too-many items.
+    Correctly initialize all of the vscreen items (not every third one!).
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.125.
+
 ==========
