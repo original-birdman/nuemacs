@@ -111,12 +111,8 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
         return;
     }
 /* Need to create or extend an ex section */
-    int xc;
-    if (gp->ex == NULL) {
-        xc = 0;
-    }
-    else {
-        xc = 1;
+    int xc = 0;
+    if (gp->ex != NULL) {
         while(gp->ex[xc] != END_UCLIST) xc++;
     }
     gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
@@ -127,23 +123,24 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
 
 /* Copy grapheme data between structures.
  * This needs to allocate new space for any ex section and copy the data.
+ * HOWEVER, since this *always* copies from vscreen to pscreen we DO NOT
+ * NEED to free any ex section in the target, as that will have been freed
+ * (by set_grapheme) when the vscreen is set!
  */
 static void
   clone_grapheme(struct grapheme *gtarget, struct grapheme *gsource) {
     gtarget->uc = gsource->uc;
     gtarget->cdm = gsource->cdm;
-/* Free any existing ex data in the target */
-    if (gtarget->ex != NULL) free(gtarget->ex);
-    if (gsource->ex == NULL) {  /* No incoming ex section */
-        gtarget->ex = NULL;
+    if (gsource->ex == NULL) {  /* No incoming ex section... */
+        gtarget->ex = NULL;     /* ...so ensure not outgoing one */
         return;
     }
 
-/* Need to allocate and copy the ex section */
-    int xc = 1;
-    while(gsource->ex[xc] != END_UCLIST) xc++;
-    gtarget->ex = malloc((xc+2)*sizeof(unicode_t));
-    memcpy(gtarget->ex, gsource->ex, (xc+2)*sizeof(unicode_t));
+/* Need to allocate and copy the ex section, which is ex-chars + 1 */
+    int cxc = 1;                /* Must be at least 1 to get here... */
+    while(gsource->ex[cxc] != END_UCLIST) cxc++;
+    gtarget->ex = malloc((cxc+1)*sizeof(unicode_t));
+    memcpy(gtarget->ex, gsource->ex, (cxc+1)*sizeof(unicode_t));
     return;
 }
 
@@ -239,13 +236,13 @@ void vtinit(void)
  * Can't use set_grapheme() until after we have initialized
  * We only need to initialize vscreen, as we do all assigning
  * (including malloc()/free()) there.
- */
-        int j = 0;
-        while (j < term.t_mcol) {   /* Need to clear out *all* now */
-                vp->v_text[j++].uc = ' ';
-                vp->v_text[j++].cdm = 0;
-                vp->v_text[j++].ex = NULL;
-        }
+ * Need to clear it *all* out now! */
+
+                for (int j = 0; j < term.t_mcol; j++) {
+                        vp->v_text[j].uc = ' ';
+                        vp->v_text[j].cdm = 0;
+                        vp->v_text[j].ex = NULL;
+                }
 
 #if     MEMMAP == 0 || SCROLLCODE
                 vp = xmalloc(sizeof(struct video) +
