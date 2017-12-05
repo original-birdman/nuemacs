@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <pwd.h>
 #ifdef SVR4
 #include <string.h>
 #else
@@ -80,8 +81,11 @@ char *dolock(char *fname)
         }
         if ((n = read(fd, locker, MAXNAME)) < 1) {
                 lseek(fd, 0, SEEK_SET);
-/*              strcpy(locker, getlogin()); */
+/* cuserid() is deprecated - its Linux man pages says, "Do not use cuserid()."
                 cuserid(locker);
+ */
+                struct passwd *pwe = getpwuid(geteuid());
+                strcpy(locker, pwe->pw_name);
                 strcat(locker + strlen(locker), "@");
                 gethostname(locker + strlen(locker), 64);
                 int dnc __attribute__ ((unused)) =
