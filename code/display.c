@@ -411,6 +411,7 @@ static void vteeol(void) {
  */
 int upscreen(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         update(TRUE);
         return TRUE;
 }
@@ -873,6 +874,7 @@ void updgar(void)
  */
 int updupd(int force)
 {
+        UNUSED(force);
         struct video *vp1;
         int i;
 #if SCROLLCODE
@@ -1794,6 +1796,7 @@ void getscreensize(int *widthp, int *heightp)
 #ifdef SIGWINCH
 void sizesignal(int signr)
 {
+        UNUSED(signr);
         int w, h;
         int old_errno = errno;
 

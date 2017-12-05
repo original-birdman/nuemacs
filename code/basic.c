@@ -60,6 +60,7 @@ static int getgoal(struct line *dlp) {
  */
 int gotobol(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         curwp->w_doto = 0;
         return TRUE;
 }
@@ -109,6 +110,7 @@ int back_grapheme(int n)
 
 /* We still need a bindable function that returns TRUE/FALSE */
 int backchar(int f, int n) {
+    UNUSED(f);
     return (back_grapheme(n) > 0);
 }
 
@@ -117,6 +119,7 @@ int backchar(int f, int n) {
  */
 int gotoeol(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         curwp->w_doto = llength(curwp->w_dotp);
         return TRUE;
 }
@@ -167,6 +170,7 @@ int forw_grapheme(int n)
 
 /* We still need a bindable/macro function that returns TRUE/FALSE */
 int forwchar(int f, int n) {
+    UNUSED(f);
     return (forw_grapheme(n) > 0);
 }
 
@@ -212,6 +216,7 @@ int gotoline(int f, int n)
  */
 int gotobob(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         curwp->w_dotp = lforw(curbp->b_linep);
         curwp->w_doto = 0;
         curwp->w_flag |= WFHARD;
@@ -225,6 +230,7 @@ int gotobob(int f, int n)
  */
 int gotoeob(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         curwp->w_dotp = curbp->b_linep;
         curwp->w_doto = 0;
         curwp->w_flag |= WFHARD;
@@ -499,6 +505,7 @@ int backpage(int f, int n)
  */
 int setmark(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         curwp->w_markp = curwp->w_dotp;
         curwp->w_marko = curwp->w_doto;
         mlwrite(MLpre "Mark set" MLpost);
@@ -513,6 +520,7 @@ int setmark(int f, int n)
  */
 int swapmark(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *odotp;
         int odoto;
 

@@ -27,6 +27,7 @@
  */
 int fileread(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int s;
         char fname[NFILEN];
 
@@ -56,6 +57,7 @@ int fileread(int f, int n)
  */
 int insfile(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int s;
         char fname[NFILEN];
 
@@ -81,6 +83,7 @@ int insfile(int f, int n)
  */
 int filefind(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         char fname[NFILEN];     /* file user wishes to find */
         int s;                  /* status return */
         if (restflag)           /* don't allow this command if restricted */
@@ -94,6 +97,7 @@ int filefind(int f, int n)
 
 int viewfile(int f, int n)
 {                               /* visit a file in VIEW mode */
+        UNUSED(f); UNUSED(n);
         char fname[NFILEN];     /* file user wishes to find */
         int s;          /* status return */
         struct window *wp;      /* scan for windows that need updating */
@@ -256,6 +260,8 @@ int readin(char *fname, int lockfl) {
         strcpy(bp->b_fname, "");
         goto out;
     }
+#else
+        UNUSED(lockfl);
 #endif
 #if CRYPT
     s = resetkey();
@@ -428,6 +434,7 @@ void unqname(char *name)
  */
 int filewrite(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct window *wp;
         int s;
         char fname[NFILEN];
@@ -459,6 +466,7 @@ int filewrite(int f, int n)
  */
 int filesave(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct window *wp;
         int s;
 
@@ -553,6 +561,7 @@ int writeout(char *fn) {
  */
 int filename(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct window *wp;
         int s;
         char fname[NFILEN];

@@ -59,6 +59,7 @@ int namedcmd(int f, int n)
  */
 int execcmd(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int status;             /* status return */
         char cmdstr[NSTRING];   /* string holding command to execute */
 
@@ -496,6 +497,7 @@ static int ptt_compile(struct buffer *bp) {
  */
 static int ptt_storing = 0;
 int storepttable(int f, int n) {
+    UNUSED(f); UNUSED(n);
     int status = storeproc(0, 0);
     if (status != TRUE) return status;
 
@@ -511,6 +513,7 @@ int storepttable(int f, int n) {
  * Doesn't (yet?) check that it is a translation table.
  */
 int set_pttable(int f, int n) {
+    UNUSED(f); UNUSED(n);
     int status;
     char pttbuf[NBUFN];
     struct buffer *bp;
@@ -609,7 +612,7 @@ int ptt_handler(int c) {
     if (linsert(1, c) != TRUE) return FALSE;
 
     for (struct ptt_ent *ptr = ptt->ptt_headp; ptr; ptr = ptr->nextp) {
-        int wc = c;             /* A working copy */
+        unicode_t wc = c;       /* A working copy */
         if (ptr->caseset != CASESET_OFF) wc = utf8proc_tolower(wc);
         if (ptr->final_uc != wc) continue;
 
@@ -663,7 +666,7 @@ int ptt_handler(int c) {
             unicode_t fc;
             (void)utf8_to_unicode(curwp->w_dotp->l_text, start_at,
                  curwp->w_dotp->l_used, &fc);
-            int need_edit_type;
+            utf8proc_category_t  need_edit_type;
             if (ptr->caseset == CASESET_LOWI_ALL ||
                 ptr->caseset == CASESET_LOWI_ONE) {
                 need_edit_type = UTF8PROC_CATEGORY_LL;
@@ -784,6 +787,7 @@ int storeproc(int f, int n)
  */
 int execproc(int f, int n)
 {
+        UNUSED(f);
         struct buffer *bp;      /* ptr to buffer to execute */
         int status;             /* status return */
         char bufn[NBUFN+1];     /* name of buffer to execute */
@@ -838,6 +842,7 @@ int execproc(int f, int n)
  * int f, n;            default flag and numeric arg
  */
 int execbuf(int f, int n) {
+    UNUSED(f);
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
     char bufn[NSTRING];     /* name of buffer to execute */
@@ -1152,7 +1157,7 @@ failexit:       freewhile(scanner);
                     if (stol(tkn) == TRUE) goto onward;
                 }
 /* Drop down and act just like !BREAK */
-
+                /* Falls through */
             case DBREAK:    /* BREAK directive */
                 if (dirnum == DBREAK && execlevel) goto onward;
 
@@ -1315,6 +1320,7 @@ static int include_level = 0;
 #define MAX_INCLUDE_LEVEL 8
 int execfile(int f, int n)
 {
+        UNUSED(f);
         int status;             /* return status of name query */
         char fname[NSTRING];    /* name of file to execute */
         char *fspec;            /* full file spec */
@@ -1406,6 +1412,7 @@ int dofile(char *fname)
  * int bufnum;          number of buffer to execute
  */
 int cbuf(int f, int n, int bufnum) {
+    UNUSED(f);
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
     static char bufname[] = "/Macro xx";

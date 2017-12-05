@@ -103,7 +103,7 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8)
         *utf8 = c;
 /* We have a unicode point - anything over 0x7f is multi-byte */
         if (c >= 0x80) {
-                int prefix = 0x40;
+                unsigned int prefix = 0x40;
                 char *p = utf8;
                 do {
                         *p++ = 0x80 + (c & 0x3f);
@@ -203,11 +203,11 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
  * grapheme handling in display.c
  */
 
-struct range_t {
+static struct range_t {
     unicode_t start;
     unicode_t end;
     int       type;     /* Possibly not needed... */
-} static const zero_width[] = { /* THIS LIST MUST BE IN SORTED ORDER!! */
+} const zero_width[] = { /* THIS LIST MUST BE IN SORTED ORDER!! */
     {0x02B0, 0x02FF, SPMOD_L},  /* Spacing Modifier Letters */
     {0x0300, 0x036F, COM_DIA},  /* Combining Diacritical Marks */
     {0x1AB0, 0x1AFF, COM_DIA},  /* Combining Diacritical Marks Extended */
@@ -247,6 +247,7 @@ static struct repmap_t *remap = NULL;
 /* Code */
 
 int char_replace(int f, int n) {
+    UNUSED(f); UNUSED(n);
 
     int status;
     char buf[NLINE];
@@ -282,9 +283,9 @@ int char_replace(int f, int n) {
         else {  /* Assume a char to map (possibly a range) */
             char *tp = tok;
             if (*tp == 'U' && *(tp+1) == '+') tp += 2;
-            int lowval = strtol(tp, &tp, 16);
-            if (lowval <= 0) continue;      /* Ignore this... */
-            int topval;
+            unsigned int lowval = strtoul(tp, &tp, 16);
+            if (lowval && 0x80000000) continue; /* Ignore any such... */
+            unsigned int topval;
             if (*tp == '-') {               /* We have a range */
                 tp++;                       /* Skip over the - */
                 if (*tp == 'U' && *(tp+1) == '+') tp += 2;

@@ -19,6 +19,7 @@
  * int n;               numeric argument
  */
 int set_encryption_key(int f, int n) {
+    UNUSED(f); UNUSED(n);
     int status;             /* return status */
     int odisinp;            /* original value of disinp */
     char key[NPAT];         /* new encryption string */

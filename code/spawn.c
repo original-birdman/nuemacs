@@ -60,6 +60,7 @@ void check_for_resize(void) {
  */
 int spawncli(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
 #if     V7 | USG | BSD
         char *cp;
 #endif
@@ -108,6 +109,7 @@ int spawncli(int f, int n)
 
 int bktoshell(int f, int n)
 {                               /* suspend MicroEMACS and wait to wake up */
+        UNUSED(f); UNUSED(n);
         vttidy();
 /******************************
         int pid;
@@ -139,6 +141,7 @@ void rtfrmshell(void)
  */
 int spawn(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int s;
         char line[NLINE];
 
@@ -201,6 +204,7 @@ int spawn(int f, int n)
 
 int execprg(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int s;
         char line[NLINE];
 
@@ -259,6 +263,7 @@ int execprg(int f, int n)
  */
 int pipecmd(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int s;                  /* return status from CLI */
         struct window *wp;      /* pointer to new window */
         struct buffer *bp;      /* pointer to buffer to zot */
@@ -378,6 +383,7 @@ int pipecmd(int f, int n)
  */
 int filter_buffer(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int s;                  /* return status from CLI */
         struct buffer *bp;      /* pointer to buffer to zot */
         char line[NLINE];       /* command line send to shell */

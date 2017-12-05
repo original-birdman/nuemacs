@@ -36,7 +36,7 @@ void varinit(void)
  */
 char *gtfun(char *fname)
 {
-    int fnum;               /* index to function to eval */
+    unsigned int fnum;      /* index to function to eval */
     int status;             /* return status */
     char *tsp;              /* temporary string pointer */
     char arg1[NSTRING];     /* value of first argument */
@@ -167,7 +167,7 @@ extern char *getkill(void);
  */
 char *gtenv(char *vname)
 {
-    int vnum;       /* ordinal number of var refrenced */
+    unsigned int vnum;  /* ordinal number of var refrenced */
 
 /* Scan the list, looking for the referenced name */
     for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
@@ -385,8 +385,8 @@ int setvar(int f, int n)
  */
 void findvar(char *var, struct variable_description *vd, int size)
 {
-        int vnum;       /* subscript in variable arrays */
-        int vtype;      /* type to return */
+        unsigned int vnum;  /* subscript in variable arrays */
+        int vtype;          /* type to return */
 
         vnum = -1;
 fvar:
@@ -576,6 +576,7 @@ int svar(struct variable_description *var, char *value)
             break;
         case EVLINE:
             putctext(value);
+            break;
         case EVGFLAGS:
             gflags = atoi(value);
             break;

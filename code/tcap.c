@@ -275,6 +275,7 @@ static void tcaprev(int state)
 /* Change screen resolution. */
 static int tcapcres(char *res)
 {
+        UNUSED(res);
         return TRUE;
 }
 
@@ -336,10 +337,12 @@ static void tcapscrollregion(int top, int bot)
 /* No colors here, ignore this. */
 static void tcapfcol(int color)
 {
+    UNUSED(color);
 }
 /* No colors here, ignore this. */
 static void tcapbcol(int color)
 {
+    UNUSED(color);
 }
 #endif
 

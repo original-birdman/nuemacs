@@ -22,6 +22,7 @@
  */
 int killregion(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int s;
         struct region region;
 
@@ -45,6 +46,7 @@ int killregion(int f, int n)
  */
 int copyregion(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *linep;
         int loffs;
         int s;
@@ -83,6 +85,7 @@ int copyregion(int f, int n)
  */
 int lowerregion(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *linep;
         int loffs;
         int c;
@@ -120,6 +123,7 @@ int lowerregion(int f, int n)
  */
 int upperregion(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *linep;
         int loffs;
         int c;
@@ -220,6 +224,7 @@ int getregion(struct region *rp)
 
 int narrow(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int status;             /* return status */
         struct buffer *bp;      /* buffer being narrowed */
         struct window *wp;      /* windows to fix up pointers in as well */
@@ -331,6 +336,7 @@ int narrow(int f, int n)
 
 int widen(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *lp;       /* temp line pointer */
         struct buffer *bp;     /* buffer being narrowed */
         struct window *wp;     /* windows to fix up pointers in as well */

@@ -33,6 +33,7 @@ static int zw_break = 0;
  */
 int wrapword(int f, int n)
 {
+    UNUSED(f); UNUSED(n);
     int cnt;        /* size of word wrapped to next line */
     int c;          /* charector temporary */
 
@@ -170,6 +171,7 @@ void ensure_case(int want_case) {
  */
 int upperword(int f, int n)
 {
+    UNUSED(f);
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
     if (n < 0)
@@ -197,6 +199,7 @@ int upperword(int f, int n)
  */
 int lowerword(int f, int n)
 {
+    UNUSED(f);
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
     if (n < 0)
@@ -225,6 +228,7 @@ int lowerword(int f, int n)
  */
 int capword(int f, int n)
 {
+    UNUSED(f);
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
     if (n < 0)
@@ -482,6 +486,7 @@ int fillwhole(int f, int n)
  */
 int killpara(int f, int n)
 {
+        UNUSED(f);
         int status;     /* returned status of functions */
 
         while (n--) {           /* for each paragraph to delete */
@@ -517,6 +522,7 @@ int killpara(int f, int n)
  */
 int wordcount(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *lp;        /* current line to scan */
         int offset;             /* current char to scan */
         int orig_offset;        /* offset in line at start */
@@ -595,6 +601,7 @@ static int n_eos = 0;
 static char eos_str[NLINE] = "";    /* String given by user */
 int eos_chars(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int status;
         char prompt[NLINE+60];
         char buf[NLINE];
@@ -649,8 +656,8 @@ struct filler_control {
 };
 int filler(int indent, int width, struct filler_control *f_ctl) {
 
-    unicode_t *wbuf       ; /* buffer for current word     */
-    size_t wbuf_ents;       /* Number of elements needed.. */
+    unicode_t *wbuf;        /* buffer for current word     */
+    int wbuf_ents;          /* Number of elements needed.. */
     int *space_ind;         /* Where the spaces are */
     int nspaces;            /* How many spaces there are */
 
@@ -669,7 +676,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
             return rdonly();        /* we are in read only mode     */
 
-    if (fillcol == 0) {             /* no fill column set */
+    if (width == 0) {             /* no fill column set */
         mlwrite("No fill column set");
         return FALSE;
     }
@@ -779,7 +786,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
         }
 
 /* We are at a word-break (whitespace). Do we have a word waiting?
- * Calculate tentative new length with word added. If it is > fillcol
+ * Calculate tentative new length with word added. If it is > width
  * then push a newline before flushing the waiting word.
  * We also flush if there are no bytes left or if we are forcing a
  * newline between paragraphs.
@@ -787,7 +794,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
         if (!wordlen) continue;     /* Multiple spaces */
 
         newlength = clength + pending_space + wordlen;
-        if (newlength <= fillcol) {
+        if (newlength <= width) {
 /* We'll just add the word to the current line */
             if (pending_space) {
                 if (space_ind) {
@@ -807,7 +814,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * Remember where we are on the line.
  */
                 int end_doto = curwp->w_doto;
-                gap = fillcol - clength;    /* How much we need to add (in columns) */
+                gap = width - clength;  /* How much we need to add (in columns) */
                 while (gap > 0) {
                     if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
                         curwp->w_doto = space_ind[ns];
@@ -878,6 +885,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  */
 
 int fillpara(int f, int n) {
+    UNUSED(f);
     struct filler_control fp_ctl;
     fp_ctl.justify = 0;
     if (n < 0) {
@@ -903,6 +911,7 @@ int fillpara(int f, int n) {
  */
 int justpara(int f, int n)
 {
+    UNUSED(f);
     struct filler_control fp_ctl;
     fp_ctl.justify = 0;
     if (n < 0) {
@@ -945,6 +954,7 @@ int justpara(int f, int n)
 static const char *lbl_fmt;
 static int region_listmaker(int f, int n)
 {
+    UNUSED(f);
     char label[80];
     struct region f_region; /* Formatting region */
     struct filler_control fp_ctl;

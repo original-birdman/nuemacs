@@ -280,7 +280,7 @@ int ffputline(char *buf, int nbuf) {
  */
 
 /* Helper routine to add text into fline, re-allocating it if required */
-static int add_to_fline(char *buf, int len) {
+static int add_to_fline(int len) {
 
     int newlen = -1;
     if (fline == NULL) {
@@ -319,7 +319,7 @@ int ffgetline(void) {
     while (!nlp) {
         nlp = memchr(cache.buf+cache.rst, '\n', cache.len);
         if (!nlp) {
-            if (!add_to_fline(cache.buf+cache.rst, cache.len))
+            if (!add_to_fline(cache.len))
                 return FIOMEM;      /* Only reason for failure */
             cache.len = fread(cache.buf, sizeof(*cache.buf),
                 sizeof(cache.buf), ffp);
@@ -352,7 +352,7 @@ int ffgetline(void) {
         }
     }
     int cc = nlp - (cache.buf+cache.rst);
-    if (!add_to_fline(cache.buf+cache.rst, cc)) return FIOMEM;
+    if (!add_to_fline(cc)) return FIOMEM;
     cache.rst++;        /* Step over newline */
     cache.len--;        /* Step over newline */
 

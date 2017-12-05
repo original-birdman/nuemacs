@@ -950,7 +950,6 @@ static int readpattern(char *prompt, char *apat, int srch)
 void savematch(void)
 {
         char *ptr;                      /* pointer to last match string */
-        int j;
         struct line *curline;           /* line of last match */
         int curoff;                     /* offset "      "    */
 
@@ -966,7 +965,7 @@ void savematch(void)
                 curoff = matchoff;
                 curline = matchline;
 
-                for (j = 0; j < matchlen; j++)
+                for (unsigned int j = 0; j < matchlen; j++)
                         *ptr++ = nextch(&curline, &curoff, FORWARD);
 
                 *ptr = '\0';
@@ -1182,6 +1181,7 @@ static int replaces(int kind, int f, int n)
                                 curwp->w_dotp = origline;
                                 curwp->w_doto = origoff;
                                 curwp->w_flag |= WFMOVE;
+                                /* Falls through */
 
                         case BELL:      /* abort! and stay */
                                 mlwrite("Aborted!");
@@ -1189,7 +1189,7 @@ static int replaces(int kind, int f, int n)
 
                         default:        /* bitch and beep */
                                 TTbeep();
-
+                                /* Falls through */
                         case '?':       /* help me */
                                 mlwrite
                                     ("(Y)es, (N)o, (!)Do rest, (U)ndo last, (^G)Abort, (.)Abort back, (?)Help: ");
@@ -1449,14 +1449,12 @@ static int mcstr(void)
                         magical = TRUE;
                         does_closure = FALSE;
                         break;
-
-                        /* Note: no break between MC_ESC case and the default.
-                         */
                 case MC_ESC:
                         if (*(patptr + 1) != '\0') {
                                 pchr = *++patptr;
                                 magical = TRUE;
                         }
+                        /* Falls through */
                 default:
                       litcase:mcptr->mc_type =
                             LITCHAR;
@@ -1732,11 +1730,9 @@ static int cclmake(char **ppatptr, struct magic *mcptr)
                                         setbit(ochr, bmap);
                         }
                         break;
-
-                        /* Note: no break between case MC_ESC and the default.
-                         */
                 case MC_ESC:
                         pchr = *++patptr;
+                        /* Falls through */
                 default:
                         setbit(pchr, bmap);
                         break;

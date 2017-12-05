@@ -41,6 +41,7 @@ int setfillcol(int f, int n)
  */
 int showcpos(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *lp;        /* current line */
         long numchars;          /* # of chars in file */
         int numlines;           /* # of lines in file */
@@ -223,6 +224,7 @@ int setccol(int pos)
  */
 int twiddle(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *dotp;
         int doto;
         char rch_buf[64], lch_buf[64];
@@ -288,6 +290,7 @@ int twiddle(int f, int n)
  */
 int quote(int f, int n)
 {
+        UNUSED(f);
         int s;
         int c;
 
@@ -311,6 +314,7 @@ int quote(int f, int n)
 /* GGR version of tab */
 int typetab(int f, int n)
 {
+        UNUSED(f);
         int nextstop;
 
         if (n < 0)
@@ -346,6 +350,7 @@ int typetab(int f, int n)
  */
 int insert_tab(int f, int n)
 {
+        UNUSED(f);
         if (n < 0)
                 return FALSE;
         if (n == 0 || n > 1) {
@@ -526,6 +531,7 @@ int trim(int f, int n)
  */
 int openline(int f, int n)
 {
+        UNUSED(f);
         int i;
         int s;
 
@@ -550,6 +556,7 @@ int openline(int f, int n)
  */
 int insert_newline(int f, int n)
 {
+        UNUSED(f);
         int s;
 
         if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
@@ -804,6 +811,7 @@ int inspound(void)
  */
 int deblank(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *lp1;
         struct line *lp2;
         long nld;
@@ -834,6 +842,7 @@ int deblank(int f, int n)
  */
 int indent(int f, int n)
 {
+        UNUSED(f);
         int nicol;
         int c;
         int i;
@@ -1056,6 +1065,7 @@ static int adjustmode(int kind, int global)
  */
 int setemode(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return adjustmode(TRUE, FALSE);
 }
 
@@ -1066,6 +1076,7 @@ int setemode(int f, int n)
  */
 int delmode(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return adjustmode(FALSE, FALSE);
 }
 
@@ -1076,6 +1087,7 @@ int delmode(int f, int n)
  */
 int setgmode(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return adjustmode(TRUE, TRUE);
 }
 
@@ -1086,6 +1098,7 @@ int setgmode(int f, int n)
  */
 int delgmode(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return adjustmode(FALSE, TRUE);
 }
 
@@ -1097,6 +1110,7 @@ int delgmode(int f, int n)
  */
 int clrmes(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         mlforce("");
         return TRUE;
 }
@@ -1109,6 +1123,7 @@ int clrmes(int f, int n)
  */
 int writemsg(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         char *sp;               /* pointer into buf to expand %s */
         char *np;               /* ptr into nbuf */
         int status;
@@ -1142,6 +1157,7 @@ int writemsg(int f, int n)
  */
 int getfence(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct line *oldlp;     /* original line pointer */
         int oldoff;             /* and offset */
         int sdir;               /* direction of search (1/-1) */
@@ -1421,6 +1437,7 @@ int leaveone(int f, int n)  /* delete all but one white around cursor */
 }
 
 int whitedelete(int f, int n) {
+    UNUSED(f); UNUSED(n);
     int c;
     int status;
 
@@ -1442,6 +1459,7 @@ int whitedelete(int f, int n) {
 }
 
 int quotedcount(int f, int n) {
+    UNUSED(f); UNUSED(n);
     int savedpos;
     int count;
     int doubles;
@@ -1478,6 +1496,7 @@ int quotedcount(int f, int n) {
  * Otherwise, switch it off,
  */
 int ggr_style(int f, int n) {
+    UNUSED(f);
     using_ggr_style = (n > 1);
     return TRUE;
 }

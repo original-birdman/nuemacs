@@ -469,6 +469,7 @@ void sigwinch_handler(int signr) {
 #endif
 
 int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
+    UNUSED(eolchar);        /* Historic... */
     struct buffer *bp;
     struct buffer *cb;
     char mbname[NBUFN];
@@ -558,19 +559,17 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     if (mpresf) mlerase();
     mberase();
 
-/* Get the PHON state from the current buffer, so we can carry it to
- * the next minibuffer.
- * We *don't* caryy back any change on return!
- */
-    int using_phon = tbp->b_mode & MDPHON;
-
     swbuffer(bp);
 
     curwp->w_toprow = term.t_nrow;
     curwp->w_ntrows = 1;
-/* Set the starting mode */
-    if (using_phon) curbp->b_mode = MDEXACT | MDPHON;
-    else            curbp->b_mode = MDEXACT;
+
+/* Get the PHON state from the current buffer, so we can carry it to
+ * the next minibuffer.
+ * We *don't* carry back any change on return!
+ */
+    if (tbp->b_mode & MDPHON) curbp->b_mode = MDEXACT | MDPHON;
+    else                      curbp->b_mode = MDEXACT;
 
 #ifdef SIGWINCH
 
@@ -858,6 +857,7 @@ abort:  /* Make sure we're still in our minibuffer */
 /* Yank back last minibuffer */
 int yankmb(int f, int n)
 {
+        UNUSED(f);
         int    c;
         int    i;
         char   *sp;    /* pointer into string to insert */
@@ -889,7 +889,8 @@ int yankmb(int f, int n)
 static char *tmpnam(dum)
 char *dum;
 {
-   char *tstring;
+        UNUSED(dum);
+        char *tstring;
 
         tstring = malloc(NBUFN);
         strcpy(tstring, "CC$000");

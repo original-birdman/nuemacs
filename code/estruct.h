@@ -27,6 +27,11 @@
 #define MLpre  "["
 #define MLpost "]"
 
+/* A macro so we can note which parameters are unused (happens a lot
+ * for f and n in handler calls) while leaving the general compiler
+ * warning on */
+#define UNUSED(x) {(void)(x);}
+
 /* Define an invalid unicode character to mark the end of lists */
 #define END_UCLIST 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
 

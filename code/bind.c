@@ -17,10 +17,11 @@
 #include "line.h"
 #include "util.h"
 
-int help(int f, int n)
-{                               /* give me some help!!!!
+int help(int f, int n)          /* give me some help!!!!
                                    bring up a fake buffer and read the help file
                                    into it with view mode                 */
+{
+        UNUSED(f); UNUSED(n);
         struct window *wp;      /* scaning pointer to windows */
         struct buffer *bp;      /* buffer pointer to help */
         char *fname = NULL;     /* ptr to file returned by flook() */
@@ -62,6 +63,7 @@ int help(int f, int n)
 }
 
 int deskey(int f, int n) {      /* describe the command for a certain key */
+    UNUSED(f); UNUSED(n);
     int c;          /* key to describe */
     char *ptr;      /* string pointer to scan output strings */
     char outseq[NSTRING];   /* output buffer for command sequence */
@@ -260,6 +262,7 @@ struct key_tab *getbind(int c) {
  */
 int bindtokey(int f, int n)
 {
+    UNUSED(f); UNUSED(n);
     unsigned int c;         /* command key to bind */
     fn_t kfunc;             /* ptr to the requested function to bind to */
     struct key_tab *ktp;    /* pointer into the command table */
@@ -372,6 +375,7 @@ int bindtokey(int f, int n)
  */
 int unbindkey(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         int c;                  /* command key to unbind */
         char outseq[80];        /* output buffer for keystroke sequence */
 
@@ -445,7 +449,7 @@ int unbindchar(int c) {
  * into it with view mode
  */
 int desbind(int f, int n) {
-
+        UNUSED(f); UNUSED(n);
 #if     APROP
 
         buildlist(TRUE, "");
@@ -454,6 +458,7 @@ int desbind(int f, int n) {
 
 int apro(int f, int n)
 {                               /* Apropos (List functions that match a substring) */
+        UNUSED(f); UNUSED(n);
         char mstring[NSTRING];  /* string to match cmd names to */
         int status;             /* status return */
 
@@ -970,6 +975,7 @@ char *transbind(char *skey) {
  */
 int buffertokey(int f, int n)
 {
+    UNUSED(f); UNUSED(n);
     unsigned int c;         /* command key to bind */
     struct key_tab *ktp;    /* pointer into the command table */
     char bname[NBUFN+1];    /* buffer name */

@@ -134,6 +134,7 @@ int fisearch(int f, int n)
 
 int isearch(int f, int n)
 {
+        UNUSED(f);
         int status;             /* Search status */
         int col;                /* prompt column */
         int cpos;       /* character number in search string  */
@@ -327,7 +328,6 @@ int checknext(char chr, char *patrn, int dir)
 int match_pat(char *patrn)
 /* See if the pattern string matches string at "."   */
 {
-        int i;                  /* Generic loop index/offset          */
         int buffchar;           /* character at current position      */
         struct line *curline;   /* current line during scan           */
         int curoff;             /* position within current line       */
@@ -340,7 +340,7 @@ int match_pat(char *patrn)
         /* top of per character compare loop: */
 
 /* Loop for all characters in patrn   */
-        for (i = 0; i < strlen(patrn); i++) {
+        for (unsigned int i = 0; i < strlen(patrn); i++) {
                 if (curoff == llength(curline)) {   /* If at end of line */
                         curline = lforw(curline);   /* Skip to the next line */
                         curoff = 0;     /* Start at the beginning of the line */

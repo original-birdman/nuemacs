@@ -25,6 +25,7 @@
  */
 int usebuffer(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct buffer *bp;
         int s;
         char bufn[NBUFN];
@@ -146,6 +147,7 @@ int swbuffer(struct buffer *bp) {
  */
 int killbuffer(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct buffer *bp;
         int s;
         char bufn[NBUFN];
@@ -197,6 +199,7 @@ int zotbuf(struct buffer *bp)
  */
 int namebuffer(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         struct buffer *bp;      /* pointer to scan through all buffers */
         char bufn[NBUFN];       /* buffer to hold buffer name */
 
@@ -234,6 +237,7 @@ int namebuffer(int f, int n)
  */
 int listbuffers(int f, int n)
 {
+    UNUSED(n);
     struct window *wp;
     struct buffer *bp;
     int s;
@@ -567,6 +571,7 @@ int bclear(struct buffer *bp) {
  * int f, n;            unused command arguments
  */
 int unmark(int f, int n) {
+    UNUSED(f); UNUSED(n);
     curbp->b_flag &= ~BFCHG;
     curwp->w_flag |= WFMODE;
     return TRUE;

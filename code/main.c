@@ -202,7 +202,7 @@ void addchar_kbdmacro(char addch) {
     case 12:  xc = 'f'; break;
     case 13:  xc = 'r'; break;
     case '~': xc = '~'; break;      /* It *does* handle this */
-    case '"': xc = '"';             /* AND DROP THROUGH!! */
+    case '"': xc = '"';             /* Falls through */
     case ' ': must_quote = 1; break;
     }
     if (xc != 0) {
@@ -313,6 +313,7 @@ static int end_kbdmacro(void) {
 }
 
 int macro_helper(int f, int n) {
+    UNUSED(f);
     char tag[2];                        /* Just char + NULL needed */
     int status = mlreplyall("helper:", tag, 1);
     if (status != TRUE) return status;  /* Only act on +ve response */
@@ -352,7 +353,7 @@ int main(int argc, char **argv)
         int verflag = 0;        /* GGR Flags -v/-V presence on command line */
         char *rcfile = NULL;    /* GGR non-default rc file */
         char *rcextra[10];      /* GGR additional rc files */
-        int rcnum = 0;          /* GGR number of extra files to process */
+        unsigned int rcnum = 0; /* GGR number of extra files to process */
 
 #if BSD
         sleep(1); /* Time for window manager. */
@@ -528,7 +529,7 @@ int main(int argc, char **argv)
         silent = TRUE;
         if (!rcfile || !startup(rcfile)) startup("");
         if (rcnum) {
-                for (int n = 0; n < rcnum; n++)
+                for (unsigned int n = 0; n < rcnum; n++)
                         startup(rcextra[n]);
         }
         silent = FALSE;
@@ -783,6 +784,7 @@ void edinit(char *bname) {
  * Requires not_in_mb to have been filled out.
  */
 int not_in_mb_error(int f, int n) {
+    UNUSED(f); UNUSED(n);
     char vis_key_paras[23];
     if (not_in_mb.keystroke != -1) {
         char vis_key[20];
@@ -987,6 +989,7 @@ int quickexit(int f, int n)
 
 static void emergencyexit(int signr)
 {
+        UNUSED(signr);
         quickexit(FALSE, 0);
         quit(TRUE, 0);
 }
@@ -1028,6 +1031,7 @@ int quit(int f, int n)
  * return.
  */
 int ctlxlp(int f, int n) {
+    UNUSED(f); UNUSED(n);
     if (kbdmode != STOP) {
         mlwrite("%%Macro already active");
         return FALSE;
@@ -1060,6 +1064,7 @@ int ctlxlp(int f, int n) {
  */
 int ctlxrp(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         if (kbdmode == STOP) {
                 mlwrite("%%Macro not active");
                 return FALSE;
@@ -1078,6 +1083,7 @@ int ctlxrp(int f, int n)
  */
 int ctlxe(int f, int n)
 {
+        UNUSED(f);
         if (kbdmode != STOP) {
                 mlwrite("%%Macro already active");
                 return FALSE;
@@ -1097,6 +1103,7 @@ int ctlxe(int f, int n)
  */
 int ctrlg(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         TTbeep();
         if (kbdmode == RECORD) end_kbdmacro();
         mlwrite(MLpre "Aborted" MLpost);
@@ -1124,24 +1131,28 @@ int resterr(void)
 /* user function that does NOTHING */
 int nullproc(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return TRUE;
 }
 
 /* dummy function for binding to meta prefix */
 int metafn(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return TRUE;
 }
 
 /* dummy function for binding to control-x prefix */
 int cex(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return TRUE;
 }
 
 /* dummy function for binding to universal-argument */
 int unarg(int f, int n)
 {
+        UNUSED(f); UNUSED(n);
         return TRUE;
 }
 
@@ -1266,6 +1277,7 @@ int cexit(int status)
  */
 int reexecute(int f, int n)
 {
+        UNUSED(f);
         int reloop;
 
         inreex = TRUE;

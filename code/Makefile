@@ -115,7 +115,7 @@ HDR=ebind.h edef.h efunc.h epath.h estruct.h evar.h util.h version.h
 # Set the default options
 #
 CC = gcc
-WARNINGS = -Wall -Wstrict-prototypes
+WARNINGS = -Wall -Wstrict-prototypes -Wextra
 CFLAGS = $(DBG_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE $(UTF8INCL)
 
 LIBS = -lcurses     # SYSV

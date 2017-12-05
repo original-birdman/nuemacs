@@ -34,6 +34,7 @@ int reposition(int f, int n)
  */
 int redraw(int f, int n)
 {
+        UNUSED(n);
         if (f == FALSE)
                 sgarbf = TRUE;
         else {
@@ -143,6 +144,7 @@ int mvdnwind(int f, int n)
  */
 int mvupwind(int f, int n)
 {
+        UNUSED(f);
         struct line *lp;
         int i;
 
@@ -186,6 +188,7 @@ int mvupwind(int f, int n)
  * become undisplayed.
  */
 int onlywind(int f, int n) {
+    UNUSED(f); UNUSED(n);
     struct window *wp;
     struct line *lp;
     int i;
@@ -234,6 +237,7 @@ int onlywind(int f, int n) {
  * int f, n;    arguments are ignored for this command
  */
 int delwind(int f, int n) {
+    UNUSED(f); UNUSED(n);
     struct window *wp;      /* window to recieve deleted space */
     struct window *lwp;     /* ptr window before curwp */
     int target;             /* target line to search for */
@@ -541,6 +545,7 @@ int scrnextdw(int f, int n)
 int savewnd(int f, int n)
 /* save ptr to current window */
 {
+        UNUSED(f); UNUSED(n);
         swindow = curwp;
         return TRUE;
 }
@@ -548,6 +553,7 @@ int savewnd(int f, int n)
 int restwnd(int f, int n)
 /* restore the saved screen */
 {
+        UNUSED(f); UNUSED(n);
         struct window *wp;
 
         /* find the window */

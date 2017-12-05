@@ -128,6 +128,7 @@ void lchange(int flag)
  */
 int insspace(int f, int n)
 {
+        UNUSED(f);
         linsert_byte(n, ' ');
         back_grapheme(n);
         return TRUE;
@@ -719,6 +720,7 @@ int kinsert(int c)
  * check for errors. Bound to "C-Y".
  */
 int yank(int f, int n) {
+    UNUSED(f);
     int c;
     int i;
     char *sp;                       /* pointer into string to insert */
