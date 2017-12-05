@@ -577,9 +577,9 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
  * "may be used uninitialized" warning in gcc4.
  * It won't be actually used when NULL.
  */
-    sighandler_t display_handler = NULL;
+    volatile sighandler_t display_handler = NULL;
 
-    int winch_seen = 0;
+    volatile int winch_seen = 0;
     if (setjmp(winch_env)) {
         winch_seen = 1;
         status = ABORT;
