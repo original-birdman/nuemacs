@@ -8,14 +8,15 @@ original 4.015 branch is just that. Then I uploaded it to github, but
 didn't want to go back to a fork and have to start again.
 
 The main extension as to add code which had been put into 3.9e many
-years ago to make the bottom line into a minibuffer - you can use many
-uemacs commands to move around, delete, yank etc.  It handles
-filename expansion (ctlI/tab), albeit in a different manner to 4.015.
-That code also handles environment variable expansion.
+years ago to make the bottom line (modeline) into a minibuffer - you can
+use many uemacs commands to move around, delete, yank etc. You can set
+modes (including Phon mode) in it.
+It handles filename expansion (ctlI/tab), albeit in a different manner
+to 4.015.  That code also handles environment variable expansion.
 
 It also now has improved utf8 character class/property support, which
-as been done by making use of the Julia Lang utf8proc library.  As a
-result this uemacs is now DEPENDENT ON that library.
+has been done by making use of the Julia Lang utf8proc library.  As a
+result this uemacs is now DEPENDENT ON that library!
 See the PREREQUISITE file.
 
 Other changes so far made are:
@@ -39,18 +40,20 @@ Other changes so far made are:
   o Added horizontal scrolling (from 3.10e).
   o Changed file encryption so it now encrypts all bytes, not just
     ASCII ones.
-  o Input and ouput now buffered into an 8kB block, significantly
+  o Input and output now buffered into an 8kB block, significantly
     speeding up file processing,
-  o keyboard macros are collected as commands in a buffer rather than
-    just as keystrokes.
+  o keyboard macros are also collected as commands in a buffer rather
+    than just as keystrokes.
   o run any file-hooks (and file-hooks-<<sfx>>) user macros when a file
     is read in
+  o added a "Phon" mode, to allow input of non-ASCII characters with an
+    ASCII keyboard using a lookup table mapping.
+  . Czech and Russian tables are provided.
 
 Other changes to be made are:
   o better handle utf8 strings (ongoing...),
-  o make some buffer dynamically allocatable to cater for very long
+  o make some buffers dynamically allocatable to cater for very long
     pieces of text and enlarge others,
-    modeline.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in

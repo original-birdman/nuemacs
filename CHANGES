@@ -1717,4 +1717,44 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.125.
 
+========== GGR4.126
+
+pklock.c
+   Replace (deprecated) cuserid() with getpwuid(geteuid())
+
+eval.c
+   gcc7 has an option to check for case statements that fall through
+   implicitly. Enabling it found a bug here.
+   Consequently decided to compile with -Wall -Wextra.
+   As a result:
+   * added /* Falls through */ comments in appropriate locations:
+    main.c      search.c
+   * removed some unused function parameters:
+    fileio.c
+   * added an UNUSED() macro for unused function parameters in:
+    estruct.h
+    basic.c     bind.c      buffer.c    crypt.c     display.c   exec.c
+    file.c      input.c     isearch.c   line.c      main.c      random.c
+    region.c    spawn.c     tcap.c      utf8.c      window.c
+   * changed some int to be unsigned int:
+    eval.c      exec.c      isearch.c   main.c      search.c    utf8.c
+   * changed some code around a setjmp/longjmp pairing:
+    input.c
+   * moved "static" to be at the start of a declaration:
+    utf8.c
+   * used the function parameter width in filler() rather then the
+     global fillcol:
+    word.c
+
+input.c
+    Make two variables volatile to avoid warning about longjmp
+    clobbering them.
+
+../CHANGES
+../README
+../TODO
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.126.
+
 ==========
