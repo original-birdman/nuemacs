@@ -144,7 +144,7 @@ int insspace(int f, int n)
  * well, and FALSE on errors.
  */
 
-int linsert_byte(int n, int c)
+int linsert_byte(int n, unsigned char c)
 {
         char *cp1;
         char *cp2;
@@ -245,22 +245,23 @@ int linstr(char *instr) {
     return status;
 }
 
-int linsert(int n, int c)
-{
-        char utf8[6];
-        int bytes = unicode_to_utf8(c, utf8), i;
+/*
+ * Insert n copies of unicode char c
+ */
+int linsert_uc(int n, unicode_t c) {
+    char utf8[6];
+    int bytes = unicode_to_utf8(c, utf8), i;
 
-        if (bytes == 1)
-                return linsert_byte(n, ch_as_uc(utf8[0]));
-        for (i = 0; i < n; i++) {
-                int j;
-                for (j = 0; j < bytes; j++) {
-                        unsigned char c = utf8[j];
-                        if (!linsert_byte(1, c))
-                                return FALSE;
-                }
+    if (bytes == 1)
+        return linsert_byte(n, ch_as_uc(utf8[0]));
+    for (i = 0; i < n; i++) {
+        int j;
+        for (j = 0; j < bytes; j++) {
+            unsigned char cb = utf8[j];
+            if (!linsert_byte(1, cb)) return FALSE;
         }
-        return TRUE;
+    }
+    return TRUE;
 }
 
 /*
@@ -268,13 +269,13 @@ int linsert(int n, int c)
  *
  * int c;       character to overwrite on current position
  */
-int lowrite(int c)
+int lowrite(unicode_t c)
 {
         if (curwp->w_doto < curwp->w_dotp->l_used &&
             (lgetc(curwp->w_dotp, curwp->w_doto) != '\t' ||
              ((curwp->w_doto) & tabmask) == tabmask))
                 ldelchar(1, FALSE);
-        return linsert(1, c);
+        return linsert_uc(1, c);
 }
 
 /*
@@ -416,17 +417,17 @@ int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
 }
 
 /* Put the grapheme structure into the buffer at the current point.
- * Just a simple matter of running linsert() on each unicode char.
+ * Just a simple matter of running linsert_uc() on each unicode char.
  */
 int lputgrapheme(struct grapheme *gp) {
 
-    int status = linsert(1, gp->uc);
+    int status = linsert_uc(1, gp->uc);
     if (gp->cdm == 0) return status;
-    status = linsert(1, gp->cdm);
+    status = linsert_uc(1, gp->cdm);
     if (gp->ex == NULL) return status;
     int xc = 0;
     while (gp->ex[xc] != END_UCLIST) {
-        status = linsert(1, gp->ex[xc]);
+        status = linsert_uc(1, gp->ex[xc]);
         if (status) return status;
     }
     return status;

@@ -609,7 +609,7 @@ int ptt_handler(int c) {
  */
 
     int orig_doto = curwp->w_doto;
-    if (linsert(1, c) != TRUE) return FALSE;
+    if (linsert_uc(1, c) != TRUE) return FALSE;
 
     for (struct ptt_ent *ptr = ptt->ptt_headp; ptr; ptr = ptr->nextp) {
         unicode_t wc = c;       /* A working copy */

@@ -858,7 +858,7 @@ abort:  /* Make sure we're still in our minibuffer */
 int yankmb(int f, int n)
 {
         UNUSED(f);
-        int    c;
+        unsigned char c;
         int    i;
         char   *sp;    /* pointer into string to insert */
 
@@ -878,7 +878,7 @@ int yankmb(int f, int n)
                                 return (FALSE);
                 }
                 else {
-                        if (linsert(1, c) == FALSE)
+                        if (linsert_byte(1, c) == FALSE)
                                 return (FALSE);
                 }
         }

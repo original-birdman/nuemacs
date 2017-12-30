@@ -922,7 +922,7 @@ int execute(int c, int f, int n) {
             }
 	}
         else {
-            status = linsert_byte(n, c);    /* We get utf-8, not Unicode */
+            status = linsert_uc(n, c);    /* We get Unicode, not utf-8 */
             if (!inmb && kbdmode == RECORD) {
                 int nc = 1;
                 if ((f > 0) && (n > 1)) nc = n;

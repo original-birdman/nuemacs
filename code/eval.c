@@ -520,7 +520,7 @@ int svar(struct variable_description *var, char *value)
             ldelchar(1, FALSE);     /* delete 1 char */
             c = atoi(value);
             if (c == '\n') lnewline();
-            else           linsert(1, c);
+            else           linsert_uc(1, c);
             back_grapheme(1);
             break;
         case EVDISCMD:

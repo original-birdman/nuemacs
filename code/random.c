@@ -308,7 +308,7 @@ int quote(int f, int n)
                 return s;
         }
         if (!inmb && kbdmode == RECORD) addchar_kbdmacro(c);
-        return linsert(n, c);
+        return linsert_uc(n, c);
 }
 
 /* GGR version of tab */
@@ -325,7 +325,7 @@ int typetab(int f, int n)
         }
 
         if (! tabsize)
-                return(linsert(1, '\t'));
+                return(linsert_byte(1, '\t'));
 
         nextstop = curwp->w_doto += tabsize - (getccol(FALSE) % tabsize);
 
@@ -338,7 +338,7 @@ int typetab(int f, int n)
 
         curwp->w_doto = llength(curwp->w_dotp);
 
-        return(linsert(tabsize - (getccol(FALSE) % tabsize), ' '));
+        return(linsert_byte(tabsize - (getccol(FALSE) % tabsize), ' '));
 }
 
 /*
@@ -358,8 +358,8 @@ int insert_tab(int f, int n)
                 return TRUE;
         }
         if (!tabsize)
-                return linsert(1, '\t');
-        return linsert(tabsize - (getccol(FALSE) % tabsize), ' ');
+                return linsert_byte(1, '\t');
+        return linsert_byte(tabsize - (getccol(FALSE) % tabsize), ' ');
 }
 
 #if     AEDIT
@@ -443,7 +443,7 @@ int entab(int f, int n)
                                         back_grapheme(ccol - fspace);
                                         ldelete((long) (ccol - fspace),
                                                 FALSE);
-                                        linsert(1, '\t');
+                                        linsert_byte(1, '\t');
                                         fspace = -1;
                                 }
                         }
@@ -667,7 +667,7 @@ int insbrace(int n, int c)
                 for (i = curwp->w_doto - 1; i >= 0; --i) {
                         ch = lgetc(curwp->w_dotp, i);
                         if (ch != ' ' && ch != '\t')
-                                return linsert(n, c);
+                                return linsert_uc(n, c);
                 }
 
         /* chercher le caractere oppose correspondant */
@@ -710,7 +710,7 @@ int insbrace(int n, int c)
         if (count != 0) {       /* no match */
                 curwp->w_dotp = oldlp;
                 curwp->w_doto = oldoff;
-                return linsert(n, c);
+                return linsert_uc(n, c);
         }
 
         curwp->w_doto = 0;      /* debut de ligne */
@@ -730,13 +730,13 @@ int insbrace(int n, int c)
                                 backdel(FALSE, 1);
                 else {          /* on doit en inserer */
                         while (target - getccol(FALSE) >= 8)
-                                linsert(1, '\t');
-                        linsert(target - getccol(FALSE), ' ');
+                                linsert_byte(1, '\t');
+                        linsert_byte(target - getccol(FALSE), ' ');
                 }
         }
 
         /* and insert the required brace(s) */
-        return linsert(n, c);
+        return linsert_uc(n, c);
 }
 
 #else
@@ -755,13 +755,13 @@ int insbrace(int n, int c)
 
         /* if we are at the beginning of the line, no go */
         if (curwp->w_doto == 0)
-                return linsert(n, c);
+                return linsert_uc(n, c);
 
         /* scan to see if all space before this is white space */
         for (i = curwp->w_doto - 1; i >= 0; --i) {
                 ch = lgetc(curwp->w_dotp, i);
                 if (ch != ' ' && ch != '\t')
-                        return linsert(n, c);
+                        return linsert_uc(n, c);
         }
 
         /* delete back first */
@@ -772,7 +772,7 @@ int insbrace(int n, int c)
                 backdel(FALSE, 1);
 
         /* and insert the required brace(s) */
-        return linsert(n, c);
+        return linsert_uc(n, c);
 }
 #endif
 
@@ -784,13 +784,13 @@ int inspound(void)
 
         /* if we are at the beginning of the line, no go */
         if (curwp->w_doto == 0)
-                return linsert(1, '#');
+                return linsert_byte(1, '#');
 
         /* scan to see if all space before this is white space */
         for (i = curwp->w_doto - 1; i >= 0; --i) {
                 ch = lgetc(curwp->w_dotp, i);
                 if (ch != ' ' && ch != '\t')
-                        return linsert(1, '#');
+                        return linsert_byte(1, '#');
         }
 
         /* delete back first */
@@ -798,7 +798,7 @@ int inspound(void)
                 backdel(FALSE, 1);
 
         /* and insert the required pound */
-        return linsert(1, '#');
+        return linsert_byte(1, '#');
 }
 
 /*
@@ -862,8 +862,8 @@ int indent(int f, int n)
                         ++nicol;
                 }
                 if (lnewline() == FALSE
-                    || ((i = nicol / 8) != 0 && linsert(i, '\t') == FALSE)
-                    || ((i = nicol % 8) != 0 && linsert(i, ' ') == FALSE))
+                    || ((i = nicol / 8) != 0 && linsert_byte(i, '\t') == FALSE)
+                    || ((i = nicol % 8) != 0 && linsert_byte(i, ' ') == FALSE))
                         return FALSE;
         }
         return TRUE;
@@ -1432,7 +1432,7 @@ int ovstring(int f, int n)
 int leaveone(int f, int n)  /* delete all but one white around cursor */
 {
     if (whitedelete(f, n))
-         return(linsert(1, ' '));
+         return(linsert_byte(1, ' '));
     return(FALSE);
 }
 

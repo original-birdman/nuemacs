@@ -33,10 +33,10 @@ struct line {
 extern void lfree(struct line *lp);
 extern void lchange(int flag);
 extern int insspace(int f, int n);
-extern int linsert_byte(int, int);
+extern int linsert_byte(int, unsigned char);
 extern int linstr(char *instr);
-extern int linsert(int n, int c);
-extern int lowrite(int c);
+extern int linsert_uc(int n, unicode_t c);
+extern int lowrite(unicode_t c);
 extern int lover(char *ostr);
 extern int lnewline(void);
 extern int ldelete(long n, int kflag);

@@ -158,7 +158,7 @@ void ensure_case(int want_case) {
     int orig_utf8_len = unicode_to_utf8(gc.uc, utf8_repl);
     gc.uc = case_hndlr((utf8proc_int32_t)gc.uc);
     ldelete(orig_utf8_len, FALSE);
-    linsert(1, gc.uc);                  /* Inserts unicode */
+    linsert_uc(1, gc.uc);                  /* Inserts unicode */
     curwp->w_doto = saved_doto;         /* Restore positon */
     lchange(WFHARD);
     return;
@@ -818,7 +818,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
                 while (gap > 0) {
                     if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
                         curwp->w_doto = space_ind[ns];
-                        linsert(1, ' ');
+                        linsert_byte(1, ' ');
                         end_doto++;     /* A space is one byte... */
                         rtol = 0;       /* So next pass goes other way */
                         if (--gap <= 0) break;
@@ -829,7 +829,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
                     if (gap <= 0) break;
                     for (int ns = 0; ns < nspaces; ns++) {
                         curwp->w_doto = space_ind[ns];
-                        linsert(1, ' ');
+                        linsert_byte(1, ' ');
                         end_doto++;     /* A space is one byte... */
                         rtol = 1;       /* So next pass goes other way */
                         if (--gap <= 0) break;
@@ -844,16 +844,16 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
             }
             lnewline();
             pending_space = 0;
-            for (int i = 0; i < indent; i++) linsert(1, ' ');
+            for (int i = 0; i < indent; i++) linsert_byte(1, ' ');
             clength = indent;
 /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
         }
 /* Possibly add space(s) */
-        if (pending_space) linsert(pending_space, ' ');
+        if (pending_space) linsert_byte(pending_space, ' ');
 
 /* ...and add in the word in either case */
         for (i = 0; i < wi; i++) {
-            linsert(1, wbuf[i]);
+            linsert_byte(1, wbuf[i]);
         }
         clength += wordlen + pending_space;
         wordlen = wi = 0;
@@ -934,7 +934,7 @@ int justpara(int f, int n)
         gotobop(FALSE, 1);
         (void)whitedelete(1, 1);    /* Don't care whether there was any */
         curwp->w_doto = 0;          /* Should be 0 anyway... */
-        for (int i = 0; i < leftmarg; i++) linsert(1, ' ');
+        for (int i = 0; i < leftmarg; i++) linsert_byte(1, ' ');
         status = filler(leftmarg, fillcol, &fp_ctl);
         if (status != TRUE) break;
 /* Position cursor at indent column in next paragraph */
@@ -1031,7 +1031,7 @@ static int region_listmaker(int f, int n)
         ix++;                       /* Insert the counter */
         int cc = snprintf(label, 10, lbl_fmt, ix);
         curwp->w_doto = 0;          /* Should be 0 anyway... */
-        for (int i = 0; i < cc; i++) linsert(1, label[i]);
+        for (int i = 0; i < cc; i++) linsert_byte(1, label[i]);
         status = filler(cc, fillcol, &fp_ctl);
 
 /* Onto the next paragraph */
