@@ -345,82 +345,85 @@ out:
 }
 
 /*
- * Take a file name, and from it
- * fabricate a buffer name. This routine knows
- * about the syntax of file names on the target system.
- * I suppose that this information could be put in
- * a better place than a line of code.
+ * Take a file name, and from it fabricate a buffer name.
+ * The fabricated name is 4-chars short of the maximum, to allow
+ * unqname to append nnnn to make it unique
  */
 void makename(char *bname, char *fname)
 {
-        char *cp1;
-        char *cp2;
 
-        cp1 = &fname[0];
-        while (*cp1 != 0)
-                ++cp1;
+/* First we have to step over any directory part in the name */
 
-#if     MSDOS
-        while (cp1 != &fname[0] && cp1[-1] != ':' && cp1[-1] != '\\'
-               && cp1[-1] != '/')
-                --cp1;
+    unsigned int clen = 0;
+    unsigned int fn4bn_start = 0;
+    unsigned int maxlen = strlen(fname);
+    unicode_t uc;
+    while (1) {
+        unsigned int nb = utf8_to_unicode(fname, clen, maxlen, &uc);
+        if (nb == 0) break;
+        clen += nb;
+#if MSDOS
+        if (uc == ':' || uc == '\\' || uc == '/')
 #endif
-#if     V7 | USG | BSD
-        while (cp1 != &fname[0] && cp1[-1] != '/')
-                --cp1;
+#if V7 | USG | BSD
+        if (uc == '/')
 #endif
-        cp2 = &bname[0];
-        while (cp2 != &bname[NBUFN - 1] && *cp1 != 0 && *cp1 != ';')
-                *cp2++ = *cp1++;
-        *cp2 = 0;
+            fn4bn_start = clen;
+    }
+
+/* We wish to copy as much of the fname into bname as we can such that
+ * we have 4 free bytes (besides the terminating NUL) for unqname
+ * to ensure uniqueness.
+ */
+
+    clen = fn4bn_start;
+    while(1) {
+        unsigned int newlen = next_utf8_offset(fname, clen, maxlen, 1);
+        if (newlen == clen) break;          /* End of string */
+        if (newlen > (NBUFN - 5)) break;    /* Out of space */
+        if (newlen > maxlen) break;         /* ??? */
+        clen = newlen;
+    }
+    memcpy(bname, fname + fn4bn_start, clen - fn4bn_start);
+    *(bname+clen) = '\0';
 }
 
 /*
- * make sure a buffer name is unique
+ * Make sure a buffer name is unique by, if necessary, appending
+ * an up-to 4 digit number.
+ * makename() will have left a 4-char space for this.
  *
  * char *name;          name to check on
  */
+static int power10(int exp) {
+    int res = 1;
+    while (exp-- > 0) res *= 10;
+    return res;
+}
 void unqname(char *name)
 {
-        char *sp;
+    char testname[NBUFN];
+/* Check to see if it is in the buffer list */
+    if (bfind(name, 0, FALSE) == NULL) return;  /* OK - not there */
 
-        /* check to see if it is in the buffer list */
-        while (bfind(name, 0, FALSE) != NULL) {
+/* That name is already there, so append numbers until it is unique */
 
-                /* go to the end of the name */
-                sp = name;
-                while (*sp)
-                        ++sp;
-
-/* GGR - Use an algorithm that doesn't easily add characters outside of
- * the defined buffer size.
- * First append a number (if there is free space) and let that go up
- * to 9. Iff we run out of numbers and length, increment the last
- * non-numeric character...
- */
-                if (sp == name) {   /* Empty name!! */
-                        *sp++ = '0';
-                        *sp = 0;
-                        continue;
-                }
-                if ((sp - name) < NBUFN-1) {  /* Space left */
-                        *sp++ = '0';
-                        *sp = 0;
-                        continue;
-                }
-                char *last_non_numeric = NULL;
-                while (--sp > name) {
-                    if ((*sp >= '0') && (*sp <= '8')) {
-                        break;
-                    }
-                    if (!last_non_numeric) last_non_numeric = sp;
-                }
-                if (sp == name) {
-                    sp = last_non_numeric;
-                    *sp = '0' - 1;
-                }
-                *sp += 1;       /* Increment where we are now */
+    int namelen = strlen(name);
+    strcpy(testname, name);
+    for (int numlen = 1; namelen + numlen < NBUFN; numlen++) {
+        int maxnum = power10(numlen);
+        for (int unum = 0; unum < maxnum; unum++) {
+            sprintf(testname + namelen, "%0*d", numlen, unum);
+/* Check to see if *this* one in the buffer list */
+            if (bfind(testname, 0, FALSE) == NULL) {    /* This is unique */
+                strcpy(name, testname);
+                return;
+            }
         }
+    }
+    mlforce("Unable to generate a unique buffer name - exiting");
+    sleep(2);
+    quickexit(FALSE, 0);
 }
 
 /*
