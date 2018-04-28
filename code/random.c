@@ -205,10 +205,7 @@ int setccol(int pos)
         unicode_t c;
         i += utf8_to_unicode(dlp->l_text, i, len, &c);
         if (zerowidth_type(c)) continue;
-        if (c == '\t') col |= tabmask;
-        else if (c < 0x20 || c == 0x7F) ++col;      /* Use 2 cols */
-        else if (c >= 0x80 && c <= 0xa0) col += 2;  /* Use 3 cols */
-        col += utf8proc_charwidth(c);
+        update_screenpos_for_char(col, c);
     }
     curwp->w_doto = i;              /* Set us at the new position... */
     return col >= pos;              /* ..and tell whether we made it */
