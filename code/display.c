@@ -1414,8 +1414,10 @@ static void modeline(struct window *wp)
         cp = tline;
         while ((c = *cp++) != 0) vtputc(c);
     }
-    cp = bp->b_bname;
-    while ((c = *cp++) != 0) vtputc(c);
+
+/* The buffer name must be handled as unicode... */
+
+    show_utf8(bp->b_bname);
     strcpy(tline, " " MLpre);
 
 /* Are we horizontally scrolled? */
@@ -1444,7 +1446,8 @@ static void modeline(struct window *wp)
     cp = tline;
     while ((c = *cp++) != 0) vtputc(c);
 
-/* Display the buffername if set. This can contain utf8...
+/* Display the filename if set and it is different to the buffername.
+ * This can contain utf8...
  * For the minibuffer this will be the main buffer name .
  */
     if (bp->b_fname[0] != 0 && strcmp(bp->b_bname, bp->b_fname) != 0) {
