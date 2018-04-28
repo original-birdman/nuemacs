@@ -1757,7 +1757,7 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.126.
 
-==========
+========== GGR4.127
 
 main.c
     Correct an horrendous bug when inserting a new character. These
@@ -1789,5 +1789,26 @@ word.c
 version.h
 etc/uemacs.hlp
    Update to version GGR4.127
+
+========== GGR4.128
+
+random.c
+line.h
+    Use update_screenpos_for_char macro in setccol().
+
+display.c
+    Use show_utf8() to display the buffer name.
+
+file.c
+    Change makename() and unqname() for unique buffer naming.
+    When generating a buffername from a filename makename() now leaves
+    4-chars at the end for unqname() to fill in with numbers to create a
+    unique name.
+    The routines also now handle unicode names.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.128
 
 ==========
