@@ -832,7 +832,7 @@ abort:  /* Make sure we're still in our minibuffer */
     flast = savflast;
     nlast = savnlast;
     mberase();
-    if (status == ABORT) {
+    if (!winch_seen && (status == ABORT)) {
         ctrlg(FALSE, 0);
         TTflush();
     }
