@@ -162,7 +162,7 @@ store-procedure lr-justify          ; Left and right justify paragraph
 !endm
 ;
 store-procedure _mytoggle-mode          ; toggle local/global mode
-    write-message &cat &cat "Toggle " %type-mode " mode (HWCPEVOMYA): "
+    write-message &cat &cat "Toggle " %type-mode " mode (HWCPEVOMYAQ): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
@@ -224,6 +224,11 @@ store-procedure _mytoggle-mode          ; toggle local/global mode
     !if &seq %modesel "A"
         set %bit 256
         set %what "ASAVE"
+        !goto doit
+    !endif
+    !if &seq %modesel "Q"
+        set %bit 512
+        set %what "EQUIV"
         !goto doit
     !endif
     write-message "Unknown mode"

@@ -487,8 +487,6 @@ struct buffer {
 
 /*      mode flags      */
 
-#define NUMMODES        9       /* # of defined modes           */
-
 #define MDWRAP  0x0001          /* word wrap                    */
 #define MDCMOD  0x0002          /* C indentation and fence match */
 #define MDPHON  0x0004          /* Phonetic input handling      */
@@ -498,6 +496,9 @@ struct buffer {
 #define MDMAGIC 0x0040          /* regular expresions in search */
 #define MDCRYPT 0x0080          /* encrytion mode active        */
 #define MDASAVE 0x0100          /* auto-save mode               */
+#define MDEQUIV 0x0200          /* match equivalent chars       */
+
+#define NUMMODES    10          /* # of defined modes           */
 
 /*
  * The starting position of a region, and the size of the region in
@@ -637,7 +638,7 @@ struct while_block {
 /*
  * Incremental search defines.
  */
-#if     ISRCH
+#if ISRCH
 
 #define CMDBUFLEN       256     /* Length of our command buffer */
 
