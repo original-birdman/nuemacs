@@ -169,7 +169,6 @@
 #define WORDPRO 1  /* Advanced word processing features            */
 #define APROP   1  /* Add code for Apropos command                 */
 #define CRYPT   1  /* file encryption enabled?                     */
-#define MAGIC   1  /* include regular expression matching?         */
 #define AEDIT   1  /* advanced editing options: en/detabbing       */
 #define PROC    1  /* named procedures                             */
 #define CLEAN   0  /* de-alloc memory on exit                      */
@@ -658,7 +657,6 @@ struct while_block {
 
 #endif
 
-#if defined(MAGIC)
 /*
  * Defines for the metacharacters in the regular expression
  * search routines.
@@ -710,7 +708,5 @@ struct magic_replacement {
         short int mc_type;
         char *rstr;
 };
-
-#endif  /* MAGIC */
 
 #endif
