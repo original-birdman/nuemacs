@@ -158,7 +158,7 @@ struct name_bind names[] = {
         {"narrow-to-region", narrow, {0, 1}},       /* GGR */
         {"newline", insert_newline, {0, 0}},
         {"newline-and-indent", indent, {0, 0}},
-        {"next-buffer", nextbuffer, {0, 0}},
+        {"next-buffer", nextbuffer, {0, 1}},
         {"next-line", forwline, {0, 0}},
         {"next-page", forwpage, {0, 0}},
 #if     WORDPRO
