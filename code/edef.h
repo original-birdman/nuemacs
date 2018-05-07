@@ -18,8 +18,6 @@
 
 extern int fillcol;             /* Fill column                  */
 extern int kbdm[];              /* Holds kayboard macro data    */
-extern char pat[];              /* Search pattern               */
-extern char rpat[];             /* Replacement pattern          */
 extern char *execstr;           /* pointer to string to execute */
 extern char golabel[];          /* current line to go to        */
 extern int execlevel;           /* execution IF level           */
@@ -153,17 +151,26 @@ extern struct buffer *kbdmac_bp;    /* keyboard macro buffer */
 
 extern int run_filehooks;       /* Set when we want them run */
 
-struct mb_info {
+typedef struct {
     struct buffer *main_bp;     /* curbp of arriving window */
     struct window *main_wp;     /* curwp of arriving window */
     int mbdepth;                /* Current depth of minibuffer */
-};
-extern struct mb_info mb_info;
+} mb_info_st;
+extern mb_info_st mb_info;
 
-struct not_in_mb {
-    char *funcname;
-    int keystroke;
-} not_in_mb;
-extern struct not_in_mb not_in_mb;
+typedef struct {
+    char *funcname;             /* Name of function */
+    int keystroke;              /* Keystroke(s) use to reach it */
+}  not_in_mb_st;
+extern not_in_mb_st not_in_mb;
 
 extern int pause_key_index_update;  /* If set, don't update keytab index */
+
+extern int in_search_prompt;        /* Set when prompting for search string */
+
+typedef struct {
+    char *preload;              /* text to preload into getstring() result */
+    int update;                 /* Set to make getstring() update its prompt */
+    char prompt[NSTRING];       /* The new prompt to use */
+} prmpt_buf_st;
+extern prmpt_buf_st prmpt_buf;

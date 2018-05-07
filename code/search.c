@@ -64,6 +64,11 @@
  *      scanner() should be callable as before, provided setpattern()
  *      has been called first.
  *      Modified by Petri Kutvonen
+ *
+ * 2018
+ * Various bits of the above no longer apply, but it's left for posterity.
+ * The FATS search code is now hard-wired, as is a "magic" (regex) search.
+ * There is also a navigable set of search and replace string buffers.
  */
 #include <stdio.h>
 #include <ctype.h>
@@ -78,7 +83,7 @@ static int deltaf[HICHAR],deltab[HICHAR];
 static int lastchfjump, lastchbjump;
 
 /*
- * The variables magical and rmagical determine if there
+ * The variables magical and rmagical determine whether there
  * were actual metacharacters in the search and replace strings -
  * if not, then we don't have to use the slower MAGIC mode
  * search functions.
@@ -86,8 +91,151 @@ static int lastchfjump, lastchbjump;
 static short int magical;
 static short int rmagical;
 static struct magic mcpat[NPAT]; /* The magic pattern. */
-static struct magic tapcm[NPAT]; /* The reversed magic patterni. */
+static struct magic tapcm[NPAT]; /* The reversed magic pattern. */
 static struct magic_replacement rmcpat[NPAT]; /* Replacement magic array. */
+
+/* Search ring buffer code...
+ */
+#define RING_SIZE 10
+
+static char *srch_txt[RING_SIZE], *repl_txt[RING_SIZE];
+char current_base[NSTRING] = "";
+
+enum call_type {Search, Replace};  /* So we know the current call type */
+static enum call_type this_rt;
+
+void init_search_ringbuffers(void) {
+    for (int ix = 0; ix < RING_SIZE; ix++) {
+        srch_txt[ix] = malloc(1);
+        *(srch_txt[ix]) = '\0';
+        repl_txt[ix] = malloc(1);
+        *(repl_txt[ix]) = '\0';
+    }
+}
+
+/* The new string goes in place at the top, pushing the others down
+ * and dropping the last one.
+ * Actually done by rotating the bottom to the top then updating the top.
+ * However - we don't want to push anything out if there is an empty entry.
+ */
+int nring_free = RING_SIZE;
+void update_ring(char *str) {
+    char **txt;
+    if (this_rt == Search) txt = srch_txt;
+    else                   txt = repl_txt;
+
+/* If there is an empty entry. move it to the
+ * Although we count down to 0 as items are added, if there is a free
+ * one we don't know where it is, so have to look.
+ * We should be able to run this RING_SIZE times - no more.
+ */
+    if (nring_free > 0) {
+        for (int ix = 0; ix < RING_SIZE-1; ix++) { /* Can't move last one */
+            if (txt[ix][0] == '\0') {
+                char *tmp = txt[ix];
+                for (int jx = ix; jx < RING_SIZE-1; jx++) {
+                    txt[jx] = txt[jx+1];
+                }
+                txt[RING_SIZE-1] = tmp;
+                break;
+            }
+        }
+        nring_free--;
+    }
+    char *tmp = txt[RING_SIZE-1];
+    for (int ix = RING_SIZE-1; ix ; ix--) {
+        txt[ix] = txt[ix-1];
+    }
+    int slen = strlen(str);
+    txt[0] = realloc(tmp, slen + 1);
+    strcpy(txt[0], str);
+    return;
+}
+
+/*
+ * nextin_ring and previn_ring are always called with non -ve n
+ */
+
+void previn_ring(int n, char *dstr, char *txt[]) {
+    char *tmp_txt[RING_SIZE];
+
+    int rotate_count = n % RING_SIZE;
+    if (rotate_count == 0) return;              /* No movement */
+    rotate_count = RING_SIZE - rotate_count;    /* So we go the right way */
+/* Rotate by <n> by mapping into a temp array then memcpy back */
+    int dx = rotate_count;
+    for (int ix = 0; ix < RING_SIZE; ix++, dx++) {
+        dx %= RING_SIZE;
+        tmp_txt[dx] = txt[ix];
+    }
+    memcpy(txt, tmp_txt, sizeof(tmp_txt));
+    strcpy(dstr, txt[0]);
+
+/* We need to make getstring() show this new value in its prompt.
+ * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
+ * to tell getsring() to use it.
+ */
+    strcpy(prmpt_buf.prompt, current_base); /* copy prompt to output string */
+    strcat(prmpt_buf.prompt, " " MLpre);    /* build new prompt string */
+    expandp(dstr, prmpt_buf.prompt+strlen(prmpt_buf.prompt), NPAT / 2);
+                                            /* add default pattern */
+    strcat(prmpt_buf.prompt, MLpost ": ");
+    prmpt_buf.update = 1;
+
+    return;
+}
+
+/* nextin_ring is done as (RING_SIZE - n) in previn_ring() */
+
+void nextin_ring(int n, char *dstr, char *txt[]) {
+    if (n == 0) return;
+    int revn = RING_SIZE - n;   /* This result can be -ve ... */
+    revn %= RING_SIZE;
+    revn += RING_SIZE;          /* ... so this ensures we get +ve */
+    previn_ring(revn, dstr, txt);
+    return;
+}
+
+/*
+ * Here are the callable functions. They must *NOT* be put into the
+ * names[] array in names.c as they cannot be bound to any key!
+ * They are called by mapping commands that are invalid in the minibuffer
+ * when you are searching.
+ */
+int prev_sstr(int f, int n) {               /* Mapped from prevwind */
+    if (n < 0) return next_sstr(f, -n);
+    switch(this_rt) {
+    case Search:
+        previn_ring(n, pat,  srch_txt);
+        break;
+    case Replace:
+        previn_ring(n, rpat, repl_txt);
+        break;
+    }
+    return TRUE;
+}
+int next_sstr(int f, int n) {               /* Mapped from nextwind */
+    if (n < 0) return prev_sstr(f, -n);
+    switch(this_rt) {
+    case Search:
+        nextin_ring(n, pat,  srch_txt);
+        break;
+    case Replace:
+        nextin_ring(n, rpat, repl_txt);
+        break;
+    }
+    return TRUE;
+}
+
+/* Setting prmpt_buf.preload makes getstring() add it into the result buffer
+ * at the start of its next get-character loop.
+ * It will be inserted into any current search string at the current point.
+ */
+int select_sstr(int f, int n) {             /* Mapped from listbuffers */
+    UNUSED(f); UNUSED(n);
+    prmpt_buf.preload = (this_rt == Search)? srch_txt[0]: repl_txt[0];
+    return TRUE;
+}
 
 /*
  * clearbits -- Allocate and zero out a CCL bitmap.
@@ -222,8 +370,8 @@ static int mcstr(void) {
 
     magical = FALSE;
     mj = 0;
-    mcptr = &mcpat[0];
-    patptr = &pat[0];
+    mcptr = mcpat;
+    patptr = pat;
 
     while ((pchr = *patptr) && status) {
         switch (pchr) {
@@ -289,7 +437,7 @@ static int mcstr(void) {
  * other bitmaps.
  */
     if (status) {
-        rtpcm = &tapcm[0];
+        rtpcm = tapcm;
         while (--mj >= 0) {
 #if     MSC | TURBO | USG | BSD | V7
             *rtpcm++ = *--mcptr;
@@ -316,8 +464,8 @@ static int rmcstr(void) {
     int status = TRUE;
     int mj;
 
-    patptr = &rpat[0];
-    rmcptr = &rmcpat[0];
+    patptr = rpat;
+    rmcptr = rmcpat;
     mj = 0;
     rmagical = FALSE;
 
@@ -459,21 +607,54 @@ static int readpattern(char *prompt, char *apat, int srch) {
     int status;
     char tpat[NPAT + 20];
 
+    char saved_base[NSTRING];
+
+/* We save the base of the prompt for previn_ring to use.
+ * Since this code can be re-enterd we have to save (and resotree at
+ * the end) the current value.
+ */
+    strcpy(saved_base, current_base);
+    strcpy(current_base, prompt);
+
     strcpy(tpat, prompt);       /* copy prompt to output string */
     strcat(tpat, " " MLpre);    /* build new prompt string */
-    expandp(&apat[0], &tpat[strlen(tpat)], NPAT / 2); /* add old pattern */
-/* GGR
- * Our mlreplyt returns only on CR
- *  strcat(tpat, MLpost "<Meta>: "); */
+    expandp(apat, tpat+strlen(tpat), NPAT / 2); /* add old pattern */
     strcat(tpat, MLpost ": ");
 
-/* Read a pattern.  Either we get one or we just get the META character
+/* Read a pattern.  Either we get one or we just get an empty result
  * and use the previous pattern.
  * Then, if it's the search string, make a reversed pattern.
  * *Then*, make the meta-pattern, if we are defined that way.
+ * Since search is recursive (you can search a search string) we
+ * have to remember the in_search_prompt value of when we arrived.
+ * We also have set this_rt before and aftre the mlreplyt() call.
  */
-    if ((status = mlreplyt(tpat, tpat, NPAT, metac)) == TRUE) {
+
+    int prev_in_search_prompt = in_search_prompt;
+    in_search_prompt = 1;
+    enum call_type our_rt = (srch == TRUE)? Search: Replace;
+    this_rt = our_rt;           /* Set our call type for nextin_ring() */
+    status = mlreplyt(tpat, tpat, NPAT, metac);
+    this_rt = our_rt;           /* Set our call type for update_ring() */
+    in_search_prompt = prev_in_search_prompt;
+    int do_update_ring = 1;
+    if (status == FALSE && pat[0] != 0) {
+/* Use the default one.
+ * Since we can now run around saved ring buffers we have to ensure that
+ * we have things set up for the currently-displayed default.
+ * So put the default into apat, but mark that we don't want to
+ * update the ring buffer with this value.
+ */
+        strcpy(tpat, pat);
+        do_update_ring = 0;
+        status = TRUE;          /* So we do the next section... */
+    }
+    if (status == TRUE) {
         strcpy(apat, tpat);
+
+/* Save this latest string in the search buffer ring? */
+
+        if (do_update_ring) update_ring(tpat);
 
 /* If we are doing the search string, reverse string copy, and remember
  * the length for substitution purposes.
@@ -493,8 +674,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
         } else
             status = srch ? mcstr() : rmcstr();
     }
-    else if (status == FALSE && apat[0] != 0)     /* Old one */
-        status = TRUE;
+    strcpy(current_base, saved_base);   /* Revert any change */
 
     return status;
 }
@@ -838,7 +1018,7 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
 /* Setup scanning pointers. */
         scanline = curline;
         scanoff = curoff;
-        patptr = &patrn[0];
+        patptr = patrn;
 
 /* Scan through the pattern for a match. */
         while (*patptr != '\0') {
@@ -894,7 +1074,7 @@ int forwsearch(int f, int n) {
  * (responses other than FALSE are possible), search for the pattern for as
  * long as  n is positive (n == 0 will go through once, which is just fine).
  */
-    if ((status = readpattern("Search", &pat[0], TRUE)) == TRUE) {
+    if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
         do {
 
 /* We are going forwards so check for eob as otherwise the rest
@@ -907,9 +1087,9 @@ int forwsearch(int f, int n) {
             }
 
             if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-                status = mcscanner(&mcpat[0], FORWARD, PTEND);
+                status = mcscanner(mcpat, FORWARD, PTEND);
             else
-                status = scanner(&pat[0], FORWARD, PTEND);
+                status = scanner(pat, FORWARD, PTEND);
         } while ((--n > 0) && status);
 
 /* Save away the match, or complain if not there. */
@@ -945,15 +1125,14 @@ int forwhunt(int f, int n) {
     if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc_type == MCNIL) {
         if (!mcstr()) return FALSE;
     }
-
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which * is just fine).
  */
     do {
         if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-            status = mcscanner(&mcpat[0], FORWARD, PTEND);
+            status = mcscanner(mcpat, FORWARD, PTEND);
         else
-            status = scanner(&pat[0], FORWARD, PTEND);
+            status = scanner(pat, FORWARD, PTEND);
     } while ((--n > 0) && status);
 
 /* Save away the match, or complain if not there. */
@@ -984,12 +1163,12 @@ int backsearch(int f, int n) {
  * (responses other than FALSE are possible), search for the pattern for
  * as long as n is positive (n == 0 will go through once, which is just fine).
  */
-    if ((status = readpattern("Reverse search", &pat[0], TRUE)) == TRUE) {
+    if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
         do {
             if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-                status = mcscanner(&tapcm[0], REVERSE, PTBEG);
+                status = mcscanner(tapcm, REVERSE, PTBEG);
             else
-                status = scanner(&tap[0], REVERSE, PTBEG);
+                status = scanner(tap, REVERSE, PTBEG);
         } while ((--n > 0) && status);
 
 /* Save away the match, or complain if not there. */
@@ -1029,9 +1208,9 @@ int backhunt(int f, int n) {
  */
     do {
         if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-            status = mcscanner(&tapcm[0], REVERSE, PTBEG);
+            status = mcscanner(tapcm, REVERSE, PTBEG);
         else
-            status = scanner(&tap[0], REVERSE, PTBEG);
+            status = scanner(tap, REVERSE, PTBEG);
     } while ((--n > 0) && status);
 
 /* Save away the match, or complain if not there. */
@@ -1173,17 +1352,17 @@ static int replaces(int kind, int f, int n) {
 /* Ask the user for the text of a pattern. */
 
     if ((status = readpattern((kind == FALSE ? "Replace" : "Query replace"),
-                                  &pat[0], TRUE)) != TRUE)
+                                  pat, TRUE)) != TRUE)
         return status;
 
 /* Ask for the replacement string. */
 
-    if ((status = readpattern("with", &rpat[0], FALSE)) == ABORT)
+    if ((status = readpattern("with", rpat, FALSE)) == ABORT)
         return status;
 
 /* Find the length of the replacement string. */
 
-    rlength = strlen(&rpat[0]);
+    rlength = strlen(rpat);
 
 /* Set up flags so we can make sure not to do a recursive replace on
  * the last line.
@@ -1194,9 +1373,9 @@ static int replaces(int kind, int f, int n) {
     if (kind) {
 /* Build query replace question string. */
         strcpy(tpat, "Replace '");
-        expandp(&pat[0], &tpat[strlen(tpat)], NPAT / 3);
+        expandp(pat, tpat+strlen(tpat), NPAT / 3);
         strcat(tpat, "' with '");
-        expandp(&rpat[0], &tpat[strlen(tpat)], NPAT / 3);
+        expandp(rpat, tpat+strlen(tpat), NPAT / 3);
         strcat(tpat, "'? ");
 
 /* Initialize last replaced pointers. */
@@ -1220,10 +1399,10 @@ static int replaces(int kind, int f, int n) {
  * matchlen is reset to the true length of the matched string.
  */
         if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0) {
-            if (!mcscanner(&mcpat[0], FORWARD, PTBEG)) break;
+            if (!mcscanner(mcpat, FORWARD, PTBEG)) break;
         }
         else {
-            if (!scanner(&pat[0], FORWARD, PTBEG)) break;  /* all done */
+            if (!scanner(pat, FORWARD, PTBEG)) break;  /* all done */
         }
         ++nummatch;     /* Increment # of matches */
 
@@ -1234,7 +1413,7 @@ static int replaces(int kind, int f, int n) {
 /* Check for query. */
 
         if (kind) {     /* Get the query. */
-            pprompt:mlwrite(&tpat[0], &pat[0], &rpat[0]);
+            pprompt:mlwrite(tpat, pat, rpat);
 qprompt:
             update(TRUE);   /* show the proposed place to change */
             c = tgetc();    /* and input */
@@ -1311,7 +1490,7 @@ qprompt:
 
 /* Delete the sucker, and insert its replacement. */
 
-        status = delins(matchlen, &rpat[0], TRUE);
+        status = delins(matchlen, rpat, TRUE);
         if (status != TRUE) return status;
 
 /* Save our position, since we may undo this. */
@@ -1364,7 +1543,7 @@ int delins(int dlength, char *instr, int use_meta) {
     else
         if ((rmagical && use_meta) &&
                     (curwp->w_bufp->b_mode & MDMAGIC) != 0) {
-            rmcptr = &rmcpat[0];
+            rmcptr = rmcpat;
             while (rmcptr->mc_type != MCNIL && status == TRUE) {
                 if (rmcptr->mc_type == LITCHAR)
                     status = linstr(rmcptr->rstr);
@@ -1450,7 +1629,7 @@ int boundry(struct line *curline, int curoff, int dir) {
 void mcclear(void) {
     struct magic *mcptr;
 
-    mcptr = &mcpat[0];
+    mcptr = mcpat;
 
     while (mcptr->mc_type != MCNIL) {
         if ((mcptr->mc_type & MASKCL) == CCL ||
@@ -1468,7 +1647,7 @@ void mcclear(void) {
 void rmcclear(void) {
     struct magic_replacement *rmcptr;
 
-    rmcptr = &rmcpat[0];
+    rmcptr = rmcpat;
 
     while (rmcptr->mc_type != MCNIL) {
         if (rmcptr->mc_type == LITCHAR) free(rmcptr->rstr);

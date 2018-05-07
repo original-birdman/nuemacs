@@ -341,6 +341,16 @@ extern int shellprog(char *cmd);
 extern int execprog(char *cmd);
 
 /* search.c */
+
+/* next_sstr, prev_sstr and select_sstr must *not* be made bindable
+ * in names.c!!!
+ * They are remapped from nextwind/prevwind when in the search mini-buffer
+ */
+extern void init_search_ringbuffers(void);
+extern int next_sstr(int f, int n);
+extern int prev_sstr(int f, int n);
+extern int select_sstr(int f, int n);
+
 extern int forwsearch(int f, int n);
 extern int forwhunt(int f, int n);
 extern int backsearch(int f, int n);

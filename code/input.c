@@ -101,7 +101,7 @@ int mlreplyall(char *prompt, char *buf, int nbuf) {
             return nextarg(prompt, buf, nbuf, ctoec('\n'));
         int nb = strlen(execstr);
         memcpy(buf, execstr, nb+1); /* Copy the NUL */
-        execstr+= nb;               /* Show we've read it all */
+        execstr += nb;              /* Show we've read it all */
         return TRUE;
 }
 
@@ -447,6 +447,9 @@ proc_ctlxc:
 
 /* GGR
  * A version of getstring in which the minibuffer is a true buffer!
+ * Note that this loops for each character, so you can manipulate the
+ * prompt etc. by providing updated info and using it after the
+ * loop: label.
  */
 
 /* If the window size changes whilst this is running the display will end
@@ -497,6 +500,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
     short bufexpand, expanded;
 
+
 #ifdef SIGWINCH
 /* We need to block SIGWINCH until we have set-up all of the variables
  * we need after the longjmp.
@@ -540,7 +544,9 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
         return(FALSE);
     }
     bufexpand = (nbuf == NBUFN);
-/* save real reexecution history */
+
+/* Save real reexecution history */
+
     savclast = clast;
     savflast = flast;
     savnlast = nlast;
@@ -554,8 +560,10 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
         mb_info.main_bp = curbp;    /* For main buffer info in modeline */
         mb_info.main_wp = &wsave;   /* Used to position modeline */
     }
+/* Set-up the (incoming) prompt string */
     strcpy(procopy, prompt);
     prolen = strlen(procopy);
+
     if (mpresf) mlerase();
     mberase();
 
@@ -607,6 +615,20 @@ loop:
     execute(META|SPEC|'C', FALSE, 1);
     lastflag = saveflag;
 
+/* Have we been asked to update the prompt? */
+
+    if (prmpt_buf.update) {
+        strcpy(procopy, prmpt_buf.prompt);
+        prolen = strlen(procopy);
+        prmpt_buf.update = 0;
+    }
+
+/* Have we been asked to load (a search string)? */
+    if (prmpt_buf.preload) {
+        linstr(prmpt_buf.preload);
+        prmpt_buf.preload = NULL;    /* One-time usage */
+    }
+
 /* Prepend the prompt to the beginning of the visible line */
     savdoto = curwp->w_doto;
     curwp->w_doto = 0;
@@ -622,7 +644,7 @@ loop:
     mbupdate();                 /* Will set modeline to prompt... */
     hscroll = real_hscroll;
 
-/* Rremove the prompt from the beginning of the visible line */
+/* Remove the prompt from the beginning of the visible line */
     curwp->w_doto = 0;
     ldelete((long)prolen, FALSE);
     curwp->w_doto = savdoto;
@@ -831,6 +853,7 @@ abort:  /* Make sure we're still in our minibuffer */
     clast = savclast;
     flast = savflast;
     nlast = savnlast;
+
     mberase();
     if (!winch_seen && (status == ABORT)) {
         ctrlg(FALSE, 0);
@@ -851,6 +874,7 @@ abort:  /* Make sure we're still in our minibuffer */
  */
     if (winch_seen) raise(SIGWINCH);
 #endif
+
     return(status);
 }
 

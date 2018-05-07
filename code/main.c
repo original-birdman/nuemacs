@@ -394,6 +394,10 @@ int main(int argc, char **argv)
     init_ents *= KEYTAB_INCR;
     extend_keytab(init_ents);
 
+/* Set up the search ring buffers */
+
+    init_search_ringbuffers();
+
 /* GGR Command line parsing substantially reorganised. It now consists of two
  * separate loops. The first loop processes all optional arguments (command
  * keywords and associated options if any) and stops on reaching the first
@@ -775,6 +779,8 @@ int not_in_mb_error(int f, int n) {
         cmdstr(not_in_mb.keystroke, vis_key);
         snprintf(vis_key_paras, 22, "(%s)", vis_key);
     }
+    else
+        strcpy(vis_key_paras, "(?!?)");
     mlwrite("%s%s not allowed in the minibuffer!!",
          not_in_mb.funcname, vis_key_paras);
     return(TRUE);
@@ -795,11 +801,31 @@ int execute(int c, int f, int n) {
     if (ktp) {
         fn_t execfunc = ktp->hndlr.k_fp;
         if (execfunc == nullproc) return(TRUE);
+/* Special handling for nextwind/prevwind key-bindings, which get
+ * re-mapped when being prompted for a search string.
+ * Since the mapped-from functions are flagged with not_mb we have
+ * to skip the minibuffer check.
+ */
+        if (in_search_prompt) {
+            if (execfunc == nextwind) {
+                execfunc = next_sstr;
+                goto after_mb_check;
+            }
+            if (execfunc == prevwind) {
+                execfunc = prev_sstr;
+                goto after_mb_check;
+            }
+            if (execfunc == listbuffers) {
+                execfunc = select_sstr;
+                goto after_mb_check;
+            }
+        }
         if (inmb && ktp->fi->opt.not_mb) {
             not_in_mb.funcname = ktp->fi->n_name;
             not_in_mb.keystroke = c;
             execfunc = not_in_mb_error;
         }
+after_mb_check:
         thisflag = 0;
 /* GGR - implement re-execute */
         if (inreex) {
