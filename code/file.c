@@ -375,17 +375,23 @@ void makename(char *bname, char *fname)
  * we have 4 free bytes (besides the terminating NUL) for unqname
  * to ensure uniqueness.
  */
-
     clen = fn4bn_start;
     while(1) {
         unsigned int newlen = next_utf8_offset(fname, clen, maxlen, 1);
-        if (newlen == clen) break;          /* End of string */
-        if (newlen > (NBUFN - 5)) break;    /* Out of space */
-        if (newlen > maxlen) break;         /* ??? */
+        if (newlen == clen) break;                          /* End of string */
+        if ((newlen - fn4bn_start) > (NBUFN - 5)) break;    /* Out of space */
+        if (newlen > maxlen) break;                         /* ??? */
         clen = newlen;
     }
-    memcpy(bname, fname + fn4bn_start, clen - fn4bn_start);
-    *(bname+clen) = '\0';
+
+/* We can't have an empty buffer name (you couldn't specify it in any
+ * command, so if it is empty (fname with a trailing /) change it to " 0"
+ */
+    if (clen > fn4bn_start) {
+        memcpy(bname, fname + fn4bn_start, clen - fn4bn_start);
+        *(bname+clen-fn4bn_start) = '\0';
+    }
+    else strcpy(bname, " 0");
 }
 
 /*
