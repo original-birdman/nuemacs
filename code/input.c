@@ -879,34 +879,38 @@ abort:  /* Make sure we're still in our minibuffer */
 }
 
 /* Yank back last minibuffer */
-int yankmb(int f, int n)
-{
-        UNUSED(f);
-        unsigned char c;
-        int    i;
-        char   *sp;    /* pointer into string to insert */
+int yankmb(int f, int n) {
+    UNUSED(f);
+    unsigned char c;
+    int    i;
+    char   *sp;    /* pointer into string to insert */
 
-        if (curbp->b_mode&MDVIEW)       /* don't allow this command if  */
-                return(rdonly());       /* we are in read only mode     */
-        if (n < 0)
-                return (FALSE);
-        /* make sure there is something to yank */
-        if (strlen(lastmb) == 0)
-                return(TRUE);           /* not an error, just nothing */
+    if (curbp->b_mode&MDVIEW)       /* don't allow this command if  */
+        return(rdonly());           /* we are in read only mode     */
+    if (n < 0) return (FALSE);
 
-        sp = &lastmb[0];
-        i = strlen(lastmb);
-        while (i--) {
-                if ((c = *sp++) == '\n' && !inmb) {
-                        if (lnewline() == FALSE)
-                                return (FALSE);
-                }
-                else {
-                        if (linsert_byte(1, c) == FALSE)
-                                return (FALSE);
-                }
+/* Make sure there is something to yank */
+    thisflag |= CFYANK;             /* This command is a yank */
+
+    if (strlen(lastmb) == 0) return(TRUE);  /* not an error, just nothing */
+
+    sp = lastmb;
+    i = strlen(lastmb);
+/* GGR - set a mark so we can rekill if we want - we don't
+ * want a message, so don't use setmark()..
+  */
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = curwp->w_doto;
+
+    while (i--) {
+        if ((c = *sp++) == '\n' && !inmb) {
+            if (lnewline() == FALSE) return (FALSE);
         }
-        return (TRUE);
+        else {
+            if (linsert_byte(1, c) == FALSE) return (FALSE);
+        }
+    }
+    return (TRUE);
 }
 
 #if MSDOS | BSD | USG

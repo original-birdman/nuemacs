@@ -56,8 +56,10 @@ char *cname[] = {               /* names of colors              */
 #endif
 };
 struct kill *kbufp = NULL;      /* current kill buffer chunk pointer    */
-struct kill *kbufh = NULL;      /* kill buffer header pointer           */
-int kused = KBLOCK;             /* # of bytes used in kill buffer       */
+struct kill *kbufh[] = {[0 ... KRING_SIZE-1] = NULL};
+                                /* kill buffer header pointers          */
+int kused[] = {[0 ... KRING_SIZE-1] = KBLOCK};
+                                /* # of bytes used in kill buffer       */
 struct window *swindow = NULL;  /* saved window pointer                 */
 int cryptflag = FALSE;          /* currently encrypting?                */
 int *kbdptr;                    /* current position in keyboard buf */

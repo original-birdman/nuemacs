@@ -18,6 +18,26 @@
 
 #define MAXVARS 255
 
+/*
+ * return some of the contents of the kill buffer
+ */
+char *getkill(void) {
+    int size;                       /* max number of chars to return */
+    static char value[NSTRING];     /* fixed buffer for value */
+
+    if (kbufh[0] == NULL)
+                /* no kill buffer....just a null string */
+        value[0] = 0;
+    else {      /* copy in the contents...allow for a trailing NUL */
+        if (kused[0] < NSTRING) size = kused[0];
+        else                    size = NSTRING - 1;
+        memcpy(value, kbufh[0]->d_chunk, size);
+        *(value+size) = '\0';
+    }
+    return value;       /* Return the constructed value */
+}
+
+
 /* User variables */
 static struct user_variable uv[MAXVARS + 1];
 
@@ -158,8 +178,6 @@ char *gtusr(char *vname)
         return errorm;
 }
 
-extern char *getkill(void);
-
 /*
  * gtenv()
  *
@@ -250,30 +268,6 @@ char *gtenv(char *vname)
     case EVHJUMP:           return(itoa(hjump));
     }
     exit(-12);              /* again, we should never get here */
-}
-
-/*
- * return some of the contents of the kill buffer
- */
-char *getkill(void)
-{
-        int size;       /* max number of chars to return */
-        static char value[NSTRING];     /* temp buffer for value */
-
-        if (kbufh == NULL)
-                /* no kill buffer....just a null string */
-                value[0] = 0;
-        else {
-                /* copy in the contents... */
-                if (kused < NSTRING)
-                        size = kused;
-                else
-                        size = NSTRING - 1;
-                strncpy(value, kbufh->d_chunk, size);
-        }
-
-        /* and return the constructed value */
-        return value;
 }
 
 /*

@@ -48,8 +48,10 @@ extern char *getctext(void);
 extern int putctext(char *iline);
 extern int ldelnewline(void);
 extern void kdelete(void);
+extern int rotate_kill_ring(int, int);
 extern int kinsert(int c);
 extern int yank(int f, int n);
+extern int yank_prev_killbuf(int, int);
 extern struct line *lalloc(int);  /* Allocate a line. */
 
 /* A macro to determine the effect on the "display column" of adding a

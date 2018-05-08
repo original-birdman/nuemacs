@@ -295,6 +295,7 @@
 
 #define CFCPCN  0x0001          /* Last command was C-P, C-N    */
 #define CFKILL  0x0002          /* Last command was a kill      */
+#define CFYANK  0x0004          /* Last command was a yank      */
 
 #define BELL    0x07            /* a bell character             */
 #define TAB     0x09            /* a tab character              */

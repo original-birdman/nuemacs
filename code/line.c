@@ -667,25 +667,65 @@ int ldelnewline(void)
  * new kill context is being created. The kill buffer array is released, just
  * in case the buffer has grown to immense size. No errors.
  */
-void kdelete(void)
-{
-        struct kill *kp;        /* ptr to scan kill buffer chunk list */
+void kdelete(void) {
+    struct kill *kp;        /* ptr to scan kill buffer chunk list */
 
-        if (kbufh != NULL) {
-
-                /* first, delete all the chunks */
-                kbufp = kbufh;
-                while (kbufp != NULL) {
-                        kp = kbufp->d_next;
-                        free(kbufp);
-                        kbufp = kp;
-                }
-
-                /* and reset all the kill buffer pointers */
-                kbufh = kbufp = NULL;
-                kused = KBLOCK;
+/* First, delete all the chunks on the bottom item.
+ * This is the one we are about to remove.
+ */
+    if (kbufh[KRING_SIZE-1] != NULL) {
+        kbufp = kbufh[KRING_SIZE-1];
+        struct kill *tp = kbufh[KRING_SIZE-1];
+        while (tp != NULL) {
+            kp = kbufp->d_next;
+            free(tp);
+            tp = kp;
         }
+    }
+
+/* Move the remaining ones down */
+
+    int ix = KRING_SIZE-1;
+    while (ix--) {
+        kbufh[ix+1] = kbufh[ix];
+        kused[ix+1] = kused[ix];
+    }
+
+/* Create a new one at the top and reset all kill buffer pointers */
+
+    kbufh[0] = kbufp = NULL;
+    kused[0] = KBLOCK;
 }
+
+/* A function to rotate the kill ring.
+ * Not normally bound, but is bindable.
+ */
+
+int rotate_kill_ring(int f, int n) {
+    UNUSED(f);
+    if (n == 0) return TRUE;
+
+    int rotate_count = n % KRING_SIZE;
+    if (rotate_count < 0) rotate_count += KRING_SIZE;
+    rotate_count = KRING_SIZE - rotate_count;   /* So we go the right way */
+    if (rotate_count > 0) {
+        struct kill *tmp_bufh[KRING_SIZE];
+        int tmp_used[KRING_SIZE];
+        int dx = rotate_count;
+        for (int ix = 0; ix < KRING_SIZE; ix++, dx++) {
+            dx %= KRING_SIZE;
+            tmp_bufh[dx] = kbufh[ix];
+            tmp_used[dx] = kused[ix];
+        }
+        memcpy(kbufh, tmp_bufh, sizeof(tmp_bufh));
+        memcpy(kused, tmp_used, sizeof(tmp_used));
+    }
+    kbufp = kbufh[0];
+//    mlwrite("kill-text: %s", getkill());
+
+    return TRUE;
+}
+
 
 /*
  * Insert a character to the kill buffer, allocating new chunks as needed.
@@ -698,20 +738,20 @@ int kinsert(int c)
         struct kill *nchunk;    /* ptr to newly malloced chunk */
 
         /* check to see if we need a new chunk */
-        if (kused >= KBLOCK) {
+        if (kused[0] >= KBLOCK) {
                 if ((nchunk = (struct kill *)malloc(sizeof(struct kill))) == NULL)
                         return FALSE;
-                if (kbufh == NULL)  /* set head ptr if first time */
-                        kbufh = nchunk;
+                if (kbufh[0] == NULL)  /* set head ptr if first time */
+                        kbufh[0] = nchunk;
                 if (kbufp != NULL)  /* point the current to this new one */
                         kbufp->d_next = nchunk;
                 kbufp = nchunk;
                 kbufp->d_next = NULL;
-                kused = 0;
+                kused[0] = 0;
         }
 
         /* and now insert the character */
-        kbufp->d_chunk[kused++] = c;
+        kbufp->d_chunk[kused[0]++] = c;
         return TRUE;
 }
 
@@ -733,7 +773,7 @@ int yank(int f, int n) {
     if (n < 0) return FALSE;
 
 /* Make sure there is something to yank */
-    if (kbufh == NULL) return TRUE; /* not an error, just nothing */
+    if (kbufh[0] == NULL) return TRUE; /* not an error, just nothing */
 
 /* We need to handle the case of being at the start of an empty buffer.
  * If we just let things run and yank (say) 2 complete lines, the mark and
@@ -743,7 +783,7 @@ int yank(int f, int n) {
  * So if the next line is the same as the previous line (which can only
  * happen if we are in a single-line buffer, when both point to the headp)
  * and empty we insert a space then remove it later. This odd(?) method
- * also ensures that the mark we set stays in teh correct place.
+ * also ensures that the mark we set stays in the correct place.
  */
     int do_dummy_space = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
     if (do_dummy_space) insspace(0, 1);
@@ -756,9 +796,9 @@ int yank(int f, int n) {
 
 /* For each time.... */
     while (n--) {
-        kp = kbufh;
+        kp = kbufh[0];
         while (kp != NULL) {
-            if (kp->d_next == NULL) i = kused;
+            if (kp->d_next == NULL) i = kused[0];
             else                    i = KBLOCK;
             sp = kp->d_chunk;
             while (i--) {
@@ -773,5 +813,43 @@ int yank(int f, int n) {
         }
     }
     if (do_dummy_space) ldelchar(1, FALSE);
+    thisflag |= CFYANK;         /* This is a yank */
     return TRUE;
+}
+
+/* A function to replace the last yank with text from teh kill-ring.
+ * Can *only* be used when a yank (or this function) was the last
+ * function used.
+ */
+int yank_prev_killbuf(int f, int n) {
+    UNUSED(f);
+    int s;
+
+/* Don't allow this command if we are in read only mode */
+
+    if (curbp->b_mode & MDVIEW) return rdonly();
+
+    if (!(lastflag & CFYANK)) {
+        mlwrite("Last command was not a yank!");
+        return FALSE;
+    }
+    thisflag |= CFYANK;         /* This is a yank */
+
+/* This is essentially the killregion() code (q.v.).
+ * But we don't want to check for some things, and don't wan't ldelete()
+ * to move the deleted region to the kill ring (it's alreayd there...).
+ */
+    struct region region;
+    if ((s = getregion(&region)) != TRUE) return s;
+    curwp->w_dotp = region.r_linep;
+    curwp->w_doto = region.r_offset;
+/* Don't put killed text onto kill ring */
+    if ((s = ldelete(region.r_size, FALSE)) != TRUE) return s;
+    rotate_kill_ring(0, n);
+
+/* If there is nothing in the top kill buffer then we are done */
+    if (kbufh[0] == NULL) return TRUE;
+
+/* yank() already does what we want, so just use it. */
+    return yank(0, 1);
 }

@@ -56,8 +56,10 @@ extern int quotec;              /* quote char during mlreply() */
 extern int tabmask;
 extern char *cname[];           /* names of colors              */
 extern struct kill *kbufp;      /* current kill buffer chunk pointer */
-extern struct kill *kbufh;      /* kill buffer header pointer   */
-extern int kused;               /* # of bytes used in KB        */
+#define KRING_SIZE 10
+extern struct kill *kbufh[KRING_SIZE];
+                                /* kill buffer header pointers  */
+extern int kused[KRING_SIZE];   /* # of bytes used in KB        */
 extern struct window *swindow;  /* saved window pointer         */
 extern int cryptflag;           /* currently encrypting?        */
 extern int *kbdptr;             /* current position in keyboard buf */

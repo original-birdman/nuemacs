@@ -397,10 +397,10 @@ int delbword(int f, int n)
  * This means that we have to fiddle with the kill ring buffers.
  */
 bckdel:
-    if ((kp = kbufh) != NULL) {
-        kbufh = kbufp = NULL;
-        ku = kused;
-        kused = KBLOCK;
+    if ((kp = kbufh[0]) != NULL) {
+        kbufh[0] = kbufp = NULL;
+        ku = kused[0];
+        kused[0] = KBLOCK;
     }
 
     status = ldelete(size, TRUE);
