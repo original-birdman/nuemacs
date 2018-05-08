@@ -1812,3 +1812,95 @@ etc/uemacs.hlp
    Update to version GGR4.128
 
 ==========
+
+globals.c
+input.c
+estruct.h
+etc/uemacs.rc
+    Added an "eQuiv" mode setting (for utf8 searching).
+    No support code to use it yet.
+
+search.c
+estruct.h
+    Removed MAGIC as a compile-time option - it is now hard-wired.
+    Reformatted search.c ahead of editing for utf8 searching.
+
+names.c
+    Mark next-buffer as "not in mini-buffer".
+
+input.c
+    Check for winch_seen before calling ctrlg()/TTflush() on ABORT in
+    getstring().
+    This allows macro-collecting to continue over a window resize.
+
+file.c
+    Fix buffername generation in makename().
+
+main.c
+    Check for there actually *being* another argument before assigning
+    it to -c/-d/-g/-k/-s/-x options.
+    Add a (required) call to setpattern() for the -s option.
+    Reformatted main() to use 4-space indents (also quickexit(),
+    emergencyexit(), quit(), ctlxrp() and ctlxe ()).
+
+----------
+
+    Added a set of ring-buffers for the last search and replace buffers
+    (one set each).
+    This allows you to recall (and re-use) the last 10 search/replace
+    strings.
+    The mechanism requires a way to update the prompt in getstring()
+    as it goes back to loop: This is done using prmpt_buf.
+
+----- Details -----
+
+edef.h
+globals.c
+    Removed duplicate pat and rpat declarations [edef.h].
+    Added in_search_prompt and prmpt_buf. Initialized in globals.c.
+    Changed some
+         struct xxx {...};
+         (extern) struct xxx xxx;
+    definitions into
+         typedef struct xxx_st;
+         (extern) xxx_st xxx;
+
+efunc.h
+    Added init_search_ringbuffers(), next_sstr(), prev_sstr() and
+    select_sstr() declarations.
+
+input.c
+    Changes to getstring().
+    o Update the prompt if prmpt_buf.update is set.
+    o Preload teh resutl buffer if prmpt_buf.preload is set.
+
+main.c 
+    o Call init_search_ringbuffers().
+    o Remap nextwind/prevwind/listbuffers to (respectively)
+      next_sstr/prev_sstr/select_sstr if in_search_prompt is set.
+    o Add vis_key_paras setting for no keystroke (not ring-buffer related!).
+   
+search.c
+    o Added the code to handle search/replace ring buffers.
+      init_search_ringbuffers(), update_ring(), previn_ring(),
+      nextin_ring(), prev_sstr(), next_sstr() and select_sstr().
+    o Modified readpattern() to handle the reprompts as we move through:
+        * Take and restore a copy of in_search_prompt around the
+          mlreplyt() call and set it to 1 for the call.
+        * Set this_rt for the current call before *and* after the
+          mlreplyt() call
+        * Update the FAST search tables for any default string used.
+        * Add the string to the ring buffers if it is a new string.
+        * Save and restore the incoming base prompt
+    o Reformatted many &mcpat[0] (and similar) to be just mcpat.
+----------
+
+../CHANGES
+../README
+../TODO
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.129
+   Added information on the search ring buffers to README and uemacs.hlp.
+
+==========

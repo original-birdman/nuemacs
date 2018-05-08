@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.128 Help Index     (28 April 2018)
+=>                   nuEmacs GGR4.129 Help Index     (08 May 2018)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -120,6 +120,11 @@ Reverse incremental search              Hunt forward ..........  Alt-S
 .......................   ^X  R         Hunt backward .........  Alt-R
 Replace string ........ Meta  R
 Query replace string .. Meta  %     ::  Yes/no Y/N, replace rest !, cancel ^G.
+
+When at the search (or replace) prompt you can move back and forwards
+though the last 10 strings using ^XO (Next window) and ^XP (Previous
+window). The current default string can be inserted into the real search
+buffer, at the current cursor point, with ^X^B (List buffers).
 -------------------------------------------------------------------------------
 =>                      ACCESSING THE OPERATING SYSTEM
 Quick exit ............ Meta  Z     ::  Write out all changed buffers and exit.

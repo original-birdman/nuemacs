@@ -3,6 +3,10 @@ fillpara).  i.e.  make inword() list configurable (as the comment there
 says it should be).  Or make it use lgetgrapheme, and treat as a
 word-char anything whose base is a word-char.  Or both...
 
+Also look at getting zero-width joiners handled in word wrapping (where
+you can set a ZW optional break).
+Non-break spaces are already OK as they aren't spaces...
+
 ========== Search Issues!!! ==========
 
 Normal search

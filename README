@@ -45,7 +45,13 @@ Other changes so far made are:
     is read in
   o added a "Phon" mode, to allow input of non-ASCII characters with an
     ASCII keyboard using a lookup table mapping.
-  . Czech and Russian tables are provided.
+    Czech and Russian tables are provided.
+  o Add a set of ring buffers for each of search and replace string.
+    You can move back and forward through the last 10 by using
+    previous-window/next-window when searching.
+    You can insert the currently-selected default into the search buffer
+    with list-buffers. (These functions were otherwise disabled in the
+    minibuffer).
 
 Other changes to be made are:
   o better handle utf8 strings (ongoing...),
