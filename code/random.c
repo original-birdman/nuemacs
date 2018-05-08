@@ -892,23 +892,21 @@ int forwdel(int f, int n)
  * forward, this actually does a kill if presented with an argument. Bound to
  * both "RUBOUT" and "C-H".
  */
-int backdel(int f, int n)
-{
-        int s;
+int backdel(int f, int n) {
+    int s;
 
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if (n < 0)
-                return forwdel(f, -n);
-        if (f != FALSE) {               /* Really a kill.       */
-                if ((lastflag & CFKILL) == 0)
-                        kdelete();
-                thisflag |= CFKILL;
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
+        return rdonly();            /* We are in read only mode    */
+    if (n < 0) return forwdel(f, -n);
+    s = (back_grapheme(n) > 0);
+    if (s == TRUE) {                /* Don't kdelete if we can't move! */
+        if (f != FALSE) {           /* Really a kill.                  */
+            if ((lastflag & CFKILL) == 0) kdelete();
+            thisflag |= CFKILL;
         }
-        s = (back_grapheme(n) > 0);
-        if (s == TRUE)
-                s = ldelchar(n, f);
-        return s;
+        s = ldelchar(n, f);
+    }
+    return s;
 }
 
 /*
