@@ -46,12 +46,18 @@ Other changes so far made are:
   o added a "Phon" mode, to allow input of non-ASCII characters with an
     ASCII keyboard using a lookup table mapping.
     Czech and Russian tables are provided.
-  o Add a set of ring buffers for each of search and replace string.
+  o Added a set of ring buffers for each of search and replace string.
     You can move back and forward through the last 10 by using
     previous-window/next-window when searching.
     You can insert the currently-selected default into the search buffer
     with list-buffers. (These functions were otherwise disabled in the
     minibuffer).
+  o Added a set of kill-buffers for the last deletes.
+    If you yank (^Y) you can then do yank_prev_killbuf (Esc-Y) to change
+    that yanked text with the previous deletes in turn. Only works if
+    you do nothing else after the yank.
+    Also works after yank-minibuffer.
+    Note that yanking rotates the kill-ring list.
 
 Other changes to be made are:
   o better handle utf8 strings (ongoing...),

@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.129 Help Index     (08 May 2018)
+=>                   nuEmacs GGR4.130 Help Index     (09 May 2018)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -81,6 +81,12 @@ Kill region ...........      ^W         Yank ..................      ^Y
 Kill paragraph ........ Meta ^W         Exchange point and mark   ^X ^X
 Delete blank lines ....   ^X ^O     ::  A region is defined as the area between
 Copy region ........... Meta  W     ::  the mark and the current position.
+
+    If you yank (^Y) you can then do yank_prev_killbuf (Esc-Y) to change
+    that yanked text with the previous deletes in turn. Only works if
+    you do nothing else after the yank.
+    Also works after yank-minibuffer (Esc-^Y).
+    Note that yanking rotates the kill-ring list.
 -------------------------------------------------------------------------------
 =>                      FORMATTING
 Case word upper ....... Meta  U         Case word lower ....... Meta  L
@@ -121,10 +127,11 @@ Reverse incremental search              Hunt forward ..........  Alt-S
 Replace string ........ Meta  R
 Query replace string .. Meta  %     ::  Yes/no Y/N, replace rest !, cancel ^G.
 
-When at the search (or replace) prompt you can move back and forwards
-though the last 10 strings using ^XO (Next window) and ^XP (Previous
-window). The current default string can be inserted into the real search
-buffer, at the current cursor point, with ^X^B (List buffers).
+    When at the search (or replace) prompt you can move back and
+    forwards though the last 10 strings using ^XO (Next window) and ^XP
+    (Previous window).  The current default string can be inserted into
+    the real search buffer, at the current cursor point, with ^X^B (List
+    buffers).
 -------------------------------------------------------------------------------
 =>                      ACCESSING THE OPERATING SYSTEM
 Quick exit ............ Meta  Z     ::  Write out all changed buffers and exit.

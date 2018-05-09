@@ -124,7 +124,7 @@ void update_ring(char *str) {
     if (this_rt == Search) txt = srch_txt;
     else                   txt = repl_txt;
 
-/* If there is an empty entry. move it to the
+/* If there is an empty entry, move it to the bottom.
  * Although we count down to 0 as items are added, if there is a free
  * one we don't know where it is, so have to look.
  * We should be able to run this RING_SIZE times - no more.
