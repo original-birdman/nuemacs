@@ -1967,7 +1967,6 @@ line.h
 names.c
     Added an entry for rotate_kill_ring as "rkr".
 
-
 word.c
     delbword() changed to use kbufh[0] and kused[0] (from kbufh and
     kused).
@@ -1981,5 +1980,123 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.130
    Added information on the kill ring buffers to README and uemacs.hlp.
+
+========== GGR4.131
+
+edef.h
+globals.c
+input.c
+region.c
+(line.c)
+    If the last command was a yank then kill_region doesn't need to save
+    the killed text, as it is already at the top of the kill-ring.
+
+efunc.h
+eval.c
+input.c
+search.c
+    Fix the code for replace-string (sreplace) so that it works again
+    after the replace-ring code added in GGR4.130.
+    Drop the code for search/replace prompt updating as we go through
+    the search-ring into a function (new_prompt()). [efunc.h, search.c]
+    Call new_prompt() if a macro sets $search or $replace [eval.c]
+    Clear prmpt_buf.update on entry to getstring() in case some
+    mis-coding(?) has left it set. [input.c]
+    Let empty Replace strings go onto the replace-ring buffer [search.c]
+    Fix the check for what to do on an empty response in getstring(). We
+    do want to save empty Replaces, but not if the current top-of-ring
+    is empty. [search.c]
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.130
+   Added information on the kill ring buffers to README and uemacs.hlp.
+
+../README
+(search.c)
+(search.c)
+../CHANGES
+../README
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.130
+   Added information on the kill ring buffers to README and uemacs.hlp.
+
+
+========== GGR4.130
+
+random.c
+    Changed backdel() to check that back_grapheme() succeeds before
+    running kdelete() and marking the command as a CFKILL one.
+
+display.c
+    Fixed mlwrite_ap() to print (nil) when passed a NULL pointer to a
+    string, rather than crashing with SIGSEGV.
+    Reformatted code to 4-space indents.
+
+----------
+
+    Added a set of kill-buffers for the last deletes.
+    If you yank (^Y) you can then do yank_prev_killbuf (Esc-Y) to change
+    that yanked text with the previous deletes in turn. Only works if
+    you do nothing else after the yank.
+    Also works after yank-minibuffer.
+    Note that yanking rotates the kill-ring list.
+
+----- Details -----
+
+ebind.h
+    Add META-Y binding for yank_prev_killbuf.
+
+edef.h
+    Declare kused and kbufh to be arrays (of dimension KRING_SIZE).
+
+estruct.h
+    Define CFYANK flag. Set when last command is a yank*.
+
+eval.c
+    Moved getkill() up and removed unneeded additional declaration.
+    Changed getkill() to use kbufh[0] not kbufh to get data.
+    Forced a trailing null into the result - the kill buffers have a
+    known length so don't have nul-terminated data strings.
+
+globals.c
+    Define kused and kbufh as arrays.
+
+input.c
+    Set a mark before restoring the last minibuffer in yankmb() so that
+    yank_prev_killbuf(0 can replace the region.
+    Mark yankmb() as a CFYANK function.
+
+line.c
+line.h
+    kdelete() changed to delete the last item in the kbufh array, then
+    move the rest down one (freeing the top entry).
+    kinsert() changed to use kbufh[0] and kused[0] (from kbufh and
+    kused).
+    yank() changed to use kbufh[0] (from kbufh).
+    Added a rotate_kill_ring() function. Not bound by default, but can
+    be run by Esc-x rkr.
+    Added a yank_prev_killbuf() function to, if the previous command was
+    a yank:
+        o rotate the kill buffer (by any numeric arg)
+        o remove the yanked region (discarding it - not putting it on the
+          kill ring).
+        o inserting the current top kill=ring buffer.
+
+names.c
+    Added an entry for rotate_kill_ring as "rkr".
+
+word.c
+    delbword() changed to use kbufh[0] and kused[0] (from kbufh and
+    kused).
+
+----------
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.131
 
 ==========
