@@ -176,3 +176,6 @@ typedef struct {
     char prompt[NSTRING];       /* The new prompt to use */
 } prmpt_buf_st;
 extern prmpt_buf_st prmpt_buf;
+
+enum yank_type { None, NormalYank, MiniBufferYank };
+enum yank_type last_yank;

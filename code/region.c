@@ -30,12 +30,17 @@ int killregion(int f, int n)
                 return rdonly();        /* we are in read only mode     */
         if ((s = getregion(&region)) != TRUE)
                 return s;
-        if ((lastflag & CFKILL) == 0)   /* This is a kill type  */
-                kdelete();      /* command, so do magic */
+/* If the last command was a yank we don't want to change the kill-ring
+ * (the text is what is already on the top, or the last minibuffer).
+ */
+        int save_to_kill_ring = (lastflag & CFYANK)? FALSE: TRUE;
+        if ((lastflag & CFKILL) == 0) {         /* This is a kill type  */
+            if (save_to_kill_ring) kdelete();   /* command, so do magic */
+        }
         thisflag |= CFKILL;     /* kill buffer stuff.   */
         curwp->w_dotp = region.r_linep;
         curwp->w_doto = region.r_offset;
-        return ldelete(region.r_size, TRUE);
+        return ldelete(region.r_size, save_to_kill_ring);
 }
 
 /*

@@ -891,6 +891,7 @@ int yankmb(int f, int n) {
 
 /* Make sure there is something to yank */
     thisflag |= CFYANK;             /* This command is a yank */
+    last_yank = MiniBufferYank;     /* Save the type */
 
     if (strlen(lastmb) == 0) return(TRUE);  /* not an error, just nothing */
 

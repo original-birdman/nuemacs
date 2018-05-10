@@ -814,10 +814,11 @@ int yank(int f, int n) {
     }
     if (do_dummy_space) ldelchar(1, FALSE);
     thisflag |= CFYANK;         /* This is a yank */
+    last_yank = NormalYank;     /* Save the type */
     return TRUE;
 }
 
-/* A function to replace the last yank with text from teh kill-ring.
+/* A function to replace the last yank with text from the kill-ring.
  * Can *only* be used when a yank (or this function) was the last
  * function used.
  */
@@ -833,7 +834,7 @@ int yank_prev_killbuf(int f, int n) {
         mlwrite("Last command was not a yank!");
         return FALSE;
     }
-    thisflag |= CFYANK;         /* This is a yank */
+    thisflag |= CFYANK;         /* This is a also a yank */
 
 /* This is essentially the killregion() code (q.v.).
  * But we don't want to check for some things, and don't wan't ldelete()
