@@ -546,9 +546,11 @@ int svar(struct variable_description *var, char *value)
 #if     MAGIC
             mcclear();
 #endif
+            new_prompt(value);  /* Let gestring() know, via the search code */
             break;
         case EVREPLACE:
             strcpy(rpat, value);
+            new_prompt(value);  /* Let gestring() know, via the search code */
             break;
         case EVMATCH:
             break;

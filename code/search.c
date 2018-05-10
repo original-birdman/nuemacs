@@ -119,17 +119,18 @@ void init_search_ringbuffers(void) {
  * However - we don't want to push anything out if there is an empty entry.
  */
 int nring_free = RING_SIZE;
-void update_ring(char *str) {
+static void update_ring(char *str) {
     char **txt;
     if (this_rt == Search) txt = srch_txt;
     else                   txt = repl_txt;
 
-/* If there is an empty entry, move it to the bottom.
- * Although we count down to 0 as items are added, if there is a free
- * one we don't know where it is, so have to look.
+/* Although for Search strings we do count down to 0 as items are added:
+ * if there is a free one we don't know where it is, so have to look.
+ * If there is an empty entry, move it to the bottom.
+ * Empty entries are fine for Replace.
  * We should be able to run this RING_SIZE times - no more.
  */
-    if (nring_free > 0) {
+    if (this_rt == Search && nring_free > 0) {
         for (int ix = 0; ix < RING_SIZE-1; ix++) { /* Can't move last one */
             if (txt[ix][0] == '\0') {
                 char *tmp = txt[ix];
@@ -149,6 +150,22 @@ void update_ring(char *str) {
     int slen = strlen(str);
     txt[0] = realloc(tmp, slen + 1);
     strcpy(txt[0], str);
+
+    return;
+}
+
+/*
+ * A function to regenerate the prompt string with the given
+ * text as the default.
+ * Also called from svar() if it sets $replace or $search
+ */
+void new_prompt(char *dflt_str) {
+    strcpy(prmpt_buf.prompt, current_base); /* copy prompt to output string */
+    strcat(prmpt_buf.prompt, " " MLpre);    /* build new prompt string */
+    expandp(dflt_str, prmpt_buf.prompt+strlen(prmpt_buf.prompt), NPAT / 2);
+                                            /* add default pattern */
+    strcat(prmpt_buf.prompt, MLpost ": ");
+    prmpt_buf.update = 1;
     return;
 }
 
@@ -156,7 +173,7 @@ void update_ring(char *str) {
  * nextin_ring and previn_ring are always called with non -ve n
  */
 
-void previn_ring(int n, char *dstr, char *txt[]) {
+static void previn_ring(int n, char *dstr, char *txt[]) {
     char *tmp_txt[RING_SIZE];
 
     int rotate_count = n % RING_SIZE;
@@ -175,19 +192,14 @@ void previn_ring(int n, char *dstr, char *txt[]) {
  * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
  * to tell getsring() to use it.
  */
-    strcpy(prmpt_buf.prompt, current_base); /* copy prompt to output string */
-    strcat(prmpt_buf.prompt, " " MLpre);    /* build new prompt string */
-    expandp(dstr, prmpt_buf.prompt+strlen(prmpt_buf.prompt), NPAT / 2);
-                                            /* add default pattern */
-    strcat(prmpt_buf.prompt, MLpost ": ");
-    prmpt_buf.update = 1;
+    new_prompt(dstr);
 
     return;
 }
 
 /* nextin_ring is done as (RING_SIZE - n) in previn_ring() */
 
-void nextin_ring(int n, char *dstr, char *txt[]) {
+static void nextin_ring(int n, char *dstr, char *txt[]) {
     if (n == 0) return;
     int revn = RING_SIZE - n;   /* This result can be -ve ... */
     revn %= RING_SIZE;
@@ -627,7 +639,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * *Then*, make the meta-pattern, if we are defined that way.
  * Since search is recursive (you can search a search string) we
  * have to remember the in_search_prompt value of when we arrived.
- * We also have set this_rt before and aftre the mlreplyt() call.
+ * We also have set this_rt before and after the mlreplyt() call.
  */
 
     int prev_in_search_prompt = in_search_prompt;
@@ -638,16 +650,33 @@ static int readpattern(char *prompt, char *apat, int srch) {
     this_rt = our_rt;           /* Set our call type for update_ring() */
     in_search_prompt = prev_in_search_prompt;
     int do_update_ring = 1;
-    if (status == FALSE && pat[0] != 0) {
-/* Use the default one.
+/*
+ * status values from mlreplyt (-> getstring()) are
+ *  ABORT  (something went wrong)
+ *  FALSE  the result (tpat) is empty
+ *  TRUE   we have something in tpat
+ *
+ * so if status is FALSE we try to use the default value.
  * Since we can now run around saved ring buffers we have to ensure that
  * we have things set up for the currently-displayed default.
- * So put the default into apat, but mark that we don't want to
- * update the ring buffer with this value.
+ * So put any default into tpat (and hence apat), but mark that we don't
+ * want to update the ring buffer with this value.
+ * We'll always update Replace strings, as an empty Replace is valid.
  */
-        strcpy(tpat, pat);
-        do_update_ring = 0;
-        status = TRUE;          /* So we do the next section... */
+    if (status == FALSE) {              /* Empty response */
+        if (our_rt == Search) {
+            if (pat[0] != 0) {          /* Have a default to use? */
+                strcpy(tpat, pat);
+                do_update_ring = 0;     /* Don't save this */
+                status = TRUE;          /* So we do the next section... */
+            }
+        }
+        else {                          /* Must be a Replace */
+            strcpy(tpat, rpat);
+            if (*repl_txt[0] == '\0')   /* If current top is also empty... */
+                do_update_ring = 0;     /* ...don't save ths one */
+            status = TRUE;              /* So we do the next section... */
+        }
     }
     if (status == TRUE) {
         strcpy(apat, tpat);

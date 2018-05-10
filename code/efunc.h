@@ -347,9 +347,10 @@ extern int execprog(char *cmd);
  * They are remapped from nextwind/prevwind when in the search mini-buffer
  */
 extern void init_search_ringbuffers(void);
-extern int next_sstr(int f, int n);
-extern int prev_sstr(int f, int n);
-extern int select_sstr(int f, int n);
+extern void new_prompt(char *);
+extern int next_sstr(int, int);
+extern int prev_sstr(int, int);
+extern int select_sstr(int, int);
 
 extern int forwsearch(int f, int n);
 extern int forwhunt(int f, int n);

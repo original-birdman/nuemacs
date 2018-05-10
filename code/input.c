@@ -560,9 +560,12 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
         mb_info.main_bp = curbp;    /* For main buffer info in modeline */
         mb_info.main_wp = &wsave;   /* Used to position modeline */
     }
-/* Set-up the (incoming) prompt string */
+/* Set-up the (incoming) prompt string and clear any prompt update flag,
+ * as it should only get set during loop:
+ */
     strcpy(procopy, prompt);
     prolen = strlen(procopy);
+    prmpt_buf.update = 0;
 
     if (mpresf) mlerase();
     mberase();
