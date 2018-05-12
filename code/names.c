@@ -244,7 +244,7 @@ struct name_bind names[] = {
         {"write-message", writemsg, {0, 0}},
         {"yank", yank, {0, 0}},
         {"yank-minibuffer", yankmb, {0, 0}},        /* GGR */
-        {"yank-prev-killbuf", yank_prev_killbuf, {0, 0}},
+        {"yank-replace", yank_replace, {0, 0}},
 };
 
 /* Routine to produce an array index for names sorted by:

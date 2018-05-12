@@ -175,7 +175,7 @@ struct key_tab_init init_keytab[] = {
         {META|'U',          upperword       },
         {META|'V',          backpage        },
         {META|'W',          copyregion      },
-        {META|'Y',          yank_prev_killbuf   },
+        {META|'Y',          yank_replace   },
         {META|'X',          namedcmd        },
         {META|'Z',          quickexit       },
         {META|0x7F,         delbword        },
