@@ -245,6 +245,10 @@ struct name_bind names[] = {
         {"yank", yank, {0, 0}},
         {"yank-minibuffer", yankmb, {0, 0}},        /* GGR */
         {"yank-replace", yank_replace, {0, 0}},
+/* Must be last!!!
+ * getname() does a serial search and stops at a NULL function pointer
+ */
+        {"", NULL, {0, 0}},
 };
 
 /* Routine to produce an array index for names sorted by:
