@@ -204,6 +204,11 @@ fn_t getname(void) {
                 if (strncmp(buf, ffp->n_name, strlen(buf)) == 0) {
 /* A possible match! More than one? */
                     if ((ffp + 1)->n_func == NULL ||
+/* Also take an exact match, otherwise we can never match "set",
+ * as other functions start with "set", so we can never get a trailing
+ * space in
+ */
+                        (strcmp(buf, ffp->n_name) == 0) ||
                         (strncmp(buf, (ffp + 1)->n_name, strlen(buf)) != 0)) {
 /* No...we match, print it */
                         sp = ffp->n_name + cpos;
