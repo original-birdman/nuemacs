@@ -748,11 +748,17 @@ int yank(int f, int n) {
         if (n < 0) return FALSE;
     }
 
+/* We are about to yank, so define an empty region at the current point,
+ * in case we don't actually have any text to yank.
+ * This ensure that we have a valid region after any yank for any
+ * re-kill or yank_replace().
+ */
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = curwp->w_doto;
+
 /* Make sure there is something to yank */
     if (kbufh[0] == NULL) {
         thisflag |= CFYANK;             /* It's still a yank... */
-        curwp->w_markp = curwp->w_dotp; /* ...but we also need... */
-        curwp->w_marko = curwp->w_doto; /* ...an (empty) region! */
         return TRUE;                    /* not an error, just nothing */
     }
 
@@ -763,17 +769,11 @@ int yank(int f, int n) {
  * positioned just off the top of the screen; which is a bit disconcerting.
  * So if the next line is the same as the previous line (which can only
  * happen if we are in a single-line buffer, when both point to the headp)
- * and empty we insert a space then remove it later. This odd(?) method
- * also ensures that the mark we set stays in the correct place.
+ * we set a flag to do a final repositon().
+ * This will display the inserted text, leaving the last line at the middle
+ * of the window (or above, if fewer lines).
  */
-    int do_dummy_space = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
-    if (do_dummy_space) insspace(0, 1);
-
-/* GGR - set a mark so we can rekill if we want - we don't
- * want a message, so don't use setmark()..
- */
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = curwp->w_doto;
+    int need_reposition = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
 
 /* Handle the end of buffer. If we do nothing the mark will move with it
  * whereas we want it to stay after the last current character (any final
@@ -809,7 +809,7 @@ int yank(int f, int n) {
             kp = kp->d_next;
         }
     }
-    if (do_dummy_space) ldelchar(1, FALSE);
+    if (need_reposition) reposition(0, 0);
 /* Do any fixup for the original mark being at end of buffer */
     if (fixup_line) {
         curwp->w_markp = lforw(fixup_line);
@@ -841,7 +841,6 @@ int yank_replace(int f, int n) {
         else
             do_kill = 0;
     }
-    thisflag |= CFYANK;         /* This is a also a yank */
 
 /* This is essentially the killregion() code (q.v.).
  * But we don't want to check for some things, and don't wan't ldelete()
@@ -857,16 +856,12 @@ int yank_replace(int f, int n) {
     }
     rotate_kill_ring(0, n);
 
-/* If there is nothing in the top kill buffer then we are done */
-    if (kbufh[0] == NULL) {
-        curwp->w_markp = curwp->w_dotp; /* ...but we also need... */
-        curwp->w_marko = curwp->w_doto; /* ...an (empty) region! */
-        return TRUE;
-    }
-
 /* yank() already does what we want, so just use it.
  * But for this "indirect" call we need to send different values for n
  * as we've done all the required rotating.
+ * NOTE: that we make this call even if there is nothing to yank. This
+ *       allows yank() to set any required bits, e.g. the yank region
+ *       and setting CFYANK in thisflag
  */
     return yank(0, (yank_mode == GNU)? 0: 1);
 }
