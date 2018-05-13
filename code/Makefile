@@ -21,8 +21,17 @@ else
     DBG_OPTS = -O0 -g
 endif
 
+# Check TRACE *after* DBG
+# We don't specify -rdynamic as we want to be given the raw addresses
+# to pass to addr2line (may change if we use libbacktrace itself)
+#
+TRACE =
+ifneq ($(strip $(TRACE)),)
+    DBG_OPTS = -O0 -g -DNUTRACE
+endif
+
 # Where is the utf8proc library?
-# If no specifc option is given we go looking for it.
+# If no specific option is given we go looking for it.
 
 filex = $(shell test -f $(1) && echo $(1))
 

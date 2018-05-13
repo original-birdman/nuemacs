@@ -328,6 +328,57 @@ int macro_helper(int f, int n) {
     return FALSE;
 }
 
+#if defined(SIGWINCH) && defined(NUTRACE)
+/* Implement a stack dump compile time option using the builtin (to libc)
+ * backtrace mechanism.
+ * This seems unable to print line numbers (only function names if
+ * -rdynamic is added at compile time) so we extract the offset
+ * and pass it to addr2line. DO NOT add -rdynamic as a compile option!
+ *
+ * Code based on example at:
+ https://www.gnu.org/software/libc/manual/html_node/Backtraces.html#Backtraces
+ */
+#include <execinfo.h>
+
+static char* called_as;
+
+void dumptrace(int signr) {
+#define NLEVELS 30
+    void *array[NLEVELS];
+    size_t size;
+    char **strings;
+
+    size = backtrace(array, NLEVELS);
+    strings = backtrace_symbols(array, size);
+
+/* We have to go back to the normal screen for the printing, otherwise
+ * it gets cleared at exit.
+ */
+    TTclose();
+
+    printf("%s: %s => %zd stack frames.\n", called_as, strsignal(signr), size);
+
+/* Start at 1 to skip ourself */
+    int ca_len = strlen(called_as);
+    for (unsigned int i = 1; i < size; i++) {
+        printf("%u: %s\n", i, strings[i]);
+        char syscom[256];
+
+        if ((strncmp(strings[i], called_as, ca_len) == 0) &&
+             *(strings[i]+ca_len) == '(') {
+            char *addr_st = strings[i]+ca_len+1;
+            char *rp = strchr(addr_st, ')');
+            *rp = '\0';             /* Done with this string[] */
+            sprintf(syscom,"addr2line -e %s -f %s", called_as, addr_st);
+            fflush(stdout);     /* flush what we've got */
+            system(syscom);
+            fflush(stdout);     /* flush what was added */
+        }
+    }
+    exit(signr);
+}
+#endif
+
 int main(int argc, char **argv)
 {
     int c = -1;             /* command character */
@@ -365,8 +416,18 @@ int main(int argc, char **argv)
     sigact.sa_handler = sizesignal;
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
+#ifdef NUTRACE
+    sigact.sa_handler = dumptrace;
+    sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
+/* The SIGTERM is there so you can trace a loop */
+    int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM };
+    for (unsigned int si = 0; si < sizeof(siglist)/sizeof(siglist[0]); si++)
+        sigaction(siglist[si], &sigact, &oldact);
+    called_as = argv[0];
 #endif
 #endif
+#endif
+
 /* GGR The rest of intialisation is done after processing optional args */
     varinit();              /* initialise user variables */
 
@@ -583,7 +644,9 @@ int main(int argc, char **argv)
 
 #if UNIX
     signal(SIGHUP, emergencyexit);
+#ifndef NUTRACE
     signal(SIGTERM, emergencyexit);
+#endif
 #endif
 
     discmd = TRUE;          /* P.K. */
