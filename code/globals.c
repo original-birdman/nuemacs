@@ -177,3 +177,5 @@ int in_search_prompt = 0;
 prmpt_buf_st prmpt_buf = { NULL, 0, "" };
 
 enum yank_type last_yank = None;
+
+enum yank_style yank_mode = Old;

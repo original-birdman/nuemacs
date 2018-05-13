@@ -28,6 +28,8 @@ enum ev_val {
     EVGMODE,    EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,
     EVGFLAGS,   EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
+/* GGR */
+    EVYANKMODE,
 };
 
 /* List of recognized environment variables. */
@@ -84,7 +86,8 @@ static struct evlist {
  { "fcol",      EVFCOL },       /* first displayed column in curent window */
  { "hjump",     EVHJUMP },      /* horizontal screen jump size */
  { "hscroll",   EVHSCROLL },    /* horizontal scrolling flag */
-
+/* GGR */
+ { "yankmode",  EVYANKMODE },   /* mode for yank (old/gnu) */
 };
 
 /* The tags for user functions - used in struct evlist */

@@ -179,3 +179,6 @@ extern prmpt_buf_st prmpt_buf;
 
 enum yank_type { None, NormalYank, MiniBufferYank };
 enum yank_type last_yank;
+
+enum yank_style { Old, GNU };
+enum yank_style yank_mode;

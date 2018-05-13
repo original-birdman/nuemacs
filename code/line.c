@@ -739,12 +739,21 @@ int yank(int f, int n) {
 /* Don't allow this command if we are in read only mode */
 
     if (curbp->b_mode & MDVIEW) return rdonly();
-    if (n < 0) return FALSE;
+
+    if (yank_mode == GNU) {     /* A *given* numeric arg is kill rotating */
+        if (f && n) rotate_kill_ring(f, n); /* No rotate on default */
+        n = 1;                              /* With 1 loop pass */
+    }
+    else {                      /* Must be the old style - no -ve */
+        if (n < 0) return FALSE;
+    }
 
 /* Make sure there is something to yank */
     if (kbufh[0] == NULL) {
-        thisflag |= CFYANK;         /* It's still a yank */
-        return TRUE;                /* not an error, just nothing */
+        thisflag |= CFYANK;             /* It's still a yank... */
+        curwp->w_markp = curwp->w_dotp; /* ...but we also need... */
+        curwp->w_marko = curwp->w_doto; /* ...an (empty) region! */
+        return TRUE;                    /* not an error, just nothing */
     }
 
 /* We need to handle the case of being at the start of an empty buffer.
@@ -823,9 +832,14 @@ int yank_replace(int f, int n) {
 
     if (curbp->b_mode & MDVIEW) return rdonly();
 
+    int do_kill = 1;
     if (!(lastflag & CFYANK)) {
-        mlwrite("Last command was not a yank!");
-        return FALSE;
+        if (yank_mode == GNU) {
+           mlwrite("Last command was not a yank!");
+           return FALSE;
+        }
+        else
+            do_kill = 0;
     }
     thisflag |= CFYANK;         /* This is a also a yank */
 
@@ -833,17 +847,26 @@ int yank_replace(int f, int n) {
  * But we don't want to check for some things, and don't wan't ldelete()
  * to move the deleted region to the kill ring (it's alreayd there...).
  */
-    struct region region;
-    if ((s = getregion(&region)) != TRUE) return s;
-    curwp->w_dotp = region.r_linep;
-    curwp->w_doto = region.r_offset;
+    if (do_kill) {              /* May not be killing */
+        struct region region;
+        if ((s = getregion(&region)) != TRUE) return s;
+        curwp->w_dotp = region.r_linep;
+        curwp->w_doto = region.r_offset;
 /* Don't put killed text onto kill ring */
-    if ((s = ldelete(region.r_size, FALSE)) != TRUE) return s;
+        if ((s = ldelete(region.r_size, FALSE)) != TRUE) return s;
+    }
     rotate_kill_ring(0, n);
 
 /* If there is nothing in the top kill buffer then we are done */
-    if (kbufh[0] == NULL) return TRUE;
+    if (kbufh[0] == NULL) {
+        curwp->w_markp = curwp->w_dotp; /* ...but we also need... */
+        curwp->w_marko = curwp->w_doto; /* ...an (empty) region! */
+        return TRUE;
+    }
 
-/* yank() already does what we want, so just use it. */
-    return yank(0, 1);
+/* yank() already does what we want, so just use it.
+ * But for this "indirect" call we need to send different values for n
+ * as we've done all the required rotating.
+ */
+    return yank(0, (yank_mode == GNU)? 0: 1);
 }

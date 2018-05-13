@@ -266,6 +266,16 @@ char *gtenv(char *vname)
     case EVFCOL:            return(itoa(curwp->w_fcol));
     case EVHSCROLL:         return(ltos(hscroll));
     case EVHJUMP:           return(itoa(hjump));
+    case EVYANKMODE:        switch (yank_mode) {
+                            case Old:
+                                return("old");
+                                break;
+                            case GNU:
+                                return("gnu");
+                                break;
+                            }
+                            return("");
+                            break;
     }
     exit(-12);              /* again, we should never get here */
 }
@@ -612,6 +622,12 @@ int svar(struct variable_description *var, char *value)
             if (hjump < 1) hjump = 1;
             if (hjump > term.t_ncol - 1) hjump = term.t_ncol - 1;
             break;
+        case EVYANKMODE:
+            if (strcmp("old", value) == 0)
+                yank_mode = Old;
+            else if (strcmp("gnu", value) == 0)
+                yank_mode = GNU;
+            break;      /* For anything else, leave unset */
         }
         break;
     }
