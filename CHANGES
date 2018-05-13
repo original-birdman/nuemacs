@@ -2099,4 +2099,140 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.131
 
+========== GGR4.132
+
+----------
+
+    Fixes related to yanking and <CR> at the end of buffer.
+    This could result in:
+    o   mark and point both ending up at EOB (so yank-replace and
+        kill-region both failed)
+    o   an additional blank line added at end of buffer
+
+ebind.h
+line.c
+line.h
+names.c
+    Rename yank_prev_killbuf to yank_replace (and yank-prev-killbuf to
+    yank-replace) [ebind.h, line.c, line.h, names.c]
+    If we are adding a newline at the end of the last line, and it is not
+    empty, don't allocate a new line - just move w_dotp to the next line
+    and set w_doto to 0. [line.c]
+    Force the newline in lnewline() if a yank didn't start on the last line.
+    [line.c]
+    If yank() has no text to insert, still mark it as a yank (otherwise
+    yank-replace can't get kick-started [line.c]
+
+---------- Description of issue and solution.
+
+To stop the "phantom" newline being added if you (say) yank a line of
+text at End-of-buffer:
+
+In lnewline(), if we are on the last line (actually next-line = the
+headp) and are at the last character in the line (so not splitting a
+line) and the line is not empty (so it's not a "dummy" last line) we
+just update the current point (doto) the start of the next line - we
+don't actually add any line at all.
+
+But this leaves us with the issue of:
+
+   ...text...
+   <empty>
+   <empty>
+
+compared to:
+
+   ...text...
+   <empty>
+
+If you enter text into the middle line of the former you get:
+
+   ...text...
+   new-text
+   <empty>
+
+
+while if you enter it into the empty (last) line of the latter you get:
+
+   ...text...
+   new-text
+   <empty>
+
+i.e. the same, as uemacs will add a final (logical) newline. But we need
+to distinguish between the two if that new-text ends-with  a newline -
+in the first case we want it to be added whilst on the latter we don't.
+
+So, in yank (the newline function for <CR> is OK) I set a force_newline
+flag if a newline is about to be inserted and we weren't on the last
+line when starting the yank ( a fact that is already known for a fix-up
+to mark when yanking at end-of-buffer).
+
+----------
+
+names.c
+    Re-add a final NULL entry at the end of names[] as getname() uses a
+    serial search and expects to find it there.
+
+input.c
+    In getname() take an exact match as found, even if it is also a
+    partial match for something else. Otherwise you can never use
+    "set" interactively.
+
+edef.h
+eval.c
+evar.h
+globals.c
+line.c
+    Add yank_mode variable. [edef.h, globals.c]
+    Tie $yankmode environment variable to yank_mode. [eval.c, evar.h]
+    Handle yank() and yank_replace() (was yank_prev_killbuf()) according
+    to the user-defined style ("old" or "gnu"). [line.c]
+    yanking an empty string must still set an empty region at the
+    current location. [line.c]
+
+    yank styles:
+    old:
+        ctl-Y (yank) inserts the last-killed string.
+        Esc<n> ctl-Y inserts <n> copies.
+        Esc-Y (yank_replace):
+            if the last command was a yank this replaces that region
+            with the previous kill-ring buffer entry, otherwise it
+            just inserts the last-killed string (== ctl-Y).
+        Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
+        replace.
+
+    gnu:
+        ctl-Y (yank) inserts the last-killed string.
+        Esc<n> ctl-Y rotates the kill-ring buffers by <n> then inserts
+        the current "top" kill-ring string.
+        Esc-Y (yank_replace):
+            if the last command was not a yank it complains and does
+            nothing
+            otherwise it replaces that region with the previous
+            kill-ring buffer entry
+        Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
+        replace.
+
+     The default setting is "old". To change this use:
+         set $yankmode gnu
+     in your personal uemacs.rc file.
+
+
+Makefile
+main.c
+    Add code to generate a stack trace dump on some signals (including
+    TERM, so you can find out where a forever loop is).
+    Built when TRACE=1 is supplied to the make command.
+    This REQUIRES the addr2line program to be accessible.
+
+line.c
+     Improve the code to handle yanking into an empty buffer.
+     Consolidate the setting of an empty-region at point before yanking.
+
+(basic.c)
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.132
+
 ==========

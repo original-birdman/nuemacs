@@ -78,7 +78,7 @@ int gotobol(int f, int n)
  * The macro-callable backchar() (as macros need something that returns
  * TRUE/FALSE) is a write-through to this, with the "f" arg ignored (it
  * has never done anything).
- * Internal calls should be to back_grapheme() *not* bachchar().
+ * Internal calls should be to back_grapheme() *not* backchar().
  */
 int back_grapheme(int n)
 {

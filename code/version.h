@@ -4,7 +4,7 @@
 #define PROGRAM_NAME "uemacs"
 #define PROGRAM_NAME_LONG "nuEmacs"
 
-#define VERSION "GGR4.131"
+#define VERSION "GGR4.132"
 
 /* Print the version string. */
 void version(void);

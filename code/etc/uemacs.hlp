@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.131 Help Index     (10 May 2018)
+=>                   nuEmacs GGR4.132 Help Index     (13 May 2018)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -82,11 +82,32 @@ Kill paragraph ........ Meta ^W         Exchange point and mark   ^X ^X
 Delete blank lines ....   ^X ^O     ::  A region is defined as the area between
 Copy region ........... Meta  W     ::  the mark and the current position.
 
-    If you yank (^Y) you can then do yank_prev_killbuf (Esc-Y) to change
-    that yanked text with the previous deletes in turn. Only works if
-    you do nothing else after the yank.
-    Also works after yank-minibuffer (Esc-^Y).
-    Note that yanking rotates the kill-ring list.
+    There are two yank-styles, "old" and "gnu". The default is "old".
+    To change this use:
+         set $yankmode gnu
+    in your personal uemacs.rc file.
+
+    old:
+        ctl-Y (yank) inserts the last-killed string.
+        Esc<n> ctl-Y inserts <n> copies.
+        Esc-Y (yank_replace):
+            if the last command was a yank this replaces that region
+            with the previous kill-ring buffer entry, otherwise it
+            just inserts the last-killed string (== ctl-Y).
+        Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
+        replace.
+
+    gnu:
+        ctl-Y (yank) inserts the last-killed string.
+        Esc<n> ctl-Y rotates the kill-ring buffers by <n> then inserts
+        the current "top" kill-ring string.
+        Esc-Y (yank_replace):
+            if the last command was not a yank it complains and does
+            nothing
+            otherwise it replaces that region with the previous
+            kill-ring buffer entry
+        Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
+        replace.
 -------------------------------------------------------------------------------
 =>                      FORMATTING
 Case word upper ....... Meta  U         Case word lower ....... Meta  L
