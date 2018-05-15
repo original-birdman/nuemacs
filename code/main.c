@@ -328,56 +328,81 @@ int macro_helper(int f, int n) {
     return FALSE;
 }
 
-#if defined(SIGWINCH) && defined(NUTRACE)
-/* Implement a stack dump compile time option using the builtin (to libc)
- * backtrace mechanism.
- * This seems unable to print line numbers (only function names if
- * -rdynamic is added at compile time) so we extract the offset
- * and pass it to addr2line. DO NOT add -rdynamic as a compile option!
- *
- * Code based on example at:
- https://www.gnu.org/software/libc/manual/html_node/Backtraces.html#Backtraces
- */
-#include <execinfo.h>
-
 static char* called_as;
 
-void dumptrace(int signr) {
-#define NLEVELS 30
-    void *array[NLEVELS];
-    size_t size;
-    char **strings;
+#if defined(SIGWINCH) && defined(NUTRACE)
+/* Implement a stack dump compile time option using libbacktrace. */
 
-    size = backtrace(array, NLEVELS);
-    strings = backtrace_symbols(array, size);
+#include "backtrace.h"
+#include "backtrace-supported.h"
+
+struct bt_ctx {
+    struct backtrace_state *state;
+    int error;
+};
+
+static void syminfo_callback (void *data, uintptr_t pc,
+     const char *symname, uintptr_t symval, uintptr_t symsize) {
+    UNUSED(data); UNUSED(symval); UNUSED(symsize);
+    if (symname) {
+        printf("0x%lx %s ??:0\n", (unsigned long)pc, symname);
+    }
+    else {
+        printf("0x%lx ?? ??:0\n", (unsigned long)pc);
+    }
+}
+
+static void error_callback(void *data, const char *msg, int errnum) {
+    struct bt_ctx *ctx = data;
+    printf("ERROR: %s (%d)", msg, errnum);
+    ctx->error = 1;
+}
+
+static int full_callback(void *data, uintptr_t pc, const char *filename,
+     int lineno, const char *function) {
+        
+    struct bt_ctx *ctx = data;
+    if (function) {
+        printf("0x%lx %s %s:%d\n", (unsigned long)pc, function,
+             filename? filename: "??", lineno);
+    }
+    else {
+        backtrace_syminfo(ctx->state, pc, syminfo_callback,
+             error_callback, data);
+    }
+    return 0;
+}
+
+static int simple_callback(void *data, uintptr_t pc) {
+    struct bt_ctx *ctx = data;
+    backtrace_pcinfo(ctx->state, pc, full_callback, error_callback, data);
+    return 0;
+}
+#endif
+
+/* Add a handler to trap any signal, do a stack dump (possibly) */
+
+void exit_via_signal(int signr) {
 
 /* We have to go back to the normal screen for the printing, otherwise
  * it gets cleared at exit.
  */
     TTclose();
 
-    printf("%s: %s => %zd stack frames.\n", called_as, strsignal(signr), size);
-
-/* Start at 1 to skip ourself */
-    int ca_len = strlen(called_as);
-    for (unsigned int i = 1; i < size; i++) {
-        printf("%u: %s\n", i, strings[i]);
-        char syscom[256];
-
-        if ((strncmp(strings[i], called_as, ca_len) == 0) &&
-             *(strings[i]+ca_len) == '(') {
-            char *addr_st = strings[i]+ca_len+1;
-            char *rp = strchr(addr_st, ')');
-            *rp = '\0';             /* Done with this string[] */
-            sprintf(syscom,"addr2line -e %s -f %s", called_as, addr_st);
-            fflush(stdout);     /* flush what we've got */
-            system(syscom);
-            fflush(stdout);     /* flush what was added */
-        }
-    }
+#if defined(SIGWINCH) && defined(NUTRACE)
+    struct backtrace_state *state =
+        backtrace_create_state (called_as, BACKTRACE_SUPPORTS_THREADS,
+             error_callback, NULL);
+    printf("%s: signal %s seen.  Traceback:\n", called_as, strsignal(signr));
+    struct bt_ctx ctx = {state, 0};
+/* Start the stacktrace 2 levels back (ignore us and the signal thrower). */
+    backtrace_simple(state, 2, simple_callback, error_callback, &ctx);
+    fflush(stdout);
+#else
+    printf("%s: signal %s seen.\n", called_as, strsignal(signr));
+#endif
     exit(signr);
 }
-#endif
 
 int main(int argc, char **argv)
 {
@@ -410,22 +435,24 @@ int main(int argc, char **argv)
         sleep(1); /* Time for window manager. */
 #endif
 
-#if     UNIX
-#ifdef SIGWINCH
+#if UNIX
     struct sigaction sigact, oldact;
+#ifdef SIGWINCH
     sigact.sa_handler = sizesignal;
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
-#ifdef NUTRACE
-    sigact.sa_handler = dumptrace;
+#endif
+/* Add a handler for other signals, whcih will exit */
+    sigact.sa_handler = exit_via_signal;
     sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
 /* The SIGTERM is there so you can trace a loop */
     int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM };
     for (unsigned int si = 0; si < sizeof(siglist)/sizeof(siglist[0]); si++)
         sigaction(siglist[si], &sigact, &oldact);
     called_as = argv[0];
-#endif
-#endif
+/* The old one to get you out... */
+    sigact.sa_handler = emergencyexit;
+    sigaction(SIGHUP, &sigact, &oldact);
 #endif
 
 /* GGR The rest of intialisation is done after processing optional args */
@@ -641,13 +668,6 @@ int main(int argc, char **argv)
     }
 
 /* Done with processing command line */
-
-#if UNIX
-    signal(SIGHUP, emergencyexit);
-#ifndef NUTRACE
-    signal(SIGTERM, emergencyexit);
-#endif
-#endif
 
     discmd = TRUE;          /* P.K. */
 
@@ -1053,7 +1073,7 @@ int quickexit(int f, int n) {
                 return status;
             }
         }
-        bp = bp->b_bufp;        /* on to the next buffer */
+        bp = bp->b_bufp;            /* on to the next buffer */
     }
     quit(f, n);                     /* conditionally quit   */
     return TRUE;

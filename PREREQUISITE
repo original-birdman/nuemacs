@@ -1,3 +1,4 @@
+========== JuliaLang utf8proc ==========
 Version GGR4.115 improved unicode character handling (such as upper and
 lower-casing) by using the Julia Lang utf8proc library for character
 properties.  As a result this library is now a pre-requisite for this
@@ -6,7 +7,33 @@ version of uemacs.
 The library is available from https://julialang.org/utf8proc/
 (downloadable from https://github.com/JuliaLang/utf8proc).
 
-To use it you can either place it alongside the nuemacs repository code
-and build it (in which case uemacs will use the static library from
-there) or install it to you system, in which case uemacs will use the
-dynamic library.  Read the Makefile for more details.
+To use it you can either place it alongside the nuemacs repository (or
+the code sub-directory) and build it (in which case uemacs will use the
+static library from there) or install it to you system, in which case
+uemacs will use the dynamic library.  Read the Makefile for more
+details.
+
+========== libbacktrace ==========
+
+Version GGR4.133 added a crude stack trace dump optional capability
+which required the external addr2line program, but this was changed at
+GGR4.133 to use libbacktrace, so that it was self-contained.
+This functionality only works (in that it only produces anything useful)
+on x86_64 architectures.
+
+The library is available at
+    https://github.com/ianlancetaylor/libbacktrace
+
+Download the zip file, unpack, run ./configure and make.
+You may then either:
+
+ o Install this to the system (by default /usr/local/lib).  The build
+   will use the dynamic libraries.
+
+ o Put the libbacktrace-master directory alongside the nuemacs
+   repository (or the code sub-directory) and the build will use the
+   static library.
+
+ o Copy just the libbacktrace.a (under .libs) backtrace.h and
+   backtrace-supported.h into a libbacktrace directory and put that
+   alongside the nuemacs repository or code sub-directory.
