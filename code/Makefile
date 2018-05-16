@@ -185,9 +185,10 @@ ifneq ($(strip $(TRACE)),)
     endif
 
 # Now set the compilation options for it...
-# It needs -g to get the line numbers, but can still -Ox optimizing.
+# -g1 is sufficient to get the line numbers (but nt for variable debugging)
+# We can still do -Ox optimizing.
 #
-    TRACE_OPTS = -g -DNUTRACE
+    TRACE_OPTS = -g1 -DNUTRACE
 endif
 
 # Who are we?
