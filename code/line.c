@@ -769,9 +769,7 @@ int yank(int f, int n) {
  * positioned just off the top of the screen; which is a bit disconcerting.
  * So if the next line is the same as the previous line (which can only
  * happen if we are in a single-line buffer, when both point to the headp)
- * we set a flag to do a final repositon().
- * This will display the inserted text, leaving the last line at the middle
- * of the window (or above, if fewer lines).
+ * we set a flag to do a final reposition().
  */
     int need_reposition = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
 
@@ -809,7 +807,12 @@ int yank(int f, int n) {
             kp = kp->d_next;
         }
     }
-    if (need_reposition) reposition(0, 0);
+/* This will display the inserted text, leaving the last line at the last
+ * but one line, if there is sufficient text for that, otherwise with the
+ * top line at the top.
+ */
+    if (need_reposition) reposition(TRUE, -1);
+
 /* Do any fixup for the original mark being at end of buffer */
     if (fixup_line) {
         curwp->w_markp = lforw(fixup_line);
