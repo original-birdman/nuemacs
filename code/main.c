@@ -55,6 +55,9 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <time.h>
 
 #include "estruct.h" /* Global structures and defines. */
 #include "edef.h"    /* Global definitions. */
@@ -167,6 +170,7 @@ static int create_kbdmacro_buffer(void) {
     kbdmac_bp->b_type = BTPROC;     /* Mark the buffer type */
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "init")) return FALSE;
     linstr("write-message \"No keyboard macro yet defined\"");
+    kbdmac_bp->b_flag &= ~BFCHG;    /* Mark as unchanged */
     return kbdmac_buffer_toggle(OutOf_KBDM, "init");
 }
 
@@ -360,7 +364,7 @@ static void error_callback(void *data, const char *msg, int errnum) {
 
 static int full_callback(void *data, uintptr_t pc, const char *filename,
      int lineno, const char *function) {
-        
+
     struct bt_ctx *ctx = data;
     if (function) {
         printf("0x%lx %s %s:%d\n", (unsigned long)pc, function,
@@ -378,29 +382,187 @@ static int simple_callback(void *data, uintptr_t pc) {
     backtrace_pcinfo(ctx->state, pc, full_callback, error_callback, data);
     return 0;
 }
+
+/* This is the entry-point routine for the trace back info */
+
+static void do_stackdump(void) {
+
+    printf("Traceback:\n");
+
+    struct backtrace_state *state =
+        backtrace_create_state (called_as, BACKTRACE_SUPPORTS_THREADS,
+             error_callback, NULL);
+    struct bt_ctx ctx = {state, 0};
+/* Start the stacktrace 3 levels back (ignore this routine,
+ * the signal handler that called us and the signal thrower code).
+ */
+    backtrace_simple(state, 2, simple_callback, error_callback, &ctx);
+    printf("\n");
+}
 #endif
 
-/* Add a handler to trap any signal, do a stack dump (possibly) */
+/* This scans through the bufers and looked for modified ones associated
+ * with files. For all it finds it tries to save them in ~/uemacs-dumps.
+ * If any buffers are narrowed it widens them before dumping.
+ */
+
+void dump_modified_buffers(void) {
+
+    int status;
+
+    printf("Trying to save modified buffers\n");
+
+/* Get the current dir name - possibly needed for the index */
+    char cwd[1024];
+    char *dnc = getcwd(cwd, 1024);
+    UNUSED(dnc);
+
+/* Get to the dump directory */
+
+    char *p;
+    if ((p = getenv("HOME")) == NULL) {
+        perror("Can't find HOME - no buffer saving:");
+        return;
+    }
+    status = chdir(p);
+    if (status !=0) {
+        perror("Can't get to HOME - no buffer saving:");
+
+    }
+#define DUMPDIR_NAME "uemacs-dumps"
+    status = mkdir(DUMPDIR_NAME, 0700); /* Private by default */
+    if (status !=0 && errno != EEXIST) {
+        perror("Can't make HOME/" DUMPDIR_NAME " - no buffer saving: ");
+        return;
+    }
+    status = chdir(DUMPDIR_NAME);
+    if (status !=0) {
+        perror("Can't get to HOME/" DUMPDIR_NAME " - no buffer saving:");
+        return;
+    }
+
+/* Generate a time-tag for the dumped files.
+ * We assume that we don't get multiple dumps in the same second.
+ */
+
+    char time_stamp[20];
+    char tagged_name[NFILEN], orig_name[NFILEN];
+    time_t t = time(NULL);
+    int ts_len = strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
+
+/* Scan the buffers */
+
+    int index_open = 0;
+    int do_index = 0;
+    int add_cwd;
+    FILE *index_fp;
+    for(struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+        if ((bp->b_flag & BFCHG) == 0     /* Not changed...*/
+         || (bp->b_flag & BFINVS) != 0    /* ...not real... */
+         || (bp->b_mode & MDVIEW) != 0    /* ...read-only... */
+         || (bp->b_fname[0] == '\0')) {   /* ...has no filename */
+
+/* Not interested ... but we *do* want to save any keyboard-macro.
+ * which is marked as invisible.
+ */
+            if (bp == kbdmac_bp && (bp->b_flag & BFCHG) != 0) {
+                strcpy(bp->b_fname, kbdmacro_buffer); /* Give it a value */
+            }
+            else {
+                continue;
+            }
+        }
+
+        curbp = bp;     /* Needed for functionality calls */
+        if ((bp->b_flag & BFTRUNC) != 0) {
+            printf("Skipping %s - truncated\n", bp->b_fname);
+            continue;
+        }
+        if ((bp->b_flag & BFNAROW) != 0) {
+            printf("Widening %s...\n", bp->b_bname);
+            curwp->w_bufp = bp;         /* widen() widens this one */
+            if (widen(0, 0) != TRUE) {
+                printf(" - failed - skipping\n");
+                continue;
+            }
+            else
+                printf("\n");
+        }
+        printf("Saving %s...\n", bp->b_bname);
+/* Get the filename from any pathname (may need a utf8 version of strrchr()? */
+        char *fn = strrchr(bp->b_fname, '/');
+        if (fn == NULL) {       /* Just a filename */
+            fn = bp->b_fname;
+            add_cwd = 1;
+        }
+        else {
+            fn++;               /* Skip over the / */
+            add_cwd = 0;
+        }
+        strcpy(tagged_name, time_stamp);
+        strncpy(tagged_name+ts_len, fn, NFILEN-ts_len-1);
+        tagged_name[NFILEN-1] = '\0';   /* Ensure a terminating NUL */
+        strcpy(orig_name, bp->b_fname); /* For INDEX */
+/* Just in case the use has opened a filed "kbd_macro", we alter the
+ * tagged name to have a ! for this special case, to avoid any
+ * name clash.
+ */
+        if (curbp == kbdmac_bp) tagged_name[ts_len-1] = '!';
+        strcpy(bp->b_fname, tagged_name);
+        if ((status = filesave(0, 0)) != TRUE) {
+            printf("  failed - skipping\n");
+            continue;
+        }
+        else
+            printf("\n");
+        if (!index_open) {
+            index_open = 1;                 /* Don't try again */
+            index_fp = fopen("INDEX", "a");
+            if (index_fp == NULL) {
+                perror("No INDEX update");
+            }
+            else
+                do_index = 1;
+        }
+        if (do_index) {
+            char *dir, *sep;
+            if (add_cwd) {
+                dir = cwd;
+                sep = "/";
+            }
+            else {
+                dir = "";
+                sep = "";
+            }
+            fprintf(index_fp, "%s <= %s%s%s\n", tagged_name, dir, sep,
+                  orig_name);
+        }
+    }
+    if (do_index) fclose(index_fp);
+    return;
+}
+
 
 void exit_via_signal(int signr) {
 
 /* We have to go back to the normal screen for the printing, otherwise
  * it gets cleared at exit.
+ * Also set up stdout to autoflush, so that it interlaces correctly
+ * with stderr.
  */
     TTclose();
-
-#if defined(SIGWINCH) && defined(NUTRACE)
-    struct backtrace_state *state =
-        backtrace_create_state (called_as, BACKTRACE_SUPPORTS_THREADS,
-             error_callback, NULL);
-    printf("%s: signal %s seen.  Traceback:\n", called_as, strsignal(signr));
-    struct bt_ctx ctx = {state, 0};
-/* Start the stacktrace 2 levels back (ignore us and the signal thrower). */
-    backtrace_simple(state, 2, simple_callback, error_callback, &ctx);
     fflush(stdout);
-#else
+    setvbuf(stdout, NULL, _IONBF, 0);
     printf("%s: signal %s seen.\n", called_as, strsignal(signr));
+
+/* Possibly a stack dump */
+#if defined(SIGWINCH) && defined(NUTRACE)
+    do_stackdump();
 #endif
+
+/* Try to save any modified files. */
+    dump_modified_buffers();
+
     exit(signr);
 }
 
