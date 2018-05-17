@@ -47,7 +47,7 @@ filex = $(shell test -f $(1) && echo $(1))
 # Where is the utf8proc library?
 # If no specific option is given we go looking for it.
 #
-# First we look in likely locations for a system installtion, and
+# First we look in likely locations for a system installation, and
 # use a dynamic libray from there.
 # The fallback assumption is that it is installed alongside the nuemacs
 # installation, and will will load the static library.
@@ -67,8 +67,11 @@ ifeq ($(strip $(UTF8)),)
     dlist += /opt/local/include/utf8proc.h
     dlist += ../utf8proc*/utf8proc.h
     dlist += ../../utf8proc*/utf8proc.h
+# Expand the wildcards...
+    xdlist = $(shell echo $(dlist))
 
-    res := $(firstword $(foreach arg, $(dlist), $(call filex, $(arg) ) ) )
+    res := $(firstword $(foreach arg, $(xdlist), $(call filex, $(arg) ) ) )
+
     ifeq ($(strip $(res)),/usr/include/utf8proc.h)
 # System location - use dynamic lib with no special options
         UTF8INCL =
@@ -133,13 +136,15 @@ ifneq ($(strip $(TRACE)),)
     ifeq ($(strip $(BCKT)),)
 # No override - so go looking...
 #
-        dlist := /usr/include/backtrace.h
-        dlist += /usr/local/include/backtrace.h
-        dlist += /opt/local/include/backtrace.h
-        dlist += ../libbacktrace*/backtrace.h
-        dlist += ../../libbacktrace*/backtrace.h
+        blist := /usr/include/backtrace.h
+        blist += /usr/local/include/backtrace.h
+        blist += /opt/local/include/backtrace.h
+        blist += ../libbacktrace*/backtrace.h
+        blist += ../../libbacktrace*/backtrace.h
+# Expand the wildcards...
+        xblist = $(shell echo $(blist))
 
-        res := $(firstword $(foreach arg, $(dlist), $(call filex, $(arg))))
+        res := $(firstword $(foreach arg, $(xblist), $(call filex, $(arg))))
         ifeq ($(strip $(res)),/usr/include/backtrace.h)
 # System location - use dynamic lib with no special options
             BCKTINCL =
