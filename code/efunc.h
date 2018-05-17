@@ -123,6 +123,7 @@ extern int ggr_style (int f, int n);
 extern int addto_kbdmacro(char *, int, int);
 extern void addchar_kbdmacro(char);
 extern int macro_helper(int, int);
+extern void dumpdir_tidy(void);
 extern void edinit(char *bname);
 extern int execute(int c, int f, int n);
 extern int quickexit(int f, int n);

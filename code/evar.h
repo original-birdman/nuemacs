@@ -29,7 +29,7 @@ enum ev_val {
     EVGFLAGS,   EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
-    EVYANKMODE,
+    EVYANKMODE, EVAUTOCLEAN,
 };
 
 /* List of recognized environment variables. */
@@ -88,6 +88,7 @@ static struct evlist {
  { "hscroll",   EVHSCROLL },    /* horizontal scrolling flag */
 /* GGR */
  { "yankmode",  EVYANKMODE },   /* mode for yank (old/gnu) */
+ { "autoclean", EVAUTOCLEAN },  /* Age at which dumped files are removed */
 };
 
 /* The tags for user functions - used in struct evlist */

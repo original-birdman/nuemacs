@@ -185,7 +185,7 @@ char *gtusr(char *vname)
  */
 char *gtenv(char *vname)
 {
-    unsigned int vnum;  /* ordinal number of var refrenced */
+    unsigned int vnum;  /* ordinal number of var referenced */
 
 /* Scan the list, looking for the referenced name */
     for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
@@ -276,6 +276,7 @@ char *gtenv(char *vname)
                             }
                             return("");
                             break;
+    case EVAUTOCLEAN:       return(itoa(autoclean));
     }
     exit(-12);              /* again, we should never get here */
 }
@@ -628,6 +629,12 @@ int svar(struct variable_description *var, char *value)
             else if (strcmp("gnu", value) == 0)
                 yank_mode = GNU;
             break;      /* For anything else, leave unset */
+        case EVAUTOCLEAN:
+           {int old_autoclean = autoclean;
+            autoclean = atoi(value);
+            if (autoclean >= 0 && autoclean < old_autoclean) dumpdir_tidy();
+           }
+            break;
         }
         break;
     }

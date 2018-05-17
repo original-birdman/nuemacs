@@ -58,6 +58,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
 
 #include "estruct.h" /* Global structures and defines. */
 #include "edef.h"    /* Global definitions. */
@@ -79,8 +80,10 @@ extern unsigned _stklen = 20000;
 static void emergencyexit(int);
 #endif
 
-void usage(int status) /* GGR - list all options actually available! */
-{
+/* ======================================================================
+ * GGR - list all options actually available!
+ */
+void usage(int status) {
 #define NL "\n"
 
 printf( \
@@ -121,6 +124,10 @@ static int must_quote;
 
 enum KBDM_direction { GetTo_KBDM, OutOf_KBDM };
 
+/* ======================================================================
+ * Internal routine to get to/from the keyboard macro buffer.
+ * Remembers whence it came.
+ */
 static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
     static enum KBDM_direction last_mode = OutOf_KBDM;  /* This must toggle */
     static struct buffer *obp;
@@ -160,8 +167,9 @@ out_of_phase:                       /* Can only get here on error */
     return FALSE;
 }
 
-/* Create a new keyboard-macro buffer */
-
+/* ======================================================================
+ * Internal routine to create the keyboard-macro buffer.
+ */
 static int create_kbdmacro_buffer(void) {
     if ((kbdmac_bp = bfind(kbdmacro_buffer, TRUE, BFINVS)) == NULL) {
         mlwrite("Cannot create keyboard macro buffer!");
@@ -174,6 +182,10 @@ static int create_kbdmacro_buffer(void) {
     return kbdmac_buffer_toggle(OutOf_KBDM, "init");
 }
 
+/* ======================================================================
+ * Internal routine to set-up the keyboard macro buffer to collect a new
+ * set of macro commands.
+ */
 static int start_kbdmacro(void) {
     if (!kbdmac_bp) {
         mlwrite("start: no keyboard macro buffer!");
@@ -187,13 +199,13 @@ static int start_kbdmacro(void) {
     return kbdmac_buffer_toggle(OutOf_KBDM, "start");
 }
 
-/* Would be nice to be able to count consecutive calls to certain
+/* ======================================================================
+ * Record a character to the keyboard macro buffer.
+ * Needs to handle spaces and token()'s special characters.
+ *
+ * Would be nice to be able to count consecutive calls to certain
  * functions (forward-character, next-line, etc.) and just use
  * one call with a numeric arg.
- */
-
-/* This records an added character
- * Needs to handle spaces and token()'s special characters.
  */
 void addchar_kbdmacro(char addch) {
 
@@ -217,10 +229,11 @@ void addchar_kbdmacro(char addch) {
     return;
 }
 
-/* Flush any pending text so as to be insert raw.
- * Needs to handle spaces, token()'s special characters and NULs
+/* ======================================================================
+ * Internal routine to flush any pending text so as to be insert raw.
+ * Needs to handle spaces, token()'s special characters and NULs.
  */
-static void flush_kbd_text(void) {
+    static void flush_kbd_text(void) {
     lnewline();
     linstr("insert-raw-string ");
     if (must_quote) linsert_byte(1, '"');
@@ -247,11 +260,18 @@ static void flush_kbd_text(void) {
     return;
 }
 
+/* ======================================================================
+ * Internal routine to record any numeric arg given to a macro function.
+ */
 static int func_rpt_cnt = 0;
 static void set_narg_kbdmacro(int n) {
     func_rpt_cnt = n;
     return;
 }
+
+/* ======================================================================
+ * Add a string to the keyboard macro buffer.
+ */
 int addto_kbdmacro(char *text, int new_command, int do_quote) {
     if (!kbdmac_bp) {
         mlwrite("addto: no keyboard macro buffer!");
@@ -302,6 +322,9 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
     return kbdmac_buffer_toggle(OutOf_KBDM, "addto");
 }
 
+/* ======================================================================
+ * Internal routine to finalize the keyboard macro buffer.
+ */
 static int end_kbdmacro(void) {
     if (!kbdmac_bp) {
         mlwrite("end: no keyboard macro buffer!");
@@ -316,6 +339,10 @@ static int end_kbdmacro(void) {
     return kbdmac_buffer_toggle(OutOf_KBDM, "end");
 }
 
+/* ======================================================================
+ * Used to get the action for certain active characters into macros,
+ * rather than just getting the raw character inserted.
+ */
 int macro_helper(int f, int n) {
     UNUSED(f);
     char tag[2];                        /* Just char + NULL needed */
@@ -332,6 +359,7 @@ int macro_helper(int f, int n) {
     return FALSE;
 }
 
+/* ====================================================================== */
 static char* called_as;
 
 #if defined(SIGWINCH) && defined(NUTRACE)
@@ -345,6 +373,9 @@ struct bt_ctx {
     int error;
 };
 
+/* ======================================================================
+ * A set of callback routines to provide the stack-trace.
+ */
 static void syminfo_callback (void *data, uintptr_t pc,
      const char *symname, uintptr_t symval, uintptr_t symsize) {
     UNUSED(data); UNUSED(symval); UNUSED(symsize);
@@ -355,13 +386,11 @@ static void syminfo_callback (void *data, uintptr_t pc,
         printf("0x%lx ?? ??:0\n", (unsigned long)pc);
     }
 }
-
 static void error_callback(void *data, const char *msg, int errnum) {
     struct bt_ctx *ctx = data;
     printf("ERROR: %s (%d)", msg, errnum);
     ctx->error = 1;
 }
-
 static int full_callback(void *data, uintptr_t pc, const char *filename,
      int lineno, const char *function) {
 
@@ -376,15 +405,18 @@ static int full_callback(void *data, uintptr_t pc, const char *filename,
     }
     return 0;
 }
-
+/* ======================================================================
+ * The entry point to the above callbacks.
+ */
 static int simple_callback(void *data, uintptr_t pc) {
     struct bt_ctx *ctx = data;
     backtrace_pcinfo(ctx->state, pc, full_callback, error_callback, data);
     return 0;
 }
 
-/* This is the entry-point routine for the trace back info */
-
+/* ======================================================================
+ * Print the trace back info.
+ */
 static void do_stackdump(void) {
 
     printf("Traceback:\n");
@@ -401,12 +433,27 @@ static void do_stackdump(void) {
 }
 #endif
 
-/* This scans through the bufers and looked for modified ones associated
+/* ====================================================================== */
+#define Dumpdir_Name "uemacs-dumps"
+#define AutoClean_Buffer "//autoclean"
+
+/* ======================================================================
+ * Generate the time-tag string.
+ * We assume that we don't get multiple dumps in the same second.
+ */
+static char time_stamp[20]; /* There is only one time_stamp at a time... */
+static int set_time_stamp(int days_back) {
+    time_t t = time(NULL) - days_back*86400;;
+    return strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
+}
+
+/* ======================================================================
+ * Scan through the buffers and look for modified ones associated
  * with files. For all it finds it tries to save them in ~/uemacs-dumps.
  * If any buffers are narrowed it widens them before dumping.
+ * Since we are dying we don't preserve the curent working dir.
  */
-
-void dump_modified_buffers(void) {
+static void dump_modified_buffers(void) {
 
     int status;
 
@@ -429,33 +476,30 @@ void dump_modified_buffers(void) {
         perror("Can't get to HOME - no buffer saving:");
 
     }
-#define DUMPDIR_NAME "uemacs-dumps"
-    status = mkdir(DUMPDIR_NAME, 0700); /* Private by default */
-    if (status !=0 && errno != EEXIST) {
-        perror("Can't make HOME/" DUMPDIR_NAME " - no buffer saving: ");
+    status = mkdir(Dumpdir_Name, 0700); /* Private by default */
+    if (status != 0 && errno != EEXIST) {
+        perror("Can't make HOME/" Dumpdir_Name " - no buffer saving: ");
         return;
     }
-    status = chdir(DUMPDIR_NAME);
+    status = chdir(Dumpdir_Name);
     if (status !=0) {
-        perror("Can't get to HOME/" DUMPDIR_NAME " - no buffer saving:");
+        perror("Can't get to HOME/" Dumpdir_Name " - no buffer saving:");
         return;
     }
 
 /* Generate a time-tag for the dumped files.
- * We assume that we don't get multiple dumps in the same second.
+ * We assume that we don't get multiple dumps in the same second to
+ * the same user's HOME.
  */
-
-    char time_stamp[20];
     char tagged_name[NFILEN], orig_name[NFILEN];
-    time_t t = time(NULL);
-    int ts_len = strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
+    int ts_len = set_time_stamp(0);     /* Set it for "now" */
 
 /* Scan the buffers */
 
     int index_open = 0;
     int do_index = 0;
     int add_cwd;
-    FILE *index_fp;
+    FILE *index_fp = NULL;  /* Avoid "may be used uninitialized" */
     for(struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if ((bp->b_flag & BFCHG) == 0     /* Not changed...*/
          || (bp->b_flag & BFINVS) != 0    /* ...not real... */
@@ -489,7 +533,7 @@ void dump_modified_buffers(void) {
                 printf("\n");
         }
         printf("Saving %s...\n", bp->b_bname);
-/* Get the filename from any pathname (may need a utf8 version of strrchr()? */
+/* Get the filename from any pathname */
         char *fn = strrchr(bp->b_fname, '/');
         if (fn == NULL) {       /* Just a filename */
             fn = bp->b_fname;
@@ -503,7 +547,7 @@ void dump_modified_buffers(void) {
         strncpy(tagged_name+ts_len, fn, NFILEN-ts_len-1);
         tagged_name[NFILEN-1] = '\0';   /* Ensure a terminating NUL */
         strcpy(orig_name, bp->b_fname); /* For INDEX */
-/* Just in case the use has opened a filed "kbd_macro", we alter the
+/* Just in case the user has opened a file "kbd_macro", we alter the
  * tagged name to have a ! for this special case, to avoid any
  * name clash.
  */
@@ -542,13 +586,165 @@ void dump_modified_buffers(void) {
     return;
 }
 
+/* ======================================================================
+ * Auto-clean the directory where modified buffers are dumped on
+ * receiving a signal.
+ * Run at start-up.
+ * Note that we MUST NOT change our current directory!
+ * Coded using fchdir, as openat and unlinkat are not available on
+ * some old Linux systems (Oleg's mips distro).
+ */
+void dumpdir_tidy(void) {
+    int status;
 
+    struct buffer *saved_bp = curbp;
+    struct buffer *auto_bp = bfind(AutoClean_Buffer, TRUE, BFINVS);
+    if (auto_bp == NULL) {  /* !?! */
+        mlwrite("Failed to find %s!\n", AutoClean_Buffer);
+        return;
+    }
+    if (!swbuffer(auto_bp)) {
+        mlwrite("Failed to get to %s!\n", AutoClean_Buffer);
+        return;
+    }
+/* A -ve days_allowed means "never". */
+    if (autoclean < 0) {
+        mlwrite("autoclean -ve (%d). No cleaning done\n");
+        goto revert_buffer;
+    }
+
+    char info_message[4096]; /* Hopefully large enough */
+
+/* Open the current directort on a file-descriptor for ease of return */
+    int start_fd = open(".", O_DIRECTORY);
+    if (start_fd < 0) {
+        snprintf(info_message, 4096,
+              "Can't open current location: %s\n", strerror(errno));
+        linstr(info_message);
+        goto revert_buffer;
+    }
+
+/* Now get HOME and go to the dumpdir there */
+    char *p;
+    if ((p = getenv("HOME")) == NULL) {
+        linstr("Can't find HOME - no auto-tidy:\n");
+        goto revert_buffer;
+    }
+
+    char dd_name[2048]; /* Hopefully large enough */
+    strcpy(dd_name, p);
+    strcat(dd_name, "/");
+    strcat(dd_name, Dumpdir_Name);
+    if (chdir(dd_name) < 0) {
+        snprintf(info_message, 4096,
+              "Can't get to ~/%s: %s\n", Dumpdir_Name, strerror(errno));
+        linstr(info_message);
+        goto close_start_fd;
+    }
+
+    FILE *index_fp = fopen("INDEX", "a+");
+    if (index_fp == NULL) {
+        snprintf(info_message, 4096,
+              "Can't open ~/%s/INDEX: %s\n", Dumpdir_Name, strerror(errno));
+        linstr(info_message);
+        goto revert_to_start_fd;
+    }
+
+/* We now have the index open...
+ * Read through it until a line is greater than the set time_stamp
+ * deleting files as we go.
+ */
+    char *lp = NULL;
+    size_t blen = 0;
+    int ts_len = set_time_stamp(autoclean);
+    long rewrite_from = 0;             /* Only if there is a deletion */
+    while (getline(&lp, &blen, index_fp) >= 0) {
+        if (strncmp(lp, time_stamp, ts_len - 1) < 0) { /* Too old... */
+/* Original filename is for reporting ONLY */
+            char *orig_fn = strstr(lp, " <= ");
+            if (!orig_fn) continue;     /* Just in case... */
+            int dfn_len = orig_fn - lp; /* Length of filename */
+            *(lp+dfn_len) = '\0';       /* Null terminate it */
+            orig_fn += 4;               /* Step over " <= " for original */
+            status = unlink(lp);
+            if (status) {
+                snprintf(info_message, 4096,
+                      "Delete of %s (<= %s)failed: %s\n", lp, orig_fn,
+                      strerror(errno));
+                linstr(info_message);
+            }
+            else {
+                snprintf(info_message, 4096,
+                      "Deleted %s (<= %s)\n", lp, orig_fn);
+                linstr(info_message);
+            }
+            rewrite_from = ftell(index_fp);
+        }
+        else
+            break;
+    }
+
+/* We need to copy the unused end of the INDEX to the start */
+    if (rewrite_from) {
+        long new_offs = 0;
+        int done = 0;
+        while (fseek(index_fp, rewrite_from, SEEK_SET)) {
+            char cbuf[4096];
+            size_t rc = fread(cbuf, sizeof(char), 1, index_fp);
+            if (feof(index_fp)) {
+                done = 1;
+                clearerr(index_fp);
+            }
+            else {                  /* Update where we read from */
+                rewrite_from = ftell(index_fp);
+            }
+            if (rc) {
+                status = fseek(index_fp, new_offs, SEEK_SET);
+                size_t wc = fwrite(cbuf, sizeof(char), 1, index_fp);
+                new_offs += wc;
+                if (wc != rc) {     /* We have a problem... */
+                    done = 1;
+                }
+            }
+            if (done) break;
+        }
+        status = ftruncate(fileno(index_fp), new_offs);
+    }
+
+/* Close files and free buffers */
+
+    if (fclose(index_fp)) {
+        snprintf(info_message, 4096,
+              "INDEX rewrite error: %s\n", strerror(errno));
+        linstr(info_message);
+    }
+    if (lp) free(lp);
+
+revert_to_start_fd:
+    status = fchdir(start_fd);
+    if (status < 0) mlforce("Stuck in dump dir!!!");
+close_start_fd:
+    close(start_fd);
+revert_buffer:
+    swbuffer(saved_bp);
+    return;
+}
+
+/* ======================================================================
+ * Signal handler which prints a stack trace (if configured at compile time)
+ * and also attempts to save all modified buffers.
+ */
 void exit_via_signal(int signr) {
 
 /* We have to go back to the normal screen for the printing, otherwise
  * it gets cleared at exit.
  * Also set up stdout to autoflush, so that it interlaces correctly
  * with stderr.
+ * NOTE: some uemacs functions (widen(), filesave()) will still
+ * be printing mini-buffer message (via mlwrite()). This seems to be OK
+ * (it uses screen positioning, but always to the bottom row), so
+ * it has been left running. There are newline prints after such calls to
+ * switch to the next output line.
  */
     TTclose();
     fflush(stdout);
@@ -566,8 +762,9 @@ void exit_via_signal(int signr) {
     exit(signr);
 }
 
-int main(int argc, char **argv)
-{
+/* ====================================================================== */
+
+int main(int argc, char **argv) {
     int c = -1;             /* command character */
     int f;                  /* default flag */
     int n;                  /* numeric repeat count */
@@ -829,6 +1026,11 @@ int main(int argc, char **argv)
         argv++;
     }
 
+/* Run the autocleaner...MUST come after processing start-up files, as they
+ * may set $autoclean.
+ */
+    dumpdir_tidy();
+
 /* Done with processing command line */
 
     discmd = TRUE;          /* P.K. */
@@ -975,7 +1177,7 @@ loop:
     goto loop;
 }
 
-/*
+/* ======================================================================
  * Initialize all of the buffers and windows. The buffer name is passed down
  * as an argument, because the main routine may have been told to read in a
  * file by default, and we want the buffer name to be right.
@@ -1012,7 +1214,8 @@ void edinit(char *bname) {
     return;
 }
 
-/* What gets called if we try to run something in the minibuffer which
+/* ======================================================================
+ * What gets called if we try to run something in the minibuffer which
  * we shouldn't.
  * Requires not_in_mb to have been filled out.
  */
@@ -1031,7 +1234,7 @@ int not_in_mb_error(int f, int n) {
     return(TRUE);
 }
 
-/*
+/* ======================================================================
  * This is the general command execution routine. It handles the fake binding
  * of all the keys to "self-insert". It also clears out the "thisflag" word,
  * and arranges to move it to the "lastflag", so that the next command can
@@ -1209,7 +1412,7 @@ after_mb_check:
     return FALSE;
 }
 
-/*
+/* ======================================================================
  * Fancy quit command, as implemented by Norm. If any buffer has changed
  * do a write on that buffer and exit uemacs, otherwise simply exit.
  */
@@ -1241,13 +1444,16 @@ int quickexit(int f, int n) {
     return TRUE;
 }
 
+/* ======================================================================
+ * The original signal handler - left bound to SIGHUP.
+ */
 static void emergencyexit(int signr) {
     UNUSED(signr);
     quickexit(FALSE, 0);
     quit(TRUE, 0);
 }
 
-/*
+/* ======================================================================
  * Quit command. If an argument, always quit. Otherwise confirm if a buffer
  * has been changed and not written out. Normally bound to "C-X C-C".
  */
@@ -1275,7 +1481,7 @@ int quit(int f, int n) {
     return s;
 }
 
-/*
+/* ======================================================================
  * Begin a keyboard macro.
  * Error if not at the top level in keyboard processing. Set up variables and
  * return.
@@ -1308,7 +1514,7 @@ int ctlxlp(int f, int n) {
     return TRUE;
 }
 
-/*
+/* ======================================================================
  * End keyboard macro. Check for the same limit conditions as the above
  * routine. Set up the variables and return to the caller.
  */
@@ -1325,7 +1531,7 @@ int ctlxrp(int f, int n) {
     return TRUE;
 }
 
-/*
+/* ======================================================================
  * Execute a macro.
  * The command argument is the number of times to loop. Quit as soon as a
  * command gets an error. Return TRUE if all ok, else FALSE.
@@ -1343,7 +1549,7 @@ int ctlxe(int f, int n) {
     return TRUE;
 }
 
-/*
+/* ======================================================================
  * Abort.
  * Beep the beeper. Kill off any keyboard macro, etc., that is in progress.
  * Sometimes called as a routine, to do general aborting of stuff.
@@ -1356,47 +1562,55 @@ int ctrlg(int f, int n) {
     return ABORT;
 }
 
-/*
- * tell the user that this command is illegal while we are in
- * VIEW (read-only) mode
+/* ======================================================================
+ * Tell the user that this command is illegal while we are in
+ * particular modes.
  */
 int rdonly(void) {
     TTbeep();
     mlwrite(MLpre "Key illegal in VIEW mode" MLpost);
     return FALSE;
 }
-
 int resterr(void) {
     TTbeep();
     mlwrite(MLpre "That command is RESTRICTED" MLpost);
     return FALSE;
 }
 
-/* user function that does NOTHING */
+/* ======================================================================
+ * User function that does NOTHING
+ */
 int nullproc(int f, int n) {
     UNUSED(f); UNUSED(n);
     return TRUE;
 }
 
-/* dummy function for binding to meta prefix */
+/* ======================================================================
+ * Dummy function for binding to meta prefix.
+ */
 int metafn(int f, int n) {
     UNUSED(f); UNUSED(n);
     return TRUE;
 }
-
-/* dummy function for binding to control-x prefix */
+/* ======================================================================
+ * Dummy function for binding to control-x prefix.
+ */
 int cex(int f, int n) {
     UNUSED(f); UNUSED(n);
     return TRUE;
 }
 
-/* dummy function for binding to universal-argument */
+/* ======================================================================
+ * Dummy function for binding to universal-argument
+ */
 int unarg(int f, int n) {
     UNUSED(f); UNUSED(n);
     return TRUE;
 }
 
-/*****          Compiler specific Library functions     ****/
+/* ====================================================================== */
+
+/****          Compiler specific Library functions     ****/
 
 #if     RAMSIZE
 /*      These routines will allow me to track memory usage by placing
@@ -1460,6 +1674,8 @@ void dspram(void) {
 #endif
 #endif
 
+/* ====================================================================== */
+
 /* On some primitave operation systems, and when emacs is used as
  * a subprogram to a larger project, emacs needs to de-alloc its
  * own used memory
@@ -1506,8 +1722,10 @@ int cexit(int status) {
 }
 #endif
 
-/* GGR
- * Function to implement re-execute last command
+/* ====================================================================== */
+
+/* ======================================================================
+ * GGR - Function to implement re-execute last command
  */
 int reexecute(int f, int n) {
     UNUSED(f);
@@ -1521,8 +1739,8 @@ int reexecute(int f, int n) {
     return(TRUE);
 }
 
-/* GGR
- * Extend the size of the key_table list.
+/* ======================================================================
+ * GGR - Extend the size of the key_table list.
  * If input arg is non-zero use that, otherwise extend by the
  * defined increment and update keytab_alloc_ents.
  */
