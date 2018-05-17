@@ -15,7 +15,7 @@ details.
 
 ========== libbacktrace ==========
 
-Version GGR4.133 added a crude stack trace dump optional capability
+Version GGR4.132 added a crude stack trace dump optional capability
 which required the external addr2line program, but this was changed at
 GGR4.133 to use libbacktrace, so that it was self-contained.
 This functionality only works (in that it only produces anything useful)
@@ -37,3 +37,7 @@ You may then either:
  o Copy just the libbacktrace.a (under .libs) backtrace.h and
    backtrace-supported.h into a libbacktrace directory and put that
    alongside the nuemacs repository or code sub-directory.
+
+NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE!
+
+If you build with TRACE=1 you will *not* get core dumps.

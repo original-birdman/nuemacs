@@ -2213,10 +2213,9 @@ line.c
         Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
         replace.
 
-     The default setting is "old". To change this use:
-         set $yankmode gnu
-     in your personal uemacs.rc file.
-
+    The default setting is "old". To change this use:
+        set $yankmode gnu
+    in your personal uemacs.rc file.
 
 Makefile
 main.c
@@ -2226,8 +2225,8 @@ main.c
     This REQUIRES the addr2line program to be accessible.
 
 line.c
-     Improve the code to handle yanking into an empty buffer.
-     Consolidate the setting of an empty-region at point before yanking.
+    Improve the code to handle yanking into an empty buffer.
+    Consolidate the setting of an empty-region at point before yanking.
 
 (basic.c)
 ../CHANGES
@@ -2235,4 +2234,59 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.132
 
-==========
+========== GGR4.133
+
+../PREREQUISITE
+Makefile
+main.c
+    Rework the stack dump code to use libbacktrace.
+    Enable the signal handler for all builds: the TRACE option now just
+    adds the traceback dump.
+    Reworked Makefile to look for the libbacktrace library.
+    Added libbacktrace information to the PREREQUISITE file.
+
+line.c
+    Change the reposition() in when yanking into an empty buffer to
+    put as much yanked text as possible on screen.
+
+main.c
+    Extended the stack dump handling to:
+      o set stdout to autoflush, so that output interleaves correctly
+        with stderr
+      o save any modified buffers (and keyboard macro) as
+        date-tagged files in a uemacs-dumps/ directory in the user HOME.
+        An INDEX file there contains a mapping to the original file names.
+
+Makefile
+    Change to -g1 for TRACE, which is sufficient to get line numbers.
+
+names.c
+    Ignore the terminating NULL entry in the needed count for
+    idxsort_fields(). 
+
+edef.h
+eval.c
+evar.h
+globals.c
+efunc.h
+main.c
+Makefile
+    Added the $autoclean environment variable.
+    Add automatic uemacs-dumps/ directory cleanup on start-up based on
+    the setting of the $autoclean environment variable.
+      o -ve  don't do any
+      o 0    remove all files at start-up
+      o +ve  remove files older than <n> days
+    The default $autoclean setting is 7. You may set your owne value in
+    a start-up file.
+    If you set the $autoclean variable after start-up that setting will
+    have immediate affect for this run of uemacs.
+    Added -D_GNU_SOURCE to Linux compile options.
+
+../CHANGES
+../PREREQUISITE
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.133
+
+========== 
