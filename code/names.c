@@ -260,7 +260,8 @@ struct name_bind names[] = {
 #include <stddef.h>
 #include "idxsorter.h"
 
-static int needed = sizeof(names)/sizeof(struct name_bind);
+/* We can ignore the final NULL entry for the index searching */
+static int needed = sizeof(names)/sizeof(struct name_bind) - 1;
 static int *func_index;
 static int *name_index;
 static int *next_name_index;
