@@ -1029,9 +1029,9 @@ static int region_listmaker(int f, int n)
     while (pc--) {                  /* Loop for paragraph count */
         (void)whitedelete(1, 1);    /* Don't care whether there was any */
         ix++;                       /* Insert the counter */
-        int cc = snprintf(label, 10, lbl_fmt, ix);
+        int cc = snprintf(label, sizeof(label)-1, lbl_fmt, ix);
         curwp->w_doto = 0;          /* Should be 0 anyway... */
-        for (int i = 0; i < cc; i++) linsert_byte(1, label[i]);
+        linstr(label);
         status = filler(cc, fillcol, &fp_ctl);
 
 /* Onto the next paragraph */
@@ -1066,10 +1066,8 @@ static int region_listmaker(int f, int n)
  *
  * int f, n;            deFault flag and Numeric argument
  */
-int makelist_region(int f, int n)
-{
-    static const char *label = " o ";
-    lbl_fmt = label;
+int makelist_region(int f, int n) {
+    lbl_fmt = regionlist_text;
     int status = region_listmaker(f, n);
     return status;
 }
@@ -1080,14 +1078,8 @@ int makelist_region(int f, int n)
  *
  * int f, n;            deFault flag and Numeric argument
  */
-int numberlist_region(int f, int n)
-{
-    char *rqd_val = gtusr("list-indent-text");
-    if (rqd_val == errorm) {
-        mlforce("%list-indent-text is not set!");
-        return FALSE;
-    }
-    lbl_fmt = rqd_val;
+int numberlist_region(int f, int n) {
+    lbl_fmt = regionlist_number;
     int status = region_listmaker(f, n);
     return status;
 }

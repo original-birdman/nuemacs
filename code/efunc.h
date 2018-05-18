@@ -238,7 +238,7 @@ extern int anycb(void);
 extern int bclear(struct buffer *bp);
 extern int unmark(int f, int n);
 /* Lookup a buffer by name. */
-extern struct buffer *bfind(char *bname, int cflag, int bflag);
+extern struct buffer *bfind(const char *bname, int cflag, int bflag);
 
 /* file.c */
 extern int fileread(int f, int n);

@@ -148,7 +148,7 @@ extern struct buffer *ptt;      /* Global pt table */
 extern int hscroll;             /* TRUE when we are scrolling horizontally */
 extern int hjump;               /* How much to jump on horizontal scroll */
 
-extern char kbdmacro_buffer[];  /* The name of the keyboard macro buffer */
+extern const char kbdmacro_buffer[];    /* Name of the keyboard macro buffer */
 extern struct buffer *kbdmac_bp;    /* keyboard macro buffer */
 
 extern int run_filehooks;       /* Set when we want them run */
@@ -184,3 +184,7 @@ enum yank_style { Old, GNU };
 extern enum yank_style yank_mode;
 
 extern int autoclean;
+
+#define MAX_REGL_LEN 16
+extern char regionlist_text[MAX_REGL_LEN];
+extern char regionlist_number[MAX_REGL_LEN];

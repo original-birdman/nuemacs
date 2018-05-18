@@ -277,6 +277,8 @@ char *gtenv(char *vname)
                             return("");
                             break;
     case EVAUTOCLEAN:       return(itoa(autoclean));
+    case EVREGLTEXT:        return regionlist_text;
+    case EVREGLNUM:         return regionlist_number;
     }
     exit(-12);              /* again, we should never get here */
 }
@@ -634,6 +636,16 @@ int svar(struct variable_description *var, char *value)
             autoclean = atoi(value);
             if (autoclean >= 0 && autoclean < old_autoclean) dumpdir_tidy();
            }
+            break;
+        case EVREGLTEXT:    /* These two are... */
+        case EVREGLNUM:     /* ...very similar */
+            if (strlen(value) >= MAX_REGL_LEN) {
+                mlforce("String too long - max %d", MAX_REGL_LEN - 1);
+                status = FALSE;
+                break;
+            }
+            strcpy((vnum == EVREGLTEXT)? regionlist_text: regionlist_number,
+                  value);
             break;
         }
         break;

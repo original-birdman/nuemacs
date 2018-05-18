@@ -161,7 +161,7 @@ struct buffer *ptt = NULL;
 int hscroll = FALSE;
 int hjump = 1;
 
-char kbdmacro_buffer[] = "//kbd_macro";
+const char kbdmacro_buffer[] = "//kbd_macro";
 struct buffer *kbdmac_bp = NULL;
 
 int run_filehooks = 0;
@@ -181,3 +181,6 @@ enum yank_type last_yank = None;
 enum yank_style yank_mode = Old;
 
 int autoclean = 7;
+
+char regionlist_text[] = " o ";
+char regionlist_number[] = " %2d. ";

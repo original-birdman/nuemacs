@@ -337,9 +337,6 @@ eos-chars ".!?"
 ; Replacement character users
 char-replace U+0800 U+10000
 
-; Default for numberlist-region
-set %list-indent-text " %2d. "
-
 ; Single UTF-16 surrogates
 char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
 
