@@ -80,7 +80,6 @@ static void modeline(struct window *wp);
 static void mlputi(int i, int r);
 static void mlputli(long l, int r);
 static void mlputf(int s);
-static int newscreensize(int h, int w, int);
 
 #if RAINBOW
 static void putline(int row, int col, char *buf);
@@ -1764,7 +1763,7 @@ void sizesignal(int signr) {
     errno = old_errno;
 }
 
-static int newscreensize(int h, int w, int no_update_needed) {
+int newscreensize(int h, int w, int no_update_needed) {
     if (displaying) {           /* do the change later */
         chg_width = w;
         chg_height = h;

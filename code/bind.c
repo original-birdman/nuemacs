@@ -269,14 +269,9 @@ int bindtokey(int f, int n)
     char outseq[80];        /* output buffer for keystroke sequence */
     struct key_tab *destp;  /* Where to copy the name and type */
 
-/* Prompt the user to type in a key to bind */
-    if (!clexec) {
-        mlwrite(": bind-to-key ");
-        mpresf = TRUE;          /* GGR */
-    }
-
 /* Get the function name to bind it to */
-    kfunc = getname();
+
+    kfunc = getname(": bind-to-key ");
     if (kfunc == NULL) {
         if (!clexec) mlwrite(MLpre "No such function" MLpost);
         return FALSE;

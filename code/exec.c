@@ -20,34 +20,30 @@
 /*
  * Execute a named command even if it is not bound.
  */
-int namedcmd(int f, int n)
-{
-        fn_t kfunc;     /* ptr to the requexted function to bind to */
+int namedcmd(int f, int n) {
+    fn_t kfunc;     /* ptr to the requested function to bind to */
 
-        /* prompt the user to type a named command */
-        mlwrite(": ");
-
-        /* and now get the function name to execute */
-        kfunc = getname();
-        if (kfunc == NULL) {
-                mlwrite(MLpre "No such function" MLpost);
-                return FALSE;
-        }
+/* Prompt the user to get the function name to execute */
+    kfunc = getname(": ");
+    if (kfunc == NULL) {
+        mlwrite(MLpre "No such function" MLpost);
+        return FALSE;
+    }
 
 /* Check whether the given command is allowed in the minibuffer, if that
- * is where we are
+ * is where we are...
  */
-        if (inmb) {
-            struct name_bind *fi = func_info(kfunc);
-            if (fi && fi->opt.not_mb) {
-                not_in_mb.funcname = fi->n_name;
-                not_in_mb.keystroke = -1;   /* No keystroke... */
-                kfunc = not_in_mb_error;    /* Change what we call... */
-            }
+    if (inmb) {
+        struct name_bind *fi = func_info(kfunc);
+        if (fi && fi->opt.not_mb) {
+            not_in_mb.funcname = fi->n_name;
+            not_in_mb.keystroke = -1;   /* No keystroke... */
+            kfunc = not_in_mb_error;    /* Change what we call... */
         }
+    }
 
-        /* and then execute the command */
-        return kfunc(f, n);
+/* ...and then execute the command */
+    return kfunc(f, n);
 }
 
 /*

@@ -162,6 +162,7 @@ extern void mlforce(const char *fmt, ...);
 extern void mlputs(char *s);
 extern void getscreensize(int *widthp, int *heightp);
 extern void sizesignal(int signr);
+extern int newscreensize(int, int, int);
 
 extern  int ttput1c(char);
 extern void mberase(void);
@@ -193,7 +194,7 @@ extern int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar);
 extern int mlreplyall(char *, char *, int);
 extern int ectoc(int c);
 extern int ctoec(int c);
-extern fn_t getname(void);
+extern fn_t getname(char *);
 extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);

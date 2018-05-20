@@ -156,6 +156,7 @@ extern int run_filehooks;       /* Set when we want them run */
 typedef struct {
     struct buffer *main_bp;     /* curbp of arriving window */
     struct window *main_wp;     /* curwp of arriving window */
+    struct window *wheadp;      /* wheap of arriving window */
     int mbdepth;                /* Current depth of minibuffer */
 } mb_info_st;
 extern mb_info_st mb_info;

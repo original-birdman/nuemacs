@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -17,20 +18,16 @@
 /* GGR - some needed things for minibuffer handling */
 #if UNIX
 #include <signal.h>
+#ifdef SIGWINCH
+static int remap_c_on_intr = 0;
+#endif
 #endif
 #include "line.h"
-
-#if MSDOS | BSD | USG
-static int tmpnamincr = 0;
-#define tmpnam our_tmpnam
-static char *tmpnam(char *);
 
 #if MSC
 void sleep();
 #define MAXDEPTH 8
 #endif
-#endif
-
 
 #if     MSDOS && TURBO
 #include        <dir.h>
@@ -136,7 +133,7 @@ int ctoec(int c)
  * that pressing a <SPACE> will attempt to complete an unfinished command
  * name if it is unique.
  */
-fn_t getname(void) {
+fn_t getname(char *prompt) {
     int cpos;               /* current column on screen output */
     int c;
     char *sp;               /* pointer to string for output */
@@ -156,9 +153,25 @@ fn_t getname(void) {
         return NULL;
     }
 
+/* Prompt... */
+    mlwrite(prompt);
+    mpresf = TRUE;          /* GGR */
+
 /* Build a name string from the keyboard */
     while (TRUE) {
+#ifdef SIGWINCH
+        remap_c_on_intr = 1;
+#endif
         c = tgetc();
+#ifdef SIGWINCH
+        remap_c_on_intr = 0;
+        if (c == END_UCLIST) {  /* SIGWINCH */
+            char mlbuf[1024];
+            snprintf(mlbuf, 1024, "%s%.*s", prompt, cpos, buf);
+            mlwrite(mlbuf);
+            continue;
+        }
+#endif
 
 /* If we are at the end, just match it */
         if (c == 0x0d) {
@@ -272,52 +285,63 @@ onward:
 /*      tgetc:  Get a key from the terminal driver, resolve any keyboard
                 macro action                                    */
 
-int tgetc(void)
-{
-        int c;                  /* fetched character */
+int tgetc(void) {
+    int c;                      /* fetched character */
 
-        /* if we are playing a keyboard macro back, */
-        if (kbdmode == PLAY) {
-
-                /* if there is some left... */
-                if (kbdptr < kbdend)
-                        return (int) *kbdptr++;
-
-                /* at the end of last repitition? */
-                if (--kbdrep < 1) {
-                        kbdmode = STOP;
+/* If we are playing a keyboard macro back, */
+    if (kbdmode == PLAY) {
+        if (kbdptr < kbdend)    /* if there is some left... */
+            return (int) *kbdptr++;
+        if (--kbdrep < 1) {     /* at the end of last repitition? */
+            kbdmode = STOP;
 #if     VISMAC == 0
-                        /* force a screen update after all is done */
-                        update(FALSE);
+            update(FALSE);      /* force a screen update after all is done */
 #endif
-                } else {
-
-                        /* reset the macro to the begining for the next rep */
-                        kbdptr = &kbdm[0];
-                        return (int) *kbdptr++;
-                }
         }
+        else {
+            kbdptr = &kbdm[0];  /* reset macro to begining for the next rep */
+            return (int) *kbdptr++;
+        }
+    }
 
-        /* fetch a character from the terminal driver */
-        c = TTgetc();
+/* Fetch a character from the terminal driver */
+#ifdef SIGWINCH
+    struct sigaction sigact;
+    if (remap_c_on_intr) {
+        sigaction(SIGWINCH, NULL, &sigact);
+        sigact.sa_flags = 0;
+        sigaction(SIGWINCH, &sigact, NULL);
+        errno = 0;
+    }
+#endif
+    c = TTgetc();
+#ifdef SIGWINCH
+    if (remap_c_on_intr) {
+        sigaction(SIGWINCH, NULL, &sigact);
+        sigact.sa_flags = SA_RESTART;
+        sigaction(SIGWINCH, &sigact, NULL);
+    }
+#endif
+/* Record it for $lastkey */
+    lastkey = c;
 
-        /* record it for $lastkey */
-        lastkey = c;
-
-        /* save it if we need to */
+#ifdef SIGWINCH
+    if (c == 0 && errno == EINTR && remap_c_on_intr)
+        c = END_UCLIST;         /* Note illegal char */
+    else
+#endif
+/* Save it if we need to */
         if (kbdmode == RECORD) {
-                *kbdptr++ = c;
-                kbdend = kbdptr;
-
-                /* don't overrun the buffer */
-                if (kbdptr == &kbdm[NKBDM - 1]) {
-                        kbdmode = STOP;
-                        TTbeep();
-                }
+            *kbdptr++ = c;
+            kbdend = kbdptr;
+            if (kbdptr == &kbdm[NKBDM - 1]) {   /* don't overrun buffer */
+                kbdmode = STOP;
+                TTbeep();
+            }
         }
 
-        /* and finally give the char back */
-        return c;
+/* And finally give the char back */
+    return c;
 }
 
 /*      GET1KEY:        Get one keystroke. The only prefixs legal here
@@ -463,16 +487,56 @@ proc_ctlxc:
  * So set up a SIGWINCH handler to get us out the minibuffer before
  * display::newscreensize() runs.
  */
+
+static struct window *mb_winp = NULL;
+
 #ifdef SIGWINCH
 
-#include <setjmp.h>
-
-static jmp_buf winch_env;
 typedef void (*sighandler_t)(int);
 
 void sigwinch_handler(int signr) {
-/* Jump back to getstring to clean up and leave */
-    if (signr == SIGWINCH) longjmp(winch_env, 1);
+
+    UNUSED(signr);
+
+/* We need to get back to how things were before we arrived in teh
+ * minibuffer.
+ * So we save the current settings, restore the originals, let the
+ * resize code run, re-fetch teh original (in case they ahve changed)
+ * the restore the ones we arrived with.
+ */
+    struct buffer *mb_bp = curbp;
+    struct window *mb_wp = curwp;
+    struct window *mb_hp = wheadp;
+
+    curbp = mb_info.main_bp;
+    curwp = mb_info.main_wp;
+    wheadp = mb_info.wheadp;
+    inmb = FALSE;
+
+/* Do the bits from sizesignal() in display.c that do the work */
+    int w, h;
+
+    getscreensize(&w, &h);
+    if (h && w && (h - 1 != term.t_nrow || w != term.t_ncol))
+        newscreensize(h, w, 0);
+
+/* Need to reget the mb_info data now */
+
+    mb_info.main_bp = curbp;
+    mb_info.main_wp = curwp;
+    mb_info.wheadp = wheadp;
+
+/* Now get back to how we arrived */
+
+    curbp = mb_bp;
+    curwp = mb_wp;
+    wheadp = mb_hp;
+    curwp->w_toprow = term.t_nrow;  /* Set new value */
+    inmb = TRUE;
+/* Ensure the minibuffer is redrawn */
+    mbupdate();
+
+    return;
 }
 #endif
 
@@ -481,7 +545,6 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     struct buffer *bp;
     struct buffer *cb;
     char mbname[NBUFN];
-    char *mbnameptr = NULL;
     int    c;               /* command character */
     int    f;               /* default flag */
     int    n;               /* numeric repeat count */
@@ -502,9 +565,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     char procopy[NSTRING];
 
     struct window wsave;
-
     short bufexpand, expanded;
-
 
 #ifdef SIGWINCH
 /* We need to block SIGWINCH until we have set-up all of the variables
@@ -515,6 +576,23 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     sigaddset(&sigwinch_set, SIGWINCH);
     sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
 #endif
+
+/* Create a minibuffer window for use by all minibuffers */
+    if (!mb_winp) {
+        mb_winp = (struct window *)malloc(sizeof(struct window));
+        if (mb_winp == NULL) exit(1);
+        mb_winp->w_wndp = NULL;               /* Initialize window    */
+#if     COLOR
+/* initalize colors to global defaults */
+        mb_winp->w_fcolor = gfcolor;
+        mb_winp->w_bcolor = gbcolor;
+#endif
+        mb_winp->w_toprow = term.t_nrow;
+        mb_winp->w_ntrows = 1;
+        mb_winp->w_fcol = 0;
+        mb_winp->w_force = 0;
+        mb_winp->w_flag = WFMODE | WFHARD;    /* Full.                */
+    }
 
 /* GGR NOTE!!
  * We want to ensure that we don't return with garbage in buf, but we
@@ -533,8 +611,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 /* Expansion commands leave junk in mb */
 
     mlerase();
-    mbnameptr = tmpnam(NULL);
-    strcpy(mbname, mbnameptr);
+    sprintf(mbname, "//minib%04d", mb_info.mbdepth+1);
     cb = curbp;
 
 /* Update main screen before entering minibuffer */
@@ -558,13 +635,26 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
 /* Remember the original buffer name if at level 1 */
 
-    mb_info.mbdepth++;
-    wsave = *curwp;             /* Structure copy - save */
-    struct buffer *tbp = curwp->w_bufp;
-    if (mb_info.mbdepth == 1) {
+/* Get the PHON state from the current buffer, so we can carry it to
+ * the next minibuffer.
+ * We *don't* carry back any change on return!
+ */
+    int new_bmode;
+    if (curbp->b_mode & MDPHON) new_bmode = MDEXACT | MDPHON;
+    else                        new_bmode = MDEXACT;
+
+    if (++mb_info.mbdepth == 1) {
         mb_info.main_bp = curbp;    /* For main buffer info in modeline */
-        mb_info.main_wp = &wsave;   /* Used to position modeline */
+        mb_info.main_wp = curwp;    /* Used to position modeline */
+        mb_info.wheadp = wheadp;    /* ??? */
     }
+    else {                          /* Save this minibuffer for recursion */
+        wsave = *curwp;             /* Structure copy... */
+    }
+/* Switch to the minibuffer window */
+    curwp = mb_winp;
+    wheadp = curwp;
+
 /* Set-up the (incoming) prompt string and clear any prompt update flag,
  * as it should only get set during loop:
  */
@@ -579,36 +669,15 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
     curwp->w_toprow = term.t_nrow;
     curwp->w_ntrows = 1;
-
-/* Get the PHON state from the current buffer, so we can carry it to
- * the next minibuffer.
- * We *don't* carry back any change on return!
- */
-    if (tbp->b_mode & MDPHON) curbp->b_mode = MDEXACT | MDPHON;
-    else                      curbp->b_mode = MDEXACT;
+    curbp->b_mode = new_bmode;
 
 #ifdef SIGWINCH
-
-/* We define a value for this before the "goto abort" to avoid a
- * "may be used uninitialized" warning in gcc4.
- * It won't be actually used when NULL.
- */
-    volatile sighandler_t display_handler = NULL;
-
-    volatile int winch_seen = 0;
-    if (setjmp(winch_env)) {
-        winch_seen = 1;
-        status = ABORT;
-        buf = "";               /* Don't return garbage */
-        goto abort;
-    }
-
+/* The oldact is restored on exit. */
     struct sigaction sigact, oldact;
     sigact.sa_handler = sigwinch_handler;
     sigemptyset(&sigact.sa_mask);
-    sigact.sa_flags = 0;            /* No SA_RESTART for this one! */
+    sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
-    display_handler = oldact.sa_handler;
 /* Now we can enable the signal */
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 #endif
@@ -658,7 +727,15 @@ loop:
     curwp->w_doto = savdoto;
 
 /* Get the next command (character) from the keyboard */
+#ifdef SIGWINCH
+    remap_c_on_intr = 1;
+#endif
     c = getcmd();
+/* We get END_UCLIST back on a sigwin signal. */
+#ifdef SIGWINCH
+    remap_c_on_intr = 0;
+    if (c == END_UCLIST) goto loop;
+#endif
 
 /* Filename expansion code:
  * a list of matches is temporarily displayed in the minibuffer.
@@ -831,7 +908,7 @@ submit:     /* Tidy up */
  */
     if (kbdmode == RECORD && mb_info.mbdepth == 1) addto_kbdmacro(buf, 0, 1);
 
-abort:  /* Make sure we're still in our minibuffer */
+abort:
 
 #ifdef SIGWINCH
 /* If we get here "normally" SIGWINCH will still be enabled, so we need
@@ -841,20 +918,21 @@ abort:  /* Make sure we're still in our minibuffer */
     sigprocmask(SIG_BLOCK, &sigwinch_set, NULL);
 #endif
 
-    swbuffer(bp);
+    swbuffer(bp);   /* Make sure we're still in our minibuffer */
     unmark(TRUE, 1);
-    mb_info.mbdepth--;
 
-    swbuffer(cb);
-    *curwp = wsave;             /* Structure copy - restore */
-    curwp->w_flag |= WFMODE;    /* Forces modeline redraw */
-
-    if (!mb_info.mbdepth) inmb = FALSE;
-
-#if (MSDOS & (LATTICE | MSC)) | BSD | USG
-    free(mbnameptr);            /* free the space */
-#endif
-    zotbuf(bp);
+    if (--mb_info.mbdepth) {
+        swbuffer(cb);
+        *curwp = wsave;             /* Back to previous mini-buffer */
+    }
+    else {
+        swbuffer(mb_info.main_bp);
+        curwp = mb_info.main_wp;    /* Leaving minibuffer */
+        wheadp = mb_info.wheadp;
+        inmb = FALSE;
+    }
+    curwp->w_flag |= WFMODE;        /* Forces modeline redraw */
+    zotbuf(bp);                     /* Remove this minibuffer */
 
 /* Restore real reexecution history */
 
@@ -863,24 +941,15 @@ abort:  /* Make sure we're still in our minibuffer */
     nlast = savnlast;
 
     mberase();
-    if (!winch_seen && (status == ABORT)) {
+    if (status == ABORT) {
         ctrlg(FALSE, 0);
         TTflush();
     }
 
 #ifdef SIGWINCH
 /* We need to re-instate the original handler now... */
-
-    sigact.sa_handler = display_handler;
-    sigemptyset(&sigact.sa_mask);
-    sigact.sa_flags = SA_RESTART;   /* This does do restarts */
-    sigaction(SIGWINCH, &sigact, NULL);
+    sigaction(SIGWINCH, &oldact, NULL);
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
-
-/* If we saw the signal, resend it now that we've tidied up the
- * minibuffer code.
- */
-    if (winch_seen) raise(SIGWINCH);
 #endif
 
     return(status);
@@ -921,21 +990,6 @@ int yankmb(int f, int n) {
     }
     return (TRUE);
 }
-
-#if MSDOS | BSD | USG
-static char *tmpnam(dum)
-char *dum;
-{
-        UNUSED(dum);
-        char *tstring;
-
-        tstring = malloc(NBUFN);
-        strcpy(tstring, "CC$000");
-        tmpnamincr++;
-        strcat(tstring, itoa(tmpnamincr));
-        return(tstring);
-}
-#endif
 
 #if MSDOS & MSC
 void sleep(n)
