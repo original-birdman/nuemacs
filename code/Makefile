@@ -62,30 +62,30 @@ UTF8 =
 ifeq ($(strip $(UTF8)),)
 # No override - so go looking...
 #
-    dlist := /usr/include/utf8proc.h
-    dlist += /usr/local/include/utf8proc.h
-    dlist += /opt/local/include/utf8proc.h
-    dlist += ../utf8proc*/utf8proc.h
-    dlist += ../../utf8proc*/utf8proc.h
+    ulist := /usr/include/utf8proc.h
+    ulist += /usr/local/include/utf8proc.h
+    ulist += /opt/local/include/utf8proc.h
+    ulist += ../utf8proc*/utf8proc.h
+    ulist += ../../utf8proc*/utf8proc.h
 # Expand the wildcards...
-    xdlist = $(shell echo $(dlist))
+    xulist = $(shell echo $(ulist))
 
-    res := $(firstword $(foreach arg, $(xdlist), $(call filex, $(arg) ) ) )
+    ures := $(firstword $(foreach arg, $(xulist), $(call filex, $(arg) ) ) )
 
-    ifeq ($(strip $(res)),/usr/include/utf8proc.h)
+    ifeq ($(strip $(ures)),/usr/include/utf8proc.h)
 # System location - use dynamic lib with no special options
         UTF8INCL =
         UTF8LIB = -lutf8proc
-    else ifeq ($(strip $(res)),/usr/local/include/utf8proc.h)
+    else ifeq ($(strip $(ures)),/usr/local/include/utf8proc.h)
         UTF8INCL = -I/usr/local/include
         UTF8LIB = -L/usr/local/lib -lutf8proc
-    else ifeq ($(strip $(res)),/opt/local/include/utf8proc.h)
+    else ifeq ($(strip $(ures)),/opt/local/include/utf8proc.h)
         UTF8INCL = -I/opt/local/include
         UTF8LIB = -L/opt/local/lib -lutf8proc
-    else ifeq ($(notdir $(strip $(res))),utf8proc.h)
+    else ifeq ($(notdir $(strip $(ures))),utf8proc.h)
 # Parallel local build - use static lib
 #
-        UTF8LOC = $(dir $(strip $(res)))
+        UTF8LOC = $(dir $(strip $(ures)))
         UTF8INCL = -I$(UTF8LOC)
         UTF8LIB = $(UTF8LOC)/libutf8proc.a
 endif
@@ -144,21 +144,21 @@ ifneq ($(strip $(TRACE)),)
 # Expand the wildcards...
         xblist = $(shell echo $(blist))
 
-        res := $(firstword $(foreach arg, $(xblist), $(call filex, $(arg))))
-        ifeq ($(strip $(res)),/usr/include/backtrace.h)
+        bres := $(firstword $(foreach arg, $(xblist), $(call filex, $(arg))))
+        ifeq ($(strip $(bres)),/usr/include/backtrace.h)
 # System location - use dynamic lib with no special options
             BCKTINCL =
             BCKTLIB = -lbacktrace
-        else ifeq ($(strip $(res)),/usr/local/include/backtrace.h)
+        else ifeq ($(strip $(bres)),/usr/local/include/backtrace.h)
             BCKTINCL = -I/usr/local/include
             BCKTLIB = -L/usr/local/lib -lbacktrace
-        else ifeq ($(strip $(res)),/opt/local/include/backtrace.h)
+        else ifeq ($(strip $(bres)),/opt/local/include/backtrace.h)
             BCKTINCL = -I/opt/local/include
             BCKTLIB = -L/opt/local/lib -backtrace
-        else ifeq ($(notdir $(strip $(res))),backtrace.h)
+        else ifeq ($(notdir $(strip $(bres))),backtrace.h)
 # Parallel local build - use static lib
 #
-            BCKTLOC = $(dir $(strip $(res)))
+            BCKTLOC = $(dir $(strip $(bres)))
             BCKTINCL = -I$(BCKTLOC)
 # If we found a libbacktrace-master we assume that the library is under
 # .libs (where it is build) otherwise we assume it is in what we found.
