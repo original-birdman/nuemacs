@@ -112,13 +112,18 @@ endif
 # Does the user want stacktraceing enabled?
 # It's only available on 64-bit Intel (x86_64) as arm and mips
 # don't produce any useful output.
+# On x86_64 it is enabled if the include file is found, but you can
+# manully disable it.
 #
-TRACE =
-ifneq ($(strip $(TRACE)),)
+NOTRACE =
+ifeq ($(strip $(NOTRACE)),)
     uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
     ifneq ($(uname_M), x86_64)
-        $(error You cannot use TRACE on a $(uname_M) machine)
+        NOTRACE = 1
     endif
+endif
+
+ifeq ($(strip $(NOTRACE)),)
 
 # Where is the libbacktrace library?
 # If no specific option is given we go looking for it.
@@ -183,17 +188,14 @@ ifneq ($(strip $(TRACE)),)
     endif
 
 # If we haven't got a defined BCKTLIB then we haven't found one
-# and need to exit, reporting that fact
+# so don't enable it.
 #
-    ifeq ($(strip $(BCKTLIB)),)
-        .DEFAULT_GOAL := bt_error
-    endif
-
+    ifneq ($(strip $(BCKTLIB)),)
 # Now set the compilation options for it...
 # -g1 is sufficient to get the line numbers (but nt for variable debugging)
 # We can still do -Ox optimizing.
-#
-    TRACE_OPTS = -g1 -DNUTRACE
+        TRACE_OPTS = -g1 -DNUTRACE
+    endif
 endif
 
 # Who are we?
