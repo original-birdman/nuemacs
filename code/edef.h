@@ -189,3 +189,5 @@ extern int autoclean;
 #define MAX_REGL_LEN 16
 extern char regionlist_text[MAX_REGL_LEN];
 extern char regionlist_number[MAX_REGL_LEN];
+
+extern char readin_mesg[NSTRING];

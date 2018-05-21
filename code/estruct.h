@@ -497,8 +497,9 @@ struct buffer {
 #define MDCRYPT 0x0080          /* encrytion mode active        */
 #define MDASAVE 0x0100          /* auto-save mode               */
 #define MDEQUIV 0x0200          /* match equivalent chars       */
+#define MDDOSLE 0x0400          /* DOS line endings             */
 
-#define NUMMODES    10          /* # of defined modes           */
+#define NUMMODES    11          /* # of defined modes           */
 
 /*
  * The starting position of a region, and the size of the region in

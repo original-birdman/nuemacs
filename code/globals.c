@@ -13,13 +13,13 @@ int revexist = FALSE;           /* does reverse video exist?    */
 int flickcode = FALSE;          /* do flicker supression?       */
 char *modename[] = {            /* name of modes                */
         "WRAP",  "CMODE", "PHON",  "EXACT", "VIEW",
-        "OVER",  "MAGIC", "CRYPT", "ASAVE", "EQUIV"
+        "OVER",  "MAGIC", "CRYPT", "ASAVE", "EQUIV", "DOS",
 };
 char *mode2name[] = {           /* display name of modes        */
         "Wrap",  "Cmode", "Phon",  "Exact", "View",
-        "Over",  "Magic", "Crypt", "Asave", "eQuiv",
+        "Over",  "Magic", "Crypt", "Asave", "eQuiv", "Dos",
 };
-char modecode[] = "WCPEVOMYAQ"; /* letters to represent modes   */
+char modecode[] = "WCPEVOMYAQD";/* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
 #if IBMPC
@@ -184,3 +184,5 @@ int autoclean = 7;
 
 char regionlist_text[] = " o ";
 char regionlist_number[] = " %2d. ";
+
+char readin_mesg[];

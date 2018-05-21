@@ -1036,10 +1036,12 @@ int main(int argc, char **argv) {
     discmd = TRUE;          /* P.K. */
 
 /* If there are any files to read, read the first one! */
+    int display_readin_msg = 0;
     bp = bfind("main", FALSE, 0);
     if (firstfile == FALSE && (gflags & GFREAD)) {
         swbuffer(firstbp);
         zotbuf(bp);
+        display_readin_msg = 1;
     } else bp->b_mode |= gmode;
 
 /* Deal with startup gotos and searches */
@@ -1083,6 +1085,12 @@ loop:
     }
     else {
         update(FALSE);
+        if (display_readin_msg) {   /* First one gets removed by update() */
+            mlwrite(readin_mesg);
+            display_readin_msg = 0;
+            movecursor(0, 0);       /* Send the cursor back to BoB */
+            TTflush();
+        }
         c = getcmd();
     }
 #else

@@ -129,16 +129,16 @@ int ffclose(void) {
  * NOTE!!!
  * We wish to handle files which didn't have a newline at the EOF in a
  * helpful manner.
- * If the file actually had a newlien tehre we have no problem - we just
+ * If the file actually had a newline there we have no problem - we just
  * put one there while writing out.
- * If it didn;t have one then the b_EOLmissing flags will have been set.
+ * If it didn't have one then the b_EOLmissing flags will have been set.
  * There are three possibly cases:
  *
  *  1. We have a text file.
  *     => We want to add a newline.
- *  2. We have a CRYPT file .  i.e. we read in a CRYPT file ot a normal
+ *  2. We have a CRYPT file .  i.e. we read in a CRYPT file to a normal
  *     buffer, switched on CRYPT and are now writing it back out again
- *     (as real text). the final newline here is not real, and if we
+ *     (as real text). The final newline here is not real, and if we
  *     write it out then it will get decrypted to an arbitrary character
  *     => We do not want to add a newline.
  *  3. We have an arbitrary binary file. (Let's leave aside why you would be
@@ -230,7 +230,10 @@ int ffputline(char *buf, int nbuf) {
         else {
             if (cache.rst != 0 && !doing_newline) {
                 doing_newline = 1;
-                status = ffputline("\n", 1);
+                if ((curbp->b_mode & MDDOSLE) == 0)
+                   status = ffputline("\n", 1);
+                else
+                   status = ffputline("\r\n", 2);
                 doing_newline = 0;
                 if (status != FIOSUC) return status;
             }
@@ -250,7 +253,10 @@ int ffputline(char *buf, int nbuf) {
 /* If not the first call for an output file, add a newline */
     if (cache.rst != 0 && !doing_newline) {
         doing_newline = 1;
-        status = ffputline("\n", 1);
+        if ((curbp->b_mode & MDDOSLE) == 0)
+            status = ffputline("\n", 1);
+        else
+            status = ffputline("\r\n", 2);
         doing_newline = 0;
         if (status != FIOSUC) return status;
     }

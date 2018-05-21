@@ -251,7 +251,6 @@ int readin(char *fname, int lockfl) {
     struct buffer *bp;
     int s;
     int nline;
-    char mesg[NSTRING];
 
 #if FILOCK && (BSD || SVR4)
     if (lockfl && lockchk(fname) == ABORT) {
@@ -308,25 +307,34 @@ int readin(char *fname, int lockfl) {
         lp1->l_bp = lp2;
         curbp->b_linep->l_bp = lp1;
         ++nline;
+/* Check for a DOS line ending on line 1 */
+        if (nline == 1 && lp1->l_text[lp1->l_used-1] == '\r')
+            curbp->b_mode |= MDDOSLE;
+        if ((curbp->b_mode & MDDOSLE) != 0 &&
+             lp1->l_text[lp1->l_used-1] == '\r') {
+             lp1->l_used--;             /* Remove the trailing CR */
+        }
         if (!(nline % 300) && !silent)  /* GGR */
             mlwrite(MLpre "Reading file" MLpost " : %d lines", nline);
     }
     ffclose();                          /* Ignore errors. */
-    strcpy(mesg, MLpre);
+    strcpy(readin_mesg, MLpre);
     if (s == FIOERR) {
-        strcat(mesg, "I/O ERROR, ");
+        strcat(readin_mesg, "I/O ERROR, ");
         curbp->b_flag |= BFTRUNC;
     }
     if (s == FIOMEM) {
-        strcat(mesg, "OUT OF MEMORY, ");
+        strcat(readin_mesg, "OUT OF MEMORY, ");
         curbp->b_flag |= BFTRUNC;
     }
-    sprintf(&mesg[strlen(mesg)], "Read %d line", nline);
-    if (nline != 1) strcat(mesg, "s");
-    strcat(mesg, MLpost);
     if (!silent) {                      /* GGR */
-        mlwrite(mesg);
-        if (s == FIOMEM) sleep(1);      /* Let it be seen */
+        sprintf(&readin_mesg[strlen(readin_mesg)], "Read %d line", nline);
+        if (nline != 1) strcat(readin_mesg, "s");
+        if (curbp->b_mode & MDDOSLE)
+              strcat(readin_mesg, " - DOS mode enabled!");
+        strcat(readin_mesg, MLpost);
+        mlwrite(readin_mesg);
+        if (s == FIOERR || s == FIOMEM) sleep(1);   /* Let it be seen */
     }
 
 out:
@@ -605,7 +613,6 @@ int ifile(char *fname) {
     struct buffer *bp;
     int s;
     int nline;
-    char mesg[NSTRING];
 
     bp = curbp;             /* Cheap.               */
     bp->b_flag |= BFCHG;    /* we have changed      */
@@ -635,6 +642,7 @@ int ifile(char *fname) {
     curwp->w_marko = 0;
 
     nline = 0;
+    int dos_include = 0;
     while ((s = ffgetline()) == FIOSUC) {
         lp1 = fline;            /* Allocate by ffgetline..*/
         lp0 = curwp->w_dotp;    /* line previous to insert */
@@ -649,25 +657,34 @@ int ifile(char *fname) {
 /* And advance and write out the current line */
         curwp->w_dotp = lp1;
         ++nline;
+
+/* Check for a DOS line ending on line 1 */
+        if (nline == 1 && lp1->l_text[lp1->l_used-1] == '\r')
+            dos_include = 1;
+        if (dos_include && lp1->l_text[lp1->l_used-1] == '\r') {
+             lp1->l_used--;             /* Remove the trailing CR */
+        }
+
         if (!(nline % 300) && !silent)      /* GGR */
              mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
 
     }
     ffclose();              /* Ignore errors. */
     curwp->w_markp = lforw(curwp->w_markp);
-    strcpy(mesg, MLpre);
+    strcpy(readin_mesg, MLpre);
     if (s == FIOERR) {
-        strcat(mesg, "I/O ERROR, ");
+        strcat(readin_mesg, "I/O ERROR, ");
         curbp->b_flag |= BFTRUNC;
     }
     if (s == FIOMEM) {
-        strcat(mesg, "OUT OF MEMORY, ");
+        strcat(readin_mesg, "OUT OF MEMORY, ");
         curbp->b_flag |= BFTRUNC;
     }
-    sprintf(&mesg[strlen(mesg)], "Inserted %d line", nline);
-    if (nline > 1) strcat(mesg, "s");
-    strcat(mesg, MLpost);
-    mlwrite(mesg);
+    sprintf(&readin_mesg[strlen(readin_mesg)], "Inserted %d line", nline);
+    if (nline > 1) strcat(readin_mesg, "s");
+    if (dos_include) strcat(readin_mesg, " - from DOS file!");
+    strcat(readin_mesg, MLpost);
+    mlwrite(readin_mesg);
 
 out:
 /* Advance to the next line and mark the window for changes */
