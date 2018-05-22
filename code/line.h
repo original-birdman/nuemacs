@@ -48,6 +48,7 @@ extern char *getctext(void);
 extern int putctext(char *iline);
 extern int ldelnewline(void);
 extern void kdelete(void);
+extern void addto_lastmb_ring(char *);
 extern int rotate_kill_ring(int, int);
 extern int kinsert(int c);
 extern int yank(int f, int n);

@@ -127,7 +127,6 @@ extern int inreex;              /* Set when re-executing */
 
 extern unicode_t *eos_list;     /* List of end-of-sentence characters */
 extern int inmb;                /* Set when in minibuffer */
-extern char lastmb[];           /* Contents of last minibuffer */
 extern int pathexpand;          /* Whether to expand paths */
 extern int silent;              /* Set for "no message line info" */
 extern char savnam[];           /* Saved buffer name */

@@ -140,7 +140,6 @@ int  inreex          = FALSE;
 int  allow_current   = 0;
 unicode_t *eos_list  = NULL;
 int  inmb            = FALSE;
-char lastmb[NSTRING] = "";
 int  nlast           = 1;
 int  pathexpand      = TRUE;
 char savnam[NBUFN]   = "main";

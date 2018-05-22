@@ -218,10 +218,34 @@ int linstr(char *instr) {
     char tmpc;
 
     if (instr != NULL)
-        while ((tmpc = *instr) && status == TRUE) {
+        while ((tmpc = *instr)) {
 /* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
             status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
 
+/* Insertion error? */
+            if (status != TRUE) {
+                mlwrite("%%Out of memory while inserting");
+                break;
+            }
+            instr++;
+        }
+    return status;
+}
+
+/*
+ * lins_nc -- Insert bytes given a pointer an count
+ * Currently only used from this file.
+ */
+
+static int lins_nc(char *instr, int nb) {
+    int status = TRUE;
+    char tmpc;
+
+    if (instr != NULL)
+        while (nb--) {
+            tmpc = *instr;
+/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
+            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
 /* Insertion error? */
             if (status != TRUE) {
                 mlwrite("%%Out of memory while inserting");
@@ -667,6 +691,38 @@ void kdelete(void) {
     kused[0] = KBLOCK;
 }
 
+/* A function to rotate the lastmb ring - NOT bindable.
+ */
+static char *lastmb[KRING_SIZE] = {[0 ... KRING_SIZE-1] = NULL};
+
+static void rotate_lastmb_ring(int n) {
+    if (n == 0) return;
+
+    int rotate_count = n % KRING_SIZE;
+    if (rotate_count < 0) rotate_count += KRING_SIZE;
+    rotate_count = KRING_SIZE - rotate_count;   /* So we go the right way */
+    if (rotate_count > 0) {
+        char *tmp[KRING_SIZE];
+        int dx = rotate_count;
+        for (int ix = 0; ix < KRING_SIZE; ix++, dx++) {
+            dx %= KRING_SIZE;
+            tmp[dx] = lastmb[ix];
+        }
+        memcpy(lastmb, tmp, sizeof(tmp));
+    }
+    return;
+}
+
+/* Add an entry at the top.
+ * Done by rotating the entries by -1 and replacing the now-top entry
+ */
+void addto_lastmb_ring(char *mb_text) {
+    rotate_lastmb_ring(-1);
+    if (lastmb[0]) free(lastmb[0]);
+    lastmb[0] = strdup(mb_text);
+    return;
+}
+
 /* A function to rotate the kill ring.
  * Not normally bound, but is bindable.
  */
@@ -691,11 +747,8 @@ int rotate_kill_ring(int f, int n) {
         memcpy(kused, tmp_used, sizeof(tmp_used));
     }
     kbufp = kbufh[0];
-//    mlwrite("kill-text: %s", getkill());
-
     return TRUE;
 }
-
 
 /*
  * Insert a character to the kill buffer, allocating new chunks as needed.
@@ -728,11 +781,11 @@ int kinsert(int c) {
  * Yank text back from the kill buffer. This is really easy. All of the work
  * is done by the standard insert routines. All you do is run the loop, and
  * check for errors. Bound to "C-Y".
+ * The yankmb() code is very similar, but the lins* loop differs.
  */
 int yank(int f, int n) {
     UNUSED(f);
-    int c;
-    int i;
+
     char *sp;                       /* pointer into string to insert */
     struct kill *kp;                /* pointer into kill buffer */
 
@@ -758,13 +811,14 @@ int yank(int f, int n) {
 
 /* Make sure there is something to yank */
     if (kbufh[0] == NULL) {
-        thisflag |= CFYANK;             /* It's still a yank... */
-        return TRUE;                    /* not an error, just nothing */
+        thisflag |= CFYANK;         /* It's still a yank... */
+        last_yank = NormalYank;     /* Save the type */
+        return TRUE;                /* not an error, just nothing */
     }
 
 /* We need to handle the case of being at the start of an empty buffer.
- * If we just let things run and yank (say) 2 complete lines, the mark and
- * dot will be at the start of the third line. With SCROLLCODE set this
+ * If we just let things run and yank (say) 2 complete lines, the current
+ * point will be at the start of the third line. With SCROLLCODE set this
  * will be on-screen so nothing gets redrawn - the added text is left
  * positioned just off the top of the screen; which is a bit disconcerting.
  * So if the next line is the same as the previous line (which can only
@@ -777,33 +831,23 @@ int yank(int f, int n) {
  * whereas we want it to stay after the last current character (any final
  * newline doesn't really exist).
  * So we remember the previous line and later set the mark to the next
- * line from there, offset zero.
+ * line from there, offset zero. (same code is in yankmb())
  */
     struct line *fixup_line = NULL;
-    if (curwp->w_dotp == curbp->b_linep /* && curwp->w_doto == 0 */)
+    if (curwp->w_dotp == curbp->b_linep && curwp->w_doto == 0)
          fixup_line = lback(curbp->b_linep);
 
 /* For each time.... */
     while (n--) {
         kp = kbufh[0];
         while (kp != NULL) {
-            if (kp->d_next == NULL) i = kused[0];
-            else                    i = KBLOCK;
+            int nb, status;
+            if (kp->d_next == NULL) nb = kused[0];
+            else                    nb = KBLOCK;
             sp = kp->d_chunk;
-            while (i--) {
-                if ((c = *sp++) == '\n') {
-/* If we didn't start on the last line we will need to force the newline
- * in if we are yanking into an empty last-but-one line (the last logical
- * line in uemacs is alway empty).
- * Done by forcing all newlines if we didn't start on the last line.
- */
-                    if (!fixup_line) force_newline = 1;
-                    if (lnewline() == FALSE) return FALSE;
-                }
-                else {
-                    if (linsert_byte(1, c) == FALSE) return FALSE;
-                }
-            }
+            if (!fixup_line) force_newline = 1;
+            if ((status = lins_nc(sp, nb)) != TRUE) return status;
+            force_newline = 0;
             kp = kp->d_next;
         }
     }
@@ -821,6 +865,75 @@ int yank(int f, int n) {
     thisflag |= CFYANK;         /* This is a yank */
     last_yank = NormalYank;     /* Save the type */
     return TRUE;
+}
+
+/* Yank back last minibuffer
+ * The yank() code is very similar, but the lins* loop differs.
+ */
+int yankmb(int f, int n) {
+    UNUSED(f);
+
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
+        return(rdonly());           /* we are in read only mode     */
+    if (n < 0) return (FALSE);
+
+/* We are about to yank, so define an empty region at the current point,
+ * in case we don't actually have any text to yank.
+ * This ensure that we have a valid region after any yank for any
+ * re-kill or yank_replace().
+ */
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = curwp->w_doto;
+
+/* Make sure there is something to yank */
+    if (lastmb[0] && strlen(lastmb[0]) == 0) {
+        thisflag |= CFYANK;             /* It's still a yank... */
+        last_yank = MiniBufferYank;     /* Save the type */
+        return TRUE;                    /* not an error, just nothing */
+    }
+
+/* We need to handle the case of being at the start of an empty buffer.
+ * If we just let things run and yank (say) 2 complete lines, the current
+ * point will be at the start of the third line. With SCROLLCODE set this
+ * will be on-screen so nothing gets redrawn - the added text is left
+ * positioned just off the top of the screen; which is a bit disconcerting.
+ * So if the next line is the same as the previous line (which can only
+ * happen if we are in a single-line buffer, when both point to the headp)
+ * we set a flag to do a final reposition().
+ */
+    int need_reposition = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
+
+/* Handle the end of buffer. If we do nothing the mark will move with it
+ * whereas we want it to stay after the last current character (any final
+ * newline doesn't really exist).
+ * So we remember the previous line and later set the mark to the next
+ * line from there, offset zero. (same code is in yankmb())
+ */
+    struct line *fixup_line = NULL;
+    if (curwp->w_dotp == curbp->b_linep /* && curwp->w_doto == 0 */)
+         fixup_line = lback(curbp->b_linep);
+
+    while (n--) {
+        int status;
+        if (!fixup_line) force_newline = 1;
+        if ((status = linstr(lastmb[0])) != TRUE) return status;
+        force_newline = 0;
+    }
+
+/* This will display the inserted text, leaving the last line at the last
+ * but one line, if there is sufficient text for that, otherwise with the
+ * top line at the top.
+ */
+    if (need_reposition) reposition(TRUE, -1);
+
+/* Do any fixup for the original mark being at end of buffer */
+    if (fixup_line) {
+        curwp->w_markp = lforw(fixup_line);
+        curwp->w_marko = 0;
+    }
+    thisflag |= CFYANK;         /* This is a yank */
+    last_yank = MiniBufferYank; /* Save the type */
+    return (TRUE);
 }
 
 /* A function to replace the last yank with text from the kill-ring.
@@ -857,14 +970,20 @@ int yank_replace(int f, int n) {
 /* Don't put killed text onto kill ring */
         if ((s = ldelete(region.r_size, FALSE)) != TRUE) return s;
     }
-    rotate_kill_ring(0, n);
 
-/* yank() already does what we want, so just use it.
+/* yank()/yankmb()  already do what we want, so just use them.
  * But for this "indirect" call we need to send different values for n
- * as we've done all the required rotating.
+ * to yank() as we've done all the required rotating.
  * NOTE: that we make this call even if there is nothing to yank. This
- *       allows yank() to set any required bits, e.g. the yank region
+ *       allows yank*() to set any required bits, e.g. the yank region
  *       and setting CFYANK in thisflag
  */
-    return yank(0, (yank_mode == GNU)? 0: 1);
+    if (last_yank == NormalYank) {
+        rotate_kill_ring(0, n);
+        return yank(0, (yank_mode == GNU)? 0: 1);
+    }
+    else {
+        rotate_lastmb_ring(n);
+        return yankmb(0, 1);
+    }
 }
