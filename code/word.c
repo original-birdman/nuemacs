@@ -441,7 +441,7 @@ int inword(void)
         zw_break = 1;
     }
     else if (gc.ex) {
-        for (unicode_t *exc = gc.ex; *exc != END_UCLIST; exc++) {
+        for (unicode_t *exc = gc.ex; *exc != UEM_NOCHAR; exc++) {
             if (*exc == 0x200B) {
                 zw_break = 1;
                 break;
@@ -633,7 +633,7 @@ int eos_chars(int f, int n)
                         i += utf8_to_unicode(buf, i, len, &c);
                         eos_list[n_eos++] = c;
                 }
-                eos_list[n_eos] = END_UCLIST;
+                eos_list[n_eos] = UEM_NOCHAR;
                 strcpy(eos_str, buf);
         }
 /* Do nothing on anything else - allows you to abort once you've started. */
@@ -763,7 +763,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
             eosflag = 0;
             if (eos_list) {     /* Some eos defined */
                 for (unicode_t *eosch = eos_list;
-                     *eosch != END_UCLIST; eosch++) {
+                     *eosch != UEM_NOCHAR; eosch++) {
                     if (gi.cdm == 0 && gi.uc == *eosch) {
                         eosflag = 1;
                         break;
@@ -775,7 +775,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
                 wbuf[wi++] = gi.cdm;
                 if (gi.ex) {
                     int xc = 0;
-                    while (gi.ex[xc] != END_UCLIST)
+                    while (gi.ex[xc] != UEM_NOCHAR)
                         wbuf[wi++] = gi.ex[xc];
                 }
             }

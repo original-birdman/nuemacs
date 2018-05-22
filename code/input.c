@@ -165,7 +165,7 @@ fn_t getname(char *prompt) {
         c = tgetc();
 #ifdef SIGWINCH
         remap_c_on_intr = 0;
-        if (c == END_UCLIST) {  /* SIGWINCH */
+        if (c == UEM_NOCHAR) {  /* SIGWINCH */
             char mlbuf[1024];
             snprintf(mlbuf, 1024, "%s%.*s", prompt, cpos, buf);
             mlwrite(mlbuf);
@@ -327,7 +327,7 @@ int tgetc(void) {
 
 #ifdef SIGWINCH
     if (c == 0 && errno == EINTR && remap_c_on_intr)
-        c = END_UCLIST;         /* Note illegal char */
+        c = UEM_NOCHAR;         /* Note illegal char */
     else
 #endif
 /* Save it if we need to */
@@ -731,10 +731,10 @@ loop:
     remap_c_on_intr = 1;
 #endif
     c = getcmd();
-/* We get END_UCLIST back on a sigwin signal. */
+/* We get UEM_NOCHAR back on a sigwin signal. */
 #ifdef SIGWINCH
     remap_c_on_intr = 0;
-    if (c == END_UCLIST) goto loop;
+    if (c == UEM_NOCHAR) goto loop;
 #endif
 
 /* Filename expansion code:

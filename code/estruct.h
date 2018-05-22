@@ -33,7 +33,7 @@
 #define UNUSED(x) {(void)(x);}
 
 /* Define an invalid unicode character to mark the end of lists */
-#define END_UCLIST 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
+#define UEM_NOCHAR 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
 
 #ifdef  MSDOS
 #undef  MSDOS

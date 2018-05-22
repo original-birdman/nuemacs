@@ -112,11 +112,11 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
 /* Need to create or extend an ex section */
     int xc = 0;
     if (gp->ex != NULL) {
-        while(gp->ex[xc] != END_UCLIST) xc++;
+        while(gp->ex[xc] != UEM_NOCHAR) xc++;
     }
     gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
     gp->ex[xc] = uc;
-    gp->ex[xc+1] = END_UCLIST;
+    gp->ex[xc+1] = UEM_NOCHAR;
     return;
 }
 
@@ -137,7 +137,7 @@ static void
 
 /* Need to allocate and copy the ex section, which is ex-chars + 1 */
     int cxc = 1;                /* Must be at least 1 to get here... */
-    while(gsource->ex[cxc] != END_UCLIST) cxc++;
+    while(gsource->ex[cxc] != UEM_NOCHAR) cxc++;
     gtarget->ex = malloc((cxc+1)*sizeof(unicode_t));
     memcpy(gtarget->ex, gsource->ex, (cxc+1)*sizeof(unicode_t));
     return;
@@ -156,10 +156,10 @@ static int grapheme_same(struct grapheme *gp1, struct grapheme *gp2) {
     unicode_t *ex2 = gp2->ex;
     while(1) {
         if (*ex1 != *ex2) return FALSE;
-        if ((*ex1 == END_UCLIST) || (*ex2 == END_UCLIST)) break;
+        if ((*ex1 == UEM_NOCHAR) || (*ex2 == UEM_NOCHAR)) break;
         ex1++; ex2++;
     }
-    return ((*ex1 == END_UCLIST) && (*ex2 == END_UCLIST));
+    return ((*ex1 == UEM_NOCHAR) && (*ex2 == UEM_NOCHAR));
 }
 
 static int
@@ -181,7 +181,7 @@ static inline int TTputgrapheme(struct grapheme *gp) {
     int status = TTputc(display_for(gp->uc));
     if (gp->cdm) TTputc(gp->cdm);   /* Might add display_for here too */
     if (gp->ex != NULL) {
-        for(unicode_t *zw = gp->ex; *zw != END_UCLIST; zw++) {
+        for(unicode_t *zw = gp->ex; *zw != UEM_NOCHAR; zw++) {
             TTputc(*zw);            /* Might add display_for here too */
         }
     }

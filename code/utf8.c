@@ -218,11 +218,11 @@ static struct range_t {
     {0X2060, 0X206F, ZW_JOIN},  /* Other ZW joiners */
     {0x20D0, 0x20FF, COM_DIA},  /* Combining Diacritical Marks for Symbols */
     {0xFE20, 0xFE2F, COM_DIA},  /* Combining Half Marks */
-    {END_UCLIST, END_UCLIST, 0} /* End of list marker */
+    {UEM_NOCHAR, UEM_NOCHAR, 0} /* End of list marker */
 };
 static int spmod_l_is_zw = 0;   /* Probably not?? */
 int zerowidth_type(unicode_t uc) {
-    for (int rc = 0; zero_width[rc].start != END_UCLIST; rc++) {
+    for (int rc = 0; zero_width[rc].start != UEM_NOCHAR; rc++) {
         if (uc < zero_width[rc].start) return 0;
         if (uc <= zero_width[rc].end) {
             if ((zero_width[rc].type == SPMOD_L) && !spmod_l_is_zw)
@@ -304,14 +304,14 @@ int char_replace(int f, int n) {
             }
             else {
                 need = 0;
-                while (remap[need++].start != END_UCLIST);
+                while (remap[need++].start != UEM_NOCHAR);
                 need++;
             }
             remap = realloc(remap, need*sizeof(struct repmap_t));
             if (need == 2)  {               /* Newly allocated */
                 remap[0].start = lowval;
                 remap[0].end = topval;
-                remap[1].start = remap[1].end = END_UCLIST;
+                remap[1].start = remap[1].end = UEM_NOCHAR;
                 continue;                   /* All done... */
             }
 /* Need to insert into list sorted */
@@ -325,7 +325,7 @@ int char_replace(int f, int n) {
             }
             else {
                 int lowtmp, toptmp;
-                while(lowval != END_UCLIST) {
+                while(lowval != UEM_NOCHAR) {
                     lowtmp = remap[ri].start;
                     toptmp = remap[ri].end;
                     remap[ri].start = lowval;
@@ -334,7 +334,7 @@ int char_replace(int f, int n) {
                     topval = toptmp;
                     ri++;
                 }
-                remap[ri].start = remap[ri].end = END_UCLIST;
+                remap[ri].start = remap[ri].end = UEM_NOCHAR;
             }
         }
     }
@@ -352,7 +352,7 @@ unicode_t display_for(unicode_t uc) {
 
     if (uc > MAX_UTF8_CHAR) return repchar;
     if (remap == NULL) return uc;
-    for (int rc = 0; remap[rc].start != END_UCLIST; rc++) {
+    for (int rc = 0; remap[rc].start != UEM_NOCHAR; rc++) {
         if (uc < remap[rc].start) return uc;
         if (uc <= remap[rc].end)  return repchar;
     }

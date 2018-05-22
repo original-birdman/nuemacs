@@ -425,7 +425,7 @@ int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
         if (!utf8_len_only) {
             gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
             gp->ex[xc] = uc;
-            gp->ex[xc+1] = END_UCLIST;
+            gp->ex[xc+1] = UEM_NOCHAR;
         }
     }
     return used;
@@ -441,7 +441,7 @@ int lputgrapheme(struct grapheme *gp) {
     status = linsert_uc(1, gp->cdm);
     if (gp->ex == NULL) return status;
     int xc = 0;
-    while (gp->ex[xc] != END_UCLIST) {
+    while (gp->ex[xc] != UEM_NOCHAR) {
         status = linsert_uc(1, gp->ex[xc]);
         if (status) return status;
     }

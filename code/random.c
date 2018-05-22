@@ -78,7 +78,7 @@ int showcpos(int f, int n)
                                 if (glyi.cdm != 0) uc_used = 2;
                                 if (glyi.ex != NULL) {
                                     for (unicode_t *xc = glyi.ex;
-                                           *xc != END_UCLIST;
+                                           *xc != UEM_NOCHAR;
                                            xc++)
                                          uc_used++;
                                     free(glyi.ex);
@@ -95,7 +95,7 @@ int showcpos(int f, int n)
         if (curwp->w_dotp == curbp->b_linep) {
                 predlines = numlines;
                 predchars = numchars;
-                curchar = END_UCLIST;   /* NoChar */
+                curchar = UEM_NOCHAR;   /* NoChar */
         }
 
         /* Get real column and end-of-line column. */
@@ -111,7 +111,7 @@ int showcpos(int f, int n)
 
         /* summarize and report the info */
         char descr[40];
-        if (curchar == END_UCLIST)
+        if (curchar == UEM_NOCHAR)
             strcpy(descr, "at end of buffer");
         else {
 #include "charset.h"
