@@ -2262,7 +2262,7 @@ Makefile
 
 names.c
     Ignore the terminating NULL entry in the needed count for
-    idxsort_fields(). 
+    idxsort_fields().
 
 edef.h
 eval.c
@@ -2289,4 +2289,135 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.133
 
-========== 
+========== GGR4.134
+
+Makefile
+   Shell expand dlist before finding which ones exist - to expand any
+   wildcard matching multiple entries.
+   Changed dlist to blist for BCKT location finding.
+
+buffer.c
+edef.h
+efunc.h
+eval.c
+evar.h
+globals.c
+word.c
+etc/uemacs.rc
+    Changed makelist-region and numberlist-region to use an environment
+    variable (regionlist_text, regionlist_number) for the label rather
+    than, respectively, a hard-wired value or user variable. [edef.h,
+    eval.c, globals.c, word.c, etc/uemacs.rc]
+    Also added const to kbdmacro_buffer and arg1 of bfind declaration
+    [buffer.c, edef.h, efunc.h, globals.c]
+
+----------
+
+    Fixes to the minibuffer, and input, so that the minibuffer use
+    doesn't need to be cancelled on SIGWINCH.
+    (Plus some related tidying up).
+
+---------- Details ----------
+bind.c
+efunc.h
+exec.c
+input.c
+    Make the prompt a parameter to the getname() call, so that it can
+    be redisplayed on a resize.
+    getname() now checks for a return char of END_UCLIST (illegal) and
+    redraws what it already has if it sees it.
+
+display.c
+efunc.h
+    Make newscreensize() and external function.
+
+edef.h
+globals.c
+    Extended mb_info definition to include saving wheadp.
+
+input.c
+    Set an internal flag to optionally disable syscall restarts around
+    the TTgetc() call, so that we can tell a signal (SIGWINCH) has
+    arrived and allow input routines to handle this.
+    An illegal unicode value (UC_LIST) is returned and not recorded to
+    macros.
+    Make the SIGWINCH handler set SA_RESTART on set-up.
+    Simplify the original signal handling on leaving getstring().
+    Remove the setjmp/longjmp calls and associated flags.
+    The handler now saves curbp, curwp and wheadp on first entry and
+    restores these before running the resize code. It then sets things
+    back. If it arrives from a minibuffer it copies the whole curwp
+    structure, as minibuffers all now share the same struct window.
+    Create the struct window for minibuffers.
+    Base minibuffer names on the minibuffer level "//minib%04d" and
+    removed tmpnam().
+
+----------
+
+Makefile
+    Fix variable re-usage that lead to missing library locations.
+
+edef.h
+estruct.h
+file.c
+fileio.c
+globals.c
+main.c
+etc/uemacs.rc
+    Added a DOS mode, for files with DOS line endings.
+    If the first line of a file ends with \r\n the buffer is put into
+    DOS mode, and the \r is remove from all lines. This only affects
+    reading a file into a new buffer. [file.c]
+    Writing out a buffer in DOS mode will write \r\n at the end of each
+    line. [fileio.c]
+    You can toggle the DOS mode in a buffer, but it only has an effect
+    when reading in or writing out a file.
+    Included files are also checked for DOS endings, but do not change
+    the current buffer mode.
+    Add a workaround to (re)display the number of lines read in for the
+    first file given on the command line, as otherwise it is lost in the
+    initial screen drawing [file.c, globals.c, main.c, edef.h]
+
+Makefile
+    Make TRACE the default for x86_64 if the backtrace include file can
+    be found, and change the option to NOTRACE to turn it off.
+
+edef.h
+globals.c
+input.c
+line.c
+line.h
+    Add a kill ring for the last minibuffers.
+    Moved the minibuffer saving and yankmb() code into line.c (with
+    yank/yank_replace). Enabled local static declarations rather than
+    global ones.
+    getstring() now calls addto_lastmb_ring() rather than copying to
+    lastmb directly.
+    Added static lins_nc() routine to insert a known byte count from a
+    pointer, rather than a C-string. [line.c]
+    Added the yank() tests for handling empty buffer and end of buffer
+    to yankmb(). These routines are now very similar, but sufficiently
+    different to keep them separate.
+
+    NOTE!!
+    Minibuffers (and hence search strings) are usually limited in size -
+    often to 128 characters.  This is silently truncated if you overstep
+    the length, so a yankmb() might not get all that you expect if you
+    copy a large region into a minibuffer.  The kill ring always
+    contains all of a delete.
+
+display.c
+estruct.h
+input.c
+line.c
+random.c
+utf8.c
+word.c
+    Changed END_UCLIST to be UEM_NOCHAR, better fitting a more general
+    usage.
+
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.134
+
+==========
