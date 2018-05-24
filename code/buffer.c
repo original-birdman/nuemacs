@@ -101,13 +101,14 @@ int swbuffer(struct buffer *bp) {
     }
     curbp = bp;                     /* Switch. */
     if (curbp->b_active != TRUE) {  /* buffer not active yet */
+/* Set this now to avoid a potential loop if a file-hook prompts */
+        curbp->b_active = TRUE;
         curbp->b_mode |= gmode;     /* readin() runs file-hooks, so set now */
 /* Read it in and activate it */
         run_filehooks = 1;          /* set flag */
         readin(curbp->b_fname, TRUE);
         curbp->b_dotp = lforw(curbp->b_linep);
         curbp->b_doto = 0;
-        curbp->b_active = TRUE;
     }
     curwp->w_bufp = bp;
     curwp->w_linep = bp->b_linep;   /* For macros, ignored. */

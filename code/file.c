@@ -262,10 +262,6 @@ int readin(char *fname, int lockfl) {
 #else
         UNUSED(lockfl);
 #endif
-#if CRYPT
-    s = resetkey();
-    if (s != TRUE) return s;
-#endif
     bp = curbp;                             /* Cheap.        */
     if ((s = bclear(bp)) != TRUE) return s; /* Might be old. */
     bp->b_flag &= ~(BFINVS | BFCHG);
@@ -282,6 +278,12 @@ int readin(char *fname, int lockfl) {
 
 /* GGR - run filehooks on this iff the caller sets the flag */
     if (run_filehooks) handle_filehooks(fname);
+
+/* Do this after file-hooks run, so they can set CRYPT mode */
+#if CRYPT
+    s = resetkey();
+    if (s != TRUE) return s;
+#endif
 
 /* let a user macro get hold of things...if he wants */
     execute(META | SPEC | 'R', FALSE, 1);
