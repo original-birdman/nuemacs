@@ -1398,15 +1398,20 @@ static void modeline(struct window *wp) {
     struct window *mwp;
     if (inmb) mwp = mb_info.main_wp;
     else      mwp = wp;
-    for (i = 0; i < NUMMODES; i++)  /* add in the mode flags */
-        if (mwp->w_bufp->b_mode & (1 << i)) {
+    int mode_mask = 1;
+    for (i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
+        if (mwp->w_bufp->b_mode & mode_mask) {
             if (firstm != TRUE) strcat(tline, " ");
             firstm = FALSE;
-            strcat(tline, mode2name[i]);
+            if (mode_mask == MDPHON)
+                  strcat(tline, ptt->ptt_headp->display_code);
+            else
+                  strcat(tline, mode2name[i]);
         }
+        mode_mask <<= 1;
+    }
     strcat(tline, MLpost " ");
-    cp = tline;
-    while ((c = *cp++) != 0) vtputc(c);
+    show_utf8(tline);
 
 /* Display the filename if set and it is different to the buffername.
  * This can contain utf8...

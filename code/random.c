@@ -958,7 +958,6 @@ int killtext(int f, int n)
  */
 static int adjustmode(int kind, int global)
 {
-        char *scan;     /* scanning pointer to convert prompt */
         int i;          /* loop index */
         int status;     /* error return on input */
 #if     COLOR
@@ -984,17 +983,10 @@ static int adjustmode(int kind, int global)
         if (status != TRUE)
                 return status;
 
-        /* make it uppercase */
-
-        scan = cbuf;
+        /* Check for 1st char being uppercase */
 #if     COLOR
-        uflag = (*scan >= 'A' && *scan <= 'Z');
+        uflag = (cbuf[0] >= 'A' && cbuf[0] <= 'Z');
 #endif
-        while (*scan != 0) {
-                if (*scan >= 'a' && *scan <= 'z')
-                        *scan = *scan - 32;
-                scan++;
-        }
 
         /* test it first against the colors we know */
 #if IBMPC
@@ -1002,7 +994,7 @@ static int adjustmode(int kind, int global)
 #else
         for (i = 0; i < NCOLORS; i++) {
 #endif
-                if (strcmp(cbuf, cname[i]) == 0) {
+                if (strcasecmp(cbuf, cname[i]) == 0) {
                         /* finding the match, we set the color */
 #if     COLOR
                         if (uflag) {
@@ -1025,10 +1017,10 @@ static int adjustmode(int kind, int global)
         /* test it against the modes we know */
 
         for (i = 0; i < NUMMODES; i++) {
-                if (strcmp(cbuf, modename[i]) == 0) {
+                if (strcasecmp(cbuf, mode2name[i]) == 0) {
                         /* finding a match, we process it */
                         if (kind == TRUE) {
-                            if (!ptt && !strcmp(modename[i], "PHON")) {
+                            if (!ptt && !strcasecmp(mode2name[i], "PHON")) {
                 mlforce("No phonetic translation tables are yet defined!");
                                     return FALSE;
                                 }

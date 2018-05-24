@@ -11,11 +11,8 @@ int execlevel = 0;              /* execution IF level           */
 int eolexist = TRUE;            /* does clear to EOL exist      */
 int revexist = FALSE;           /* does reverse video exist?    */
 int flickcode = FALSE;          /* do flicker supression?       */
-char *modename[] = {            /* name of modes                */
-        "WRAP",  "CMODE", "PHON",  "EXACT", "VIEW",
-        "OVER",  "MAGIC", "CRYPT", "ASAVE", "EQUIV", "DOS",
-};
-char *mode2name[] = {           /* display name of modes        */
+char *mode2name[] = {           /* Display name of modes        */
+                                /* Also text when checking them */
         "Wrap",  "Cmode", "Phon",  "Exact", "View",
         "Over",  "Magic", "Crypt", "Asave", "eQuiv", "Dos",
 };

@@ -24,7 +24,6 @@ extern int execlevel;           /* execution IF level           */
 extern int eolexist;            /* does clear to EOL exist?     */
 extern int revexist;            /* does reverse video exist?    */
 extern int flickcode;           /* do flicker supression?       */
-extern char *modename[];        /* text names of modes          */
 extern char *mode2name[];       /* text names of modes          */
 extern char modecode[];         /* letters to represent modes   */
 extern struct key_tab *keytab;  /* key bind to functions table  */

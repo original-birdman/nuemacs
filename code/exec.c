@@ -332,12 +332,10 @@ void ptt_free(struct buffer *bp) {
 }
 
 /* GGR
- * Sets the pttable to use if PHON mode is on and sets the modeline
- * text to display when it is.
+ * Sets the pttable to use if PHON mode is on, and flags to redisplay it.
  */
-static void use_pttable(struct buffer *bp) {
+static inline void use_pttable(struct buffer *bp) {
     ptt = bp;
-    mode2name[2] = ptt->ptt_headp->display_code;    /* Text for modeline */
     curwp->w_flag |= WFMODE;
 }
 
