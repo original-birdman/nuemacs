@@ -290,7 +290,8 @@ int readin(char *fname, int lockfl) {
 
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
     if (s == FIOFNF) {                              /* File not found. */
-        mlwrite(MLpre "New file" MLpost);
+        strcpy(readin_mesg, MLpre "New file" MLpost);
+        mlwrite(readin_mesg);
         goto out;
     }
 
