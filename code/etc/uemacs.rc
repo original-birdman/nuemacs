@@ -69,7 +69,7 @@ store-procedure rm-dflt-repl
     write-message "[Default replace string set null]"
 !endm
 ;
-store-procedure spell-check
+store-procedure spell-check not_mb
     set %extras @"<return> or any special SPELL options: "
     !if &seq %extras "ERROR"
         write-message "[Aborted]"
@@ -104,7 +104,7 @@ set %rindef 0
 ;
 ; left-and-right-justify
 ;
-store-procedure lr-justify          ; Left and right justify paragraph
+store-procedure lr-justify not_mb   ; Left and right justify paragraph
   set %oldfill $fillcol
   set %left @&cat &cat "Left indent [" %lindef "]: "
   !if &seq %left "ERROR"

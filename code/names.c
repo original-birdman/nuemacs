@@ -29,15 +29,15 @@ struct name_bind names[] = {
         {"case-word-capitalize", capword, {0, 0}},
         {"case-word-lower", lowerword, {0, 0}},
         {"case-word-upper", upperword, {0, 0}},
-        {"change-file-name", filename, {0, 0}},
-        {"change-screen-size", newsize, {0, 0}},
-        {"change-screen-width", newwidth, {0, 0}},
+        {"change-file-name", filename, {0, 1}},
+        {"change-screen-size", newsize, {0, 1}},
+        {"change-screen-width", newwidth, {0, 1}},
         {"char-replace", char_replace, {0, 0}},     /* GGR */
         {"clear-and-redraw", redraw, {0, 0}},
         {"clear-message-line", clrmes, {0, 0}},
         {"copy-region", copyregion, {0, 0}},
 #if     WORDPRO
-        {"count-words", wordcount, {0, 0}},
+        {"count-words", wordcount, {0, 1}},
 #endif
         {"ctlx-prefix", cex, {0, 0}},
         {"delete-blank-lines", deblank, {0, 0}},
@@ -152,9 +152,9 @@ struct name_bind names[] = {
         {"numberlist-region", numberlist_region, {0, 0}},   /* GGR */
 #endif
         {"meta-prefix", metafn, {0, 0}},
-        {"move-window-down", mvdnwind, {0, 0}},
-        {"move-window-up", mvupwind, {0, 0}},
-        {"name-buffer", namebuffer, {0, 0}},
+        {"move-window-down", mvdnwind, {0, 1}},
+        {"move-window-up", mvupwind, {0, 1}},
+        {"name-buffer", namebuffer, {0, 1}},
         {"narrow-to-region", narrow, {0, 1}},       /* GGR */
         {"newline", insert_newline, {0, 0}},
         {"newline-and-indent", indent, {0, 0}},
@@ -188,7 +188,7 @@ struct name_bind names[] = {
         {"redraw-display", reposition, {0, 0}},
         {"reexecute", reexecute, {1, 0}},           /* GGR */
         {"resize-window", resize, {0, 1}},
-        {"restore-window", restwnd, {0, 0}},
+        {"restore-window", restwnd, {0, 1}},
         {"replace-string", sreplace, {0, 0}},
 #if     ISRCH
         {"reverse-incremental-search", risearch, {0, 1}},
@@ -198,17 +198,17 @@ struct name_bind names[] = {
 #endif
         {"rkr", rotate_kill_ring, {0, 0}},
         {"save-file", filesave, {0, 0}},
-        {"save-window", savewnd, {0, 0}},
-        {"scroll-next-up", scrnextup, {0, 0}},
-        {"scroll-next-down", scrnextdw, {0, 0}},
+        {"save-window", savewnd, {0, 1}},
+        {"scroll-next-up", scrnextup, {0, 1}},
+        {"scroll-next-down", scrnextdw, {0, 1}},
         {"search-forward", forwsearch, {0, 0}},
         {"search-reverse", backsearch, {0, 0}},
         {"select-buffer", usebuffer, {0, 0}},
         {"set", setvar, {0, 0}},
 #if     CRYPT
-        {"set-encryption-key", set_encryption_key, {0, 0}},
+        {"set-encryption-key", set_encryption_key, {0, 1}},
 #endif
-        {"set-fill-column", setfillcol, {0, 0}},
+        {"set-fill-column", setfillcol, {0, 1}},
         {"set-mark", setmark, {0, 0}},
 #if PROC
         {"set-pttable", set_pttable, {0, 0}},       /* GGR */
@@ -234,7 +234,7 @@ struct name_bind names[] = {
         {"type-tab", typetab, {0, 0}},              /* GGR */
         {"unbind-key", unbindkey, {0, 0}},
         {"universal-argument", unarg, {0, 0}},
-        {"unmark-buffer", unmark, {0, 0}},
+        {"unmark-buffer", unmark, {0, 1}},
         {"update-screen", upscreen, {0, 0}},
         {"view-file", viewfile, {0, 0}},
         {"white-delete", whitedelete, {0, 0}},      /* GGR */
