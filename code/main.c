@@ -1257,6 +1257,7 @@ int execute(int c, int f, int n) {
     if (ktp) {
         fn_t execfunc = ktp->hndlr.k_fp;
         if (execfunc == nullproc) return(TRUE);
+        int run_not_in_mb = 0;
 /* Special handling for nextwind/prevwind key-bindings, which get
  * re-mapped when being prompted for a search string.
  * Since the mapped-from functions are flagged with not_mb we have
@@ -1276,7 +1277,20 @@ int execute(int c, int f, int n) {
                 goto after_mb_check;
             }
         }
-        if (inmb && ktp->fi->opt.not_mb) {
+        if (inmb) {
+            if (ktp->k_type == FUNC_KMAP && ktp->fi->opt.not_mb)
+                run_not_in_mb = 1;
+            else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
+                 struct buffer *proc_bp;
+                 char pbuf[NBUFN+1];
+                 pbuf[0] = '/';
+                 strcpy(pbuf+1, ktp->hndlr.pbp);
+                 if ((proc_bp = bfind(pbuf, FALSE, 0)) != NULL) {
+                    if (proc_bp->btp_opt.not_mb) run_not_in_mb = 1;
+                 }
+            }
+        }
+        if (run_not_in_mb) {
             not_in_mb.funcname = ktp->fi->n_name;
             not_in_mb.keystroke = c;
             execfunc = not_in_mb_error;
@@ -1309,7 +1323,8 @@ after_mb_check:
                 addto_kbdmacro(ktp->fi->n_name, 1, 0);
             }
         }
-        if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
+        if (!run_not_in_mb &&
+             ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
             execfunc = execproc;    /* Run this instead... */
             input_waiting = ktp->hndlr.pbp;
             if (!inmb && kbdmode == RECORD)

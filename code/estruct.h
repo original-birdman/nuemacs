@@ -445,6 +445,13 @@ struct ptt_ent {
     char display_code[32];      /* Only 2 graphemes, though */
 };
 #endif
+
+/* Structure for function/buffer-proc options */
+struct func_opts {
+     unsigned int skip_in_macro :1;
+     unsigned int not_mb :1;
+};
+
 struct buffer {
         struct buffer *b_bufp;  /* Link to next struct buffer   */
         struct line *b_dotp;    /* Link to "." struct line structure */
@@ -455,6 +462,7 @@ struct buffer {
 #if PROC
         struct ptt_ent *ptt_headp;
         int b_type;             /* Type of buffer */
+        struct func_opts btp_opt;   /* Only for b_type = BTPROC */
 #endif
         int b_exec_level;       /* Recursion level */
         int b_doto;             /* Offset of "." in above struct line */
@@ -595,10 +603,7 @@ struct key_tab_init {           /* Initializing data */
 struct name_bind {
         char *n_name;            /* name of function */
         fn_t n_func;             /* function name is bound to */
-        struct {
-            unsigned int skip_in_macro :1;
-            unsigned int not_mb :1;
-        } opt;
+        struct func_opts opt;
 };
 
 /* The editor holds deleted text chunks in the struct kill buffer. The

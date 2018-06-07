@@ -736,41 +736,49 @@ int ptt_handler(int c) {
  * int f;               default flag
  * int n;               macro number to use
  */
-int storeproc(int f, int n)
-{
-        struct buffer *bp;      /* pointer to macro buffer */
-        int status;             /* return status */
-        char bufn[NBUFN+1];     /* name of buffer to use */
+int storeproc(int f, int n) {
+    struct buffer *bp;      /* pointer to macro buffer */
+    int status;             /* return status */
+    char bufn[NBUFN+1];     /* name of buffer to use */
 
-        /* a numeric argument means its a numbered macro */
-        if (f == TRUE)
-                return storemac(f, n);
+/* A numeric argument means its a numbered macro */
+    if (f == TRUE) return storemac(f, n);
 
 /* Append the procedure name to the buffer marker tag */
-        bufn[0] = '/';
-        if ((status =
-             mlreply("Procedure name: ", &bufn[1], NBUFN)) != TRUE)
-                return status;
-        if (strlen(bufn) >= NBUFN) {
-            mlforce("Procedure name too long (store): %s. Ignored.", bufn);
-            sleep(1);
-            return TRUE;    /* Don't abort start-up file */
-        }
+    bufn[0] = '/';
+    if ((status = mlreply("Procedure name: ", &bufn[1], NBUFN)) != TRUE)
+         return status;
+    if (strlen(bufn) >= NBUFN) {
+        mlforce("Procedure name too long (store): %s. Ignored.", bufn);
+        sleep(1);
+        return TRUE;    /* Don't abort start-up file */
+    }
 
-        /* set up the new macro buffer */
-        if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
-                mlwrite("Can not create macro");
-                return FALSE;
-        }
+/* Set up the new macro buffer */
+    if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
+        mlwrite("Can not create macro");
+        return FALSE;
+    }
 
-        /* and make sure it is empty */
-        bclear(bp);
+/* Add any options */
+    char optstr[NBUFN+1];
+    bp->btp_opt.skip_in_macro = 0;
+    bp->btp_opt.not_mb = 0;
+    while (1) {
+        mlreply("opts: ", optstr, NBUFN);
+        if (optstr[0] == '\0') break;
+        if (!strcmp(optstr, "skip_in_macro")) bp->btp_opt.skip_in_macro = 1;
+        if (!strcmp(optstr, "not_mb"))        bp->btp_opt.not_mb = 1;
+    }
 
-        /* and set the macro store pointers to it */
-        mstore = TRUE;
-        bp->b_type = BTPROC;    /* Mark the buffer type */
-        bstore = bp;
-        return TRUE;
+/* And make sure it is empty */
+    bclear(bp);
+
+/* And set the macro store pointers to it */
+    mstore = TRUE;
+    bp->b_type = BTPROC;    /* Mark the buffer type */
+    bstore = bp;
+    return TRUE;
 }
 
 /*
