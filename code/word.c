@@ -851,10 +851,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 /* Possibly add space(s) */
         if (pending_space) linsert_byte(pending_space, ' ');
 
-/* ...and add in the word in either case */
-        for (i = 0; i < wi; i++) {
-            linsert_byte(1, wbuf[i]);
-        }
+/* ...and add in the word (unicode chars) in either case */
+        for (i = 0; i < wi; i++) linsert_uc(1, wbuf[i]);
         clength += wordlen + pending_space;
         wordlen = wi = 0;
         pending_space = 1 + eosflag;
