@@ -36,20 +36,18 @@ extern int insspace(int f, int n);
 extern int linsert_byte(int, unsigned char);
 extern int linstr(char *instr);
 extern int linsert_uc(int n, unicode_t c);
-extern int lowrite(unicode_t c);
 extern int lover(char *ostr);
 extern int lnewline(void);
 extern int ldelete(long n, int kflag);
 extern int ldelchar(long n, int kflag);
-extern int lgetchar(unicode_t *);
 extern int lgetgrapheme(struct grapheme *, int);
+#ifdef CURRENTLY_UNUSED
 extern int lputgrapheme(struct grapheme *gp);
+#endif
 extern char *getctext(void);
 extern int putctext(char *iline);
-extern int ldelnewline(void);
 extern void kdelete(void);
 extern void addto_lastmb_ring(char *);
-extern int rotate_kill_ring(int, int);
 extern int kinsert(int c);
 extern int yank(int f, int n);
 extern int yank_replace(int, int);

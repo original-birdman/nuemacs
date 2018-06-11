@@ -233,7 +233,7 @@ int linstr(char *instr) {
 }
 
 /*
- * lins_nc -- Insert bytes given a pointer an count
+ * lins_nc -- Insert bytes given a pointer and count
  * Currently only used from this file.
  */
 
@@ -280,7 +280,7 @@ int linsert_uc(int n, unicode_t c) {
  *
  * int c;       character to overwrite on current position
  */
-int lowrite(unicode_t c) {
+static int lowrite(unicode_t c) {
     if (curwp->w_doto < curwp->w_dotp->l_used &&
          (lgetc(curwp->w_dotp, curwp->w_doto) != '\t' ||
          ((curwp->w_doto) & tabmask) == tabmask))
@@ -379,12 +379,6 @@ int lnewline(void) {
     return TRUE;
 }
 
-int lgetchar(unicode_t *c) {
-    int len = llength(curwp->w_dotp);
-    char *buf = curwp->w_dotp->l_text;
-    return utf8_to_unicode(buf, curwp->w_doto, len, c);
-}
-
 /* Get the grapheme structure for what point is looking at.
  * Returns the number of bytes used up by the utf8 string.
  */
@@ -431,6 +425,7 @@ int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
     return used;
 }
 
+#ifdef CURRENTLY_UNUSED
 /* Put the grapheme structure into the buffer at the current point.
  * Just a simple matter of running linsert_uc() on each unicode char.
  */
@@ -446,6 +441,88 @@ int lputgrapheme(struct grapheme *gp) {
         if (status) return status;
     }
     return status;
+}
+#endif
+
+/*
+ * Delete a newline. Join the current line with the next line. If the next line
+ * is the magic header line always return TRUE; merging the last line with the
+ * header line can be thought of as always being a successful operation, even
+ * if nothing is done, and this makes the kill buffer work "right". Easy cases
+ * can be done by shuffling data around. Hard cases require that lines be moved
+ * about in memory. Return FALSE on error and TRUE if all looks ok. Called by
+ * "ldelete" only.
+ */
+static int ldelnewline(void) {
+    char *cp1;
+    char *cp2;
+    struct line *lp1;
+    struct line *lp2;
+    struct line *lp3;
+    struct window *wp;
+
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+        return rdonly();        /* we are in read only mode     */
+    lp1 = curwp->w_dotp;
+    lp2 = lp1->l_fp;
+    if (lp2 == curbp->b_linep) {    /* At the buffer end.           */
+        if (lp1->l_used == 0)   /* Blank line.                  */
+            lfree(lp1);
+        return TRUE;
+    }
+    if (lp2->l_used <= lp1->l_size - lp1->l_used) {
+        cp1 = &lp1->l_text[lp1->l_used];
+        cp2 = &lp2->l_text[0];
+        while (cp2 != &lp2->l_text[lp2->l_used]) *cp1++ = *cp2++;
+        wp = wheadp;
+        while (wp != NULL) {
+            if (wp->w_linep == lp2) wp->w_linep = lp1;
+            if (wp->w_dotp == lp2) {
+                wp->w_dotp = lp1;
+                wp->w_doto += lp1->l_used;
+            }
+            if (wp->w_markp == lp2) {
+                wp->w_markp = lp1;
+                wp->w_marko += lp1->l_used;
+            }
+            wp = wp->w_wndp;
+        }
+        lp1->l_used += lp2->l_used;
+        lp1->l_fp = lp2->l_fp;
+        lp2->l_fp->l_bp = lp1;
+        free((char *)lp2);
+        return TRUE;
+    }
+    if ((lp3 = lalloc(lp1->l_used + lp2->l_used)) == NULL) return FALSE;
+    cp1 = &lp1->l_text[0];
+    cp2 = &lp3->l_text[0];
+    while (cp1 != &lp1->l_text[lp1->l_used]) *cp2++ = *cp1++;
+    cp1 = &lp2->l_text[0];
+    while (cp1 != &lp2->l_text[lp2->l_used]) *cp2++ = *cp1++;
+    lp1->l_bp->l_fp = lp3;
+    lp3->l_fp = lp2->l_fp;
+    lp2->l_fp->l_bp = lp3;
+    lp3->l_bp = lp1->l_bp;
+    wp = wheadp;
+    while (wp != NULL) {
+        if (wp->w_linep == lp1 || wp->w_linep == lp2) wp->w_linep = lp3;
+        if (wp->w_dotp == lp1)
+            wp->w_dotp = lp3;
+        else if (wp->w_dotp == lp2) {
+            wp->w_dotp = lp3;
+            wp->w_doto += lp1->l_used;
+        }
+        if (wp->w_markp == lp1)
+            wp->w_markp = lp3;
+        else if (wp->w_markp == lp2) {
+            wp->w_markp = lp3;
+            wp->w_marko += lp1->l_used;
+        }
+        wp = wp->w_wndp;
+    }
+    free((char *)lp1);
+    free((char *)lp2);
+    return TRUE;
 }
 
 /*
@@ -576,87 +653,6 @@ int putctext(char *iline) {
 }
 
 /*
- * Delete a newline. Join the current line with the next line. If the next line
- * is the magic header line always return TRUE; merging the last line with the
- * header line can be thought of as always being a successful operation, even
- * if nothing is done, and this makes the kill buffer work "right". Easy cases
- * can be done by shuffling data around. Hard cases require that lines be moved
- * about in memory. Return FALSE on error and TRUE if all looks ok. Called by
- * "ldelete" only.
- */
-int ldelnewline(void) {
-    char *cp1;
-    char *cp2;
-    struct line *lp1;
-    struct line *lp2;
-    struct line *lp3;
-    struct window *wp;
-
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-        return rdonly();        /* we are in read only mode     */
-    lp1 = curwp->w_dotp;
-    lp2 = lp1->l_fp;
-    if (lp2 == curbp->b_linep) {    /* At the buffer end.           */
-        if (lp1->l_used == 0)   /* Blank line.                  */
-            lfree(lp1);
-        return TRUE;
-    }
-    if (lp2->l_used <= lp1->l_size - lp1->l_used) {
-        cp1 = &lp1->l_text[lp1->l_used];
-        cp2 = &lp2->l_text[0];
-        while (cp2 != &lp2->l_text[lp2->l_used]) *cp1++ = *cp2++;
-        wp = wheadp;
-        while (wp != NULL) {
-            if (wp->w_linep == lp2) wp->w_linep = lp1;
-            if (wp->w_dotp == lp2) {
-                wp->w_dotp = lp1;
-                wp->w_doto += lp1->l_used;
-            }
-            if (wp->w_markp == lp2) {
-                wp->w_markp = lp1;
-                wp->w_marko += lp1->l_used;
-            }
-            wp = wp->w_wndp;
-        }
-        lp1->l_used += lp2->l_used;
-        lp1->l_fp = lp2->l_fp;
-        lp2->l_fp->l_bp = lp1;
-        free((char *)lp2);
-        return TRUE;
-    }
-    if ((lp3 = lalloc(lp1->l_used + lp2->l_used)) == NULL) return FALSE;
-    cp1 = &lp1->l_text[0];
-    cp2 = &lp3->l_text[0];
-    while (cp1 != &lp1->l_text[lp1->l_used]) *cp2++ = *cp1++;
-    cp1 = &lp2->l_text[0];
-    while (cp1 != &lp2->l_text[lp2->l_used]) *cp2++ = *cp1++;
-    lp1->l_bp->l_fp = lp3;
-    lp3->l_fp = lp2->l_fp;
-    lp2->l_fp->l_bp = lp3;
-    lp3->l_bp = lp1->l_bp;
-    wp = wheadp;
-    while (wp != NULL) {
-        if (wp->w_linep == lp1 || wp->w_linep == lp2) wp->w_linep = lp3;
-        if (wp->w_dotp == lp1)
-            wp->w_dotp = lp3;
-        else if (wp->w_dotp == lp2) {
-            wp->w_dotp = lp3;
-            wp->w_doto += lp1->l_used;
-        }
-        if (wp->w_markp == lp1)
-            wp->w_markp = lp3;
-        else if (wp->w_markp == lp2) {
-            wp->w_markp = lp3;
-            wp->w_marko += lp1->l_used;
-        }
-        wp = wp->w_wndp;
-    }
-    free((char *)lp1);
-    free((char *)lp2);
-    return TRUE;
-}
-
-/*
  * Delete all of the text saved in the kill buffer. Called by commands when a
  * new kill context is being created. The kill buffer array is released, just
  * in case the buffer has grown to immense size. No errors.
@@ -724,12 +720,10 @@ void addto_lastmb_ring(char *mb_text) {
 }
 
 /* A function to rotate the kill ring.
- * Not normally bound, but is bindable.
  */
 
-int rotate_kill_ring(int f, int n) {
-    UNUSED(f);
-    if (n == 0) return TRUE;
+static void rotate_kill_ring(int n) {
+    if (n == 0) return;
 
     int rotate_count = n % KRING_SIZE;
     if (rotate_count < 0) rotate_count += KRING_SIZE;
@@ -747,7 +741,7 @@ int rotate_kill_ring(int f, int n) {
         memcpy(kused, tmp_used, sizeof(tmp_used));
     }
     kbufp = kbufh[0];
-    return TRUE;
+    return;
 }
 
 /*
@@ -794,7 +788,7 @@ int yank(int f, int n) {
     if (curbp->b_mode & MDVIEW) return rdonly();
 
     if (yank_mode == GNU) {     /* A *given* numeric arg is kill rotating */
-        if (f && n) rotate_kill_ring(f, n); /* No rotate on default */
+        if (f && n) rotate_kill_ring(n);    /* No rotate on default */
         n = 1;                              /* With 1 loop pass */
     }
     else {                      /* Must be the old style - no -ve */
@@ -876,6 +870,14 @@ int yankmb(int f, int n) {
     if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
         return(rdonly());           /* we are in read only mode     */
     if (n < 0) return (FALSE);
+
+    if (yank_mode == GNU) {     /* A *given* numeric arg is kill rotating */
+        if (f && n) rotate_lastmb_ring(n);  /* No rotate on default */
+        n = 1;                              /* With 1 loop pass */
+    }
+    else {                      /* Must be the old style - no -ve */
+        if (n < 0) return FALSE;
+    }
 
 /* We are about to yank, so define an empty region at the current point,
  * in case we don't actually have any text to yank.
@@ -979,11 +981,11 @@ int yank_replace(int f, int n) {
  *       and setting CFYANK in thisflag
  */
     if (last_yank == NormalYank) {
-        rotate_kill_ring(0, n);
+        rotate_kill_ring(n);
         return yank(0, (yank_mode == GNU)? 0: 1);
     }
     else {
         rotate_lastmb_ring(n);
-        return yankmb(0, 1);
+        return yankmb(0, (yank_mode == GNU)? 0: 1);
     }
 }

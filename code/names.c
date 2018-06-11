@@ -196,7 +196,6 @@ struct name_bind names[] = {
 #if     PROC
         {"run", execproc, {0, 0}},
 #endif
-        {"rkr", rotate_kill_ring, {0, 0}},
         {"save-file", filesave, {0, 0}},
         {"save-window", savewnd, {0, 1}},
         {"scroll-next-up", scrnextup, {0, 1}},
