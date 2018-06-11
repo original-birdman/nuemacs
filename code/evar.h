@@ -78,9 +78,7 @@ static struct evlist {
  { "tab",       EVTAB },        /* tab 4 or 8 */
  { "overlap",   EVOVERLAP },    /* Overlap on next/prev page */
  { "jump",      EVSCROLLJUMP }, /* Number of lines jump on scroll */
-#if SCROLLCODE
  { "scroll",    EVSCROLL },     /* scroll enabled */
-#endif
  { "inmb",      EVINMB },       /* In mini-buffer (read only) */
 
  { "fcol",      EVFCOL },       /* first displayed column in curent window */

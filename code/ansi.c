@@ -74,17 +74,15 @@ struct terminal term = {
         ansieeop,
         ansibeep,
         ansirev,
-        ansicres
-#if     COLOR
-            , ansifcol,
-        ansibcol
+        ansicres,
+#if COLOR
+        ansifcol,
+        ansibcol,
 #endif
-#if     SCROLLCODE
-            , NULL
-#endif
+        NULL,
 };
 
-#if     COLOR
+#if COLOR
 /*
  * Set the current output color
  * color: color to set.

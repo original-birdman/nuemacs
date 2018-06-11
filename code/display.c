@@ -53,7 +53,7 @@ struct video {
 #define VFCOL   0x0010          /* color change requested       */
 
 static struct video **vscreen;          /* Virtual screen. */
-#if MEMMAP == 0 || SCROLLCODE
+#if MEMMAP == 0
 static struct video **pscreen;          /* Physical screen. */
 #endif
 
@@ -68,12 +68,10 @@ static int displaying = FALSE;
 static int reframe(struct window *wp);
 static void updone(struct window *wp);
 static void updall(struct window *wp);
-#if SCROLLCODE
 static int scrolls(int inserts);
 static void scrscroll(int from, int to, int count);
 static int texttest(int vrow, int prow);
 static int endofline(struct grapheme *s, int n);
-#endif
 static void updext(void);
 static int updateline(int row, struct video *vp1, struct video *vp2);
 static void modeline(struct window *wp);
@@ -215,10 +213,8 @@ void vtinit(void) {
     TTkopen();              /* open the keyboard */
     TTrev(FALSE);
     vscreen = xmalloc(term.t_mrow * sizeof(struct video *));
-
-#if MEMMAP == 0 || SCROLLCODE
     pscreen = xmalloc(term.t_mrow * sizeof(struct video *));
-#endif
+
     for (i = 0; i < term.t_mrow; ++i) {
         vp = xmalloc(sizeof(struct video) +
              term.t_mcol*sizeof(struct grapheme));
@@ -242,12 +238,10 @@ void vtinit(void) {
             vp->v_text[j].ex = NULL;
         }
 
-#if MEMMAP == 0 || SCROLLCODE
         vp = xmalloc(sizeof(struct video) +
               term.t_mcol*sizeof(struct grapheme));
         vp->v_flag = 0;
         pscreen[i] = vp;
-#endif
     }
     mberase();              /* GGR */
 }
@@ -392,9 +386,7 @@ int upscreen(int f, int n) {
     return TRUE;
 }
 
-#if SCROLLCODE
 static int scrflags = 0;
-#endif
 
 /*
  * Make sure that the display is right. This is a three part process. First,
@@ -423,8 +415,6 @@ int update(int force) {
     int was_displaying = displaying;    /* So this can recurse.... */
     displaying = TRUE;
 
-#if SCROLLCODE
-
 /* First, propagate mode line changes to all instances of a buffer
  * displayed in more than one window
  */
@@ -443,7 +433,6 @@ int update(int force) {
         }
         wp = wp->w_wndp;
     }
-#endif
 
 /* Update any windows that need refreshing
  * GGR - get the correct window
@@ -454,21 +443,15 @@ int update(int force) {
         if (wp->w_flag) {
 /* If the window has changed, service it */
             reframe(wp);    /* check the framing */
-#if SCROLLCODE
             if (wp->w_flag & (WFKILLS | WFINS)) {
                 scrflags |= (wp->w_flag & (WFINS | WFKILLS));
                 wp->w_flag &= ~(WFKILLS | WFINS);
             }
-#endif
             if ((wp->w_flag & ~WFMODE) == WFEDIT)
                 updone(wp);     /* update EDITed line */
             else if (wp->w_flag & ~WFMOVE)
                 updall(wp);     /* update all lines */
-#if SCROLLCODE
             if (scrflags || (wp->w_flag & WFMODE))
-#else
-            if (wp->w_flag & WFMODE)
-#endif
                 modeline(wp);   /* update modeline */
             wp->w_flag = 0;
             wp->w_force = 0;
@@ -480,11 +463,6 @@ int update(int force) {
 /* Recalc the current hardware cursor location */
 
     updpos();
-
-#if     MEMMAP && ! SCROLLCODE
-/* Update the cursor and flush the buffers */
-    movecursor(currow, curcol - lbound);
-#endif
 
 /* Check for lines to de-extend */
     upddex();
@@ -515,14 +493,11 @@ int update(int force) {
  */
 static int reframe(struct window *wp) {
     struct line *lp;
-#if SCROLLCODE
     struct line *lp0;
-#endif
     int i = 0;
 
 /* If not a requested reframe, check for a needed one */
     if ((wp->w_flag & WFFORCE) == 0) {
-#if SCROLLCODE
 /* Loop from one line above the window to one line after */
         lp = wp->w_linep;
         lp0 = lback(lp);
@@ -532,22 +507,15 @@ static int reframe(struct window *wp) {
             i = -1;
             lp = lp0;
         }
-        for (; i <= (int) (wp->w_ntrows); i++)
-#else
-        lp = wp->w_linep;
-        for (i = 0; i < wp->w_ntrows; i++)
-#endif
-        {
+        for (; i <= (int) (wp->w_ntrows); i++) {
 /* If the line is in the window, no reframe */
             if (lp == wp->w_dotp) {
-#if SCROLLCODE
 /* If not _quite_ in, we'll reframe gently */
                 if (i < 0 || i == wp->w_ntrows) {
 /* If the terminal can't help, then we're simply outside */
                     if (term.t_scroll == NULL) i = wp->w_force;
                     break;
                 }
-#endif
                 return TRUE;
             }
 
@@ -558,7 +526,6 @@ static int reframe(struct window *wp) {
             lp = lforw(lp);
         }
     }
-#if SCROLLCODE
     if (i == -1) {                  /* we're just above the window */
         i = scrolljump;             /* put dot at first line */
         scrflags |= WFINS;
@@ -568,7 +535,6 @@ static int reframe(struct window *wp) {
         scrflags |= WFKILLS;
     }
     else                            /* put dot where requested */
-#endif
         i = wp->w_force;        /* (is 0, unless reposition() was called) */
 
     wp->w_flag |= WFMODE;
@@ -821,10 +787,8 @@ void updgar(void) {
         vscreen[i]->v_fcolor = gfcolor;
         vscreen[i]->v_bcolor = gbcolor;
 #endif
-#if MEMMAP == 0 || SCROLLCODE
         txt = pscreen[i]->v_text;
         for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ');
-#endif
     }
 
     movecursor(0, 0);       /* Erase the screen. */
@@ -846,13 +810,11 @@ int updupd(int force) {
     UNUSED(force);
     struct video *vp1;
     int i;
-#if SCROLLCODE
     if (scrflags & WFKILLS)
         scrolls(FALSE);
     if (scrflags & WFINS)
         scrolls(TRUE);
     scrflags = 0;
-#endif
 
 /* GGR - include the last row, so <=, (for mini-buffer) */
     int lrow;
@@ -863,17 +825,11 @@ int updupd(int force) {
 
 /* For each line that needs to be updated */
         if ((vp1->v_flag & VFCHG) != 0) {
-#if MEMMAP && ! SCROLLCODE
-            updateline(i, vp1, NULL);
-#else
             updateline(i, vp1, pscreen[i]);
-#endif
         }
     }
     return TRUE;
 }
-
-#if SCROLLCODE
 
 /*
  * optimize out scrolls (line breaks, and newlines)
@@ -982,7 +938,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
             from = target + count;
             to = match + count;
         }
-#if     MEMMAP == 0
+#if MEMMAP == 0
         for (i = from; i < to; i++) {
             struct grapheme *txt;
             txt = pscreen[i]->v_text;
@@ -1022,8 +978,6 @@ static int endofline(struct grapheme *s, int n) {
         if (!is_space(s+i)) return i + 1;
     return 0;
 }
-
-#endif                          /* SCROLLCODE */
 
 /*
  * updext:
@@ -1072,7 +1026,6 @@ static void updext(void) {
 /*      UPDATELINE specific code for the IBM-PC and other compatables */
 
 static int updateline(int row, struct video *vp1, struct video *vp2) {
-#if SCROLLCODE
     struct grapheme *cp1;
     struct grapheme *cp2;
     int nch;
@@ -1085,7 +1038,6 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
         ++cp2;
         ++cp1;
     } while (--nch);
-#endif
 #if COLOR
     scwrite(row, vp1->v_text, vp1->v_rfcolor, vp1->v_rbcolor);
     vp1->v_fcolor = vp1->v_rfcolor;

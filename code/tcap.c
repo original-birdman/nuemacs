@@ -43,9 +43,7 @@ static void tcapeeop(void);
 static void tcapbeep(void);
 static void tcaprev(int);
 static int tcapcres(char *);
-#if SCROLLCODE
 static void tcapscrollregion(int top, int bot);
-#endif
 static void putpad(char *str);
 
 static void tcapopen(void);
@@ -55,10 +53,8 @@ static void tcapclose(void);
 static void tcapfcol(int);
 static void tcapbcol(int);
 #endif
-#if SCROLLCODE
 static void tcapscroll_reg(int from, int to, int linestoscroll);
 static void tcapscroll_delins(int from, int to, int linestoscroll);
-#endif
 
 #define TCAPSLEN 315
 static char tcapbuf[TCAPSLEN];
@@ -69,9 +65,7 @@ static char *TI, *TE;
 static int term_init_ok = 0;
 #endif
 
-#if SCROLLCODE
 static char *CS, *DL, *AL, *SF, *SR;
-#endif
 
 struct terminal term = {
         0, /* These four values are set dynamically at open time. */
@@ -93,14 +87,12 @@ struct terminal term = {
         tcapeeop,
         tcapbeep,
         tcaprev,
-        tcapcres
+        tcapcres,
 #if COLOR
-            , tcapfcol,
-        tcapbcol
+        tcapfcol,
+        tcapbcol,
 #endif
-#if SCROLLCODE
-            , NULL              /* set dynamically at open time */
-#endif
+         NULL,              /* set dynamically at open time */
 };
 
 static void tcapopen(void)
@@ -179,7 +171,6 @@ static void tcapopen(void)
 
                 if (CE == NULL) /* will we be able to use clear to EOL? */
                         eolexist = FALSE;
-#if SCROLLCODE
                 CS = tgetstr("cs", &p);
                 SF = tgetstr("sf", &p);
                 SR = tgetstr("sr", &p);
@@ -195,7 +186,6 @@ static void tcapopen(void)
                 } else {
                         term.t_scroll = NULL;
                 }
-#endif
 
                 if (p >= &tcapbuf[TCAPSLEN]) {
                         puts("Terminal description too big!\n");
@@ -279,8 +269,6 @@ static int tcapcres(char *res)
         return TRUE;
 }
 
-#if SCROLLCODE
-
 /* move howmanylines lines starting at from to to */
 static void tcapscroll_reg(int from, int to, int howmanylines)
 {
@@ -330,8 +318,6 @@ static void tcapscrollregion(int top, int bot)
         ttputc(PC);
         putpad(tgoto(CS, bot, top));
 }
-
-#endif
 
 #if COLOR
 /* No colors here, ignore this. */

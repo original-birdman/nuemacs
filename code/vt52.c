@@ -72,14 +72,12 @@ struct terminal term = {
         &vt52eeop,
         &vt52beep,
         &vt52rev,
-        &vt52cres
-#if     COLOR
-            , &vt52fcol,
-        &vt52bcol
+        &vt52cres,
+#if COLOR
+        &vt52fcol,
+        &vt52bcol,
 #endif
-#if     SCROLLCODE
-            , NULL
-#endif
+        NULL,
 };
 
 vt52move(row, col)

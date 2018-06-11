@@ -129,7 +129,6 @@
 
 /*      Configuration options   */
 
-#define CVMVAS  1  /* arguments to page forward/back in pages      */
 #define CLRMSG  0  /* space clears the message line with no insert */
 #define TYPEAH  1  /* type ahead causes update to be skipped       */
 #define DEBUGM  1  /* $debug triggers macro debugging              */
@@ -158,8 +157,6 @@
 #endif /* Autoconf. */
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
-
-#define SCROLLCODE 1   /* scrolling code P.K.                          */
 
 /* System dependant library redefinitions, structures and includes. */
 
@@ -389,11 +386,8 @@ struct window {
 #define WFHARD  0x08            /* Better to a full display     */
 #define WFMODE  0x10            /* Update mode line.            */
 #define WFCOLR  0x20            /* Needs a color change         */
-
-#if SCROLLCODE
 #define WFKILLS 0x40            /* something was deleted        */
 #define WFINS   0x80            /* something was inserted       */
-#endif
 
 
 /*
@@ -525,13 +519,11 @@ struct terminal {
         void (*t_beep)(void);       /* Beep.                         */
         void (*t_rev)(int);         /* set reverse video state       */
         int (*t_rez)(char *);       /* change screen resolution      */
-#if     COLOR
+#if COLOR
         void (*t_setfor) (int);     /* set foreground color          */
         void (*t_setback) (int);    /* set background color          */
 #endif
-#if     SCROLLCODE
         void (*t_scroll)(int, int,int); /* scroll a region of the screen */
-#endif
 };
 
 /*      TEMPORARY macros for terminal I/O  (to be placed in a machine

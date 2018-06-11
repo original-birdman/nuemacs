@@ -326,11 +326,8 @@ int lnewline(void) {
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
          return rdonly();           /* we are in read only mode     */
-#if SCROLLCODE
     lchange(WFHARD | WFINS);
-#else
-    lchange(WFHARD);
-#endif
+
 /* Ignore the original comment at the start of the routine - we *do* need
  * to make a special case of the last line *if we are at the end of it*
  * AND it is not empty!
@@ -568,11 +565,7 @@ int ldelete(long n, int kflag) {
         chunk = dotp->l_used - doto;    /* Size of chunk.       */
         if (chunk > n) chunk = n;
         if (chunk == 0) {       /* End of line, merge.  */
-#if SCROLLCODE
             lchange(WFHARD | WFKILLS);
-#else
-            lchange(WFHARD);
-#endif
             if (ldelnewline() == FALSE
                   || (kflag != FALSE && kinsert('\n') == FALSE))
                 return FALSE;
@@ -812,9 +805,10 @@ int yank(int f, int n) {
 
 /* We need to handle the case of being at the start of an empty buffer.
  * If we just let things run and yank (say) 2 complete lines, the current
- * point will be at the start of the third line. With SCROLLCODE set this
- * will be on-screen so nothing gets redrawn - the added text is left
- * positioned just off the top of the screen; which is a bit disconcerting.
+ * point will be at the start of the third line. With SCROLLCODE set (which
+ * is now hard-wired) this will be on-screen so nothing gets redrawn - the
+ * added text is left positioned just off the top of the screen; which is
+ * a bit disconcerting.
  * So if the next line is the same as the previous line (which can only
  * happen if we are in a single-line buffer, when both point to the headp)
  * we set a flag to do a final reposition().
@@ -896,9 +890,10 @@ int yankmb(int f, int n) {
 
 /* We need to handle the case of being at the start of an empty buffer.
  * If we just let things run and yank (say) 2 complete lines, the current
- * point will be at the start of the third line. With SCROLLCODE set this
- * will be on-screen so nothing gets redrawn - the added text is left
- * positioned just off the top of the screen; which is a bit disconcerting.
+ * point will be at the start of the third line. With SCROLLCODE set (which
+ * is now hard-wired) this will be on-screen so nothing gets redrawn - the
+ * added text is left positioned just off the top of the screen; which is  
+ * a bit disconcerting.
  * So if the next line is the same as the previous line (which can only
  * happen if we are in a single-line buffer, when both point to the headp)
  * we set a flag to do a final reposition().

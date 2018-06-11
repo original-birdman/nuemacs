@@ -102,17 +102,15 @@ struct terminal term = {
         ibmeeop,
         ibmbeep,
         ibmrev,
-        ibmcres
-#if     COLOR
-            , ibmfcol,
-        ibmbcol
+        ibmcres,
+#if COLOR
+        ibmfcol,
+        ibmbcol,
 #endif
-#if     SCROLLCODE
-            , ibmscroll_reg
-#endif
+        ibmscroll_reg,
 };
 
-#if     COLOR
+#if COLOR
 /* Set the current output color.
  *
  * @color: color to set.
@@ -245,8 +243,6 @@ void ibmcres(char *res)
         return FALSE;
 }
 
-#if SCROLLCODE
-
 /* Move howmany lines starting at from to to. */
 void ibmscroll_reg(from, to, howmany)
 {
@@ -265,8 +261,6 @@ void ibmscroll_reg(from, to, howmany)
                 }
         }
 }
-
-#endif
 
 void ibmbeep(void)
 {

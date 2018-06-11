@@ -257,11 +257,7 @@ char *gtenv(char *vname)
     case EVTAB:             return itoa(tabmask + 1);
     case EVOVERLAP:         return itoa(overlap);
     case EVSCROLLJUMP:      return itoa(scrolljump);
-#if SCROLLCODE
     case EVSCROLL:          return ltos(term.t_scroll != NULL);
-#else
-    case EVSCROLL:          return ltos(0);
-#endif
     case EVINMB:            return itoa(inmb);
     case EVFCOL:            return(itoa(curwp->w_fcol));
     case EVHSCROLL:         return(ltos(hscroll));
@@ -604,10 +600,7 @@ int svar(struct variable_description *var, char *value)
             scrolljump = atoi(value);
             break;
         case EVSCROLL:
-#if SCROLLCODE
-            if (!stol(value))
-            term.t_scroll = NULL;
-#endif
+            if (!stol(value)) term.t_scroll = NULL;
             break;
         case EVINMB:
             break;
