@@ -188,9 +188,7 @@ int file_is_binary(void) {
 
 /* Routine to flush the cache */
 static int flush_write_cache(void) {
-#if CRYPT
     if (cryptflag) myencrypt(cache.buf, cache.len);
-#endif
     fwrite(cache.buf, sizeof(*cache.buf), cache.len, ffp);
     cache.len = 0;
     if (ferror(ffp)) {
@@ -352,9 +350,7 @@ int ffgetline(void) {
                     return FIOERR;
                 }
             }
-#if CRYPT
             if (cryptflag) myencrypt(cache.buf, cache.len);
-#endif
         }
     }
     int cc = nlp - (cache.buf+cache.rst);

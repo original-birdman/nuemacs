@@ -121,7 +121,6 @@ int viewfile(int f, int n)
         return s;
 }
 
-#if     CRYPT
 static int resetkey(void) { /* Reset the encryption key if needed */
     int s;              /* return status */
 
@@ -150,7 +149,6 @@ static int resetkey(void) { /* Reset the encryption key if needed */
     }
     return TRUE;
 }
-#endif
 
 /*
  * getfile()
@@ -280,10 +278,8 @@ int readin(char *fname, int lockfl) {
     if (run_filehooks) handle_filehooks(fname);
 
 /* Do this after file-hooks run, so they can set CRYPT mode */
-#if CRYPT
     s = resetkey();
     if (s != TRUE) return s;
-#endif
 
 /* let a user macro get hold of things...if he wants */
     execute(META | SPEC | 'R', FALSE, 1);
@@ -538,10 +534,8 @@ int writeout(char *fn) {
     struct line *lp;
     int nline;
 
-#if CRYPT
     s = resetkey();
     if (s != TRUE) return s;
-#endif
 
     if ((s = ffwopen(fn)) != FIOSUC) return FALSE;  /* Open writes message */
 
@@ -634,10 +628,9 @@ int ifile(char *fname) {
     }
     mlwrite(MLpre "Inserting file" MLpost);
 
-#if     CRYPT
     s = resetkey();
     if (s != TRUE) return s;
-#endif
+
 /* Back up a line and save the mark here */
     curwp->w_dotp = lback(curwp->w_dotp);
     curwp->w_doto = 0;

@@ -425,7 +425,6 @@ int inword(void) {
     return FALSE;
 }
 
-#if     WORDPRO
 /* a GGR one.. */
 int fillwhole(int f, int n) {
     int savline, thisline;
@@ -540,7 +539,6 @@ int wordcount(int f, int n) {
           nwords, nchars, nlines, avgch);
     return TRUE;
 }
-#endif
 
 /*
  * Set the GGR-added end-of-sentence list for use by fillpara and

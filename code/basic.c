@@ -311,8 +311,6 @@ int backline(int f, int n)
         return TRUE;
 }
 
-#if     WORDPRO
-
 /* The inword() test has been replaced with this, as we really want to
  * be skipping whitespace, not skipping over words. Things like
  * punctuation need to be counted too.
@@ -404,7 +402,6 @@ int gotoeop(int f, int n)
     curwp->w_flag |= WFMOVE;  /* force screen update */
     return TRUE;
 }
-#endif
 
 /*
  * Scroll forward by a specified number of lines, or by a full page if no

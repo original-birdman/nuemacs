@@ -98,13 +98,7 @@ printf( \
 "      -e           edit file (default)"                  NL \
 "      -g<n>        go to line <n> (same as +<n>)"        NL \
 "      -i           insecure mode - look in current dir"  NL \
-        , PROGRAM_NAME);
-#if CRYPT
-fputs(
 "      -k<key>      encryption key"                       NL \
-, stdout);
-#endif
-fputs(
 "      -n           accept null chars (now always true)"  NL \
 "      -r           restrictive use"                      NL \
 "      -s<str>      initial search string"                NL \
@@ -112,7 +106,7 @@ fputs(
 "      -x<filepath> an additional rc file"                NL \
 "      -h,--help    display this help and exit"           NL \
 "      -V,--version output version information and exit"  NL \
-, stdout);
+        , PROGRAM_NAME);
   exit(status);
 }
 
@@ -780,10 +774,8 @@ int main(int argc, char **argv) {
     int saveflag;           /* temp store for lastflag */
     int errflag;            /* C error processing? */
     char bname[NBUFN];      /* buffer name of file to read */
-#if     CRYPT
     int cryptflag;          /* encrypting on the way in? */
     char ekey[NPAT];        /* startup encryption key */
-#endif
     int newc;
     int verflag = 0;        /* GGR Flags -v/-V presence on command line */
     char *rcfile = NULL;    /* GGR non-default rc file */
@@ -822,9 +814,7 @@ int main(int argc, char **argv) {
     searchflag = FALSE;     /* set to off to begin with */
     firstfile = TRUE;       /* no file to edit yet */
     errflag = FALSE;        /* not doing C error parsing */
-#if CRYPT
     cryptflag = FALSE;      /* no encryption by default */
-#endif
 
 /* Set up the initial keybindings.  Must be done early, before any
  * command line processing.
@@ -910,7 +900,6 @@ int main(int argc, char **argv) {
             case 'I':
                 allow_current = 1;
                 break;
-#if CRYPT
             case 'k':       /* -k<key> for code key */
             case 'K':
                 /* GGR only if given a key.. */
@@ -921,7 +910,6 @@ int main(int argc, char **argv) {
                      strcpy(ekey, opt);
                 }
                 break;
-#endif
             case 'n':       /* -n accept null chars */
             case 'N':
                 nullflag = TRUE;
@@ -1014,7 +1002,6 @@ int main(int argc, char **argv) {
 /* Set the modes appropriately */
 
         if (viewflag) bp->b_mode |= MDVIEW;
-#if CRYPT
         if (cryptflag) {
             bp->b_mode |= MDCRYPT;
             bp->b_keylen = strlen(ekey);
@@ -1022,7 +1009,6 @@ int main(int argc, char **argv) {
             myencrypt(ekey, bp->b_keylen);
             memcpy(bp->b_key, ekey, bp->b_keylen);
         }
-#endif
         argv++;
     }
 
@@ -1411,12 +1397,10 @@ after_mb_check:
 	    }
 	}
 
-#if     CFENCE
 /* Check for CMODE fence matching */
          if ((c == '}' || c == ')' || c == ']') &&
             (curbp->b_mode & MDCMOD) != 0)
                 fmatch(c);
-#endif
 
 /* Check auto-save mode */
         if (curbp->b_mode & MDASAVE)

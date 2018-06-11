@@ -36,9 +36,7 @@ struct name_bind names[] = {
         {"clear-and-redraw", redraw, {0, 0}},
         {"clear-message-line", clrmes, {0, 0}},
         {"copy-region", copyregion, {0, 0}},
-#if     WORDPRO
         {"count-words", wordcount, {0, 1}},
-#endif
         {"ctlx-prefix", cex, {0, 0}},
         {"delete-blank-lines", deblank, {0, 0}},
         {"delete-buffer", killbuffer, {0, 0}},
@@ -111,18 +109,14 @@ struct name_bind names[] = {
         {"execute-procedure", execproc, {0, 0}},
         {"execute-program", execprg, {0, 1}},
         {"exit-emacs", quit, {0, 1}},
-#if     WORDPRO
         {"fill-paragraph", fillpara, {0, 0}},
         {"fill-all-paragraphs", fillwhole, {0, 0}}, /* GGR */
-#endif
         {"filter-buffer", filter_buffer, {0, 0}},
         {"find-file", filefind, {0, 0}},
         {"forward-character", forwchar, {0, 0}},
         {"ggr-style", ggr_style, {0, 0}},           /* GGR */
         {"goto-line", gotoline, {0, 0}},
-#if     CFENCE
         {"goto-matching-fence", getfence, {0, 0}},
-#endif
         {"grow-window", enlargewind, {0, 1}},
         {"handle-tab", insert_tab, {0, 0}},
         {"hunt-forward", forwhunt, {0, 0}},
@@ -136,19 +130,15 @@ struct name_bind names[] = {
         {"insert-space", insspace, {0, 0}},
         {"insert-string", istring, {0, 0}},
         {"insert-raw-string", rawstring, {0, 0}},
-#if     WORDPRO
         {"justify-paragraph", justpara, {0, 0}},
         {"kill-paragraph", killpara, {0, 0}},
-#endif
         {"kill-region", killregion, {0, 0}},
         {"kill-to-end-of-line", killtext, {0, 0}},
         {"leave-one-white", leaveone, {0, 0}},      /* GGR */
         {"list-buffers", listbuffers, {0, 1}},
         {"macro-helper", macro_helper, {0, 1}},     /* GGR */
-#if     WORDPRO
         {"makelist-region", makelist_region, {0, 0}},       /* GGR */
         {"numberlist-region", numberlist_region, {0, 0}},   /* GGR */
-#endif
         {"meta-prefix", metafn, {0, 0}},
         {"move-window-down", mvdnwind, {0, 1}},
         {"move-window-up", mvupwind, {0, 1}},
@@ -159,9 +149,7 @@ struct name_bind names[] = {
         {"next-buffer", nextbuffer, {0, 1}},
         {"next-line", forwline, {0, 0}},
         {"next-page", forwpage, {0, 0}},
-#if     WORDPRO
         {"next-paragraph", gotoeop, {0, 0}},
-#endif
         {"next-pttable", next_pttable, {0, 0}},     /* GGR */
         {"next-window", nextwind, {0, 1}},
         {"next-word", forwword, {0, 0}},
@@ -171,9 +159,7 @@ struct name_bind names[] = {
         {"pipe-command", pipecmd, {0, 1}},
         {"previous-line", backline, {0, 0}},
         {"previous-page", backpage, {0, 0}},
-#if     WORDPRO
         {"previous-paragraph", gotobop, {0, 0}},
-#endif
         {"previous-window", prevwind, {0, 1}},
         {"previous-word", backword, {0, 0}},
         {"query-replace-string", qreplace, {0, 1}},
@@ -198,9 +184,7 @@ struct name_bind names[] = {
         {"search-reverse", backsearch, {0, 0}},
         {"select-buffer", usebuffer, {0, 0}},
         {"set", setvar, {0, 0}},
-#if     CRYPT
         {"set-encryption-key", set_encryption_key, {0, 1}},
-#endif
         {"set-fill-column", setfillcol, {0, 1}},
         {"set-mark", setmark, {0, 0}},
         {"set-pttable", set_pttable, {0, 0}},       /* GGR */

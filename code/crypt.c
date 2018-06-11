@@ -10,8 +10,6 @@
 #include        "edef.h"
 #include        "efunc.h"
 
-#if     CRYPT
-
 /*
  * reset encryption key of current buffer
  *
@@ -214,9 +212,3 @@ debug++;
     }
     return;
 }
-
-#else
-static void myennocrypt(void)
-{
-}
-#endif

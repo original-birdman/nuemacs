@@ -522,11 +522,9 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         bp->b_linep = lp;
         strcpy(bp->b_fname, "");
         strcpy(bp->b_bname, bname);
-#if     CRYPT
         bp->b_key[0] = 0;
         bp->b_keylen = 0;
         bp->b_EOLmissing = 0;
-#endif
         bp->ptt_headp = NULL;
         bp->b_type = BTNORM;
         bp->b_exec_level = 0;

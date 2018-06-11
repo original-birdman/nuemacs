@@ -164,9 +164,7 @@
 #endif /* Autoconf. */
 
 #define ISRCH   1  /* Incremental searches like ITS EMACS          */
-#define WORDPRO 1  /* Advanced word processing features            */
 #define APROP   1  /* Add code for Apropos command                 */
-#define CRYPT   1  /* file encryption enabled?                     */
 #define AEDIT   1  /* advanced editing options: en/detabbing       */
 #define CLEAN   0  /* de-alloc memory on exit                      */
 
@@ -463,17 +461,13 @@ struct buffer {
         int b_mode;             /* editor mode of this buffer   */
         int b_fcol;             /* first col to display         */
         int b_EOLmissing;       /* When read in... */
-#if     CRYPT
         int b_keylen;           /* encrypted key len            */
-#endif
         char b_active;          /* window activated flag        */
         char b_nwnd;            /* Count of windows on buffer   */
         char b_flag;            /* Flags                        */
         char b_fname[NFILEN];   /* File name                    */
         char b_bname[NBUFN];    /* Buffer name                  */
-#if     CRYPT
         char b_key[NPAT];       /* current encrypted key        */
-#endif
 };
 
 #define BTNORM  0               /* A "normal" buffer            */

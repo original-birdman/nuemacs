@@ -118,9 +118,7 @@ struct key_tab_init init_keytab[] = {
         {CTLX|'W',          resize          },
         {CTLX|'X',          nextbuffer      },
         {CTLX|'Z',          enlargewind     },
-#if     WORDPRO
         {META|CONTROL|'C',  wordcount       },
-#endif
         {META|CONTROL|'D',  newsize         },
         {META|CONTROL|'E',  execproc        },
         {META|CONTROL|'F',  getfence        },
@@ -133,9 +131,7 @@ struct key_tab_init init_keytab[] = {
         {META|CONTROL|'S',  newsize         },
         {META|CONTROL|'T',  newwidth        },
         {META|CONTROL|'V',  scrnextdw       },
-#if     WORDPRO
         {META|CONTROL|'W',  killpara        },
-#endif
         {META|CONTROL|'Z',  scrnextup       },
         {META|' ',          setmark         },
         {META|'?',          help            },
@@ -150,22 +146,16 @@ struct key_tab_init init_keytab[] = {
         {META|'B',          backword        },
         {META|'C',          capword         },
         {META|'D',          delfword        },
-#if     CRYPT
         {META|'E',      set_encryption_key  },
-#endif
         {META|'F',          forwword        },
         {META|'G',          gotoline        },
-#if     WORDPRO
         {META|'J',          justpara        },
-#endif
         {META|'K',          bindtokey       },
         {META|'L',          lowerword       },
         {META|'M',          setgmode        },
-#if     WORDPRO
         {META|'N',          gotoeop         },
         {META|'P',          gotobop         },
         {META|'Q',          fillpara        },
-#endif
         {META|'R',          sreplace        },
         {META|'S',          forwsearch      }, /* alternative P.K. */
         {META|'U',          upperword       },
@@ -191,10 +181,8 @@ struct key_tab_init init_keytab[] = {
         {SPEC|83,           forwdel         },
         {SPEC|115,          backword        },
         {SPEC|116,          forwword        },
-#if     WORDPRO
         {SPEC|132,          gotobop         },
         {SPEC|118,          gotoeop         },
-#endif
         {SPEC|84,           cbuf1           },
         {SPEC|85,           cbuf2           },
         {SPEC|86,           cbuf3           },
