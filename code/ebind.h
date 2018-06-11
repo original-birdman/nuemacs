@@ -122,9 +122,7 @@ struct key_tab_init init_keytab[] = {
         {META|CONTROL|'C',  wordcount       },
 #endif
         {META|CONTROL|'D',  newsize         },
-#if     PROC
         {META|CONTROL|'E',  execproc        },
-#endif
         {META|CONTROL|'F',  getfence        },
         {META|CONTROL|'H',  delbword        },
         {META|CONTROL|'K',  unbindkey       },

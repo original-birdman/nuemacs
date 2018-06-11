@@ -527,10 +527,8 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         bp->b_keylen = 0;
         bp->b_EOLmissing = 0;
 #endif
-#if PROC
         bp->ptt_headp = NULL;
         bp->b_type = BTNORM;
-#endif
         bp->b_exec_level = 0;
         lp->l_fp = lp;
         lp->l_bp = lp;

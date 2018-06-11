@@ -311,8 +311,6 @@ int storemac(int f, int n)
         return TRUE;
 }
 
-#if     PROC
-
 /* GGR
  * Free up any current ptt_ent allocation
  */
@@ -835,7 +833,6 @@ int execproc(int f, int n)
                         return status;
         return TRUE;
 }
-#endif
 
 /*
  * execbuf:

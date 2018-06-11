@@ -108,9 +108,7 @@ struct name_bind names[] = {
         {"execute-macro-39", cbuf39, {0, 0}},
         {"execute-macro-40", cbuf40, {0, 0}},
         {"execute-named-command", namedcmd, {1, 0}},
-#if     PROC
         {"execute-procedure", execproc, {0, 0}},
-#endif
         {"execute-program", execprg, {0, 1}},
         {"exit-emacs", quit, {0, 1}},
 #if     WORDPRO
@@ -164,9 +162,7 @@ struct name_bind names[] = {
 #if     WORDPRO
         {"next-paragraph", gotoeop, {0, 0}},
 #endif
-#if PROC
         {"next-pttable", next_pttable, {0, 0}},     /* GGR */
-#endif
         {"next-window", nextwind, {0, 1}},
         {"next-word", forwword, {0, 0}},
         {"nop", nullproc, {1, 0}},
@@ -193,9 +189,7 @@ struct name_bind names[] = {
 #if     ISRCH
         {"reverse-incremental-search", risearch, {0, 1}},
 #endif
-#if     PROC
         {"run", execproc, {0, 0}},
-#endif
         {"save-file", filesave, {0, 0}},
         {"save-window", savewnd, {0, 1}},
         {"scroll-next-up", scrnextup, {0, 1}},
@@ -209,23 +203,17 @@ struct name_bind names[] = {
 #endif
         {"set-fill-column", setfillcol, {0, 1}},
         {"set-mark", setmark, {0, 0}},
-#if PROC
         {"set-pttable", set_pttable, {0, 0}},       /* GGR */
-#endif
         {"shell-command", spawn, {0, 1}},
         {"shrink-window", shrinkwind, {0, 1}},
         {"split-current-window", splitwind, {0, 1}},
         {"store-macro", storemac, {0, 0}},
-#if     PROC
         {"store-procedure", storeproc, {0, 0}},
         {"store-pttable", storepttable, {0, 0}},    /* GGR */
-#endif
 #if     BSD | __hpux | SVR4
         {"suspend-emacs", bktoshell, {0, 0}},
 #endif
-#if PROC
         {"toggle-ptmode", toggle_ptmode, {0, 0}},   /* GGR */
-#endif
         {"transpose-characters", twiddle, {0, 0}},
 #if     AEDIT
         {"trim-line", trim, {0, 0}},

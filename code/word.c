@@ -74,26 +74,21 @@ int wrapword(int f, int n)
 
 /*
  * Move the cursor backward by "n" words. All of the details of motion are
- * performed by the "back_grapheme" and "forw_grapheme" routines.
- * Error if you try to move beyond the buffers.
+ * performed by the "back_grapheme" routine.
+ * Error if you try to move beyond the start of the buffer.
  */
-int backword(int f, int n)
-{
-        if (n < 0)
-                return forwword(f, -n);
-        if (back_grapheme(1) <= 0)
-                return FALSE;
-        while (n--) {
-                while (inword() == FALSE) {
-                        if (back_grapheme(1) <= 0)
-                                return FALSE;
-                }
-                while ((inword() != FALSE) || zw_break) {
-                        if (back_grapheme(1) <= 0)
-                                return FALSE;
-                }
+int backword(int f, int n) {
+    if (n < 0) return forwword(f, -n);
+    if (back_grapheme(1) <= 0) return FALSE;
+    while (n--) {
+        while (inword() == FALSE) {
+            if (back_grapheme(1) <= 0) return FALSE;
         }
-        return (forw_grapheme(1) > 0);      /* Success count => T/F */
+        while ((inword() != FALSE) || zw_break) {
+            if (back_grapheme(1) <= 0) return FALSE;
+        }
+    }
+    return (forw_grapheme(1) > 0);  /* Success count => T/F */
 }
 
 /*
@@ -101,10 +96,8 @@ int backword(int f, int n)
  * is done by "forw_grapheme".
  * Error if you try and move beyond the buffer's end.
  */
-int forwword(int f, int n)
-{
-    if (n < 0)
-            return backword(f, -n);
+int forwword(int f, int n) {
+    if (n < 0) return backword(f, -n);
     while (n--) {
 /* GGR - reverse loop order according to ggr-style state
  * Determines whether you end up at the end of the current word (ggr-style)
@@ -113,14 +106,12 @@ int forwword(int f, int n)
         int state1 = using_ggr_style? FALSE: TRUE;
         int prev_zw_break = 0;
         while ((inword() == state1) || (!state1 && prev_zw_break)) {
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
         prev_zw_break = zw_break;
         while ((inword() == !state1) || (!state1 && zw_break)) {
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
     }
@@ -169,23 +160,19 @@ void ensure_case(int want_case) {
  * convert any characters to upper case. Error if you try and move beyond the
  * end of the buffer. Bound to "M-U".
  */
-int upperword(int f, int n)
-{
+int upperword(int f, int n) {
     UNUSED(f);
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-        return rdonly();        /* we are in read only mode     */
-    if (n < 0)
-        return FALSE;
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
+        return rdonly();            /* we are in read only mode     */
+    if (n < 0) return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE) || prev_zw_break) {
             ensure_case(UPPERCASE);
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
     }
@@ -197,23 +184,19 @@ int upperword(int f, int n)
  * convert characters to lower case. Error if you try and move over the end of
  * the buffer. Bound to "M-L".
  */
-int lowerword(int f, int n)
-{
+int lowerword(int f, int n) {
     UNUSED(f);
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-        return rdonly();        /* we are in read only mode     */
-    if (n < 0)
-        return FALSE;
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
+        return rdonly();            /* we are in read only mode     */
+    if (n < 0) return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE)  || prev_zw_break) {
             ensure_case(LOWERCASE);
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
     }
@@ -226,27 +209,22 @@ int lowerword(int f, int n)
  * characters to lower case. Error if you try and move past the end of the
  * buffer. Bound to "M-C".
  */
-int capword(int f, int n)
-{
+int capword(int f, int n) {
     UNUSED(f);
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
-    if (n < 0)
-        return FALSE;
+    if (n < 0) return FALSE;
     while (n--) {
         while (inword() == FALSE) {
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
         }
         int prev_zw_break = zw_break;
         if (inword() != FALSE) {
             ensure_case(UPPERCASE);
-            if (forw_grapheme(1) <= 0)
-                return FALSE;
+            if (forw_grapheme(1) <= 0) return FALSE;
             while ((inword() != FALSE) || prev_zw_break) {
                 ensure_case(LOWERCASE);
-                if (forw_grapheme(1) <= 0)
-                    return FALSE;
+                if (forw_grapheme(1) <= 0) return FALSE;
             }
         }
     }
@@ -261,82 +239,75 @@ int capword(int f, int n)
  * GGR - forw_grapheme()/back_grapheme() now move by graphemes, so we need
  *       to track the byte count (which they now return).
  */
-int delfword(int f, int n)
-{
-        struct line *dotp;      /* original cursor line */
-        int doto;               /*      and row */
-        long size;              /* # of chars to delete */
+int delfword(int f, int n) {
+    struct line *dotp;      /* original cursor line */
+    int doto;               /*      and row */
+    long size;              /* # of chars to delete */
 
-        /* don't allow this command if we are in read only mode */
-        if (curbp->b_mode & MDVIEW)
-                return rdonly();
+/* Don't allow this command if we are in read only mode */
+    if (curbp->b_mode & MDVIEW) return rdonly();
 
-        /* GGR - allow a -ve arg - use the backward function */
-        if (n < 0)
-                return(delbword(f, -n));
+/* GGR - allow a -ve arg - use the backward function */
+    if (n < 0) return(delbword(f, -n));
 
-        /* Clear the kill buffer if last command wasn't a kill */
-        if ((lastflag & CFKILL) == 0)
-                kdelete();
-        thisflag |= CFKILL;     /* this command is a kill */
+/* Clear the kill buffer if last command wasn't a kill */
+    if ((lastflag & CFKILL) == 0) kdelete();
+    thisflag |= CFKILL;     /* this command is a kill */
 
-        /* save the current cursor position */
-        dotp = curwp->w_dotp;
-        doto = curwp->w_doto;
+/* Save the current cursor position */
+    dotp = curwp->w_dotp;
+    doto = curwp->w_doto;
 
-        /* figure out how many characters to give the axe */
-        size = 0;
-        int moved = 0;
+/* Figure out how many characters to give the axe */
+    size = 0;
+    int moved = 0;
 
-        /* get us into a word.... */
-        while (inword() == FALSE) {
+/* Get us into a word.... */
+    while (inword() == FALSE) {
+        moved = forw_grapheme(1);
+        if (moved <= 0) return FALSE;
+        size += moved;
+    }
+
+    if (n == 0) {       /* skip one word, no whitespace! */
+        int prev_zw_break = 0;
+        while ((inword() == TRUE) || prev_zw_break) {
+            moved = forw_grapheme(1);
+            if (moved <= 0) return FALSE;
+            size += moved;
+            prev_zw_break = zw_break;
+        }
+    } else {            /* skip n words.... */
+        while (n--) {
+
+/* If we are at EOL; skip to the beginning of the next */
+            while (curwp->w_doto == llength(curwp->w_dotp)) {
+                moved = forw_grapheme(1);
+                if (moved <= 0) return FALSE;
+                ++size;     /* Will move one to next line */
+            }
+
+/* Move forward till we are at the end of the word */
+            int prev_zw_break = 0;
+            while ((inword() == TRUE) || prev_zw_break) {
                 moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 size += moved;
+                prev_zw_break = zw_break;
+            }
+
+/* If there are more words, skip the interword stuff */
+            if (n != 0) while (inword() == FALSE) {
+                moved = forw_grapheme(1);
+                if (moved <= 0) return FALSE;
+                size += moved;
+            }
         }
-
-        if (n == 0) {
-                /* skip one word, no whitespace! */
-                int prev_zw_break = 0;
-                while ((inword() == TRUE) || prev_zw_break) {
-                        moved = forw_grapheme(1);
-                        if (moved <= 0) return FALSE;
-                        size += moved;
-                        prev_zw_break = zw_break;
-                }
-        } else {
-                /* skip n words.... */
-                while (n--) {
-
-                        /* if we are at EOL; skip to the beginning of the next */
-                        while (curwp->w_doto == llength(curwp->w_dotp)) {
-                                moved = forw_grapheme(1);
-                                if (moved <= 0) return FALSE;
-                                ++size;     /* Will move one to next line */
-                        }
-
-                        /* move forward till we are at the end of the word */
-                        int prev_zw_break = 0;
-                        while ((inword() == TRUE) || prev_zw_break) {
-                                moved = forw_grapheme(1);
-                                if (moved <= 0) return FALSE;
-                                size += moved;
-                                prev_zw_break = zw_break;
-                        }
-
-                        /* if there are more words, skip the interword stuff */
-                        if (n != 0)
-                                while (inword() == FALSE) {
-                                        moved = forw_grapheme(1);
-                                        if (moved <= 0) return FALSE;
-                                        size += moved;
-                                }
-                }
-        }
-        /* restore the original position and delete the words */
-        curwp->w_dotp = dotp;
-        curwp->w_doto = doto;
-        return ldelete(size, TRUE);
+    }
+/* Restore the original position and delete the words */
+    curwp->w_dotp = dotp;
+    curwp->w_doto = doto;
+    return ldelete(size, TRUE);
 }
 
 /*
@@ -346,48 +317,44 @@ int delfword(int f, int n)
  * GGR - forw_grapheme()/back_grapheme() now move by graphemes, so we need
  *       to track the byte count (which they now return).
  */
-int delbword(int f, int n)
-{
-        long size;
+int delbword(int f, int n) {
+    long size;
 
 /* GGR - variables for kill-ring fix-up */
-        int    i, status, ku;
-        char   *sp;             /* pointer into string to insert */
-        struct kill *kp;        /* pointer into kill buffer */
-        struct kill *op;
+    int    i, status, ku;
+    char   *sp;             /* pointer into string to insert */
+    struct kill *kp;        /* pointer into kill buffer */
+    struct kill *op;
 
-        /* don't allow this command if we are in read only mode */
-        if (curbp->b_mode & MDVIEW)
-                return rdonly();
+/* Don't allow this command if we are in read only mode */
+    if (curbp->b_mode & MDVIEW) return rdonly();
 
-        /* GGR - allow a -ve arg - use the forward function */
-        if (n <= 0)
-                return(delfword(f, -n));
+/* GGR - allow a -ve arg - use the forward function */
+    if (n <= 0) return(delfword(f, -n));
 
-        /* Clear the kill buffer if last command wasn't a kill */
-        if ((lastflag & CFKILL) == 0)
-                kdelete();
-        thisflag |= CFKILL;     /* this command is a kill */
+/* Clear the kill buffer if last command wasn't a kill */
+    if ((lastflag & CFKILL) == 0) kdelete();
+    thisflag |= CFKILL;     /* this command is a kill */
 
-        int moved;
-        moved = back_grapheme(1);
-        if (moved <= 0) return FALSE;
-        size = moved;
-        while (n--) {
-                while (inword() == FALSE) {
-                        moved = back_grapheme(1);
-                        if (moved <= 0) return FALSE;
-                        size += moved;
-                }
-                while ((inword() != FALSE) || zw_break) {
-                        moved = back_grapheme(1);
-                        if (moved <= 0) goto bckdel;
-                        size += moved;
-                }
+    int moved;
+    moved = back_grapheme(1);
+    if (moved <= 0) return FALSE;
+    size = moved;
+    while (n--) {
+        while (inword() == FALSE) {
+            moved = back_grapheme(1);
+            if (moved <= 0) return FALSE;
+            size += moved;
         }
-        moved = forw_grapheme(1);
-        if (moved <= 0) return FALSE;
-        size -= moved;
+        while ((inword() != FALSE) || zw_break) {
+            moved = back_grapheme(1);
+            if (moved <= 0) goto bckdel;
+            size += moved;
+        }
+    }
+    moved = forw_grapheme(1);
+    if (moved <= 0) return FALSE;
+    size -= moved;
 
 /* GGR
  * We have to cater for the function being called multiple times in
@@ -419,7 +386,6 @@ bckdel:
         kp = kp->d_next;
         free(op);           /* kinsert() mallocs, so we free */
     }
-
     return(status);
 }
 
@@ -428,8 +394,7 @@ bckdel:
  * part of a word. The word character list is hard coded. Should be setable.
  * GGR - the grapheme-based version.
  */
-int inword(void)
-{
+int inword(void) {
     struct grapheme gc;
 
     if (curwp->w_doto == llength(curwp->w_dotp))
@@ -462,20 +427,19 @@ int inword(void)
 
 #if     WORDPRO
 /* a GGR one.. */
-int fillwhole(int f, int n)
-{
+int fillwhole(int f, int n) {
     int savline, thisline;
     int status = FALSE;
 
-        gotobob(TRUE, 1);
-        savline = 0;
-        mlwrite(MLpre "Filling all paragraphs in buffer.." MLpost);
-        while ((thisline = getcline()) > savline) {
-                status = fillpara(f, n);
-                savline = thisline;
-        }
-        mlwrite("");
-        return(status);
+    gotobob(TRUE, 1);
+    savline = 0;
+    mlwrite(MLpre "Filling all paragraphs in buffer.." MLpost);
+    while ((thisline = getcline()) > savline) {
+        status = fillpara(f, n);
+        savline = thisline;
+    }
+    mlwrite("");
+    return(status);
 }
 
 /*
@@ -484,32 +448,30 @@ int fillwhole(int f, int n)
  * int f        default flag
  * int n        # of paras to delete
  */
-int killpara(int f, int n)
-{
-        UNUSED(f);
-        int status;     /* returned status of functions */
+int killpara(int f, int n) {
+    UNUSED(f);
+    int status;     /* returned status of functions */
 
-        while (n--) {           /* for each paragraph to delete */
+    while (n--) {           /* for each paragraph to delete */
 
-                /* mark out the end and beginning of the para to delete */
-                gotoeop(FALSE, 1);
+/* Mark out the end and beginning of the para to delete */
+        gotoeop(FALSE, 1);
 
-                /* set the mark here */
-                curwp->w_markp = curwp->w_dotp;
-                curwp->w_marko = curwp->w_doto;
+/* Set the mark here */
+        curwp->w_markp = curwp->w_dotp;
+        curwp->w_marko = curwp->w_doto;
 
-                /* go to the beginning of the paragraph */
-                gotobop(FALSE, 1);
-                curwp->w_doto = 0;  /* force us to the beginning of line */
+/* Gon to the beginning of the paragraph */
+        gotobop(FALSE, 1);
+        curwp->w_doto = 0;  /* force us to the beginning of line */
 
-                /* and delete it */
-                if ((status = killregion(FALSE, 1)) != TRUE)
-                        return status;
+/* And delete it */
+        if ((status = killregion(FALSE, 1)) != TRUE) return status;
 
-                /* and clean up the 2 extra lines */
-                ldelete(2L, TRUE);
-        }
-        return TRUE;
+/* and clean up the 2 extra lines */
+        ldelete(2L, TRUE);
+    }
+    return TRUE;
 }
 
 
@@ -520,71 +482,63 @@ int killpara(int f, int n)
  *
  * int f, n;            ignored numeric arguments
  */
-int wordcount(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct line *lp;        /* current line to scan */
-        int offset;             /* current char to scan */
-        int orig_offset;        /* offset in line at start */
-        long size;              /* size of region left to count */
-        int ch;                 /* current character to scan */
-        int wordflag;           /* are we in a word now? */
-        int lastword;           /* were we just in a word? */
-        long nwords;            /* total # of words */
-        long nchars;            /* total number of chars */
-        int nlines;             /* total number of lines in region */
-        int avgch;              /* average number of chars/word */
-        int status;             /* status return code */
-        struct region region;   /* region to look at */
+int wordcount(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct line *lp;        /* current line to scan */
+    int offset;             /* current char to scan */
+    int orig_offset;        /* offset in line at start */
+    long size;              /* size of region left to count */
+    int ch;                 /* current character to scan */
+    int wordflag;           /* are we in a word now? */
+    int lastword;           /* were we just in a word? */
+    long nwords;            /* total # of words */
+    long nchars;            /* total number of chars */
+    int nlines;             /* total number of lines in region */
+    int avgch;              /* average number of chars/word */
+    int status;             /* status return code */
+    struct region region;   /* region to look at */
 
-        /* make sure we have a region to count */
-        if ((status = getregion(&region)) != TRUE)
-                return status;
-        lp = region.r_linep;
-        offset = region.r_offset;
-        orig_offset = offset;
-        size = region.r_size;
-        /* count up things */
-        lastword = FALSE;
-        nchars = 0L;
-        nwords = 0L;
-        nlines = 0;
-        while (size--) {
-
-                /* get the current character */
-                if (offset == llength(lp)) {    /* end of line */
-                        ch = '\n';
-                        lp = lforw(lp);
-                        offset = 0;
-                        ++nlines;
-                } else {
-                        ch = lgetc(lp, offset);
-                        ++offset;
-                }
-
-                /* and tabulate it */
-                wordflag = (
-                    (isletter(ch)) ||
-                    (ch >= '0' && ch <= '9'));
-                if (wordflag == TRUE && lastword == FALSE)
-                        ++nwords;
-                lastword = wordflag;
-                ++nchars;
+/* Make sure we have a region to count */
+    if ((status = getregion(&region)) != TRUE) return status;
+    lp = region.r_linep;
+    offset = region.r_offset;
+    orig_offset = offset;
+    size = region.r_size;
+/* Count up things */
+    lastword = FALSE;
+    nchars = 0L;
+    nwords = 0L;
+    nlines = 0;
+    while (size--) {
+/* Get the current character... */
+        if (offset == llength(lp)) {    /* end of line */
+            ch = '\n';
+            lp = lforw(lp);
+            offset = 0;
+            ++nlines;
         }
+        else {
+            ch = lgetc(lp, offset);
+            ++offset;
+        }
+/* ...and tabulate it */
+        wordflag = ((isletter(ch)) || (ch >= '0' && ch <= '9'));
+        if (wordflag == TRUE && lastword == FALSE) ++nwords;
+        lastword = wordflag;
+        ++nchars;
+    }
 /* GGR - Increment line count if offset is now more than at the start
  * So line1 col3 -> line2 col55 is 2 lines,. not 1
  */
-        if (offset > orig_offset) ++nlines;
-        /* and report on the info */
-        if (nwords > 0L)
-                avgch = (int) ((100L * nchars) / nwords);
-        else
-                avgch = 0;
+    if (offset > orig_offset) ++nlines;
+/* And report on the info */
+    if (nwords > 0L) avgch = (int) ((100L * nchars) / nwords);
+    else             avgch = 0;
 
 /* GGR - we don't need nlines+1 here now */
-        mlwrite("Words %D Chars %D Lines %d Avg chars/word %f",
-                nwords, nchars, nlines, avgch);
-        return TRUE;
+    mlwrite("Words %D Chars %D Lines %d Avg chars/word %f",
+          nwords, nchars, nlines, avgch);
+    return TRUE;
 }
 #endif
 
@@ -599,45 +553,42 @@ int wordcount(int f, int n)
  */
 static int n_eos = 0;
 static char eos_str[NLINE] = "";    /* String given by user */
-int eos_chars(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        int status;
-        char prompt[NLINE+60];
-        char buf[NLINE];
+int eos_chars(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int status;
+    char prompt[NLINE+60];
+    char buf[NLINE];
 
-        if (n_eos == 0) {
-            strcpy(eos_str, "none");    /* Clearer for user? */
-        }
-        sprintf(prompt,
-            "End of sentence characters " MLpre "currently %s" MLpost ":",
-        eos_str);
+    if (n_eos == 0) strcpy(eos_str, "none");    /* Clearer for user? */
+    sprintf(prompt,
+          "End of sentence characters " MLpre "currently %s" MLpost ":",
+          eos_str);
 
-        status = mlreply(prompt, buf, NLINE - 1);
-        if (status == FALSE) {      /* Empty response - remove item */
-                if (eos_list) free (eos_list);
-                n_eos = 0;
-        }
-        else if (status == TRUE) {  /* Some response - set item */
+    status = mlreply(prompt, buf, NLINE - 1);
+    if (status == FALSE) {      /* Empty response - remove item */
+        if (eos_list) free (eos_list);
+        n_eos = 0;
+    }
+    else if (status == TRUE) {  /* Some response - set item */
 /* We'll get the buffer length in characters, then allocate that number of
  * unicode chars. It might be more than we need (if there is a utf8
  * multi-byte character in there) but it's not going to be that big.
  * Actually we'll allocate one extra and put an illegal value at the end.
  */
-                int len = strlen(buf);
-                eos_list = realloc(eos_list, sizeof(unicode_t)*(len + 1));
-                int i = 0;
-                n_eos = 0;
-                while (i < len) {
-                        unicode_t c;
-                        i += utf8_to_unicode(buf, i, len, &c);
-                        eos_list[n_eos++] = c;
-                }
-                eos_list[n_eos] = UEM_NOCHAR;
-                strcpy(eos_str, buf);
+        int len = strlen(buf);
+        eos_list = realloc(eos_list, sizeof(unicode_t)*(len + 1));
+        int i = 0;
+        n_eos = 0;
+        while (i < len) {
+            unicode_t c;
+            i += utf8_to_unicode(buf, i, len, &c);
+            eos_list[n_eos++] = c;
         }
+        eos_list[n_eos] = UEM_NOCHAR;
+        strcpy(eos_str, buf);
+    }
 /* Do nothing on anything else - allows you to abort once you've started. */
-        return status;              /* Whatever mlreply returned */
+    return status;              /* Whatever mlreply returned */
 }
 
 /* Space factor needed for a unicode array copied from a char array */
@@ -907,8 +858,7 @@ int fillpara(int f, int n) {
  *
  * int f, n;            deFault flag and Numeric argument
  */
-int justpara(int f, int n)
-{
+int justpara(int f, int n) {
     UNUSED(f);
     struct filler_control fp_ctl;
     fp_ctl.justify = 0;
@@ -950,8 +900,7 @@ int justpara(int f, int n)
  * int f, n;            deFault flag and Numeric argument
  */
 static const char *lbl_fmt;
-static int region_listmaker(int f, int n)
-{
+static int region_listmaker(int f, int n) {
     UNUSED(f);
     char label[80];
     struct region f_region; /* Formatting region */

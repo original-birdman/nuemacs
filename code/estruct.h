@@ -168,7 +168,6 @@
 #define APROP   1  /* Add code for Apropos command                 */
 #define CRYPT   1  /* file encryption enabled?                     */
 #define AEDIT   1  /* advanced editing options: en/detabbing       */
-#define PROC    1  /* named procedures                             */
 #define CLEAN   0  /* de-alloc memory on exit                      */
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
@@ -422,7 +421,6 @@ struct window {
  * have not been read in yet. These get read in at "use buffer" time.
  */
 
-#if PROC
 #define CASESET_LOWI_ALL -4
 #define CASESET_LOWI_ONE -3
 #define CASESET_CAPI_ALL -2
@@ -442,7 +440,6 @@ struct ptt_ent {
     int caseset;                /* Casing for replacement */
     char display_code[32];      /* Only 2 graphemes, though */
 };
-#endif
 
 /* Structure for function/buffer-proc options */
 struct func_opts {
@@ -457,11 +454,9 @@ struct buffer {
         struct line *b_linep;   /* Link to the header struct line */
         struct line *b_topline; /* Link to narrowed top text    */
         struct line *b_botline; /* Link to narrowed bottom text */
-#if PROC
         struct ptt_ent *ptt_headp;
         int b_type;             /* Type of buffer */
         struct func_opts btp_opt;   /* Only for b_type = BTPROC */
-#endif
         int b_exec_level;       /* Recursion level */
         int b_doto;             /* Offset of "." in above struct line */
         int b_marko;            /* but for the "mark"           */
