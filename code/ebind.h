@@ -125,9 +125,7 @@ struct key_tab_init init_keytab[] = {
 #if     PROC
         {META|CONTROL|'E',  execproc        },
 #endif
-#if     CFENCE
         {META|CONTROL|'F',  getfence        },
-#endif
         {META|CONTROL|'H',  delbword        },
         {META|CONTROL|'K',  unbindkey       },
         {META|CONTROL|'L',  reposition      },
