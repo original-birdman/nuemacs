@@ -18,7 +18,7 @@ union REGS rg;                  /* cpu register for use of DOS calls */
 int nxtchar = -1;               /* character held from type ahead    */
 #endif
 
-#if     USG                     /* System V */
+#if USG                         /* System V */
 #include        <signal.h>
 #include        <termio.h>
 #include        <fcntl.h>
@@ -33,7 +33,7 @@ struct termio ntermio;          /* charactoristics to use inside */
 #endif
 #endif
 
-#if     V7 | BSD
+#if BSD
 #include        <sgtty.h>       /* for stty/gtty functions */
 #include        <signal.h>
 struct sgttyb ostate;           /* saved tty state */
@@ -75,7 +75,7 @@ char tobuf[TBUFSIZ];            /* terminal output buffer */
  */
 void ttopen(void)
 {
-#if     MSDOS & (TURBO | MSC)
+#if MSDOS & (TURBO | MSC)
         /* kill the CONTROL-break interupt */
         rg.h.ah = 0x33;         /* control-break check dos call */
         rg.h.al = 1;            /* set the current state */
@@ -83,10 +83,10 @@ void ttopen(void)
         intdos(&rg, &rg);       /* go for it! */
 #endif
 
-#if     USG
+#if USG
         ioctl(0, TCGETA, &otermio);     /* save old settings */
         ntermio.c_iflag = 0;            /* setup new settings */
-#if     XONXOFF
+#if XONXOFF
         ntermio.c_iflag = otermio.c_iflag & XXMASK; /* save XON/XOFF P.K. */
 #endif
         ntermio.c_oflag = 0;
@@ -100,10 +100,10 @@ void ttopen(void)
         kbdpoll = FALSE;
 #endif
 
-#if     V7 | BSD
+#if BSD
         gtty(0, &ostate);       /* save old state */
         gtty(0, &nstate);       /* get base of new state */
-#if     XONXOFF
+#if XONXOFF
         nstate.sg_flags |= (CBREAK | TANDEM);
 #else
         nstate.sg_flags |= RAW;
@@ -116,7 +116,7 @@ void ttopen(void)
         ioctl(0, TIOCGLTC, &oltchars);      /* Save old local characters */
         ioctl(0, TIOCSLTC, &nltchars);      /* New local characters */
 #endif
-#if     BSD
+#if BSD
         /* provide a smaller terminal output buffer so that
            the type ahead detection works better (more often) */
         setbuffer(stdout, &tobuf[0], TBUFSIZ);
@@ -125,7 +125,7 @@ void ttopen(void)
 #endif
 #endif
 
-#if     __hpux | SVR4
+#if __hpux | SVR4
         /* provide a smaller terminal output buffer so that
            the type ahead detection works better (more often) */
         setvbuf(stdout, &tobuf[0], _IOFBF, TBUFSIZ);
@@ -147,7 +147,7 @@ void ttopen(void)
  */
 void ttclose(void)
 {
-#if     MSDOS & (TURBO | MSC)
+#if MSDOS & (TURBO | MSC)
         /* restore the CONTROL-break interupt */
         rg.h.ah = 0x33;         /* control-break check dos call */
         rg.h.al = 1;            /* set the current state */
@@ -155,12 +155,12 @@ void ttclose(void)
         intdos(&rg, &rg);       /* go for it! */
 #endif
 
-#if     USG
+#if USG
         ioctl(0, TCSETAW, &otermio);    /* restore terminal settings */
         fcntl(0, F_SETFL, kbdflgs);
 #endif
 
-#if     V7 | BSD
+#if BSD
         stty(0, &ostate);
         ioctl(0, TIOCSETC, &otchars);   /* Place old character into K */
         ioctl(0, TIOCSLTC, &oltchars);  /* Place old local character into K */
@@ -174,11 +174,11 @@ void ttclose(void)
  */
 void ttputc(char c)
 {
-#if     MSDOS & ~IBMPC
+#if MSDOS & ~IBMPC
         bdos(6, c, 0);
 #endif
 
-#if     V7 | USG | BSD
+#if USG | BSD
         fputc(c, stdout);
 #endif
 }
@@ -189,10 +189,10 @@ void ttputc(char c)
  */
 int ttflush(void)
 {
-#if     MSDOS
+#if MSDOS
 #endif
 
-#if     V7 | USG | BSD
+#if USG | BSD
 /*
  * Add some terminal output success checking, sometimes an orphaned
  * process may be left looping on SunOS 4.1.
@@ -238,11 +238,11 @@ int ttgetc(void)
         return c & 255;
 #endif
 
-#if     V7 | BSD
+#if BSD
         return 255 & fgetc(stdin);      /* 8BIT P.K. */
 #endif
 
-#if     USG
+#if USG
         if (kbdqp)
                 kbdqp = FALSE;
         else {
@@ -255,7 +255,7 @@ int ttgetc(void)
 #endif
 }
 
-#if     TYPEAH
+#if TYPEAH
 /* typahead:    Check to see if any characters are already in the
                 keyboard buffer
 */

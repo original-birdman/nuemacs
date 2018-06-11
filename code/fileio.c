@@ -109,7 +109,7 @@ int ffclose(void) {
     fputc(26, ffp);         /* add a ^Z at the end of the file */
 #endif
 
-#if V7 | USG | BSD | (MSDOS & (MSC | TURBO))
+#if USG | BSD | (MSDOS & (MSC | TURBO))
     if (fclose(ffp) != FALSE) {
         mlwrite("Error closing file");
         return FIOERR;

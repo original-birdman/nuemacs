@@ -677,7 +677,7 @@ static char path_sep =
 #if MSDOS
     '\\'
 #else
-#if V7 | BSD | USG
+#if BSD | USG
     '/'
 #else
     '\0'
@@ -686,7 +686,7 @@ static char path_sep =
 ;
 
 
-#if     ENVFUNC
+#if ENVFUNC
 static int along_path(char *fname, char *fspec) {
         char *path;     /* environmental PATH variable */
         char *sp;       /* pointer into path spec */
@@ -772,7 +772,7 @@ char *flook(char *fname, int hflag, int mode)
             return res;
         }
 
-#if     ENVFUNC
+#if ENVFUNC
 
         if (hflag) {
                 home = getenv("HOME");

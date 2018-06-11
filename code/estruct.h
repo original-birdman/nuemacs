@@ -19,7 +19,7 @@
  * Ensure these are treated as unsigned.
  * Could use a compile option (-funsigned-char for gcc) but
  * that puts the logic into the build files rather than the actual code.
- * So use this macro to cast it when you wnat it as an int (0-255).
+ * So use this macro to cast it when you want it as an int (0-255).
  */
 #define ch_as_uc(bc) ((unsigned char)(bc))
 
@@ -37,9 +37,6 @@
 
 #ifdef  MSDOS
 #undef  MSDOS
-#endif
-#ifdef  EGA
-#undef  EGA
 #endif
 #ifdef  CTRLZ
 #undef  CTRLZ
@@ -77,12 +74,9 @@
 #define USG 0
 #endif
 
-#define V7 0 /* No more. */
-
 #else
 
 #define MSDOS   1               /* MS-DOS                       */
-#define V7      0               /* V7 UNIX or Coherent or BSD4.2 */
 #define BSD     0               /* UNIX BSD 4.2 and ULTRIX      */
 #define USG     0               /* UNIX system V                */
 
@@ -97,7 +91,7 @@
 
 #else
 
-#define UNIX    (V7 | BSD | USG)
+#define UNIX    (BSD | USG)
 #define MSC     0
 #define TURBO   MSDOS
 
@@ -188,13 +182,13 @@
 
 /* Define some ability flags. */
 
-#if     IBMPC
+#if IBMPC
 #define MEMMAP  1
 #else
 #define MEMMAP  0
 #endif
 
-#if     MSDOS | V7 | USG | BSD
+#if MSDOS | USG | BSD
 #define ENVFUNC 1
 #else
 #define ENVFUNC 0
@@ -290,7 +284,7 @@
 #define BELL    0x07            /* a bell character             */
 #define TAB     0x09            /* a tab character              */
 
-#if     V7 | USG | BSD
+#if USG | BSD
 #define PATHCHR ':'
 #else
 #define PATHCHR ';'

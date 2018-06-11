@@ -1,6 +1,6 @@
 /*      tcap.c
  *
- *      Unix V7 SysV and BS4 Termcap video driver
+ *      Unix SysV and BS4 Termcap video driver
  *
  *      modified by Petri Kutvonen
  */
@@ -94,11 +94,11 @@ struct terminal term = {
         tcapbeep,
         tcaprev,
         tcapcres
-#if     COLOR
+#if COLOR
             , tcapfcol,
         tcapbcol
 #endif
-#if     SCROLLCODE
+#if SCROLLCODE
             , NULL              /* set dynamically at open time */
 #endif
 };
@@ -235,7 +235,7 @@ static void tcapkclose(void)
  * that the original screen gets cleared (as you've switched to it before
  * the second clear arrives).
  */
-#if V7 | USG | BSD
+#if USG | BSD
 
 #else
         putpad(TE);

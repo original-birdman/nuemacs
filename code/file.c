@@ -163,7 +163,7 @@ int getfile(char *fname, int lockfl) {
     int s;
     char bname[NBUFN];      /* buffer name to put file */
 
-#if     MSDOS
+#if MSDOS
     mklower(fname);         /* msdos isn't case sensitive */
 #endif
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
@@ -372,7 +372,7 @@ void makename(char *bname, char *fname)
 #if MSDOS
         if (uc == ':' || uc == '\\' || uc == '/')
 #endif
-#if V7 | USG | BSD
+#if USG | BSD
         if (uc == '/')
 #endif
             fn4bn_start = clen;

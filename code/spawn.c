@@ -12,11 +12,11 @@
 #include "edef.h"
 #include "efunc.h"
 
-#if     V7 | USG | BSD
+#if USG | BSD
 #include        <signal.h>
 #endif
 
-#if     MSDOS & (MSC | TURBO)
+#if MSDOS & (MSC | TURBO)
 #include        <process.h>
 #endif
 
@@ -61,7 +61,7 @@ void check_for_resize(void) {
 int spawncli(int f, int n)
 {
         UNUSED(f); UNUSED(n);
-#if     V7 | USG | BSD
+#if USG | BSD
         char *cp;
 #endif
 
@@ -72,7 +72,7 @@ int spawncli(int f, int n)
 #ifdef SIGWINCH
         get_orig_size();
 #endif
-#if     MSDOS & (MSC | TURBO)
+#if MSDOS & (MSC | TURBO)
         movecursor(term.t_nrow, 0);     /* Seek to last line.   */
         TTflush();
         TTkclose();
@@ -81,7 +81,7 @@ int spawncli(int f, int n)
         sgarbf = TRUE;
         return TRUE;
 #endif
-#if     V7 | USG | BSD
+#if USG | BSD
         movecursor(term.t_nrow, 0);     /* Seek to last line.   */
         TTflush();
         TTclose();                      /* stty to old settings */
@@ -89,7 +89,7 @@ int spawncli(int f, int n)
         if ((cp = getenv("SHELL")) != NULL && *cp != '\0')
                 dnc = system(cp);
         else
-#if     BSD
+#if BSD
                 dnc = system("exec /bin/csh");
 #else
                 dnc = system("exec /bin/sh");
@@ -105,7 +105,7 @@ int spawncli(int f, int n)
 #endif
 }
 
-#if     BSD | __hpux | SVR4
+#if BSD | __hpux | SVR4
 
 int bktoshell(int f, int n)
 {                               /* suspend MicroEMACS and wait to wake up */
@@ -152,7 +152,7 @@ int spawn(int f, int n)
 #ifdef SIGWINCH
         get_orig_size();
 #endif
-#if     MSDOS
+#if MSDOS
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
         movecursor(term.t_nrow, 0);
@@ -167,7 +167,7 @@ int spawn(int f, int n)
         sgarbf = TRUE;
         return TRUE;
 #endif
-#if     V7 | USG | BSD
+#if USG | BSD
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
         TTflush();
@@ -216,7 +216,7 @@ int execprg(int f, int n)
         get_orig_size();
 #endif
 
-#if     MSDOS
+#if MSDOS
         if ((s = mlreply("$", line, NLINE)) != TRUE)
                 return s;
         movecursor(term.t_nrow, 0);
@@ -232,7 +232,7 @@ int execprg(int f, int n)
         return TRUE;
 #endif
 
-#if     V7 | USG | BSD
+#if USG | BSD
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
         ttput1c('\n');          /* Already have '\r'    */
@@ -272,7 +272,7 @@ int pipecmd(int f, int n)
 
         static char filnam[NSTRING] = "command";
 
-#if     MSDOS
+#if MSDOS
         char *tmp;
         FILE *fp;
         int len;
@@ -285,7 +285,7 @@ int pipecmd(int f, int n)
 #ifdef SIGWINCH
         get_orig_size();
 #endif
-#if     MSDOS
+#if MSDOS
         if ((tmp = getenv("TMP")) == NULL
             && (tmp = getenv("TEMP")) == NULL)
                 strcpy(filnam, "command");
@@ -321,7 +321,7 @@ int pipecmd(int f, int n)
 
                         return FALSE;
         }
-#if     MSDOS
+#if MSDOS
         strcat(line, " >>");
         strcat(line, filnam);
         movecursor(term.t_nrow, 0);
@@ -337,7 +337,7 @@ int pipecmd(int f, int n)
         }
 #endif
 
-#if     V7 | USG | BSD
+#if USG | BSD
         TTflush();
         TTclose();              /* stty to old modes    */
         TTkclose();
@@ -418,7 +418,7 @@ int filter_buffer(int f, int n)
                 strcpy(bp->b_fname, tmpnam);
                 return FALSE;
         }
-#if     MSDOS
+#if MSDOS
         strcat(line, " <fltinp >fltout");
         movecursor(term.t_nrow - 1, 0);
         TTkclose();
@@ -428,7 +428,7 @@ int filter_buffer(int f, int n)
         s = TRUE;
 #endif
 
-#if     V7 | USG | BSD
+#if USG | BSD
         ttput1c('\n');          /* Already have '\r'    */
         TTflush();
         TTclose();              /* stty to old modes    */
@@ -468,7 +468,7 @@ int filter_buffer(int f, int n)
         return TRUE;
 }
 
-#if     MSDOS & (TURBO | MSC)
+#if MSDOS & (TURBO | MSC)
 
 /*
  * SHELLPROG: Execute a command in a subshell
@@ -576,14 +576,14 @@ int execprog(char *cmd)
         regs.x.dx = (unsigned int) (prog);
         segreg.es = ((unsigned long) (&pblock) >> 16);  /* set up param block ptr */
         regs.x.bx = (unsigned int) (&pblock);
-#if     TURBO | MSC
+#if TURBO | MSC
         intdosx(&regs, &regs, &segreg);
         if (regs.x.cflag == 0) {
                 regs.h.ah = 0x4d;       /* get child process return code */
                 intdos(&regs, &regs);   /* go do it */
                 rval = regs.x.ax;       /* save child's return code */
         } else
-#if     MSC
+#if MSC
                 rval = -1;
 #else
                 rval = -_doserrno;      /* failed child call */

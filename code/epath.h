@@ -16,7 +16,7 @@
 #define DFLT_PATH "\\sys\\public\\", "\\usr\\bin\\", "\\bin\\", "\\", ""
 #endif
 
-#if     V7 | BSD | USG
+#if BSD | USG
 #define DFLT_PATH "/opt/local/etc/", "/usr/local/etc/"
 #endif
 
