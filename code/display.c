@@ -252,24 +252,6 @@ void vtinit(void) {
     mberase();              /* GGR */
 }
 
-#if CLEAN
-/* free up all the dynamically allocated video structures */
-
-void vtfree(void) {
-    int i;
-    for (i = 0; i < term.t_mrow; ++i) {
-        free(vscreen[i]);
-#if MEMMAP == 0 || SCROLLCODE
-        free(pscreen[i]);
-#endif
-    }
-    free(vscreen);
-#if MEMMAP == 0 || SCROLLCODE
-    free(pscreen);
-#endif
-}
-#endif
-
 /*
  * Clean up the virtual terminal system, in anticipation for a return to the
  * operating system. Move down to the last line and clear it out (the next

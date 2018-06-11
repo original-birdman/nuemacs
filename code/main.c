@@ -1681,56 +1681,6 @@ void dspram(void) {
 #endif
 #endif
 
-/* ====================================================================== */
-
-/* On some primitave operation systems, and when emacs is used as
- * a subprogram to a larger project, emacs needs to de-alloc its
- * own used memory
- */
-
-#if CLEAN
-
-/*
- * cexit()
- *
- * int status;          return status of emacs
- */
-int cexit(int status) {
-    struct buffer *bp;      /* buffer list pointer */
-    struct window *wp;      /* window list pointer */
-    struct window *tp;      /* temporary window pointer */
-
-/* First clean up the windows... */
-    wp = wheadp;
-    while (wp) {
-        tp = wp->w_wndp;
-        free(wp);
-        wp = tp;
-    }
-    wheadp = NULL;
-
-/* ...then the buffers... */
-    bp = bheadp;
-    while (bp) {
-        bp->b_nwnd = 0;
-        bp->b_flag = 0; /* don't say anything about a changed buffer! */
-        zotbuf(bp);
-        bp = bheadp;
-    }
-
-/* ...and the kill buffer... */
-    kdelete();
-
-/* ...and the video buffers */
-    vtfree();
-
-#undef  exit
-    exit(status);
-}
-#endif
-
-/* ====================================================================== */
-
 /* ======================================================================
  * GGR - Function to implement re-execute last command
  */

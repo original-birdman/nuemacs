@@ -163,8 +163,6 @@
 
 #endif /* Autoconf. */
 
-#define CLEAN   0  /* de-alloc memory on exit                      */
-
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
 
 #define SCROLLCODE 1   /* scrolling code P.K.                          */
