@@ -111,10 +111,8 @@ struct key_tab_init init_keytab[] = {
         {CTLX|'O',          nextwind        },
         {CTLX|'P',          prevwind        },
         {CTLX|'Q',          quote           }, /* alternative */
-#if     ISRCH
         {CTLX|'R',          risearch        },
         {CTLX|'S',          fisearch        },
-#endif
         {CTLX|'W',          resize          },
         {CTLX|'X',          nextbuffer      },
         {CTLX|'Z',          enlargewind     },
