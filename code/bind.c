@@ -445,8 +445,6 @@ int unbindchar(int c) {
  */
 int desbind(int f, int n) {
         UNUSED(f); UNUSED(n);
-#if     APROP
-
         buildlist(TRUE, "");
         return TRUE;
 }
@@ -471,7 +469,6 @@ int apro(int f, int n)
  * char *mstring;       match string if a partial list
  */
 int buildlist(int type, char *mstring) {
-#endif
     struct window *wp;         /* scanning pointer to windows */
     struct key_tab *ktp;       /* pointer into the command table */
     struct buffer *bp;         /* buffer to put binding list into */
@@ -518,11 +515,10 @@ int buildlist(int type, char *mstring) {
         strcpy(outseq, names[ni].n_name);
         cpos = strlen(outseq);
 
-#if     APROP
 /* If we are executing an apropos command.....
  * ...and current string doesn't include the search string */
         if (type == FALSE && strinc(outseq, mstring) == FALSE) goto fail;
-#endif
+
 /* Search down for any keys bound to this. */
         ktp = getbyfnc(names[ni].n_func);
         while (ktp) {
@@ -592,8 +588,6 @@ fail:   ;
     return TRUE;
 }
 
-#if     APROP
-
 /*
  * does source include sub?
  *
@@ -629,7 +623,6 @@ int strinc(char *source, char *sub)
         }
         return FALSE;
 }
-#endif
 
 /*
  * get a command key sequence from the keyboard

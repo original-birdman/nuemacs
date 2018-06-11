@@ -14,9 +14,7 @@ struct name_bind names[] = {
         {"abort-command", ctrlg, {0, 0}},
         {"add-mode", setemode, {0, 0}},
         {"add-global-mode", setgmode, {0, 0}},
-#if     APROP
         {"apropos", apro, {0, 1}},
-#endif
         {"backward-character", backchar, {0, 0}},
         {"begin-macro", ctlxlp, {0, 0}},
         {"beginning-of-file", gotobob, {0, 0}},
@@ -50,16 +48,12 @@ struct name_bind names[] = {
         {"delete-window", delwind, {0, 1}},
         {"describe-bindings", desbind, {0, 1}},
         {"describe-key", deskey, {0, 0}},
-#if     AEDIT
         {"detab-line", detab, {0, 0}},
-#endif
         {"end-macro", ctlxrp, {1, 0}},
         {"end-of-file", gotoeob, {0, 0}},
         {"end-of-line", gotoeol, {0, 0}},
         {"eos-chars", eos_chars, {0, 0}},           /* GGR */
-#if     AEDIT
         {"entab-line", entab, {0, 0}},
-#endif
         {"exchange-point-and-mark", swapmark, {0, 0}},
         {"execute-buffer", execbuf, {0, 0}},
         {"execute-command-line", execcmd, {0, 0}},
@@ -195,9 +189,7 @@ struct name_bind names[] = {
 #endif
         {"toggle-ptmode", toggle_ptmode, {0, 0}},   /* GGR */
         {"transpose-characters", twiddle, {0, 0}},
-#if     AEDIT
         {"trim-line", trim, {0, 0}},
-#endif
         {"type-tab", typetab, {0, 0}},              /* GGR */
         {"unbind-key", unbindkey, {0, 0}},
         {"universal-argument", unarg, {0, 0}},

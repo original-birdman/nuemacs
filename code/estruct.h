@@ -163,8 +163,6 @@
 
 #endif /* Autoconf. */
 
-#define APROP   1  /* Add code for Apropos command                 */
-#define AEDIT   1  /* advanced editing options: en/detabbing       */
 #define CLEAN   0  /* de-alloc memory on exit                      */
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */

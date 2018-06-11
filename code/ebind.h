@@ -60,13 +60,9 @@ struct key_tab_init init_keytab[] = {
         {CONTROL|']',       metafn          },
         {CTLX|CONTROL|'B',  listbuffers     },
         {CTLX|CONTROL|'C',  quit            }, /* Hard quit. */
-#if     AEDIT
         {CTLX|CONTROL|'A',  detab           },
-#endif
         {CTLX|CONTROL|'D',  filesave        }, /* alternative */
-#if     AEDIT
         {CTLX|CONTROL|'E',  entab           },
-#endif
         {CTLX|CONTROL|'F',  filefind        },
         {CTLX|CONTROL|'I',  insfile         },
         {CTLX|CONTROL|'L',  lowerregion     },
@@ -76,9 +72,7 @@ struct key_tab_init init_keytab[] = {
         {CTLX|CONTROL|'P',  mvupwind        },
         {CTLX|CONTROL|'R',  fileread        },
         {CTLX|CONTROL|'S',  filesave        },
-#if     AEDIT
         {CTLX|CONTROL|'T',  trim            },
-#endif
         {CTLX|CONTROL|'U',  upperregion     },
         {CTLX|CONTROL|'V',  viewfile        },
         {CTLX|CONTROL|'W',  filewrite       },
@@ -138,9 +132,7 @@ struct key_tab_init init_keytab[] = {
         {META|'>',          gotoeob         },
         {META|'<',          gotobob         },
         {META|'~',          unmark          },
-#if     APROP
         {META|'A',          apro            },
-#endif
         {META|'B',          backword        },
         {META|'C',          capword         },
         {META|'D',          delfword        },
