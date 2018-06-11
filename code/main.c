@@ -1052,7 +1052,6 @@ loop:
     execute(META | SPEC | 'C', FALSE, 1);
     lastflag = saveflag;
 
-#if TYPEAH
     if (typahead()) {
         newc = getcmd();
         update(FALSE);
@@ -1079,13 +1078,7 @@ loop:
         }
         c = getcmd();
     }
-#else
-/* Fix up the screen    */
-    update(FALSE);
 
-/* Get the next command from the keyboard */
-    c = getcmd();
-#endif
 /* If there is something on the command line, clear it */
     if (mpresf != FALSE) {
         mlerase();

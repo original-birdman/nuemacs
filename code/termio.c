@@ -255,40 +255,35 @@ int ttgetc(void)
 #endif
 }
 
-#if TYPEAH
 /* typahead:    Check to see if any characters are already in the
                 keyboard buffer
 */
 
-int typahead(void)
-{
-#if     MSDOS & (MSC | TURBO)
-        if (kbhit() != 0)
-                return TRUE;
-        else
-                return FALSE;
+int typahead(void) {
+#if MSDOS & (MSC | TURBO)
+    if (kbhit() != 0) return TRUE;
+    else              return FALSE;
 #endif
 
-#if     BSD
-        int x;                  /* holds # of pending chars */
+#if BSD
+    int x;                  /* holds # of pending chars */
 
-        return (ioctl(0, FIONREAD, &x) < 0) ? 0 : x;
+    return (ioctl(0, FIONREAD, &x) < 0) ? 0 : x;
 #endif
 
-#if     USG
-        if (!kbdqp) {
-                if (!kbdpoll && fcntl(0, F_SETFL, kbdflgs | O_NDELAY) < 0)
-                        return FALSE;
-                kbdpoll = 1;
-                kbdqp = (1 == read(0, &kbdq, 1));
-        }
-        return kbdqp;
+#if USG
+    if (!kbdqp) {
+        if (!kbdpoll && fcntl(0, F_SETFL, kbdflgs | O_NDELAY) < 0)
+            return FALSE;
+        kbdpoll = 1;
+        kbdqp = (1 == read(0, &kbdq, 1));
+    }
+    return kbdqp;
 #endif
 
 #if !UNIX & !MSDOS
-        return FALSE;
+    return FALSE;
 #endif
 }
-#endif
 
 #endif                          /* not POSIX */

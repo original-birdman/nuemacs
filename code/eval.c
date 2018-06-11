@@ -244,12 +244,7 @@ char *gtenv(char *vname)
     case EVCMODE:           return itoa(curbp->b_mode);
     case EVGMODE:           return itoa(gmode);
     case EVTPAUSE:          return itoa(term.t_pause);
-    case EVPENDING:
-#if     TYPEAH
-        return ltos(typahead());
-#else
-        return falsem;
-#endif
+    case EVPENDING:         return ltos(typahead());
     case EVLWIDTH:          return itoa(llength(curwp->w_dotp));
     case EVLINE:            return getctext();
     case EVGFLAGS:          return itoa(gflags);
