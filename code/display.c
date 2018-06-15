@@ -86,13 +86,13 @@ static void putline(int row, int col, char *buf);
 /* GGR Some functions to handle struct grapheme usage */
 
 /* Set the entry to an ASCII character.
- * Checks for previous extended cdm usage and frees any such found.
- * POSSIBLY INLINABLE??
+ * Checks for previous extended cdm usage and frees any such found
+ * unless the no_free flag is set (which it is for a pscreen setting).
  */
-static void set_grapheme(struct grapheme *gp, unicode_t uc) {
+static void set_grapheme(struct grapheme *gp, unicode_t uc, int no_free) {
     gp->uc = uc;
     gp->cdm = 0;
-    if (gp->ex != NULL) {
+    if (!no_free && gp->ex != NULL) {
         free(gp->ex);
         gp->ex = NULL;
     }
@@ -119,25 +119,19 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
 }
 
 /* Copy grapheme data between structures.
- * This needs to allocate new space for any ex section and copy the data.
  * HOWEVER, since this *always* copies from vscreen to pscreen we DO NOT
- * NEED to free any ex section in the target, as that will have been freed
- * (by set_grapheme) when the vscreen is set!
+ * NEED to allocate any ex section in the target, as we never free
+ * anything from pscreen - it will be freed (by set_grapheme) when the
+ * vscreen is set! We just copy the pointer, so copy the whole structure.
+ * Could just be defined as:
+ *      #define clone_grapheme(to, from)   *to = *from
+ * but we'll just inline it instead.
  */
-static void
+static inline void
   clone_grapheme(struct grapheme *gtarget, struct grapheme *gsource) {
     gtarget->uc = gsource->uc;
     gtarget->cdm = gsource->cdm;
-    if (gsource->ex == NULL) {  /* No incoming ex section... */
-        gtarget->ex = NULL;     /* ...so ensure not outgoing one */
-        return;
-    }
-
-/* Need to allocate and copy the ex section, which is ex-chars + 1 */
-    int cxc = 1;                /* Must be at least 1 to get here... */
-    while(gsource->ex[cxc] != UEM_NOCHAR) cxc++;
-    gtarget->ex = malloc((cxc+1)*sizeof(unicode_t));
-    memcpy(gtarget->ex, gsource->ex, (cxc+1)*sizeof(unicode_t));
+    gtarget->ex = gsource->ex;
     return;
 }
 
@@ -227,7 +221,7 @@ void vtinit(void) {
         vscreen[i] = vp;
 
 /* GGR - clear things out at the start.
- * Can't use set_grapheme() until after we have initialized
+ * We can't use set_grapheme() until after we have initialized
  * We only need to initialize vscreen, as we do all assigning
  * (including malloc()/free()) there.
  * Need to clear it *all* out now! */
@@ -239,7 +233,7 @@ void vtinit(void) {
         }
 
         vp = xmalloc(sizeof(struct video) +
-              term.t_mcol*sizeof(struct grapheme));
+             term.t_mcol*sizeof(struct grapheme));
         vp->v_flag = 0;
         pscreen[i] = vp;
     }
@@ -303,11 +297,11 @@ static void vtputc(unsigned int c) {
         for (int dcol = term.t_ncol - 1; dcol >= 0; dcol--) {
             if (vp->v_text[dcol].uc == '$') break;  /* Quick repeat exit */
             if (vp->v_text[dcol].uc != 0) {
-                set_grapheme(&(vp->v_text[dcol]), '$');
+                set_grapheme(&(vp->v_text[dcol]), '$', 0);
                 break;
             }
         }
-        set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
+        set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$', 0);
         return;
     }
 
@@ -346,12 +340,12 @@ static void vtputc(unsigned int c) {
 
     int cw = utf8proc_charwidth(c);
     if (vtcol >= 0) {
-        set_grapheme(&(vp->v_text[vtcol]), c);
+        set_grapheme(&(vp->v_text[vtcol]), c, 0);
 /* This code assumes that a NUL byte will not be displayed */
         int pvcol = vtcol;
         for (int nulpad = cw - 1; nulpad > 0; nulpad--) {
             pvcol++;
-            set_grapheme(&(vp->v_text[pvcol]), 0);
+            set_grapheme(&(vp->v_text[pvcol]), 0, 0);
         }
     }
 /* If vtcol is -ve, but will be +ve after the cw increment we need to space
@@ -359,7 +353,7 @@ static void vtputc(unsigned int c) {
  */
     else {
         for (int pcol = vtcol + cw; pcol > 0; pcol--) {
-            set_grapheme(&(vp->v_text[pcol-1]), ' ');
+            set_grapheme(&(vp->v_text[pcol-1]), ' ', 0);
         }
     }
     vtcol += cw;
@@ -372,7 +366,7 @@ static void vtputc(unsigned int c) {
 static void vteeol(void) {
     struct grapheme *vcp = vscreen[vtrow]->v_text;
 
-    while (vtcol < term.t_ncol) set_grapheme(&(vcp[vtcol++]), ' ');
+    while (vtcol < term.t_ncol) set_grapheme(&(vcp[vtcol++]), ' ', 0);
 }
 
 /*
@@ -384,6 +378,44 @@ int upscreen(int f, int n) {
     UNUSED(f); UNUSED(n);
     update(TRUE);
     return TRUE;
+}
+
+/*
+ * updgar:
+ *      if the screen is garbage, clear the physical screen and
+ *      the virtual screen and force a full update
+ */
+static void updgar(void) {
+    struct grapheme *txt;
+    int i, j;
+
+/* GGR - include the last row, so <=, (for mini-buffer) */
+    int lrow;
+    if (inmb) lrow = term.t_nrow + 1;
+    else      lrow = term.t_nrow;
+    for (i = 0; i < lrow; ++i) {
+        vscreen[i]->v_flag |= VFCHG;
+#if REVSTA
+        vscreen[i]->v_flag &= ~VFREV;
+#endif
+#if COLOR
+        vscreen[i]->v_fcolor = gfcolor;
+        vscreen[i]->v_bcolor = gbcolor;
+#endif
+/* We only ever free the extended parts from the virtual screnn info, not the
+ * physical one, so set the no_free flag here.
+ */
+        txt = pscreen[i]->v_text;
+        for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ', 1);
+    }
+
+    movecursor(0, 0);       /* Erase the screen. */
+    (*term.t_eeop) ();
+    sgarbf = FALSE;         /* Erase-page clears */
+    mpresf = FALSE;         /* the message area. */
+#if COLOR
+    mlerase();              /* needs to be cleared if colored */
+#endif
 }
 
 static int scrflags = 0;
@@ -766,41 +798,6 @@ void upddex(void) {
 }
 
 /*
- * updgar:
- *      if the screen is garbage, clear the physical screen and
- *      the virtual screen and force a full update
- */
-void updgar(void) {
-    struct grapheme *txt;
-    int i, j;
-
-/* GGR - include the last row, so <=, (for mini-buffer) */
-    int lrow;
-    if (inmb) lrow = term.t_nrow + 1;
-    else      lrow = term.t_nrow;
-    for (i = 0; i < lrow; ++i) {
-        vscreen[i]->v_flag |= VFCHG;
-#if REVSTA
-        vscreen[i]->v_flag &= ~VFREV;
-#endif
-#if COLOR
-        vscreen[i]->v_fcolor = gfcolor;
-        vscreen[i]->v_bcolor = gbcolor;
-#endif
-        txt = pscreen[i]->v_text;
-        for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ');
-    }
-
-    movecursor(0, 0);       /* Erase the screen. */
-    (*term.t_eeop) ();
-    sgarbf = FALSE;         /* Erase-page clears */
-    mpresf = FALSE;         /* the message area. */
-#if COLOR
-    mlerase();              /* needs to be cleared if colored */
-#endif
-}
-
-/*
  * updupd:
  *      update the physical screen from the virtual screen
  *
@@ -942,7 +939,8 @@ static int scrolls(int inserts) {   /* returns true if it does something */
         for (i = from; i < to; i++) {
             struct grapheme *txt;
             txt = pscreen[i]->v_text;
-            for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ');
+/* This is a pscreen, so set the no_free flag */
+            for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ', 1);
             vscreen[i]->v_flag |= VFCHG;
         }
 #endif
@@ -1010,9 +1008,9 @@ static void updext(void) {
  * need to change any following NULs to spaces
  */
     int cw = utf8proc_charwidth(vscreen[currow]->v_text[0].uc);
-    set_grapheme(&(vscreen[currow]->v_text[0]), '$');
+    set_grapheme(&(vscreen[currow]->v_text[0]), '$', 0);
     for (int pcol = cw - 1; pcol > 0; pcol--) {
-        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
+        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ', 0);
     }
 }
 
