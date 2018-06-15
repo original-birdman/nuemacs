@@ -46,6 +46,12 @@
 
 #if defined(AUTOCONF) || defined(MSDOS) || defined(BSD) || defined(SYSV)
 
+/* Cygwin is (as far as we are concerned) just like Linux */
+
+#ifdef __CYGWIN__
+#define __linux__
+#endif
+
 /* Make an intelligent guess about the target system. */
 
 #if defined(__TURBOC__)

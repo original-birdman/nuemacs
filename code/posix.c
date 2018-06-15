@@ -31,6 +31,15 @@
 #define XCASE 0000004
 #endif
 
+/* None of these is defiend in CygWin, so set them to 0.
+ * Note that these are not actually POSIX, and not implemenetd in Linux
+ */
+#ifdef __CYGWIN__
+#define XCASE 0
+#define ECHOPRT 0
+#define PENDIN 0
+#endif
+
 static int kbdflgs;                     /* saved keyboard fd flags      */
 static int kbdpoll;                     /* in O_NDELAY mode             */
 
@@ -70,6 +79,7 @@ void ttopen(void)
             ~(OPOST | ONLCR | OLCUC | OCRNL | ONOCR | ONLRET);
 
         /* No signal handling, no echo etc */
+
         ntermios.c_lflag &= ~(ISIG | ICANON | XCASE | ECHO | ECHOE | ECHOK
                               | ECHONL | NOFLSH | TOSTOP | ECHOCTL |
                               ECHOPRT | ECHOKE | FLUSHO | PENDIN | IEXTEN);
