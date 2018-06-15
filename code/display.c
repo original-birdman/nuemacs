@@ -886,7 +886,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
                   j < rows && k < rows; j++, k++) {
                 if (inserts? texttest(j, k): texttest(k, j)) count++;
                 else break;
-            }  
+            }
             if (longcount < count) {
                 longcount = count;
                 longmatch = match;
@@ -1318,7 +1318,7 @@ static void modeline(struct window *wp) {
 
 /* Are we horizontally scrolled? */
     if (wp->w_fcol > 0) {
-        strcat(tline, itoa(wp->w_fcol));
+        strcat(tline, ue_itoa(wp->w_fcol));
         strcat(tline, "> ");
     }
 

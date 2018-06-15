@@ -1305,7 +1305,7 @@ int quotedcount(int f, int n) {
                 count = savedpos - curwp->w_doto - 1 - doubles;
                 curwp->w_doto = savedpos;
                 linstr("',");
-                linstr(itoa(count));
+                linstr(ue_itoa(count));
                 return(TRUE);
             }
         }

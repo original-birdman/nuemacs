@@ -278,7 +278,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
     if (new_command) {
         lnewline();
         if (func_rpt_cnt) {
-            linstr(itoa(func_rpt_cnt));
+            linstr(ue_itoa(func_rpt_cnt));
             linsert_byte(1, ' ');
             func_rpt_cnt = 0;
         }

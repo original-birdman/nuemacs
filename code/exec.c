@@ -1040,7 +1040,7 @@ failexit:       freewhile(scanner);
             strcat(outline, ":");
 
 /* Debug if levels */
-            strcat(outline, itoa(execlevel));
+            strcat(outline, ue_itoa(execlevel));
             strcat(outline, ":");
 
 /* and lastly the line. GGR - if line > 80 chars, chop it */

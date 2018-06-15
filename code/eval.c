@@ -90,12 +90,12 @@ char *gtfun(char *fname)
 
 /* And now evaluate it! */
     switch (funcs[fnum].tag) {
-    case UFADD:         return itoa(atoi(arg1) + atoi(arg2));
-    case UFSUB:         return itoa(atoi(arg1) - atoi(arg2));
-    case UFTIMES:       return itoa(atoi(arg1) * atoi(arg2));
-    case UFDIV:         return itoa(atoi(arg1) / atoi(arg2));
-    case UFMOD:         return itoa(atoi(arg1) % atoi(arg2));
-    case UFNEG:         return itoa(-atoi(arg1));
+    case UFADD:         return ue_itoa(atoi(arg1) + atoi(arg2));
+    case UFSUB:         return ue_itoa(atoi(arg1) - atoi(arg2));
+    case UFTIMES:       return ue_itoa(atoi(arg1) * atoi(arg2));
+    case UFDIV:         return ue_itoa(atoi(arg1) / atoi(arg2));
+    case UFMOD:         return ue_itoa(atoi(arg1) % atoi(arg2));
+    case UFNEG:         return ue_itoa(-atoi(arg1));
     case UFCAT:
         strcpy(result, arg1);
         return strcat(result, arg2);
@@ -114,7 +114,7 @@ char *gtfun(char *fname)
     case UFIND:         return strcpy(result, getval(arg1));
     case UFAND:         return ltos(stol(arg1) && stol(arg2));
     case UFOR:          return ltos(stol(arg1) || stol(arg2));
-    case UFLENGTH:      return itoa(strlen(arg1));
+    case UFLENGTH:      return ue_itoa(strlen(arg1));
     case UFUPPER:
         strcpy(result, arg1);
         return mkupper(result);
@@ -122,7 +122,7 @@ char *gtfun(char *fname)
         strcpy(result, arg1);
         return mklower(result);
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
-    case UFASCII:       return itoa((int) arg1[0]);
+    case UFASCII:       return ue_itoa((int) arg1[0]);
     case UFCHR:
         result[0] = atoi(arg1);
         result[1] = 0;
@@ -131,9 +131,9 @@ char *gtfun(char *fname)
         result[0] = tgetc();
         result[1] = 0;
         return result;
-    case UFRND:         return itoa((ernd() % abs(atoi(arg1))) + 1);
-    case UFABS:         return itoa(abs(atoi(arg1)));
-    case UFSINDEX:      return itoa(sindex(arg1, arg2));
+    case UFRND:         return ue_itoa((ernd() % abs(atoi(arg1))) + 1);
+    case UFABS:         return ue_itoa(abs(atoi(arg1)));
+    case UFSINDEX:      return ue_itoa(sindex(arg1, arg2));
     case UFENV:
 #if     ENVFUNC
         tsp = getenv(arg1);
@@ -146,10 +146,10 @@ char *gtfun(char *fname)
     case UFFIND:
         tsp = flook(arg1, TRUE, ONPATH);
         return tsp == NULL ? "" : tsp;
-    case UFBAND:        return itoa(atoi(arg1) & atoi(arg2));
-    case UFBOR:         return itoa(atoi(arg1) | atoi(arg2));
-    case UFBXOR:        return itoa(atoi(arg1) ^ atoi(arg2));
-    case UFBNOT:        return itoa(~atoi(arg1));
+    case UFBAND:        return ue_itoa(atoi(arg1) & atoi(arg2));
+    case UFBOR:         return ue_itoa(atoi(arg1) | atoi(arg2));
+    case UFBXOR:        return ue_itoa(atoi(arg1) ^ atoi(arg2));
+    case UFBNOT:        return ue_itoa(~atoi(arg1));
     case UFXLATE:       return xlat(arg1, arg2, arg3);
     }
 
@@ -207,56 +207,56 @@ char *gtenv(char *vname)
 
 /* Otherwise, fetch the appropriate value */
     switch (evl[vnum].tag) {
-    case EVFILLCOL:         return itoa(fillcol);
-    case EVPAGELEN:         return itoa(term.t_nrow + 1);
-    case EVCURCOL:          return itoa(getccol(FALSE));
-    case EVCURLINE:         return itoa(getcline());
-    case EVRAM:             return itoa((int) (envram / 1024l));
+    case EVFILLCOL:         return ue_itoa(fillcol);
+    case EVPAGELEN:         return ue_itoa(term.t_nrow + 1);
+    case EVCURCOL:          return ue_itoa(getccol(FALSE));
+    case EVCURLINE:         return ue_itoa(getcline());
+    case EVRAM:             return ue_itoa((int) (envram / 1024l));
     case EVFLICKER:         return ltos(flickcode);
-    case EVCURWIDTH:        return itoa(term.t_ncol);
+    case EVCURWIDTH:        return ue_itoa(term.t_ncol);
     case EVCBUFNAME:        return curbp->b_bname;
     case EVCFNAME:          return curbp->b_fname;
     case EVSRES:            return sres;
     case EVDEBUG:           return ltos(macbug);
     case EVSTATUS:          return ltos(cmdstatus);
     case EVPALETTE:         return palstr;
-    case EVASAVE:           return itoa(gasave);
-    case EVACOUNT:          return itoa(gacount);
-    case EVLASTKEY:         return itoa(lastkey);
+    case EVASAVE:           return ue_itoa(gasave);
+    case EVACOUNT:          return ue_itoa(gacount);
+    case EVLASTKEY:         return ue_itoa(lastkey);
     case EVCURCHAR:
         return (curwp->w_dotp->l_used == curwp->w_doto ?
-            itoa('\n') :
-            itoa(lgetc(curwp->w_dotp, curwp->w_doto)));
+            ue_itoa('\n') :
+            ue_itoa(lgetc(curwp->w_dotp, curwp->w_doto)));
     case EVDISCMD:          return ltos(discmd);
     case EVVERSION:         return VERSION;
     case EVPROGNAME:        return PROGRAM_NAME_LONG;
-    case EVSEED:            return itoa(seed);
+    case EVSEED:            return ue_itoa(seed);
     case EVDISINP:          return ltos(disinp);
-    case EVWLINE:           return itoa(curwp->w_ntrows);
-    case EVCWLINE:          return itoa(getwpos());
+    case EVWLINE:           return ue_itoa(curwp->w_ntrows);
+    case EVCWLINE:          return ue_itoa(getwpos());
     case EVTARGET:
         saveflag = lastflag;
-        return itoa(curgoal);
+        return ue_itoa(curgoal);
     case EVSEARCH:          return pat;
     case EVREPLACE:         return rpat;
     case EVMATCH:           return (patmatch == NULL) ? "" : patmatch;
     case EVKILL:            return getkill();
-    case EVCMODE:           return itoa(curbp->b_mode);
-    case EVGMODE:           return itoa(gmode);
-    case EVTPAUSE:          return itoa(term.t_pause);
+    case EVCMODE:           return ue_itoa(curbp->b_mode);
+    case EVGMODE:           return ue_itoa(gmode);
+    case EVTPAUSE:          return ue_itoa(term.t_pause);
     case EVPENDING:         return ltos(typahead());
-    case EVLWIDTH:          return itoa(llength(curwp->w_dotp));
+    case EVLWIDTH:          return ue_itoa(llength(curwp->w_dotp));
     case EVLINE:            return getctext();
-    case EVGFLAGS:          return itoa(gflags);
-    case EVRVAL:            return itoa(rval);
-    case EVTAB:             return itoa(tabmask + 1);
-    case EVOVERLAP:         return itoa(overlap);
-    case EVSCROLLJUMP:      return itoa(scrolljump);
+    case EVGFLAGS:          return ue_itoa(gflags);
+    case EVRVAL:            return ue_itoa(rval);
+    case EVTAB:             return ue_itoa(tabmask + 1);
+    case EVOVERLAP:         return ue_itoa(overlap);
+    case EVSCROLLJUMP:      return ue_itoa(scrolljump);
     case EVSCROLL:          return ltos(term.t_scroll != NULL);
-    case EVINMB:            return itoa(inmb);
-    case EVFCOL:            return(itoa(curwp->w_fcol));
+    case EVINMB:            return ue_itoa(inmb);
+    case EVFCOL:            return(ue_itoa(curwp->w_fcol));
     case EVHSCROLL:         return(ltos(hscroll));
-    case EVHJUMP:           return(itoa(hjump));
+    case EVHJUMP:           return(ue_itoa(hjump));
     case EVYANKMODE:        switch (yank_mode) {
                             case Old:
                                 return("old");
@@ -267,7 +267,7 @@ char *gtenv(char *vname)
                             }
                             return("");
                             break;
-    case EVAUTOCLEAN:       return(itoa(autoclean));
+    case EVAUTOCLEAN:       return(ue_itoa(autoclean));
     case EVREGLTEXT:        return regionlist_text;
     case EVREGLNUM:         return regionlist_number;
     }
@@ -312,7 +312,7 @@ int setvar(int f, int n)
 
         /* get the value for that variable */
         if (f == TRUE)
-                strcpy(value, itoa(n));
+                strcpy(value, ue_itoa(n));
         else {
                 status = mlreply("Value: ", &value[0], NSTRING);
                 if (status != TRUE)
@@ -642,13 +642,13 @@ int svar(struct variable_description *var, char *value)
 }
 
 /*
- * itoa:
+ * ue_itoa:
  *      integer to ascii string.......... This is too
  *      inconsistant to use the system's
  *
  * int i;               integer to translate to a string
  */
-char *itoa(int i)
+char *ue_itoa(int i)
 {
         int digit;      /* current digit being used */
         char *sp;       /* pointer into result */
