@@ -1252,8 +1252,10 @@ int execute(int c, int f, int n) {
             }
         }
         if (inmb) {
-            if (ktp->k_type == FUNC_KMAP && ktp->fi->opt.not_mb)
+            if (ktp->k_type == FUNC_KMAP && ktp->fi->opt.not_mb) {
                 run_not_in_mb = 1;
+                not_in_mb.funcname = ktp->fi->n_name;
+            }
             else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
                  struct buffer *proc_bp;
                  char pbuf[NBUFN+1];
@@ -1261,11 +1263,11 @@ int execute(int c, int f, int n) {
                  strcpy(pbuf+1, ktp->hndlr.pbp);
                  if ((proc_bp = bfind(pbuf, FALSE, 0)) != NULL) {
                     if (proc_bp->btp_opt.not_mb) run_not_in_mb = 1;
+                    not_in_mb.funcname = ktp->hndlr.pbp;
                  }
             }
         }
         if (run_not_in_mb) {
-            not_in_mb.funcname = ktp->fi->n_name;
             not_in_mb.keystroke = c;
             execfunc = not_in_mb_error;
         }
