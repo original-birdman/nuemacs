@@ -2421,3 +2421,163 @@ etc/uemacs.hlp
    Update to version GGR4.134
 
 ==========
+
+display.c
+edef.h
+exec.c
+globals.c
+random.c
+    Remove modename[] and just use mode2name[] case-insensitively in tests.
+
+
+buffer.c
+file.c
+    Run resetkey() after file-hooks run [file.c]
+    Set the b_active flag before running readin() (and hence before
+    file-hooks run) [buffer.c]
+
+file.c
+    Fix minibuffer display when reading a non-existent file given on the
+    command line ([New file]).
+
+exec.c
+main.c
+estruct.h
+    Allow store-procedure to set skip_in_macro and not_mb flags for
+    the stored buffer code and check for this in execute().
+
+names.c
+etc/uemacs.rc
+    Tag more functions as not_mb ones.
+    names.c:
+        change-file-name, change-screen-size,  change-screen-width,
+        count-words, move-window-down, move-window-up, name-buffer,
+        restore-window, save-window, scroll-next-up, scroll-next-down,
+        set-encryption-key, set-fill-column, unmark-buffer
+    etc/uemacs.rc
+        spell-check, lr-justify
+
+word.c
+    Use linsert_uc() to add the wbuf word, not linsert_byte(), as it is
+    a unicode array.
+
+line.c
+line.h
+names.c
+    Change yankmb() to check the yank_mode setting (as yank() does).
+    Change rotate_kill_ring() to be an internal, rather than a bindable,
+    function.
+    Mark lowrite() and ldelnewline() as static, not external.
+    Removed lgetchar() - lgetgrapheme() must be used.
+    Mark lputgrapheme() as CURRENTLY_UNUSED.
+
+random.c
+ebind.h
+estruct.h
+    When in DOS mode, allow for the extra \r at the end of each line
+    when reporting the position in showcpos().
+    Reformat file to 4-space indenting.
+    Assume NBRACE is set (remove old insbrace() code) and remove its
+    setting from estruct.h.
+    Assume CFENCE is set.
+    [Also main.c and names.c fixups later...]
+
+----------
+Various removals for optional code. Just set these to be on - there is
+sufficient memory in systems nowadays.
+This makes the code easier to read.
+----------
+
+ebind.h estruct.h exec.c names.c word.c
+    Assume PROC is set.
+
+buffer.c crypt.c ebind.h estruct.h file.c fileio.c main.c names.c
+    Assume CRYPT is set.
+
+basic.c buffer.c crypt.c ebind.h estruct.h file.c fileio.c main.c
+names.c word.c
+    Assume WORDPRO is set.
+
+ebind.h estruct.h isearch.c names.c
+    Assume ISRCH is set.
+
+bind.c ebind.h estruct.h names.c
+    Assume APROP is set.
+
+bind.c ebind.h estruct.h names.c random.c
+    Assume AEDIT is set.
+
+display.c estruct.h main.c
+    Assume CLEAN is NOT SET!
+
+ansi.c bind.c epath.h estruct.h file.c fileio.c search.c spawn.c tcap.c
+termio.c vt52.c
+    Remove V7 and EGA.
+
+ansi.c basic.c display.c estruct.h eval.c evar.h ibmpc.c line.c random.c
+tcap.c vt52.c window.c
+    Assume SCROLLCODE and CVMVAS are set.
+
+estruct.h eval.c main.c termio.c
+    Assume TYPEAH is set.
+    Remove unused ADDCR from estruct.h
+
+posix.c
+estruct.h
+Makefile
+tcap.c
+    Enable compiling under CygWin.
+    If __CYGWIN__ is set, define __linux__  [estruct.h]
+    Set compilation options if under CygWin [Makefile]
+    Set undefined (non-POSIX) XCASE, ECHOPRT and PENDIN to 0 [posix.c]
+    Do include curses.h and term,.h for CygWin [tcap.c]
+
+
+display.c
+eval.c
+exec.c
+main.c
+random.c
+efunc.h
+    Change itoa() to ue_itoa() to avoid name-clash in CygWin.
+
+efunc.h
+display.c
+    Fixes for handling the ex field in graphemes.
+    Add no_free flag to set_grapheme() and set it when calling for a
+    pscreen entry. Also make the function static (and move it up the file)
+    as it is only used here.
+    Don't allocate space for an existing ex section in clone_grapheme.
+    This was a memory leak, as we never free from pscreen.
+
+estruct.h fileio.c
+    Assume CTRLZ is NOT SET!
+
+
+bind.c complet.c ebind.h epath.h estruct.h file.c fileio.c input.c
+main.c spawn.c termio.c
+    Assume MSDOS is NOT SET!
+
+main.c
+    Add SIGABRT to the list of signals handled.
+
+estruct.h search.c
+    Assume TURBO is NOT SET!
+
+estruct.h input.c search.c
+    Assume MSC is NOT SET!
+
+eval.c
+exec.c
+line.c
+line.h
+main.c
+random.c
+   Rename ldelchar() to ldelgrapheme(), as that is what it does.
+
+version.h
+etc/uemacs.hlp
+../test-files/multi-uc-graphemes
+   Update to version GGR4.135
+
+==========
