@@ -24,11 +24,6 @@ static int remap_c_on_intr = 0;
 #endif
 #include "line.h"
 
-#if MSC
-void sleep();
-#define MAXDEPTH 8
-#endif
-
 #if UNIX
 #define COMPLC  1
 #else
@@ -585,14 +580,6 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
  * can't initialize it to empty here, as some callers use it as a
  * temporary buffer for the prompt!
  */
-#if MSC
-    if (mb_info.mbdepth >= MAXDEPTH) {
-        TTbeep();
-        buf = "";               /* Ensure we never return garbage */
-        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
-        return(ABORT);
-    }
-#endif
 
 /* Expansion commands leave junk in mb */
 

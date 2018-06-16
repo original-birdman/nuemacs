@@ -78,12 +78,10 @@
 
 /*      Compiler definitions                    */
 #define UNIX    0               /* a random UNIX compiler */
-#define MSC     0               /* MicroSoft C compiler, versions 3 up */
 
 #else
 
 #define UNIX    (BSD | USG)
-#define MSC     0
 
 #endif                          /*autoconf */
 
