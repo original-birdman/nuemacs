@@ -1357,7 +1357,7 @@ after_mb_check:
             curwp->w_doto < curwp->w_dotp->l_used &&
             (lgetc(curwp->w_dotp, curwp->w_doto) != '\t' ||
             (curwp->w_doto) % 8 == 7))
-                ldelchar(1, FALSE);
+                ldelgrapheme(1, FALSE);
 
 /* Do the appropriate insertion */
         if (c == '}' && (curbp->b_mode & MDCMOD) != 0) {

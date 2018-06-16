@@ -284,7 +284,7 @@ static int lowrite(unicode_t c) {
     if (curwp->w_doto < curwp->w_dotp->l_used &&
          (lgetc(curwp->w_dotp, curwp->w_doto) != '\t' ||
          ((curwp->w_doto) & tabmask) == tabmask))
-                ldelchar(1, FALSE);
+                ldelgrapheme(1, FALSE);
     return linsert_uc(1, c);
 }
 
@@ -383,7 +383,7 @@ int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
     int len = llength(curwp->w_dotp);
 
 /* Fudge in NL if at eol.
- * ldelchar needs to know there is one char to step over
+ * ldelgrapheme needs to know there is one char to step over
  * Also, return nothing if out of range(!).
  */
     if (curwp->w_doto == len) {
@@ -528,9 +528,9 @@ static int ldelnewline(void) {
  * the bytes we scanned".
  * GGR - cater for zero-width characters...with lgetgrapheme.
  *
- * If you want to delete characters, use ldelchar().
+ * If you want to delete character-places<, use ldelgrapheme().
  */
-int ldelchar(long n, int kflag) {
+int ldelgrapheme(long n, int kflag) {
     while (n-- > 0) {
         struct grapheme gc;
         if (!ldelete(lgetgrapheme(&gc, TRUE), kflag)) return FALSE;

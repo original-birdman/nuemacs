@@ -39,7 +39,7 @@ extern int linsert_uc(int n, unicode_t c);
 extern int lover(char *ostr);
 extern int lnewline(void);
 extern int ldelete(long n, int kflag);
-extern int ldelchar(long n, int kflag);
+extern int ldelgrapheme(long n, int kflag);
 extern int lgetgrapheme(struct grapheme *, int);
 #ifdef CURRENTLY_UNUSED
 extern int lputgrapheme(struct grapheme *gp);

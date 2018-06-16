@@ -364,7 +364,7 @@ int detab(int f, int n) {
         while (curwp->w_doto < llength(curwp->w_dotp)) {
 /* If we have a tab */
             if (lgetc(curwp->w_dotp, curwp->w_doto) == '\t') {
-                ldelchar(1, FALSE);
+                ldelgrapheme(1, FALSE);
                 insspace(TRUE, (tabmask + 1) - (curwp->w_doto & tabmask));
             }
             forw_grapheme(1);
@@ -776,7 +776,7 @@ int forwdel(int f, int n) {
         if ((lastflag & CFKILL) == 0) kdelete();
         thisflag |= CFKILL;
     }
-    return ldelchar((long) n, f);
+    return ldelgrapheme((long) n, f);
 }
 
 /*
@@ -797,7 +797,7 @@ int backdel(int f, int n) {
             if ((lastflag & CFKILL) == 0) kdelete();
             thisflag |= CFKILL;
         }
-        s = ldelchar(n, f);
+        s = ldelgrapheme(n, f);
     }
     return s;
 }

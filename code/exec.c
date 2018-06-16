@@ -717,12 +717,12 @@ int ptt_handler(int c) {
         return TRUE;
     }
 /* We have to delete the added character before returning.
- * NOTE!!!  ldelchar() will actually delete a grapheme!
+ * NOTE!!!  ldelgrapheme() will (clearly) delete a grapheme!
  * But we've just inserted the unichar we are deleting, so it can't
- * consist of multiple unicode chars - and we'll only delete the one.
+ * consist of multiple unicode chars - so we'll only delete the one.
  */
     curwp->w_doto = orig_doto;
-    ldelchar(1, FALSE);
+    ldelgrapheme(1, FALSE);
     return FALSE;
 }
 
