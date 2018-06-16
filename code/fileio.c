@@ -105,10 +105,6 @@ int ffclose(void) {
     fline = NULL;
     eofflag = FALSE;
 
-#if MSDOS & CTRLZ
-    fputc(26, ffp);         /* add a ^Z at the end of the file */
-#endif
-
 #if USG | BSD | (MSDOS & (MSC | TURBO))
     if (fclose(ffp) != FALSE) {
         mlwrite("Error closing file");
