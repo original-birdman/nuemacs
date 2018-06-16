@@ -333,7 +333,7 @@ int lnewline(void) {
  * AND it is not empty!
  * In that case we don't need to allocate a new line, but do need to
  * update the current line pointer (to the next line, which will be headp)
- * and set doto top zero.
+ * and set doto to zero.
  */
     if (force_newline) {
         force_newline = 0;          /* Reset the force */
@@ -360,16 +360,24 @@ int lnewline(void) {
     lp1->l_bp = lp2;
     lp2->l_bp->l_fp = lp2;
     lp2->l_fp = lp1;
-    wp = wheadp;                        /* Windows              */
-    while (wp != NULL) {
-        if (wp->w_linep == lp1)     wp->w_linep = lp2;
+    wp = wheadp;            /* Windows              */
+
+/* When inserting a newline we want to keep any mark on the original line if
+ * the newline is inserted after it, *including* if we insert a newline
+ * when already at the end of line.
+ * But we want to move dot to the next line if we insert a newline when
+ * already at the end of line.
+ * Hence the different < and <= tests below.
+ */
+     while (wp != NULL) {
+        if (wp->w_linep == lp1)      wp->w_linep = lp2;
         if (wp->w_dotp == lp1) {
-            if (wp->w_doto < doto)  wp->w_dotp = lp2;
-            else                    wp->w_doto -= doto;
+            if (wp->w_doto < doto)   wp->w_dotp = lp2;
+            else                     wp->w_doto -= doto;
         }
         if (wp->w_markp == lp1) {
-            if (wp->w_marko < doto) wp->w_markp = lp2;
-            else                    wp->w_marko -= doto;
+            if (wp->w_marko <= doto) wp->w_markp = lp2;
+            else                     wp->w_marko -= doto;
         }
         wp = wp->w_wndp;
     }
@@ -459,11 +467,11 @@ static int ldelnewline(void) {
     struct window *wp;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-        return rdonly();        /* we are in read only mode     */
+        return rdonly();            /* we are in read only mode     */
     lp1 = curwp->w_dotp;
     lp2 = lp1->l_fp;
     if (lp2 == curbp->b_linep) {    /* At the buffer end.           */
-        if (lp1->l_used == 0)   /* Blank line.                  */
+        if (lp1->l_used == 0)       /* Blank line.                  */
             lfree(lp1);
         return TRUE;
     }
@@ -651,18 +659,17 @@ int putctext(char *iline) {
  * in case the buffer has grown to immense size. No errors.
  */
 void kdelete(void) {
-    struct kill *kp;        /* ptr to scan kill buffer chunk list */
 
 /* First, delete all the chunks on the bottom item.
  * This is the one we are about to remove.
  */
     if (kbufh[KRING_SIZE-1] != NULL) {
-        kbufp = kbufh[KRING_SIZE-1];
+        struct kill *np;        /* Next pointer */
         struct kill *tp = kbufh[KRING_SIZE-1];
         while (tp != NULL) {
-            kp = kbufp->d_next;
+            np = kbufp->d_next;
             free(tp);
-            tp = kp;
+            tp = np;
         }
     }
 
@@ -839,6 +846,7 @@ int yank(int f, int n) {
             kp = kp->d_next;
         }
     }
+
 /* This will display the inserted text, leaving the last line at the last
  * but one line, if there is sufficient text for that, otherwise with the
  * top line at the top.
@@ -956,8 +964,8 @@ int yank_replace(int f, int n) {
     }
 
 /* This is essentially the killregion() code (q.v.).
- * But we don't want to check for some things, and don't wan't ldelete()
- * to move the deleted region to the kill ring (it's alreayd there...).
+ * But we don't want to check for some things, and don't want ldelete()
+ * to move the deleted region to the kill ring (it's already there...).
  */
     if (do_kill) {              /* May not be killing */
         struct region region;
