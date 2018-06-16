@@ -13,11 +13,6 @@
 #include        "estruct.h"
 #include        "edef.h"
 
-#if     MSDOS & (MSC | TURBO)
-union REGS rg;                  /* cpu register for use of DOS calls */
-int nxtchar = -1;               /* character held from type ahead    */
-#endif
-
 #if USG                         /* System V */
 #include        <signal.h>
 #include        <termio.h>
@@ -75,14 +70,6 @@ char tobuf[TBUFSIZ];            /* terminal output buffer */
  */
 void ttopen(void)
 {
-#if MSDOS & (TURBO | MSC)
-        /* kill the CONTROL-break interupt */
-        rg.h.ah = 0x33;         /* control-break check dos call */
-        rg.h.al = 1;            /* set the current state */
-        rg.h.dl = 0;            /* set it OFF */
-        intdos(&rg, &rg);       /* go for it! */
-#endif
-
 #if USG
         ioctl(0, TCGETA, &otermio);     /* save old settings */
         ntermio.c_iflag = 0;            /* setup new settings */
@@ -147,14 +134,6 @@ void ttopen(void)
  */
 void ttclose(void)
 {
-#if MSDOS & (TURBO | MSC)
-        /* restore the CONTROL-break interupt */
-        rg.h.ah = 0x33;         /* control-break check dos call */
-        rg.h.al = 1;            /* set the current state */
-        rg.h.dl = 1;            /* set it ON */
-        intdos(&rg, &rg);       /* go for it! */
-#endif
-
 #if USG
         ioctl(0, TCSETAW, &otermio);    /* restore terminal settings */
         fcntl(0, F_SETFL, kbdflgs);
@@ -174,10 +153,6 @@ void ttclose(void)
  */
 void ttputc(char c)
 {
-#if MSDOS & ~IBMPC
-        bdos(6, c, 0);
-#endif
-
 #if USG | BSD
         fputc(c, stdout);
 #endif
@@ -189,9 +164,6 @@ void ttputc(char c)
  */
 int ttflush(void)
 {
-#if MSDOS
-#endif
-
 #if USG | BSD
 /*
  * Add some terminal output success checking, sometimes an orphaned
@@ -221,23 +193,6 @@ int ttflush(void)
  */
 int ttgetc(void)
 {
-#if     MSDOS & (MSC | TURBO)
-        int c;                  /* character read */
-
-        /* if a char already is ready, return it */
-        if (nxtchar >= 0) {
-                c = nxtchar;
-                nxtchar = -1;
-                return c;
-        }
-
-        /* call the dos to get a char */
-        rg.h.ah = 7;            /* dos Direct Console Input call */
-        intdos(&rg, &rg);
-        c = rg.h.al;            /* grab the char */
-        return c & 255;
-#endif
-
 #if BSD
         return 255 & fgetc(stdin);      /* 8BIT P.K. */
 #endif
@@ -260,11 +215,6 @@ int ttgetc(void)
 */
 
 int typahead(void) {
-#if MSDOS & (MSC | TURBO)
-    if (kbhit() != 0) return TRUE;
-    else              return FALSE;
-#endif
-
 #if BSD
     int x;                  /* holds # of pending chars */
 
@@ -281,7 +231,7 @@ int typahead(void) {
     return kbdqp;
 #endif
 
-#if !UNIX & !MSDOS
+#if !UNIX
     return FALSE;
 #endif
 }

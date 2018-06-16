@@ -162,10 +162,6 @@ int getfile(char *fname, int lockfl) {
     int i;
     int s;
     char bname[NBUFN];      /* buffer name to put file */
-
-#if MSDOS
-    mklower(fname);         /* msdos isn't case sensitive */
-#endif
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
             swbuffer(bp);
@@ -369,12 +365,7 @@ void makename(char *bname, char *fname)
         unsigned int nb = utf8_to_unicode(fname, clen, maxlen, &uc);
         if (nb == 0) break;
         clen += nb;
-#if MSDOS
-        if (uc == ':' || uc == '\\' || uc == '/')
-#endif
-#if USG | BSD
         if (uc == '/')
-#endif
             fn4bn_start = clen;
     }
 

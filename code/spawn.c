@@ -16,10 +16,6 @@
 #include        <signal.h>
 #endif
 
-#if MSDOS & (MSC | TURBO)
-#include        <process.h>
-#endif
-
 static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
 
 #ifdef SIGWINCH
@@ -71,15 +67,6 @@ int spawncli(int f, int n)
 
 #ifdef SIGWINCH
         get_orig_size();
-#endif
-#if MSDOS & (MSC | TURBO)
-        movecursor(term.t_nrow, 0);     /* Seek to last line.   */
-        TTflush();
-        TTkclose();
-        shellprog("");
-        TTkopen();
-        sgarbf = TRUE;
-        return TRUE;
 #endif
 #if USG | BSD
         movecursor(term.t_nrow, 0);     /* Seek to last line.   */
@@ -152,21 +139,6 @@ int spawn(int f, int n)
 #ifdef SIGWINCH
         get_orig_size();
 #endif
-#if MSDOS
-        if ((s = mlreply("!", line, NLINE)) != TRUE)
-                return s;
-        movecursor(term.t_nrow, 0);
-        TTkclose();
-        shellprog(line);
-        TTkopen();
-        /* if we are interactive, pause here */
-        if (clexec == FALSE) {
-                mlputs("\r\n(End)");
-                tgetc();
-        }
-        sgarbf = TRUE;
-        return TRUE;
-#endif
 #if USG | BSD
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
@@ -215,23 +187,6 @@ int execprg(int f, int n)
 #ifdef SIGWINCH
         get_orig_size();
 #endif
-
-#if MSDOS
-        if ((s = mlreply("$", line, NLINE)) != TRUE)
-                return s;
-        movecursor(term.t_nrow, 0);
-        TTkclose();
-        execprog(line);
-        TTkopen();
-        /* if we are interactive, pause here */
-        if (clexec == FALSE) {
-                mlputs("\r\n(End)");
-                tgetc();
-        }
-        sgarbf = TRUE;
-        return TRUE;
-#endif
-
 #if USG | BSD
         if ((s = mlreply("!", line, NLINE)) != TRUE)
                 return s;
@@ -272,12 +227,6 @@ int pipecmd(int f, int n)
 
         static char filnam[NSTRING] = "command";
 
-#if MSDOS
-        char *tmp;
-        FILE *fp;
-        int len;
-#endif
-
         /* don't allow this command if restricted */
         if (restflag)
                 return resterr();
@@ -285,20 +234,6 @@ int pipecmd(int f, int n)
 #ifdef SIGWINCH
         get_orig_size();
 #endif
-#if MSDOS
-        if ((tmp = getenv("TMP")) == NULL
-            && (tmp = getenv("TEMP")) == NULL)
-                strcpy(filnam, "command");
-        else {
-                strcpy(filnam, tmp);
-                len = strlen(tmp);
-                if (len <= 0 || filnam[len - 1] != '\\'
-                    && filnam[len - 1] != '/')
-                        strcat(filnam, "\\");
-                strcat(filnam, "command");
-        }
-#endif
-
         /* get the command to pipe in */
         if ((s = mlreply("@", line, NLINE)) != TRUE)
                 return s;
@@ -321,22 +256,6 @@ int pipecmd(int f, int n)
 
                         return FALSE;
         }
-#if MSDOS
-        strcat(line, " >>");
-        strcat(line, filnam);
-        movecursor(term.t_nrow, 0);
-        TTkclose();
-        shellprog(line);
-        TTkopen();
-        sgarbf = TRUE;
-        if ((fp = fopen(filnam, "r")) == NULL) {
-                s = FALSE;
-        } else {
-                fclose(fp);
-                s = TRUE;
-        }
-#endif
-
 #if USG | BSD
         TTflush();
         TTclose();              /* stty to old modes    */
@@ -418,16 +337,6 @@ int filter_buffer(int f, int n)
                 strcpy(bp->b_fname, tmpnam);
                 return FALSE;
         }
-#if MSDOS
-        strcat(line, " <fltinp >fltout");
-        movecursor(term.t_nrow - 1, 0);
-        TTkclose();
-        shellprog(line);
-        TTkopen();
-        sgarbf = TRUE;
-        s = TRUE;
-#endif
-
 #if USG | BSD
         ttput1c('\n');          /* Already have '\r'    */
         TTflush();
@@ -467,128 +376,3 @@ int filter_buffer(int f, int n)
         unlink(filnam2);
         return TRUE;
 }
-
-#if MSDOS & (TURBO | MSC)
-
-/*
- * SHELLPROG: Execute a command in a subshell
- *
- * char *cmd;           Incoming command line to execute
- */
-int shellprog(char *cmd)
-{
-        char *shell;            /* Name of system command processor */
-        char *p;                /* Temporary pointer */
-        char swchar;            /* switch character to use */
-        union REGS regs;        /* parameters for dos call */
-        char comline[NSTRING];  /* constructed command line */
-
-        /*  detect current switch character and set us up to use it */
-        regs.h.ah = 0x37;       /*  get setting data  */
-        regs.h.al = 0x00;       /*  get switch character  */
-        intdos(&regs, &regs);
-        swchar = (char) regs.h.dl;
-
-        /*  get name of system shell  */
-        if ((shell = getenv("COMSPEC")) == NULL) {
-                return FALSE;   /*  No shell located  */
-        }
-
-        /* trim leading whitespace off the command */
-        while (*cmd == ' ' || *cmd == '\t') /*  find out if null command */
-                cmd++;
-
-        /**  If the command line is not empty, bring up the shell  **/
-        /**  and execute the command.  Otherwise, bring up the     **/
-        /**  shell in interactive mode.   **/
-
-        if (*cmd) {
-                strcpy(comline, shell);
-                strcat(comline, " ");
-                comline[strlen(comline) + 1] = 0;
-                comline[strlen(comline)] = swchar;
-                strcat(comline, "c ");
-                strcat(comline, cmd);
-                return execprog(comline);
-        } else
-                return execprog(shell);
-}
-
-/*
- * EXECPROG:
- *      A function to execute a named program
- *      with arguments
- *
- * char *cmd;           Incoming command line to execute
- */
-int execprog(char *cmd)
-{
-        char *sp;               /* temporary string pointer */
-        char f1[38];            /* FCB1 area (not initialized */
-        char f2[38];            /* FCB2 area (not initialized */
-        char prog[NSTRING];     /* program filespec */
-        char tail[NSTRING];     /* command tail with length byte */
-        union REGS regs;        /* parameters for dos call  */
-        struct SREGS segreg;    /* segment registers for dis call */
-        struct pblock {         /* EXEC parameter block */
-                short envptr;   /* 2 byte pointer to environment string */
-                char *cline;    /* 4 byte pointer to command line */
-                char *fcb1;     /* 4 byte pointer to FCB at PSP+5Ch */
-                char *fcb2;     /* 4 byte pointer to FCB at PSP+6Ch */
-        } pblock;
-        char *flook();
-
-        /* parse the command name from the command line */
-        sp = prog;
-        while (*cmd && (*cmd != ' ') && (*cmd != '\t'))
-                *sp++ = *cmd++;
-        *sp = 0;
-
-        /* and parse out the command tail */
-        while (*cmd && ((*cmd == ' ') || (*cmd == '\t')))
-                ++cmd;
-        *tail = (char) (strlen(cmd));   /* record the byte length */
-        strcpy(&tail[1], cmd);
-        strcat(&tail[1], "\r");
-
-        /* look up the program on the path trying various extentions */
-        if ((sp = flook(prog, TRUE, INTABLE)) == NULL)
-                if ((sp = flook(strcat(prog, ".exe"), TRUE, INTABLE)) == NULL) {
-                        strcpy(&prog[strlen(prog) - 4], ".com");
-                        if ((sp = flook(prog, TRUE, INTABLE)) == NULL)
-                                return FALSE;
-                }
-        strcpy(prog, sp);
-
-        /* get a pointer to this PSPs environment segment number */
-        segread(&segreg);
-
-        /* set up the EXEC parameter block */
-        pblock.envptr = 0;      /* make the child inherit the parents env */
-        pblock.fcb1 = f1;       /* point to a blank FCB */
-        pblock.fcb2 = f2;       /* point to a blank FCB */
-        pblock.cline = tail;    /* parameter line pointer */
-
-        /* and make the call */
-        regs.h.ah = 0x4b;       /* EXEC Load or Execute a Program */
-        regs.h.al = 0x00;       /* load end execute function subcode */
-        segreg.ds = ((unsigned long) (prog) >> 16);     /* program name ptr */
-        regs.x.dx = (unsigned int) (prog);
-        segreg.es = ((unsigned long) (&pblock) >> 16);  /* set up param block ptr */
-        regs.x.bx = (unsigned int) (&pblock);
-#if TURBO | MSC
-        intdosx(&regs, &regs, &segreg);
-        if (regs.x.cflag == 0) {
-                regs.h.ah = 0x4d;       /* get child process return code */
-                intdos(&regs, &regs);   /* go do it */
-                rval = regs.x.ax;       /* save child's return code */
-        } else
-#if MSC
-                rval = -1;
-#else
-                rval = -_doserrno;      /* failed child call */
-#endif
-#endif
-        return (rval < 0) ? FALSE : TRUE;
-}
-#endif

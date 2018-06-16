@@ -15,21 +15,6 @@ static void close_dir(void);
 
 static char picture[NFILEN], directory[NFILEN];
 
-#if MSDOS
-#if  TURBO
-#include <conio.h>
-#include <dir.h>
-struct ffblk fileblock; /* structure for directory searches */
-#else
-#include <dos.h>
-struct find_t fileblock;
-/*
-#define FINDALL _A_NORMAL|_A_RDONLY|_A_HIDDEN|_A_SYSTEM|_A_VOLID|_A_SUBDIR|_A_ARCH
-*/
-#define FINDALL _A_NORMAL|_A_SUBDIR
-#endif
-#endif
-
 static char *getffile(char *), *getnfile(void);
 static char *getfbuffer(char *, int), *getnbuffer(char *, int);
 static short ljust(char *);
@@ -62,7 +47,7 @@ int comp_file(char *name, char *choices)
  * don't end up wrapping in the minibuffer line.
  */
     max = term.t_ncol;
-#if BSD | (MSDOS & MSC)
+#if BSD
     max--;
 #endif
     l = (match_length < max) ? match_length : max;
@@ -98,17 +83,8 @@ int comp_file(char *name, char *choices)
         }
     }
     close_dir();
-#if MSDOS
-    mklower(so_far);
-#endif
-
     if (directory[0]) {
         strcpy(name, directory);
-/*
-#if MSDOS
-        strcat(name, "\\");
-#endif
-*/
         strcat(name, so_far);
     }
     else {
@@ -117,11 +93,6 @@ int comp_file(char *name, char *choices)
 
     if (unique && strcmp(name, supplied))
         *choices = 0;
-#if MSDOS
-    else
-        mklower(choices);
-#endif
-
     return(TRUE);
 }
 /*
@@ -130,99 +101,6 @@ int comp_file(char *name, char *choices)
  * from the file part.  Call getnfile() to return the first match.  If
  * the system is not case-sensitive, force lower case.
  */
-#if MSDOS
-char *getffile(char *fspec)
-{
-        int point;                      /* index into various strings */
-        char *strrchr(), *index();      /* indexing function */
-        char *p, *q;                    /* handy pointers */
-        int extflag;                    /* is there an extension? */
-        int len;
-        char lookfor[NFILEN];
-
-        strcpy(directory, mklower(fspec));
-        strcpy(picture, directory);
-        len = strlen(directory);
-        point = len -1;
-        while (point >= 0 && (directory[point] != '/' &&
-            directory[point] != '\\' && directory[point] != ':'))
-                --point;
-        /* No directory part */
-        if (point<0)
-            directory[0] = 0;
-        else {
-            point++;
-            directory[point] = 0;
-        }
-        point++;
-        /* check for an extension */
-        extflag = FALSE;
-        while (point<len) {
-            if (picture[point] == '.') {
-                    extflag = TRUE;
-                    break;
-            }
-            point++;
-        }
-
-        /* Build wildcard picture */
-        strcat(picture, "*");
-        if (!extflag)
-                strcat(picture, ".*");
-
-        /* Start things off.. */
-#if MSC
-        if (_dos_findfirst(picture, FINDALL, &fileblock))
-#else
-        if (findfirst(picture, &fileblock, 0) == -1)
-#endif
-            return(NULL);
-#if MSC
-
-        if ((strcmp(fileblock.name, ".") == 0) ||
-            (strcmp(fileblock.name, "..") == 0))
-                return(getnfile());
-
-        if (fileblock.attrib == _A_SUBDIR)
-                strcat(fileblock.name, "\\");
-
-        return(fileblock.name);
-#else
-        return(fileblock.ff_name);
-#endif
-}
-
-/*
- * Should work out if it's a directory.. if so return with a trailing \
- */
-char *getnfile(void)
-{
-#if MSC
-    if (_dos_findnext(&fileblock))
-#else
-    if (findnext(&fileblock) == -1)
-#endif
-        return(NULL);
-#if MSC
-        if ((strcmp(fileblock.name, ".") == 0) ||
-            (strcmp(fileblock.name, "..") == 0))
-                return(getnfile());
-
-    if (fileblock.attrib == _A_SUBDIR)
-                strcat(fileblock.name, "\\");
-
-    return(fileblock.name);
-#else
-    return(fileblock.ff_name);
-#endif
-}
-
-/* nop */
-static void close_dir(void)
-{
-}
-#endif
-
 #if BSD | USG
 #include <sys/types.h>
 
@@ -373,9 +251,6 @@ int comp_buffer(char *name, char *choices)
     strcpy(supplied, name);
     match_length = strlen(so_far);
     max = term.t_ncol;
-#if MSDOS & IBMPC
-    max--;
-#endif
     l = (match_length < max) ? match_length : max;
 /* We also need to check we are not going to overflow the
  *  destination buffer, and we have to allow for the final NUL

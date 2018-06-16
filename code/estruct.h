@@ -35,13 +35,9 @@
 /* Define an invalid unicode character to mark the end of lists */
 #define UEM_NOCHAR 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
 
-#ifdef  MSDOS
-#undef  MSDOS
-#endif
-
 /* Machine/OS definitions. */
 
-#if defined(AUTOCONF) || defined(MSDOS) || defined(BSD) || defined(SYSV)
+#if defined(AUTOCONF) || defined(BSD) || defined(SYSV)
 
 /* Cygwin is (as far as we are concerned) just like Linux */
 
@@ -50,12 +46,6 @@
 #endif
 
 /* Make an intelligent guess about the target system. */
-
-#if defined(__TURBOC__)
-#define MSDOS 1 /* MS/PC DOS 3.1-4.0 with Turbo C 2.0 */
-#else
-#define MSDOS 0
-#endif
 
 #if defined(BSD) || defined(sun) || defined(ultrix) || (defined(vax) && defined(unix)) || defined(ultrix) || defined(__osf__)
 #ifndef BSD
@@ -79,7 +69,6 @@
 
 #else
 
-#define MSDOS   1               /* MS-DOS                       */
 #define BSD     0               /* UNIX BSD 4.2 and ULTRIX      */
 #define USG     0               /* UNIX system V                */
 
@@ -96,7 +85,6 @@
 
 #define UNIX    (BSD | USG)
 #define MSC     0
-#define TURBO   MSDOS
 
 #endif                          /*autoconf */
 
@@ -169,14 +157,6 @@
 #define       poke(a,b,c,d)   movedata(FP_SEG(c),FP_OFF(c),a,b,d)
 #endif
 
-#if MSDOS & MSC
-#include        <dos.h>
-#include        <memory.h>
-#define peek(a,b,c,d)   movedata(a,b,FP_SEG(c),FP_OFF(c),d)
-#define poke(a,b,c,d)   movedata(FP_SEG(c),FP_OFF(c),a,b,d)
-#define movmem(a, b, c)         memcpy(b, a, c)
-#endif
-
 /* Define some ability flags. */
 
 #if IBMPC
@@ -185,7 +165,7 @@
 #define MEMMAP  0
 #endif
 
-#if MSDOS | USG | BSD
+#if USG | BSD
 #define ENVFUNC 1
 #else
 #define ENVFUNC 0

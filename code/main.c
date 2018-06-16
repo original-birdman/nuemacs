@@ -66,11 +66,6 @@
 #include "ebind.h"   /* Default key bindings. */
 #include "version.h"
 
-/* For MSDOS, increase the default stack space. */
-#if MSDOS & TURBO
-extern unsigned _stklen = 20000;
-#endif
-
 #ifndef GOOD
 #define GOOD    0
 #endif

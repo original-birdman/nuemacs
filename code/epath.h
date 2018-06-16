@@ -12,9 +12,6 @@
  * NOTE that there must be at least one!!
  */
 #ifndef DFLT_PATH
-#if     MSDOS
-#define DFLT_PATH "\\sys\\public\\", "\\usr\\bin\\", "\\bin\\", "\\", ""
-#endif
 
 #if BSD | USG
 #define DFLT_PATH "/opt/local/etc/", "/usr/local/etc/"

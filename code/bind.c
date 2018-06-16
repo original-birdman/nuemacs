@@ -674,14 +674,10 @@ int startup(char *sfname)
 /* GGR - Define a path-separator
  */
 static char path_sep =
-#if MSDOS
-    '\\'
-#else
 #if BSD | USG
     '/'
 #else
     '\0'
-#endif
 #endif
 ;
 

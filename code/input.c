@@ -29,11 +29,7 @@ void sleep();
 #define MAXDEPTH 8
 #endif
 
-#if     MSDOS && TURBO
-#include        <dir.h>
-#endif
-
-#if (UNIX || (MSDOS && TURBO))
+#if UNIX
 #define COMPLC  1
 #else
 #define COMPLC  0
@@ -354,16 +350,6 @@ int get1key(void)
 
         /* get a keystroke */
         c = tgetc();
-
-#if     MSDOS
-        if (c == 0) {           /* Apply SPEC prefix    */
-                c = tgetc();
-                if (c >= 0x00 && c <= 0x1F)     /* control key? */
-                        c = CONTROL | (c + '@');
-                return SPEC | c;
-        }
-#endif
-
         if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
                 c = CONTROL | (c + '@');
         return c;
@@ -952,25 +938,3 @@ abort:
 
     return(status);
 }
-
-#if MSDOS & MSC
-void sleep(n)
-int n;
-{
-#include <dos.h>
-
-    struct dostime_t tbuf;
-    int sec, dsec, i;
-
-    for (i=0; i<n; i++) {
-        /* Yes, I *know* this is really lazy... */
-        _dos_gettime(&tbuf);
-        sec =  (int)tbuf.second;
-        dsec = (int)tbuf.hsecond / 10;
-        while ((int)tbuf.second == sec)
-            _dos_gettime(&tbuf);
-        while (((int)tbuf.hsecond / 10) != dsec)
-            _dos_gettime(&tbuf);
-    }
-}
-#endif

@@ -105,7 +105,7 @@ int ffclose(void) {
     fline = NULL;
     eofflag = FALSE;
 
-#if USG | BSD | (MSDOS & (MSC | TURBO))
+#if USG | BSD
     if (fclose(ffp) != FALSE) {
         mlwrite("Error closing file");
         return FIOERR;
