@@ -2416,6 +2416,7 @@ word.c
     Changed END_UCLIST to be UEM_NOCHAR, better fitting a more general
     usage.
 
+../CHANGES
 version.h
 etc/uemacs.hlp
    Update to version GGR4.134
@@ -2575,9 +2576,25 @@ main.c
 random.c
    Rename ldelchar() to ldelgrapheme(), as that is what it does.
 
+../CHANGES
 version.h
 etc/uemacs.hlp
 ../test-files/multi-uc-graphemes
    Update to version GGR4.135
+
+========== GGR4.136
+
+main.c
+    Use buffer (proc) name when reporting that an execute-procedure
+    cannot be run in the mini-buffer.
+
+line.c
+    Run through the correct pointers in kdelete.
+    Keep mark on original line if at eol when adding a newline.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.136
 
 ==========
