@@ -451,7 +451,7 @@ static int mcstr(void) {
     if (status) {
         rtpcm = tapcm;
         while (--mj >= 0) {
-#if MSC | TURBO | USG | BSD
+#if MSC | USG | BSD
             *rtpcm++ = *--mcptr;
 #endif
         }

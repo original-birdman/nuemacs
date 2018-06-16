@@ -79,7 +79,6 @@
 /*      Compiler definitions                    */
 #define UNIX    0               /* a random UNIX compiler */
 #define MSC     0               /* MicroSoft C compiler, versions 3 up */
-#define TURBO   1               /* Turbo C/MSDOS */
 
 #else
 
@@ -145,17 +144,6 @@
 #endif /* Autoconf. */
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
-
-/* System dependant library redefinitions, structures and includes. */
-
-#if TURBO
-#include <dos.h>
-#include <mem.h>
-#undef peek
-#undef poke
-#define       peek(a,b,c,d)   movedata(a,b,FP_SEG(c),FP_OFF(c),d)
-#define       poke(a,b,c,d)   movedata(FP_SEG(c),FP_OFF(c),a,b,d)
-#endif
 
 /* Define some ability flags. */
 
