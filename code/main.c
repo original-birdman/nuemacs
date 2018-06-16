@@ -791,8 +791,8 @@ int main(int argc, char **argv) {
 /* Add a handler for other signals, whcih will exit */
     sigact.sa_handler = exit_via_signal;
     sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
-/* The SIGTERM is there so you can trace a loop */
-    int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM };
+/* The SIGTERM is there so you can trace a loop by sending one */
+    int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM, SIGABRT };
     for (unsigned int si = 0; si < sizeof(siglist)/sizeof(siglist[0]); si++)
         sigaction(siglist[si], &sigact, &oldact);
     called_as = argv[0];
