@@ -7,7 +7,7 @@
 #include "edef.h"
 #include "efunc.h"
 
-#if BSD || SVR4
+#if FILOCK && (BSD || SVR4)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
