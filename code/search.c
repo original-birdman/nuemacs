@@ -1290,10 +1290,10 @@ void setpattern(const char apat[], const char tap[]) {
  */
     for (i = 0; i < patlenadd; i++) {
         deltaf[ch_as_uc(apat[i])] = patlenadd - i;
-        if (isalpha (apat[i]))
+        if (isalpha(ch_as_uc(apat[i])))
             deltaf[ch_as_uc(apat[i] ^ DIFCASE)] = patlenadd - i;
         deltab[ch_as_uc(tap[i])] = patlenadd - i;
-        if (isalpha (tap[i]))
+        if (isalpha(ch_as_uc(tap[i])))
             deltab[ch_as_uc(tap[i] ^ DIFCASE)] = patlenadd - i;
     }
 
@@ -1303,11 +1303,11 @@ void setpattern(const char apat[], const char tap[]) {
  */
     lastchfjump = patlenadd + deltaf[ch_as_uc(apat[patlenadd])];
     deltaf[ch_as_uc(apat[patlenadd])] = 0;
-    if (isalpha (apat[patlenadd]))
+    if (isalpha(ch_as_uc(apat[patlenadd])))
         deltaf[ch_as_uc(apat[patlenadd] ^ DIFCASE)] = 0;
     lastchbjump = patlenadd + deltab[ch_as_uc(apat[0])];
     deltab[ch_as_uc(apat[0])] = 0;
-    if (isalpha (apat[0]))
+    if (isalpha(ch_as_uc(apat[0])))
         deltab[ch_as_uc(apat[0] ^ DIFCASE)] = 0;
 }
 
