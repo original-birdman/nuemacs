@@ -181,7 +181,7 @@ static inline int TTputgrapheme(struct grapheme *gp) {
     return status;
 }
 /* Output a single character. mlwrite, mlput* may send zerowidth ones */
-static inline int TTput1char(unicode_t uc) {
+static inline int TTput_1uc(unicode_t uc) {
     int status = TTputc(display_for(uc));
     if (!zerowidth_type(uc)) ttcol++;
     return status;
@@ -189,7 +189,7 @@ static inline int TTput1char(unicode_t uc) {
 
 /* Routine callable from other modules to access the TTput* handlers */
 int ttput1c(char c) {
-    return TTput1char((unicode_t)c);
+    return TTput_1uc((unicode_t)c);
 }
 
 /*
@@ -1502,7 +1502,7 @@ static void mlwrite_ap(const char *fmt, va_list ap) {
         bytes_togo -= used;
         fmt += used;
         if (c != '%') {
-            TTput1char(c);
+            TTput_1uc(c);
         } else {
             if (bytes_togo <= 0) continue;
             int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
@@ -1538,7 +1538,7 @@ static void mlwrite_ap(const char *fmt, va_list ap) {
                 break;
 
             default:
-                TTput1char(c);
+                TTput_1uc(c);
             }
         }
     }
@@ -1591,7 +1591,7 @@ void mlputs(char *s) {
     int idx = 0;
     while (idx < nbytes) {
         idx += utf8_to_unicode(s, idx, nbytes, &c);
-        TTput1char(c);
+        TTput_1uc(c);
     }
 }
 
@@ -1605,14 +1605,14 @@ static void mlputi(int i, int r) {
 
     if (i < 0) {
         i = -i;
-        TTput1char('-');
+        TTput_1uc('-');
     }
 
     q = i / r;
 
     if (q != 0) mlputi(q, r);
 
-    TTput1char(hexdigits[i % r]);
+    TTput_1uc(hexdigits[i % r]);
 }
 
 /*
@@ -1623,14 +1623,14 @@ static void mlputli(long l, int r) {
 
     if (l < 0) {
         l = -l;
-        TTput1char('-');
+        TTput_1uc('-');
     }
 
     q = l / r;
 
     if (q != 0) mlputli(q, r);
 
-    TTput1char((int) (l % r) + '0');
+    TTput_1uc((int) (l % r) + '0');
 }
 
 /*
@@ -1648,9 +1648,9 @@ static void mlputf(int s) {
 
 /* Send out the integer portion */
     mlputi(i, 10);
-    TTput1char('.');
-    TTput1char((f / 10) + '0');
-    TTput1char((f % 10) + '0');
+    TTput_1uc('.');
+    TTput_1uc((f / 10) + '0');
+    TTput_1uc((f % 10) + '0');
 }
 
 #if RAINBOW
