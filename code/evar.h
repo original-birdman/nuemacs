@@ -29,7 +29,7 @@ enum ev_val {
     EVGFLAGS,   EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
-    EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM,
+    EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
 };
 
 /* List of recognized environment variables. */
@@ -89,6 +89,7 @@ static struct evlist {
  { "autoclean", EVAUTOCLEAN },  /* Age at which dumped files are removed */
  { "regionlist_text", EVREGLTEXT },     /* makelist_region() indent */
  { "regionlist_number", EVREGLNUM },    /* numberlist_region() indent */
+ { "autodos",   EVAUTODOS },    /* Check for DOS on read-in? */
 };
 
 /* The tags for user functions - used in struct evlist */

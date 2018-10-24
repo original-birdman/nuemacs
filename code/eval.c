@@ -270,6 +270,7 @@ char *gtenv(char *vname)
     case EVAUTOCLEAN:       return(ue_itoa(autoclean));
     case EVREGLTEXT:        return regionlist_text;
     case EVREGLNUM:         return regionlist_number;
+    case EVAUTODOS:         return(ltos(autodos));
     }
     exit(-12);              /* again, we should never get here */
 }
@@ -634,6 +635,9 @@ int svar(struct variable_description *var, char *value)
             }
             strcpy((vnum == EVREGLTEXT)? regionlist_text: regionlist_number,
                   value);
+            break;
+        case EVAUTODOS:
+            autodos = stol(value);
             break;
         }
         break;

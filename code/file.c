@@ -302,9 +302,17 @@ int readin(char *fname, int lockfl) {
         lp1->l_bp = lp2;
         curbp->b_linep->l_bp = lp1;
         ++nline;
-/* Check for a DOS line ending on line 1 */
-        if (nline == 1 && lp1->l_text[lp1->l_used-1] == '\r')
-            curbp->b_mode |= MDDOSLE;
+/* Check for a DOS line ending on line 1?
+ * Only if the check is enabled...
+ * NOTE!! that we set/unset this flag every time we read line 1,
+ * so a file can be re-read with the required autodos setting.
+ */
+        if (nline == 1) {
+            if (autodos && lp1->l_text[lp1->l_used-1] == '\r')
+                curbp->b_mode |= MDDOSLE;
+            else
+                curbp->b_mode &= ~MDDOSLE;
+        }
         if ((curbp->b_mode & MDDOSLE) != 0 &&
              lp1->l_text[lp1->l_used-1] == '\r') {
              lp1->l_used--;             /* Remove the trailing CR */
