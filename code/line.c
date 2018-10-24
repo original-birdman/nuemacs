@@ -667,7 +667,7 @@ void kdelete(void) {
         struct kill *np;        /* Next pointer */
         struct kill *tp = kbufh[KRING_SIZE-1];
         while (tp != NULL) {
-            np = kbufp->d_next;
+            np = tp->d_next;
             free(tp);
             tp = np;
         }
@@ -676,7 +676,7 @@ void kdelete(void) {
 /* Move the remaining ones down */
 
     int ix = KRING_SIZE-1;
-    while (ix--) {
+    while (ix--) {      /* Move KRING_SIZE-2 ... 0 to one higher */
         kbufh[ix+1] = kbufh[ix];
         kused[ix+1] = kused[ix];
     }
