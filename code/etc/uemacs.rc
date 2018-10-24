@@ -162,14 +162,24 @@ store-procedure lr-justify not_mb   ; Left and right justify paragraph
 !endm
 ;
 store-procedure _mytoggle-mode          ; toggle local/global mode
-    write-message &cat &cat "Toggle " %type-mode " mode (HWCPEVOMYAQD): "
+    write-message &cat &cat "Toggle " %type-mode " mode (FHWCPEVOMYAQD): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
         write-message "[Aborted]"
         !finish
     !endif
-; H is special...and only global
+; F and H are special...and only global
+    !if &seq %modesel "F"
+        !if $autodos
+            set %how off
+        !else
+            set %how on
+        !endif
+        set %report "(GLOBAL) auto-DOS detect toggled "
+        set $autodos &not $autodos
+        !goto report
+    !endif
     !if &seq %modesel "H"
         !if $hscroll
             set %how off
