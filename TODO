@@ -7,6 +7,10 @@ Also look at getting zero-width joiners handled in word wrapping (where
 you can set a ZW optional break).
 Non-break spaces are already OK as they aren't spaces...
 
+==========
+tgetc() in input.c returns a unicode character, but some of the rest of
+the code there may assume it is just a char (byte)?
+
 ========== Search Issues!!! ==========
 
 Normal search

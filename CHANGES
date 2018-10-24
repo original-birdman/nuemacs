@@ -2597,4 +2597,41 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.136
 
+========== GGR4.137
+
+search.c
+    Add four missing ch_as_uc() macros wrappers for isalpha calls.
+    Affects old systems that use a lookup table.
+
+pklock.c
+    Make compilation conditional on FILOCK being set.
+
+display.c
+    Rename TTput1char to be TTput_1uc, as it handles unicode.
+
+line.c
+    Use the correct pointer to get np when freeing multi-block kill
+    buffer ring text in kdelete().
+
+eval.c
+file.c
+globals.c
+edef.h
+evar.h
+    Add an autodos system variable to enable/disable the DOS file
+    detection as a file is read.
+    The default setting is TRUE.
+    NOTE that this flag is checked, and the pre-buffer DOS flag
+    set/unset at any re-reading of a file.
+
+etc/uemacs.rc
+    Extended the toggle-mode code to have an "F" option, which toggles
+    the autodos flag value.
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.137
+
 ==========
