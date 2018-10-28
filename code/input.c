@@ -545,6 +545,14 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     int prolen;
     char procopy[NSTRING];
 
+/* gcc 4.4.7 is happy to report "may be used initialized" for wsave
+ * (which is wrong) even though it doesn't have a -Wmaybe-uninitialized
+ * option.
+ * So if we find we are using that, use this hammer...
+ */
+#if __GNUC__ == 4 && __GNUC_MINOR__ == 4 && __GNUC_PATCHLEVEL__ == 7
+ volatile
+#endif
     struct window wsave;
     short bufexpand, expanded;
 
@@ -591,9 +599,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
     update(FALSE);
 
-    inmb = TRUE;
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
-        inmb = FALSE;
         buf = "";               /* Ensure we never return garbage */
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
         return(FALSE);
@@ -616,10 +622,11 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     if (curbp->b_mode & MDPHON) new_bmode = MDEXACT | MDPHON;
     else                        new_bmode = MDEXACT;
 
-    if (++mb_info.mbdepth == 1) {
+    if (++mb_info.mbdepth == 1) {   /* Arrival into minibuffer */
         mb_info.main_bp = curbp;    /* For main buffer info in modeline */
         mb_info.main_wp = curwp;    /* Used to position modeline */
         mb_info.wheadp = wheadp;    /* ??? */
+        inmb = TRUE;
     }
     else {                          /* Save this minibuffer for recursion */
         wsave = *curwp;             /* Structure copy... */
@@ -892,15 +899,15 @@ abort:
     swbuffer(bp);   /* Make sure we're still in our minibuffer */
     unmark(TRUE, 1);
 
-    if (--mb_info.mbdepth) {
-        swbuffer(cb);
-        *curwp = wsave;             /* Back to previous mini-buffer */
+    if (--mb_info.mbdepth) {        /* Back to previous mini-buffer */
+        swbuffer(cb);               /* Switch to its buffer... */
+        *curwp = wsave;             /* ...and its window info */
     }
-    else {
-        swbuffer(mb_info.main_bp);
-        curwp = mb_info.main_wp;    /* Leaving minibuffer */
-        wheadp = mb_info.wheadp;
-        inmb = FALSE;
+    else {                          /* Leaving minibuffer */
+        swbuffer(mb_info.main_bp);  /* Switch back to main buffer */
+        curwp = mb_info.main_wp;    /* Reset window info ptr */
+        wheadp = mb_info.wheadp;    /* Reset window list */
+        inmb = FALSE;               /* Note we have left mb */
     }
     curwp->w_flag |= WFMODE;        /* Forces modeline redraw */
     zotbuf(bp);                     /* Remove this minibuffer */
