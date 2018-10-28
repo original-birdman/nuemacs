@@ -128,9 +128,10 @@ int showcpos(int f, int n) {
             }
         snprintf(descr, 40 ,"char = U+%04x (%s)", curchar, temp);
     }
-    char gl_descr[20] = "";
+#define DLEN 32
+    char gl_descr[DLEN] = "";   /* Longer than actually needed... */
     if (bytes_used > 1)
-          snprintf(gl_descr, 20, " %db/%duc", bytes_used, uc_used);
+          snprintf(gl_descr, DLEN, " %db/%duc", bytes_used, uc_used);
     mlwrite( "Line %d/%d Col %d/%d Byte %D/%D (%d%%) %s%s",
           predlines+1, numlines+1, col, ecol,
           predchars, numchars, ratio, descr, gl_descr);
