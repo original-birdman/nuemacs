@@ -548,12 +548,12 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 /* gcc 4.4.7 is happy to report "may be used initialized" for wsave
  * (which is wrong) even though it doesn't have a -Wmaybe-uninitialized
  * option.
- * So if we find we are using that, use this hammer...
+ * Since we aren't using -Winit-self we can initialize it to itself
+ * and the optimizer will optimize it away (!?!).
+ * From Flexo's answer at:
+ *   https://stackoverflow.com/questions/5080848/disable-gcc-may-be-used-uninitialized-on-a-particular-variable
  */
-#if __GNUC__ == 4 && __GNUC_MINOR__ == 4 && __GNUC_PATCHLEVEL__ == 7
- volatile
-#endif
-    struct window wsave;
+    struct window wsave = wsave;
     short bufexpand, expanded;
 
 #ifdef SIGWINCH
@@ -601,7 +601,9 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
         buf = "";               /* Ensure we never return garbage */
+#ifdef SIGWINCH
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
+#endif
         return(FALSE);
     }
     bufexpand = (nbuf == NBUFN);
