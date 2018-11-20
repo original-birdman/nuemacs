@@ -535,14 +535,12 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
 }
 
 /*
- * This routine blows away all of the text
- * in a buffer. If the buffer is marked as changed
- * then we ask if it is ok to blow it away; this is
- * to save the user the grief of losing text. The
- * window chain is nearly always wrong if this gets
- * called; the caller must arrange for the updates
- * that are required. Return TRUE if everything
- * looks good.
+ * This routine blows away all of the text in a buffer.
+ * If the buffer is marked as changed then we ask if it is ok to blow it away;
+ * this is to save the user the grief of losing text.
+ * The window chain is nearly always wrong if this gets called; the caller
+ * must arrange for the updates that are required.
+ * Return TRUE if everything looks good.
  */
 int bclear(struct buffer *bp) {
     struct line *lp;
@@ -553,7 +551,18 @@ int bclear(struct buffer *bp) {
         && (s = mlyesno("Discard changes")) != TRUE)
             return s;
     bp->b_flag &= ~BFCHG;               /* Not changed          */
+
+/* If the buffer is narrowed we must widen it first to ensure we free
+ * all lines - not just those from the narrowed region.
+ */
+    if (bp->b_flag & BFNAROW) {
+        curwp->w_bufp = bp;             /* Ensure this is current */
+        widen(0, -1);                   /* -1 == no reposition */
+        bp = curwp->w_bufp;
+    }
+
     while ((lp = lforw(bp->b_linep)) != bp->b_linep) lfree(lp);
+
     bp->b_dotp = bp->b_linep;           /* Fix "."              */
     bp->b_doto = 0;
     bp->b_markp = NULL;                 /* Invalidate "mark"    */

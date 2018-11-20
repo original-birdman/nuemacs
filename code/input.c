@@ -35,29 +35,24 @@ static int remap_c_on_intr = 0;
  * ABORT. The ABORT status is returned if the user bumps out of the question
  * with a ^G. Used any time a confirmation is required.
  */
-int mlyesno(char *prompt)
-{
-        char c;                 /* input character */
-        char buf[NPAT];         /* prompt to user */
+int mlyesno(char *prompt) {
+    char c;                 /* input character */
+    char buf[NPAT];         /* prompt to user */
 
-        for (;;) {
-                /* build and prompt the user */
-                strcpy(buf, prompt);
-                strcat(buf, " " MLpre "y/n" MLpost "? ");
-                mlwrite(buf);
+    int res = -1;           /* NOT ABORT, TRUE or FALSE */
+    while(res == -1) {
+        strcpy(buf, prompt);    /* build and prompt the user */
+        strcat(buf, " " MLpre "y/n" MLpost "? ");
+        mlwrite(buf);
 
-                /* get the response */
-                c = tgetc();
+        c = tgetc();        /* get the response */
 
-                if (c == ectoc(abortc)) /* Bail out! */
-                        return ABORT;
-
-                if (c == 'y' || c == 'Y')
-                        return TRUE;
-
-                if (c == 'n' || c == 'N')
-                        return FALSE;
-        }
+        if (c == ectoc(abortc)) res = ABORT;
+        else if (c == 'y' || c == 'Y') res = TRUE;
+        else if (c == 'n' || c == 'N') res = FALSE;
+    }
+    mlerase();
+    return res;
 }
 
 /*
@@ -68,14 +63,12 @@ int mlyesno(char *prompt)
  * return. Handle erase, kill, and abort keys.
  */
 
-int mlreply(char *prompt, char *buf, int nbuf)
-{
-        return nextarg(prompt, buf, nbuf, ctoec('\n'));
+int mlreply(char *prompt, char *buf, int nbuf) {
+    return nextarg(prompt, buf, nbuf, ctoec('\n'));
 }
 
-int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar)
-{
-        return nextarg(prompt, buf, nbuf, eolchar);
+int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar) {
+    return nextarg(prompt, buf, nbuf, eolchar);
 }
 
 /* GGR
@@ -85,12 +78,11 @@ int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar)
  * This just complicates any caller's code.
  */
 int mlreplyall(char *prompt, char *buf, int nbuf) {
-        if (!clexec)
-            return nextarg(prompt, buf, nbuf, ctoec('\n'));
-        int nb = strlen(execstr);
-        memcpy(buf, execstr, nb+1); /* Copy the NUL */
-        execstr += nb;              /* Show we've read it all */
-        return TRUE;
+    if (!clexec) return nextarg(prompt, buf, nbuf, ctoec('\n'));
+    int nb = strlen(execstr);
+    memcpy(buf, execstr, nb+1); /* Copy the NUL */
+    execstr += nb;              /* Show we've read it all */
+    return TRUE;
 }
 
 /*
@@ -98,13 +90,10 @@ int mlreplyall(char *prompt, char *buf, int nbuf) {
  *      expanded character to character
  *      collapse the CONTROL and SPEC flags back into an ascii code
  */
-int ectoc(int c)
-{
-        if (c & CONTROL)
-                c = c & ~(CONTROL | 0x40);
-        if (c & SPEC)
-                c = c & 255;
-        return c;
+int ectoc(int c) {
+    if (c & CONTROL) c = c & ~(CONTROL | 0x40);
+    if (c & SPEC)    c = c & 255;
+    return c;
 }
 
 /*
@@ -112,11 +101,9 @@ int ectoc(int c)
  *      character to extended character
  *      pull out the CONTROL and SPEC prefixes (if possible)
  */
-int ctoec(int c)
-{
-        if (c >= 0x00 && c <= 0x1F)
-                c = CONTROL | (c + '@');
-        return c;
+int ctoec(int c) {
+    if (c >= 0x00 && c <= 0x1F) c = CONTROL | (c + '@');
+    return c;
 }
 
 /*
@@ -285,7 +272,7 @@ int tgetc(void) {
             return (int) *kbdptr++;
         if (--kbdrep < 1) {     /* at the end of last repitition? */
             kbdmode = STOP;
-#if     VISMAC == 0
+#if VISMAC == 0
             update(FALSE);      /* force a screen update after all is done */
 #endif
         }
@@ -335,124 +322,118 @@ int tgetc(void) {
     return c;
 }
 
-/*      GET1KEY:        Get one keystroke. The only prefixs legal here
-                        are the SPEC and CONTROL prefixes.
-                                                                */
+/* get1key: Get one keystroke.
+ *          The only prefixes legal here are SPEC and CONTROL.
+ */
+int get1key(void) {
+    int c;
 
-int get1key(void)
-{
-        int c;
-
-        /* get a keystroke */
-        c = tgetc();
-        if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
-                c = CONTROL | (c + '@');
-        return c;
+    c = tgetc();                    /* get a keystroke */
+    if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
+        c = CONTROL | (c + '@');
+    return c;
 }
 
-/*      GETCMD: Get a command from the keyboard. Process all applicable
-                prefix keys
-                                                        */
-int getcmd(void)
-{
-        int c;                  /* fetched keystroke */
+/* getcmd: Get a command from the keyboard.
+ *         Process all applicable prefix keys
+ */
+int getcmd(void) {
+    int c;                  /* fetched keystroke */
 #if VT220
-        int d;                  /* second character P.K. */
-        int cmask = 0;
+    int d;                  /* second character P.K. */
+    int cmask = 0;
 #endif
-        /* get initial character */
-        c = get1key();
+    c = get1key();          /* get initial character */
 
 #if VT220
 proc_metac:
-        if (c == 128+27)                /* CSI - ~equiv to Esc[ */
-                goto handle_CSI;
+    if (c == 128+27)        /* CSI - ~equiv to Esc[ */
+        goto handle_CSI;
 #endif
-        /* process META prefix */
-        if (c == (CONTROL | '[')) {
-                c = get1key();
-#if VT220
-                if (c == '[' || c == 'O') {     /* CSI P.K. */
-handle_CSI:
-                        c = get1key();
-                        if (c >= 'A' && c <= 'D')
-                                return SPEC | c | cmask;
-                        if (c >= 'E' && c <= 'z' && c != 'i' && c != 'c')
-                                return SPEC | c | cmask;
-                        d = get1key();
-                        if (d == '~')   /* ESC [ n ~   P.K. */
-                                return SPEC | c | cmask;
-                        switch (c) {    /* ESC [ n n ~ P.K. */
-                        case '1':
-                                c = d + 32;
-                                break;
-                        case '2':
-                                c = d + 48;
-                                break;
-                        case '3':
-                                c = d + 64;
-                                break;
-                        default:
-                                c = '?';
-                                break;
-                        }
-                        if (d != '~')   /* eat tilde P.K. */
-                                get1key();
-                        if (c == 'i') { /* DO key    P.K. */
-                                c = ctlxc;
-                                goto proc_ctlxc;
-                        } else if (c == 'c')    /* ESC key   P.K. */
-                                c = get1key();
-                        else
-                                return SPEC | c | cmask;
-                }
-                if (c == (CONTROL | '[')) {
-                        cmask = META;
-                        goto proc_metac;
-                }
-#endif
-                if (islower(c)) /* Force to upper */
-                        c ^= DIFCASE;
-                if (c >= 0x00 && c <= 0x1F)     /* control key */
-                        c = CONTROL | (c + '@');
-                return META | c;
-        }
-        else if (c == metac) {
-                c = get1key();
-#if VT220
-                if (c == (CONTROL | '[')) {
-                        cmask = META;
-                        goto proc_metac;
-                }
-#endif
-                if (islower(c)) /* Force to upper */
-                        c ^= DIFCASE;
-                if (c >= 0x00 && c <= 0x1F)     /* control key */
-                        c = CONTROL | (c + '@');
-                return META | c;
-        }
 
-#if     VT220
+    if (c == (CONTROL | '[')) {     /* Process META prefix */
+        c = get1key();
+#if VT220
+        if (c == '[' || c == 'O') { /* CSI P.K. */
+handle_CSI:
+            c = get1key();
+            if (c >= 'A' && c <= 'D') return SPEC | c | cmask;
+            if (c >= 'E' && c <= 'z' && c != 'i' && c != 'c')
+                return SPEC | c | cmask;
+            d = get1key();
+            if (d == '~')   /* ESC [ n ~   P.K. */
+                return SPEC | c | cmask;
+            switch (c) {    /* ESC [ n n ~ P.K. */
+            case '1':
+                c = d + 32;
+                break;
+            case '2':
+                c = d + 48;
+                break;
+            case '3':
+                c = d + 64;
+                break;
+            default:
+                c = '?';
+                break;
+            }
+            if (d != '~')   /* eat tilde P.K. */
+                get1key();
+            if (c == 'i') { /* DO key    P.K. */
+                c = ctlxc;
+                goto proc_ctlxc;
+            }
+            else if (c == 'c')    /* ESC key   P.K. */
+                    c = get1key();
+                else
+                    return SPEC | c | cmask;
+        }
+        if (c == (CONTROL | '[')) {
+            cmask = META;
+            goto proc_metac;
+        }
+#endif
+        if (islower(c)) /* Force to upper */
+            c ^= DIFCASE;
+        if (c >= 0x00 && c <= 0x1F)     /* control key */
+            c = CONTROL | (c + '@');
+        return META | c;
+    }
+    else if (c == metac) {
+        c = get1key();
+#if VT220
+        if (c == (CONTROL | '[')) {
+            cmask = META;
+            goto proc_metac;
+        }
+#endif
+        if (islower(c))                 /* Force to upper */
+            c ^= DIFCASE;
+        if (c >= 0x00 && c <= 0x1F)     /* control key */
+            c = CONTROL | (c + '@');
+        return META | c;
+    }
+
+#if VT220
 proc_ctlxc:
 #endif
-        /* process CTLX prefix */
-        if (c == ctlxc) {
-                c = get1key();
+    if (c == ctlxc) {                   /* process CTLX prefix */
+        c = get1key();
 #if VT220
-                if (c == (CONTROL | '[')) {
-                        cmask = CTLX;
-                        goto proc_metac;
-                }
-#endif
-                if (c >= 'a' && c <= 'z')       /* Force to upper */
-                        c -= 0x20;
-                if (c >= 0x00 && c <= 0x1F)     /* control key */
-                        c = CONTROL | (c + '@');
-                return CTLX | c;
+        if (c == (CONTROL | '[')) {
+            cmask = CTLX;
+            goto proc_metac;
         }
+#endif
+        if (c >= 'a' && c <= 'z')       /* Force to upper */
+            c -= 0x20;
+        if (c >= 0x00 && c <= 0x1F)     /* control key */
+            c = CONTROL | (c + '@');
+        return CTLX | c;
+    }
 
-        /* otherwise, just return it */
-        return c;
+/* Otherwise, just return it */
+    return c;
 }
 
 /* GGR

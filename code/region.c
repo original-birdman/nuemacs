@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -386,8 +387,16 @@ int widen(int f, int n)
         }
         /* and now remember we are not narrowed */
         bp->b_flag &= (~BFNAROW);
+/* Note the widening and redraw with the start of the ex-narrowed
+ * region in middle of screen.
+ * Unless we were called with a negative n.
+ */
         mlwrite(MLpre "Buffer is widened" MLpost);
-/* Redraw with the start of the ex-narrowed region in middle of screen */
-        reposition(FALSE, 0);
+        if (n < 0) {    /* Allow message to be read, but no reposition */
+            sleep(1);
+        }
+        else {
+            reposition(FALSE, 0);
+        }
         return(TRUE);
 }

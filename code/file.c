@@ -334,7 +334,7 @@ int readin(char *fname, int lockfl) {
         sprintf(&readin_mesg[strlen(readin_mesg)], "Read %d line", nline);
         if (nline != 1) strcat(readin_mesg, "s");
         if (curbp->b_mode & MDDOSLE)
-              strcat(readin_mesg, " - DOS mode enabled!");
+            strcat(readin_mesg, " - DOS mode enabled!");
         strcat(readin_mesg, MLpost);
         mlwrite(readin_mesg);
         if (s == FIOERR || s == FIOMEM) sleep(1);   /* Let it be seen */
