@@ -213,12 +213,27 @@ else ifeq ($(firstword $(subst -, ,$(uname_S))),CYGWIN_NT)
  DEFINES=-DAUTOCONF -DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 endif
 
+# Are we building an ARM version for an Android 'phone?
+#
+ifeq ($(strip $(ANDROID)),1)
+    uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+    ifeq ($(uname_M),arm7l)
+        .DEFAULT_GOAL := notarm_error
+    else
+        STATIC=-static
+        STATIC_ARM=-L/usr/lib/arm-linux-gnueabihf
+        STATIC_XLIBS=-ltinfo
+        STATIC_XDEFS=-DANDROID
+        PROGRAM=uemacs-android
+    endif
+endif
+
 # Set the default options
 #
-CC = gcc
+CC = gcc $(STATIC)
 WARNINGS = -Wall -Wstrict-prototypes -Wextra
 CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
-    $(UTF8INCL) $(BCKTINCL)
+    $(UTF8INCL) $(BCKTINCL) $(STATIC_XDEFS)
 
 LIBS = -lcurses     # SYSV
 LFLAGS = -hbx
@@ -239,8 +254,8 @@ endif
 #
 $(PROGRAM): $(OBJ)
 	$(E) "  LINK    " $@
-	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(LIBS) \
-                 $(UTF8LIB) $(BCKTLIB) $(RPATH)
+	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_ARM) \
+           $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
 
 SPARSE=sparse
 SPARSE_FLAGS=-D__LITTLE_ENDIAN__ -D__x86_64__ -D__linux__ -D__unix__
@@ -315,6 +330,9 @@ utf8_error:
 	@echo "ERROR: Unable to find the Julia Lang utf8lib"
 	@echo "       This is a pre-requisite!"
 	@echo "  See https://julialang.org/utf8proc"
+
+notarm_error:
+	@echo "ERROR: You may only use the ANDROID option on an ARM (arm7l) system"
 
 # DO NOT DELETE THIS LINE -- make depend uses it
 
