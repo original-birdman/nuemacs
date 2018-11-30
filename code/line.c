@@ -261,15 +261,17 @@ static int lins_nc(char *instr, int nb) {
  */
 int linsert_uc(int n, unicode_t c) {
     char utf8[6];
-    int bytes = unicode_to_utf8(c, utf8), i;
 
-    if (bytes == 1)
+/* Short-cut the most-likely case - an ASCII char */
+
+    if (c <= 0x7f) return linsert_byte(n, c);
+
+    int bytes = unicode_to_utf8(c, utf8);
+    if (bytes == 1)     /* Extended Latin1... */
         return linsert_byte(n, ch_as_uc(utf8[0]));
-    for (i = 0; i < n; i++) {
-        int j;
-        for (j = 0; j < bytes; j++) {
-            unsigned char cb = utf8[j];
-            if (!linsert_byte(1, cb)) return FALSE;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < bytes; j++) {
+            if (!linsert_byte(1, ch_as_uc(utf8[j]))) return FALSE;
         }
     }
     return TRUE;
