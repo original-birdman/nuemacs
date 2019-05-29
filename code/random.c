@@ -565,13 +565,16 @@ int cinsert(void) {
     tptr = curwp->w_doto;
     bracef = 0;
     i = tptr;
+/* Using C-mode for Perl is also nice. But we need to allow for
+ * things such as "@{$data{$dev}[$item]} = @attr;"
+ * So count all { and } and set bracef if there are more of the former.
+ */
     while (--i >= 0) {
         if (cptr[i] == ' ' || cptr[i] == '\t') continue;
-        if (cptr[i] == '{') {
-            bracef = 1;
-            break;
-        }
+        if      (cptr[i] == '{') bracef++;
+        else if (cptr[i] == '}') bracef--;
     }
+    bracef = (bracef > 0);
 
 /* Save the indent of the previous line */
     i = 0;
