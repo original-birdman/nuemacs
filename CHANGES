@@ -2634,4 +2634,56 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.137
 
+========== GGR4.138
+
+random.c
+    Make gl_descr larger to prevent gcc8.2 (Ubuntu 18.10) warning about
+    snprintf() possibly having too much to put into the buffer.
+
+input.c
+    Handle a bug in gcc4.4.7 that reports "may be used uninitialized"
+    for restoring wsave. Add more comments to save/restore blocks.
+    Simplify inmb setting.
+
+input.c
+    A better fix for the "may be used uninitialized" issue with
+    gcc4.4.7.
+
+
+buffer.c
+input.c
+region.c
+    Fixes to check for the BFNAROW flag being set on reading in a file to
+    a buffer.
+    Without this you can narrow a file, re-read it, then widen it again
+    to get a modified file (entire file within the region of the file)
+    that is marked as unmodified.
+-----
+    If bclear() is about to clear a narrowed buffer, then widen it first
+    so that all lines may be freed. [buffer.c]
+
+    Clear the minibuffer line of the prompt at end of mlyesno().
+    (Format all file to my 4-space standard.) [input.c]
+
+    sleep(1), rather than reposition, at end of widen() if n is passed
+    in as -ve. [region.c]
+-----
+
+line.c
+    Speed up the most-likely case (an ASCII char) [linsert_uc].
+
+Makefile
+epath.h 
+    Enable a static arm7l build for Android (for use with SS Helper).
+
+random.c
+    Count { and } more intelligently in C-mode, so it works better for
+    Perl.
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.138
+
 ==========
