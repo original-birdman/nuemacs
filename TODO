@@ -41,3 +41,8 @@ Also all of:
  LASTUL LASTLL isupper  isxletter isxlower isxupper  [estruct.h only]
  isletter                       [estruct.h, search.c, word.c]
  islower                        [estruct.h, search.c, input.c]
+
+========== Environment variable expansion
+
+Issues with the way this is done (pipe to echo in shell and read the
+result). This means any other active characters get "handled" too.

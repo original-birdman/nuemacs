@@ -2673,7 +2673,7 @@ line.c
     Speed up the most-likely case (an ASCII char) [linsert_uc].
 
 Makefile
-epath.h 
+epath.h
     Enable a static arm7l build for Android (for use with SS Helper).
 
 random.c
@@ -2685,5 +2685,38 @@ random.c
 version.h
 etc/uemacs.hlp
    Update to version GGR4.138
+
+========== GGR4.139
+
+complet.c
+fileio.c
+lock.c
+efunc.h
+estruct.h
+    Combined the expand_tilde() and expand_shell functions into
+    fixup_fname() and removed the conditional compilation bits.
+    Extended fixup_fname() to handle any leading (multiple) ".."
+    directories to mean "get $PWD, strip that number of entries and
+    append the rest".
+    This is to handle this sort of case:
+     o  A user's HOME is /home/user
+     o  They have a symlink, slw, to a working dir /workdir/user.
+     o  In their HOME they cd slw.
+     o  Now that can cat ../.bashrc and it will cat what they expect.
+     o  Previously, uemacs ../.bashrc would try to open /workdir/.bashrc
+        as the .. would be relative to the physical location.
+     o  This changes means it uses an edit of $PWD, so opens the
+        expected file.
+
+     If you really want to go via the physical location you can use
+     ./../.bashrc.
+
+     Reformatted (tidied) code of complet.c and lock.c.
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.139
 
 ==========
