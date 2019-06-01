@@ -119,119 +119,98 @@ static char suggestion[NFILEN];
 static short allfiles;
 static char fullname[NFILEN];
 
-static char *getffile(char *fspec)
-{
-        char *p;                        /* handy pointers */
+static char *getffile(char *fspec) {
+    char *p;                        /* handy pointers */
 
-        /* Initialise things */
-        dirptr = NULL;
+    dirptr = NULL;                  /* Initialise things */
 
-#if EXPAND_TILDE
-        expand_tilde(fspec);
-#endif
-#if EXPAND_SHELL
-        expand_shell(fspec);
-#endif
+    fixup_fname(fspec);
+    strcpy(directory, fspec);
 
-        strcpy(directory, fspec);
+    if ((p = strrchr(directory, '/'))) {
+        p++;
+        strcpy(picture, p);
+        *p = 0;
+        strcpy(fullname, directory);
+    }
+    else {
+        strcpy(picture, directory);
+        directory[0] = 0;
+        fullname[0] = 0;
+    }
 
-        if ((p = strrchr(directory, '/'))) {
-            p++;
-            strcpy(picture, p);
-            *p = 0;
-            strcpy(fullname, directory);
-        }
-        else {
-            strcpy(picture, directory);
-            directory[0] = 0;
-            fullname[0] = 0;
-        }
+    nameptr = &fullname[strlen(fullname)];
 
-        nameptr = &fullname[strlen(fullname)];
+    if (!directory[0]) dirptr = opendir(".");
+    else               dirptr = opendir(directory);
 
-        if (!directory[0])
-                dirptr = opendir(".");
-        else
-                dirptr = opendir(directory);
+    if (dirptr == NULL) return(NULL);
 
-        if (dirptr == NULL)
-            return(NULL);
+    piclen = strlen(picture);
+    allfiles = (piclen == 0);
 
-        piclen = strlen(picture);
-        allfiles = (piclen == 0);
-
-        /* And return the first match (we return ONLY matches, for speed) */
-        return(getnfile());
+/* And return the first match (we return ONLY matches, for speed) */
+    return(getnfile());
 }
 
-static char *getnfile(void)
-{
-        unsigned short type;                /* file type                */
+static char *getnfile(void) {
+    unsigned short type;        /* file type */
 #if USG
-        struct dirent *dp;
+    struct dirent *dp;
 #else
-        struct direct *dp;
+    struct direct *dp;
 #endif
-        struct stat statbuf;
-        int namelen;
+    struct stat statbuf;
+    int namelen;
 
-        /* Get the next directory entry, if no more, we finish */
-        if ((dp = readdir(dirptr)) == NULL)
-            return(NULL);
+/* Get the next directory entry, if no more, we finish */
+    if ((dp = readdir(dirptr)) == NULL) return(NULL);
 
-        if ((allfiles ||
-              (((namelen = strlen(dp->d_name)) >= piclen) &&
-              (!strncmp(dp->d_name, picture, piclen)))) &&
-            (strcmp(dp->d_name, ".")) &&
-            (strcmp(dp->d_name, ".."))) {
+    if ((allfiles ||
+         (((namelen = strlen(dp->d_name)) >= piclen) &&
+         (!strncmp(dp->d_name, picture, piclen)))) &&
+         (strcmp(dp->d_name, ".")) &&
+         (strcmp(dp->d_name, ".."))) {
 
-            strcpy(nameptr, dp->d_name);
-            stat(fullname, &statbuf);
-            type = (statbuf.st_mode & S_IFMT);
-            if ((type == S_IFREG)
+        strcpy(nameptr, dp->d_name);
+        stat(fullname, &statbuf);
+        type = (statbuf.st_mode & S_IFMT);
+        if ((type == S_IFREG)
 #ifdef S_IFLNK
-            || (type == S_IFLNK)
+             || (type == S_IFLNK)
 #endif
-            || (type == S_IFDIR)) {
-                strcpy(suggestion, dp->d_name);
-                if (type == S_IFDIR)
-                    strcat(suggestion, "/");
-                return(suggestion);
-            }
+             || (type == S_IFDIR)) {
+            strcpy(suggestion, dp->d_name);
+            if (type == S_IFDIR) strcat(suggestion, "/");
+            return(suggestion);
         }
-        return(getnfile());
+    }
+    return(getnfile());
 }
 
-static void close_dir(void)
-{
-    if (dirptr != NULL)
-        closedir(dirptr);
+static void close_dir(void) {
+    if (dirptr != NULL) closedir(dirptr);
 }
 #endif
 
-
-static short ljust(char *str)
-{
+static short ljust(char *str) {
     char *p, *q;
     short justified;
 
     justified = FALSE;
     p = str;
-    while (*p++ == ' ')
-        justified = TRUE;
+    while (*p++ == ' ') justified = TRUE;
     p--;
     if (justified) {
         q = str;
-        while (*p!=0)
-            *q++ = *p++;
+        while (*p!=0) *q++ = *p++;
         *q = 0;
     }
     return(justified);
 }
 
 
-int comp_buffer(char *name, char *choices)
-{
+int comp_buffer(char *name, char *choices) {
     char so_far[NFILEN];        /* Maximal match so far     */
     char supplied[NFILEN];      /* Maximal match so far     */
     char *next;                 /* Next filename to look at */
@@ -268,8 +247,7 @@ int comp_buffer(char *name, char *choices)
         so_far[match_length] = 0;
         l = strlen(next);
         if (max == 0) {
-            if (match_length == 0)
-                break;
+            if (match_length == 0) break;
         }
         else if (l < max) {
             strcat(choices, " ");
@@ -285,31 +263,29 @@ int comp_buffer(char *name, char *choices)
     }
     strcpy(name, so_far);
 
-    if (unique && strcmp(name, supplied))
-        *choices = 0;
+    if (unique && strcmp(name, supplied)) *choices = 0;
 
     return(TRUE);
 }
 
-static char *getfbuffer(char *bpic, int bpiclen)
-{
+static char *getfbuffer(char *bpic, int bpiclen) {
     expandbp = bheadp;
     return(getnbuffer(bpic, bpiclen));
 }
 
-static char *getnbuffer(char *bpic, int bpiclen)
-{
+static char *getnbuffer(char *bpic, int bpiclen) {
     char *retptr;
 
     if (expandbp) {
-            /* We NEVER return minibuffer buffers (CC$00nnn), and
-               we return internal [xx] buffers only if the user asked
-               for them by specifying a picture starting with [ */
+/* We NEVER return minibuffer buffers (CC$00nnn), and we return internal
+ * [xx] buffers only if the user asked for them by specifying a picture
+ * starting with [.
+ */
 
-        /* We don't return a buffer if it doesn't match, or if it's
-           a minibuffer buffername (CC$) or if it's an internal
-           buffer [xx], unless the user *asked* for these */
-
+/* We don't return a buffer if it doesn't match, or if it's a minibuffer
+ * buffername (CC$) or if it's an internal buffer [xx], unless the user
+ * *asked* for these.
+ */
         if ((strncmp(bpic, expandbp->b_bname, bpiclen)) ||
             (!strncmp(expandbp->b_bname, "CC$", 3)) ||
             ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {

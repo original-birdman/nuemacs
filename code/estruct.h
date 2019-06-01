@@ -122,9 +122,6 @@
 #define VISMAC  0  /* update display during keyboard macros        */
 #define REVSTA  1  /* Status line appears in reverse video         */
 
-#define EXPAND_TILDE    1    /* Understand ~/ as meaning $HOME/    */
-#define EXPAND_SHELL    1    /* Understand embedded shell vars etc */
-
 #ifndef AUTOCONF
 
 #define COLOR   1  /* color commands and windows                   */

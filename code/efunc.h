@@ -263,8 +263,7 @@ extern int ffputline(char *buf, int nbuf);
 extern int ffgetline(void);
 extern int fexist(char *fname);
 
-extern void expand_tilde(char *);
-extern void expand_shell(char *);
+extern void fixup_fname(char *);
 
 /* exec.c */
 extern int namedcmd(int f, int n);

@@ -10,13 +10,6 @@
 #include "edef.h"
 #include "efunc.h"
 
-#if EXPAND_TILDE
-        extern void expand_tilde(char *);
-#endif
-#if EXPAND_SHELL
-        extern void expand_shell(char *);
-#endif
-
 #if     FILOCK && (BSD | SVR4)
 #include <sys/errno.h>
 
@@ -29,79 +22,75 @@ static int numlocks;                    /* # of current locks active */
  *
  * char *fname;                 file to check for a lock
  */
-int lockchk(char *fname)
-{
-        int i;          /* loop indexes */
-        int status;     /* return status */
+int lockchk(char *fname) {
+    int i;          /* loop indexes */
+    int status;     /* return status */
 /* GGR
  * Need a copy of the filename, to allow possible tilde and shell
- * expansion on the passsed-in name.
+ * expansion on the passed-in name.
  */
-        char *tmpname = (char *) malloc(NFILEN);
-        if (tmpname == NULL) {
-                mlwrite("Cannot lock, out of memory");
-                return ABORT;
-        }
-        strcpy(tmpname, fname);
-#if EXPAND_TILDE
-        expand_tilde(tmpname);
-#endif
-#if EXPAND_SHELL
-        expand_shell(tmpname);
-#endif
-/* */
-        /* check to see if that file is already locked here */
-        if (numlocks > 0)
-                for (i = 0; i < numlocks; ++i)
-                        if (strcmp(tmpname, lname[i]) == 0)
-                                return TRUE;
+    char *tmpname = (char *) malloc(NFILEN);
+    if (tmpname == NULL) {
+        mlwrite("Cannot lock, out of memory");
+        return ABORT;
+    }
+    strcpy(tmpname, fname);
+    fixup_fname(tmpname);
 
-        /* if we have a full locking table, bitch and leave */
-        if (numlocks == NLOCKS) {
-                mlwrite("LOCK ERROR: Lock table full");
-                return ABORT;
-        }
+/* Check to see whether that file is already locked here */
 
-        /* next, try to lock it */
-        status = lock(tmpname);
-        if (status == ABORT)    /* file is locked, no override */
-                return ABORT;
-        if (status == FALSE)    /* locked, overriden, dont add to table */
-                return TRUE;
+    if (numlocks > 0)
+        for (i = 0; i < numlocks; ++i)
+            if (strcmp(tmpname, lname[i]) == 0) return TRUE;
 
-        /* we have now locked it, add it to our table */
-        lname[++numlocks - 1] = (char *) malloc(strlen(tmpname) + 1);
-        if (lname[numlocks - 1] == NULL) {  /* malloc failure */
-                undolock(tmpname);          /* free the lock */
-                mlwrite("Cannot lock, out of memory");
-                --numlocks;
-                return ABORT;
-        }
+/* If we have a full locking table, bitch and leave */
 
-        /* everthing is cool, add it to the table */
-        lname[++numlocks - 1] = tmpname;
+    if (numlocks == NLOCKS) {
+        mlwrite("LOCK ERROR: Lock table full");
+        return ABORT;
+    }
+
+/* Next, try to lock it */
+
+    status = lock(tmpname);
+    if (status == ABORT)    /* file is locked, no override */
+        return ABORT;
+    if (status == FALSE)    /* locked, overriden, dont add to table */
         return TRUE;
+
+/* We have now locked it, add it to our table */
+
+    lname[++numlocks - 1] = (char *) malloc(strlen(tmpname) + 1);
+    if (lname[numlocks - 1] == NULL) {  /* malloc failure */
+        undolock(tmpname);              /* free the lock */
+        mlwrite("Cannot lock, out of memory");
+        --numlocks;
+        return ABORT;
+    }
+
+/* Everthing is cool, add it to the table */
+
+    lname[++numlocks - 1] = tmpname;
+    return TRUE;
 }
 
 /*
  * lockrel:
  *      release all the file locks so others may edit
  */
-int lockrel(void)
-{
-        int i;          /* loop index */
-        int status;     /* status of locks */
-        int s;          /* status of one unlock */
+int lockrel(void) {
+    int i;          /* loop index */
+    int status;     /* status of locks */
+    int s;          /* status of one unlock */
 
-        status = TRUE;
-        if (numlocks > 0)
-                for (i = 0; i < numlocks; ++i) {
-                        if ((s = unlock(lname[i])) != TRUE)
-                                status = s;
-                        free(lname[i]);
-                }
-        numlocks = 0;
-        return status;
+    status = TRUE;
+    if (numlocks > 0)
+        for (i = 0; i < numlocks; ++i) {
+            if ((s = unlock(lname[i])) != TRUE) status = s;
+            free(lname[i]);
+        }
+    numlocks = 0;
+    return status;
 }
 
 /*
@@ -113,32 +102,32 @@ int lockrel(void)
  *
  * char *fname;         file name to lock
  */
-int lock(char *fname)
-{
-        char *locker;       /* lock error message */
-        int status;         /* return status      */
-        char msg[NSTRING];  /* message string     */
+int lock(char *fname) {
+    char *locker;       /* lock error message */
+    int status;         /* return status      */
+    char msg[NSTRING];  /* message string     */
 
-        /* attempt to lock the file */
-        locker = dolock(fname);
-        if (locker == NULL)     /* we win */
-                return TRUE;
+/* Attempt to lock the file */
 
-        /* file failed...abort */
-        if (strncmp(locker, "LOCK", 4) == 0) {
-                lckerror(locker);
-                return ABORT;
-        }
+    locker = dolock(fname);
+    if (locker == NULL)     /* we win */
+        return TRUE;
 
-        /* someone else has it....override? */
-        strcpy(msg, "File in use by ");
-        strcat(msg, locker);
-        strcat(msg, ", override?");
-        status = mlyesno(msg);  /* ask them */
-        if (status == TRUE)
-                return FALSE;
-        else
-                return ABORT;
+/* File failed...abort */
+
+    if (strncmp(locker, "LOCK", 4) == 0) {
+        lckerror(locker);
+        return ABORT;
+    }
+
+/* Someone else has it....override? */
+
+    strcpy(msg, "File in use by ");
+    strcat(msg, locker);
+    strcat(msg, ", override?");
+    status = mlyesno(msg);  /* ask them */
+    if (status == TRUE) return FALSE;
+    else                return ABORT;
 }
 
 /*
@@ -148,18 +137,18 @@ int lock(char *fname)
  *
  * char *fname;         file to unlock
  */
-int unlock(char *fname)
-{
-        char *locker;   /* undolock return string */
+int unlock(char *fname) {
+    char *locker;   /* undolock return string */
 
-        /* unclock and return */
-        locker = undolock(fname);
-        if (locker == NULL)
-                return TRUE;
+/* Unclock and return */
 
-        /* report the error and come back */
-        lckerror(locker);
-        return FALSE;
+    locker = undolock(fname);
+    if (locker == NULL) return TRUE;
+
+/* Report the error and come back */
+
+    lckerror(locker);
+    return FALSE;
 }
 
 /*
@@ -167,13 +156,12 @@ int unlock(char *fname)
  *
  * char *errstr;        lock error string to print out
  */
-void lckerror(char *errstr)
-{
-        char obuf[NSTRING];     /* output buffer for error message */
+void lckerror(char *errstr) {
+    char obuf[NSTRING];     /* output buffer for error message */
 
-        strcpy(obuf, errstr);
-        strcat(obuf, " - ");
-        strcat(obuf, strerror(errno));
-        mlwrite(obuf);
+    strcpy(obuf, errstr);
+    strcat(obuf, " - ");
+    strcat(obuf, strerror(errno));
+    mlwrite(obuf);
 }
 #endif

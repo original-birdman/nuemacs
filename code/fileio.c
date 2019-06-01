@@ -43,12 +43,7 @@ static struct {
  */
 int ffropen(char *fn) {
 #if (BSD | USG)
-#if EXPAND_TILDE
-    expand_tilde(fn);
-#endif
-#if EXPAND_SHELL
-    expand_shell(fn);
-#endif
+    fixup_fname(fn);
 #endif
     if ((ffp = fopen(fn, "r")) == NULL) return FIOFNF;
     if (pathexpand) {       /* GGR */
@@ -73,12 +68,7 @@ int ffropen(char *fn) {
  */
 int ffwopen(char *fn) {
 #if (BSD | USG)
-#if EXPAND_TILDE
-    expand_tilde(fn);
-#endif
-#if EXPAND_SHELL
-    expand_shell(fn);
-#endif
+    fixup_fname(fn);
 #endif
     if ((ffp = fopen(fn, "w")) == NULL) {
         mlwrite("Cannot open file for writing");
@@ -365,12 +355,7 @@ int ffgetline(void) {
 int fexist(char *fname) {
     FILE *fp;
 #if (BSD | USG)
-#if EXPAND_TILDE
-    expand_tilde(fname);
-#endif
-#if EXPAND_SHELL
-    expand_shell(fname);
-#endif
+    fixup_fname(fname);
 #endif
 
 /* Try to open the file for reading */
@@ -386,64 +371,101 @@ int fexist(char *fname) {
 
 #if BSD | USG
 
-#if EXPAND_SHELL
-void expand_shell(char *fn) {
+#include <libgen.h>
+#include <pwd.h>
+
+static char pwd_var[NFILEN];
+static int have_pwd = 0;    /* 1 == have it, -1 == tried and failed */
+
+void fixup_fname(char *fn) {
     char *ptr;
-    char command[NFILEN];
-    int c;
+    char fn_copy[NFILEN];
+    int c, i;
     FILE *pipe;
+
+    char *p, *q;
+    struct passwd *pwptr;
+
+/* We start with looking for either ../ or ~ at the start (we can't have
+ * both).
+ */
+    if (have_pwd >= 0 &&
+        fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) {
+/* We have to count the leading occurrences of ../ and append what is left
+ * to $PWD less the number of occurences.
+ */
+        int dd_cnt = 1;             /* We know we have one */
+        char *fnwp = fn+2;
+        while (*fnwp) {
+            while (*++fnwp == '/'); /* Skip over any '/' */
+            if (*fnwp == '.' && *(fnwp+1) == '.' &&
+                  (*(fnwp+2) == '/' || *(fnwp+2) == '\0')) {
+                dd_cnt++;
+                fnwp = fnwp+2;
+                continue;
+            }
+            break;
+        }
+        if (have_pwd == 0) {
+            if ((p = getenv("PWD")) == NULL) have_pwd = -1;
+            else {
+                if (*p == '/') {    /* Only if valid path.. */
+                    strcpy(pwd_var, p);
+                    have_pwd = 1;
+                }
+                else
+                    have_pwd = -1;
+            }
+        }
+        if (have_pwd == 1) {
+            strcpy(fn_copy, pwd_var);
+            p = fn_copy;
+            while(dd_cnt--) p = dirname(p);
+            strcpy(fn_copy, p);
+            strcat(fn_copy, "/");
+            strcat(fn_copy, fnwp);
+            strcpy(fn, fn_copy);
+        }
+    }
+    else if (fn[0]=='~') {          /* HOME dir wanted... */
+        if (fn[1]=='/' || fn[1]==0) {
+            if ((p = getenv("HOME")) != NULL) {
+                strcpy(fn_copy, fn);
+                strcpy(fn , p);
+                i = 1;
+/* Special case for root (i.e just "/")! */
+                if (fn[0]=='/' && fn[1]==0 && fn_copy[1] != 0)
+                    i++;
+                strcat(fn, fn_copy+i);
+            }
+        }
+        else {
+            p = fn + 1;
+            q = fn_copy;
+            while (*p != 0 && *p != '/')
+                *q++ = *p++;
+            *q = 0;
+            if ((pwptr = getpwnam(fn_copy)) != NULL) {
+                strcpy(fn_copy, pwptr->pw_dir);
+                strcat(fn_copy, p);
+                strcpy(fn, fn_copy);
+            }
+        }
+    }
+
+/* Now expand any environment variables */
 
     if (strchr(fn, '$') == NULL)    /* Don't bother if no $s */
         return;
-    strcpy(command, "echo ");  /* Not all systems have -n, sadly */
-    strcat(command, fn);
-    if ((pipe = popen(command, "r")) == NULL)
+    strcpy(fn_copy, "echo ");  /* Not all systems have -n, sadly */
+    strcat(fn_copy, fn);
+    if ((pipe = popen(fn_copy, "r")) == NULL)
         return;
     ptr = fn;
-    while ((c = getc(pipe)) != EOF && c != 012)
+    while ((c = getc(pipe)) != EOF && c != '\n')
         *ptr++ = c;
     *ptr = 0;
     pclose(pipe);
     return;
 }
-#endif
-
-#if EXPAND_TILDE
-#include <stdlib.h>
-#include <pwd.h>
-void expand_tilde(char *fn) {
-    char tilde_copy[NFILEN];
-    char *p, *q;
-    short i;
-    struct passwd *pwptr;
-
-    if (fn[0]=='~') {
-        if (fn[1]=='/' || fn[1]==0) {
-            if ((p = getenv("HOME")) != NULL) {
-                strcpy(tilde_copy, fn);
-                strcpy(fn , p);
-                i = 1;
-/* Special case for root (i.e just "/")! */
-                if (fn[0]=='/' && fn[1]==0 && tilde_copy[1] != 0)
-                    i++;
-                strcat(fn, tilde_copy+i);
-            }
-        }
-        else {
-            p = fn + 1;
-            q = tilde_copy;
-            while (*p != 0 && *p != '/')
-                *q++ = *p++;
-            *q = 0;
-            if ((pwptr = getpwnam(tilde_copy)) != NULL) {
-                strcpy(tilde_copy, pwptr->pw_dir);
-                strcat(tilde_copy, p);
-                strcpy(fn, tilde_copy);
-            }
-        }
-    }
-    return;
-}
-#endif
-
 #endif
