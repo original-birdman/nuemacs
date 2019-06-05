@@ -8,10 +8,12 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
+#include "errno.h"
 
 #include "utf8proc.h"
 
@@ -39,41 +41,43 @@ static struct {
 } file_start;
 
 /*
- * Open a file for reading.
+ * Check that whatever is open on ffp is a regular file.
+ * uemacs *only* deals with files.
  */
-int ffropen(char *fn) {
-#if (BSD | USG)
-    fixup_fname(fn);
-#endif
-    if ((ffp = fopen(fn, "r")) == NULL) return FIOFNF;
-    if (pathexpand) {       /* GGR */
-/* If activating an inactive buffer, these may be the same and the
- * action of strcpy() is undefined for overlapping strings.
- * On a Mac it will crash...
- */
-        if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
+static int check_for_file(char *fn) {
+    struct stat statbuf;
+
+    int status = fstat(fileno(ffp), &statbuf);
+    if (status != 0)
+        mlwrite("Cannot stat %s", fn);
+    else {
+        if ((statbuf.st_mode & S_IFMT) != S_IFREG) {
+            mlwrite("Not a file: %s", fn);
+            status = FIOERR;        /* So we close&exit... */
+        }
     }
-
-    cache.rst = cache.len = 0;
-    curbp->b_EOLmissing = 0;        /* Unset this on open */
-    fline = NULL;
-
-    eofflag = FALSE;
+    if (status != 0) {
+        fclose(ffp);
+        return FIOERR;
+    }
     return FIOSUC;
 }
 
 /*
- * Open a file for writing. Return TRUE if all is well, and FALSE on error
- * (cannot create).
+ * Open file <fn> for reading on global file-handle ffp
  */
-int ffwopen(char *fn) {
+int ffropen(char *fn) {
+
 #if (BSD | USG)
     fixup_fname(fn);
 #endif
-    if ((ffp = fopen(fn, "w")) == NULL) {
-        mlwrite("Cannot open file for writing");
-        return FIOERR;
-    }
+/* Opening for reading lets the caller display relevant message on not found.
+ * This may be an error (insert file) or just mean you are openign a new file.
+ */
+    if ((ffp = fopen(fn, "r")) == NULL) return FIOFNF;
+    int status = check_for_file(fn);    /* Check ffp - fn is for messages */
+    if (status != FIOSUC) return status;
+
     if (pathexpand) {       /* GGR */
 /* If activating an inactive buffer, these may be the same and the
  * action of strcpy() is undefined for overlapping strings.
@@ -81,6 +85,43 @@ int ffwopen(char *fn) {
  */
         if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
     }
+
+/* Unset these on open */
+    cache.rst = cache.len = 0;
+    curbp->b_EOLmissing = 0;
+    fline = NULL;
+    eofflag = FALSE;
+
+    return FIOSUC;
+}
+
+/*
+ * Open file <fn> for writing on global file-handle ffp
+ */
+int ffwopen(char *fn) {
+
+#if (BSD | USG)
+    fixup_fname(fn);
+#endif
+/* Opening for writing displays errors here */
+    if ((ffp = fopen(fn, "w")) == NULL) {
+        if (errno == EISDIR)    /* Can't open a dir for writing */
+            mlwrite("Can't write a directory: %s", fn);
+        else
+            mlwrite("Cannot open %s for writing", fn);
+        return FIOERR;
+    }
+    int status = check_for_file(fn);    /* Check ffp - fn is for messages */
+    if (status != FIOSUC) return status;
+
+    if (pathexpand) {       /* GGR */
+/* If activating an inactive buffer, these may be the same and the
+ * action of strcpy() is undefined for overlapping strings.
+ * On a Mac it will crash...
+ */
+        if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
+    }
+
     cache.rst = cache.len = 0;
     file_start.vlen = 0;
 
@@ -348,24 +389,19 @@ int ffgetline(void) {
 }
 
 /*
- * does <fname> exist on disk?
+ * Does file <fn> exist on disk?
  *
- * char *fname;         file to check for existance
  */
-int fexist(char *fname) {
-    FILE *fp;
+int fexist(char *fn) {
+    struct stat statbuf;
+
 #if (BSD | USG)
-    fixup_fname(fname);
+    fixup_fname(fn);
 #endif
 
-/* Try to open the file for reading */
-    fp = fopen(fname, "r");
-
-/* If it fails, just return false! */
-    if (fp == NULL) return FALSE;
-
-/* Otherwise, close it and report true */
-    fclose(fp);
+    int status = stat(fn, &statbuf);
+    if (status != 0) return FALSE;
+    if ((statbuf.st_mode & S_IFMT) != S_IFREG) return FALSE;
     return TRUE;
 }
 
@@ -378,11 +414,7 @@ static char pwd_var[NFILEN];
 static int have_pwd = 0;    /* 1 == have it, -1 == tried and failed */
 
 void fixup_fname(char *fn) {
-    char *ptr;
     char fn_copy[NFILEN];
-    int c, i;
-    FILE *pipe;
-
     char *p, *q;
     struct passwd *pwptr;
 
@@ -432,7 +464,7 @@ void fixup_fname(char *fn) {
             if ((p = getenv("HOME")) != NULL) {
                 strcpy(fn_copy, fn);
                 strcpy(fn , p);
-                i = 1;
+                int i = 1;
 /* Special case for root (i.e just "/")! */
                 if (fn[0]=='/' && fn[1]==0 && fn_copy[1] != 0)
                     i++;
@@ -452,20 +484,6 @@ void fixup_fname(char *fn) {
             }
         }
     }
-
-/* Now expand any environment variables */
-
-    if (strchr(fn, '$') == NULL)    /* Don't bother if no $s */
-        return;
-    strcpy(fn_copy, "echo ");  /* Not all systems have -n, sadly */
-    strcat(fn_copy, fn);
-    if ((pipe = popen(fn_copy, "r")) == NULL)
-        return;
-    ptr = fn;
-    while ((c = getc(pipe)) != EOF && c != '\n')
-        *ptr++ = c;
-    *ptr = 0;
-    pclose(pipe);
     return;
 }
 #endif

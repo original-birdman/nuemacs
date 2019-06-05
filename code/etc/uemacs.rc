@@ -25,6 +25,9 @@ set $overlap 2          ; What it used to be
 ; NOTE: that the maximum length of any store-procedure/buffer-to-key name
 ; is 14 characters.
 ;
+
+; Procedure run when a new file is opened
+;
 store-procedure file-hooks
     set %rctmp &sin $cfname "."
     !if &equ %rctmp 0
@@ -50,6 +53,8 @@ store-procedure file-hooks
     !endif
 !endm
 ;
+; Centre the current text within $fillcol columns
+;
 store-procedure centre-line
         beginning-of-line
         !force white-delete
@@ -64,10 +69,15 @@ store-procedure centre-line
         !endif
 !endm
 ;
+; Unset the Default replace string (which is otherwise remembered
+; between replacements).
+;
 store-procedure rm-dflt-repl
     set $replace ""
     write-message "[Default replace string set null]"
 !endm
+;
+; Run the buffer through an external spell checker
 ;
 store-procedure spell-check not_mb
     set %extras @"<return> or any special SPELL options: "
@@ -84,9 +94,9 @@ store-procedure spell-check not_mb
       write-message "[Pulling (corrected) buffer back in..]~n~r"
       read-file "Temp.spell"
       write-message "~n[Tidying up temporary files..]"
-      set %crunch FALSE
-    !else
-      set %crunch TRUE
+;      set %crunch FALSE
+;    !else
+;      set %crunch TRUE
     !endif
     set $discmd FALSE
     2 shell-command "rm Temp.spell"
@@ -102,7 +112,7 @@ set %rindef 0
 ; set %spc "                                                                  "
 
 ;
-; left-and-right-justify
+; left-and-right-justify text within a $fillcol width
 ;
 store-procedure lr-justify not_mb   ; Left and right justify paragraph
   set %oldfill $fillcol
@@ -161,7 +171,9 @@ store-procedure lr-justify not_mb   ; Left and right justify paragraph
   clear-message-line
 !endm
 ;
-store-procedure _mytoggle-mode          ; toggle local/global mode
+; Toggle local/global modes
+;
+store-procedure _mytoggle-mode
     write-message &cat &cat "Toggle " %type-mode " mode (FHWCPEVOMYAQD): "
     set %report " "
     set %modesel &upper &gtkey
@@ -280,10 +292,34 @@ store-procedure toggle-gmode            ; toggle global mode
     execute-procedure _mytoggle-mode
 !endm
 ;
-store-procedure del-sp-right            ; delete space right
+; delete spaces right until next non-space char
+;
+store-procedure del-sp-right
     !while &or &equal $curchar 32 &equal $curchar 9
         delete-next-character
     !endwhile
+!endm
+
+; Take text between point and any preceding $ as an environment variable
+; name and replace that $text with the variable's contents
+;
+store-procedure expand-envvar
+    set-mark
+    !while TRUE
+        !if &equal $curchar 36  ; i.e. "$"
+            !break
+        !endif
+        !if &equal $curcol 0
+            write-message "No envar found"
+            exchange-point-and-mark
+            !finish
+        !endif
+        backward-character
+    !endwhile
+; Need to get the text we've found - which is the name of the envvar
+; Remove the $varname text, then look-up that (minus the $) as an envvar
+    kill-region
+    insert-string &env &mid $kill 2 &len $kill
 !endm
 
 ;
@@ -301,15 +337,15 @@ unbind-key                              ^X^A
 bind-to-key detab-line                  ^X^D
 bind-to-key handle-tab                  ^X^I
 ;
+bind-to-key fill-all-paragraphs         ^X.
+bind-to-key numberlist-region           ^X/
+bind-to-key narrow-to-region            ^X<
+bind-to-key widen-from-region           ^X>
+bind-to-key help                        ^X?
 bind-to-key insert-file                 ^XI
 buffer-to-key centre-line               ^XL
 bind-to-key save-file                   ^XS
 buffer-to-key toggle-lmode              ^XT
-bind-to-key numberlist-region           ^X/
-bind-to-key fill-all-paragraphs         ^X.
-bind-to-key narrow-to-region            ^X<
-bind-to-key widen-from-region           ^X>
-bind-to-key help                        ^X?
 ;
 buffer-to-key rm-dflt-repl              M-^D
 bind-to-key incremental-search          M-^I
@@ -320,17 +356,19 @@ bind-to-key i-shell                     M-^U
 bind-to-key execute-file                M-^X
 bind-to-key yank-minibuffer             M-^Y
 ;
+; The SP on the following line denotes "space"
+bind-to-key leave-one-white             M-SP
+buffer-to-key expand-envvar             M-$
+bind-to-key query-replace-string        M-%
+bind-to-key quoted-count                M-'
+bind-to-key makelist-region             M-/
+buffer-to-key spell-check               M-=
+bind-to-key describe-key                M-?
+
 bind-to-key search-reverse              M-R
 buffer-to-key toggle-gmode              M-T
 bind-to-key fill-paragraph              M-Q
-bind-to-key makelist-region             M-/
 bind-to-key white-delete                M-\
-; The SP on the following line denotes "space"
-bind-to-key leave-one-white             M-SP
-bind-to-key query-replace-string        M-%
-bind-to-key quoted-count                M-'
-buffer-to-key spell-check               M-=
-bind-to-key describe-key                M-?
 ;
 bind-to-key previous-line               FNA
 bind-to-key next-line                   FNB
