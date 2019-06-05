@@ -53,18 +53,16 @@ int namedcmd(int f, int n) {
  *
  * int f, n;            default Flag and Numeric argument
  */
-int execcmd(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        int status;             /* status return */
-        char cmdstr[NSTRING];   /* string holding command to execute */
+int execcmd(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int status;             /* status return */
+    char cmdstr[NSTRING];   /* string holding command to execute */
 
-        /* get the line wanted */
-        if ((status = mlreply(": ", cmdstr, NSTRING)) != TRUE)
-                return status;
+/* Get the line wanted */
+    if ((status = mlreply(": ", cmdstr, NSTRING)) != TRUE) return status;
 
-        execlevel = 0;
-        return docmd(cmdstr);
+    execlevel = 0;
+    return docmd(cmdstr);
 }
 
 /*
@@ -80,71 +78,70 @@ int execcmd(int f, int n)
  *
  * char *cline;         command line to execute
  */
-int docmd(char *cline)
-{
-        int f;                  /* default argument flag */
-        int n;                  /* numeric repeat value */
-        int status;             /* return status of function */
-        int oldcle;             /* old contents of clexec flag */
-        char *oldestr;          /* original exec string */
-        char tkn[NSTRING];      /* next token off of command line */
-        char tbuf[NSTRING];     /* string buffer for some workings */
-        /* if we are scanning and not executing..go back here */
-        if (execlevel)
-                return TRUE;
+int docmd(char *cline) {
+    int f;                  /* default argument flag */
+    int n;                  /* numeric repeat value */
+    int status;             /* return status of function */
+    int oldcle;             /* old contents of clexec flag */
+    char *oldestr;          /* original exec string */
+    char tkn[NSTRING];      /* next token off of command line */
+    char tbuf[NSTRING];     /* string buffer for some workings */
 
-        oldestr = execstr;      /* save last ptr to string to execute */
-        execstr = cline;        /* and set this one as current */
+/* If we are scanning and not executing..go back here */
+    if (execlevel) return TRUE;
 
-        /* first set up the default command values */
-        f = FALSE;
-        n = 1;
-        lastflag = thisflag;
-        thisflag = 0;
+    oldestr = execstr;      /* save last ptr to string to execute */
+    execstr = cline;        /* and set this one as current */
 
-        if ((status = macarg(tkn)) != TRUE) {   /* and grab the first token */
-                execstr = oldestr;
-                return status;
-        }
+/* First set up the default command values */
+    f = FALSE;
+    n = 1;
+    lastflag = thisflag;
+    thisflag = 0;
 
-        /* process leadin argument */
-        if (gettyp(tkn) != TKCMD) {
-                f = TRUE;
+    if ((status = macarg(tkn)) != TRUE) {   /* and grab the first token */
+        execstr = oldestr;
+        return status;
+    }
+
+/* Process leadin argument */
+    if (gettyp(tkn) != TKCMD) {
+        f = TRUE;
 /* GGR - There is the possibility of an illegal overlap of args here.
  *       So it must be done via a temporary buffer.
  *              strcpy(tkn, getval(tkn));
  */
-                strcpy(tbuf, getval(tkn));
-                strcpy(tkn, tbuf);
-                n = atoi(tkn);
+        strcpy(tbuf, getval(tkn));
+        strcpy(tkn, tbuf);
+        n = atoi(tkn);
 
-                /* and now get the command to execute */
-                if ((status = macarg(tkn)) != TRUE) {
-                        execstr = oldestr;
-                        return status;
-                }
+/* and now get the command to execute */
+        if ((status = macarg(tkn)) != TRUE) {
+            execstr = oldestr;
+            return status;
         }
+    }
 
-        /* and match the token to see if it exists */
-        struct name_bind *nbp = name_info(tkn);
-        if (nbp == NULL) {
-                char ermess[NSTRING+22];
-                snprintf(ermess, NSTRING+22, "%s No such Function: %s %s",
-                     MLpre, tkn, MLpost);
-                mlwrite(ermess);
-                execstr = oldestr;
-                return FALSE;
-        }
-
-        /* save the arguments and go execute the command */
-        oldcle = clexec;        /* save old clexec flag */
-        clexec = TRUE;          /* in cline execution */
-        current_command = nbp->n_name;
-        status = (nbp->n_func)(f, n); /* call the function */
-        cmdstatus = status;     /* save the status */
-        clexec = oldcle;        /* restore clexec flag */
+/* And match the token to see if it exists */
+    struct name_bind *nbp = name_info(tkn);
+    if (nbp == NULL) {
+        char ermess[NSTRING+22];
+        snprintf(ermess, NSTRING+22, "%s No such Function: %s %s",
+              MLpre, tkn, MLpost);
+        mlwrite(ermess);
         execstr = oldestr;
-        return status;
+        return FALSE;
+    }
+
+/* Save the arguments and go execute the command */
+    oldcle = clexec;        /* save old clexec flag */
+    clexec = TRUE;          /* in cline execution */
+    current_command = nbp->n_name;
+    status = (nbp->n_func)(f, n); /* call the function */
+    cmdstatus = status;     /* save the status */
+    clexec = oldcle;        /* restore clexec flag */
+    execstr = oldestr;
+    return status;
 }
 
 /*
@@ -155,74 +152,67 @@ int docmd(char *cline)
  * char *src, *tok;     source string, destination token string
  * int size;            maximum size of token
  */
-char *token(char *src, char *tok, int size)
-{
-        int quotef;     /* is the current string quoted? */
-        char c; /* temporary character */
+char *token(char *src, char *tok, int size) {
+    int quotef;     /* is the current string quoted? */
+    char c; /* temporary character */
 
-        /* first scan past any whitespace in the source string */
-        while (*src == ' ' || *src == '\t')
-                ++src;
+/* First scan past any whitespace in the source string */
+    while (*src == ' ' || *src == '\t') ++src;
 
-        /* scan through the source string */
-        quotef = FALSE;
-        while (*src) {
-                /* process special characters */
-                if (*src == '~') {
-                        ++src;
-                        if (*src == 0)
-                                break;
-                        switch (*src++) {
-                        case 'r':
-                                c = 13;
-                                break;
-                        case 'n':
-                                c = 10;
-                                break;
-                        case 't':
-                                c = 9;
-                                break;
-                        case 'b':
-                                c = 8;
-                                break;
-                        case 'f':
-                                c = 12;
-                                break;
-                        default:
-                                c = *(src - 1);
-                        }
-                        if (--size > 0) {
-                                *tok++ = c;
-                        }
-                } else {
-                        /* check for the end of the token */
-                        if (quotef) {
-                                if (*src == '"')
-                                        break;
-                        } else {
-                                if (*src == ' ' || *src == '\t')
-                                        break;
-                        }
-
-                        /* set quote mode if quote found */
-                        if (*src == '"') {
-                                quotef = TRUE;
-                                src++;
-                                continue;   /* Don't record it... */
-                        }
-
-                        /* record the character */
-                        c = *src++;
-                        if (--size > 0)
-                                *tok++ = c;
-                }
+/* Scan through the source string */
+    quotef = FALSE;
+    while (*src) {      /* process special characters */
+        if (*src == '~') {
+            ++src;
+            if (*src == 0) break;
+            switch (*src++) {
+                case 'r':
+                    c = 13;
+                    break;
+                case 'n':
+                    c = 10;
+                    break;
+                case 't':
+                    c = 9;
+                    break;
+                case 'b':
+                    c = 8;
+                    break;
+                case 'f':
+                    c = 12;
+                    break;
+                default:
+                    c = *(src - 1);
+            }
+            if (--size > 0) {
+                *tok++ = c;
+            }
         }
+        else {      /* check for the end of the token */
+            if (quotef) {
+                if (*src == '"') break;
+            }
+            else {
+                if (*src == ' ' || *src == '\t') break;
+            }
 
-        /* terminate the token and exit */
-        if (*src)
-                ++src;
-        *tok = 0;
-        return src;
+/* Set quote mode if quote found */
+            if (*src == '"') {
+                quotef = TRUE;
+                src++;
+                continue;   /* Don't record it... */
+            }
+
+/* Record the character */
+            c = *src++;
+            if (--size > 0) *tok++ = c;
+        }
+    }
+
+/* Terminate the token and exit */
+    if (*src) ++src;
+    *tok = 0;
+    return src;
 }
 
 /*
@@ -230,16 +220,15 @@ char *token(char *src, char *tok, int size)
  *
  * char *tok;           buffer to place argument
  */
-int macarg(char *tok)
-{
-        int savcle;             /* buffer to store original clexec */
-        int status;
+int macarg(char *tok) {
+    int savcle;             /* buffer to store original clexec */
+    int status;
 
-        savcle = clexec;        /* save execution mode */
-        clexec = TRUE;          /* get the argument */
-        status = nextarg("", tok, NSTRING, ctoec('\n'));
-        clexec = savcle;        /* restore execution mode */
-        return status;
+    savcle = clexec;        /* save execution mode */
+    clexec = TRUE;          /* get the argument */
+    status = nextarg("", tok, NSTRING, ctoec('\n'));
+    clexec = savcle;        /* restore execution mode */
+    return status;
 }
 
 /*
@@ -251,23 +240,23 @@ int macarg(char *tok)
  * int size;                    size of the buffer
  * int terminator;              terminating char to be used on interactive fetch
  */
-int nextarg(char *prompt, char *buffer, int size, int terminator)
-{
-        char tbuf[NSTRING];     /* string buffer for some workings */
-        /* if we are interactive, go get it! */
-        if (clexec == FALSE)
-                return getstring(prompt, buffer, size, terminator);
-        /* grab token and advance past */
-        execstr = token(execstr, buffer, size);
+int nextarg(char *prompt, char *buffer, int size, int terminator) {
+    char tbuf[NSTRING];     /* string buffer for some workings */
 
-        /* evaluate it */
+/* If we are interactive, go get it! */
+    if (clexec == FALSE) return getstring(prompt, buffer, size, terminator);
+
+/* Grab token and advance past */
+    execstr = token(execstr, buffer, size);
+
+/* Evaluate it */
 /* GGR - There is the possibility of an illegal overlap of args here.
  *       So it must be done via a temporary buffer.
  *      strcpy(buffer, getval(buffer));
  */
-        strcpy(tbuf, getval(buffer));
-        strcpy(buffer, tbuf);
-        return TRUE;
+    strcpy(tbuf, getval(buffer));
+    strcpy(buffer, tbuf);
+    return TRUE;
 }
 
 /*
@@ -278,41 +267,40 @@ int nextarg(char *prompt, char *buffer, int size, int terminator)
  * int f;               default flag
  * int n;               macro number to use
  */
-int storemac(int f, int n)
-{
-        struct buffer *bp;      /* pointer to macro buffer */
-        char bufn[NBUFN];       /* name of buffer to use */
+int storemac(int f, int n) {
+    struct buffer *bp;      /* pointer to macro buffer */
+    char bufn[NBUFN];       /* name of buffer to use */
 
-        /* must have a numeric argument to this function */
-        if (f == FALSE) {
-                mlwrite("No macro specified");
-                return FALSE;
-        }
+/* Must have a numeric argument to this function */
+    if (f == FALSE) {
+        mlwrite("No macro specified");
+        return FALSE;
+    }
 
-        /* range check the macro number */
-        if (n < 1 || n > 40) {
-                mlwrite("Macro number out of range");
-                return FALSE;
-        }
+/* Range check the macro number */
+    if (n < 1 || n > 40) {
+        mlwrite("Macro number out of range");
+        return FALSE;
+    }
 
-        /* construct the macro buffer name */
-        strcpy(bufn, "/Macro xx");
-        bufn[7] = '0' + (n / 10);
-        bufn[8] = '0' + (n % 10);
+/* Construct the macro buffer name */
+    strcpy(bufn, "/Macro xx");
+    bufn[7] = '0' + (n / 10);
+    bufn[8] = '0' + (n % 10);
 
-        /* set up the new macro buffer */
-        if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
-                mlwrite("Can not create macro");
-                return FALSE;
-        }
+/* Set up the new macro buffer */
+    if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
+        mlwrite("Can not create macro");
+        return FALSE;
+    }
 
-        /* and make sure it is empty */
-        bclear(bp);
+/* And make sure it is empty */
+    bclear(bp);
 
-        /* and set the macro store pointers to it */
-        mstore = TRUE;
-        bstore = bp;
-        return TRUE;
+/* And set the macro store pointers to it */
+    mstore = TRUE;
+    bstore = bp;
+    return TRUE;
 }
 
 /* GGR
@@ -789,53 +777,50 @@ int storeproc(int f, int n) {
  *
  * int f, n;            default flag and numeric arg
  */
-int execproc(int f, int n)
-{
-        UNUSED(f);
-        struct buffer *bp;      /* ptr to buffer to execute */
-        int status;             /* status return */
-        char bufn[NBUFN+1];     /* name of buffer to execute */
+int execproc(int f, int n) {
+    UNUSED(f);
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+    char bufn[NBUFN+1];     /* name of buffer to execute */
 
 /* Append the procedure name to the buffer marker tag */
-        bufn[0] = '/';
+    bufn[0] = '/';
 
-        if (input_waiting != NULL) {
-            strcpy(bufn+1, input_waiting);
-            input_waiting = NULL;   /* We've used it */
-        }
-        else {
-            if ((status =
-                 mlreply("Execute procedure: ", &bufn[1], NBUFN)) != TRUE)
-                    return status;
-            if (strlen(bufn) >= NBUFN) {
-                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
-                sleep(1);
-                return TRUE;    /* Don't abort start-up file */
-            }
-        }
-
-        /* construct the buffer name */
-        bufn[0] = '/';
-
-        /* find the pointer to that buffer */
-        if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-                mlwrite("No such procedure");
-                return FALSE;
-        }
-
-/* Check that it is a procedure buffer */
-
-        if (bp->b_type != BTPROC) {
-            mlforce("Buffer %s is not a procedure buffer.", bufn);
+    if (input_waiting != NULL) {
+        strcpy(bufn+1, input_waiting);
+        input_waiting = NULL;   /* We've used it */
+    }
+    else {
+        if ((status = mlreply("Execute procedure: ", &bufn[1], NBUFN)) != TRUE)
+            return status;
+        if (strlen(bufn) >= NBUFN) {
+            mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
             sleep(1);
             return TRUE;    /* Don't abort start-up file */
         }
+    }
 
-        /* and now execute it as asked */
-        while (n-- > 0)
-                if ((status = dobuf(bp)) != TRUE)
-                        return status;
-        return TRUE;
+/* Construct the buffer name */
+    bufn[0] = '/';
+
+/* Find the pointer to that buffer */
+    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
+        mlwrite("No such procedure");
+        return FALSE;
+    }
+
+/* Check that it is a procedure buffer */
+
+    if (bp->b_type != BTPROC) {
+        mlforce("Buffer %s is not a procedure buffer.", bufn);
+        sleep(1);
+        return TRUE;    /* Don't abort start-up file */
+    }
+
+/* and now execute it as asked */
+    while (n-- > 0)
+        if ((status = dobuf(bp)) != TRUE) return status;
+    return TRUE;
 }
 
 /*
@@ -1325,13 +1310,10 @@ single_exit:
  *
  * struct while_block *wp;              head of structure to free
  */
-void freewhile(struct while_block *wp)
-{
-        if (wp == NULL)
-                return;
-        if (wp->w_next)
-                freewhile(wp->w_next);
-        free(wp);
+void freewhile(struct while_block *wp) {
+    if (wp == NULL) return;
+    if (wp->w_next) freewhile(wp->w_next);
+    free(wp);
 }
 
 /*
@@ -1342,47 +1324,45 @@ void freewhile(struct while_block *wp)
  */
 static int include_level = 0;
 #define MAX_INCLUDE_LEVEL 8
-int execfile(int f, int n)
-{
-        UNUSED(f);
-        int status;             /* return status of name query */
-        char fname[NSTRING];    /* name of file to execute */
-        char *fspec;            /* full file spec */
-        int fail_ok = 0;
-        int fns = 0;
+int execfile(int f, int n) {
+    UNUSED(f);
+    int status;             /* return status of name query */
+    char fname[NSTRING];    /* name of file to execute */
+    char *fspec;            /* full file spec */
+    int fail_ok = 0;
+    int fns = 0;
 
-        if ((status =
-             mlreply("File to execute: ", fname, NSTRING - 1)) != TRUE)
-                return status;
+    if ((status = mlreply("File to execute: ", fname, NSTRING - 1)) != TRUE)
+        return status;
 
-        if (include_level >= MAX_INCLUDE_LEVEL) {
-                mlwrite("Include depth too great (%d)!",  include_level+1);
-                return FALSE;
-        }
-        if (fname[0] == '^') {
-                fail_ok = 1;
-                fns = 1;
-        }
+    if (include_level >= MAX_INCLUDE_LEVEL) {
+        mlwrite("Include depth too great (%d)!",  include_level+1);
+        return FALSE;
+    }
+    if (fname[0] == '^') {
+        fail_ok = 1;
+        fns = 1;
+    }
 /* Don't look in HOME!
  * This allows you to have uemacs.rc in HOME that includes a system one
  * by using "include-file uemacs.rc"
  */
-        fspec = flook(fname+fns, FALSE, INTABLE);
+    fspec = flook(fname+fns, FALSE, INTABLE);
 
-        /* if it isn't around */
-        if (fspec == NULL) {
-                mlwrite("Include file %s not found!", fname+fns);
-                return fail_ok? TRUE: FALSE;
-        }
+/* If it isn't around */
+    if (fspec == NULL) {
+        mlwrite("Include file %s not found!", fname+fns);
+        return fail_ok? TRUE: FALSE;
+    }
 
-        /* otherwise, execute it */
-        while (n-- > 0) {
-                include_level++;
-                status = dofile(fspec);
-                include_level--;
-                if (status != TRUE) return fail_ok? TRUE: status;
-        }
-        return TRUE;
+/* Otherwise, execute it */
+    while (n-- > 0) {
+        include_level++;
+        status = dofile(fspec);
+        include_level--;
+        if (status != TRUE) return fail_ok? TRUE: status;
+    }
+    return TRUE;
 }
 
 /*
@@ -1392,38 +1372,36 @@ int execfile(int f, int n)
  *
  * char *fname;         file name to execute
  */
-int dofile(char *fname)
-{
-        struct buffer *bp;      /* buffer to place file to exeute */
-        struct buffer *cb;      /* temp to hold current buf while we read */
-        int status;             /* results of various calls */
-        char bufn[NBUFN];       /* name of buffer */
+int dofile(char *fname) {
+    struct buffer *bp;      /* buffer to place file to exeute */
+    struct buffer *cb;      /* temp to hold current buf while we read */
+    int status;             /* results of various calls */
+    char bufn[NBUFN];       /* name of buffer */
 
-        makename(bufn, fname);  /* derive the name of the buffer */
-        unqname(bufn);          /* make sure we don't stomp things */
-        if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
-                return FALSE;
-        cb = curbp;             /* save the old buffer */
-        curbp = bp;             /* make this one current */
-        if (silent)             /* GGR */
-                pathexpand = FALSE;
-        /* and try to read in the file to execute */
-        if ((status = readin(fname, FALSE)) != TRUE) {
-                curbp = cb;     /* restore the current buffer */
-                pathexpand = TRUE;  /* GGR */
-                return status;
-        }
-        pathexpand = TRUE;          /* GGR */
+    makename(bufn, fname);  /* derive the name of the buffer */
+    unqname(bufn);          /* make sure we don't stomp things */
+    if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
+        return FALSE;
+    cb = curbp;             /* save the old buffer */
+    curbp = bp;             /* make this one current */
+    if (silent)             /* GGR */
+        pathexpand = FALSE;
 
-        /* go execute it! */
-        curbp = cb;             /* restore the current buffer */
-        if ((status = dobuf(bp)) != TRUE)
-                return status;
+/* And try to read in the file to execute */
+    if ((status = readin(fname, FALSE)) != TRUE) {
+        curbp = cb;     /* restore the current buffer */
+        pathexpand = TRUE;  /* GGR */
+        return status;
+    }
+    pathexpand = TRUE;          /* GGR */
 
-        /* if not displayed, remove the now unneeded buffer and exit */
-        if (bp->b_nwnd == 0)
-                zotbuf(bp);
-        return TRUE;
+/* Go execute it! */
+    curbp = cb;             /* restore the current buffer */
+    if ((status = dobuf(bp)) != TRUE) return status;
+
+/* If not displayed, remove the now unneeded buffer and exit */
+    if (bp->b_nwnd == 0) zotbuf(bp);
+    return TRUE;
 }
 
 /*

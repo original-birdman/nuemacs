@@ -23,24 +23,20 @@
  * if the use count is 0. Otherwise, they come
  * from some other window.
  */
-int usebuffer(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct buffer *bp;
-        int s;
-        char bufn[NBUFN];
+int usebuffer(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct buffer *bp;
+    int s;
+    char bufn[NBUFN];
 
 /* GGR - handle saved buffer name in minibuffer */
-        if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
-                if (!inmb && s != ABORT)
-                        strcpy(bufn, savnam);
-                else
-                        return(s);
-        }
+    if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
+        if (!inmb && s != ABORT) strcpy(bufn, savnam);
+        else                     return(s);
+    }
 
-        if ((bp = bfind(bufn, TRUE, 0)) == NULL)
-                return FALSE;
-        return swbuffer(bp);
+    if ((bp = bfind(bufn, TRUE, 0)) == NULL) return FALSE;
+    return swbuffer(bp);
 }
 
 /*
@@ -48,39 +44,30 @@ int usebuffer(int f, int n)
  *
  * int f, n;            default flag, numeric argument
  */
-int nextbuffer(int f, int n)
-{
-        struct buffer *bp = NULL;  /* eligable buffer to switch to */
-        struct buffer *bbp;        /* eligable buffer to switch to */
+int nextbuffer(int f, int n) {
+    struct buffer *bp = NULL;   /* eligable buffer to switch to */
+    struct buffer *bbp;         /* eligable buffer to switch to */
 
-        /* make sure the arg is legit */
-        if (f == FALSE)
-                n = 1;
-        if (n < 1)
-                return FALSE;
+/* Make sure the arg is legit */
+    if (f == FALSE) n = 1;
+    if (n < 1) return FALSE;
 
-        bbp = curbp;
-        while (n-- > 0) {
-                /* advance to the next buffer */
-                bp = bbp->b_bufp;
+    bbp = curbp;
+    while (n-- > 0) {
+        bp = bbp->b_bufp;       /* advance to the next buffer */
 
-                /* cycle through the buffers to find an eligable one */
-                while (bp == NULL || bp->b_flag & BFINVS) {
-                        if (bp == NULL)
-                                bp = bheadp;
-                        else
-                                bp = bp->b_bufp;
+/* Cycle through the buffers to find an eligable one */
+        while (bp == NULL || bp->b_flag & BFINVS) {
+            if (bp == NULL) bp = bheadp;
+            else            bp = bp->b_bufp;
 
-                        /* don't get caught in an infinite loop! */
-                        if (bp == bbp)
-                                return FALSE;
+/* Don't get caught in an infinite loop! */
+            if (bp == bbp)  return FALSE;
 
-                }
-
-                bbp = bp;
         }
-
-        return swbuffer(bp);
+        bbp = bp;
+    }
+    return swbuffer(bp);
 }
 
 /*
@@ -158,51 +145,49 @@ int swbuffer(struct buffer *bp) {
  * if the buffer has been changed). Then free the header
  * line and the buffer header. Bound to "C-X K".
  */
-int killbuffer(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct buffer *bp;
-        int s;
-        char bufn[NBUFN];
+int killbuffer(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct buffer *bp;
+    int s;
+    char bufn[NBUFN];
 
-        if ((s = mlreply("Kill buffer: ", bufn, NBUFN)) != TRUE)
-                return s;
-        if ((bp = bfind(bufn, FALSE, 0)) == NULL)   /* Easy if unknown. */
-                return TRUE;
-        if (bp->b_flag & BFINVS)    /* Deal with special buffers */
-                return TRUE;        /* by doing nothing.    */
-        return zotbuf(bp);
+    if ((s = mlreply("Kill buffer: ", bufn, NBUFN)) != TRUE)
+        return s;
+    if ((bp = bfind(bufn, FALSE, 0)) == NULL)   /* Easy if unknown. */
+        return TRUE;
+    if (bp->b_flag & BFINVS)    /* Deal with special buffers */
+        return TRUE;            /* by doing nothing.    */
+    return zotbuf(bp);
 }
 
 /*
  * kill the buffer pointed to by bp
  */
-int zotbuf(struct buffer *bp)
-{
-        struct buffer *bp1;
-        struct buffer *bp2;
-        int s;
+int zotbuf(struct buffer *bp) {
+    struct buffer *bp1;
+    struct buffer *bp2;
+    int s;
 
-        if (bp->b_nwnd != 0) {          /* Error if on screen.  */
-                mlwrite("Buffer is being displayed");
-                return FALSE;
-        }
-        if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
-                return s;
-        free((char *) bp->b_linep);     /* Release header line. */
-        bp1 = NULL;                     /* Find the header.     */
-        bp2 = bheadp;
-        while (bp2 != bp) {
-                bp1 = bp2;
-                bp2 = bp2->b_bufp;
-        }
-        bp2 = bp2->b_bufp;              /* Next one in chain.   */
-        if (bp1 == NULL)                /* Unlink it.           */
-                bheadp = bp2;
-        else
-                bp1->b_bufp = bp2;
-        free((char *) bp);              /* Release buffer block */
-        return TRUE;
+    if (bp->b_nwnd != 0) {          /* Error if on screen.  */
+        mlwrite("Buffer is being displayed");
+        return FALSE;
+    }
+    if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
+        return s;
+    free((char *) bp->b_linep);     /* Release header line. */
+    bp1 = NULL;                     /* Find the header.     */
+    bp2 = bheadp;
+    while (bp2 != bp) {
+        bp1 = bp2;
+        bp2 = bp2->b_bufp;
+    }
+    bp2 = bp2->b_bufp;              /* Next one in chain.   */
+    if (bp1 == NULL)                /* Unlink it.           */
+        bheadp = bp2;
+    else
+        bp1->b_bufp = bp2;
+    free((char *) bp);              /* Release buffer block */
+    return TRUE;
 }
 
 /*
@@ -210,32 +195,30 @@ int zotbuf(struct buffer *bp)
  *
  * int f, n;            default Flag & Numeric arg
  */
-int namebuffer(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct buffer *bp;      /* pointer to scan through all buffers */
-        char bufn[NBUFN];       /* buffer to hold buffer name */
+int namebuffer(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct buffer *bp;      /* pointer to scan through all buffers */
+    char bufn[NBUFN];       /* buffer to hold buffer name */
 
-        /* prompt for and get the new buffer name */
-      ask:if (mlreply("Change buffer name to: ", bufn, NBUFN) !=
-            TRUE)
-                return FALSE;
+/* Prompt for and get the new buffer name */
+ask:
+    if (mlreply("Change buffer name to: ", bufn, NBUFN) != TRUE)
+        return FALSE;
 
-        /* and check for duplicates */
-        bp = bheadp;
-        while (bp != NULL) {
-                if (bp != curbp) {
-                        /* if the names the same */
-                        if (strcmp(bufn, bp->b_bname) == 0)
-                                goto ask;       /* try again */
-                }
-                bp = bp->b_bufp;        /* onward */
+/* And check for duplicates */
+    bp = bheadp;
+    while (bp != NULL) {
+        if (bp != curbp) {
+            if (strcmp(bufn, bp->b_bname) == 0) /* If the names the same */
+                goto ask;       /* try again */
         }
+        bp = bp->b_bufp;        /* onward */
+    }
 
-        strcpy(curbp->b_bname, bufn);   /* copy buffer name to structure */
-        curwp->w_flag |= WFMODE;        /* make mode line replot */
-        mlerase();
-        return TRUE;
+    strcpy(curbp->b_bname, bufn);   /* copy buffer name to structure */
+    curwp->w_flag |= WFMODE;        /* make mode line replot */
+    mlerase();
+    return TRUE;
 }
 
 /*
@@ -248,8 +231,7 @@ int namebuffer(int f, int n)
  * A numeric argument forces it to list invisible buffers as
  * well.
  */
-int listbuffers(int f, int n)
-{
+int listbuffers(int f, int n) {
     UNUSED(n);
     struct window *wp;
     struct buffer *bp;
@@ -296,8 +278,7 @@ int listbuffers(int f, int n)
  * int iflag;           list hidden buffer flag
  */
 #define MAXLINE MAXCOL
-int makelist(int iflag)
-{
+int makelist(int iflag) {
     char *cp1;
     char *cp2;
     int c;
@@ -423,60 +404,50 @@ void ltoa(char *buf, int width, long num)
 }
 
 /*
- * The argument "text" points to
- * a string. Append this line to the
- * buffer list buffer. Handcraft the EOL
- * on the end. Return TRUE if it worked and
- * FALSE if you ran out of room.
+ * The argument "text" points to a string. Append this line to the
+ * buffer list buffer. Handcraft the EOL on the end.
+ * Return TRUE if it worked and FALSE if you ran out of room.
  */
-int addline(char *text)
-{
-        struct line *lp;
-        int ntext;
+int addline(char *text) {
+    struct line *lp;
+    int ntext;
 
-        ntext = strlen(text);
-        if ((lp = lalloc(ntext)) == NULL)
-                return FALSE;
-        lfillchars(lp, ntext, text);
-        blistp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
-        lp->l_bp = blistp->b_linep->l_bp;
-        blistp->b_linep->l_bp = lp;
-        lp->l_fp = blistp->b_linep;
-        if (blistp->b_dotp == blistp->b_linep)  /* If "." is at the end */
-                blistp->b_dotp = lp;    /* move it to new line  */
-        return TRUE;
+    ntext = strlen(text);
+    if ((lp = lalloc(ntext)) == NULL) return FALSE;
+    lfillchars(lp, ntext, text);
+    blistp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
+    lp->l_bp = blistp->b_linep->l_bp;
+    blistp->b_linep->l_bp = lp;
+    lp->l_fp = blistp->b_linep;
+    if (blistp->b_dotp == blistp->b_linep)  /* If "." is at the end */
+        blistp->b_dotp = lp;                /* move it to new line  */
+    return TRUE;
 }
 
 /*
- * Look through the list of
- * buffers. Return TRUE if there
- * are any changed buffers. Buffers
- * that hold magic internal stuff are
- * not considered; who cares if the
- * list of buffer names is hacked.
- * Return FALSE if no buffers
- * have been changed.
+ * Look through the list of buffers. Return TRUE if there are any
+ * changed buffers.
+ * Buffers that hold magic internal stuff are not considered; who cares
+ * if the list of buffer names is hacked.
+ * Return FALSE if no buffers have been changed.
  */
-int anycb(void)
-{
-        struct buffer *bp;
+int anycb(void) {
+    struct buffer *bp;
 
-        bp = bheadp;
-        while (bp != NULL) {
-                if ((bp->b_flag & BFINVS) == 0
-                    && (bp->b_flag & BFCHG) != 0)
-                        return TRUE;
-                bp = bp->b_bufp;
-        }
-        return FALSE;
+    bp = bheadp;
+    while (bp != NULL) {
+        if ((bp->b_flag & BFINVS) == 0 && (bp->b_flag & BFCHG) != 0)
+            return TRUE;
+        bp = bp->b_bufp;
+    }
+    return FALSE;
 }
 
 /*
- * Find a buffer, by name. Return a pointer
- * to the buffer structure associated with it.
- * If the buffer is not found
- * and the "cflag" is TRUE, create it. The "bflag" is
- * the settings for the flags in in buffer.
+ * Find a buffer, by name. Return a pointer to the buffer structure
+ * associated with it.
+ * If the buffer is not found and the "cflag" is TRUE, create it.
+ * The "bflag" is the settings for the flags in in buffer.
  */
 struct buffer *bfind(const char *bname, int cflag, int bflag) {
     struct buffer *bp;

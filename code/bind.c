@@ -17,49 +17,45 @@
 #include "line.h"
 #include "util.h"
 
-int help(int f, int n)          /* give me some help!!!!
-                                   bring up a fake buffer and read the help file
-                                   into it with view mode                 */
-{
-        UNUSED(f); UNUSED(n);
-        struct window *wp;      /* scaning pointer to windows */
-        struct buffer *bp;      /* buffer pointer to help */
-        char *fname = NULL;     /* ptr to file returned by flook() */
+int help(int f, int n) {    /* give me some help!!!!
+                               bring up a fake buffer and read the help file
+                               into it with view mode                 */
+    UNUSED(f); UNUSED(n);
+    struct window *wp;      /* scaning pointer to windows */
+    struct buffer *bp;      /* buffer pointer to help */
+    char *fname = NULL;     /* ptr to file returned by flook() */
 
-        /* first check if we are already here */
-        bp = bfind(init_files.help, FALSE, BFINVS); /* GGR - epath.h setting */
+/* First check if we are already here */
+    bp = bfind(init_files.help, FALSE, BFINVS); /* GGR - epath.h setting */
 
-        if (bp == NULL) {
-                fname = flook(init_files.help, FALSE, INTABLE);
-                if (fname == NULL) {
-                        mlwrite(MLpre "Help file is not online" MLpost);
-                        return FALSE;
-                }
-        }
+    if (bp == NULL) {
+        fname = flook(init_files.help, FALSE, INTABLE);
+        if (fname == NULL) {
+            mlwrite(MLpre "Help file is not online" MLpost);
+            return FALSE;
+            }
+    }
 
-        /* split the current window to make room for the help stuff */
-        if (splitwind(FALSE, 1) == FALSE)
-                return FALSE;
+/* Split the current window to make room for the help stuff */
+    if (splitwind(FALSE, 1) == FALSE) return FALSE;
 
-        if (bp == NULL) {
-                /* and read the stuff in */
-                /* GGR - unset pathexpand around call */
-                pathexpand = FALSE;
-                int res = getfile(fname, FALSE);
-                pathexpand = TRUE;
-                if (res == FALSE) return(FALSE);
-        } else
-                swbuffer(bp);
+    if (bp == NULL) {   /* and read the stuff in */
+        pathexpand = FALSE; /* GGR - unset pathexpand around call */
+        int res = getfile(fname, FALSE);
+        pathexpand = TRUE;
+        if (res == FALSE) return(FALSE);
+    } else
+        swbuffer(bp);
 
-        /* make this window in VIEW mode, update all mode lines */
-        curwp->w_bufp->b_mode |= MDVIEW;
-        curwp->w_bufp->b_flag |= BFINVS;
-        wp = wheadp;
-        while (wp != NULL) {
-                wp->w_flag |= WFMODE;
-                wp = wp->w_wndp;
-        }
-        return TRUE;
+/* Make this window in VIEW mode, update all mode lines */
+    curwp->w_bufp->b_mode |= MDVIEW;
+    curwp->w_bufp->b_flag |= BFINVS;
+    wp = wheadp;
+    while (wp != NULL) {
+        wp->w_flag |= WFMODE;
+        wp = wp->w_wndp;
+    }
+    return TRUE;
 }
 
 int deskey(int f, int n) {      /* describe the command for a certain key */
@@ -262,8 +258,7 @@ struct key_tab *getbind(int c) {
  *
  * int f, n;            command arguments [IGNORED]
  */
-int bindtokey(int f, int n)
-{
+int bindtokey(int f, int n) {
     UNUSED(f); UNUSED(n);
     unsigned int c;         /* command key to bind */
     fn_t kfunc;             /* ptr to the requested function to bind to */
@@ -370,36 +365,35 @@ int bindtokey(int f, int n)
  *
  * int f, n;            command arguments [IGNORED]
  */
-int unbindkey(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        int c;                  /* command key to unbind */
-        char outseq[80];        /* output buffer for keystroke sequence */
+int unbindkey(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int c;                  /* command key to unbind */
+    char outseq[80];        /* output buffer for keystroke sequence */
 
-        /* prompt the user to type in a key to unbind */
-        if (!clexec) {
-            mlwrite(": unbind-key ");
-            mpresf = TRUE;      /* GGR */
-        }
+/* Prompt the user to type in a key to unbind */
+    if (!clexec) {
+        mlwrite(": unbind-key ");
+        mpresf = TRUE;      /* GGR */
+    }
 
-        /* get the command sequence to unbind */
-        c = getckey(FALSE);     /* get a command sequence */
+/* Get the command sequence to unbind */
+    c = getckey(FALSE);     /* get a command sequence */
 
-        /* change it to something we can print as well */
-        cmdstr(c, outseq);
+/* Change it to something we can print as well */
+    cmdstr(c, outseq);
 
-        /* and dump it out */
-        if (!clexec) mlputs(outseq);
+/* And dump it out */
+    if (!clexec) mlputs(outseq);
 
-        /* if it isn't bound, bitch */
-        if (unbindchar(c) == FALSE) {
-                mlwrite(MLpre "Key not bound" MLpost);
-                mpresf = TRUE;  /* GGR */
-                return FALSE;
-        }
-        TTflush();              /* GGR */
+/* If it isn't bound, bitch */
+    if (unbindchar(c) == FALSE) {
+        mlwrite(MLpre "Key not bound" MLpost);
+        mpresf = TRUE;  /* GGR */
+        return FALSE;
+    }
+    TTflush();              /* GGR */
 
-        return TRUE;
+    return TRUE;
 }
 
 
@@ -451,17 +445,17 @@ int desbind(int f, int n) {
         return TRUE;
 }
 
-int apro(int f, int n)
-{                               /* Apropos (List functions that match a substring) */
-        UNUSED(f); UNUSED(n);
-        char mstring[NSTRING];  /* string to match cmd names to */
-        int status;             /* status return */
+/* Apropos (List functions that match a substring) */
+int apro(int f, int n) {
 
-        status = mlreply("Apropos string: ", mstring, NSTRING - 1);
-        if (status != TRUE)
-                return status;
+    UNUSED(f); UNUSED(n);
+    char mstring[NSTRING];  /* string to match cmd names to */
+    int status;             /* status return */
 
-        return buildlist(FALSE, mstring);
+    status = mlreply("Apropos string: ", mstring, NSTRING - 1);
+    if (status != TRUE) return status;
+
+    return buildlist(FALSE, mstring);
 }
 
 /*
@@ -596,34 +590,30 @@ fail:   ;
  * char *source;        string to search in
  * char *sub;           substring to look for
  */
-int strinc(char *source, char *sub)
-{
-        char *sp;               /* ptr into source */
-        char *nxtsp;            /* next ptr into source */
-        char *tp;               /* ptr into substring */
+int strinc(char *source, char *sub) {
+    char *sp;               /* ptr into source */
+    char *nxtsp;            /* next ptr into source */
+    char *tp;               /* ptr into substring */
 
-        /* for each character in the source string */
-        sp = source;
-        while (*sp) {
-                tp = sub;
-                nxtsp = sp;
+/* For each character in the source string */
+    sp = source;
+    while (*sp) {
+        tp = sub;
+        nxtsp = sp;
 
-                /* is the substring here? */
-                while (*tp) {
-                        if (*nxtsp++ != *tp)
-                                break;
-                        else
-                                tp++;
-                }
-
-                /* yes, return a success */
-                if (*tp == 0)
-                        return TRUE;
-
-                /* no, onward */
-                sp++;
+/* Is the substring here? */
+        while (*tp) {
+            if (*nxtsp++ != *tp) break;
+            else                 tp++;
         }
-        return FALSE;
+
+/* Yes, return a success */
+        if (*tp == 0) return TRUE;
+
+/* No, onward */
+        sp++;
+    }
+    return FALSE;
 }
 
 /*
@@ -631,23 +621,20 @@ int strinc(char *source, char *sub)
  *
  * int mflag;           going for a meta sequence?
  */
-unsigned int getckey(int mflag)
-{
-        unsigned int c;         /* character fetched */
-        char tok[NSTRING];      /* command incoming */
+unsigned int getckey(int mflag) {
+    unsigned int c;         /* character fetched */
+    char tok[NSTRING];      /* command incoming */
 
-        /* check to see if we are executing a command line */
-        if (clexec) {
-                macarg(tok);    /* get the next token */
-                return stock(tok);
-        }
+/* Check to see if we are executing a command line */
+    if (clexec) {
+        macarg(tok);    /* get the next token */
+        return stock(tok);
+    }
 
-        /* or the normal way */
-        if (mflag)
-                c = get1key();
-        else
-                c = getcmd();
-        return c;
+/* Or the normal way */
+    if (mflag) c = get1key();
+    else       c = getcmd();
+    return c;
 }
 
 /*
@@ -655,22 +642,18 @@ unsigned int getckey(int mflag)
  *
  * char *sfname;        name of startup file (null if default)
  */
-int startup(char *sfname)
-{
-        char *fname;            /* resulting file name to execute */
+int startup(char *sfname) {
+    char *fname;            /* resulting file name to execute */
 
-        /* look up the startup file */
-        if (*sfname != 0)
-                fname = flook(sfname, TRUE, INTABLE);
-        else
-                fname = flook(init_files.startup, TRUE, INTABLE);
+/* Look up the startup file */
+    if (*sfname != 0) fname = flook(sfname, TRUE, INTABLE);
+    else              fname = flook(init_files.startup, TRUE, INTABLE);
 
-        /* if it isn't around, don't sweat it */
-        if (fname == NULL)
-                return TRUE;
+/* If it isn't around, don't sweat it */
+    if (fname == NULL) return TRUE;
 
-        /* otherwise, execute the sucker */
-        return dofile(fname);
+/* Otherwise, execute the sucker */
+    return dofile(fname);
 }
 
 /* GGR - Define a path-separator
@@ -683,38 +666,34 @@ static char path_sep =
 #endif
 ;
 
-
 #if ENVFUNC
 static int along_path(char *fname, char *fspec) {
-        char *path;     /* environmental PATH variable */
-        char *sp;       /* pointer into path spec */
+    char *path;     /* environmental PATH variable */
+    char *sp;       /* pointer into path spec */
 
-        /* get the PATH variable */
-        path = getenv("PATH");
-        if (path != NULL)
-                while (*path) {
+/* get the PATH variable */
+    path = getenv("PATH");
+    if (path != NULL)
+        while (*path) {
 
-                        /* build next possible file spec */
-                        sp = fspec;
-                        while (*path && (*path != PATHCHR))
-                                *sp++ = *path++;
+/* Build next possible file spec */
+            sp = fspec;
+            while (*path && (*path != PATHCHR)) *sp++ = *path++;
 
-                        /* add a terminating dir separator if we need it */
-                        if (sp != fspec)
-                                *sp++ = path_sep;
-                        *sp = 0;
-                        strcat(fspec, fname);
+/* Add a terminating dir separator if we need it */
+            if (sp != fspec) *sp++ = path_sep;
+            *sp = 0;
+            strcat(fspec, fname);
 
-                        /* and try it out */
-                        if (ffropen(fspec) == FIOSUC) {
-                                ffclose();
-                                return TRUE;
-                        }
+/* And try it out */
+            if (ffropen(fspec) == FIOSUC) {
+                ffclose();
+                return TRUE;
+            }
 
-                        if (*path == PATHCHR)
-                                ++path;
-                }
-        return FALSE;
+            if (*path == PATHCHR) ++path;
+        }
+    return FALSE;
 }
 #endif
 
@@ -750,86 +729,79 @@ void set_pathname(char *cl_string) {
  * char *fname;         base file name to search for
  * int hflag;           Look in the HOME environment variable first?
  */
-char *flook(char *fname, int hflag, int mode)
-{
-        char *home;                     /* path to home directory */
-        int i;                          /* index */
-        static char fspec[NSTRING];     /* full path spec to search */
+char *flook(char *fname, int hflag, int mode) {
+    char *home;                     /* path to home directory */
+    int i;                          /* index */
+    static char fspec[NSTRING];     /* full path spec to search */
 
-        pathexpand = FALSE;             /* GGR */
+    pathexpand = FALSE;             /* GGR */
 
 /* If we've been given a pathname, rather than a filename, just use that */
 
-        if (strchr(fname, path_sep)) {
-            char *res = NULL;   /* Assume the worst */
-            if (ffropen(fname) == FIOSUC) {
-                ffclose();
-                res = fname;
-            }
-            pathexpand = TRUE;  /* GGR */
-            return res;
+    if (strchr(fname, path_sep)) {
+        char *res = NULL;   /* Assume the worst */
+        if (ffropen(fname) == FIOSUC) {
+            ffclose();
+            res = fname;
         }
+        pathexpand = TRUE;  /* GGR */
+        return res;
+    }
 
 #if ENVFUNC
+    if (hflag) {
+        home = getenv("HOME");
+        if (home != NULL) {     /* build home dir file spec */
+            strcpy(fspec, home);
+            char psbuf[2];
+            psbuf[0] = path_sep;
+            psbuf[1] = '\0';
+            strcat(fspec, psbuf);
+            strcat(fspec, fname);
 
-        if (hflag) {
-                home = getenv("HOME");
-                if (home != NULL) {
-                        /* build home dir file spec */
-                        strcpy(fspec, home);
-                        char psbuf[2];
-                        psbuf[0] = path_sep;
-                        psbuf[1] = '\0';
-                        strcat(fspec, psbuf);
-                        strcat(fspec, fname);
-
-                        /* and try it out */
-                        if (ffropen(fspec) == FIOSUC) {
-                                ffclose();
-                                pathexpand = TRUE;  /* GGR */
-                                return fspec;
-                        }
-                }
+            if (ffropen(fspec) == FIOSUC) { /* and try it out */
+                ffclose();
+                pathexpand = TRUE;  /* GGR */
+                return fspec;
+            }
         }
+    }
 #endif
 
-        /* always try the current directory first - if allowed */
-        if (allow_current && ffropen(fname) == FIOSUC) {
-                ffclose();
-                pathexpand = TRUE;                  /* GGR */
-                return fname;
-        }
+/* Always try the current directory first - if allowed */
+    if (allow_current && ffropen(fname) == FIOSUC) {
+        ffclose();
+        pathexpand = TRUE;                  /* GGR */
+        return fname;
+    }
 
 /* GGR - use PATH or TABLE according to mode.
  * You want to use ONPATH when looking for a command, but INTABLE
  * when looking for a config files.
  * The caller knows which...
  */
-        if (mode == ONPATH) {
-            if (along_path(fname, fspec) == TRUE) {
-                pathexpand = TRUE;                  /* GGR */
+    if (mode == ONPATH) {
+        if (along_path(fname, fspec) == TRUE) {
+            pathexpand = TRUE;                  /* GGR */
+            return fspec;
+        }
+    }
+
+    if (mode == INTABLE) {  /* look it up via the old table method */
+        for (i = 0;; i++) {
+            if (pathname[i] == NULL) break;
+            strcpy(fspec, pathname[i]);
+            strcat(fspec, fname);
+            if (ffropen(fspec) == FIOSUC) {    /* and try it out */
+                ffclose();
+                pathexpand = TRUE;          /* GGR */
                 return fspec;
             }
         }
+    }
 
-        if (mode == INTABLE) {
-        /* look it up via the old table method */
-            for (i = 0;; i++) {
-                if (pathname[i] == NULL) break;
-                strcpy(fspec, pathname[i]);
-                strcat(fspec, fname);
-
-                /* and try it out */
-                if (ffropen(fspec) == FIOSUC) {
-                    ffclose();
-                    pathexpand = TRUE;          /* GGR */
-                    return fspec;
-                }
-            }
-        }
-
-        pathexpand = TRUE;                          /* GGR */
-        return NULL;            /* no such luck */
+    pathexpand = TRUE;                          /* GGR */
+    return NULL;            /* no such luck */
 }
 
 /*
@@ -838,46 +810,38 @@ char *flook(char *fname, int hflag, int mode)
  * int c;               sequence to translate
  * char *seq;           destination string for sequence
  */
-void cmdstr(int c, char *seq)
-{
-        char *ptr;      /* pointer into current position in sequence */
+void cmdstr(int c, char *seq) {
+    char *ptr;      /* pointer into current position in sequence */
 
-        ptr = seq;
+    ptr = seq;
 
-        /* apply meta sequence if needed */
-        if (c & META) {
-                *ptr++ = 'M';
-                *ptr++ = '-';
-        }
+    if (c & META) {     /* apply meta sequence if needed */
+        *ptr++ = 'M';
+        *ptr++ = '-';
+    }
+    if (c & CTLX) {     /* apply ^X sequence if needed */
+        *ptr++ = '^';
+        *ptr++ = 'X';
+    }
+    if (c & SPEC) {     /* apply SPEC sequence if needed */
+        *ptr++ = 'F';
+        *ptr++ = 'N';
+    }
+    if (c & CONTROL) {  /* apply control sequence if needed */
+        *ptr++ = '^';
+    }
 
-        /* apply ^X sequence if needed */
-        if (c & CTLX) {
-                *ptr++ = '^';
-                *ptr++ = 'X';
-        }
+/* And output the final sequence */
 
-        /* apply SPEC sequence if needed */
-        if (c & SPEC) {
-                *ptr++ = 'F';
-                *ptr++ = 'N';
-        }
+/* GGR - handle the SP for space which we allow */
+    if ((c & 255) == ' ') {
+        *ptr++ = 'S';
+        *ptr++ = 'P';
+    }
+    else
+        *ptr++ = c & 255;   /* strip the prefixes */
 
-        /* apply control sequence if needed */
-        if (c & CONTROL) {
-                *ptr++ = '^';
-        }
-
-        /* and output the final sequence */
-
-        /* GGR - handle the SP for space which we allow */
-        if ((c & 255) == ' ') {
-                *ptr++ = 'S';
-                *ptr++ = 'P';
-        }
-        else
-                *ptr++ = c & 255;   /* strip the prefixes */
-
-        *ptr = 0;                   /* terminate the string */
+    *ptr = 0;               /* terminate the string */
 }
 
 /*
@@ -886,59 +850,55 @@ void cmdstr(int c, char *seq)
  *
  * char *keyname;       name of key to translate to Command key form
  */
-unsigned int stock(char *keyname)
-{
-        unsigned int c; /* key sequence to return */
+unsigned int stock(char *keyname) {
+    unsigned int c; /* key sequence to return */
 
-        /* GGR - allow different bindings for 1char UPPER and lower */
-        int noupper = (strlen(keyname) == 1);
+/* GGR - allow different bindings for 1char UPPER and lower */
+    int noupper = (strlen(keyname) == 1);
 
-        /* parse it up */
-        c = 0;
+/* Parse it up */
+    c = 0;
 
-        /* first, the META prefix */
-        if (*keyname == 'M' && *(keyname + 1) == '-') {
-                c = META;
-                keyname += 2;
-        }
+/* First, the META prefix */
+    if (*keyname == 'M' && *(keyname + 1) == '-') {
+        c = META;
+        keyname += 2;
+    }
+/* Next the function prefix */
+    if (*keyname == 'F' && *(keyname + 1) == 'N') {
+        c |= SPEC;
+        keyname += 2;
+    }
+/* Control-x as well... (but not with FN *OR* META!!) */
+    if (*keyname == '^' && *(keyname + 1) == 'X'
+          && !(c & SPEC) && !(c & META)) {
+        c |= CTLX;
+        keyname += 2;
+    }
 
-        /* next the function prefix */
-        if (*keyname == 'F' && *(keyname + 1) == 'N') {
-                c |= SPEC;
-                keyname += 2;
-        }
+/* A control char? */
+    if (*keyname == '^' && *(keyname + 1) != 0) {
+        c |= CONTROL;
+        ++keyname;
+    }
+    if (*keyname < 32) {
+        c |= CONTROL;
+        *keyname += 'A';
+    }
+/* GGR - allow SP for space by putting it there... */
+    if (*keyname == 'S' && *(keyname + 1) == 'P') {
+        ++keyname;
+        *keyname = ' ';
+    }
 
-        /* control-x as well... (but not with FN *OR* META!!) */
-        if (*keyname == '^' && *(keyname + 1) == 'X'
-             && !(c & SPEC) && !(c & META)) {
-                c |= CTLX;
-                keyname += 2;
-        }
+/* Make sure we are not lower case (not with function keys) */
+    if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC)
+          && !(noupper))            /* GGR */
+        *keyname -= 32;
 
-        /* a control char? */
-        if (*keyname == '^' && *(keyname + 1) != 0) {
-                c |= CONTROL;
-                ++keyname;
-        }
-        if (*keyname < 32) {
-                c |= CONTROL;
-                *keyname += 'A';
-        }
-        /* GGR - allow SP for space by putting it there... */
-        if (*keyname == 'S' && *(keyname + 1) == 'P') {
-                ++keyname;
-                *keyname = ' ';
-        }
-
-
-        /* make sure we are not lower case (not with function keys) */
-        if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC)
-              && !(noupper))            /* GGR */
-                *keyname -= 32;
-
-        /* the final sequence... */
-        c |= *keyname;
-        return c;
+/* The final sequence... */
+    c |= *keyname;
+    return c;
 }
 
 /*
@@ -959,8 +919,7 @@ char *transbind(char *skey) {
  *
  * int f, n;            command arguments [IGNORED]
  */
-int buffertokey(int f, int n)
-{
+int buffertokey(int f, int n) {
     UNUSED(f); UNUSED(n);
     unsigned int c;         /* command key to bind */
     struct key_tab *ktp;    /* pointer into the command table */
