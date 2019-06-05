@@ -84,6 +84,25 @@ int nextbuffer(int f, int n)
 }
 
 /*
+ * Make a buffer active...by reading in (possibly delayed) a file.
+ */
+void make_active(struct buffer *nbp) {
+
+/* Set this now to avoid a potential loop if a file-hook prompts */
+    nbp->b_active = TRUE;
+    nbp->b_mode |= gmode;       /* readin() runs file-hooks, so set now */
+/* Read it in and activate it */
+    run_filehooks = 1;          /* set flag */
+    struct buffer *real_curbp = curbp;
+    curbp = nbp;
+    readin(nbp->b_fname, TRUE);
+    curbp = real_curbp;
+    nbp->b_dotp = lforw(nbp->b_linep);
+    nbp->b_doto = 0;
+    return;
+}
+
+/*
  * make buffer BP current
  */
 int swbuffer(struct buffer *bp) {
@@ -100,16 +119,9 @@ int swbuffer(struct buffer *bp) {
         curbp->b_fcol = curwp->w_fcol;
     }
     curbp = bp;                     /* Switch. */
-    if (curbp->b_active != TRUE) {  /* buffer not active yet */
-/* Set this now to avoid a potential loop if a file-hook prompts */
-        curbp->b_active = TRUE;
-        curbp->b_mode |= gmode;     /* readin() runs file-hooks, so set now */
-/* Read it in and activate it */
-        run_filehooks = 1;          /* set flag */
-        readin(curbp->b_fname, TRUE);
-        curbp->b_dotp = lforw(curbp->b_linep);
-        curbp->b_doto = 0;
-    }
+    if (curbp->b_active != TRUE)    /* buffer not active yet */
+        make_active(curbp);
+
     curwp->w_bufp = bp;
     curwp->w_linep = bp->b_linep;   /* For macros, ignored. */
     curwp->w_flag |= WFMODE | WFFORCE | WFHARD;     /* Quite nasty. */
@@ -481,7 +493,14 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
     }
     bp = bheadp;
     while (bp != NULL) {
-        if (strcmp(bname, bp->b_bname) == 0) return bp;
+        if (strcmp(bname, bp->b_bname) == 0) {
+            if (bp->b_active != TRUE) { /* buffer not active yet */
+                silent = TRUE;          /* As probably not the current buffer */
+                make_active(bp);
+                silent = FALSE;
+            }
+            return bp;
+        }
         bp = bp->b_bufp;
     }
     if (cflag != FALSE) {
