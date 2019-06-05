@@ -128,7 +128,10 @@ int docmd(char *cline)
         /* and match the token to see if it exists */
         struct name_bind *nbp = name_info(tkn);
         if (nbp == NULL) {
-                mlwrite(MLpre "No such Function" MLpost);
+                char ermess[NSTRING+22];
+                snprintf(ermess, NSTRING+22, "%s No such Function: %s %s",
+                     MLpre, tkn, MLpost);
+                mlwrite(ermess);
                 execstr = oldestr;
                 return FALSE;
         }
@@ -136,6 +139,7 @@ int docmd(char *cline)
         /* save the arguments and go execute the command */
         oldcle = clexec;        /* save old clexec flag */
         clexec = TRUE;          /* in cline execution */
+        current_command = nbp->n_name;
         status = (nbp->n_func)(f, n); /* call the function */
         cmdstatus = status;     /* save the status */
         clexec = oldcle;        /* restore clexec flag */
@@ -862,10 +866,11 @@ int execbuf(int f, int n) {
     }
 
 /* And now execute it as asked */
-    while (n-- > 0)
-        if ((status = dobuf(bp)) != TRUE)
-            return status;
-    return TRUE;
+
+    status = TRUE;
+    while (n-- > 0) if ((status = dobuf(bp)) != TRUE) break;
+
+    return status;
 }
 
 /*
@@ -888,6 +893,11 @@ int execbuf(int f, int n) {
  *      Line Labels begin with a "*" as the first nonblank char, like:
  *
  *      *LBL01
+ *
+ * NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE
+ * This routine sets the buffer to be read-only while runnign it,
+ * so it is IMPORTANT to ensure that any exit goes via the code
+ * to restore the original setting - by "goto single_exit" not "return".
  *
  * struct buffer *bp;           buffer to execute
  */
@@ -924,6 +934,11 @@ int dobuf(struct buffer *bp) {
         mlwrite("%%Maximum recursion level, %d, exceeded!", MAX_RECURSE);
         return FALSE;
     }
+
+/* Mark an executing buffer as read-only while it is being executed */
+    int orig_view_bit = bp->b_mode & MDVIEW;
+    bp->b_mode |= MDVIEW;
+
     bp->b_exec_level++;
     orig_pause_key_index_update = pause_key_index_update;
     pause_key_index_update = 1;
@@ -1113,7 +1128,8 @@ failexit:       freewhile(scanner);
                 mlwrite ("Out of memory while storing macro");
                 bp->b_exec_level--;
                 pause_key_index_update = orig_pause_key_index_update;
-                return FALSE;
+                status = FALSE;
+                goto single_exit;
             }
 
 /* Copy the text into the new line */
@@ -1249,6 +1265,7 @@ failexit:       freewhile(scanner);
         }
 
 /* Execute the statement */
+
         status = docmd(eline);
         if (force) status = TRUE;       /* force the status */
 
@@ -1272,7 +1289,7 @@ failexit:       freewhile(scanner);
             freewhile(whlist);
             bp->b_exec_level--;
             pause_key_index_update = orig_pause_key_index_update;
-            return status;
+            goto single_exit;
         }
 
 onward:                 /* On to the next line */
@@ -1285,14 +1302,22 @@ eexec:                  /* Exit the current function */
     freewhile(whlist);
     bp->b_exec_level--;
     pause_key_index_update = orig_pause_key_index_update;
-    return return_stat;
+    status = return_stat;
+    goto single_exit;
 
 /* This sequence is used for several exits, so only write it once */
 failexit2:
     freewhile(whlist);
     bp->b_exec_level--;
     pause_key_index_update = orig_pause_key_index_update;
-    return FALSE;
+    status = FALSE;
+
+single_exit:
+
+/* Revert to original read-only status if it wasn't set */
+
+    if (!orig_view_bit) bp->b_mode &= ~MDVIEW;
+    return status;
 }
 
 /*
@@ -1378,11 +1403,9 @@ int dofile(char *fname)
         unqname(bufn);          /* make sure we don't stomp things */
         if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
                 return FALSE;
-
-        bp->b_mode = MDVIEW;    /* mark the buffer as read only */
         cb = curbp;             /* save the old buffer */
         curbp = bp;             /* make this one current */
-        if (silent)                 /* GGR */
+        if (silent)             /* GGR */
                 pathexpand = FALSE;
         /* and try to read in the file to execute */
         if ((status = readin(fname, FALSE)) != TRUE) {

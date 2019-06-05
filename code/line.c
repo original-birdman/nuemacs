@@ -124,7 +124,7 @@ void lchange(int flag) {
  */
 int insspace(int f, int n) {
     UNUSED(f);
-    linsert_byte(n, ' ');
+    if (!linsert_byte(n, ' ')) return FALSE;
     back_grapheme(n);
     return TRUE;
 }
@@ -216,6 +216,12 @@ int linsert_byte(int n, unsigned char c) {
 int linstr(char *instr) {
     int status = TRUE;
     char tmpc;
+
+/* We have to check this here to avoid the "Out of memory" message
+ * on failure when linsert_byte() gripes about it.
+ */
+    if (curbp->b_mode & MDVIEW) /* don't allow this command if */
+        return rdonly();        /* we are in read only mode    */
 
     if (instr != NULL)
         while ((tmpc = *instr)) {
