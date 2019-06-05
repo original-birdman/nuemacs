@@ -183,3 +183,6 @@ char regionlist_text[] = " o ";
 char regionlist_number[] = " %2d. ";
 
 char readin_mesg[];
+
+int running_function = 0;
+char *current_command = NULL;

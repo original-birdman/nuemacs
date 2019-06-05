@@ -190,3 +190,6 @@ extern char regionlist_text[MAX_REGL_LEN];
 extern char regionlist_number[MAX_REGL_LEN];
 
 extern char readin_mesg[NSTRING];
+
+extern int running_function;
+extern char *current_command;

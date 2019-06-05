@@ -1308,7 +1308,9 @@ after_mb_check:
         }
         else input_waiting = NULL;
 
+        running_function = 1;   /* Rather than keyboard input */
         status = (*execfunc) (f, n);
+        running_function = 0;
         input_waiting = NULL;
         if (execfunc != showcpos) lastflag = thisflag;
 /* GGR - abort keyboard macro at point of error */
@@ -1353,7 +1355,7 @@ after_mb_check:
         thisflag = 0;   /* For the future.      */
 
 /* If we are in overwrite mode, not at eol, and next char is not a tab
- * or we are at a tab stop, delete a char forword
+ * or we are at a tab stop, delete a char forward
  */
         if (curwp->w_bufp->b_mode & MDOVER &&
             curwp->w_doto < curwp->w_dotp->l_used &&
@@ -1565,7 +1567,11 @@ int ctrlg(int f, int n) {
  */
 int rdonly(void) {
     TTbeep();
-    mlwrite(MLpre "Key illegal in VIEW mode" MLpost);
+    if (running_function)
+        mlwrite(MLpre "%s illegal in read-only buffer: %s" MLpost,
+            current_command, curbp->b_fname);
+    else
+        mlwrite(MLpre "Key illegal in VIEW mode" MLpost);
     return FALSE;
 }
 int resterr(void) {

@@ -251,7 +251,9 @@ struct key_tab *getbind(int c) {
     if (first > last) {
         return NULL;        /* No such binding */
     }
-    return &keytab[key_index[middle]];
+    struct key_tab *res = &keytab[key_index[middle]];
+    current_command = res->fi->n_name;
+    return res;
 }
 
 /*
