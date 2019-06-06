@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.139 Help Index     (01 June 2019)
+=>                   nuEmacs GGR4.140 Help Index     (06 June 2019)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -210,7 +210,8 @@ view-file, ...) but it works only under UNIX and MS-DOS. It is invoked
 by a <Tab>. If more than one possible completion exists they are displayed
 in the minibuffer and the longest common part is retained for you to add
 to. The minibuffer is an editable buffer line.
-Shell and variable expansion is handled.
+Shell expansion is handled and leading ".." dirs are taken relative to
+the $PWD environment variable.
 -------------------------------------------------------------------------------
 =>                MACRO functions and user variables
 eos-chars <string of characters>

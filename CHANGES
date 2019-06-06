@@ -2719,4 +2719,51 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.139
 
+========== GGR4.140
+
+etc/uemacs.rc
+fileio.c
+    Check that we only open *files* for reading/writing and also for the
+    &EXIst macro function. [fileio.c]
+    Remove code that checks for environment variables in filenames. It
+    leads to inconsistent handling of $ in filenames. [fileio.c]
+    Added an expand-envvar macro function, bound to Esc-$. [uemacs.rc].
+
+exec.c
+line.c
+    Report the name of a function when we can't find it. [exec.c]
+    Mark code buffers as read-only whilst they are being executed. [exec.c]
+    Add read-only check to linstr(), to avoid incorrect error
+    message. [line.c]
+    Fix insspace() to check that linsert_byte() succeeded. [line.c]
+
+bind.c
+globals.c
+main.c
+edef.h
+    Remember current_command when running one. [bind.c]
+    Mark that we are running a function when we are. [main.c]
+    Change rdonly() to display the offending command and buffer if
+    we are running a function at the time. [main.c]
+
+buffer.c
+    Check when going to a buffer that it is active and, if not, read in
+    its file.
+
+bind.c
+exec.c
+buffer.c
+    Reformatted (tidied) code of recently-changed files.
+
+ptt/czech.cmd -> etc/czech.cmd
+ptt/russian.cmd -> etc/russian.cmd
+    Move *.ptt files to etc/, whcih is where they need to be installed.
+    Remove the ptt/ directory.
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.140
+
 ==========
