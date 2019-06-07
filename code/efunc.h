@@ -226,7 +226,7 @@ extern int buffertokey(int, int);
 /* buffer.c */
 extern int usebuffer(int f, int n);
 extern int nextbuffer(int f, int n);
-extern int swbuffer(struct buffer *bp);
+extern int swbuffer(struct buffer *, int);
 extern int killbuffer(int f, int n);
 extern int zotbuf(struct buffer *bp);
 extern int namebuffer(int f, int n);

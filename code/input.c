@@ -628,7 +628,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     if (mpresf) mlerase();
     mberase();
 
-    swbuffer(bp);
+    if (!swbuffer(bp, 0)) return FALSE;
 
     curwp->w_toprow = term.t_nrow;
     curwp->w_ntrows = 1;
@@ -879,18 +879,21 @@ abort:
     sigprocmask(SIG_BLOCK, &sigwinch_set, NULL);
 #endif
 
-    swbuffer(bp);   /* Make sure we're still in our minibuffer */
+    if (!swbuffer(bp, 0))   /* Make sure we're still in our minibuffer */
+        return FALSE;
     unmark(TRUE, 1);
 
     if (--mb_info.mbdepth) {        /* Back to previous mini-buffer */
-        swbuffer(cb);               /* Switch to its buffer... */
+        if (!swbuffer(cb, 0))       /* Switch to its buffer... */
+            return FALSE;
         *curwp = wsave;             /* ...and its window info */
     }
-    else {                          /* Leaving minibuffer */
-        swbuffer(mb_info.main_bp);  /* Switch back to main buffer */
-        curwp = mb_info.main_wp;    /* Reset window info ptr */
-        wheadp = mb_info.wheadp;    /* Reset window list */
-        inmb = FALSE;               /* Note we have left mb */
+    else {                              /* Leaving minibuffer */
+        if (!swbuffer(mb_info.main_bp, 0))  /* Switch back to main buffer */
+            return FALSE;
+        curwp = mb_info.main_wp;        /* Reset window info ptr */
+        wheadp = mb_info.wheadp;        /* Reset window list */
+        inmb = FALSE;                   /* Note we have left mb */
     }
     curwp->w_flag |= WFMODE;        /* Forces modeline redraw */
     zotbuf(bp);                     /* Remove this minibuffer */

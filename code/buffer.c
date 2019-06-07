@@ -36,7 +36,7 @@ int usebuffer(int f, int n) {
     }
 
     if ((bp = bfind(bufn, TRUE, 0)) == NULL) return FALSE;
-    return swbuffer(bp);
+    return swbuffer(bp, 0);
 }
 
 /*
@@ -67,7 +67,7 @@ int nextbuffer(int f, int n) {
         }
         bbp = bp;
     }
-    return swbuffer(bp);
+    return swbuffer(bp, 0);
 }
 
 /*
@@ -92,8 +92,18 @@ void make_active(struct buffer *nbp) {
 /*
  * make buffer BP current
  */
-int swbuffer(struct buffer *bp) {
+int swbuffer(struct buffer *bp, int macro_OK) {
     struct window *wp;
+
+/* We must not switch to the keyboard macro buffer when collecting a
+ * macro, as that would allow the user to move around in the buffer...
+ */
+    if (kbdmode == RECORD && !macro_OK &&
+          strcmp(bp->b_bname, kbdmacro_buffer) == 0) {
+        mlwrite("Can't switch to %s when collecting macro", kbdmacro_buffer);
+        sleep(2);
+        return FALSE;
+    }
 
 /* Save last name so we can switch back to it on empty MB reply */
     if (!inmb && do_savnam) strcpy(savnam, curbp->b_bname);

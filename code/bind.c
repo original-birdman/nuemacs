@@ -45,7 +45,7 @@ int help(int f, int n) {    /* give me some help!!!!
         pathexpand = TRUE;
         if (res == FALSE) return(FALSE);
     } else
-        swbuffer(bp);
+        if (!swbuffer(bp, 0)) return FALSE;
 
 /* Make this window in VIEW mode, update all mode lines */
     curwp->w_bufp->b_mode |= MDVIEW;

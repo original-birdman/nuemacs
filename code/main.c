@@ -127,27 +127,33 @@ static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
     switch(mode) {
     case GetTo_KBDM:
         if (last_mode == GetTo_KBDM) goto out_of_phase;
-        last_mode = GetTo_KBDM;
         obp = curbp;                    /* Save whence we came */
         wsave = *curwp;                 /* Structure copy - save */
         saved_nw = kbdmac_bp->b_nwnd;   /* Mark as "not viewed" */
         kbdmac_bp->b_nwnd = 0;
-        if (!swbuffer(kbdmac_bp)) {
+/* This code has to be able to reach the macro buffer even when
+ * we are collecting macros...
+ */
+        if (!swbuffer(kbdmac_bp, 1)) {
             mlwrite("%s: cannot reach keyboard macro buffer!", who);
             kbdmac_bp->b_nwnd = saved_nw;
             kbdmode = STOP;
             do_savnam = 1;
             return FALSE;
         }
+        last_mode = GetTo_KBDM;
         return TRUE;
     case OutOf_KBDM:
         if (last_mode == OutOf_KBDM) goto out_of_phase;
-        last_mode = OutOf_KBDM;
-        int status = swbuffer(obp);
+        if (!swbuffer(obp, 0)) {
+            mlwrite("%s: cannot leave keyboard macro buffer!", who);
+            return FALSE;   /* and probably panic! */
+        }
         *curwp = wsave;             /* Structure copy - restore */
         kbdmac_bp->b_nwnd = saved_nw;
         do_savnam = 1;
-        return status;
+        last_mode = OutOf_KBDM;
+        return TRUE;
     }
 out_of_phase:                       /* Can only get here on error */
     mlforce("Keyboard macro collection out of phase - aborted.");
@@ -325,6 +331,7 @@ static int end_kbdmacro(void) {
     if (kbd_idx) flush_kbd_text();
     lnewline();
     kbdmode = STOP;
+    mlwrite(MLpre "End macro" MLpost);
     return kbdmac_buffer_toggle(OutOf_KBDM, "end");
 }
 
@@ -592,7 +599,7 @@ void dumpdir_tidy(void) {
         mlwrite("Failed to find %s!\n", AutoClean_Buffer);
         return;
     }
-    if (!swbuffer(auto_bp)) {
+    if (!swbuffer(auto_bp, 0)) {
         mlwrite("Failed to get to %s!\n", AutoClean_Buffer);
         return;
     }
@@ -715,7 +722,7 @@ revert_to_start_fd:
 close_start_fd:
     close(start_fd);
 revert_buffer:
-    swbuffer(saved_bp);
+    swbuffer(saved_bp, 0);  /* Assume it succeeds... */
     return;
 }
 
@@ -1020,7 +1027,7 @@ int main(int argc, char **argv) {
     int display_readin_msg = 0;
     bp = bfind("main", FALSE, 0);
     if (firstfile == FALSE && (gflags & GFREAD)) {
-        swbuffer(firstbp);
+        swbuffer(firstbp, 0);   /* Assume it succeeds */
         zotbuf(bp);
         display_readin_msg = 1;
     } else bp->b_mode |= gmode;
@@ -1313,8 +1320,8 @@ after_mb_check:
         running_function = 0;
         input_waiting = NULL;
         if (execfunc != showcpos) lastflag = thisflag;
-/* GGR - abort keyboard macro at point of error */
-        if ((kbdmode == PLAY) & !status) kbdmode = STOP;
+/* GGR - abort running/collecting keyboard macro at point of error */
+        if ((kbdmode != STOP) & !status) end_kbdmacro();
         return status;
     }
 
@@ -1516,6 +1523,8 @@ int ctlxlp(int f, int n) {
 /* ======================================================================
  * End keyboard macro. Check for the same limit conditions as the above
  * routine. Set up the variables and return to the caller.
+ * NOTE that since the key strokes to get here when recording a macro
+ * are in the macro buffer we do nothing on reaching here in PLAY mode.
  */
 int ctlxrp(int f, int n) {
     UNUSED(f); UNUSED(n);
@@ -1523,10 +1532,7 @@ int ctlxrp(int f, int n) {
         mlwrite("%%Macro not active");
         return FALSE;
     }
-    if (kbdmode == RECORD) {
-        mlwrite(MLpre "End macro" MLpost);
-        end_kbdmacro();
-    }
+    if (kbdmode == RECORD) end_kbdmacro();
     return TRUE;
 }
 
