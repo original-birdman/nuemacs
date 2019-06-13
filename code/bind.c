@@ -265,6 +265,7 @@ int bindtokey(int f, int n) {
     struct key_tab *ktp;    /* pointer into the command table */
     char outseq[80];        /* output buffer for keystroke sequence */
     struct key_tab *destp;  /* Where to copy the name and type */
+    int mflag;              /* Are we handling a prefix key? */
 
 /* Get the function name to bind it to */
 
@@ -276,8 +277,9 @@ int bindtokey(int f, int n) {
     if (!clexec) mlputs(" ");
 
 /* Get the command sequence to bind */
-    c = getckey((kfunc == metafn) || (kfunc == cex) ||
-         (kfunc == unarg) || (kfunc == ctrlg));
+    mflag = ((kfunc == metafn) || (kfunc == cex) ||
+             (kfunc == unarg)  || (kfunc == ctrlg));
+    c = getckey(mflag);
 
 /* Change it to something we can print as well */
     cmdstr(c, outseq);
@@ -286,8 +288,7 @@ int bindtokey(int f, int n) {
     if (!clexec) mlputs(outseq);
 
 /* If the function is a prefix key */
-    if (kfunc == metafn || kfunc == cex ||
-         kfunc == unarg || kfunc == ctrlg) {
+    if (mflag) {
 
 /* Search for any/all existing bindings for the prefix key.
  * This is not indexed (rare search, and possible multiple entries per key,
@@ -301,10 +302,11 @@ int bindtokey(int f, int n) {
         }
 
 /* Reset the appropriate global prefix variable */
-        if (kfunc == metafn) metac = c;
-        if (kfunc == cex)    ctlxc = c;
-        if (kfunc == unarg)  reptc = c;
-        if (kfunc == ctrlg) abortc = c;
+
+        if (kfunc == metafn)     metac = c;
+        else if (kfunc == cex)   ctlxc = c;
+        else if (kfunc == unarg) reptc = c;
+        else                    abortc = c;    /* Only other option */
     }
 
 /* Search the table to see whether it exists */
