@@ -836,10 +836,13 @@ void cmdstr(int c, char *seq) {
 
 /* And output the final sequence */
 
-/* GGR - handle the SP for space which we allow */
-    if ((c & 255) == ' ') {
+    if ((c & 255) == ' ') { /* Handle the "SP" for space which we allow */
         *ptr++ = 'S';
         *ptr++ = 'P';
+    }
+    else if (c == 0x7f) {   /* Handle "^?" for delete */
+        *ptr++ = '^';
+        *ptr++ = '?';
     }
     else
         *ptr++ = c & 255;   /* strip the prefixes */
@@ -881,7 +884,10 @@ unsigned int stock(char *keyname) {
 
 /* A control char? */
     if (*keyname == '^' && *(keyname + 1) != 0) {
-        c |= CONTROL;
+        if (*(keyname + 1) == '?')  /* Special case ^? for Delete */
+            c = 0x7f;
+        else
+            c |= CONTROL;
         ++keyname;
     }
     if (*keyname < 32) {
