@@ -111,7 +111,7 @@ int ctoec(int c) {
  * that pressing a <SPACE> will attempt to complete an unfinished command
  * name if it is unique.
  */
-fn_t getname(char *prompt) {
+struct name_bind *getname(char *prompt) {
     int cpos;               /* current column on screen output */
     int c;
     char *sp;               /* pointer to string for output */
@@ -126,9 +126,7 @@ fn_t getname(char *prompt) {
 /* If we are executing a command line get the next arg and match it */
     if (clexec) {
         if (macarg(buf) != TRUE) return NULL;
-        struct name_bind *nbp = name_info(buf);
-        if (nbp) return nbp->n_func;
-        return NULL;
+        return name_info(buf);
     }
 
 /* Prompt... */
@@ -147,7 +145,7 @@ fn_t getname(char *prompt) {
             char mlbuf[1024];
             snprintf(mlbuf, 1024, "%s%.*s", prompt, cpos, buf);
             mlwrite(mlbuf);
-            continue;
+            continue;           /* Start again... */
         }
 #endif
 
@@ -157,7 +155,7 @@ fn_t getname(char *prompt) {
             struct name_bind *nbp = name_info(buf);
             if (nbp) {
                 if (kbdmode == RECORD) addto_kbdmacro(buf, 1, 0);
-                return nbp->n_func;
+                return nbp;
             }
             return NULL;
         }
@@ -210,7 +208,7 @@ fn_t getname(char *prompt) {
                         TTflush();
                         if (kbdmode == RECORD)
                             addto_kbdmacro(ffp->n_name, 1, 0);
-                        return ffp->n_func;
+                        return ffp;
                     }
                     else {
 /* << << << << << << << << << << << << << << << << << */
@@ -277,7 +275,7 @@ int tgetc(void) {
 #endif
         }
         else {
-            kbdptr = &kbdm[0];  /* reset macro to begining for the next rep */
+            kbdptr = kbdm;      /* reset macro to beginning for the next rep */
             return (int) *kbdptr++;
         }
     }

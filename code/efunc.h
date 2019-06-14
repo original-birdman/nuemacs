@@ -193,7 +193,7 @@ extern int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar);
 extern int mlreplyall(char *, char *, int);
 extern int ectoc(int c);
 extern int ctoec(int c);
-extern fn_t getname(char *);
+extern struct name_bind *getname(char *);
 extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);

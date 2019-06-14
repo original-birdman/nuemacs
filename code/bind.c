@@ -269,11 +269,12 @@ int bindtokey(int f, int n) {
 
 /* Get the function name to bind it to */
 
-    kfunc = getname(": bind-to-key ");
-    if (kfunc == NULL) {
+    struct name_bind *nm_info = getname(": bind-to-key ");
+    if (nm_info == NULL) {
         if (!clexec) mlwrite(MLpre "No such function" MLpost);
         return FALSE;
     }
+    kfunc = nm_info->n_func;
     if (!clexec) mlputs(" ");
 
 /* Get the command sequence to bind */
@@ -351,7 +352,7 @@ int bindtokey(int f, int n) {
     }
     destp->k_type = FUNC_KMAP;      /* Set the type */
     destp->hndlr.k_fp = kfunc;      /* and the function pointer */
-    destp->fi = func_info(kfunc);
+    destp->fi = nm_info;
 
     mpresf = TRUE;                  /* GGR */
     TTflush();

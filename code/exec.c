@@ -24,19 +24,19 @@ int namedcmd(int f, int n) {
     fn_t kfunc;     /* ptr to the requested function to bind to */
 
 /* Prompt the user to get the function name to execute */
-    kfunc = getname(": ");
-    if (kfunc == NULL) {
+    struct name_bind *nm_info = getname(": ");
+    if (nm_info == NULL) {
         mlwrite(MLpre "No such function" MLpost);
         return FALSE;
     }
+    kfunc = nm_info->n_func;
 
 /* Check whether the given command is allowed in the minibuffer, if that
  * is where we are...
  */
     if (inmb) {
-        struct name_bind *fi = func_info(kfunc);
-        if (fi && fi->opt.not_mb) {
-            not_in_mb.funcname = fi->n_name;
+        if (nm_info && nm_info->opt.not_mb) {
+            not_in_mb.funcname = nm_info->n_name;
             not_in_mb.keystroke = -1;   /* No keystroke... */
             kfunc = not_in_mb_error;    /* Change what we call... */
         }
