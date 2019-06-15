@@ -172,7 +172,7 @@ struct name_bind names[] = {
         {"scroll-next-down", scrnextdw, {0, 1}},
         {"search-forward", forwsearch, {0, 0}},
         {"search-reverse", backsearch, {0, 0}},
-        {"select-buffer", usebuffer, {0, 0}},
+        {"select-buffer", usebuffer, {0, 1}},
         {"set", setvar, {0, 0}},
         {"set-encryption-key", set_encryption_key, {0, 1}},
         {"set-fill-column", setfillcol, {0, 1}},

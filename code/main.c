@@ -1164,6 +1164,7 @@ loop:
     }
 
 /* And execute the command */
+    if (n) mlerase();   /* Remove any numeric arg */
     execute(c, f, n);
     goto loop;
 }

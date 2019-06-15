@@ -18,22 +18,26 @@
 #include "line.h"
 
 /*
- * Attach a buffer to a window. The
- * values of dot and mark come from the buffer
- * if the use count is 0. Otherwise, they come
- * from some other window.
+ * Attach a buffer to a window. The values of dot and mark come from
+ * the buffer if the use count is 0. Otherwise, they come from some
+ * other window.
+ * If *any* numeric arg is given, use the savnam buffer directly with
+ * no prompting.
+ * This command is disabled in the minibuffer (names in names.c)
  */
 int usebuffer(int f, int n) {
-    UNUSED(f); UNUSED(n);
+    UNUSED(n);
     struct buffer *bp;
     int s;
     char bufn[NBUFN];
 
+    if (f) strcpy(bufn, savnam);
+    else
 /* GGR - handle saved buffer name in minibuffer */
-    if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
-        if (!inmb && s != ABORT) strcpy(bufn, savnam);
-        else                     return(s);
-    }
+        if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
+            if (s != ABORT) strcpy(bufn, savnam);
+            else                     return(s);
+        }
 
     if ((bp = bfind(bufn, TRUE, 0)) == NULL) return FALSE;
     return swbuffer(bp, 0);
@@ -41,33 +45,39 @@ int usebuffer(int f, int n) {
 
 /*
  * switch to the next buffer in the buffer list
+ * This command is disabled in the minibuffer (names in names.c)
  *
  * int f, n;            default flag, numeric argument
  */
 int nextbuffer(int f, int n) {
-    struct buffer *bp = NULL;   /* eligable buffer to switch to */
-    struct buffer *bbp;         /* eligable buffer to switch to */
+    struct buffer *bp;          /* test buffer pointer */
+    struct buffer *bbp;         /* eligible buffer to switch to */
 
 /* Make sure the arg is legit */
     if (f == FALSE) n = 1;
-    if (n < 1) return FALSE;
 
-    bbp = curbp;
-    while (n-- > 0) {
-        bp = bbp->b_bufp;       /* advance to the next buffer */
-
-/* Cycle through the buffers to find an eligable one */
-        while (bp == NULL || bp->b_flag & BFINVS) {
-            if (bp == NULL) bp = bheadp;
-            else            bp = bp->b_bufp;
-
-/* Don't get caught in an infinite loop! */
-            if (bp == bbp)  return FALSE;
-
-        }
-        bbp = bp;
+/* We now allow -ve changes. Since we only have forward pointers this is
+ * implemented by counting the valid buffers and taking the (+ve) modulus.
+ */
+    if (n < 1) {
+        int nb = 0;
+        for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+            if (!(bp->b_flag & BFINVS)) nb++;
+        n %= nb;
+        if (n == 0) return FALSE;
+        if (n < 0) n += nb;     /* Ensure it is +ve - modulus does not */
     }
-    return swbuffer(bp, 0);
+
+    bbp = curbp;                /* Start here */
+    while (n-- > 0) {
+        bp = bbp->b_bufp? bbp->b_bufp: bheadp;  /* Next buffer */
+        while (bp->b_flag & BFINVS) {           /* Skip ineligible ones */
+            bp = bp->b_bufp? bp->b_bufp: bheadp;
+            if (bp == bbp)  return FALSE;       /* No infinite loops! */
+        }
+        bbp = bp;                               /* Next eligible one */
+    }
+    return swbuffer(bbp, 0);
 }
 
 /*

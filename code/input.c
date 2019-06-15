@@ -817,7 +817,11 @@ loop:
         goto abort;
     }
 
-/* ...and execute the command. DON'T MACRO_CAPTURE THIS!! */
+/* ...and execute the command. DON'T MACRO_CAPTURE THIS!!
+ * No need to mlerase any numeric arg as either:
+ *  o the command will edit the minibuffer, which will be redrawn, or
+ *  o the command will execute, so the minibuffer will be erased anyway.
+ */
 
     execute(c, f, n);
     if (mpresf) {
