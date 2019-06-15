@@ -431,6 +431,7 @@ static void do_stackdump(void) {
 
 /* ====================================================================== */
 #define Dumpdir_Name "uemacs-dumps"
+#define Dump_Index "INDEX"
 #define AutoClean_Buffer "//autoclean"
 
 /* ======================================================================
@@ -557,7 +558,7 @@ static void dump_modified_buffers(void) {
             printf("\n");
         if (!index_open) {
             index_open = 1;                 /* Don't try again */
-            index_fp = fopen("INDEX", "a");
+            index_fp = fopen(Dump_Index, "a");
             if (index_fp == NULL) {
                 perror("No INDEX update");
             }
@@ -611,7 +612,7 @@ void dumpdir_tidy(void) {
 
     char info_message[4096]; /* Hopefully large enough */
 
-/* Open the current directort on a file-descriptor for ease of return */
+/* Open the current directory on a file-descriptor for ease of return */
     int start_fd = open(".", O_DIRECTORY);
     if (start_fd < 0) {
         snprintf(info_message, 4096,
@@ -638,10 +639,13 @@ void dumpdir_tidy(void) {
         goto close_start_fd;
     }
 
-    FILE *index_fp = fopen("INDEX", "a+");
+/* Open file read/write using "r+". "a+" always writes at the end!! */
+
+    FILE *index_fp = fopen(Dump_Index, "r+");
     if (index_fp == NULL) {
         snprintf(info_message, 4096,
-              "Can't open ~/%s/INDEX: %s\n", Dumpdir_Name, strerror(errno));
+              "Can't open ~/%s/" Dump_Index ": %s\n",
+              Dumpdir_Name, strerror(errno));
         linstr(info_message);
         goto revert_to_start_fd;
     }
@@ -684,9 +688,9 @@ void dumpdir_tidy(void) {
     if (rewrite_from) {
         long new_offs = 0;
         int done = 0;
-        while (fseek(index_fp, rewrite_from, SEEK_SET)) {
+        while (!done && (fseek(index_fp, rewrite_from, SEEK_SET) == 0)) {
             char cbuf[4096];
-            size_t rc = fread(cbuf, sizeof(char), 1, index_fp);
+            size_t rc = fread(cbuf, sizeof(char), sizeof(cbuf), index_fp);
             if (feof(index_fp)) {
                 done = 1;
                 clearerr(index_fp);
@@ -696,13 +700,11 @@ void dumpdir_tidy(void) {
             }
             if (rc) {
                 status = fseek(index_fp, new_offs, SEEK_SET);
-                size_t wc = fwrite(cbuf, sizeof(char), 1, index_fp);
+                size_t wc = fwrite(cbuf, sizeof(char), rc, index_fp);
                 new_offs += wc;
-                if (wc != rc) {     /* We have a problem... */
-                    done = 1;
-                }
+                if (wc != rc) break;    /* We have a problem... */
+                status = fflush(index_fp);       /* See man fopen */
             }
-            if (done) break;
         }
         status = ftruncate(fileno(index_fp), new_offs);
     }
@@ -711,7 +713,7 @@ void dumpdir_tidy(void) {
 
     if (fclose(index_fp)) {
         snprintf(info_message, 4096,
-              "INDEX rewrite error: %s\n", strerror(errno));
+              Dump_Index " rewrite error: %s\n", strerror(errno));
         linstr(info_message);
     }
     if (lp) free(lp);
