@@ -35,9 +35,13 @@ Magic search
 
 General Notes when changing the above:
 
-DIFCASE and CHCASE need to go (estruct.h and search.c).
+DIFCASE and CHCASE need to go (estruct.h, input.c and search.c).
 Also all of:
 
  LASTUL LASTLL isupper  isxletter isxlower isxupper  [estruct.h only]
  isletter                       [estruct.h, search.c, word.c]
  islower                        [estruct.h, search.c, input.c]
+
+NOTE: that the usage in input.c handles mapping of, e.g., Esc-a to
+Esc-A. Currently non-ascci characters (from AltGr usage on a keyboard)
+can be bound (bind-to-key) separately by case.

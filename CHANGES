@@ -2757,7 +2757,7 @@ buffer.c
 
 ptt/czech.cmd -> etc/czech.cmd
 ptt/russian.cmd -> etc/russian.cmd
-    Move *.ptt files to etc/, whcih is where they need to be installed.
+    Move *.ptt files to etc/, which is where they need to be installed.
     Remove the ptt/ directory.
 
 ../CHANGES
@@ -2766,4 +2766,58 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.140
 
-==========
+========== GGR4.141
+
+bind.c
+buffer.c
+file.c
+input.c
+main.c
+efunc.h
+    Disable making keyboard macro buffer be the current buffer while it
+    is being collected.
+    Add arg to swbuffer() to allow switch to actually add the macro text.
+    Add return code checks to swbuffer() calls.
+    Minor change to end_kbdmacro() call in ctlxrp() [main.c]
+
+bind.c
+    Simplify the prefix key coding.
+
+bind.c
+exec.c
+input.c
+efunc.h
+    Return name_bind struct from getname() rather than just the function.
+    Changed the two callers to handle this - they now have more info available.
+
+bind.c
+    Display, and allow in commands, the 2-char sequence "^?" for Delete (0x7f).
+
+main.c
+    Fix the ~/uemacs-dumps clean-up code to actually work (multiple errors).
+
+buffer.c
+main.c
+names.c
+    Allow negative arg to "next-buffer" (nextbuffer()). [buffer.c]
+    Take any numeric arg to "select-buffer" (usebuffer()) to mean go
+    back to previous buffer without prompting.  [buffer.c]
+    Remove any numeric arg message from the mini-buffer before executing
+    a command [main.c], and add comment to execute() call in getstring()
+    that mlerase() after execute() isn't needed there.  [input.c]
+    Disable "select-buffer" when in the mini-buffer.  [names.c]
+
+
+exec.c
+main.c
+efunc.h
+    Add code to remember the text of the last command line run in a
+    buffer for reexecute.
+    Fix addto_kbdmacro() to record a 0 numeric arg when it is set. [main.c]
+    docmd() is only used in exec.c, so make it static there. [efunc.h, exec.c]
+    Add struct line_info and struct line_seen. [exec.c]
+    Add push_lsb(), pop_lsb(), switch_lsb_lines(). [exex.c]
+    docmd() use *_lsb code to preserve commands and, if the command is
+    "reexecute", recurse with the previous command. [exec.c]
+    Tidy up the 40 numeric macro functions by using a generating macrto.
+    [exec.c]

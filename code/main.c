@@ -258,9 +258,13 @@ void addchar_kbdmacro(char addch) {
 /* ======================================================================
  * Internal routine to record any numeric arg given to a macro function.
  */
-static int func_rpt_cnt = 0;
+static struct {
+    int cnt;
+    int valid;
+} func_rpt = { 0, 0 };
 static void set_narg_kbdmacro(int n) {
-    func_rpt_cnt = n;
+    func_rpt.cnt = n;
+    func_rpt.valid = 1;
     return;
 }
 
@@ -278,10 +282,10 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
     if (kbd_idx) flush_kbd_text();
     if (new_command) {
         lnewline();
-        if (func_rpt_cnt) {
-            linstr(ue_itoa(func_rpt_cnt));
+        if (func_rpt.valid) {
+            linstr(ue_itoa(func_rpt.cnt));
             linsert_byte(1, ' ');
-            func_rpt_cnt = 0;
+            func_rpt.valid = 0;
         }
     }
     else linsert_byte(1, ' ');

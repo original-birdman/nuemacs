@@ -17,52 +17,47 @@
 
 #include "utf8proc.h"
 
-/*
- * Execute a named command even if it is not bound.
+/* Structures and code for command line remmebering */
+
+/* Structure for remembering past commands (for reexecute) */
+
+struct line_info {
+    char *text;
+    int alloc;
+};
+struct line_seen {
+    struct line_info curr;
+    struct line_info prev;
+};
+
+static struct line_seen *lsb = NULL;
+
+/* This creates a new struct line_seen for lsb and returns the previous
+ * value.
+ * Users of docmd() (so dobuf() and execcmd()) should call this on entry,
+ * save teh retuneds value and ensure that they call pop_lsb with that value
+ * as they return.
  */
-int namedcmd(int f, int n) {
-    fn_t kfunc;     /* ptr to the requested function to bind to */
+static struct line_seen *push_lsb(void) {
+    struct line_seen *retval = lsb;
 
-/* Prompt the user to get the function name to execute */
-    struct name_bind *nm_info = getname(": ");
-    if (nm_info == NULL) {
-        mlwrite(MLpre "No such function" MLpost);
-        return FALSE;
-    }
-    kfunc = nm_info->n_func;
-
-/* Check whether the given command is allowed in the minibuffer, if that
- * is where we are...
- */
-    if (inmb) {
-        if (nm_info && nm_info->opt.not_mb) {
-            not_in_mb.funcname = nm_info->n_name;
-            not_in_mb.keystroke = -1;   /* No keystroke... */
-            kfunc = not_in_mb_error;    /* Change what we call... */
-        }
-    }
-
-/* ...and then execute the command */
-    return kfunc(f, n);
+    lsb = malloc(sizeof(struct line_seen));
+    lsb->curr.alloc = lsb->prev.alloc = 0;
+    lsb->curr.text = lsb->prev.text = NULL;
+    return retval;
 }
-
-/*
- * execcmd:
- *      Execute a command line command to be typed in
- *      by the user
- *
- * int f, n;            default Flag and Numeric argument
- */
-int execcmd(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    int status;             /* status return */
-    char cmdstr[NSTRING];   /* string holding command to execute */
-
-/* Get the line wanted */
-    if ((status = mlreply(": ", cmdstr, NSTRING)) != TRUE) return status;
-
-    execlevel = 0;
-    return docmd(cmdstr);
+static void pop_lsb(struct line_seen *old_p) {
+    if (lsb->curr.text) free(lsb->curr.text);
+    if (lsb->prev.text) free(lsb->prev.text);
+    free(lsb);
+    lsb = old_p;
+    return;
+}
+void switch_lsb_lines(void) {
+    struct line_info tmp_li = lsb->curr;
+    lsb->curr = lsb->prev;
+    lsb->prev = tmp_li;
+    return;
 }
 
 /*
@@ -78,7 +73,7 @@ int execcmd(int f, int n) {
  *
  * char *cline;         command line to execute
  */
-int docmd(char *cline) {
+static int docmd(char *cline) {
     int f;                  /* default argument flag */
     int n;                  /* numeric repeat value */
     int status;             /* return status of function */
@@ -92,6 +87,19 @@ int docmd(char *cline) {
 
     oldestr = execstr;      /* save last ptr to string to execute */
     execstr = cline;        /* and set this one as current */
+
+/* We need to take a copy of the current command line now.
+ * The token parsing writes NULs into the buffer as it goes...
+ */
+    switch_lsb_lines();     /* Last curr -> prev */
+#define ALLOC_CHUNK 64
+    int want = strlen(cline) + 1;   /* Need the NUL */
+    int need = ALLOC_CHUNK*((want + ALLOC_CHUNK - 1)/ALLOC_CHUNK);
+    if (lsb->curr.alloc < need) {
+        lsb->curr.text = realloc(lsb->curr.text, need);
+        lsb->curr.alloc = need;
+    }
+    strcpy(lsb->curr.text, cline);
 
 /* First set up the default command values */
     f = FALSE;
@@ -120,6 +128,21 @@ int docmd(char *cline) {
             execstr = oldestr;
             return status;
         }
+    }
+
+/* If the command is "reexecute" we need to recurse with the previous
+ * command line.
+ * We also need to preserve the previous line as the current line,
+ * which switch_lsb_lines() does - the reexecute gets sent to prev and
+ * is then removed rather then the command we actually want.
+ */
+    if (strcmp(tkn, "reexecute") == 0) {
+        switch_lsb_lines();
+        char *reex_str = malloc(lsb->curr.alloc);
+        strcpy(reex_str, lsb->curr.text);
+        int status = docmd(reex_str);
+        free(reex_str);
+        return status;
     }
 
 /* And match the token to see if it exists */
@@ -213,6 +236,63 @@ char *token(char *src, char *tok, int size) {
     if (*src) ++src;
     *tok = 0;
     return src;
+}
+
+/*
+ * Execute a named command even if it is not bound.
+ */
+int namedcmd(int f, int n) {
+    fn_t kfunc;     /* ptr to the requested function to bind to */
+
+/* Prompt the user to get the function name to execute */
+    struct name_bind *nm_info = getname(": ");
+    if (nm_info == NULL) {
+        mlwrite(MLpre "No such function" MLpost);
+        return FALSE;
+    }
+    kfunc = nm_info->n_func;
+
+/* Check whether the given command is allowed in the minibuffer, if that
+ * is where we are...
+ */
+    if (inmb) {
+        if (nm_info && nm_info->opt.not_mb) {
+            not_in_mb.funcname = nm_info->n_name;
+            not_in_mb.keystroke = -1;   /* No keystroke... */
+            kfunc = not_in_mb_error;    /* Change what we call... */
+        }
+    }
+
+/* ...and then execute the command */
+    return kfunc(f, n);
+}
+
+/*
+ * execcmd:
+ *      Execute a command line command to be typed in
+ *      by the user
+ *
+ * int f, n;            default Flag and Numeric argument
+ */
+int execcmd(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int status;             /* status return */
+    char cmdstr[NSTRING];   /* string holding command to execute */
+
+/* Get the line wanted */
+//    if ((status = mlreply(": ", cmdstr, NSTRING)) != TRUE) return status;
+    if ((status = mlreplyall(": ", cmdstr, NSTRING)) != TRUE) return status;
+
+    execlevel = 0;
+
+/* We're only going to run one command, so the concept of saving the current
+ * and previous is somewhat moot, but we need to do this so that other usage
+ * bahaves as we expect.
+ */
+    struct line_seen *saved_lsb = push_lsb();
+    status = docmd(cmdstr);
+    pop_lsb(saved_lsb);
+    return status;
 }
 
 /*
@@ -920,6 +1000,12 @@ int dobuf(struct buffer *bp) {
         return FALSE;
     }
 
+/* We need to push a new set of line_seen buffers.
+ * This is another reason to ensure we always leave at single_exit, so
+ * that we can switch back.
+ */
+    struct line_seen *saved_lsb = push_lsb();
+
 /* Mark an executing buffer as read-only while it is being executed */
     int orig_view_bit = bp->b_mode & MDVIEW;
     bp->b_mode |= MDVIEW;
@@ -1302,6 +1388,8 @@ single_exit:
 /* Revert to original read-only status if it wasn't set */
 
     if (!orig_view_bit) bp->b_mode &= ~MDVIEW;
+
+    pop_lsb(saved_lsb);     /* Back to the original line_seen buffers */
     return status;
 }
 
@@ -1434,162 +1522,47 @@ int cbuf(int f, int n, int bufnum) {
     return TRUE;
 }
 
-int cbuf1(int f, int n) {
-    return cbuf(f, n, 1);
-}
+/* Declare the historic 40 numbered macro buffers */
+#define NMAC(nmac) \
+   int cbuf ## nmac(int f, int n) { return cbuf(f, n, nmac); }
 
-int cbuf2(int f, int n) {
-    return cbuf(f, n, 2);
-}
-
-int cbuf3(int f, int n) {
-    return cbuf(f, n, 3);
-}
-
-int cbuf4(int f, int n) {
-    return cbuf(f, n, 4);
-}
-
-int cbuf5(int f, int n) {
-    return cbuf(f, n, 5);
-}
-
-int cbuf6(int f, int n) {
-    return cbuf(f, n, 6);
-}
-
-int cbuf7(int f, int n) {
-    return cbuf(f, n, 7);
-}
-
-int cbuf8(int f, int n) {
-    return cbuf(f, n, 8);
-}
-
-int cbuf9(int f, int n) {
-    return cbuf(f, n, 9);
-}
-
-int cbuf10(int f, int n) {
-    return cbuf(f, n, 10);
-}
-
-int cbuf11(int f, int n) {
-    return cbuf(f, n, 11);
-}
-
-int cbuf12(int f, int n) {
-    return cbuf(f, n, 12);
-}
-
-int cbuf13(int f, int n) {
-    return cbuf(f, n, 13);
-}
-
-int cbuf14(int f, int n) {
-    return cbuf(f, n, 14);
-}
-
-int cbuf15(int f, int n) {
-    return cbuf(f, n, 15);
-}
-
-int cbuf16(int f, int n) {
-    return cbuf(f, n, 16);
-}
-
-int cbuf17(int f, int n) {
-    return cbuf(f, n, 17);
-}
-
-int cbuf18(int f, int n) {
-    return cbuf(f, n, 18);
-}
-
-int cbuf19(int f, int n) {
-    return cbuf(f, n, 19);
-}
-
-int cbuf20(int f, int n) {
-    return cbuf(f, n, 20);
-}
-
-int cbuf21(int f, int n) {
-    return cbuf(f, n, 21);
-}
-
-int cbuf22(int f, int n) {
-    return cbuf(f, n, 22);
-}
-
-int cbuf23(int f, int n) {
-    return cbuf(f, n, 23);
-}
-
-int cbuf24(int f, int n) {
-    return cbuf(f, n, 24);
-}
-
-int cbuf25(int f, int n) {
-    return cbuf(f, n, 25);
-}
-
-int cbuf26(int f, int n) {
-    return cbuf(f, n, 26);
-}
-
-int cbuf27(int f, int n) {
-    return cbuf(f, n, 27);
-}
-
-int cbuf28(int f, int n) {
-    return cbuf(f, n, 28);
-}
-
-int cbuf29(int f, int n) {
-    return cbuf(f, n, 29);
-}
-
-int cbuf30(int f, int n) {
-    return cbuf(f, n, 30);
-}
-
-int cbuf31(int f, int n) {
-    return cbuf(f, n, 31);
-}
-
-int cbuf32(int f, int n) {
-    return cbuf(f, n, 32);
-}
-
-int cbuf33(int f, int n) {
-    return cbuf(f, n, 33);
-}
-
-int cbuf34(int f, int n) {
-    return cbuf(f, n, 34);
-}
-
-int cbuf35(int f, int n) {
-    return cbuf(f, n, 35);
-}
-
-int cbuf36(int f, int n) {
-    return cbuf(f, n, 36);
-}
-
-int cbuf37(int f, int n) {
-    return cbuf(f, n, 37);
-}
-
-int cbuf38(int f, int n) {
-    return cbuf(f, n, 38);
-}
-
-int cbuf39(int f, int n) {
-    return cbuf(f, n, 39);
-}
-
-int cbuf40(int f, int n) {
-    return cbuf(f, n, 40);
-}
+NMAC(1)
+NMAC(2)
+NMAC(3)
+NMAC(4)
+NMAC(5)
+NMAC(6)
+NMAC(7)
+NMAC(8)
+NMAC(9)
+NMAC(10)
+NMAC(11)
+NMAC(12)
+NMAC(13)
+NMAC(14)
+NMAC(15)
+NMAC(16)
+NMAC(17)
+NMAC(18)
+NMAC(19)
+NMAC(20)
+NMAC(21)
+NMAC(22)
+NMAC(23)
+NMAC(24)
+NMAC(25)
+NMAC(26)
+NMAC(27)
+NMAC(28)
+NMAC(29)
+NMAC(30)
+NMAC(31)
+NMAC(32)
+NMAC(33)
+NMAC(34)
+NMAC(35)
+NMAC(36)
+NMAC(37)
+NMAC(38)
+NMAC(39)
+NMAC(40)

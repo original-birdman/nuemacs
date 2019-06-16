@@ -268,7 +268,6 @@ extern void fixup_fname(char *);
 /* exec.c */
 extern int namedcmd(int f, int n);
 extern int execcmd(int f, int n);
-extern int docmd(char *cline);
 extern char *token(char *src, char *tok, int size);
 extern int macarg(char *tok);
 extern int nextarg(char *prompt, char *buffer, int size, int terminator);
