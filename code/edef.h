@@ -192,9 +192,12 @@ extern int running_function;
 extern char *current_command;
 
 typedef struct {
-    fn_t func;          /* Function that would be called */
     int c;              /* Last command char (reexecute) */
     int f;              /* Last flag (-> n valid) */
     int n;              /* Last n */
-} last_arg;
-extern last_arg l_arg, p_arg;
+} com_arg;
+typedef struct {
+    fn_t func;          /* Function that would be called */
+    com_arg ca;
+} func_arg;
+extern func_arg f_arg, p_arg;

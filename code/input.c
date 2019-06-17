@@ -276,7 +276,7 @@ int tgetc(void) {
         }
         else {
             kbdptr = kbdm;      /* reset macro to beginning for the next rep */
-            l_arg = p_arg;      /* Restore original l_arg */
+            f_arg = p_arg;      /* Restore original f_arg */
             return (int) *kbdptr++;
         }
     }
@@ -507,17 +507,13 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     struct buffer *cb;
     char mbname[NBUFN];
     int    c;               /* command character */
-    int    f;               /* default flag */
-    int    n;               /* numeric repeat count */
-    int    basec;           /* c stripped of meta character */
-    int    mflag;           /* negative flag on repeat */
     struct line *lp;        /* line to copy */
     int size;
     char *sp;               /* string pointer into line */
     char tstring[NSTRING];
     char choices[1000];     /* MUST be > max likely window width */
     int status;
-    last_arg sav;
+    func_arg sav;
 
     short savdoto;
     int prolen;
@@ -588,7 +584,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
 /* Save real reexecution history */
 
-    sav = l_arg;
+    sav = f_arg;
 
 /* Remember the original buffer name if at level 1 */
 
@@ -732,83 +728,15 @@ loop:
     }
 /* End of filename expansion code */
 
-    f = FALSE;
-    n = 1;
+/* Check for any numeric prefix */
 
-/* Do META-# processing if needed */
-
-    basec = c & ~META;          /* strip meta char off if there */
-    if ((c & META) && ((basec >= '0' && basec <= '9') || basec == '-')) {
-        f = TRUE;               /* there is a # arg */
-        n = 0;                  /* start with a zero default */
-        mflag = 1;              /* current minus flag */
-        c = basec;              /* strip the META */
-        while ((c >= '0' && c <= '9') || (c == '-')) {
-            if (c == '-') {     /* already hit a minus or digit? */
-                if ((mflag == -1) || (n != 0)) break;
-                mflag = -1;
-            }
-            else {
-                n = n * 10 + (c - '0');
-            }
-            if ((n == 0) && (mflag == -1))  /* lonely - */
-                mlwrite("Arg:");
-            else
-                mlwrite("Arg: %d",n * mflag);
-
-            c = getcmd();       /* get the next key */
-        }
-        n = n * mflag;          /* figure in the sign */
-    }
-
-/* Do ^U repeat argument processing */
-
-    if (c == reptc) {           /* ^U, start argument   */
-        f = TRUE;
-        n = 4;                  /* with argument of 4 */
-        mflag = 0;              /* that can be discarded. */
-        mlwrite("Arg: 4");
-        while (((c=getcmd()) >='0' && c<='9') || c==reptc || c=='-'){
-            if (c == reptc)
-                if ((n > 0) == ((n*4) > 0)) n = n*4;
-                else n = 1;
-/*
- * If dash, and start of argument string, set arg.
- * to -1.  Otherwise, insert it.
- */
-            else if (c == '-') {
-                if (mflag) break;
-                n = 0;
-                mflag = -1;
-            }
-/*
- * If first digit entered, replace previous argument
- * with digit and set sign.  Otherwise, append to arg.
- */
-            else {
-                if (!mflag) {
-                    n = 0;
-                    mflag = 1;
-                }
-                n = 10*n + c - '0';
-            }
-            mlwrite("Arg: %d", (mflag >=0) ? n : (n ? -n : -1));
-        }
-/*
- * Make arguments preceded by a minus sign negative and change
- * the special argument "^U -" to an effective "^U -1".
- */
-        if (mflag == -1) {
-            if (n == 0) n++;
-            n = -n;
-        }
-    }
+    com_arg *carg = multiplier_check(c);
 
 /* Intercept minibuffer specials.. <NL> and ^G */
 
-    if ((c == (CONTROL|'M')) || (c == (CTLX|CONTROL|'C')))
+    if ((carg->c == (CONTROL|'M')) || (carg->c == (CTLX|CONTROL|'C')))
         goto submit;
-    else if (c == (CONTROL|'G')) {
+    else if (carg->c == (CONTROL|'G')) {
         status = ABORT;
         buf = "";               /* Don't return garbage */
         goto abort;
@@ -820,7 +748,7 @@ loop:
  *  o the command will execute, so the minibuffer will be erased anyway.
  */
 
-    execute(c, f, n);
+    execute(carg->c, carg->f, carg->n);
     if (mpresf) {
         sleep(1);
         mlerase();
@@ -901,7 +829,7 @@ abort:
 
 /* Restore real reexecution history */
 
-    l_arg = sav;
+    f_arg = sav;
 
     mberase();
     if (status == ABORT) {

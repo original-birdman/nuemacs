@@ -772,15 +772,95 @@ void exit_via_signal(int signr) {
 
 /* ====================================================================== */
 
+com_arg *multiplier_check(int c) {
+
+    static com_arg ca;  /* Caller will copy out, so we only need one */
+    int mflag;          /* negative flag on repeat */
+    int basec;          /* c stripped of meta character */
+
+    ca.c = c;           /* Initialize... */
+    ca.f = FALSE;       /* ...these... */
+    ca.n = 1;           /* ...3 now */
+
+/* Do META-# processing if needed */
+
+    basec = ca.c & ~META;       /* strip meta char off if there */
+    if ((ca.c & META) && ((basec >= '0' && basec <= '9') || basec == '-')) {
+        ca.f = TRUE;            /* there is a # arg */
+        ca.n = 0;               /* start with a zero default */
+        mflag = 1;              /* current minus flag */
+        ca.c = basec;           /* strip the META */
+        while ((ca.c >= '0' && ca.c <= '9') || (ca.c == '-')) {
+            if (ca.c == '-') {  /* already hit a minus or digit? */
+                if ((mflag == -1) || (ca.n != 0)) break;
+                mflag = -1;
+            }
+            else {
+                ca.n = ca.n * 10 + (ca.c - '0');
+            }
+            if ((ca.n == 0) && (mflag == -1))  /* lonely - */
+                mlwrite("Arg:");
+            else
+                mlwrite("Arg: %d", ca.n * mflag);
+
+            ca.c = getcmd();    /* get the next key */
+        }
+        ca.n = ca.n * mflag;    /* figure in the sign */
+    }
+
+/* Do ^U repeat argument processing */
+
+    if (ca.c == reptc) {    /* ^U, start argument   */
+        ca.f = TRUE;
+        ca.n = 4;           /* with argument of 4 */
+        mflag = 0;          /* that can be discarded. */
+        mlwrite("Arg: 4");
+        while (((ca.c = getcmd()) >= '0' && ca.c <= '9') ||
+                 ca.c == reptc || ca.c == '-') {
+            if (ca.c == reptc)
+/* This odd-looking statement is checking for integer overflow by testing
+ * that the sign of the result would be the same sign as the starting value.
+ */
+                if ((ca.n > 0) == ((ca.n * 4) > 0))
+                    ca.n = ca.n * 4;
+                else
+                    ca.n = 1;
+/* If dash, and start of argument string, set arg.
+ * to -1.  Otherwise, insert it.
+ */
+            else if (ca.c == '-') {
+                if (mflag) break;
+                ca.n = 0;
+                mflag = -1;
+            }
+/* If first digit entered, replace previous argument
+ * with digit and set sign.  Otherwise, append to arg.
+ */
+            else {
+                if (!mflag) {
+                    ca.n = 0;
+                    mflag = 1;
+                }
+                ca.n = 10 * ca.n + ca.c - '0';
+            }
+            mlwrite("Arg: %d", (mflag >= 0) ? ca.n : (ca.n ? -ca.n : -1));
+        }
+/* Make arguments preceded by a minus sign negative and change
+ * the special argument "^U -" to an effective "^U -1".
+ */
+        if (mflag == -1) {
+            if (ca.n == 0) ca.n++;
+            ca.n = -ca.n;
+        }
+    }
+    return &ca;             /* Give back the result */
+}
+
 int main(int argc, char **argv) {
     int c = -1;             /* command character */
-    int f;                  /* default flag */
-    int n;                  /* numeric repeat count */
-    int mflag;              /* negative flag on repeat */
     struct buffer *bp;      /* temp buffer pointer */
     int firstfile;          /* first file flag */
     struct buffer *firstbp = NULL;  /* ptr to first buffer in cmd line */
-    int basec;              /* c stripped of meta character */
     int viewflag;           /* are we starting in view mode? */
     int gotoflag;           /* do we need to goto a line at start? */
     int gline = 0;          /* if so, what line? */
@@ -1100,81 +1180,14 @@ loop:
         if (c == ' ') goto loop;    /* ITS EMACS does this  */
 #endif
     }
-    f = FALSE;
-    n = 1;
 
-/* Do META-# processing if needed */
+/* Check for any numeric prefix */
 
-    basec = c & ~META;      /* strip meta char off if there */
-    if ((c & META) && ((basec >= '0' && basec <= '9') || basec == '-')) {
-        f = TRUE;       /* there is a # arg */
-        n = 0;          /* start with a zero default */
-        mflag = 1;      /* current minus flag */
-        c = basec;      /* strip the META */
-        while ((c >= '0' && c <= '9') || (c == '-')) {
-            if (c == '-') { /* already hit a minus or digit? */
-                if ((mflag == -1) || (n != 0)) break;
-                mflag = -1;
-            }
-            else {
-                n = n * 10 + (c - '0');
-            }
-            if ((n == 0) && (mflag == -1))  /* lonely - */
-                mlwrite("Arg:");
-            else
-                mlwrite("Arg: %d", n * mflag);
-
-            c = getcmd();   /* get the next key */
-        }
-        n = n * mflag;  /* figure in the sign */
-    }
-
-/* Do ^U repeat argument processing */
-
-    if (c == reptc) {       /* ^U, start argument   */
-        f = TRUE;
-        n = 4;          /* with argument of 4 */
-        mflag = 0;      /* that can be discarded. */
-        mlwrite("Arg: 4");
-        while (((c = getcmd()) >= '0' && c <= '9') || c == reptc || c == '-') {
-            if (c == reptc)
-                if ((n > 0) == ((n * 4) > 0)) n = n * 4;
-                else                          n = 1;
-/*
- * If dash, and start of argument string, set arg.
- * to -1.  Otherwise, insert it.
- */
-            else if (c == '-') {
-                if (mflag) break;
-                n = 0;
-                mflag = -1;
-            }
-/*
- * If first digit entered, replace previous argument
- * with digit and set sign.  Otherwise, append to arg.
- */
-            else {
-                if (!mflag) {
-                    n = 0;
-                    mflag = 1;
-                }
-                n = 10 * n + c - '0';
-            }
-            mlwrite("Arg: %d", (mflag >= 0) ? n : (n ? -n : -1));
-        }
-/*
- * Make arguments preceded by a minus sign negative and change
- * the special argument "^U -" to an effective "^U -1".
- */
-        if (mflag == -1) {
-            if (n == 0) n++;
-            n = -n;
-        }
-    }
+    com_arg *carg = multiplier_check(c);
 
 /* And execute the command */
-    if (n) mlerase();   /* Remove any numeric arg */
-    execute(c, f, n);
+    if (carg->n) mlerase();   /* Remove any numeric arg */
+    execute(carg->c, carg->f, carg->n);
     goto loop;
 }
 
@@ -1301,10 +1314,10 @@ after_mb_check:
         }
         else if ((execfunc != reexecute) && (execfunc != nullproc) &&
                  (execfunc != ctlxrp)) {    /* Remember current set */
-            l_arg.func = execfunc;
-            l_arg.c = c;
-            l_arg.f = f;
-            l_arg.n = n;
+            f_arg.func = execfunc;
+            f_arg.ca.c = c;
+            f_arg.ca.f = f;
+            f_arg.ca.n = n;
         }
 
         if (!inmb && kbdmode == RECORD) {
@@ -1346,10 +1359,10 @@ after_mb_check:
 /* A single character "self-insert" also has to be remembered so that
  * ctl-C while typing repeats the last character
  */
-    l_arg.func = NULL;
-    l_arg.c = c;
-    l_arg.f = f;
-    l_arg.n = n;
+    f_arg.func = NULL;
+    f_arg.ca.c = c;
+    f_arg.ca.f = f;
+    f_arg.ca.n = n;
 
 /*
  * If a space was typed, fill column is defined, the argument is non-
@@ -1530,7 +1543,7 @@ int ctlxlp(int f, int n) {
     }
 
 /* Have to save current c/f/n-last */
-    p_arg = l_arg;          /* Restored on ctlxrp in execute() */
+    p_arg = f_arg;          /* Restored on ctlxrp in execute() */
 
     mlwrite(MLpre "Start macro" MLpost);
     kbdptr = &kbdm[0];
@@ -1561,7 +1574,7 @@ int ctlxrp(int f, int n) {
  * have a numeric arg > 1 for execute-macro.
  */
     if (kbdmode != STOP) {
-        l_arg = p_arg;      /* Restore saved set - should be ctlxe */
+        f_arg = p_arg;      /* Restore saved set - should be ctlxe */
 
 /* On the last keyboard repeat kbdrep will be 1 (haven't yet reached
  * the end - it will be >1 if we've been asked to run the macro
@@ -1572,7 +1585,7 @@ int ctlxrp(int f, int n) {
  */
         if ((kbdrep == 1) && kbdmode == PLAY && (ctlxe_togo > 0)) {
             kbdmode = STOP;     /* Leave ctlxe_togo as-is */
-            return reexecute(l_arg.f, l_arg.n);
+            return reexecute(f_arg.ca.f, f_arg.ca.n);
         }
         inreex = FALSE;
     }
@@ -1593,7 +1606,7 @@ int ctlxe(int f, int n) {
     if (n <= 0) return TRUE;
 
 /* Have to save current c/f/n-last */
-    p_arg = l_arg;          /* Restored on ctlxrp in execute() */
+    p_arg = f_arg;          /* Restored on ctlxrp in execute() */
 
     kbdrep = n;             /* remember how many times to execute */
     kbdmode = PLAY;         /* start us in play mode */
@@ -1745,12 +1758,12 @@ int reexecute(int f, int n) {
  * Do NOT set inreex for this!! We aren't reexecing anything - instead
  * we're setting up the macro to replay, which is not the same thing...
  */
-    if (l_arg.func == ctlxe) {
+    if (f_arg.func == ctlxe) {
         if (ctlxe_togo == 0) {  /* First call */
             if (f && (n > 1)) ctlxe_togo = n;
             else              ctlxe_togo = 1;
         }
-        ctlxe(l_arg.f, l_arg.n);
+        ctlxe(f_arg.ca.f, f_arg.ca.n);
         ctlxe_togo--;
         return TRUE;
     }
@@ -1758,7 +1771,7 @@ int reexecute(int f, int n) {
     inreex = TRUE;
 /* We can't just multiply n's. Must loop. */
     for (reloop = 1; reloop<=n; ++reloop) {
-        execute(l_arg.c, l_arg.f, l_arg.n);
+        execute(f_arg.ca.c, f_arg.ca.f, f_arg.ca.n);
     }
     inreex = FALSE;
     return(TRUE);

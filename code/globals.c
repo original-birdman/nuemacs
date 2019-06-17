@@ -184,4 +184,4 @@ char readin_mesg[];
 int running_function = 0;
 char *current_command = NULL;
 
-last_arg l_arg = { NULL, META|SPEC|'C', TRUE, 1 }, p_arg;
+func_arg f_arg = { NULL, { META|SPEC|'C', TRUE, 1 } }, p_arg;

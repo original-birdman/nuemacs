@@ -120,6 +120,7 @@ extern int quotedcount(int f, int n);
 extern int ggr_style (int f, int n);
 
 /* main.c */
+extern com_arg *multiplier_check(int);
 extern int addto_kbdmacro(char *, int, int);
 extern void addchar_kbdmacro(char);
 extern int macro_helper(int, int);
