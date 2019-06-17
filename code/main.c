@@ -105,11 +105,12 @@ printf( \
   exit(status);
 }
 
-/* EXPERIMENTAL KBD MACRO CODE */
+/* KBD Macro in buffer code */
 
 static char kbd_text[1024];
 static int kbd_idx;
 static int must_quote;
+static int ctlxe_togo = 0;  /* This is for the kbdm[] version */
 
 enum KBDM_direction { GetTo_KBDM, OutOf_KBDM };
 
@@ -138,6 +139,7 @@ static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
             mlwrite("%s: cannot reach keyboard macro buffer!", who);
             kbdmac_bp->b_nwnd = saved_nw;
             kbdmode = STOP;
+            ctlxe_togo = 0;     /* Just in case... */
             do_savnam = 1;
             return FALSE;
         }
@@ -159,6 +161,7 @@ out_of_phase:                       /* Can only get here on error */
     mlforce("Keyboard macro collection out of phase - aborted.");
     do_savnam = 1;
     kbdmode = STOP;
+    ctlxe_togo = 0;             /* Just in case... */
     return FALSE;
 }
 
@@ -323,6 +326,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
 
 /* ======================================================================
  * Internal routine to finalize the keyboard macro buffer.
+ * Also used to terminate running...
  */
 static int end_kbdmacro(void) {
     if (!kbdmac_bp) {
@@ -334,8 +338,10 @@ static int end_kbdmacro(void) {
 /* If there is any pending text we need to flush it first */
     if (kbd_idx) flush_kbd_text();
     lnewline();
+    if (kbdmode != PLAY) mlwrite(MLpre "End macro" MLpost);
     kbdmode = STOP;
-    mlwrite(MLpre "End macro" MLpost);
+/* Reset ctlxe_togo regardless of current state */
+    ctlxe_togo = 0;
     return kbdmac_buffer_toggle(OutOf_KBDM, "end");
 }
 
@@ -1086,7 +1092,6 @@ loop:
         }
         c = getcmd();
     }
-
 /* If there is something on the command line, clear it */
     if (mpresf != FALSE) {
         mlerase();
@@ -1164,7 +1169,7 @@ loop:
         if (mflag == -1) {
             if (n == 0) n++;
             n = -n;
-            }
+        }
     }
 
 /* And execute the command */
@@ -1291,14 +1296,15 @@ after_mb_check:
         if (inreex) {
             if ((execfunc == fisearch) || (execfunc == forwsearch))
                 execfunc = forwhunt;
-            if ((execfunc == risearch) || (execfunc == backsearch))
+            else if ((execfunc == risearch) || (execfunc == backsearch))
                 execfunc = backhunt;
         }
-        else if ((execfunc != reexecute) && (execfunc != nullproc)
-                        && (kbdmode != PLAY)) {
-            clast = c;
-            flast = f;
-            nlast = n;
+        else if ((execfunc != reexecute) && (execfunc != nullproc) &&
+                 (execfunc != ctlxrp)) {    /* Remember current set */
+            l_arg.func = execfunc;
+            l_arg.c = c;
+            l_arg.f = f;
+            l_arg.n = n;
         }
 
         if (!inmb && kbdmode == RECORD) {
@@ -1310,7 +1316,12 @@ after_mb_check:
             }
             else {                          /* Record it */
                 if ((f > 0) && (n != 1)) set_narg_kbdmacro(n);
-                addto_kbdmacro(ktp->fi->n_name, 1, 0);
+                char *func4macro = ktp->fi->n_name;
+                if (inreex) {       /* Handle the mapped calls */
+                    if (execfunc == forwhunt)      func4macro = "hunt-forward";
+                    else if (execfunc == backhunt) func4macro = "hunt-backward";
+                }
+                addto_kbdmacro(func4macro, 1, 0);
             }
         }
         if (!run_not_in_mb &&
@@ -1323,7 +1334,7 @@ after_mb_check:
         else input_waiting = NULL;
 
         running_function = 1;   /* Rather than keyboard input */
-        status = (*execfunc) (f, n);
+        status = execfunc(f, n);
         running_function = 0;
         input_waiting = NULL;
         if (execfunc != showcpos) lastflag = thisflag;
@@ -1331,6 +1342,14 @@ after_mb_check:
         if ((kbdmode != STOP) & !status) end_kbdmacro();
         return status;
     }
+
+/* A single character "self-insert" also has to be remembered so that
+ * ctl-C while typing repeats the last character
+ */
+    l_arg.func = NULL;
+    l_arg.c = c;
+    l_arg.f = f;
+    l_arg.n = n;
 
 /*
  * If a space was typed, fill column is defined, the argument is non-
@@ -1510,14 +1529,8 @@ int ctlxlp(int f, int n) {
         return FALSE;
     }
 
-#if GMLTEST
-    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
-        if (strcmp( wp->w_bufp->b_bname, kbdmacro_buffer) == 0) {
-            mlwrite("%%Cannot collect macro while macro buffer is visible");
-            return FALSE;
-        }
-    }
-#endif
+/* Have to save current c/f/n-last */
+    p_arg = l_arg;          /* Restored on ctlxrp in execute() */
 
     mlwrite(MLpre "Start macro" MLpost);
     kbdptr = &kbdm[0];
@@ -1531,7 +1544,8 @@ int ctlxlp(int f, int n) {
  * End keyboard macro. Check for the same limit conditions as the above
  * routine. Set up the variables and return to the caller.
  * NOTE that since the key strokes to get here when recording a macro
- * are in the macro buffer we do nothing on reaching here in PLAY mode.
+ * are in the macro buffer we take advantage of that to implement
+ * re-executing the macro multiple-times.
  */
 int ctlxrp(int f, int n) {
     UNUSED(f); UNUSED(n);
@@ -1540,6 +1554,28 @@ int ctlxrp(int f, int n) {
         return FALSE;
     }
     if (kbdmode == RECORD) end_kbdmacro();
+
+/* Collecting a keyboard macro puts a ctlxrp at the end of the buffer.
+ * this is somewhat fortunate, as it allows us to detect the end of a
+ * macro pass and set things up for the next reexecute call when we
+ * have a numeric arg > 1 for execute-macro.
+ */
+    if (kbdmode != STOP) {
+        l_arg = p_arg;      /* Restore saved set - should be ctlxe */
+
+/* On the last keyboard repeat kbdrep will be 1 (haven't yet reached
+ * the end - it will be >1 if we've been asked to run the macro
+ * multiple times).
+ * If we are on the last keyboard repeat, in PLAY mode and ctlxe still
+ * has more repeats to go then call reexecute to set things up for the
+ * next pass.
+ */
+        if ((kbdrep == 1) && kbdmode == PLAY && (ctlxe_togo > 0)) {
+            kbdmode = STOP;     /* Leave ctlxe_togo as-is */
+            return reexecute(l_arg.f, l_arg.n);
+        }
+        inreex = FALSE;
+    }
     return TRUE;
 }
 
@@ -1555,6 +1591,10 @@ int ctlxe(int f, int n) {
         return FALSE;
     }
     if (n <= 0) return TRUE;
+
+/* Have to save current c/f/n-last */
+    p_arg = l_arg;          /* Restored on ctlxrp in execute() */
+
     kbdrep = n;             /* remember how many times to execute */
     kbdmode = PLAY;         /* start us in play mode */
     kbdptr = &kbdm[0];      /*    at the beginning */
@@ -1696,10 +1736,29 @@ void dspram(void) {
 int reexecute(int f, int n) {
     UNUSED(f);
     int reloop;
+/* If we are being asked to reexec running the macro (ctlxe) then we have
+ * to return to let it happen (i.e. collect keys from tehT macro buffer).
+ * We also need to remember how many times to pass here if n > 1.
+ * Since we can't actually recurse into a keyboard macro we can
+ * manage with this fudge, rather than having to restructure everything
+ * into recursive calls.
+ * Do NOT set inreex for this!! We aren't reexecing anything - instead
+ * we're setting up the macro to replay, which is not the same thing...
+ */
+    if (l_arg.func == ctlxe) {
+        if (ctlxe_togo == 0) {  /* First call */
+            if (f && (n > 1)) ctlxe_togo = n;
+            else              ctlxe_togo = 1;
+        }
+        ctlxe(l_arg.f, l_arg.n);
+        ctlxe_togo--;
+        return TRUE;
+    }
+
     inreex = TRUE;
 /* We can't just multiply n's. Must loop. */
     for (reloop = 1; reloop<=n; ++reloop) {
-        execute(clast, flast, nlast);
+        execute(l_arg.c, l_arg.f, l_arg.n);
     }
     inreex = FALSE;
     return(TRUE);

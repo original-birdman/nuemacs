@@ -119,9 +119,6 @@ extern struct terminal term;
 #endif  /* EDEF_H_ */
 
 /* GGR - Additional declarations */
-extern int clast;               /* Last command (for re-execute) */
-extern int flast;               /* "f" option to last command */
-extern int nlast;               /* "n" option to last command */
 extern int inreex;              /* Set when re-executing */
 
 extern unicode_t *eos_list;     /* List of end-of-sentence characters */
@@ -193,3 +190,11 @@ extern char readin_mesg[NSTRING];
 
 extern int running_function;
 extern char *current_command;
+
+typedef struct {
+    fn_t func;          /* Function that would be called */
+    int c;              /* Last command char (reexecute) */
+    int f;              /* Last flag (-> n valid) */
+    int n;              /* Last n */
+} last_arg;
+extern last_arg l_arg, p_arg;

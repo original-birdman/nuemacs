@@ -268,14 +268,15 @@ int tgetc(void) {
     if (kbdmode == PLAY) {
         if (kbdptr < kbdend)    /* if there is some left... */
             return (int) *kbdptr++;
-        if (--kbdrep < 1) {     /* at the end of last repitition? */
-            kbdmode = STOP;
+        if (--kbdrep < 1) {     /* at the end of last repetition? */
+            kbdmode = STOP;     /* Leave ctlxe_togo alone */
 #if VISMAC == 0
             update(FALSE);      /* force a screen update after all is done */
 #endif
         }
         else {
             kbdptr = kbdm;      /* reset macro to beginning for the next rep */
+            l_arg = p_arg;      /* Restore original l_arg */
             return (int) *kbdptr++;
         }
     }
@@ -311,7 +312,7 @@ int tgetc(void) {
             *kbdptr++ = c;
             kbdend = kbdptr;
             if (kbdptr == &kbdm[NKBDM - 1]) {   /* don't overrun buffer */
-                kbdmode = STOP;
+                kbdmode = STOP; /* Must be collecting - leave ctlxe_togo */
                 TTbeep();
             }
         }
@@ -516,9 +517,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
     char tstring[NSTRING];
     char choices[1000];     /* MUST be > max likely window width */
     int status;
-    int savclast;
-    int savflast;
-    int savnlast;
+    last_arg sav;
 
     short savdoto;
     int prolen;
@@ -589,9 +588,7 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
 /* Save real reexecution history */
 
-    savclast = clast;
-    savflast = flast;
-    savnlast = nlast;
+    sav = l_arg;
 
 /* Remember the original buffer name if at level 1 */
 
@@ -867,9 +864,11 @@ submit:     /* Tidy up */
     else status = FALSE;        /* Empty input... */
 
 /* Record the result if we are recording a keyboard macro, but only
- * at first level of the minibuffer (i.e. the "true" result).
+ * at first level of the minibuffer (i.e. the "true" result),
+ * and only if we have some text.
  */
-    if (kbdmode == RECORD && mb_info.mbdepth == 1) addto_kbdmacro(buf, 0, 1);
+    if ((*buf != '\0') && (kbdmode == RECORD) && (mb_info.mbdepth == 1))
+         addto_kbdmacro(buf, 0, 1);
 
 abort:
 
@@ -902,9 +901,7 @@ abort:
 
 /* Restore real reexecution history */
 
-    clast = savclast;
-    flast = savflast;
-    nlast = savnlast;
+    l_arg = sav;
 
     mberase();
     if (status == ABORT) {

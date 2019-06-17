@@ -677,6 +677,12 @@ static int readpattern(char *prompt, char *apat, int srch) {
                 do_update_ring = 0;     /* ...don't save ths one */
             status = TRUE;              /* So we do the next section... */
         }
+/* Record this default if we are recording a keyboard macro, but only
+ * at base level of the minibuffer (i.e. we aren't searching *in* the
+ * mini-buffer).
+ */
+        if (kbdmode == RECORD && mb_info.mbdepth == 0)
+             addto_kbdmacro(tpat, 0, 1);
     }
     if (status == TRUE) {
         strcpy(apat, tpat);

@@ -130,14 +130,11 @@ char outline[NSTRING];          /* global string to hold debug line text */
 #endif
 
 /* GGR - Additional initializations */
-int  clast           = META|SPEC|'C';
-int  flast           = TRUE;
 int  inreex          = FALSE;
 
 int  allow_current   = 0;
 unicode_t *eos_list  = NULL;
 int  inmb            = FALSE;
-int  nlast           = 1;
 int  pathexpand      = TRUE;
 char savnam[NBUFN]   = "main";
 int do_savnam        = 1;
@@ -186,3 +183,5 @@ char readin_mesg[];
 
 int running_function = 0;
 char *current_command = NULL;
+
+last_arg l_arg = { NULL, META|SPEC|'C', TRUE, 1 }, p_arg;
