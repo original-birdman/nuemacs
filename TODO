@@ -43,5 +43,5 @@ Also all of:
  islower                        [estruct.h, search.c, input.c]
 
 NOTE: that the usage in input.c handles mapping of, e.g., Esc-a to
-Esc-A. Currently non-ascci characters (from AltGr usage on a keyboard)
+Esc-A. Currently non-ascii characters (from AltGr usage on a keyboard)
 can be bound (bind-to-key) separately by case.

@@ -2819,5 +2819,44 @@ efunc.h
     Add push_lsb(), pop_lsb(), switch_lsb_lines(). [exex.c]
     docmd() use *_lsb code to preserve commands and, if the command is
     "reexecute", recurse with the previous command. [exec.c]
-    Tidy up the 40 numeric macro functions by using a generating macrto.
+    Tidy up the 40 numeric macro functions by using a generating macro.
     [exec.c]
+
+globals.c
+input.c
+main.c
+search.c
+edef.h
+    Fixes for keyboard macro so that reexecute and numeric multipliers
+    work for it.
+    Merge saved c/f/n vars into a last_arg structure. [edef.h,
+    globals.c, input.c, main.c]
+    Only record getstring input to macro text buffer if there is some.
+    [input.c]
+    If getpattern() inserts the default reply for searching, add that to
+    the macro text buffer. [search.c]
+    If in reexecute mode, put mapped search function names into the
+    macro text buffer, not the originals. [main.c]
+    Save last c/f/n when in PLAY kbdmode, so reexecute works, but don;t
+    save them for ctlxrp. [main.c]
+    Modify ctlxe() and ctlxrp() so that things like Esc2^Xe Esc3^C work
+    as expected (keyboard macro runs 6 times). [main.c]
+
+globals.c
+input.c
+main.c
+edef.h
+efunc.h
+    Move the (identical) numeric prefix code in main.c and input.c into
+    a function (multiplier_check()) and get them both to call it.
+    [main.c, input.c, efunc.h]
+    Redefined (and renamed) the last_arg structure to func_arg.
+    [globals.c, input.c, edef.h]
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.141
+
+==========
