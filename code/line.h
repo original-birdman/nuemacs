@@ -51,6 +51,7 @@ extern void addto_lastmb_ring(char *);
 extern int kinsert(int c);
 extern int yank(int f, int n);
 extern int yank_replace(int, int);
+extern int yankmb(int f, int n);
 extern struct line *lalloc(int);  /* Allocate a line. */
 
 /* A macro to determine the effect on the "display column" of adding a

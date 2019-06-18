@@ -200,7 +200,6 @@ extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);
 extern int getstring(char *prompt, char *buf, int nbuf, int eolchar);
-extern int yankmb(int f, int n);
 
 /* bind.c */
 extern int help(int f, int n);

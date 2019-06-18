@@ -15,6 +15,8 @@
 #include "efunc.h"
 #include "wrapper.h"
 
+#include "utf8proc.h"
+
 /* GGR - some needed things for minibuffer handling */
 #if UNIX
 #include <signal.h>
@@ -333,9 +335,24 @@ int get1key(void) {
     return c;
 }
 
+/* Force a char to uppercase
+ * We expect c to mostly be ASCII, so shortcut that case
+ * Used several times in getcmd
+ */
+static int ensure_uppercase(int c) {
+    if (c <= 0x7f) {
+        if (c >= 'a' && c <= 'z') c ^= DIFCASE;
+    }
+    else {
+        c = utf8proc_toupper(c);    /* Unchanged if not lower/title case */
+    }
+    return c;
+}
+
 /* getcmd: Get a command from the keyboard.
  *         Process all applicable prefix keys
  */
+
 int getcmd(void) {
     int c;                  /* fetched keystroke */
 #if VT220
@@ -392,8 +409,7 @@ handle_CSI:
             goto proc_metac;
         }
 #endif
-        if (islower(c)) /* Force to upper */
-            c ^= DIFCASE;
+        c = ensure_uppercase(c);
         if (c >= 0x00 && c <= 0x1F)     /* control key */
             c = CONTROL | (c + '@');
         return META | c;
@@ -406,8 +422,7 @@ handle_CSI:
             goto proc_metac;
         }
 #endif
-        if (islower(c))                 /* Force to upper */
-            c ^= DIFCASE;
+        c = ensure_uppercase(c);
         if (c >= 0x00 && c <= 0x1F)     /* control key */
             c = CONTROL | (c + '@');
         return META | c;
@@ -424,8 +439,7 @@ proc_ctlxc:
             goto proc_metac;
         }
 #endif
-        if (c >= 'a' && c <= 'z')       /* Force to upper */
-            c -= 0x20;
+        c = ensure_uppercase(c);
         if (c >= 0x00 && c <= 0x1F)     /* control key */
             c = CONTROL | (c + '@');
         return CTLX | c;
