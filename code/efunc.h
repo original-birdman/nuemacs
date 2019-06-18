@@ -376,24 +376,12 @@ extern void reeat(int c);
 
 /* eval.c */
 extern void varinit(void);
-extern char *gtfun(char *fname);
-extern char *gtusr(char *vname);
-extern char *gtenv(char *vname);
-extern char *getkill(void);
-extern int setvar(int f, int n);
-extern void findvar(char *var, struct variable_description *vd, int size);
-extern int svar(struct variable_description *var, char *value);
-extern char *ue_itoa(int i);
-extern int gettyp(char *token);
-extern char *getval(char *token);
-extern int stol(char *val);
-extern char *ltos(int val);
-extern char *mkupper(char *str);
-extern char *mklower(char *str);
-extern int abs(int x);
-extern int ernd(void);
-extern int sindex(char *source, char *pattern);
-extern char *xlat(char *source, char *lookup, char *trans);
+extern int stol(char *);
+extern int abs(int);
+extern int setvar(int, int);
+extern char *ue_itoa(int);
+extern int gettyp(char *);
+extern char *getval(char *);
 
 /* crypt.c */
 extern int set_encryption_key(int f, int n);
