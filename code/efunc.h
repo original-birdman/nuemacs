@@ -135,6 +135,7 @@ extern int ctlxe(int f, int n);
 extern int ctrlg(int f, int n);
 extern int rdonly(void);
 extern int resterr(void);
+extern int not_in_mb_error(int, int);
 extern int nullproc(int f, int n);
 extern int metafn(int f, int n);
 extern int cex(int f, int n);
@@ -207,20 +208,14 @@ extern int deskey(int f, int n);
 extern struct key_tab *getbind(int);
 extern int bindtokey(int f, int n);
 extern int unbindkey(int f, int n);
-extern int unbindchar(int c);
 extern int desbind(int f, int n);
 extern int apro(int f, int n);
-extern int buildlist(int type, char *mstring);
-extern int strinc(char *source, char *sub);
-extern unsigned int getckey(int mflag);
 extern int startup(char *sfname);
 extern void set_pathname(char *);
 #define ONPATH 1
 #define INTABLE 2
 extern char *flook(char *, int, int);
 extern void cmdstr(int c, char *seq);
-extern int not_in_mb_error(int, int);
-extern unsigned int stock(char *keyname);
 extern char *transbind(char *skey);
 extern int buffertokey(int, int);
 

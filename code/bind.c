@@ -17,6 +17,8 @@
 #include "line.h"
 #include "util.h"
 
+#include "utf8proc.h"
+
 int help(int f, int n) {    /* give me some help!!!!
                                bring up a fake buffer and read the help file
                                into it with view mode                 */
@@ -56,6 +58,98 @@ int help(int f, int n) {    /* give me some help!!!!
         wp = wp->w_wndp;
     }
     return TRUE;
+}
+
+/*
+ * stock:
+ *      String key name TO Command Key
+ *      We need to be careful about signedness in comparisons!!
+ *
+ * char *keyname;       name of key to translate to Command key from
+ */
+static unsigned int stock(char *keyname) {
+    unsigned int c; /* key sequence to return */
+
+/* GGR - allow different bindings for 1char UPPER and lower */
+    int kn_len = strlen(keyname);
+    int noupper = (kn_len == 1);
+    char *kn_end = keyname + kn_len;
+
+/* Parse it up */
+    c = 0;
+
+/* First, the META prefix */
+    if (*keyname == 'M' && *(keyname + 1) == '-') {
+        c = META;
+        keyname += 2;
+    }
+/* Next the function prefix */
+    if (*keyname == 'F' && *(keyname + 1) == 'N') {
+        c |= SPEC;
+        keyname += 2;
+    }
+/* Control-x as well... (but not with FN *OR* META!!) */
+    if (*keyname == '^' && *(keyname + 1) == 'X'
+          && !(c & SPEC) && !(c & META)) {
+        c |= CTLX;
+        keyname += 2;
+    }
+
+/* A control char? */
+    if (*keyname == '^' && *(keyname + 1) != 0) {
+        if (*(keyname + 1) == '?')  /* Special case ^? for Delete */
+            c = 0x7f;
+        else
+            c |= CONTROL;
+        ++keyname;
+    }
+    if (ch_as_uc(*keyname) < 32) {
+        c |= CONTROL;
+        *keyname += 'A';
+    }
+/* GGR - allow SP for space by putting it there... */
+    if (*keyname == 'S' && *(keyname + 1) == 'P') {
+        ++keyname;
+        *keyname = ' ';
+    }
+
+/* Make sure we are not lower case (not with function keys) */
+    if (ch_as_uc(*keyname) >= 'a' && ch_as_uc(*keyname) <= 'z' && !(c & SPEC)
+          && !(noupper))            /* GGR */
+        *keyname -= 32;
+
+    if (ch_as_uc(*keyname) >= 0xc0) {   /* We have a utf-8 string... */
+        unsigned int uc;
+        int kn_left = kn_end - keyname;
+        utf8_to_unicode(keyname, 0, kn_left, &uc);
+        uc = utf8proc_toupper(uc);      /* Unchanged if not lower/title case */
+        c |= uc;        /* The final tagged char... */
+    }
+    else
+        c |= *keyname;  /* The final sequence... */
+
+    return c;
+}
+
+/*
+ * get a command key sequence from the keyboard
+ *
+ * int mflag;           going for a meta sequence?
+ */
+static unsigned int getckey(int mflag) {
+    unsigned int c;         /* character fetched */
+    char tok[NSTRING];      /* command incoming */
+
+/* Check to see if we are executing a command line */
+    if (clexec) {
+        macarg(tok);    /* get the next token */
+        return stock(tok);
+    }
+
+/* Or the normal way */
+    if (mflag) c = get1key();
+    else       c = getcmd();
+    return c;
 }
 
 int deskey(int f, int n) {      /* describe the command for a certain key */
@@ -253,6 +347,44 @@ struct key_tab *getbind(int c) {
 }
 
 /*
+ * unbindchar()
+ *
+ * int c;               command key to unbind
+ */
+static int unbindchar(int c) {
+    struct key_tab *ktp;   /* pointer into the command table */
+    struct key_tab *sktp;  /* saved pointer into the command table */
+
+/* Search the table to see whether the key exists */
+
+    ktp = getbind(c);
+
+/* If it isn't bound, bitch */
+    if (!ktp) return FALSE;
+
+/* If this was a procedure mapping, free the buffer reference */
+    if (ktp->k_type == PROC_KMAP) free(ktp->hndlr.pbp);
+
+/* save the pointer and scan to the end of the table */
+    sktp = ktp;
+    while (ktp->k_type != ENDL_KMAP) ++ktp;
+    --ktp;                  /* backup to the last legit entry */
+
+/* copy the last entry to the current one */
+    *sktp = *ktp;           /* Copy the whole structure */
+
+/* null out the last one */
+    ktp->k_type = ENDL_KMAP;
+    ktp->k_code = 0;
+    ktp->hndlr.k_fp = NULL;
+    ktp->fi = NULL;
+
+    key_index_valid = 0;    /* Rebuild index before using it. */
+
+    return TRUE;
+}
+
+/*
  * bindtokey:
  *      add a new key to the key binding table
  *
@@ -399,75 +531,13 @@ int unbindkey(int f, int n) {
     return TRUE;
 }
 
-
-/*
- * unbindchar()
- *
- * int c;               command key to unbind
- */
-int unbindchar(int c) {
-    struct key_tab *ktp;   /* pointer into the command table */
-    struct key_tab *sktp;  /* saved pointer into the command table */
-
-/* Search the table to see whether the key exists */
-
-    ktp = getbind(c);
-
-/* If it isn't bound, bitch */
-    if (!ktp) return FALSE;
-
-/* If this was a procedure mapping, free the buffer reference */
-    if (ktp->k_type == PROC_KMAP) free(ktp->hndlr.pbp);
-
-/* save the pointer and scan to the end of the table */
-    sktp = ktp;
-    while (ktp->k_type != ENDL_KMAP) ++ktp;
-    --ktp;                  /* backup to the last legit entry */
-
-/* copy the last entry to the current one */
-    *sktp = *ktp;           /* Copy the whole structure */
-
-/* null out the last one */
-    ktp->k_type = ENDL_KMAP;
-    ktp->k_code = 0;
-    ktp->hndlr.k_fp = NULL;
-    ktp->fi = NULL;
-
-    key_index_valid = 0;    /* Rebuild index before using it. */
-
-    return TRUE;
-}
-
-/* describe bindings
- * bring up a fake buffer and list the key bindings
- * into it with view mode
- */
-int desbind(int f, int n) {
-        UNUSED(f); UNUSED(n);
-        buildlist(TRUE, "");
-        return TRUE;
-}
-
-/* Apropos (List functions that match a substring) */
-int apro(int f, int n) {
-
-    UNUSED(f); UNUSED(n);
-    char mstring[NSTRING];  /* string to match cmd names to */
-    int status;             /* status return */
-
-    status = mlreply("Apropos string: ", mstring, NSTRING - 1);
-    if (status != TRUE) return status;
-
-    return buildlist(FALSE, mstring);
-}
-
 /*
  * build a binding list (limited or full)
  *
  * int type;            true = full list,   false = partial list
  * char *mstring;       match string if a partial list
  */
-int buildlist(int type, char *mstring) {
+static int buildlist(int type, char *mstring) {
     struct window *wp;         /* scanning pointer to windows */
     struct key_tab *ktp;       /* pointer into the command table */
     struct buffer *bp;         /* buffer to put binding list into */
@@ -516,7 +586,7 @@ int buildlist(int type, char *mstring) {
 
 /* If we are executing an apropos command.....
  * ...and current string doesn't include the search string */
-        if (type == FALSE && strinc(outseq, mstring) == FALSE) goto fail;
+        if (type == FALSE && strstr(outseq, mstring) == FALSE) goto fail;
 
 /* Search down for any keys bound to this. */
         ktp = getbyfnc(names[ni].n_func);
@@ -587,57 +657,27 @@ fail:   ;
     return TRUE;
 }
 
-/*
- * does source include sub?
- *
- * char *source;        string to search in
- * char *sub;           substring to look for
+/* describe bindings
+ * bring up a fake buffer and list the key bindings
+ * into it with view mode
  */
-int strinc(char *source, char *sub) {
-    char *sp;               /* ptr into source */
-    char *nxtsp;            /* next ptr into source */
-    char *tp;               /* ptr into substring */
-
-/* For each character in the source string */
-    sp = source;
-    while (*sp) {
-        tp = sub;
-        nxtsp = sp;
-
-/* Is the substring here? */
-        while (*tp) {
-            if (*nxtsp++ != *tp) break;
-            else                 tp++;
-        }
-
-/* Yes, return a success */
-        if (*tp == 0) return TRUE;
-
-/* No, onward */
-        sp++;
-    }
-    return FALSE;
+int desbind(int f, int n) {
+        UNUSED(f); UNUSED(n);
+        buildlist(TRUE, "");
+        return TRUE;
 }
 
-/*
- * get a command key sequence from the keyboard
- *
- * int mflag;           going for a meta sequence?
- */
-unsigned int getckey(int mflag) {
-    unsigned int c;         /* character fetched */
-    char tok[NSTRING];      /* command incoming */
+/* Apropos (List functions that match a substring) */
+int apro(int f, int n) {
 
-/* Check to see if we are executing a command line */
-    if (clexec) {
-        macarg(tok);    /* get the next token */
-        return stock(tok);
-    }
+    UNUSED(f); UNUSED(n);
+    char mstring[NSTRING];  /* string to match cmd names to */
+    int status;             /* status return */
 
-/* Or the normal way */
-    if (mflag) c = get1key();
-    else       c = getcmd();
-    return c;
+    status = mlreply("Apropos string: ", mstring, NSTRING - 1);
+    if (status != TRUE) return status;
+
+    return buildlist(FALSE, mstring);
 }
 
 /*
@@ -848,66 +888,6 @@ void cmdstr(int c, char *seq) {
         *ptr++ = c & 255;   /* strip the prefixes */
 
     *ptr = 0;               /* terminate the string */
-}
-
-/*
- * stock:
- *      String key name TO Command Key
- *
- * char *keyname;       name of key to translate to Command key form
- */
-unsigned int stock(char *keyname) {
-    unsigned int c; /* key sequence to return */
-
-/* GGR - allow different bindings for 1char UPPER and lower */
-    int noupper = (strlen(keyname) == 1);
-
-/* Parse it up */
-    c = 0;
-
-/* First, the META prefix */
-    if (*keyname == 'M' && *(keyname + 1) == '-') {
-        c = META;
-        keyname += 2;
-    }
-/* Next the function prefix */
-    if (*keyname == 'F' && *(keyname + 1) == 'N') {
-        c |= SPEC;
-        keyname += 2;
-    }
-/* Control-x as well... (but not with FN *OR* META!!) */
-    if (*keyname == '^' && *(keyname + 1) == 'X'
-          && !(c & SPEC) && !(c & META)) {
-        c |= CTLX;
-        keyname += 2;
-    }
-
-/* A control char? */
-    if (*keyname == '^' && *(keyname + 1) != 0) {
-        if (*(keyname + 1) == '?')  /* Special case ^? for Delete */
-            c = 0x7f;
-        else
-            c |= CONTROL;
-        ++keyname;
-    }
-    if (*keyname < 32) {
-        c |= CONTROL;
-        *keyname += 'A';
-    }
-/* GGR - allow SP for space by putting it there... */
-    if (*keyname == 'S' && *(keyname + 1) == 'P') {
-        ++keyname;
-        *keyname = ' ';
-    }
-
-/* Make sure we are not lower case (not with function keys) */
-    if (*keyname >= 'a' && *keyname <= 'z' && !(c & SPEC)
-          && !(noupper))            /* GGR */
-        *keyname -= 32;
-
-/* The final sequence... */
-    c |= *keyname;
-    return c;
 }
 
 /*
