@@ -75,6 +75,41 @@ int lockchk(char *fname) {
 }
 
 /*
+ * report a lock error
+ *
+ * char *errstr;        lock error string to print out
+ */
+static void lckerror(char *errstr) {
+    char obuf[NSTRING];     /* output buffer for error message */
+
+    strcpy(obuf, errstr);
+    strcat(obuf, " - ");
+    strcat(obuf, strerror(errno));
+    mlwrite(obuf);
+}
+
+/*
+ * unlock:
+ *      Unlock a file
+ *      this only warns the user if it fails
+ *
+ * char *fname;         file to unlock
+ */
+static int unlock(char *fname) {
+    char *locker;   /* undolock return string */
+
+/* Unclock and return */
+
+    locker = undolock(fname);
+    if (locker == NULL) return TRUE;
+
+/* Report the error and come back */
+
+    lckerror(locker);
+    return FALSE;
+}
+
+/*
  * lockrel:
  *      release all the file locks so others may edit
  */
@@ -130,38 +165,4 @@ int lock(char *fname) {
     else                return ABORT;
 }
 
-/*
- * unlock:
- *      Unlock a file
- *      this only warns the user if it fails
- *
- * char *fname;         file to unlock
- */
-int unlock(char *fname) {
-    char *locker;   /* undolock return string */
-
-/* Unclock and return */
-
-    locker = undolock(fname);
-    if (locker == NULL) return TRUE;
-
-/* Report the error and come back */
-
-    lckerror(locker);
-    return FALSE;
-}
-
-/*
- * report a lock error
- *
- * char *errstr;        lock error string to print out
- */
-void lckerror(char *errstr) {
-    char obuf[NSTRING];     /* output buffer for error message */
-
-    strcpy(obuf, errstr);
-    strcat(obuf, " - ");
-    strcat(obuf, strerror(errno));
-    mlwrite(obuf);
-}
 #endif

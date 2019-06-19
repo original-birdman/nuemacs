@@ -606,6 +606,40 @@ static int mceq(int bc, struct magic *mt) {
 }
 
 /*
+ * mcclear -- Free up any CCL bitmaps, and MCNIL the struct magic search
+ * arrays.
+ */
+void mcclear(void) {
+    struct magic *mcptr;
+
+    mcptr = mcpat;
+
+    while (mcptr->mc_type != MCNIL) {
+        if ((mcptr->mc_type & MASKCL) == CCL ||
+            (mcptr->mc_type & MASKCL) == NCCL)
+            free(mcptr->u.cclmap);
+        mcptr++;
+    }
+    mcpat[0].mc_type = tapcm[0].mc_type = MCNIL;
+}
+
+/*
+ * rmcclear -- Free up any strings, and MCNIL the struct magic_replacement
+ * array.
+ */
+static void rmcclear(void) {
+    struct magic_replacement *rmcptr;
+
+    rmcptr = rmcpat;
+
+    while (rmcptr->mc_type != MCNIL) {
+        if (rmcptr->mc_type == LITCHAR) free(rmcptr->rstr);
+        rmcptr++;
+    }
+    rmcpat[0].mc_type = MCNIL;
+}
+
+/*
  * readpattern -- Read a pattern.  Stash it in apat.
  * If it is the search string, create the reverse pattern and the
  * magic pattern, assuming we are in MAGIC mode (and defined that way).
@@ -1091,6 +1125,31 @@ fail:;                                  /* continue to search */
 }
 
 /*
+ * savematch -- We found the pattern?  Let's save it away.
+ */
+static void savematch(void) {
+    char *ptr;                      /* pointer to last match string */
+    struct line *curline;           /* line of last match */
+    int curoff;                     /* offset "      "    */
+
+/* Free any existing match string, then attempt to allocate a new one. */
+
+    if (patmatch != NULL) free(patmatch);
+
+    ptr = patmatch = malloc(matchlen + 1);
+
+    if (ptr != NULL) {
+        curoff = matchoff;
+        curline = matchline;
+
+        for (unsigned int j = 0; j < matchlen; j++)
+            *ptr++ = nextch(&curline, &curoff, FORWARD);
+
+        *ptr = '\0';
+    }
+}
+
+/*
  * forwsearch -- Search forward.  Get a search string from the user, and
  *      search for the string.  If found, reset the "." to be just after
  *      the match string, and (perhaps) repaint the display.
@@ -1318,31 +1377,6 @@ void setpattern(const char apat[], const char tap[]) {
 }
 
 /*
- * savematch -- We found the pattern?  Let's save it away.
- */
-void savematch(void) {
-    char *ptr;                      /* pointer to last match string */
-    struct line *curline;           /* line of last match */
-    int curoff;                     /* offset "      "    */
-
-/* Free any existing match string, then attempt to allocate a new one. */
-
-    if (patmatch != NULL) free(patmatch);
-
-    ptr = patmatch = malloc(matchlen + 1);
-
-    if (ptr != NULL) {
-        curoff = matchoff;
-        curline = matchline;
-
-        for (unsigned int j = 0; j < matchlen; j++)
-            *ptr++ = nextch(&curline, &curoff, FORWARD);
-
-        *ptr = '\0';
-    }
-}
-
-/*
  * rvstrcpy -- Reverse string copy.
  */
 void rvstrcpy(char *rvstr, char *str) {
@@ -1353,6 +1387,36 @@ void rvstrcpy(char *rvstr, char *str) {
     while (i-- > 0) *rvstr++ = *--str;
 
     *rvstr = '\0';
+}
+
+/*
+ * delins -- Delete a specified length from the current point
+ *      then either insert the string directly, or make use of
+ *      replacement meta-array.
+ */
+static int delins(int dlength, char *instr, int use_meta) {
+    int status;
+    struct magic_replacement *rmcptr;
+
+/* Zap what we gotta, * and insert its replacement. */
+
+    if ((status = ldelete((long) dlength, FALSE)) != TRUE)
+        mlwrite("%%ERROR while deleting");
+    else
+        if ((rmagical && use_meta) &&
+                    (curwp->w_bufp->b_mode & MDMAGIC) != 0) {
+            rmcptr = rmcpat;
+            while (rmcptr->mc_type != MCNIL && status == TRUE) {
+                if (rmcptr->mc_type == LITCHAR)
+                    status = linstr(rmcptr->rstr);
+                else
+                    status = linstr(patmatch);
+                rmcptr++;
+            }
+        }
+        else status = linstr(instr);
+
+    return status;
 }
 
 /*
@@ -1563,36 +1627,6 @@ int qreplace(int f, int n) {
 }
 
 /*
- * delins -- Delete a specified length from the current point
- *      then either insert the string directly, or make use of
- *      replacement meta-array.
- */
-int delins(int dlength, char *instr, int use_meta) {
-    int status;
-    struct magic_replacement *rmcptr;
-
-/* Zap what we gotta, * and insert its replacement. */
-
-    if ((status = ldelete((long) dlength, FALSE)) != TRUE)
-        mlwrite("%%ERROR while deleting");
-    else
-        if ((rmagical && use_meta) &&
-                    (curwp->w_bufp->b_mode & MDMAGIC) != 0) {
-            rmcptr = rmcpat;
-            while (rmcptr->mc_type != MCNIL && status == TRUE) {
-                if (rmcptr->mc_type == LITCHAR)
-                    status = linstr(rmcptr->rstr);
-                else
-                    status = linstr(patmatch);
-                rmcptr++;
-            }
-        }
-        else status = linstr(instr);
-
-    return status;
-}
-
-/*
  * expandp -- Expand control key sequences for output.
  *
  * char *srcstr;                string to expand
@@ -1655,38 +1689,4 @@ int boundry(struct line *curline, int curoff, int dir) {
         border = (curoff == 0) && (lback(curline) == curbp->b_linep);
     }
     return border;
-}
-
-/*
- * mcclear -- Free up any CCL bitmaps, and MCNIL the struct magic search
- * arrays.
- */
-void mcclear(void) {
-    struct magic *mcptr;
-
-    mcptr = mcpat;
-
-    while (mcptr->mc_type != MCNIL) {
-        if ((mcptr->mc_type & MASKCL) == CCL ||
-            (mcptr->mc_type & MASKCL) == NCCL)
-            free(mcptr->u.cclmap);
-        mcptr++;
-    }
-    mcpat[0].mc_type = tapcm[0].mc_type = MCNIL;
-}
-
-/*
- * rmcclear -- Free up any strings, and MCNIL the struct magic_replacement
- * array.
- */
-void rmcclear(void) {
-    struct magic_replacement *rmcptr;
-
-    rmcptr = rmcpat;
-
-    while (rmcptr->mc_type != MCNIL) {
-        if (rmcptr->mc_type == LITCHAR) free(rmcptr->rstr);
-        rmcptr++;
-    }
-    rmcpat[0].mc_type = MCNIL;
 }

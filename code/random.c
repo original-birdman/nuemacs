@@ -16,7 +16,7 @@
 
 #include "utf8proc.h"
 
-int tabsize; /* Tab size (0: use real tabs) */
+static int tabsize; /* Tab size (0: use real tabs) */
 
 /*
  * Set fill column to n.
@@ -513,42 +513,8 @@ int openline(int f, int n) {
     return s;
 }
 
-/*
- * Insert a newline. Bound to "C-M". If we are in CMODE, do automatic
- * indentation as specified.
- */
-int insert_newline(int f, int n) {
-    UNUSED(f);
-    int s;
-
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
-          return rdonly();          /* we are in read only mode    */
-    if (n < 0) return FALSE;
-
-/* If we are in C mode and this is a default <NL> */
-    if (n == 1 && (curbp->b_mode & MDCMOD) && curwp->w_dotp != curbp->b_linep)
-          return cinsert();
-
-/*
- * If a newline was typed, fill column is defined, the argument is non-
- * negative, wrap mode is enabled, and we are now past fill column,
- * and we are not read-only, perform word wrap.
- */
-    if ((curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
-        getccol(FALSE) > fillcol &&
-        (curwp->w_bufp->b_mode & MDVIEW) == FALSE)
-          execute(META | SPEC | 'W', FALSE, 1);
-
-/* insert some lines */
-    while (n--) {
-        if ((s = lnewline()) != TRUE) return s;
-        curwp->w_flag |= WFINS;
-    }
-    return TRUE;
-}
-
 /* Insert a newline and indentation for C */
-int cinsert(void) {
+static int cinsert(void) {
     char *cptr;     /* string pointer into text to copy */
     int tptr;       /* index to scan into line */
     int bracef;     /* was there a brace at the end of line? */
@@ -595,6 +561,40 @@ int cinsert(void) {
     if (bracef) insert_tab(FALSE, 1);
 
     curwp->w_flag |= WFINS;
+    return TRUE;
+}
+
+/*
+ * Insert a newline. Bound to "C-M". If we are in CMODE, do automatic
+ * indentation as specified.
+ */
+int insert_newline(int f, int n) {
+    UNUSED(f);
+    int s;
+
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
+          return rdonly();          /* we are in read only mode    */
+    if (n < 0) return FALSE;
+
+/* If we are in C mode and this is a default <NL> */
+    if (n == 1 && (curbp->b_mode & MDCMOD) && curwp->w_dotp != curbp->b_linep)
+          return cinsert();
+
+/*
+ * If a newline was typed, fill column is defined, the argument is non-
+ * negative, wrap mode is enabled, and we are now past fill column,
+ * and we are not read-only, perform word wrap.
+ */
+    if ((curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
+        getccol(FALSE) > fillcol &&
+        (curwp->w_bufp->b_mode & MDVIEW) == FALSE)
+          execute(META | SPEC | 'W', FALSE, 1);
+
+/* insert some lines */
+    while (n--) {
+        if ((s = lnewline()) != TRUE) return s;
+        curwp->w_flag |= WFINS;
+    }
     return TRUE;
 }
 

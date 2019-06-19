@@ -241,49 +241,40 @@ ask:
     return TRUE;
 }
 
-/*
- * List all of the active buffers.  First update the special
- * buffer that holds the list.  Next make sure at least 1
- * window is displaying the buffer list, splitting the screen
- * if this is what it takes.  Lastly, repaint all of the
- * windows that are displaying the list.  Bound to "C-X C-B".
- *
- * A numeric argument forces it to list invisible buffers as
- * well.
+/* This is being put into a 9-char (+NL) field, but could actually
+ * have 10 chars...
  */
-int listbuffers(int f, int n) {
-    UNUSED(n);
-    struct window *wp;
-    struct buffer *bp;
-    int s;
+static void ltoa(char *buf, int width, long num) {
 
-    if ((s = makelist(f)) != TRUE) return s;
+    buf[width] = 0;                 /* End of string.       */
+    while (num >= 10 && width) {    /* Conditional digits.  */
+        buf[--width] = (int) (num % 10L) + '0';
+        num /= 10L;
+    }
+    if (width) buf[--width] = (int) num + '0';  /* If room */
+    else buf[0] = '+';                          /* if not */
+    while (width != 0)      /* Pad with blanks.     */
+        buf[--width] = ' ';
+}
 
-    if (blistp->b_nwnd == 0) {      /* Not on screen yet.   */
-        if ((wp = wpopup()) == NULL) return FALSE;
-        bp = wp->w_bufp;
-        if (--bp->b_nwnd == 0) {
-            bp->b_dotp = wp->w_dotp;
-            bp->b_doto = wp->w_doto;
-            bp->b_markp = wp->w_markp;
-            bp->b_marko = wp->w_marko;
-            bp->b_fcol = wp->w_fcol;
-        }
-        wp->w_bufp = blistp;
-        ++blistp->b_nwnd;
-    }
-    wp = wheadp;
-    while (wp != NULL) {
-        if (wp->w_bufp == blistp) {
-            wp->w_linep = lforw(blistp->b_linep);
-            wp->w_dotp = lforw(blistp->b_linep);
-            wp->w_doto = 0;
-            wp->w_markp = NULL;
-            wp->w_marko = 0;
-            wp->w_flag |= WFMODE | WFHARD;
-        }
-        wp = wp->w_wndp;
-    }
+/*
+ * The argument "text" points to a string. Append this line to the
+ * buffer list buffer. Handcraft the EOL on the end.
+ * Return TRUE if it worked and FALSE if you ran out of room.
+ */
+static int addline(char *text) {
+    struct line *lp;
+    int ntext;
+
+    ntext = strlen(text);
+    if ((lp = lalloc(ntext)) == NULL) return FALSE;
+    lfillchars(lp, ntext, text);
+    blistp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
+    lp->l_bp = blistp->b_linep->l_bp;
+    blistp->b_linep->l_bp = lp;
+    lp->l_fp = blistp->b_linep;
+    if (blistp->b_dotp == blistp->b_linep)  /* If "." is at the end */
+        blistp->b_dotp = lp;                /* move it to new line  */
     return TRUE;
 }
 
@@ -298,7 +289,7 @@ int listbuffers(int f, int n) {
  * int iflag;           list hidden buffer flag
  */
 #define MAXLINE MAXCOL
-int makelist(int iflag) {
+static int makelist(int iflag) {
     char *cp1;
     char *cp2;
     int c;
@@ -407,40 +398,49 @@ int makelist(int iflag) {
     return TRUE;            /* All done             */
 }
 
-/* This is being put into a 9-char (+NL) field, but could actually
- * have 10 chars...
- */
-void ltoa(char *buf, int width, long num)
-{
-        buf[width] = 0;                 /* End of string.       */
-        while (num >= 10 && width) {    /* Conditional digits.  */
-                buf[--width] = (int) (num % 10L) + '0';
-                num /= 10L;
-        }
-        if (width) buf[--width] = (int) num + '0';  /* If room */
-        else buf[0] = '+';                          /* if not */
-        while (width != 0)      /* Pad with blanks.     */
-                buf[--width] = ' ';
-}
-
 /*
- * The argument "text" points to a string. Append this line to the
- * buffer list buffer. Handcraft the EOL on the end.
- * Return TRUE if it worked and FALSE if you ran out of room.
+ * List all of the active buffers.  First update the special
+ * buffer that holds the list.  Next make sure at least 1
+ * window is displaying the buffer list, splitting the screen
+ * if this is what it takes.  Lastly, repaint all of the
+ * windows that are displaying the list.  Bound to "C-X C-B".
+ *
+ * A numeric argument forces it to list invisible buffers as
+ * well.
  */
-int addline(char *text) {
-    struct line *lp;
-    int ntext;
+int listbuffers(int f, int n) {
+    UNUSED(n);
+    struct window *wp;
+    struct buffer *bp;
+    int s;
 
-    ntext = strlen(text);
-    if ((lp = lalloc(ntext)) == NULL) return FALSE;
-    lfillchars(lp, ntext, text);
-    blistp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
-    lp->l_bp = blistp->b_linep->l_bp;
-    blistp->b_linep->l_bp = lp;
-    lp->l_fp = blistp->b_linep;
-    if (blistp->b_dotp == blistp->b_linep)  /* If "." is at the end */
-        blistp->b_dotp = lp;                /* move it to new line  */
+    if ((s = makelist(f)) != TRUE) return s;
+
+    if (blistp->b_nwnd == 0) {      /* Not on screen yet.   */
+        if ((wp = wpopup()) == NULL) return FALSE;
+        bp = wp->w_bufp;
+        if (--bp->b_nwnd == 0) {
+            bp->b_dotp = wp->w_dotp;
+            bp->b_doto = wp->w_doto;
+            bp->b_markp = wp->w_markp;
+            bp->b_marko = wp->w_marko;
+            bp->b_fcol = wp->w_fcol;
+        }
+        wp->w_bufp = blistp;
+        ++blistp->b_nwnd;
+    }
+    wp = wheadp;
+    while (wp != NULL) {
+        if (wp->w_bufp == blistp) {
+            wp->w_linep = lforw(blistp->b_linep);
+            wp->w_dotp = lforw(blistp->b_linep);
+            wp->w_doto = 0;
+            wp->w_markp = NULL;
+            wp->w_marko = 0;
+            wp->w_flag |= WFMODE | WFHARD;
+        }
+        wp = wp->w_wndp;
+    }
     return TRUE;
 }
 

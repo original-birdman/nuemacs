@@ -18,107 +18,28 @@
 /* Max number of lines from one file. */
 #define MAXNLINE 10000000
 
-/*
- * Read a file into the current
- * buffer. This is really easy; all you do is
- * find the name of the file, and call the standard
- * "read a file into the current buffer" code.
+/* Read a file into the current buffer.
+ * This is really easy; all you do is find the name of the file and
+ * call the standard "read a file into the current buffer" code.
  * Bound to "C-X C-R".
  */
-int fileread(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        int s;
-        char fname[NFILEN];
+int fileread(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int s;
+    char fname[NFILEN];
 
-        if (restflag)           /* don't allow this command if restricted */
-                return resterr();
+    if (restflag)           /* don't allow this command if restricted */
+        return resterr();
 /* GGR - return any current filename for the buffer on <CR>.
  *      Useful for ^X^R <CR> to re-read current file on erroneous change
  */
-        s = mlreply("Read file: ", fname, NFILEN);
-        if (s == ABORT)
-                return(s);
-        else if (s == FALSE) {
-                if (strlen(curbp->b_fname) == 0)
-                        return(s);
-                else
-                        strcpy(fname, curbp->b_fname);
-        }
-        return readin(fname, TRUE);
-}
-
-/*
- * Insert a file into the current
- * buffer. This is really easy; all you do it
- * find the name of the file, and call the standard
- * "insert a file into the current buffer" code.
- * Bound to "C-X C-I".
- */
-int insfile(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        int s;
-        char fname[NFILEN];
-
-        if (restflag)           /* don't allow this command if restricted */
-                return resterr();
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if      */
-                return rdonly();        /* we are in read only mode     */
-        if ((s = mlreply("Insert file: ", fname, NFILEN)) != TRUE)
-                return s;
-        if ((s = ifile(fname)) != TRUE)
-                return s;
-        return reposition(TRUE, -1);
-}
-
-/*
- * Select a file for editing.
- * Look around to see if you can find the
- * fine in another buffer; if you can find it
- * just switch to the buffer. If you cannot find
- * the file, create a new buffer, read in the
- * text, and switch to the new buffer.
- * Bound to C-X C-F.
- */
-int filefind(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        char fname[NFILEN];     /* file user wishes to find */
-        int s;                  /* status return */
-        if (restflag)           /* don't allow this command if restricted */
-                return resterr();
-        if ((s = mlreply("Find file: ", fname, NFILEN)) != TRUE) {
-                return s;
-        }
-        run_filehooks = 1;      /* set flag */
-        return getfile(fname, TRUE);
-}
-
-int viewfile(int f, int n)
-{                               /* visit a file in VIEW mode */
-        UNUSED(f); UNUSED(n);
-        char fname[NFILEN];     /* file user wishes to find */
-        int s;          /* status return */
-        struct window *wp;      /* scan for windows that need updating */
-
-        if (restflag)           /* don't allow this command if restricted */
-                return resterr();
-        if ((s = mlreply("View file: ", fname, NFILEN)) != TRUE)
-                return s;
-        run_filehooks = 1;      /* set flag */
-        s = getfile(fname, FALSE);
-        if (s) {                /* if we succeed, put it in view mode */
-                curwp->w_bufp->b_mode |= MDVIEW;
-
-                /* scan through and update mode lines of all windows */
-                wp = wheadp;
-                while (wp != NULL) {
-                        wp->w_flag |= WFMODE;
-                        wp = wp->w_wndp;
-                }
-        }
-        return s;
+    s = mlreply("Read file: ", fname, NFILEN);
+    if (s == ABORT) return(s);
+    else if (s == FALSE) {
+        if (strlen(curbp->b_fname) == 0) return(s);
+        else strcpy(fname, curbp->b_fname);
+    }
+    return readin(fname, TRUE);
 }
 
 static int resetkey(void) { /* Reset the encryption key if needed */
@@ -142,12 +63,179 @@ static int resetkey(void) { /* Reset the encryption key if needed */
  * Since this uses a symmetric cipher the running key ends up the same
  * Taking a copy would mean we could do only one set of encrypting, but
  * would then leave us with the decrypted key in memory, and we're trying
- *  to avoid that...
+ * to avoid that...
  */
         myencrypt(NULL, 0);
         myencrypt(curbp->b_key, curbp->b_keylen);
     }
     return TRUE;
+}
+
+/* Insert file "fname" into the current buffer.
+ * Called by insert file command.
+ * Return the final status of the read.
+ */
+static int ifile(char *fname) {
+    struct line *lp0;
+    struct line *lp1;
+    struct line *lp2;
+    struct buffer *bp;
+    int s;
+    int nline;
+
+    bp = curbp;             /* Cheap.               */
+    bp->b_flag |= BFCHG;    /* we have changed      */
+    bp->b_flag &= ~BFINVS;  /* and are not temporary */
+
+/* If this is a translation table, remove any compiled data */
+
+    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
+
+    pathexpand = FALSE;     /* GGR */
+
+    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
+    if (s == FIOFNF) {                              /* File not found */
+        mlwrite(MLpre "No such file" MLpost);
+        return FALSE;
+    }
+    mlwrite(MLpre "Inserting file" MLpost);
+
+    s = resetkey();
+    if (s != TRUE) return s;
+
+/* Back up a line and save the mark here */
+    curwp->w_dotp = lback(curwp->w_dotp);
+    curwp->w_doto = 0;
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = 0;
+
+    nline = 0;
+    int dos_include = 0;
+    while ((s = ffgetline()) == FIOSUC) {
+        lp1 = fline;            /* Allocate by ffgetline..*/
+        lp0 = curwp->w_dotp;    /* line previous to insert */
+        lp2 = lp0->l_fp;        /* line after insert */
+
+/* Re-link new line between lp0 and lp2 */
+        lp2->l_bp = lp1;
+        lp0->l_fp = lp1;
+        lp1->l_bp = lp0;
+        lp1->l_fp = lp2;
+
+/* And advance and write out the current line */
+        curwp->w_dotp = lp1;
+        ++nline;
+
+/* Check for a DOS line ending on line 1 */
+        if (nline == 1 && lp1->l_text[lp1->l_used-1] == '\r')
+            dos_include = 1;
+        if (dos_include && lp1->l_text[lp1->l_used-1] == '\r') {
+             lp1->l_used--;             /* Remove the trailing CR */
+        }
+
+        if (!(nline % 300) && !silent)      /* GGR */
+             mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
+
+    }
+    ffclose();              /* Ignore errors. */
+    curwp->w_markp = lforw(curwp->w_markp);
+    strcpy(readin_mesg, MLpre);
+    if (s == FIOERR) {
+        strcat(readin_mesg, "I/O ERROR, ");
+        curbp->b_flag |= BFTRUNC;
+    }
+    if (s == FIOMEM) {
+        strcat(readin_mesg, "OUT OF MEMORY, ");
+        curbp->b_flag |= BFTRUNC;
+    }
+    sprintf(&readin_mesg[strlen(readin_mesg)], "Inserted %d line", nline);
+    if (nline > 1) strcat(readin_mesg, "s");
+    if (dos_include) strcat(readin_mesg, " - from DOS file!");
+    strcat(readin_mesg, MLpost);
+    mlwrite(readin_mesg);
+
+out:
+/* Advance to the next line and mark the window for changes */
+    curwp->w_dotp = lforw(curwp->w_dotp);
+    curwp->w_flag |= WFHARD | WFMODE;
+
+/* Copy window parameters back to the buffer structure */
+    curbp->b_dotp = curwp->w_dotp;
+    curbp->b_doto = curwp->w_doto;
+    curbp->b_markp = curwp->w_markp;
+    curbp->b_marko = curwp->w_marko;
+    curbp->b_fcol = curwp->w_fcol;
+
+    if (s == FIOERR) return FALSE;      /* False if error. */
+    return TRUE;
+}
+
+/* Insert a file into the current buffer.
+ * This is really easy; all you do it find the name of the file and
+ * call the standard "insert a file into the current buffer" code.
+ * Bound to "C-X C-I".
+ */
+int insfile(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int s;
+    char fname[NFILEN];
+
+    if (restflag)           /* don't allow this command if restricted */
+        return resterr();
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if      */
+        return rdonly();        /* we are in read only mode     */
+    if ((s = mlreply("Insert file: ", fname, NFILEN)) != TRUE)
+        return s;
+    if ((s = ifile(fname)) != TRUE)
+        return s;
+    return reposition(TRUE, -1);
+}
+
+/*
+ * Select a file for editing.
+ * Look around to see if you can find the file in another buffer; if you
+ * can find it just switch to the buffer.
+ * If you cannot find the file, create a new buffer, read in the text
+ * and switch to the new buffer.
+ * Bound to C-X C-F.
+ */
+int filefind(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    char fname[NFILEN];     /* file user wishes to find */
+    int s;                  /* status return */
+
+    if (restflag)           /* don't allow this command if restricted */
+        return resterr();
+    if ((s = mlreply("Find file: ", fname, NFILEN)) != TRUE) {
+        return s;
+    }
+    run_filehooks = 1;      /* set flag */
+    return getfile(fname, TRUE);
+}
+
+int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
+    UNUSED(f); UNUSED(n);
+    char fname[NFILEN];         /* File user wishes to find */
+    int s;                      /* Status return */
+    struct window *wp;          /* Scan for windows that need updating */
+
+    if (restflag)               /* Don't allow this command if restricted */
+        return resterr();
+    if ((s = mlreply("View file: ", fname, NFILEN)) != TRUE)
+        return s;
+    run_filehooks = 1;          /* Set flag */
+    s = getfile(fname, FALSE);
+    if (s) {                    /* If we succeed, put it in view mode */
+        curwp->w_bufp->b_mode |= MDVIEW;
+
+/* Scan through and update mode lines of all windows */
+        wp = wheadp;
+        while (wp != NULL) {
+            wp->w_flag |= WFMODE;
+            wp = wp->w_wndp;
+        }
+    }
+    return s;
 }
 
 /*
@@ -226,8 +314,7 @@ static void handle_filehooks(char *fname) {
     return;
 }
 
-/*
- * Read file "fname" into the current buffer, blowing away any text
+/* Read file "fname" into the current buffer, blowing away any text
  * found there - called by both the read and find commands.
  * Return the final status of the read.
  * Also called by the main routine to read in a file specified on the
@@ -355,13 +442,11 @@ out:
     return TRUE;
 }
 
-/*
- * Take a file name, and from it fabricate a buffer name.
+/* Take a file name, and from it fabricate a buffer name.
  * The fabricated name is 4-chars short of the maximum, to allow
  * unqname to append nnnn to make it unique
  */
-void makename(char *bname, char *fname)
-{
+void makename(char *bname, char *fname) {
 
 /* First we have to step over any directory part in the name */
 
@@ -400,8 +485,7 @@ void makename(char *bname, char *fname)
     else strcpy(bname, " 0");
 }
 
-/*
- * Make sure a buffer name is unique by, if necessary, appending
+/* Make sure a buffer name is unique by, if necessary, appending
  * an up-to 4 digit number.
  * makename() will have left a 4-char space for this.
  *
@@ -412,8 +496,8 @@ static int power10(int exp) {
     while (exp-- > 0) res *= 10;
     return res;
 }
-void unqname(char *name)
-{
+
+void unqname(char *name) {
     char testname[NBUFN];
 /* Check to see if it is in the buffer list */
     if (bfind(name, 0, FALSE) == NULL) return;  /* OK - not there */
@@ -438,92 +522,83 @@ void unqname(char *name)
     quickexit(FALSE, 0);
 }
 
-/*
- * Ask for a file name, and write the
- * contents of the current buffer to that file.
- * Update the remembered file name and clear the
- * buffer changed flag. This handling of file names
- * is different from the earlier versions, and
- * is more compatable with Gosling EMACS than
- * with ITS EMACS. Bound to "C-X C-W".
+/* Ask for a file name, and write the contents of the current buffer
+ * to that file.
+ * Update the remembered file name and clear the buffer changed flag.
+ * This handling of file names is different from the earlier versions and
+ * is more compatable with Gosling EMACS than with ITS EMACS.
+ * Bound to "C-X C-W".
  */
-int filewrite(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct window *wp;
-        int s;
-        char fname[NFILEN];
+int filewrite(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct window *wp;
+    int s;
+    char fname[NFILEN];
 
-        if (restflag)           /* don't allow this command if restricted */
-                return resterr();
-        if ((s = mlreply("Write file: ", fname, NFILEN)) != TRUE)
-                return s;
-        if ((s = writeout(fname)) == TRUE) {
-                strcpy(curbp->b_fname, fname);
-                curbp->b_flag &= ~BFCHG;
-                wp = wheadp;    /* Update mode lines.   */
-                while (wp != NULL) {
-                        if (wp->w_bufp == curbp)
-                                wp->w_flag |= WFMODE;
-                        wp = wp->w_wndp;
-                }
-        }
+    if (restflag)           /* Don't allow this command if restricted */
+        return resterr();
+    if ((s = mlreply("Write file: ", fname, NFILEN)) != TRUE)
         return s;
+    if ((s = writeout(fname)) == TRUE) {
+        strcpy(curbp->b_fname, fname);
+        curbp->b_flag &= ~BFCHG;
+        wp = wheadp;        /* Update mode lines.   */
+        while (wp != NULL) {
+            if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;
+            wp = wp->w_wndp;
+        }
+    }
+    return s;
 }
 
-/*
- * Save the contents of the current
- * buffer in its associatd file. No nothing
- * if nothing has changed (this may be a bug, not a
- * feature). Error if there is no remembered file
- * name for the buffer. Bound to "C-X C-S". May
- * get called by "C-Z".
+/* Save the contents of the current buffer in its associated file.
+ * Do nothing if nothing has changed (this may be a bug, not a
+ * feature).
+ * Error if there is no remembered file name for the buffer.
+ * Bound to "C-X C-S". May get called by "C-Z".
  */
-int filesave(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct window *wp;
-        int s;
+int filesave(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct window *wp;
+    int s;
 
-        if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-                return rdonly();        /* we are in read only mode     */
-        if ((curbp->b_flag & BFCHG) == 0)       /* Return, no changes.  */
-                return TRUE;
-        if (curbp->b_fname[0] == 0) {   /* Must have a name. */
-                mlwrite("No file name");
-                return FALSE;
-        }
+    if (curbp->b_mode & MDVIEW) /* Don't allow this command if  */
+        return rdonly();        /* we are in read only mode     */
+    if ((curbp->b_flag & BFCHG) == 0)   /* Return, no changes.  */
+        return TRUE;
+    if (curbp->b_fname[0] == 0) {   /* Must have a name. */
+        mlwrite("No file name");
+        return FALSE;
+    }
 
-        /* Complain about truncated files */
-        if ((curbp->b_flag & BFTRUNC) != 0) {
-                if (mlyesno("Truncated file ... write it out") == FALSE) {
-                        mlwrite(MLpre "Aborted" MLpost);
-                        return FALSE;
-                }
+/* Complain about truncated files */
+    if ((curbp->b_flag & BFTRUNC) != 0) {
+        if (mlyesno("Truncated file ... write it out") == FALSE) {
+            mlwrite(MLpre "Aborted" MLpost);
+            return FALSE;
         }
+    }
 
-        /* Complain about narrowed buffers */
-        if ((curbp->b_flag&BFNAROW) != 0) {
-                if (mlyesno("Narrowed buffer: write it out anyway") != TRUE) {
-                        mlwrite(MLpre "Aborted" MLpost);
-                        return(FALSE);
-                }
+/* Complain about narrowed buffers */
+    if ((curbp->b_flag&BFNAROW) != 0) {
+        if (mlyesno("Narrowed buffer: write it out anyway") != TRUE) {
+            mlwrite(MLpre "Aborted" MLpost);
+            return(FALSE);
         }
+    }
 
-        if ((s = writeout(curbp->b_fname)) == TRUE) {
-                curbp->b_flag &= ~BFCHG;
-                wp = wheadp;    /* Update mode lines. */
-                while (wp != NULL) {
-                        if (wp->w_bufp == curbp)
-                                wp->w_flag |= WFMODE;
-                        wp = wp->w_wndp;
-                }
+    if ((s = writeout(curbp->b_fname)) == TRUE) {
+        curbp->b_flag &= ~BFCHG;
+        wp = wheadp;            /* Update mode lines. */
+        while (wp != NULL) {
+            if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;
+            wp = wp->w_wndp;
         }
-        return s;
+    }
+    return s;
 }
 
-/*
- * This function performs the details of file writing.
+/* This function performs the details of file writing.
  * Uses the file management routines in the "fileio.c" package.
  * The number of lines written is displayed.
  * Most of the grief is error checking of some sort.
@@ -563,136 +638,32 @@ int writeout(char *fn) {
     return TRUE;
 }
 
-/*
- * The command allows the user
- * to modify the file name associated with
- * the current buffer. It is like the "f" command
- * in UNIX "ed". The operation is simple; just zap
- * the name in the buffer structure, and mark the windows
- * as needing an update. You can type a blank line at the
- * prompt if you wish.
+/* The command allows the user to modify the file name associated with
+ * the current buffer.
+ * It is like the "f" command in UNIX "ed".
+ * The operation is simple; just zap the name in the buffer structure
+ * and mark the windows as needing an update.
+ * You can type a blank line at the prompt if you wish.
  */
-int filename(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct window *wp;
-        int s;
-        char fname[NFILEN];
-
-        if (restflag)           /* don't allow this command if restricted */
-                return resterr();
-        if ((s = mlreply("Name: ", fname, NFILEN)) == ABORT)
-                return s;
-        if (s == FALSE)
-                strcpy(curbp->b_fname, "");
-        else
-                strcpy(curbp->b_fname, fname);
-        wp = wheadp;            /* Update mode lines.   */
-        while (wp != NULL) {
-                if (wp->w_bufp == curbp)
-                        wp->w_flag |= WFMODE;
-                wp = wp->w_wndp;
-        }
-        curbp->b_mode &= ~MDVIEW;       /* no longer read only mode */
-        return TRUE;
-}
-
-/*
- * Insert file "fname" into the current
- * buffer, Called by insert file command. Return the final
- * status of the read.
- */
-int ifile(char *fname) {
-    struct line *lp0;
-    struct line *lp1;
-    struct line *lp2;
-    struct buffer *bp;
+int filename(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct window *wp;
     int s;
-    int nline;
+    char fname[NFILEN];
 
-    bp = curbp;             /* Cheap.               */
-    bp->b_flag |= BFCHG;    /* we have changed      */
-    bp->b_flag &= ~BFINVS;  /* and are not temporary */
-
-/* If this is a translation table, remove any compiled data */
-
-    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
-
-    pathexpand = FALSE;     /* GGR */
-
-    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
-    if (s == FIOFNF) {                              /* File not found */
-        mlwrite(MLpre "No such file" MLpost);
-        return FALSE;
+    if (restflag)           /* Don't allow this command if restricted */
+        return resterr();
+    if ((s = mlreply("Name: ", fname, NFILEN)) == ABORT)
+        return s;
+    if (s == FALSE)
+        strcpy(curbp->b_fname, "");
+    else
+        strcpy(curbp->b_fname, fname);
+    wp = wheadp;            /* Update mode lines.   */
+    while (wp != NULL) {
+        if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;
+        wp = wp->w_wndp;
     }
-    mlwrite(MLpre "Inserting file" MLpost);
-
-    s = resetkey();
-    if (s != TRUE) return s;
-
-/* Back up a line and save the mark here */
-    curwp->w_dotp = lback(curwp->w_dotp);
-    curwp->w_doto = 0;
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = 0;
-
-    nline = 0;
-    int dos_include = 0;
-    while ((s = ffgetline()) == FIOSUC) {
-        lp1 = fline;            /* Allocate by ffgetline..*/
-        lp0 = curwp->w_dotp;    /* line previous to insert */
-        lp2 = lp0->l_fp;        /* line after insert */
-
-/* Re-link new line between lp0 and lp2 */
-        lp2->l_bp = lp1;
-        lp0->l_fp = lp1;
-        lp1->l_bp = lp0;
-        lp1->l_fp = lp2;
-
-/* And advance and write out the current line */
-        curwp->w_dotp = lp1;
-        ++nline;
-
-/* Check for a DOS line ending on line 1 */
-        if (nline == 1 && lp1->l_text[lp1->l_used-1] == '\r')
-            dos_include = 1;
-        if (dos_include && lp1->l_text[lp1->l_used-1] == '\r') {
-             lp1->l_used--;             /* Remove the trailing CR */
-        }
-
-        if (!(nline % 300) && !silent)      /* GGR */
-             mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
-
-    }
-    ffclose();              /* Ignore errors. */
-    curwp->w_markp = lforw(curwp->w_markp);
-    strcpy(readin_mesg, MLpre);
-    if (s == FIOERR) {
-        strcat(readin_mesg, "I/O ERROR, ");
-        curbp->b_flag |= BFTRUNC;
-    }
-    if (s == FIOMEM) {
-        strcat(readin_mesg, "OUT OF MEMORY, ");
-        curbp->b_flag |= BFTRUNC;
-    }
-    sprintf(&readin_mesg[strlen(readin_mesg)], "Inserted %d line", nline);
-    if (nline > 1) strcat(readin_mesg, "s");
-    if (dos_include) strcat(readin_mesg, " - from DOS file!");
-    strcat(readin_mesg, MLpost);
-    mlwrite(readin_mesg);
-
-out:
-/* Advance to the next line and mark the window for changes */
-    curwp->w_dotp = lforw(curwp->w_dotp);
-    curwp->w_flag |= WFHARD | WFMODE;
-
-/* Copy window parameters back to the buffer structure */
-    curbp->b_dotp = curwp->w_dotp;
-    curbp->b_doto = curwp->w_doto;
-    curbp->b_markp = curwp->w_markp;
-    curbp->b_marko = curwp->w_marko;
-    curbp->b_fcol = curwp->w_fcol;
-
-    if (s == FIOERR) return FALSE;      /* False if error. */
+    curbp->b_mode &= ~MDVIEW;   /* no longer read only mode */
     return TRUE;
 }

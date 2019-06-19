@@ -80,7 +80,6 @@ extern int setmark(int f, int n);
 extern int swapmark(int f, int n);
 
 /* random.c */
-extern int tabsize;  /* Tab size (0: use real tabs). */
 extern int setfillcol(int f, int n);
 extern int showcpos(int f, int n);
 extern int getcline(void);
@@ -95,7 +94,6 @@ extern int entab(int f, int n);
 extern int trim(int f, int n);
 extern int openline(int f, int n);
 extern int insert_newline(int f, int n);
-extern int cinsert(void);
 extern int insbrace(int n, int c);
 extern int inspound(void);
 extern int deblank(int f, int n);
@@ -142,7 +140,6 @@ extern int cex(int f, int n);
 extern int unarg(int f, int n);
 extern int cexit(int status);
 extern int reexecute(int, int);
-extern void meexit(int);
 extern void extend_keytab(int);
 
 /* display.c */
@@ -226,9 +223,6 @@ extern int killbuffer(int f, int n);
 extern int zotbuf(struct buffer *bp);
 extern int namebuffer(int f, int n);
 extern int listbuffers(int f, int n);
-extern int makelist(int iflag);
-extern void ltoa(char *buf, int width, long num);
-extern int addline(char *text);
 extern int anycb(void);
 extern int bclear(struct buffer *bp);
 extern int unmark(int f, int n);
@@ -248,7 +242,6 @@ extern int filewrite(int f, int n);
 extern int filesave(int f, int n);
 extern int writeout(char *fn);
 extern int filename(int f, int n);
-extern int ifile(char *fname);
 
 /* fileio.c */
 extern int ffropen(char *fn);
@@ -257,7 +250,6 @@ extern int ffclose(void);
 extern int ffputline(char *buf, int nbuf);
 extern int ffgetline(void);
 extern int fexist(char *fname);
-
 extern void fixup_fname(char *);
 
 /* exec.c */
@@ -277,7 +269,6 @@ extern int storeproc(int f, int n);
 extern int execproc(int f, int n);
 extern int execbuf(int f, int n);
 extern int dobuf(struct buffer *bp);
-extern void freewhile(struct while_block *wp);
 extern int execfile(int f, int n);
 extern int dofile(char *fname);
 extern int cbuf(int f, int n, int bufnum);
@@ -330,9 +321,6 @@ extern int spawn(int f, int n);
 extern int execprg(int f, int n);
 extern int pipecmd(int f, int n);
 extern int filter_buffer(int f, int n);
-extern int sys(char *cmd);
-extern int shellprog(char *cmd);
-extern int execprog(char *cmd);
 
 /* search.c */
 
@@ -353,26 +341,17 @@ extern int backhunt(int f, int n);
 extern int scanmore(char *, int);
 extern void setpattern(const char[], const char[]);
 extern int eq(unsigned char bc, unsigned char pc);
-extern void savematch(void);
 extern void rvstrcpy(char *rvstr, char *str);
 extern int sreplace(int f, int n);
 extern int qreplace(int f, int n);
-extern int delins(int dlength, char *instr, int use_meta);
 extern int expandp(char *srcstr, char *deststr, int maxlength);
 extern int boundry(struct line *curline, int curoff, int dir);
 extern void mcclear(void);
-extern void rmcclear(void);
 
 /* isearch.c */
 extern int risearch(int f, int n);
 extern int fisearch(int f, int n);
 extern int isearch(int f, int n);
-extern int checknext(char chr, char *patrn, int dir);
-extern int match_pat(char *patrn);
-extern int promptpattern(char *prompt);
-extern int get_char(void);
-extern int uneat(void);
-extern void reeat(int c);
 
 /* eval.c */
 extern void varinit(void);
@@ -391,8 +370,6 @@ extern void myencrypt(char *bptr, unsigned len);
 extern int lockchk(char *fname);
 extern int lockrel(void);
 extern int lock(char *fname);
-extern int unlock(char *fname);
-extern void lckerror(char *errstr);
 
 /* pklock.c */
 extern char *dolock(char *fname);

@@ -939,6 +939,17 @@ int execbuf(int f, int n) {
 }
 
 /*
+ * free a list of while block pointers
+ *
+ * struct while_block *wp;              head of structure to free
+ */
+static void freewhile(struct while_block *wp) {
+    if (wp == NULL) return;
+    if (wp->w_next) freewhile(wp->w_next);
+    free(wp);
+}
+
+/*
  * dobuf:
  *      execute the contents of the buffer pointed to
  *      by the passed BP
@@ -1393,19 +1404,7 @@ single_exit:
     return status;
 }
 
-/*
- * free a list of while block pointers
- *
- * struct while_block *wp;              head of structure to free
- */
-void freewhile(struct while_block *wp) {
-    if (wp == NULL) return;
-    if (wp->w_next) freewhile(wp->w_next);
-    free(wp);
-}
-
-/*
- * execute a series of commands in a file
+/* execute a series of commands in a file
  * If given fname starts with "^", remove that character and don't
  * return any error status.
  * int f, n;            default flag and numeric arg to pass on to file
