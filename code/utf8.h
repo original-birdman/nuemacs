@@ -34,9 +34,14 @@ int zerowidth_type(unicode_t);
 int char_replace(int, int);
 unicode_t display_for(unicode_t);
 
-char *tolower_utf8(char *, int, int *, int *);
 unsigned int uclen_utf8(char *);
 int nocasecmp_utf8(char *, int, int, char *, int, int);
 int unicode_back_utf8(int, char *, int);
+
+#define UTF8_UPPER 1
+#define UTF8_LOWER 2
+#define UTF8_TITLE 3
+int utf8_recase(int , char *, int, char **);
+char *tolower_utf8(char *, int, int *, int *);
 
 #endif

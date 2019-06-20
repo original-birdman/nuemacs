@@ -24,65 +24,59 @@
  *  NOW CHANGED to return 0 and a unicode char of 0.
  */
 unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
-     unicode_t *res)
-{
-        if (index >= len) {
-            *res = 0;
-            return 0;
-        }
+     unicode_t *res) {
+    if (index >= len) {
+        *res = 0;
+        return 0;
+    }
 
-        unsigned value;
-        unsigned char c = line[index];
-        unsigned bytes, mask, i;
+    unsigned value;
+    unsigned char c = line[index];
+    unsigned bytes, mask, i;
 
-        *res = c;
-        line += index;
-        len -= index;
+    *res = c;
+    line += index;
+    len -= index;
 
-        /*
-         * 0xxxxxxx is valid utf8
-         * 10xxxxxx is invalid UTF-8, we assume it is Latin1
-         */
-        if (c < 0xc0)
-                return 1;
+/* 0xxxxxxx is valid utf8
+ * 10xxxxxx is invalid UTF-8, we assume it is Latin1
+ */
+    if (c < 0xc0) return 1;
 
-        /* Ok, it's 11xxxxxx, do a stupid decode */
-        mask = 0x20;
-        bytes = 2;
-        while (c & mask) {
-                bytes++;
-                mask >>= 1;
-        }
+/* Ok, it's 11xxxxxx, do a stupid decode */
+    mask = 0x20;
+    bytes = 2;
+    while (c & mask) {
+        bytes++;
+        mask >>= 1;
+    }
 
-        /* Invalid? Do it as a single byte Latin1 */
-        if (bytes > MAX_UTF8_LEN)
-                return 1;
-        if (bytes > len)
-                return 1;
+/* Invalid? Do it as a single byte Latin1
+ */
+    if (bytes > MAX_UTF8_LEN) return 1;
+    if (bytes > len) return 1;
 
-        value = c & (mask-1);
+    value = c & (mask-1);
 
-        /* Ok, do the bytes */
-        for (i = 1; i < bytes; i++) {
-                c = line[i];
-                if ((c & 0xc0) != 0x80)
-                        return 1;
-                value = (value << 6) | (c & 0x3f);
-        }
-        if (value > MAX_UTF8_CHAR) {
-            return 1;
-        }
-        *res = value;
-        return bytes;
+/* Ok, do the bytes */
+    for (i = 1; i < bytes; i++) {
+        c = line[i];
+        if ((c & 0xc0) != 0x80) return 1;
+        value = (value << 6) | (c & 0x3f);
+    }
+    if (value > MAX_UTF8_CHAR) {
+        return 1;
+    }
+    *res = value;
+    return bytes;
 }
 
-static void reverse_string(char *begin, char *end)
-{
-        do {
-                char a = *begin, b = *end;
-                *end = a; *begin = b;
-                begin++; end--;
-        } while (begin < end);
+static void reverse_string(char *begin, char *end) {
+    do {
+        char a = *begin, b = *end;
+        *end = a; *begin = b;
+        begin++; end--;
+    } while (begin < end);
 }
 
 /*
@@ -96,25 +90,24 @@ static void reverse_string(char *begin, char *end)
  * possible sequence, while utf8_to_unicode() accepts both Latin1 and
  * overlong utf-8 sequences.
  */
-unsigned unicode_to_utf8(unsigned int c, char *utf8)
-{
-        int bytes = 1;
+unsigned unicode_to_utf8(unsigned int c, char *utf8) {
+    int bytes = 1;
 
-        *utf8 = c;
+    *utf8 = c;
 /* We have a unicode point - anything over 0x7f is multi-byte */
-        if (c >= 0x80) {
-                unsigned int prefix = 0x40;
-                char *p = utf8;
-                do {
-                        *p++ = 0x80 + (c & 0x3f);
-                        bytes++;
-                        prefix >>= 1;
-                        c >>= 6;
-                } while (c > prefix);
-                *p = c - 2*prefix;
-                reverse_string(utf8, p);
-        }
-        return bytes;
+    if (c >= 0x80) {
+        unsigned int prefix = 0x40;
+        char *p = utf8;
+        do {
+            *p++ = 0x80 + (c & 0x3f);
+            bytes++;
+            prefix >>= 1;
+            c >>= 6;
+        } while (c > prefix);
+        *p = c - 2*prefix;
+        reverse_string(utf8, p);
+    }
+    return bytes;
 }
 
 /* GGR functions to get offset of previous/next character in a buffer.
@@ -125,20 +118,20 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8)
 int
  next_utf8_offset(char *buf, int offset, int max_offset, int grapheme_start) {
 
-        unicode_t c;
+    unicode_t c;
 
 /* Just use utf8_to_unicode */
 
-        int offs = offset;
-        offs += utf8_to_unicode(buf, offs, max_offset, &c);
-        if (grapheme_start) {
-            while(1) {      /* Look for any attached zero-width modifiers */
-                int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
-                if (!zerowidth_type(c)) break;
-                offs += next_incr;
-            }
+    int offs = offset;
+    offs += utf8_to_unicode(buf, offs, max_offset, &c);
+    if (grapheme_start) {
+        while(1) {      /* Look for any attached zero-width modifiers */
+            int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
+            if (!zerowidth_type(c)) break;
+            offs += next_incr;
         }
-        return offs;
+    }
+    return offs;
 }
 
 /* Step back a byte at a time.
@@ -152,51 +145,51 @@ int
  */
 int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
 
-        if (offset <= 0) return -1;
-        unicode_t res = 0;
-        int offs = offset;
-        do {
-            unsigned char c = buf[--offs];
-            res = c;
-            unicode_t poss;
-            int got_utf8 = 0;
-            if ((c & 0xc0) == 0x80) {           /* Ext byte? */
-                int trypos = offs;
-                int tryb = MAX_UTF8_LEN;
-                signed char marker = 0xc0;      /* Extend sign-bit here */
-                unsigned char valmask = 0x1f;
-                int bits_sofar = 0;
-                int addin;
-                poss = c & 0x3f;                /* 6-bits */
-                while ((--trypos >= 0) && (--tryb >= 0)) {
-                    c = buf[trypos];
-                    if ((c & 0xc0) == 0x80) {   /* Ext byte */
-                        marker >>= 1;           /* Shift right..*/
-                        valmask >>= 1;          /* Fewer... */
-                        addin = (c & 0x3f);
-                        bits_sofar += 6;
-                        addin <<= bits_sofar;
-                        poss |= addin;          /* 6-bits more */
-                        continue;
-                    }
+    if (offset <= 0) return -1;
+    unicode_t res = 0;
+    int offs = offset;
+    do {
+        unsigned char c = buf[--offs];
+        res = c;
+        unicode_t poss;
+        int got_utf8 = 0;
+        if ((c & 0xc0) == 0x80) {           /* Ext byte? */
+            int trypos = offs;
+            int tryb = MAX_UTF8_LEN;
+            signed char marker = 0xc0;      /* Extend sign-bit here */
+            unsigned char valmask = 0x1f;
+            int bits_sofar = 0;
+            int addin;
+            poss = c & 0x3f;                /* 6-bits */
+            while ((--trypos >= 0) && (--tryb >= 0)) {
+                c = buf[trypos];
+                if ((c & 0xc0) == 0x80) {   /* Ext byte */
+                    marker >>= 1;           /* Shift right..*/
+                    valmask >>= 1;          /* Fewer... */
+                    addin = (c & 0x3f);
+                    bits_sofar += 6;
+                    addin <<= bits_sofar;
+                    poss |= addin;          /* 6-bits more */
+                    continue;
+                }
 /* Have we found a valid start code?
  * NOTE that the test needs marker as an unsigned char, to stop sign
  * extention in the test.
  */
-                    if ((c & ~valmask) == ch_as_uc(marker)) {
-                        addin = (c & valmask);
-                        bits_sofar += 6;
-                        addin <<= bits_sofar;
-                        poss |= addin;
-                        offs = trypos;
-                        got_utf8 = 1;
-                    }
-                    break;          /* By default, now done */
+                if ((c & ~valmask) == ch_as_uc(marker)) {
+                    addin = (c & valmask);
+                    bits_sofar += 6;
+                    addin <<= bits_sofar;
+                    poss |= addin;
+                    offs = trypos;
+                    got_utf8 = 1;
                 }
+                break;                      /* By default, now done */
             }
-            if (got_utf8) res = poss;
-        } while(grapheme_start && (offs >= 0) && zerowidth_type(res));
-        return offs;
+        }
+        if (got_utf8) res = poss;
+    } while(grapheme_start && (offs >= 0) && zerowidth_type(res));
+    return offs;
 }
 
 /* Check whether the character is a zero-width one - needed for
@@ -297,7 +290,8 @@ int char_replace(int f, int n) {
                 continue;                   /* Error - just ignore */
 
 /* Get the current size - we want one more, or two more if it's
- * currently empty */
+ * currently empty
+ */
             int need;
             if (remap == NULL) {
                 need = 2;
@@ -359,49 +353,6 @@ unicode_t display_for(unicode_t uc) {
     return uc;
 }
 
-/* Convert a utf8 sequence to lower case.
- * Returns the result in a malloc'ed buffer.
- *  in:         input utf8 bytes
- *  inlen:      input byte length (-1 == it's null terminated)
- *  resbytes:   set resulting string length in bytes, if not NULL
- *  resunicode: set resulting string length in unicode chars, if not NULL
- */
-
-char *tolower_utf8(char *in, int inlen, int *resbytes, int *resunicode) {
-    char work[NLINE+4];     /* Working buffer */
-    unicode_t uc;
-
-    if (inlen < 0) inlen = strlen(in);
-    int ix = 0, wx = 0;
-    int tlen = 0, uclen = 0;
-    char *res = NULL;
-    int res_st = 0;
-    while (ix < inlen) {
-        ix += utf8_to_unicode(in, ix, inlen, &uc);
-        uc = utf8proc_tolower(uc);
-        int add = unicode_to_utf8(uc, work+wx);
-        tlen += add;
-        wx += add;
-/* Iff we are about to fill up work[], flush it to the result */
-        if (wx > NLINE) {
-            res = realloc(res, tlen+1);     /* Allow for the NUL */
-            memcpy(res+res_st, work, wx);
-            res_st += wx;
-            wx = 0;
-        }
-        uclen++;
-    }
-/* Flush any remaining chars */
-    if (wx > 0) {
-        res = realloc(res, tlen+1);     /* Allow for the NUL */
-        memcpy(res+res_st, work, wx);
-    }
-    *(res+tlen) = '\0';
-    if (resbytes) *resbytes = tlen;
-    if (resunicode) *resunicode = uclen;
-    return res;
-}
-
 /* Get the number of unicode chars in a NUL-terminated utf8 string.
  */
 unsigned int uclen_utf8(char *str) {
@@ -444,4 +395,117 @@ int unicode_back_utf8(int n_back, char *buf, int offset) {
     }
     if (n_back != 0) return -1;
     return offset;
+}
+
+/* ------------------------------------------------------------ */
+
+/* We don't have to worry about recursion or thread-concurrency, so
+ * just declare these as static, rather than passing them into add_to_res
+ * as args.
+ * We'll put them all in a suitably named struct to warn others off.
+ */
+
+static struct { int alloc; int incr; int outlen; int uclen; } recase;
+static void add_to_res(char **outbuf, char *buf, int nc) {
+
+    if ((recase.outlen + nc) >= recase.alloc) { /* Allow for NUL we'll add */
+        recase.alloc += recase.incr;
+        *outbuf = realloc(*outbuf, recase.alloc);
+    }
+/* We have to be able to copy NULs */
+    memcpy(*outbuf+recase.outlen, buf, nc);
+    recase.outlen += nc;
+    return;
+}
+
+/* We will be sent a utf8 string of defined length (or -1 to look for NUL).
+ * Put the result into an alloc()ed buffer on the user-given variable.
+ * It is the caller's responsibility to free() this.
+ */
+int utf8_recase(int want, char *in, int len, char **out) {
+    utf8proc_int32_t (*caser)(utf8proc_int32_t);
+
+/* Quickly handle this preverse case. */
+
+    if (len == 0) {
+        *out = malloc(1);
+        **out = '\0';
+        return 0;
+    }
+
+/* Set the case-mapping handler we wish to use */
+
+    switch (want) {
+    case UTF8_UPPER:
+        caser = utf8proc_toupper;
+        break;
+    case UTF8_LOWER:
+        caser = utf8proc_tolower;
+        break;
+    case UTF8_TITLE:
+        caser = utf8proc_totitle;
+        break;
+    default:
+        return -1;
+    }
+
+/* We'll allocate in steps of len+1...we add a trailing NUL */
+    if (len < 1) len = strlen(in);
+    recase.incr = len + 1;
+    recase.outlen = 0;      /* Currently used */
+    recase.alloc = 0;       /* Currently allocated */
+    recase.uclen = 0;       /* Count unicode chars as we go */
+    *out = NULL;            /* So realloc() works at the start */
+    int used;
+    for (int offset = 0; offset < len; offset += used) {
+        unicode_t uc;
+        used = utf8_to_unicode(in, offset, len, &uc);
+        recase.uclen++;
+
+/* There may be some special cases.
+ *  The German Sharp S (ß) uppercases to ẞ in libutf8proc, but it isn't
+ * used in standard German - SS is. So lower->upper isn't reversible!
+ * Other special cases may be needed...
+ */
+        if ((want == UTF8_UPPER) && (uc == 0x00df)) {
+            add_to_res(out, "SS", 2);
+            continue;
+        }
+
+/* If this isn't a base character or it doesn't change when
+ * run through the case-mapper, just copy it verbatim.
+ */
+        unicode_t nuc;
+        if (zerowidth_type(uc) || ((nuc = caser(uc)) == uc)) {
+            add_to_res(out, in+offset, used);
+            continue;
+        }
+
+/* The case-mapper changed it, so copy the new unicode char to the
+ * output as a utf8 sequence.
+ */
+        char tbuf[4];   /* Maxlen utf8 mapping */
+        int newlen = unicode_to_utf8(nuc, tbuf);
+        add_to_res(out, tbuf, newlen);
+    }
+    *(*out+recase.outlen) = '\0';   /* Null terminate it while we are there */
+    return recase.outlen;
+}
+
+/* An older, specific, casing routine.
+ * Now a write-through to utf8_recase()
+ * Convert a utf8 sequence to lower case.
+ * Returns the result in a malloc'ed buffer.
+ *  in:         input utf8 bytes
+ *  inlen:      input byte length (-1 == it's null terminated)
+ *  resbytes:   set resulting string length in bytes, if not NULL
+ *  resunicode: set resulting string length in unicode chars, if not NULL
+ */
+
+char *tolower_utf8(char *in, int inlen, int *resbytes, int *resunicode) {
+
+    char *res;
+    *resbytes = utf8_recase(UTF8_LOWER, in, inlen, &res);
+    *resunicode = recase.uclen;  /* Not returned by utf8_recase */
+    return res;
 }
