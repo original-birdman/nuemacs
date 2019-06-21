@@ -526,8 +526,11 @@ static int ptt_compile(struct buffer *bp) {
  */
         new->from_len = strlen(from_string);
         if (caseset != CASESET_OFF) {
-            new->from = tolower_utf8(from_string, new->from_len,
-                 &(new->from_len), &(new->from_len_uc));
+            struct mstr ex_mstr;
+            utf8_recase(UTF8_LOWER, from_string, new->from_len, &ex_mstr);
+            new->from = ex_mstr.str;
+            new->from_len = ex_mstr.utf8c;
+            new->from_len_uc = ex_mstr.uc;
         }
         else {
             new->from = malloc(new->from_len+1);
@@ -734,11 +737,11 @@ int ptt_handler(int c) {
             if (ptr->caseset == CASESET_LOWI_ALL ||
                 ptr->caseset == CASESET_LOWI_ONE) {
                 need_edit_type = UTF8PROC_CATEGORY_LL;
-                set_case = LOWERCASE;
+                set_case = UTF8_LOWER;
             }
             else {
                 need_edit_type = UTF8PROC_CATEGORY_LU;
-                set_case = UPPERCASE;
+                set_case = UTF8_UPPER;
             }
             if (utf8proc_category(fc) == need_edit_type)
                 edit_case = 1;

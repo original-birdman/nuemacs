@@ -126,20 +126,21 @@ static int casechange_region(int newcase) { /* The handling function */
  * Remember to include the newline as we count down.
  */
     struct line *linep = region.r_linep;
-    char *recased;
+    struct mstr mstr;
     for (int b_offs = region.r_offset; region.r_size > 0; linep = lforw(linep)) {
         int b_end = region.r_size + b_offs;
         if (b_end > llength(linep)) b_end = llength(linep);
         int this_blen = b_end - b_offs;
-        int replen = utf8_recase(newcase, linep->l_text+b_offs,
-              this_blen, &recased);
+        utf8_recase(newcase, linep->l_text+b_offs, this_blen, &mstr);
+        int replen = mstr.utf8c;            /* Less code when copied.. */
+        char *repstr = mstr.str;            /* ...to simple local vars */
         if (replen == this_blen) {          /* Easy - just overwrite */
-            memcpy(linep->l_text+b_offs, recased, replen);
-            free(recased);
+            memcpy(linep->l_text+b_offs, repstr, replen);
+            free(repstr);
         }
         else if (replen < this_blen) {      /* So guaranteed the space */
-            memcpy(linep->l_text+b_offs, recased, replen);
-            free(recased);
+            memcpy(linep->l_text+b_offs, repstr, replen);
+            free(repstr);
             ccr_Tail_Copy;
             int b_less = this_blen - replen;
             llength(linep) -= b_less;       /* Fix-up length */
@@ -149,8 +150,8 @@ static int casechange_region(int newcase) { /* The handling function */
             int b_more = replen - this_blen;
             if ((linep->l_size - linep->l_used) >= b_more) {    /* OK */
                 ccr_Tail_Copy;  /* Must move the tail out-of-the-way first!! */
-                memcpy(linep->l_text+b_offs, recased, replen);
-                free(recased);
+                memcpy(linep->l_text+b_offs, repstr, replen);
+                free(repstr);
                 llength(linep) += b_more;   /* Fix-up length */
             }
             else {
@@ -159,8 +160,8 @@ static int casechange_region(int newcase) { /* The handling function */
 /* Copy in and leading text on this line... */
                 if (b_offs) memcpy(newl->l_text, linep->l_text, b_offs);
 /* Copy in the replacement text */
-                memcpy(newl->l_text+b_offs, recased, replen);
-                free(recased);
+                memcpy(newl->l_text+b_offs, repstr, replen);
+                free(repstr);
 /* Copy in and trailing text on this line... */
                 ccr_Tail_Copy;
 /* Now need to replace the current line with the new one in the linked list */

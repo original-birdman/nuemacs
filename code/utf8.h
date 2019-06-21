@@ -18,9 +18,9 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8);
  * mean we'll probably get that space "free").
  */
 struct grapheme {
-        unicode_t  uc;          /* The "main" unicode character */
-        unicode_t cdm;          /* A "combining diacritic marker" */
-        unicode_t *ex;          /* A possible list of further cdm */
+    unicode_t  uc;          /* The "main" unicode character */
+    unicode_t cdm;          /* A "combining diacritic marker" */
+    unicode_t *ex;          /* A possible list of further cdm */
 };
 
 int next_utf8_offset(char *, int, int, int);
@@ -41,7 +41,17 @@ int unicode_back_utf8(int, char *, int);
 #define UTF8_UPPER 1
 #define UTF8_LOWER 2
 #define UTF8_TITLE 3
-int utf8_recase(int , char *, int, char **);
+
+/* A string with various lengths attached. -1 if unknown */
+struct mstr {
+    char *str;          /* May be NULL */
+    int alloc;          /* Allocated size of str */
+    int utf8c;          /* Bytes - excluding trailing NUL */
+    int uc;             /* unicode points */
+    int grphc;          /* grapheme count*/
+};
+
+int utf8_recase(int , char *, int, struct mstr*);
 char *tolower_utf8(char *, int, int *, int *);
 
 #endif

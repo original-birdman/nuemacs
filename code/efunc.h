@@ -32,8 +32,6 @@ extern int numberlist_region(int, int);
 
 extern int fillwhole(int, int);
 extern int eos_chars(int f, int n);
-#define LOWERCASE 0
-#define UPPERCASE 1
 void ensure_case(int);
 
 /* window.c */

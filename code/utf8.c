@@ -399,22 +399,16 @@ int unicode_back_utf8(int n_back, char *buf, int offset) {
 
 /* ------------------------------------------------------------ */
 
-/* We don't have to worry about recursion or thread-concurrency, so
- * just declare these as static, rather than passing them into add_to_res
- * as args.
- * We'll put them all in a suitably named struct to warn others off.
- */
+/* Called multiple times with differing args */
+static void add_to_res(struct mstr *mstr, char *buf, int nc, int incr) {
 
-static struct { int alloc; int incr; int outlen; int uclen; } recase;
-static void add_to_res(char **outbuf, char *buf, int nc) {
-
-    if ((recase.outlen + nc) >= recase.alloc) { /* Allow for NUL we'll add */
-        recase.alloc += recase.incr;
-        *outbuf = realloc(*outbuf, recase.alloc);
+    if ((mstr->utf8c + nc) >= mstr->alloc) {    /* Allow for NUL we'll add */
+        mstr->alloc += incr;
+        mstr->str = realloc(mstr->str, mstr->alloc);
     }
 /* We have to be able to copy NULs */
-    memcpy(*outbuf+recase.outlen, buf, nc);
-    recase.outlen += nc;
+    memcpy(mstr->str+mstr->utf8c, buf, nc);
+    mstr->utf8c += nc;
     return;
 }
 
@@ -422,14 +416,19 @@ static void add_to_res(char **outbuf, char *buf, int nc) {
  * Put the result into an alloc()ed buffer on the user-given variable.
  * It is the caller's responsibility to free() this.
  */
-int utf8_recase(int want, char *in, int len, char **out) {
+int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
     utf8proc_int32_t (*caser)(utf8proc_int32_t);
 
 /* Quickly handle this preverse case. */
 
+    mstr->alloc = 0;        /* Currently allocated */
+    mstr->utf8c = 0;        /* None there yet */
+    mstr->uc = 0;           /* Count unicode chars as we go */
+    mstr->grphc = -1;       /* Not known */
     if (len == 0) {
-        *out = malloc(1);
-        **out = '\0';
+        mstr->str = malloc(1);
+        *(mstr->str) = '\0';
+        mstr->alloc = 1;
         return 0;
     }
 
@@ -451,16 +450,13 @@ int utf8_recase(int want, char *in, int len, char **out) {
 
 /* We'll allocate in steps of len+1...we add a trailing NUL */
     if (len < 1) len = strlen(in);
-    recase.incr = len + 1;
-    recase.outlen = 0;      /* Currently used */
-    recase.alloc = 0;       /* Currently allocated */
-    recase.uclen = 0;       /* Count unicode chars as we go */
-    *out = NULL;            /* So realloc() works at the start */
+    mstr->str = NULL;       /* So realloc() works at the start */
+    int rec_incr = len + 1;
     int used;
     for (int offset = 0; offset < len; offset += used) {
         unicode_t uc;
         used = utf8_to_unicode(in, offset, len, &uc);
-        recase.uclen++;
+        mstr->uc++;
 
 /* There may be some special cases.
  *  The German Sharp S (ß) uppercases to ẞ in libutf8proc, but it isn't
@@ -468,7 +464,7 @@ int utf8_recase(int want, char *in, int len, char **out) {
  * Other special cases may be needed...
  */
         if ((want == UTF8_UPPER) && (uc == 0x00df)) {
-            add_to_res(out, "SS", 2);
+            add_to_res(mstr, "SS", 2, rec_incr);
             continue;
         }
 
@@ -477,7 +473,7 @@ int utf8_recase(int want, char *in, int len, char **out) {
  */
         unicode_t nuc;
         if (zerowidth_type(uc) || ((nuc = caser(uc)) == uc)) {
-            add_to_res(out, in+offset, used);
+            add_to_res(mstr, in+offset, used, rec_incr);
             continue;
         }
 
@@ -486,26 +482,8 @@ int utf8_recase(int want, char *in, int len, char **out) {
  */
         char tbuf[4];   /* Maxlen utf8 mapping */
         int newlen = unicode_to_utf8(nuc, tbuf);
-        add_to_res(out, tbuf, newlen);
+        add_to_res(mstr, tbuf, newlen, rec_incr);
     }
-    *(*out+recase.outlen) = '\0';   /* Null terminate it while we are there */
-    return recase.outlen;
-}
-
-/* An older, specific, casing routine.
- * Now a write-through to utf8_recase()
- * Convert a utf8 sequence to lower case.
- * Returns the result in a malloc'ed buffer.
- *  in:         input utf8 bytes
- *  inlen:      input byte length (-1 == it's null terminated)
- *  resbytes:   set resulting string length in bytes, if not NULL
- *  resunicode: set resulting string length in unicode chars, if not NULL
- */
-
-char *tolower_utf8(char *in, int inlen, int *resbytes, int *resunicode) {
-
-    char *res;
-    *resbytes = utf8_recase(UTF8_LOWER, in, inlen, &res);
-    *resunicode = recase.uclen;  /* Not returned by utf8_recase */
-    return res;
+    *(mstr->str+mstr->utf8c) = '\0';    /* NUL terminate it */
+    return 0;   /* Success */
 }

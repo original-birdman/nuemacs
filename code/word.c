@@ -122,35 +122,64 @@ int forwword(int f, int n) {
  * Force the case of the current character (or the main character of
  * a multi-char grapheme) to be a particular case.
  * For use by upper/lower/cap-word() and equiv.
- * We start by defining the calling parameters.
  */
 void ensure_case(int want_case) {
-    utf8proc_category_t case_tofix;
-    utf8proc_int32_t (*case_hndlr) (utf8proc_int32_t);
 
-    if (want_case == LOWERCASE) {
-        case_tofix = UTF8PROC_CATEGORY_LU;
-        case_hndlr = utf8proc_tolower;
+    utf8proc_int32_t (*caser)(utf8proc_int32_t);
+/* Set the case-mapping handler we wish to use */
+
+    switch (want_case) {
+    case UTF8_UPPER:
+        caser = utf8proc_toupper;
+        break;
+    case UTF8_LOWER:
+        caser = utf8proc_tolower;
+        break;
+    case UTF8_TITLE:
+        caser = utf8proc_totitle;
+        break;
+    default:
+        return;
     }
-    else if (want_case == UPPERCASE) {
-        case_tofix = UTF8PROC_CATEGORY_LL;
-        case_hndlr = utf8proc_toupper;
-    }
-    else return;
 
     int saved_doto = curwp->w_doto;     /* Save position */
     struct grapheme gc;
-    (void)lgetgrapheme(&gc, FALSE);     /* Doesn't move doto */
+    int orig_utf8_len = lgetgrapheme(&gc, FALSE);     /* Doesn't move doto */
 /* We only look at the base character for casing.
- * If it's not what we want to change, leave now...
+ * If it's not changed by the caser(), leave now...
+ * Although we will (try to) handle the preverse case of a German sharp.
+ * If we have a bare ß and are uppercasing, insert "SS" instead...
+ * Since utf8_recase() in utf8.c does this.
+ *
+ * If we have something to do we insert the new character first (so
+ * that any mark at the point gets updated correctly by linsert_*())
+ * then delete the old char, then restore doto (possibly adjusted).
  */
-    if (utf8proc_category((utf8proc_int32_t)gc.uc) != case_tofix) return;
-    char utf8_repl[8];
-    int orig_utf8_len = unicode_to_utf8(gc.uc, utf8_repl);
-    gc.uc = case_hndlr((utf8proc_int32_t)gc.uc);
+    int doto_adj = 0;
+    if ((want_case == UTF8_UPPER) &&    /* Bare German sharp? */
+        (gc.uc == 0x00df) && (gc.cdm == 0)) {
+        linsert_byte(2, 'S');           /* Inserts "SS" */
+        orig_utf8_len = 2;
+        doto_adj = 1;
+    }
+    else {
+        unicode_t nuc = caser(gc.uc);   /* Get the case-translated uc */
+        if (nuc == gc.uc) return;       /* No change */
+        char utf8_repl[8];
+        int new_utf8_len = unicode_to_utf8(nuc, utf8_repl);
+        gc.uc = nuc;
+        linsert_uc(1, gc.uc);           /* Inserts unicode */
+/* If mark is on this line we may have to update it to reflect any change
+ * in byte count
+ */
+        if ((new_utf8_len != orig_utf8_len) &&      /* Byte count changed */
+            (curwp->w_markp == curwp->w_dotp) &&    /* Same line... */
+            (curwp->w_marko > curwp->w_doto)) {     /* and beyond dot? */
+            curwp->w_markp += (new_utf8_len - orig_utf8_len);
+        }
+    }
     ldelete(orig_utf8_len, FALSE);
-    linsert_uc(1, gc.uc);                  /* Inserts unicode */
-    curwp->w_doto = saved_doto;         /* Restore positon */
+    curwp->w_doto = saved_doto + doto_adj;          /* Restore positon */
     lchange(WFHARD);
     return;
 }
@@ -171,7 +200,7 @@ int upperword(int f, int n) {
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE) || prev_zw_break) {
-            ensure_case(UPPERCASE);
+            ensure_case(UTF8_UPPER);
             if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
@@ -195,7 +224,7 @@ int lowerword(int f, int n) {
         }
         int prev_zw_break = zw_break;
         while ((inword() != FALSE)  || prev_zw_break) {
-            ensure_case(LOWERCASE);
+            ensure_case(UTF8_LOWER);
             if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
@@ -220,10 +249,10 @@ int capword(int f, int n) {
         }
         int prev_zw_break = zw_break;
         if (inword() != FALSE) {
-            ensure_case(UPPERCASE);
+            ensure_case(UTF8_UPPER);
             if (forw_grapheme(1) <= 0) return FALSE;
             while ((inword() != FALSE) || prev_zw_break) {
-                ensure_case(LOWERCASE);
+                ensure_case(UTF8_LOWER);
                 if (forw_grapheme(1) <= 0) return FALSE;
             }
         }
