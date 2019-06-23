@@ -11,7 +11,6 @@
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
-#include "wrapper.h"
 
 /* Reposition dot in the current window to line "n". If the argument is
  * positive, it is that line. If it is negative it is that line from the
@@ -278,8 +277,10 @@ int delwind(int f, int n) {
 /* Split the current window.  A window smaller than 3 lines cannot be
  * split.  An argument of 1 forces the cursor into the upper window, an
  * argument of two forces the cursor to the lower window.  The only
- * other error that is possible is a "malloc" failure allocating the
- * structure for the new window.  Bound to "C-X 2".
+ * other error that is possible is a "Xmalloc" failure allocating the
+ * structure for the new window (whereupon the interlude in wrapper.c
+ * will exit the program).
+ * Bound to "C-X 2".
  *
  * int f, n;    default flag and numeric argument
  */
@@ -296,7 +297,7 @@ int splitwind(int f, int n) {
         mlwrite("Cannot split a %d line window", curwp->w_ntrows);
         return FALSE;
     }
-    wp = xmalloc(sizeof(struct window));
+    wp = Xmalloc(sizeof(struct window));
     ++curbp->b_nwnd;                        /* Displayed twice.     */
     wp->w_bufp = curbp;
     wp->w_dotp = curwp->w_dotp;

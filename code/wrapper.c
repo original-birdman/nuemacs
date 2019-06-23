@@ -1,18 +1,15 @@
-#include "usage.h"
-
 #include <stdlib.h>
 
-/* Function copyright: git */
-int xmkstemp(char *template) {
-    int fd;
+#include "usage.h"
 
-    fd = mkstemp(template);
-    if (fd < 0) die("Unable to create temporary file");
-    return fd;
+void *Xmalloc(size_t size) {
+    void *ret = malloc(size);
+    if (!ret) die("malloc: Out of memory");
+    return ret;
 }
 
-void *xmalloc(size_t size) {
-    void *ret = malloc(size);
-    if (!ret) die("Out of memory");
+void *Xrealloc(void *optr, size_t size) {
+    void *ret = realloc(optr, size);
+    if (!ret) die("realloc: Out of memory");
     return ret;
 }

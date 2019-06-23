@@ -19,14 +19,14 @@ struct user_variable {
 
 /* The tags for environment variable - used in struct evlist */
 enum ev_val {
-    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVRAM,
-    EVFLICKER,  EVCURWIDTH, EVCBUFNAME, EVCFNAME,   EVSRES,
-    EVDEBUG,    EVSTATUS,   EVPALETTE,  EVASAVE,    EVACOUNT,
-    EVLASTKEY,  EVCURCHAR,  EVDISCMD,   EVVERSION,  EVPROGNAME,
-    EVSEED,     EVDISINP,   EVWLINE,    EVCWLINE,   EVTARGET,
-    EVSEARCH,   EVREPLACE,  EVMATCH,    EVKILL,     EVCMODE,
-    EVGMODE,    EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,
-    EVGFLAGS,   EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
+    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVFLICKER,
+    EVCURWIDTH, EVCBUFNAME, EVCFNAME,   EVSRES,     EVDEBUG,
+    EVSTATUS,   EVPALETTE,  EVASAVE,    EVACOUNT,   EVLASTKEY,
+    EVCURCHAR,  EVDISCMD,   EVVERSION,  EVPROGNAME, EVSEED,
+    EVDISINP,   EVWLINE,    EVCWLINE,   EVTARGET,   EVSEARCH,
+    EVREPLACE,  EVMATCH,    EVKILL,     EVCMODE,    EVGMODE,
+    EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,     EVGFLAGS,
+    EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
@@ -42,7 +42,6 @@ static struct evlist {
  { "pagelen",   EVPAGELEN },    /* number of lines used by editor */
  { "curcol",    EVCURCOL },     /* current column pos of cursor */
  { "curline",   EVCURLINE },    /* current line in file */
- { "ram",       EVRAM },        /* ram in use by malloc */
  { "flicker",   EVFLICKER },    /* flicker supression */
  { "curwidth",  EVCURWIDTH },   /* current screen width */
  { "cbufname",  EVCBUFNAME },   /* current buffer name */

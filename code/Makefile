@@ -13,7 +13,7 @@ OBJ=ansi.o basic.o bind.o buffer.o complet.o crypt.o display.o eval.o \
 	random.o region.o search.o spawn.o tcap.o termio.o usage.o \
 	utf8.o version.o vt52.o window.o word.o wrapper.o
 HDR=charset.h ebind.h edef.h efunc.h epath.h estruct.h evar.h \
-	idxsorter.h line.h usage.h utf8.h util.h version.h wrapper.h
+	idxsorter.h line.h usage.h utf8.h util.h version.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
 
@@ -343,8 +343,7 @@ bind.o: bind.c estruct.h utf8.h edef.h efunc.h epath.h line.h util.h \
 buffer.o: buffer.c estruct.h utf8.h edef.h efunc.h line.h
 complet.o: complet.c estruct.h utf8.h edef.h efunc.h
 crypt.o: crypt.c estruct.h utf8.h edef.h efunc.h
-display.o: display.c estruct.h utf8.h edef.h efunc.h line.h version.h \
- wrapper.h
+display.o: display.c estruct.h utf8.h edef.h efunc.h line.h version.h
 eval.o: eval.c estruct.h utf8.h edef.h efunc.h evar.h line.h util.h \
  version.h
 exec.o: exec.c estruct.h utf8.h edef.h efunc.h line.h
@@ -353,7 +352,7 @@ fileio.o: fileio.c estruct.h utf8.h edef.h efunc.h line.h
 globals.o: globals.c estruct.h utf8.h edef.h
 ibmpc.o: ibmpc.c estruct.h utf8.h edef.h
 idxsorter.o: idxsorter.c idxsorter.h
-input.o: input.c estruct.h utf8.h edef.h efunc.h wrapper.h line.h
+input.o: input.c estruct.h utf8.h edef.h efunc.h line.h
 isearch.o: isearch.c estruct.h utf8.h edef.h efunc.h line.h
 line.o: line.c line.h utf8.h estruct.h edef.h efunc.h
 lock.o: lock.c estruct.h utf8.h edef.h efunc.h
@@ -371,7 +370,7 @@ usage.o: usage.c usage.h
 utf8.o: utf8.c estruct.h utf8.h edef.h efunc.h
 version.o: version.c version.h
 vt52.o: vt52.c estruct.h utf8.h edef.h
-window.o: window.c estruct.h utf8.h edef.h efunc.h line.h wrapper.h
+window.o: window.c estruct.h utf8.h edef.h efunc.h line.h
 word.o: word.c estruct.h utf8.h edef.h efunc.h line.h
 wrapper.o: wrapper.c usage.h
 

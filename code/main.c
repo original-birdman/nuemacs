@@ -1202,8 +1202,8 @@ void edinit(char *bname) {
 
     bp = bfind(bname, TRUE, 0);             /* First buffer         */
     blistp = bfind("/List", TRUE, BFINVS);  /* Buffer list buffer   */
-    wp = (struct window *)malloc(sizeof(struct window));    /* First window */
-    if (bp == NULL || wp == NULL || blistp == NULL) exit(1);
+    if (bp == NULL || blistp == NULL) exit(1);
+    wp = (struct window *)Xmalloc(sizeof(struct window));   /* First window */
     curbp = bp;             /* Make this current    */
     wheadp = wp;
     curwp = wp;
@@ -1677,72 +1677,6 @@ int unarg(int f, int n) {
     return TRUE;
 }
 
-/* ====================================================================== */
-
-/****          Compiler specific Library functions     ****/
-
-#if     RAMSIZE
-/*      These routines will allow me to track memory usage by placing
-        a layer on top of the standard system malloc() and free() calls.
-        with this code defined, the environment variable, $RAM, will
-        report on the number of bytes allocated via malloc.
-
-        with SHOWRAM defined, the number is also posted on the
-        end of the bottom mode line and is updated whenever it is changed.
-*/
-
-#undef  malloc
-#undef  free
-
-/* Allocate nbytes and track */
-char *allocate(unsigned nbytes) {
-    char *mp;               /* ptr returned from malloc */
-    char *malloc();
-
-    mp = malloc(nbytes);
-    if (mp) {
-        envram += nbytes;
-#if RAMSHOW
-        dspram();
-#endif
-    }
-    return mp;
-}
-
-/* Release malloced memory and track */
-void release(char *mp) {
-    unsigned *lp;           /* ptr to the long containing the block size */
-
-    if (mp) {               /* update amount of ram currently malloced */
-        lp = ((unsigned *) mp) - 1;
-        envram -= (long) *lp - 2;
-        free(mp);
-#if RAMSHOW
-        dspram();
-#endif
-    }
-}
-
-#if RAMSHOW
-/* Display the amount of RAM currently malloced */
-void dspram(void) {
-    char mbuf[20];
-    char *sp;
-
-    TTmove(term.t_nrow - 1, 70);
-#if COLOR
-    TTforg(7);
-    TTbacg(0);
-#endif
-    sprintf(mbuf, "[%lu]", envram);
-    sp = &mbuf[0];
-    while (*sp) ttput1c(*sp++);
-    TTmove(term.t_nrow, 0);
-    movecursor(term.t_nrow, 0);
-}
-#endif
-#endif
-
 /* ======================================================================
  * GGR - Function to implement re-execute last command
  */
@@ -1796,7 +1730,7 @@ void extend_keytab(int n_ents) {
         init_from = 0;
         keytab_alloc_ents = n_ents;
     }
-    keytab = realloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
+    keytab = Xrealloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
     if (init_from == 0) {           /* Add in starting data */
         int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
         struct key_tab *ktp = keytab;

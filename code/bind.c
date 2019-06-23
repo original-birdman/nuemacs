@@ -198,7 +198,7 @@ static int keystr_index_valid = 0;
 
 static void index_bindings(void) {
     if (key_index_allocated < keytab_alloc_ents) {
-        key_index = realloc(key_index, keytab_alloc_ents*sizeof(int));
+        key_index = Xrealloc(key_index, keytab_alloc_ents*sizeof(int));
         key_index_allocated = keytab_alloc_ents;
     }
     struct fields fdef;
@@ -231,7 +231,7 @@ static void index_bindings(void) {
 static int *keystr_index = NULL;
 static int *next_keystr_index = NULL;
 static void index_keystr(void) {
-    keystr_index = realloc(keystr_index, kt_ents*sizeof(int));
+    keystr_index = Xrealloc(keystr_index, kt_ents*sizeof(int));
     struct fields fdef;
     fdef.offset = offsetof(struct key_tab, hndlr.k_fp);
     fdef.type = 'P';
@@ -247,7 +247,7 @@ static void index_keystr(void) {
  * We can generate this from the index we've just made.
  * The final entry has a next of -1 to indicate "no further entry".
  */
-    next_keystr_index = realloc(next_keystr_index, kt_ents*sizeof(int));
+    next_keystr_index = Xrealloc(next_keystr_index, kt_ents*sizeof(int));
     make_next_idx(keystr_index, next_keystr_index, kt_ents);
     keystr_index_valid = 1; /* This index is now usable */
     return;
@@ -469,7 +469,7 @@ int bindtokey(int f, int n) {
 /* The next entry will alway be an End-of-List.
  * If the list is not exhausted the one after will also be an End-of-List.
  * If it is an End-of-Structure we need to extend, and if we do that we
- * need to handle destp, in case the realloc() moves things.
+ * need to handle destp, in case the Xrealloc() moves things.
  * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
  */
         ktp += 2;
@@ -754,7 +754,7 @@ void set_pathname(char *cl_string) {
     }
     pathname[0] = strdup(cl_string);
     if (add_sep) {
-        pathname[0] = realloc(pathname[0], slen+2); /* incl. NULL! */
+        pathname[0] = Xrealloc(pathname[0], slen+2); /* incl. NULL! */
         pathname[0][slen] = path_sep;
         pathname[0][slen+1] = '\0';
     }
@@ -964,7 +964,7 @@ int buffertokey(int f, int n) {
     ktp = getbind(c);
     if (ktp) {              /* If it exists, change it... */
         if (ktp->k_type == FUNC_KMAP) /* Need to allocate space for name */
-            ktp->hndlr.pbp = malloc(NBUFN);
+            ktp->hndlr.pbp = Xmalloc(NBUFN);
         destp = ktp;
     }
     else {  /* ...else add a new one at the end */
@@ -979,12 +979,12 @@ int buffertokey(int f, int n) {
         }
         ktp = &keytab[ki+1];    /* Step forward to an ENDL_KMAP to use... */
         ktp->k_code = c;        /* set keycode */
-        ktp->hndlr.pbp = malloc(NBUFN);
+        ktp->hndlr.pbp = Xmalloc(NBUFN);
         destp = ktp;
 
 /* If the list is not exhausted the next one will also be an End-of-List.
  * If it is an End-of-Structure we need to extend, and if we do that we
- * need to handle destp, in case the realloc() moves things.
+ * need to handle destp, in case the Xrealloc() moves things.
  * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
  */
         ktp += 2;

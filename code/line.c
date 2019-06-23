@@ -39,10 +39,7 @@ struct line *lalloc(int used) {
     size = (used + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
     if (size == 0)              /* Assume that is an empty. */
         size = BLOCK_SIZE;  /* Line is for type-in. */
-    if ((lp = (struct line *)malloc(sizeof(struct line) + size)) == NULL) {
-        mlwrite(MLpre "OUT OF MEMORY" MLpost);
-        return NULL;
-    }
+    lp = (struct line *)Xmalloc(sizeof(struct line) + size);
     lp->l_size = size;
     lp->l_used = used;
     return lp;
@@ -132,7 +129,7 @@ int insspace(int f, int n) {
 /*
  * Insert "n" copies of the character "c" at the current location of dot. In
  * the easy case all that happens is the text is stored in the line. In the
- * hard case, the line has to be reallocated. When the window list is updated,
+ * hard case, the line has to be Xreallocated. When the window list is updated,
  * take special care; I screwed it up once. You always update dot in the
  * current window. You update mark, and a dot in another window, if it is
  * greater than the place where you did the insert. Return TRUE if all is
@@ -430,7 +427,7 @@ int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
         if (!zerowidth_type(uc)) break;
         used += xtra;
         if (!utf8_len_only) {
-            gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
+            gp->ex = Xrealloc(gp->ex, (xc+2)*sizeof(unicode_t));
             gp->ex[xc] = uc;
             gp->ex[xc+1] = UEM_NOCHAR;
         }
@@ -759,12 +756,11 @@ static void rotate_kill_ring(int n) {
  * int c;                       character to insert in the kill buffer
  */
 int kinsert(int c) {
-    struct kill *nchunk;    /* ptr to newly malloced chunk */
+    struct kill *nchunk;    /* ptr to newly Xmalloced chunk */
 
 /* Check to see if we need a new chunk */
     if (kused[0] >= KBLOCK) {
-        if ((nchunk = (struct kill *)malloc(sizeof(struct kill))) == NULL)
-            return FALSE;
+        nchunk = (struct kill *)Xmalloc(sizeof(struct kill));
         if (kbufh[0] == NULL)  /* set head ptr if first time */
             kbufh[0] = nchunk;
         if (kbufp != NULL)  /* point the current to this new one */

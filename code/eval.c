@@ -326,7 +326,6 @@ static char *gtenv(char *vname) {
     case EVPAGELEN:         return ue_itoa(term.t_nrow + 1);
     case EVCURCOL:          return ue_itoa(getccol(FALSE));
     case EVCURLINE:         return ue_itoa(getcline());
-    case EVRAM:             return ue_itoa((int) (envram / 1024l));
     case EVFLICKER:         return ltos(flickcode);
     case EVCURWIDTH:        return ue_itoa(term.t_ncol);
     case EVCBUFNAME:        return curbp->b_bname;
@@ -464,11 +463,7 @@ static int svar(struct variable_description *var, char *value) {
     switch (vtype) {
     case TKVAR:             /* set a user variable */
         if (uv[vnum].u_value != NULL) free(uv[vnum].u_value);
-        sp = malloc(strlen(value) + 1);
-        if (sp == NULL) {
-            uv[vnum].u_value = NULL;    /* GGR */
-            return FALSE;
-        }
+        sp = Xmalloc(strlen(value) + 1);
         strcpy(sp, value);
         uv[vnum].u_value = sp;
         break;
@@ -487,8 +482,6 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVCURLINE:
             status = gotoline(TRUE, atoi(value));
-            break;
-        case EVRAM:
             break;
         case EVFLICKER:
             flickcode = stol(value);

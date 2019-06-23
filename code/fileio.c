@@ -304,7 +304,7 @@ int ffputline(char *buf, int nbuf) {
 }
 
 /*
- * Read a line from a file, and store the bytes into a global, malloc()ed
+ * Read a line from a file, and store the bytes into a global, Xmalloc()ed
  * buffer (fline).
  * Complain about lines at the end of the file that don't have a newline.
  * Check for I/O errors too. Return status.

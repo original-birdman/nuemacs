@@ -17,8 +17,6 @@
 
 #include "utf8proc.h"
 
-/* Structures and code for command line remmebering */
-
 /* Structure for remembering past commands (for reexecute) */
 
 struct line_info {
@@ -35,13 +33,13 @@ static struct line_seen *lsb = NULL;
 /* This creates a new struct line_seen for lsb and returns the previous
  * value.
  * Users of docmd() (so dobuf() and execcmd()) should call this on entry,
- * save teh retuneds value and ensure that they call pop_lsb with that value
+ * save the returned value and ensure that they call pop_lsb with that value
  * as they return.
  */
 static struct line_seen *push_lsb(void) {
     struct line_seen *retval = lsb;
 
-    lsb = malloc(sizeof(struct line_seen));
+    lsb = Xmalloc(sizeof(struct line_seen));
     lsb->curr.alloc = lsb->prev.alloc = 0;
     lsb->curr.text = lsb->prev.text = NULL;
     return retval;
@@ -53,7 +51,7 @@ static void pop_lsb(struct line_seen *old_p) {
     lsb = old_p;
     return;
 }
-void switch_lsb_lines(void) {
+static void switch_lsb_lines(void) {
     struct line_info tmp_li = lsb->curr;
     lsb->curr = lsb->prev;
     lsb->prev = tmp_li;
@@ -96,7 +94,7 @@ static int docmd(char *cline) {
     int want = strlen(cline) + 1;   /* Need the NUL */
     int need = ALLOC_CHUNK*((want + ALLOC_CHUNK - 1)/ALLOC_CHUNK);
     if (lsb->curr.alloc < need) {
-        lsb->curr.text = realloc(lsb->curr.text, need);
+        lsb->curr.text = Xrealloc(lsb->curr.text, need);
         lsb->curr.alloc = need;
     }
     strcpy(lsb->curr.text, cline);
@@ -138,7 +136,7 @@ static int docmd(char *cline) {
  */
     if (strcmp(tkn, "reexecute") == 0) {
         switch_lsb_lines();
-        char *reex_str = malloc(lsb->curr.alloc);
+        char *reex_str = Xmalloc(lsb->curr.alloc);
         strcpy(reex_str, lsb->curr.text);
         int status = docmd(reex_str);
         free(reex_str);
@@ -189,23 +187,23 @@ char *token(char *src, char *tok, int size) {
             ++src;
             if (*src == 0) break;
             switch (*src++) {
-                case 'r':
-                    c = 13;
-                    break;
-                case 'n':
-                    c = 10;
-                    break;
-                case 't':
-                    c = 9;
-                    break;
-                case 'b':
-                    c = 8;
-                    break;
-                case 'f':
-                    c = 12;
-                    break;
-                default:
-                    c = *(src - 1);
+            case 'r':
+                c = 13;
+                break;
+            case 'n':
+                c = 10;
+                break;
+            case 't':
+                c = 9;
+                break;
+            case 'b':
+                c = 8;
+                break;
+            case 'f':
+                c = 12;
+                break;
+            default:
+                c = *(src - 1);
             }
             if (--size > 0) {
                 *tok++ = c;
@@ -409,25 +407,28 @@ static inline void use_pttable(struct buffer *bp) {
     curwp->w_flag |= WFMODE;
 }
 
+static char* get_display_code(char *buf) {
+    static char ml_display_code[32];
+
+    int mlen = strlen(buf);
+    int offs = next_utf8_offset(buf, 0, mlen, 1);
+    offs = next_utf8_offset(buf, offs, mlen, 1);
+    strncpy(ml_display_code, buf, offs);
+    ml_display_code[offs] = '\0';
+    return ml_display_code;
+}
 
 /* GGR
  * Compile the contents of a buffer into a ptt_remap structure
  */
 static int ptt_compile(struct buffer *bp) {
-    char ml_display_code[32];
+    char *ml_display_code;
 
 /* Free up any previously-compiled table and get a default display code */
 
     ptt_free(bp);
 
-    unicode_t uc1, uc2;
-    int mlen = strlen(bp->b_bname);
-    int offs = 1;                   /* Skip the leading / */
-    offs += utf8_to_unicode(bp->b_bname, 1, mlen, &uc1);
-    (void)utf8_to_unicode(bp->b_bname, offs, mlen, &uc2);
-    offs = unicode_to_utf8(uc1, ml_display_code);
-    offs += unicode_to_utf8(uc2, ml_display_code+offs);
-    ml_display_code[offs] = '\0';
+    ml_display_code = get_display_code(bp->b_bname+1);  /* Skip '/' */
 
 /* Read through the lines of the buffer */
 
@@ -481,14 +482,7 @@ static int ptt_compile(struct buffer *bp) {
         }
         if (!strcmp("display-code", from_string)) {
             rp = token(rp, tok, NLINE);
-            if (tok[0] != '\0')  {
-                mlen = strlen(tok);
-                offs = utf8_to_unicode(tok, 0, mlen, &uc1);
-                (void)utf8_to_unicode(tok, offs, mlen, &uc2);
-                offs = unicode_to_utf8(uc1, ml_display_code);
-                offs += unicode_to_utf8(uc2, ml_display_code+offs);
-                ml_display_code[offs] = '\0';
-            }
+            if (tok[0] != '\0') ml_display_code = get_display_code(tok);
             continue;
         }
         while(*rp != '\0') {
@@ -509,7 +503,7 @@ static int ptt_compile(struct buffer *bp) {
             }
         }
         if (to_len == 0) continue;
-        struct ptt_ent *new = malloc(sizeof(struct ptt_ent));
+        struct ptt_ent *new = Xmalloc(sizeof(struct ptt_ent));
         if (lastp == NULL) {
             bp->ptt_headp = new;
             strcpy(bp->ptt_headp->display_code, "P-");
@@ -533,7 +527,7 @@ static int ptt_compile(struct buffer *bp) {
             new->from_len_uc = ex_mstr.uc;
         }
         else {
-            new->from = malloc(new->from_len+1);
+            new->from = Xmalloc(new->from_len+1);
             strcpy(new->from, from_string);
             new->from_len_uc = uclen_utf8(new->from);
         }
@@ -545,7 +539,7 @@ static int ptt_compile(struct buffer *bp) {
         int start_at = prev_utf8_offset(new->from, new->from_len, FALSE);
         (void)utf8_to_unicode(new->from, start_at, new->from_len,
               &(new->final_uc));
-        new->to = malloc(to_len+1);
+        new->to = Xmalloc(to_len+1);
         strncpy(new->to, to_string, to_len);
         new->to[to_len] = '\0';
         new->to_len_uc = uclen_utf8(new->to);
@@ -728,7 +722,7 @@ int ptt_handler(int c) {
  */
         curwp->w_doto = start_at;
         int edit_case = 0;
-        int set_case;
+        int set_case = UTF8_CKEEP;
         if (ptr->caseset != CASESET_OFF) {
             unicode_t fc;
             (void)utf8_to_unicode(curwp->w_dotp->l_text, start_at,
@@ -947,9 +941,7 @@ int execbuf(int f, int n) {
  * struct while_block *wp;              head of structure to free
  */
 static void freewhile(struct while_block *wp) {
-    if (wp == NULL) return;
-    if (wp->w_next) freewhile(wp->w_next);
-    free(wp);
+    for (struct while_block *fwp = wp; fwp; fwp = fwp->w_next) free(fwp);
 }
 
 /*
@@ -1049,12 +1041,7 @@ int dobuf(struct buffer *bp) {
 
 /* If is a while directive, make a block... */
         if (eline[0] == '!' && eline[1] == 'w' && eline[2] == 'h') {
-            whtemp = (struct while_block *)malloc(sizeof(struct while_block));
-            if (whtemp == NULL) {
-noram:          mlwrite("%%Out of memory during while scan");
-failexit:       freewhile(scanner);
-                goto failexit2;
-            }
+            whtemp = Xmalloc(sizeof(struct while_block));
             whtemp->w_begin = lp;
             whtemp->w_type = BTWHILE;
             whtemp->w_next = scanner;
@@ -1065,10 +1052,9 @@ failexit:       freewhile(scanner);
         if (eline[0] == '!' && eline[1] == 'b' && eline[2] == 'r') {
             if (scanner == NULL) {
                 mlwrite("%%!BREAK outside of any !WHILE loop");
-                goto failexit;
+                goto failexit2;
             }
-            whtemp = (struct while_block *)malloc(sizeof(struct while_block));
-            if (whtemp == NULL) goto noram;
+            whtemp = Xmalloc(sizeof(struct while_block));
             whtemp->w_begin = lp;
             whtemp->w_type = BTBREAK;
             whtemp->w_next = scanner;
@@ -1080,7 +1066,7 @@ failexit:       freewhile(scanner);
             if (scanner == NULL) {
                 mlwrite("%%!ENDWHILE with no preceding !WHILE in '%s'",
                      bp->b_bname);
-                goto failexit;
+                goto failexit2;
             }
 /* move top records from the scanner list to the whlist until we have
  * moved all BREAK records and one WHILE record.
@@ -1101,7 +1087,7 @@ failexit:       freewhile(scanner);
 /* While and endwhile should match! */
     if (scanner != NULL) {
         mlwrite("%%!WHILE with no matching !ENDWHILE in '%s'", bp->b_bname);
-        goto failexit;
+        goto failexit2;
     }
 
 /* Let the first command inherit the flags from the last one.. */
@@ -1113,10 +1099,7 @@ failexit:       freewhile(scanner);
     while (lp != hlp) {
 /* Allocate eline and copy macro line to it */
         linlen = lp->l_used;
-        if ((einit = eline = malloc(linlen + 1)) == NULL) {
-            mlwrite("%%Out of Memory during macro execution");
-            goto failexit2;
-        }
+        einit = eline = Xmalloc(linlen + 1);
         memcpy(eline, lp->l_text, linlen);
         eline[linlen] = 0;      /* make sure it ends */
 
@@ -1126,7 +1109,7 @@ failexit:       freewhile(scanner);
 /* dump comments and blank lines */
         if (*eline == ';' || *eline == 0) goto onward;
 
-#if     DEBUGM
+#if DEBUGM
 /* If $debug == TRUE, every line to execute gets echoed and a key needs
  * to be pressed to continue.
  * ^G will abort the command.
@@ -1227,8 +1210,6 @@ failexit:       freewhile(scanner);
             mp->l_fp = bstore->b_linep;
             goto onward;
         }
-
-
         force = FALSE;
 
 /* Dump comments */
@@ -1384,18 +1365,17 @@ onward:                 /* On to the next line */
 
 eexec:                  /* Exit the current function */
     execlevel = 0;
-    freewhile(whlist);
-    bp->b_exec_level--;
-    pause_key_index_update = orig_pause_key_index_update;
     status = return_stat;
-    goto single_exit;
+    goto failexit;
 
 /* This sequence is used for several exits, so only write it once */
 failexit2:
+    status = FALSE;
+
+failexit:
     freewhile(whlist);
     bp->b_exec_level--;
     pause_key_index_update = orig_pause_key_index_update;
-    status = FALSE;
 
 single_exit:
 

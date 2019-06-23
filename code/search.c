@@ -106,9 +106,9 @@ static enum call_type this_rt;
 
 void init_search_ringbuffers(void) {
     for (int ix = 0; ix < RING_SIZE; ix++) {
-        srch_txt[ix] = malloc(1);
+        srch_txt[ix] = Xmalloc(1);
         *(srch_txt[ix]) = '\0';
-        repl_txt[ix] = malloc(1);
+        repl_txt[ix] = Xmalloc(1);
         *(repl_txt[ix]) = '\0';
     }
 }
@@ -148,7 +148,7 @@ static void update_ring(char *str) {
         txt[ix] = txt[ix-1];
     }
     int slen = strlen(str);
-    txt[0] = realloc(tmp, slen + 1);
+    txt[0] = Xrealloc(tmp, slen + 1);
     strcpy(txt[0], str);
 
     return;
@@ -257,9 +257,9 @@ static char *clearbits(void) {
     char *cclmap;
     int i;
 
-    if ((cclmap = cclstart = (char *)malloc(HIBYTE)) != NULL) {
-        for (i = 0; i < HIBYTE; i++) *cclmap++ = 0;
-    }
+    cclmap = cclstart = (char *)Xmalloc(HIBYTE);
+    for (i = 0; i < HIBYTE; i++) *cclmap++ = 0;
+
     return cclstart;
 }
 
@@ -491,11 +491,7 @@ static int rmcstr(void) {
  */
             if (mj != 0) {
                 rmcptr->mc_type = LITCHAR;
-                if ((rmcptr->rstr = malloc(mj + 1)) == NULL) {
-                    mlwrite("%%Out of memory");
-                    status = FALSE;
-                    break;
-                }
+                rmcptr->rstr = Xmalloc(mj + 1);
                 strncpy(rmcptr->rstr, patptr - mj, mj);
                 rmcptr++;
                 mj = 0;
@@ -508,14 +504,10 @@ static int rmcstr(void) {
         case MC_ESC:
             rmcptr->mc_type = LITCHAR;
 
-/* We malloc mj plus two here, instead of one, because we have to count the
+/* We Xmalloc mj plus two here, instead of one, because we have to count the
  * current character.
  */
-            if ((rmcptr->rstr = malloc(mj + 2)) == NULL) {
-                mlwrite("%%Out of memory");
-                status = FALSE;
-                break;
-            }
+            rmcptr->rstr = Xmalloc(mj + 2);
             strncpy(rmcptr->rstr, patptr - mj, mj + 1);
 
 /* If MC_ESC is not the last character in the string, find out what it is
@@ -537,10 +529,7 @@ static int rmcstr(void) {
 
     if (rmagical && mj > 0) {
         rmcptr->mc_type = LITCHAR;
-        if ((rmcptr->rstr = malloc(mj + 1)) == NULL) {
-            mlwrite("%%Out of memory.");
-            status = FALSE;
-        }
+        rmcptr->rstr = Xmalloc(mj + 1);
         strncpy(rmcptr->rstr, patptr - mj, mj);
         rmcptr++;
     }
@@ -1136,17 +1125,15 @@ static void savematch(void) {
 
     if (patmatch != NULL) free(patmatch);
 
-    ptr = patmatch = malloc(matchlen + 1);
+    ptr = patmatch = Xmalloc(matchlen + 1);
 
-    if (ptr != NULL) {
-        curoff = matchoff;
-        curline = matchline;
+    curoff = matchoff;
+    curline = matchline;
 
-        for (unsigned int j = 0; j < matchlen; j++)
-            *ptr++ = nextch(&curline, &curoff, FORWARD);
+    for (unsigned int j = 0; j < matchlen; j++)
+        *ptr++ = nextch(&curline, &curoff, FORWARD);
 
-        *ptr = '\0';
-    }
+    *ptr = '\0';
 }
 
 /*

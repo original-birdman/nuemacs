@@ -13,7 +13,6 @@
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
-#include "wrapper.h"
 
 #include "utf8proc.h"
 
@@ -556,10 +555,9 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 
 /* Create a minibuffer window for use by all minibuffers */
     if (!mb_winp) {
-        mb_winp = (struct window *)malloc(sizeof(struct window));
-        if (mb_winp == NULL) exit(1);
+        mb_winp = (struct window *)Xmalloc(sizeof(struct window));
         mb_winp->w_wndp = NULL;               /* Initialize window    */
-#if     COLOR
+#if COLOR
 /* initalize colors to global defaults */
         mb_winp->w_fcolor = gfcolor;
         mb_winp->w_bcolor = gbcolor;

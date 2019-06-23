@@ -66,7 +66,6 @@ int kbdrep = 0;                 /* number of repetitions        */
 int restflag = FALSE;           /* restricted use?              */
 int lastkey = 0;                /* last keystoke                */
 int seed = 0;                   /* random number seed           */
-long envram = 0l;               /* # of bytes current in use by malloc */
 int macbug = FALSE;             /* macro debuging flag          */
 char errorm[] = "ERROR";        /* error literal                */
 char truem[] = "TRUE";          /* true literal                 */

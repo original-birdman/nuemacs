@@ -18,7 +18,6 @@
 #include "efunc.h"
 #include "line.h"
 #include "version.h"
-#include "wrapper.h"
 #include "utf8.h"
 
 #include "utf8proc.h"
@@ -112,7 +111,7 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
     if (gp->ex != NULL) {
         while(gp->ex[xc] != UEM_NOCHAR) xc++;
     }
-    gp->ex = realloc(gp->ex, (xc+2)*sizeof(unicode_t));
+    gp->ex = Xrealloc(gp->ex, (xc+2)*sizeof(unicode_t));
     gp->ex[xc] = uc;
     gp->ex[xc+1] = UEM_NOCHAR;
     return;
@@ -206,11 +205,11 @@ void vtinit(void) {
     TTopen();               /* open the screen */
     TTkopen();              /* open the keyboard */
     TTrev(FALSE);
-    vscreen = xmalloc(term.t_mrow * sizeof(struct video *));
-    pscreen = xmalloc(term.t_mrow * sizeof(struct video *));
+    vscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
+    pscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
 
     for (i = 0; i < term.t_mrow; ++i) {
-        vp = xmalloc(sizeof(struct video) +
+        vp = Xmalloc(sizeof(struct video) +
              term.t_mcol*sizeof(struct grapheme));
         vp->v_flag = 0;
 #if COLOR
@@ -223,7 +222,7 @@ void vtinit(void) {
 /* GGR - clear things out at the start.
  * We can't use set_grapheme() until after we have initialized
  * We only need to initialize vscreen, as we do all assigning
- * (including malloc()/free()) there.
+ * (including Xmalloc()/free()) there.
  * Need to clear it *all* out now! */
 
         for (int j = 0; j < term.t_mcol; j++) {
@@ -232,7 +231,7 @@ void vtinit(void) {
             vp->v_text[j].ex = NULL;
         }
 
-        vp = xmalloc(sizeof(struct video) +
+        vp = Xmalloc(sizeof(struct video) +
              term.t_mcol*sizeof(struct grapheme));
         vp->v_flag = 0;
         pscreen[i] = vp;

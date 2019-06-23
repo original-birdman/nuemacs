@@ -147,7 +147,7 @@ void ensure_case(int want_case) {
     int orig_utf8_len = lgetgrapheme(&gc, FALSE);     /* Doesn't move doto */
 /* We only look at the base character for casing.
  * If it's not changed by the caser(), leave now...
- * Although we will (try to) handle the preverse case of a German sharp.
+ * Although we will (try to) handle the perverse case of a German sharp.
  * If we have a bare ß and are uppercasing, insert "SS" instead...
  * Since utf8_recase() in utf8.c does this.
  *
@@ -413,7 +413,7 @@ bckdel:
         }
         op = kp;
         kp = kp->d_next;
-        free(op);           /* kinsert() mallocs, so we free */
+        free(op);           /* kinsert() Xmallocs, so we free */
     }
     return(status);
 }
@@ -603,7 +603,7 @@ int eos_chars(int f, int n) {
  * Actually we'll allocate one extra and put an illegal value at the end.
  */
         int len = strlen(buf);
-        eos_list = realloc(eos_list, sizeof(unicode_t)*(len + 1));
+        eos_list = Xrealloc(eos_list, sizeof(unicode_t)*(len + 1));
         int i = 0;
         n_eos = 0;
         while (i < len) {
@@ -689,11 +689,11 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * So we allocate it dynamically.
  */
     wbuf_ents = llength(curwp->w_dotp) + 1;
-    wbuf = malloc(MFACTOR*wbuf_ents);
+    wbuf = Xmalloc(MFACTOR*wbuf_ents);
     wordlen = wi = 0;
 
 /* If we've been asked to right-justify we need some space */
-    space_ind = f_ctl->justify? malloc(sizeof(int)*(wbuf_ents+1)/2): NULL;
+    space_ind = f_ctl->justify? Xmalloc(sizeof(int)*(wbuf_ents+1)/2): NULL;
     nspaces = 0;
 
     long togo = f_region.r_size + 1;    /* Need final end-of-line */
@@ -719,10 +719,10 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  */
             if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
                 wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
-                wbuf = realloc(wbuf, MFACTOR*wbuf_ents);
+                wbuf = Xrealloc(wbuf, MFACTOR*wbuf_ents);
                 if (space_ind) {    /* We're padding */
                      space_ind =
-                          realloc(space_ind, sizeof(int)*(wbuf_ents+1)/2);
+                          Xrealloc(space_ind, sizeof(int)*(wbuf_ents+1)/2);
                 }
             }
         }

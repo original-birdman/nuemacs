@@ -301,7 +301,7 @@ int char_replace(int f, int n) {
                 while (remap[need++].start != UEM_NOCHAR);
                 need++;
             }
-            remap = realloc(remap, need*sizeof(struct repmap_t));
+            remap = Xrealloc(remap, need*sizeof(struct repmap_t));
             if (need == 2)  {               /* Newly allocated */
                 remap[0].start = lowval;
                 remap[0].end = topval;
@@ -404,7 +404,7 @@ static void add_to_res(struct mstr *mstr, char *buf, int nc, int incr) {
 
     if ((mstr->utf8c + nc) >= mstr->alloc) {    /* Allow for NUL we'll add */
         mstr->alloc += incr;
-        mstr->str = realloc(mstr->str, mstr->alloc);
+        mstr->str = Xrealloc(mstr->str, mstr->alloc);
     }
 /* We have to be able to copy NULs */
     memcpy(mstr->str+mstr->utf8c, buf, nc);
@@ -426,7 +426,7 @@ int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
     mstr->uc = 0;           /* Count unicode chars as we go */
     mstr->grphc = -1;       /* Not known */
     if (len == 0) {
-        mstr->str = malloc(1);
+        mstr->str = Xmalloc(1);
         *(mstr->str) = '\0';
         mstr->alloc = 1;
         return 0;
@@ -450,7 +450,7 @@ int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
 
 /* We'll allocate in steps of len+1...we add a trailing NUL */
     if (len < 1) len = strlen(in);
-    mstr->str = NULL;       /* So realloc() works at the start */
+    mstr->str = NULL;       /* So Xrealloc() works at the start */
     int rec_incr = len + 1;
     int used;
     for (int offset = 0; offset < len; offset += used) {

@@ -68,7 +68,6 @@ extern int kbdrep;              /* number of repetitions        */
 extern int restflag;            /* restricted use?              */
 extern int lastkey;             /* last keystoke                */
 extern int seed;                /* random number seed           */
-extern long envram;             /* # of bytes current in use by malloc */
 extern int macbug;              /* macro debuging flag          */
 extern char errorm[];           /* error literal                */
 extern char truem[];            /* true literal                 */

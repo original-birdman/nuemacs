@@ -383,4 +383,9 @@ extern struct name_bind *func_info(fn_t);
 extern struct name_bind *name_info(char *);
 extern int nxti_name_info(int);
 
+/* wrapper.c */
+
+extern void *Xmalloc(size_t);
+extern void *Xrealloc(void *, size_t);
+
 #endif

@@ -29,11 +29,7 @@ int lockchk(char *fname) {
  * Need a copy of the filename, to allow possible tilde and shell
  * expansion on the passed-in name.
  */
-    char *tmpname = (char *) malloc(NFILEN);
-    if (tmpname == NULL) {
-        mlwrite("Cannot lock, out of memory");
-        return ABORT;
-    }
+    char *tmpname = (char *)Xmalloc(NFILEN);
     strcpy(tmpname, fname);
     fixup_fname(tmpname);
 
@@ -60,13 +56,7 @@ int lockchk(char *fname) {
 
 /* We have now locked it, add it to our table */
 
-    lname[++numlocks - 1] = (char *) malloc(strlen(tmpname) + 1);
-    if (lname[numlocks - 1] == NULL) {  /* malloc failure */
-        undolock(tmpname);              /* free the lock */
-        mlwrite("Cannot lock, out of memory");
-        --numlocks;
-        return ABORT;
-    }
+    lname[++numlocks - 1] = (char *)Xmalloc(strlen(tmpname) + 1);
 
 /* Everthing is cool, add it to the table */
 

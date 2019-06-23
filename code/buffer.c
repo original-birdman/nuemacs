@@ -495,8 +495,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         bp = bp->b_bufp;
     }
     if (cflag != FALSE) {
-        if ((bp = (struct buffer *)malloc(sizeof(struct buffer))) == NULL)
-            return NULL;
+        bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
         if ((lp = lalloc(0)) == NULL) {
             free((char *) bp);
             return NULL;

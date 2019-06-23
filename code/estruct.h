@@ -85,11 +85,6 @@
 
 #endif                          /*autoconf */
 
-/*      Debugging options       */
-
-#define RAMSIZE 0               /* dynamic RAM memory usage tracking */
-#define RAMSHOW 0               /* auto dynamic RAM reporting */
-
 #ifndef AUTOCONF
 
 /*   Special keyboard definitions            */
@@ -296,13 +291,6 @@
 #define isxletter(c)    (('a' <= c && LASTLL >= c) || ('A' <= c && LASTUL >= c) || (192<=c && c<=255))
 #define isxlower(c)     (('a' <= c && LASTLL >= c) || (224 <= c && 252 >= c))
 #define isxupper(c)     (('A' <= c && LASTUL >= c) || (192 <= c && 220 >= c))
-
-/*      Dynamic RAM tracking and reporting redefinitions        */
-
-#if     RAMSIZE
-#define malloc  allocate
-#define free    release
-#endif
 
 /*      De-allocate memory always on exit (if the operating system or
  *      main program can not

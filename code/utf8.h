@@ -38,6 +38,7 @@ unsigned int uclen_utf8(char *);
 int nocasecmp_utf8(char *, int, int, char *, int, int);
 int unicode_back_utf8(int, char *, int);
 
+#define UTF8_CKEEP 0    /* So we can init a var to 0 and do nothing */
 #define UTF8_UPPER 1
 #define UTF8_LOWER 2
 #define UTF8_TITLE 3
