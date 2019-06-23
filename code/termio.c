@@ -9,14 +9,14 @@
 
 #ifndef POSIX
 
-#include        <stdio.h>
-#include        "estruct.h"
-#include        "edef.h"
+#include <stdio.h>
+#include "estruct.h"
+#include "edef.h"
 
 #if USG                         /* System V */
-#include        <signal.h>
-#include        <termio.h>
-#include        <fcntl.h>
+#include <signal.h>
+#include <termio.h>
+#include <fcntl.h>
 int kbdflgs;                    /* saved keyboard fd flags      */
 int kbdpoll;                    /* in O_NDELAY mode                     */
 int kbdqp;                      /* there is a char in kbdq      */
@@ -29,12 +29,12 @@ struct termio ntermio;          /* charactoristics to use inside */
 #endif
 
 #if BSD
-#include        <sgtty.h>       /* for stty/gtty functions */
-#include        <signal.h>
+#include <sgtty.h>              /* for stty/gtty functions */
+#include <signal.h>
 struct sgttyb ostate;           /* saved tty state */
 struct sgttyb nstate;           /* values for editor mode */
 struct tchars otchars;          /* Saved terminal special character set */
-#if     XONXOFF
+#if XONXOFF
 struct tchars ntchars = { 0xff, 0xff, 0x11, 0x13, 0xff, 0xff };
 
                                 /* A lot of nothing and XON/XOFF */
@@ -58,112 +58,105 @@ char tobuf[TBUFSIZ];            /* terminal output buffer */
 #endif
 #endif
 
-#if     __hpux | SVR4
+#if __hpux | SVR4
 extern int rtfrmshell();        /* return from suspended shell */
 #define TBUFSIZ 128
 char tobuf[TBUFSIZ];            /* terminal output buffer */
 #endif
 
-/*
- * This function is called once to set up the terminal device streams.
+/* This function is called once to set up the terminal device streams.
  * On CPM it is a no-op.
  */
-void ttopen(void)
-{
+void ttopen(void) {
 #if USG
-        ioctl(0, TCGETA, &otermio);     /* save old settings */
-        ntermio.c_iflag = 0;            /* setup new settings */
+    ioctl(0, TCGETA, &otermio);     /* save old settings */
+    ntermio.c_iflag = 0;            /* setup new settings */
 #if XONXOFF
-        ntermio.c_iflag = otermio.c_iflag & XXMASK; /* save XON/XOFF P.K. */
+    ntermio.c_iflag = otermio.c_iflag & XXMASK; /* save XON/XOFF P.K. */
 #endif
-        ntermio.c_oflag = 0;
-        ntermio.c_cflag = otermio.c_cflag;
-        ntermio.c_lflag = 0;
-        ntermio.c_line = otermio.c_line;
-        ntermio.c_cc[VMIN] = 1;
-        ntermio.c_cc[VTIME] = 0;
-        ioctl(0, TCSETAW, &ntermio);    /* and activate them */
-        kbdflgs = fcntl(0, F_GETFL, 0);
-        kbdpoll = FALSE;
+    ntermio.c_oflag = 0;
+    ntermio.c_cflag = otermio.c_cflag;
+    ntermio.c_lflag = 0;
+    ntermio.c_line = otermio.c_line;
+    ntermio.c_cc[VMIN] = 1;
+    ntermio.c_cc[VTIME] = 0;
+    ioctl(0, TCSETAW, &ntermio);    /* and activate them */
+    kbdflgs = fcntl(0, F_GETFL, 0);
+    kbdpoll = FALSE;
 #endif
 
 #if BSD
-        gtty(0, &ostate);       /* save old state */
-        gtty(0, &nstate);       /* get base of new state */
+    gtty(0, &ostate);       /* save old state */
+    gtty(0, &nstate);       /* get base of new state */
 #if XONXOFF
-        nstate.sg_flags |= (CBREAK | TANDEM);
+    nstate.sg_flags |= (CBREAK | TANDEM);
 #else
-        nstate.sg_flags |= RAW;
+    nstate.sg_flags |= RAW;
 #endif
-        nstate.sg_flags &= ~(ECHO | CRMOD); /* no echo for now... */
-        stty(0, &nstate);                   /* set mode */
-        ioctl(0, TIOCGETC, &otchars);       /* Save old characters */
-        ioctl(0, TIOCSETC, &ntchars);       /* Place new character into K */
+    nstate.sg_flags &= ~(ECHO | CRMOD); /* no echo for now... */
+    stty(0, &nstate);                   /* set mode */
+    ioctl(0, TIOCGETC, &otchars);       /* Save old characters */
+    ioctl(0, TIOCSETC, &ntchars);       /* Place new character into K */
 #if BSD
-        ioctl(0, TIOCGLTC, &oltchars);      /* Save old local characters */
-        ioctl(0, TIOCSLTC, &nltchars);      /* New local characters */
+    ioctl(0, TIOCGLTC, &oltchars);      /* Save old local characters */
+    ioctl(0, TIOCSLTC, &nltchars);      /* New local characters */
 #endif
 #if BSD
-        /* provide a smaller terminal output buffer so that
-           the type ahead detection works better (more often) */
-        setbuffer(stdout, &tobuf[0], TBUFSIZ);
-        signal(SIGTSTP, SIG_DFL);           /* set signals so that we can */
-        signal(SIGCONT, rtfrmshell);        /* suspend & restart emacs */
+/* Provide a smaller terminal output buffer so that the type-ahead
+ * detection works better (more often)
+ */
+    setbuffer(stdout, &tobuf[0], TBUFSIZ);
+    signal(SIGTSTP, SIG_DFL);           /* set signals so that we can */
+    signal(SIGCONT, rtfrmshell);        /* suspend & restart emacs */
 #endif
 #endif
 
 #if __hpux | SVR4
-        /* provide a smaller terminal output buffer so that
-           the type ahead detection works better (more often) */
-        setvbuf(stdout, &tobuf[0], _IOFBF, TBUFSIZ);
-        signal(SIGTSTP, SIG_DFL);           /* set signals so that we can */
-        signal(SIGCONT, rtfrmshell);        /* suspend & restart emacs */
-        TTflush();
+/* Provide a smaller terminal output buffer so that the type-ahead
+ * detection works better (more often)
+ */
+    setvbuf(stdout, &tobuf[0], _IOFBF, TBUFSIZ);
+    signal(SIGTSTP, SIG_DFL);           /* set signals so that we can */
+    signal(SIGCONT, rtfrmshell);        /* suspend & restart emacs */
+    TTflush();
 #endif                          /* __hpux */
 
-        /* on all screens we are not sure of the initial position
-           of the cursor                                        */
-        ttrow = 999;
-        ttcol = 999;
+/* on all screens we are not sure of the initial position of the cursor */
+    ttrow = 999;
+    ttcol = 999;
 }
 
-/*
- * This function gets called just before we go back home to the command
+/* This function gets called just before we go back home to the command
  * interpreter.
  * Another no-operation on CPM.
  */
-void ttclose(void)
-{
+void ttclose(void) {
 #if USG
-        ioctl(0, TCSETAW, &otermio);    /* restore terminal settings */
-        fcntl(0, F_SETFL, kbdflgs);
+    ioctl(0, TCSETAW, &otermio);    /* restore terminal settings */
+    fcntl(0, F_SETFL, kbdflgs);
 #endif
 
 #if BSD
-        stty(0, &ostate);
-        ioctl(0, TIOCSETC, &otchars);   /* Place old character into K */
-        ioctl(0, TIOCSLTC, &oltchars);  /* Place old local character into K */
+    stty(0, &ostate);
+    ioctl(0, TIOCSETC, &otchars);   /* Place old character into K */
+    ioctl(0, TIOCSLTC, &oltchars);  /* Place old local character into K */
 #endif
 }
 
-/*
- * Write a character to the display.
+/* Write a character to the display.
  * On CPM terminal I/O unbuffered, so we just write the byte out. Ditto on
  * MS-DOS (use the very very raw console output routine).
  */
-void ttputc(char c)
-{
+void ttputc(char c) {
 #if USG | BSD
-        fputc(c, stdout);
+    fputc(c, stdout);
 #endif
 }
 
-/*
- * Flush terminal buffer. Does real work where the terminal output is buffered
+/* Flush terminal buffer. Does real work where the terminal output is buffered
  * up. A no-operation on systems where byte at a time terminal I/O is done.
  */
-int ttflush(void)
-{
+int ttflush(void) {
 #if USG | BSD
 /*
  * Add some terminal output success checking, sometimes an orphaned
@@ -176,37 +169,28 @@ int ttflush(void)
  */
 
 #include <errno.h>
-
-        int status;
-
-        status = fflush(stdout);
-
-        if (status != 0 && errno != EAGAIN) {
-                exit(errno);
-        }
+    int status = fflush(stdout);
+    if (status != 0 && errno != EAGAIN) exit(errno);
 #endif
 }
 
-/*
- * Read a character from the terminal, performing no editing and doing no echo
+/* Read a character from the terminal, performing no editing and doing no echo
  * at all. Very simple on CPM, because the system can do exactly what you want.
  */
-int ttgetc(void)
-{
+int ttgetc(void) {
 #if BSD
-        return 255 & fgetc(stdin);      /* 8BIT P.K. */
+    return 255 & fgetc(stdin);      /* 8BIT P.K. */
 #endif
 
 #if USG
-        if (kbdqp)
-                kbdqp = FALSE;
-        else {
-                if (kbdpoll && fcntl(0, F_SETFL, kbdflgs) < 0)
-                        return FALSE;
-                kbdpoll = FALSE;
-                while (read(0, &kbdq, 1) != 1);
-        }
-        return kbdq & 255;
+    if (kbdqp)
+        kbdqp = FALSE;
+    else {
+        if (kbdpoll && fcntl(0, F_SETFL, kbdflgs) < 0) return FALSE;
+        kbdpoll = FALSE;
+        while (read(0, &kbdq, 1) != 1);
+    }
+    return kbdq & 255;
 #endif
 }
 
@@ -217,7 +201,6 @@ int ttgetc(void)
 int typahead(void) {
 #if BSD
     int x;                  /* holds # of pending chars */
-
     return (ioctl(0, FIONREAD, &x) < 0) ? 0 : x;
 #endif
 

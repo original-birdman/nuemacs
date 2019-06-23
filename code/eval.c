@@ -18,8 +18,7 @@
 
 #define MAXVARS 255
 
-/*
- * return some of the contents of the kill buffer
+/* Return some of the contents of the kill buffer
  */
 static char *getkill(void) {
     int size;                       /* max number of chars to return */
@@ -47,8 +46,7 @@ void varinit(void) {
     for (i = 0; i < MAXVARS; i++) uv[i].u_name[0] = 0;
 }
 
-/*
- * convert a string to a numeric logical
+/* Convert a string to a numeric logical
  * Used by exec.c
  *
  * char *val;           value to check for stol
@@ -62,8 +60,7 @@ int stol(char *val) {
     return (atoi(val) != 0);
 }
 
-/*
- * numeric logical to string logical
+/* Numeric logical to string logical
  *
  * int val;             value to translate
  */
@@ -72,27 +69,23 @@ static char *ltos(int val) {
     else     return falsem;
 }
 
-/*
- * make a string upper case
+/* Make a string upper case
  * Internal to this routine - only needs to handle ASCII
  *
  * char *str;           string to upper case
  */
-static char *mkupper(char *str)
-{
-        char *sp;
+static char *mkupper(char *str) {
+    char *sp;
 
-        sp = str;
-        while (*sp) {
-                if ('a' <= *sp && *sp <= 'z')
-                        *sp += 'A' - 'a';
-                ++sp;
-        }
-        return str;
+    sp = str;
+    while (*sp) {
+        if ('a' <= *sp && *sp <= 'z') *sp += 'A' - 'a';
+        ++sp;
+    }
+    return str;
 }
 
-/*
- * make a string lower case
+/* Make a string lower case
  * Internal to this routine - only needs to handle ASCII
  *
  * char *str;           string to lower case
@@ -108,24 +101,14 @@ static char *mklower(char *str) {
     return str;
 }
 
-/*
- * take the absolute value of an integer
- * also used by idxsorter.c
- */
-int abs(int x) {
-    return x < 0 ? -x : x;
-}
-
-/*
- * returns a random integer
+/* Returns a random integer
  */
 static int ernd(void) {
     seed = abs(seed * 1721 + 10007);
     return seed;
 }
 
-/*
- * find pattern within source
+/* Find pattern within source
  *
  * char *source;        source string to search
  * char *pattern;       string to look for
@@ -155,8 +138,7 @@ static int sindex(char *source, char *pattern) {
     return 0;
 }
 
-/*
- * Filter a string through a translation table
+/* Filter a string through a translation table
  *
  * char *source;        string to filter
  * char *lookup;        characters to translate
@@ -190,8 +172,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
     return result;
 }
 
-/*
- * Evaluate a function.
+/* Evaluate a function.
  *
  * @fname: name of function to evaluate.
  */
@@ -296,8 +277,7 @@ static char *gtfun(char *fname) {
     exit(-11);              /* never should get here */
 }
 
-/*
- * look up a user var's value
+/* Look up a user var's value
  *
  * char *vname;                 name of user variable to fetch
  */
@@ -410,8 +390,7 @@ static char *gtenv(char *vname) {
     exit(-12);              /* again, we should never get here */
 }
 
-/*
- * Find a variables type and name.
+/* Find a variables type and name.
  *
  * @var: name of variable to get.
  * @vd: structure to hold type and pointer.
@@ -464,8 +443,7 @@ fvar:
     return;
 }
 
-/*
- * Set a variable.
+/* Set a variable.
  *
  * @var: variable to set.
  * @value: value to set to.
@@ -674,8 +652,7 @@ static int svar(struct variable_description *var, char *value) {
     return status;
 }
 
-/*
- * set a variable
+/* Set a variable
  * The command front-end to svar
  * Also used by names.c
  *

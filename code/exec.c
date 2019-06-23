@@ -974,7 +974,7 @@ static void freewhile(struct while_block *wp) {
  *      *LBL01
  *
  * NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE! NOTE
- * This routine sets the buffer to be read-only while runnign it,
+ * This routine sets the buffer to be read-only while running it,
  * so it is IMPORTANT to ensure that any exit goes via the code
  * to restore the original setting - by "goto single_exit" not "return".
  *

@@ -269,9 +269,6 @@
 /*      Internal defined functions                                      */
 
 #define nextab(a)       (a & ~tabmask) + (tabmask+1)
-#ifdef  abs
-#undef  abs
-#endif
 
 /* DIFCASE represents the integer difference between upper
    and lower case letters.  It is an xor-able value, which is
@@ -308,15 +305,14 @@
 #endif
 
 /*      De-allocate memory always on exit (if the operating system or
-        main program can not
-*/
+ *      main program can not
+ */
 
 #if     CLEAN
 #define exit(a) cexit(a)
 #endif
 
-/*
- * There is a window structure allocated for every active display window. The
+/* There is a window structure allocated for every active display window. The
  * windows are kept in a big list, in top to bottom screen order, with the
  * listhead at "wheadp". Each window contains its own values of dot and mark.
  * The flag field contains some bits that are set by commands to guide
@@ -325,22 +321,22 @@
  * character.
  */
 struct window {
-        struct window *w_wndp;  /* Next window                  */
-        struct buffer *w_bufp;  /* Buffer displayed in window   */
-        struct line *w_linep;   /* Top line in the window       */
-        struct line *w_dotp;    /* Line containing "."          */
-        struct line *w_markp;   /* Line containing "mark"       */
-        int w_doto;             /* Byte offset for "."          */
-        int w_marko;            /* Byte offset for "mark"       */
-        int w_toprow;           /* Origin 0 top row of window   */
-        int w_ntrows;           /* # of rows of text in window  */
-        char w_force;           /* If NZ, forcing row.          */
-        char w_flag;            /* Flags.                       */
-#if     COLOR
-        char w_fcolor;          /* current forground color      */
-        char w_bcolor;          /* current background color     */
+    struct window *w_wndp;  /* Next window                  */
+    struct buffer *w_bufp;  /* Buffer displayed in window   */
+    struct line *w_linep;   /* Top line in the window       */
+    struct line *w_dotp;    /* Line containing "."          */
+    struct line *w_markp;   /* Line containing "mark"       */
+    int w_doto;             /* Byte offset for "."          */
+    int w_marko;            /* Byte offset for "mark"       */
+    int w_toprow;           /* Origin 0 top row of window   */
+    int w_ntrows;           /* # of rows of text in window  */
+    char w_force;           /* If NZ, forcing row.          */
+    char w_flag;            /* Flags.                       */
+#if COLOR
+    char w_fcolor;          /* current forground color      */
+    char w_bcolor;          /* current background color     */
 #endif
-        int w_fcol;             /* first column displayed       */
+    int w_fcol;             /* first column displayed       */
 };
 
 #define WFFORCE 0x01            /* Window needs forced reframe  */
@@ -353,8 +349,7 @@ struct window {
 #define WFINS   0x80            /* something was inserted       */
 
 
-/*
- * Text is kept in buffers. A buffer header, described below, exists for every
+/* Text is kept in buffers. A buffer header, described below, exists for every
  * buffer in the system. The buffers are kept in a big list, so that commands
  * that search for a buffer by name can find the buffer header. There is a
  * safe store for the dot and mark in the header, but this is only valid if
@@ -392,28 +387,28 @@ struct func_opts {
 };
 
 struct buffer {
-        struct buffer *b_bufp;  /* Link to next struct buffer   */
-        struct line *b_dotp;    /* Link to "." struct line structure */
-        struct line *b_markp;   /* The same as the above two,   */
-        struct line *b_linep;   /* Link to the header struct line */
-        struct line *b_topline; /* Link to narrowed top text    */
-        struct line *b_botline; /* Link to narrowed bottom text */
-        struct ptt_ent *ptt_headp;
-        int b_type;             /* Type of buffer */
-        struct func_opts btp_opt;   /* Only for b_type = BTPROC */
-        int b_exec_level;       /* Recursion level */
-        int b_doto;             /* Offset of "." in above struct line */
-        int b_marko;            /* but for the "mark"           */
-        int b_mode;             /* editor mode of this buffer   */
-        int b_fcol;             /* first col to display         */
-        int b_EOLmissing;       /* When read in... */
-        int b_keylen;           /* encrypted key len            */
-        char b_active;          /* window activated flag        */
-        char b_nwnd;            /* Count of windows on buffer   */
-        char b_flag;            /* Flags                        */
-        char b_fname[NFILEN];   /* File name                    */
-        char b_bname[NBUFN];    /* Buffer name                  */
-        char b_key[NPAT];       /* current encrypted key        */
+    struct buffer *b_bufp;  /* Link to next struct buffer   */
+    struct line *b_dotp;    /* Link to "." struct line structure */
+    struct line *b_markp;   /* The same as the above two,   */
+    struct line *b_linep;   /* Link to the header struct line */
+    struct line *b_topline; /* Link to narrowed top text    */
+    struct line *b_botline; /* Link to narrowed bottom text */
+    struct ptt_ent *ptt_headp;
+    int b_type;             /* Type of buffer */
+    struct func_opts btp_opt;   /* Only for b_type = BTPROC */
+    int b_exec_level;       /* Recursion level */
+    int b_doto;             /* Offset of "." in above struct line */
+    int b_marko;            /* but for the "mark"           */
+    int b_mode;             /* editor mode of this buffer   */
+    int b_fcol;             /* first col to display         */
+    int b_EOLmissing;       /* When read in... */
+    int b_keylen;           /* encrypted key len            */
+    char b_active;          /* window activated flag        */
+    char b_nwnd;            /* Count of windows on buffer   */
+    char b_flag;            /* Flags                        */
+    char b_fname[NFILEN];   /* File name                    */
+    char b_bname[NBUFN];    /* Buffer name                  */
+    char b_key[NPAT];       /* current encrypted key        */
 };
 
 #define BTNORM  0               /* A "normal" buffer            */
@@ -442,18 +437,16 @@ struct buffer {
 
 #define NUMMODES    11          /* # of defined modes           */
 
-/*
- * The starting position of a region, and the size of the region in
+/* The starting position of a region, and the size of the region in
  * characters, is kept in a region structure.  Used by the region commands.
  */
 struct region {
-        struct line *r_linep;   /* Origin struct line address.         */
-        int r_offset;           /* Origin struct line offset.          */
-        long r_size;            /* Length in characters.        */
+    struct line *r_linep;   /* Origin struct line address.         */
+    int r_offset;           /* Origin struct line offset.          */
+    long r_size;            /* Length in characters.        */
 };
 
-/*
- * The editor communicates with the display using a high level interface. A
+/* The editor communicates with the display using a high level interface. A
  * "TERM" structure holds useful variables, and indirect pointers to routines
  * that do useful operations. The low level get and put routines are here too.
  * This lets a terminal, in addition to having non standard commands, have
@@ -462,52 +455,52 @@ struct region {
  * one terminal type.
  */
 struct terminal {
-        short t_mrow;               /* max number of rows allowable  */
-        short t_nrow;               /* current number of rows used   */
-        short t_mcol;               /* max Number of columns.        */
-        short t_ncol;               /* current Number of columns.    */
-        short t_margin;             /* min margin for extended lines */
-        short t_scrsiz;             /* size of scroll region "       */
-        int t_pause;                /* # times thru update to pause  */
-        void (*t_open)(void);       /* Open terminal at the start.   */
-        void (*t_close)(void);      /* Close terminal at end.        */
-        void (*t_kopen)(void);      /* Open keyboard                 */
-        void (*t_kclose)(void);     /* close keyboard                */
-        int (*t_getchar)(void);     /* Get character from keyboard.  */
-        int (*t_putchar)(int);      /* Put character to display.     */
-        void (*t_flush) (void);     /* Flush output buffers.         */
-        void (*t_move)(int, int);   /* Move the cursor, origin 0.    */
-        void (*t_eeol)(void);       /* Erase to end of line.         */
-        void (*t_eeop)(void);       /* Erase to end of page.         */
-        void (*t_beep)(void);       /* Beep.                         */
-        void (*t_rev)(int);         /* set reverse video state       */
-        int (*t_rez)(char *);       /* change screen resolution      */
+    short t_mrow;               /* max number of rows allowable  */
+    short t_nrow;               /* current number of rows used   */
+    short t_mcol;               /* max Number of columns.        */
+    short t_ncol;               /* current Number of columns.    */
+    short t_margin;             /* min margin for extended lines */
+    short t_scrsiz;             /* size of scroll region "       */
+    int t_pause;                /* # times thru update to pause  */
+    void (*t_open)(void);       /* Open terminal at the start.   */
+    void (*t_close)(void);      /* Close terminal at end.        */
+    void (*t_kopen)(void);      /* Open keyboard                 */
+    void (*t_kclose)(void);     /* close keyboard                */
+    int (*t_getchar)(void);     /* Get character from keyboard.  */
+    int (*t_putchar)(int);      /* Put character to display.     */
+    void (*t_flush) (void);     /* Flush output buffers.         */
+    void (*t_move)(int, int);   /* Move the cursor, origin 0.    */
+    void (*t_eeol)(void);       /* Erase to end of line.         */
+    void (*t_eeop)(void);       /* Erase to end of page.         */
+    void (*t_beep)(void);       /* Beep.                         */
+    void (*t_rev)(int);         /* set reverse video state       */
+    int (*t_rez)(char *);       /* change screen resolution      */
 #if COLOR
-        void (*t_setfor) (int);     /* set foreground color          */
-        void (*t_setback) (int);    /* set background color          */
+    void (*t_setfor) (int);     /* set foreground color          */
+    void (*t_setback) (int);    /* set background color          */
 #endif
-        void (*t_scroll)(int, int,int); /* scroll a region of the screen */
+    void (*t_scroll)(int, int,int); /* scroll a region of the screen */
 };
 
-/*      TEMPORARY macros for terminal I/O  (to be placed in a machine
+/* TEMPORARY macros for terminal I/O  (to be placed in a machine
                                             dependant place later)      */
 
-#define TTopen          (*term.t_open)
-#define TTclose         (*term.t_close)
-#define TTkopen         (*term.t_kopen)
-#define TTkclose        (*term.t_kclose)
-#define TTgetc          (*term.t_getchar)
-#define TTputc          (*term.t_putchar)
-#define TTflush         (*term.t_flush)
-#define TTmove          (*term.t_move)
-#define TTeeol          (*term.t_eeol)
-#define TTeeop          (*term.t_eeop)
-#define TTbeep          (*term.t_beep)
-#define TTrev           (*term.t_rev)
-#define TTrez           (*term.t_rez)
-#if     COLOR
-#define TTforg          (*term.t_setfor)
-#define TTbacg          (*term.t_setback)
+#define TTopen      (*term.t_open)
+#define TTclose     (*term.t_close)
+#define TTkopen     (*term.t_kopen)
+#define TTkclose    (*term.t_kclose)
+#define TTgetc      (*term.t_getchar)
+#define TTputc      (*term.t_putchar)
+#define TTflush     (*term.t_flush)
+#define TTmove      (*term.t_move)
+#define TTeeol      (*term.t_eeol)
+#define TTeeop      (*term.t_eeop)
+#define TTbeep      (*term.t_beep)
+#define TTrev       (*term.t_rev)
+#define TTrez       (*term.t_rez)
+#if COLOR
+#define TTforg      (*term.t_setfor)
+#define TTbacg      (*term.t_setback)
 #endif
 
 /* Structure for the table of initial key bindings. */
@@ -517,24 +510,24 @@ struct terminal {
 #define PROC_KMAP 2
 typedef int (*fn_t)(int, int);  /* Bound function prototype*/
 struct key_tab {
-        int k_type;             /* function or procedure buffer */
-        int k_code;             /* Key code */
-        union {
-            fn_t k_fp;          /* Routine to handle it, or... */
-            char *pbp;          /* ...procedure buffer name */
-        } hndlr;
-        struct name_bind *fi;   /* Function info */
+    int k_type;             /* function or procedure buffer */
+    int k_code;             /* Key code */
+    union {
+        fn_t k_fp;          /* Routine to handle it, or... */
+        char *pbp;          /* ...procedure buffer name */
+    } hndlr;
+    struct name_bind *fi;   /* Function info */
 };
-struct key_tab_init {           /* Initializing data */
-        int k_code;             /* Key code */
-        fn_t k_fp;              /* Routine to handle it */
+struct key_tab_init {       /* Initializing data */
+    int k_code;             /* Key code */
+    fn_t k_fp;              /* Routine to handle it */
 };
 
 /* Structure for the name binding table. */
 struct name_bind {
-        char *n_name;            /* name of function */
-        fn_t n_func;             /* function name is bound to */
-        struct func_opts opt;
+    char *n_name;            /* name of function */
+    fn_t n_func;             /* function name is bound to */
+    struct func_opts opt;
 };
 
 /* The editor holds deleted text chunks in the struct kill buffer. The
@@ -544,8 +537,8 @@ struct name_bind {
  * was taken up by the keycode structure).
  */
 struct kill {
-        struct kill *d_next;   /* Link to next chunk, NULL if last. */
-        char d_chunk[KBLOCK];  /* Deleted text. */
+    struct kill *d_next;   /* Link to next chunk, NULL if last. */
+    char d_chunk[KBLOCK];  /* Deleted text. */
 };
 
 /* When emacs' command interpetor needs to get a variable's name,
@@ -553,8 +546,8 @@ struct kill {
  * structure. The v_num field is a index into the appropriate variable table.
  */
 struct variable_description {
-        int v_type;  /* Type of variable. */
-        int v_num;   /* Ordinal pointer to variable in list. */
+    int v_type;  /* Type of variable. */
+    int v_num;   /* Ordinal pointer to variable in list. */
 };
 
 /* The !WHILE directive in the execution language needs to
@@ -563,10 +556,10 @@ struct variable_description {
  * the following structure.
 */
 struct while_block {
-        struct line *w_begin;        /* ptr to !while statement */
-        struct line *w_end;          /* ptr to the !endwhile statement */
-        int w_type;                  /* block type */
-        struct while_block *w_next;  /* next while */
+    struct line *w_begin;        /* ptr to !while statement */
+    struct line *w_end;          /* ptr to the !endwhile statement */
+    int w_type;                  /* block type */
+    struct while_block *w_next;  /* next while */
 };
 
 #define BTWHILE         1
@@ -631,16 +624,16 @@ struct while_block {
  * (struct magic_replacement).
  */
 struct magic {
-        short int mc_type;
-        union {
-                int lchar;
-                char *cclmap;
-        } u;
+    short int mc_type;
+    union {
+        int lchar;
+        char *cclmap;
+    } u;
 };
 
 struct magic_replacement {
-        short int mc_type;
-        char *rstr;
+    short int mc_type;
+    char *rstr;
 };
 
 #endif

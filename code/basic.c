@@ -24,8 +24,7 @@
  * So it's been renamed and simplified.
  * It's not empty if we have any *byte* other than a space or tab
  */
-static int curline_empty(void)
-{
+static int curline_empty(void) {
     char c;
     int end = llength(curwp->w_dotp);
     for (int ci = 0; ci < end; ci++) {
@@ -58,11 +57,10 @@ static int getgoal(struct line *dlp) {
 /*
  * Move the cursor to the beginning of the current line.
  */
-int gotobol(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        curwp->w_doto = 0;
-        return TRUE;
+int gotobol(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    curwp->w_doto = 0;
+    return TRUE;
 }
 
 /*
@@ -80,32 +78,30 @@ int gotobol(int f, int n)
  * has never done anything).
  * Internal calls should be to back_grapheme() *not* backchar().
  */
-int back_grapheme(int n)
-{
-        struct line *lp;
+int back_grapheme(int n) {
+    struct line *lp;
 
-        if (n < 0)
-                return forw_grapheme(-n);
-        int moved = 0;
-        while (n--) {
-                if (curwp->w_doto == 0) {
-                        if ((lp = lback(curwp->w_dotp)) == curbp->b_linep)
-                                return -moved;
-                        curwp->w_dotp = lp;
-                        curwp->w_doto = llength(lp);
-                        curwp->w_flag |= WFMOVE;
-                        moved++;
-                } else {
+    if (n < 0) return forw_grapheme(-n);
+    int moved = 0;
+    while (n--) {
+        if (curwp->w_doto == 0) {
+            if ((lp = lback(curwp->w_dotp)) == curbp->b_linep) return -moved;
+            curwp->w_dotp = lp;
+            curwp->w_doto = llength(lp);
+            curwp->w_flag |= WFMOVE;
+            moved++;
+        }
+        else {
 /* GGR - We must cater for utf8 characters in the same way
  * as the rest of the utf8 code does.
  */
-                        int saved_doto = curwp->w_doto;
-                        curwp->w_doto = prev_utf8_offset(
-                                curwp->w_dotp->l_text, curwp->w_doto, TRUE);
-                        moved += saved_doto - curwp->w_doto;
-                }
+            int saved_doto = curwp->w_doto;
+            curwp->w_doto =
+                 prev_utf8_offset(curwp->w_dotp->l_text, curwp->w_doto, TRUE);
+            moved += saved_doto - curwp->w_doto;
         }
-        return moved;
+    }
+    return moved;
 }
 
 /* We still need a bindable function that returns TRUE/FALSE */
@@ -114,18 +110,15 @@ int backchar(int f, int n) {
     return (back_grapheme(n) > 0);
 }
 
-/*
- * Move the cursor to the end of the current line. Trivial. No errors.
+/* Move the cursor to the end of the current line. Trivial. No errors.
  */
-int gotoeol(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        curwp->w_doto = llength(curwp->w_dotp);
-        return TRUE;
+int gotoeol(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    curwp->w_doto = llength(curwp->w_dotp);
+    return TRUE;
 }
 
-/*
- * Move the cursor forwards by "n" characters.
+/* Move the cursor forwards by "n" characters.
  * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
  * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
@@ -139,33 +132,30 @@ int gotoeol(int f, int n)
  * has never done anything).
  * Internal calls should be to forw_grapheme() *not* forwchar().
  */
-int forw_grapheme(int n)
-{
-        if (n < 0)
-                return back_grapheme(-n);
-        int moved = 0;
-        while (n--) {
-                int len = llength(curwp->w_dotp);
-                if (curwp->w_doto == len) {
-                        if (curwp->w_dotp == curbp->b_linep)
-                                return -moved;
-                        curwp->w_dotp = lforw(curwp->w_dotp);
-                        curwp->w_doto = 0;
-                        curwp->w_flag |= WFMOVE;
-                        moved++;
-                }
-                else {
+int forw_grapheme(int n) {
+    if (n < 0) return back_grapheme(-n);
+    int moved = 0;
+    while (n--) {
+        int len = llength(curwp->w_dotp);
+        if (curwp->w_doto == len) {
+            if (curwp->w_dotp == curbp->b_linep) return -moved;
+            curwp->w_dotp = lforw(curwp->w_dotp);
+            curwp->w_doto = 0;
+            curwp->w_flag |= WFMOVE;
+            moved++;
+        }
+        else {
 /* GGR - We must cater for utf8 characters in the same way
  * as the rest of the utf8 code does.
  */
-                        int saved_doto = curwp->w_doto;
-                        curwp->w_doto = next_utf8_offset(
-                                curwp->w_dotp->l_text, curwp->w_doto,
-                                llength(curwp->w_dotp), TRUE);
-                        moved += curwp->w_doto - saved_doto;
-                }
+            int saved_doto = curwp->w_doto;
+            curwp->w_doto = 
+                 next_utf8_offset(curwp->w_dotp->l_text, curwp->w_doto,
+                                  llength(curwp->w_dotp), TRUE);
+            moved += curwp->w_doto - saved_doto;
         }
-        return moved;
+    }
+    return moved;
 }
 
 /* We still need a bindable/macro function that returns TRUE/FALSE */
@@ -174,141 +164,128 @@ int forwchar(int f, int n) {
     return (forw_grapheme(n) > 0);
 }
 
-/*
- * Move to a particular line.
+/* Move to a particular line.
  *
  * @n: The specified line position at the current buffer.
  */
-int gotoline(int f, int n)
-{
-        int status;
-        char arg[NSTRING]; /* Buffer to hold argument. */
+int gotoline(int f, int n) {
+    int status;
+    char arg[NSTRING]; /* Buffer to hold argument. */
 
-        /* Get an argument if one doesnt exist. */
-        if (f == FALSE) {
-                if ((status =
-                     mlreply("Line to GOTO: ", arg, NSTRING)) != TRUE) {
-                        mlwrite(MLpre "Aborted" MLpost);
-                        return status;
-                }
-                n = atoi(arg);
+/* Get an argument if one doesnt exist. */
+    if (f == FALSE) {
+        if ((status = mlreply("Line to GOTO: ", arg, NSTRING)) != TRUE) {
+            mlwrite(MLpre "Aborted" MLpost);
+            return status;
         }
-        /* Handle the case where the user may be passed something like this:
-         * em filename +
-         * In this case we just go to the end of the buffer.
-         */
-        if (n == 0)
-                return gotoeob(f, n);
+        n = atoi(arg);
+    }
+/* Handle the case where the user may be passed something like this:
+ * em filename +
+ * In this case we just go to the end of the buffer.
+ */
+    if (n == 0) return gotoeob(f, n);
 
-        /* If a bogus argument was passed, then returns false. */
-        if (n < 0)
-                return FALSE;
+/* If a bogus argument was passed, then returns false. */
+    if (n < 0) return FALSE;
 
-        /* First, we go to the begin of the buffer. */
-        gotobob(f, n);
-        return forwline(f, n - 1);
+/* First, we go to the begin of the buffer. */
+    gotobob(f, n);
+    return forwline(f, n - 1);
 }
 
-/*
- * Goto the beginning of the buffer. Massive adjustment of dot. This is
+/* Goto the beginning of the buffer. Massive adjustment of dot. This is
  * considered to be hard motion; it really isn't if the original value of dot
  * is the same as the new value of dot. Normally bound to "M-<".
  */
-int gotobob(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        curwp->w_dotp = lforw(curbp->b_linep);
-        curwp->w_doto = 0;
-        curwp->w_flag |= WFHARD;
-        return TRUE;
+int gotobob(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    curwp->w_dotp = lforw(curbp->b_linep);
+    curwp->w_doto = 0;
+    curwp->w_flag |= WFHARD;
+    return TRUE;
 }
 
-/*
- * Move to the end of the buffer. Dot is always put at the end of the file
+/* Move to the end of the buffer. Dot is always put at the end of the file
  * (ZJ). The standard screen code does most of the hard parts of update.
  * Bound to "M->".
  */
-int gotoeob(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        curwp->w_dotp = curbp->b_linep;
-        curwp->w_doto = 0;
-        curwp->w_flag |= WFHARD;
-        return TRUE;
+int gotoeob(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    curwp->w_dotp = curbp->b_linep;
+    curwp->w_doto = 0;
+    curwp->w_flag |= WFHARD;
+    return TRUE;
 }
 
-/*
- * Move forward by full lines. If the number of lines to move is less than
+/* Move forward by full lines. If the number of lines to move is less than
  * zero, call the backward line function to actually do it. The last command
  * controls how the goal column is set. Bound to "C-N". No errors are
  * possible.
  */
-int forwline(int f, int n)
-{
-        struct line *dlp;
+int forwline(int f, int n) {
+    struct line *dlp;
 
-        if (n < 0)
-                return backline(f, -n);
+    if (n < 0) return backline(f, -n);
 
-        /* if we are on the last line as we start....fail the command */
-        if (curwp->w_dotp == curbp->b_linep)
-                return FALSE;
+/* If we are on the last line as we start....fail the command */
 
-        /* if the last command was not note a line move,
-           reset the goal column */
-        if ((lastflag & CFCPCN) == 0)
-                curgoal = getccol(FALSE);
+    if (curwp->w_dotp == curbp->b_linep) return FALSE;
 
-        /* flag this command as a line move */
-        thisflag |= CFCPCN;
+/* If the last command was not a line move, reset the goal column */
 
-        /* and move the point down */
-        dlp = curwp->w_dotp;
-        while (n-- && dlp != curbp->b_linep)
-                dlp = lforw(dlp);
+    if ((lastflag & CFCPCN) == 0) curgoal = getccol(FALSE);
 
-        /* reseting the current position */
-        curwp->w_dotp = dlp;
-        curwp->w_doto = getgoal(dlp);
-        curwp->w_flag |= WFMOVE;
-        return TRUE;
+/* Flag this command as a line move */
+
+    thisflag |= CFCPCN;
+
+/* And move the point down */
+
+    dlp = curwp->w_dotp;
+    while (n-- && dlp != curbp->b_linep) dlp = lforw(dlp);
+
+/* Reseting the current position */
+
+    curwp->w_dotp = dlp;
+    curwp->w_doto = getgoal(dlp);
+    curwp->w_flag |= WFMOVE;
+    return TRUE;
 }
 
-/*
- * This function is like "forwline", but goes backwards. The scheme is exactly
+/* This function is like "forwline", but goes backwards. The scheme is exactly
  * the same. Check for arguments that are less than zero and call your
  * alternate. Figure out the new line and call "movedot" to perform the
  * motion. No errors are possible. Bound to "C-P".
  */
-int backline(int f, int n)
-{
-        struct line *dlp;
+int backline(int f, int n) {
+    struct line *dlp;
 
-        if (n < 0)
-                return forwline(f, -n);
+    if (n < 0) return forwline(f, -n);
 
-        /* if we are on the last line as we start....fail the command */
-        if (lback(curwp->w_dotp) == curbp->b_linep)
-                return FALSE;
+/* If we are on the first line as we start....fail the command */
 
-        /* if the last command was not note a line move,
-           reset the goal column */
-        if ((lastflag & CFCPCN) == 0)
-                curgoal = getccol(FALSE);
+    if (lback(curwp->w_dotp) == curbp->b_linep) return FALSE;
 
-        /* flag this command as a line move */
-        thisflag |= CFCPCN;
+/* If the last command was not a line move, reset the goal column */
 
-        /* and move the point up */
-        dlp = curwp->w_dotp;
-        while (n-- && lback(dlp) != curbp->b_linep)
-                dlp = lback(dlp);
+    if ((lastflag & CFCPCN) == 0) curgoal = getccol(FALSE);
 
-        /* reseting the current position */
-        curwp->w_dotp = dlp;
-        curwp->w_doto = getgoal(dlp);
-        curwp->w_flag |= WFMOVE;
-        return TRUE;
+/* Flag this command as a line move */
+
+    thisflag |= CFCPCN;
+
+/* And move the point up */
+
+    dlp = curwp->w_dotp;
+    while (n-- && lback(dlp) != curbp->b_linep) dlp = lback(dlp);
+
+/* Reseting the current position */
+
+    curwp->w_dotp = dlp;
+    curwp->w_doto = getgoal(dlp);
+    curwp->w_flag |= WFMOVE;
+    return TRUE;
 }
 
 /* The inword() test has been replaced with this, as we really want to
@@ -329,14 +306,12 @@ static int at_whitespace(void) {
     return FALSE;
 }
 
-/*
- * Go back to the beginning of the current paragraph.
+/* Go back to the beginning of the current paragraph.
  * Here we look for an empty line to delimit the beginning of a paragraph.
  *
  * int f, n;            default Flag & Numeric argument
  */
-int gotobop(int f, int n)
-{
+int gotobop(int f, int n) {
     int suc;        /* Bytes moved by last back_grapheme() */
 
     if (n < 0)      /* the other way... */
@@ -365,14 +340,12 @@ int gotobop(int f, int n)
     return TRUE;
 }
 
-/*
- * Go forword to the end of the current paragraph
+/* Go forword to the end of the current paragraph
  * Here we look for an empty line to delimit the beginning of a paragraph.
  *
  * int f, n;            default Flag & Numeric argument
  */
-int gotoeop(int f, int n)
-{
+int gotoeop(int f, int n) {
     int suc;        /* Bytes moved by last back_grapheme() */
 
     if (n < 0)      /* the other way... */
@@ -403,8 +376,7 @@ int gotoeop(int f, int n)
     return TRUE;
 }
 
-/*
- * Scroll forward by a specified number of lines, or by a full page if no
+/* Scroll forward by a specified number of lines, or by a full page if no
  * argument. Bound to "C-V". The "2" in the arithmetic on the window size is
  * the overlap; this value is the default overlap value in ITS EMACS. Because
  * this zaps the top line in the display window, we have to do a hard update.
@@ -442,8 +414,7 @@ int forwpage(int f, int n) {
     return TRUE;
 }
 
-/*
- * This command is like "forwpage", but it goes backwards. The "2", like
+/* This command is like "forwpage", but it goes backwards. The "2", like
  * above, is the overlap between the two windows. The value is from the ITS
  * EMACS manual. Bound to "M-V". We do a hard update for exactly the same
  * reason.
@@ -474,41 +445,37 @@ int backpage(int f, int n) {
     return TRUE;
 }
 
-/*
- * Set the mark in the current window to the value of "." in the window. No
+/* Set the mark in the current window to the value of "." in the window. No
  * errors are possible. Bound to "M-.".
  */
-int setmark(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        curwp->w_markp = curwp->w_dotp;
-        curwp->w_marko = curwp->w_doto;
-        mlwrite(MLpre "Mark set" MLpost);
-        return TRUE;
+int setmark(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    curwp->w_markp = curwp->w_dotp;
+    curwp->w_marko = curwp->w_doto;
+    mlwrite(MLpre "Mark set" MLpost);
+    return TRUE;
 }
 
-/*
- * Swap the values of "." and "mark" in the current window. This is pretty
+/* Swap the values of "." and "mark" in the current window. This is pretty
  * easy, bacause all of the hard work gets done by the standard routine
  * that moves the mark about. The only possible error is "no mark". Bound to
  * "C-X C-X".
  */
-int swapmark(int f, int n)
-{
-        UNUSED(f); UNUSED(n);
-        struct line *odotp;
-        int odoto;
+int swapmark(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct line *odotp;
+    int odoto;
 
-        if (curwp->w_markp == NULL) {
-                mlwrite("No mark in this window");
-                return FALSE;
-        }
-        odotp = curwp->w_dotp;
-        odoto = curwp->w_doto;
-        curwp->w_dotp = curwp->w_markp;
-        curwp->w_doto = curwp->w_marko;
-        curwp->w_markp = odotp;
-        curwp->w_marko = odoto;
-        curwp->w_flag |= WFMOVE;
-        return TRUE;
+    if (curwp->w_markp == NULL) {
+        mlwrite("No mark in this window");
+        return FALSE;
+    }
+    odotp = curwp->w_dotp;
+    odoto = curwp->w_doto;
+    curwp->w_dotp = curwp->w_markp;
+    curwp->w_doto = curwp->w_marko;
+    curwp->w_markp = odotp;
+    curwp->w_marko = odoto;
+    curwp->w_flag |= WFMOVE;
+    return TRUE;
 }

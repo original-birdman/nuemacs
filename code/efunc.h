@@ -354,7 +354,6 @@ extern int isearch(int f, int n);
 /* eval.c */
 extern void varinit(void);
 extern int stol(char *);
-extern int abs(int);
 extern int setvar(int, int);
 extern char *ue_itoa(int);
 extern int gettyp(char *);

@@ -9,11 +9,11 @@
 
 #define termdef 1               /* don't define "term" external */
 
-#include        <stdio.h>
-#include        "estruct.h"
-#include        "edef.h"
+#include <stdio.h>
+#include "estruct.h"
+#include "edef.h"
 
-#if     ANSI
+#if ANSI
 
 #define NROW    25              /* Screen size.                 */
 #define NCOL    80              /* Edit if you want to.         */
@@ -41,7 +41,7 @@ extern int ansikopen();
 extern int ansikclose();
 extern int ansicres();
 
-#if     COLOR
+#if COLOR
 extern int ansifcol();
 extern int ansibcol();
 
@@ -55,31 +55,31 @@ int cbcolor = -1;               /* current background color */
  * "termio" code.
  */
 struct terminal term = {
-        MROW - 1,
-        NROW - 1,
-        NCOL,
-        NCOL,
-        MARGIN,
-        SCRSIZ,
-        NPAUSE,
-        ansiopen,
-        ansiclose,
-        ansikopen,
-        ansikclose,
-        ttgetc,
-        ttputc,
-        ttflush,
-        ansimove,
-        ansieeol,
-        ansieeop,
-        ansibeep,
-        ansirev,
-        ansicres,
+    MROW - 1,
+    NROW - 1,
+    NCOL,
+    NCOL,
+    MARGIN,
+    SCRSIZ,
+    NPAUSE,
+    ansiopen,
+    ansiclose,
+    ansikopen,
+    ansikclose,
+    ttgetc,
+    ttputc,
+    ttflush,
+    ansimove,
+    ansieeol,
+    ansieeop,
+    ansibeep,
+    ansirev,
+    ansicres,
 #if COLOR
-        ansifcol,
-        ansibcol,
+    ansifcol,
+    ansibcol,
 #endif
-        NULL,
+    NULL,
 };
 
 #if COLOR
@@ -87,149 +87,134 @@ struct terminal term = {
  * Set the current output color
  * color: color to set.
  */
-void ansifcol(int color)
-{
-        if (color == cfcolor)
-                return;
-        ttputc(ESC);
-        ttputc('[');
-        ansiparm(color + 30);
-        ttputc('m');
-        cfcolor = color;
-        return;
+void ansifcol(int color) {
+    if (color == cfcolor) return;
+    ttputc(ESC);
+    ttputc('[');
+    ansiparm(color + 30);
+    ttputc('m');
+    cfcolor = color;
+    return;
 }
 
 /* Set the current background color.
  * color: color to set.
  */
-void ansibcol(int color)
-{
-        if (color == cbcolor)
-                return;
-        ttputc(ESC);
-        ttputc('[');
-        ansiparm(color + 40);
-        ttputc('m');
-        cbcolor = color;
+void ansibcol(int color) {
+    if (color == cbcolor) return;
+    ttputc(ESC);
+    ttputc('[');
+    ansiparm(color + 40);
+    ttputc('m');
+    cbcolor = color;
 }
 #endif
 
-ansimove(int row, int col)
-{
-        ttputc(ESC);
-        ttputc('[');
-        ansiparm(row + 1);
-        ttputc(';');
-        ansiparm(col + 1);
-        ttputc('H');
+ansimove(int row, int col) {
+    ttputc(ESC);
+    ttputc('[');
+    ansiparm(row + 1);
+    ttputc(';');
+    ansiparm(col + 1);
+    ttputc('H');
 }
 
-void ansieeol(void)
-{
-        ttputc(ESC);
-        ttputc('[');
-        ttputc('K');
+void ansieeol(void) {
+    ttputc(ESC);
+    ttputc('[');
+    ttputc('K');
 }
 
-void ansieeop(void)
-{
-#if     COLOR
-        ansifcol(gfcolor);
-        ansibcol(gbcolor);
+void ansieeop(void) {
+#if COLOR
+    ansifcol(gfcolor);
+    ansibcol(gbcolor);
 #endif
-        ttputc(ESC);
-        ttputc('[');
-        ttputc('J');
+    ttputc(ESC);
+    ttputc('[');
+    ttputc('J');
 }
 
 /* Change reverse video state.
  * state: TRUE = reverse, FALSE = normal
  */
-void ansirev(int state)
-{
-#if     COLOR
-        int ftmp, btmp;         /* temporaries for colors */
+void ansirev(int state) {
+#if COLOR
+    int ftmp, btmp;         /* temporaries for colors */
 #endif
 
-        ttputc(ESC);
-        ttputc('[');
-        ttputc(state ? '7' : '0');
-        ttputc('m');
-#if     COLOR
-        if (state == FALSE) {
-                ftmp = cfcolor;
-                btmp = cbcolor;
-                cfcolor = -1;
-                cbcolor = -1;
-                ansifcol(ftmp);
-                ansibcol(btmp);
-        }
+    ttputc(ESC);
+    ttputc('[');
+    ttputc(state ? '7' : '0');
+    ttputc('m');
+#if COLOR
+    if (state == FALSE) {
+        ftmp = cfcolor;
+        btmp = cbcolor;
+        cfcolor = -1;
+        cbcolor = -1;
+        ansifcol(ftmp);
+        ansibcol(btmp);
+    }
 #endif
 }
 
 /* Change screen resolution. */
-int ansicres(void)
-{
-        return TRUE;
+int ansicres(void) {
+    return TRUE;
 }
 
-void ansibeep(void)
-{
-        ttputc(BEL);
-        ttflush();
+void ansibeep(void) {
+    ttputc(BEL);
+    ttflush();
 }
 
-void ansiparm(int n)
-{
-        int q, r;
+void ansiparm(int n) {
+    int q, r;
 
-        q = n / 10;
-        if (q != 0) {
-                r = q / 10;
-                if (r != 0) {
-                        ttputc((r % 10) + '0');
-                }
-                ttputc((q % 10) + '0');
+    q = n / 10;
+    if (q != 0) {
+        r = q / 10;
+        if (r != 0) {
+            ttputc((r % 10) + '0');
         }
-        ttputc((n % 10) + '0');
+        ttputc((q % 10) + '0');
+    }
+    ttputc((n % 10) + '0');
 }
 
-void ansiopen(void)
-{
+void ansiopen(void) {
 #if BSD
-        char *cp;
+    char *cp;
 
-        if ((cp = getenv("TERM")) == NULL) {
-                puts("Shell variable TERM not defined!");
-                exit(1);
-        }
-        if (strcmp(cp, "vt100") != 0) {
-                puts("Terminal type not 'vt100'!");
-                exit(1);
-        }
+    if ((cp = getenv("TERM")) == NULL) {
+        puts("Shell variable TERM not defined!");
+        exit(1);
+    }
+    if (strcmp(cp, "vt100") != 0) {
+        puts("Terminal type not 'vt100'!");
+        exit(1);
+    }
 #endif
-        strcpy(sres, "NORMAL");
-        revexist = TRUE;
-        ttopen();
+    strcpy(sres, "NORMAL");
+    revexist = TRUE;
+    ttopen();
 }
 
-void ansiclose(void)
-{
-#if     COLOR
-        ansifcol(7);
-        ansibcol(0);
+void ansiclose(void) {
+#if COLOR
+    ansifcol(7);
+    ansibcol(0);
 #endif
-        ttclose();
+    ttclose();
 }
 
 /* Open the keyboard (a noop here). */
-void ansikopen(void)
-{
+void ansikopen(void) {
 }
 
 /* Close the keyboard (a noop here). */
-void ansikclose(void)
-{
+void ansikclose(void) {
 }
 
 #endif
