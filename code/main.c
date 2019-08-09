@@ -338,7 +338,14 @@ static int end_kbdmacro(void) {
 /* If there is any pending text we need to flush it first */
     if (kbd_idx) flush_kbd_text();
     lnewline();
-    if (kbdmode != PLAY) mlwrite(MLpre "End macro" MLpost);
+
+/* If we were in PLAY mode, restore the current c/f/n-last.
+ * Otherwise it gets lost if macro has aborted.
+ * If we weren;t in PLAY mode, report ending the macro.
+ */
+    if (kbdmode == PLAY) f_arg = p_arg;
+    else                 mlwrite(MLpre "End macro" MLpost);
+
     kbdmode = STOP;
 /* Reset ctlxe_togo regardless of current state */
     ctlxe_togo = 0;
@@ -1684,7 +1691,7 @@ int reexecute(int f, int n) {
     UNUSED(f);
     int reloop;
 /* If we are being asked to reexec running the macro (ctlxe) then we have
- * to return to let it happen (i.e. collect keys from tehT macro buffer).
+ * to return to let it happen (i.e. collect keys from the macro buffer).
  * We also need to remember how many times to pass here if n > 1.
  * Since we can't actually recurse into a keyboard macro we can
  * manage with this fudge, rather than having to restructure everything
