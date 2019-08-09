@@ -425,12 +425,6 @@ int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
     mstr->utf8c = 0;        /* None there yet */
     mstr->uc = 0;           /* Count unicode chars as we go */
     mstr->grphc = -1;       /* Not known */
-    if (len == 0) {
-        mstr->str = Xmalloc(1);
-        *(mstr->str) = '\0';
-        mstr->alloc = 1;
-        return 0;
-    }
 
 /* Set the case-mapping handler we wish to use */
 
@@ -448,10 +442,19 @@ int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
         return -1;
     }
 
-/* We'll allocate in steps of len+1...we add a trailing NUL */
+/* We only check this now, once we know the real length... */
+
     if (len < 1) len = strlen(in);
+    if (len == 0) {
+        mstr->str = Xmalloc(1);
+        *(mstr->str) = '\0';
+        mstr->alloc = 1;
+        return 0;
+    }
+
     mstr->str = NULL;       /* So Xrealloc() works at the start */
-    int rec_incr = len + 1;
+    int rec_incr = len + 1; /* Allocate in steps of len+1...trailing NUL */
+
     int used;
     for (int offset = 0; offset < len; offset += used) {
         unicode_t uc;
