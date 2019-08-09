@@ -69,24 +69,9 @@ static char *ltos(int val) {
     else     return falsem;
 }
 
-/* Make a string upper case
- * Internal to this routine - only needs to handle ASCII
- *
- * char *str;           string to upper case
- */
-static char *mkupper(char *str) {
-    char *sp;
-
-    sp = str;
-    while (*sp) {
-        if ('a' <= *sp && *sp <= 'z') *sp += 'A' - 'a';
-        ++sp;
-    }
-    return str;
-}
-
 /* Make a string lower case
- * Internal to this routine - only needs to handle ASCII
+ * Internal to this routine - only needs to handle ASCII as it is only
+ * used for the function names defined for this code.
  *
  * char *str;           string to lower case
  */
@@ -184,6 +169,8 @@ static char *gtfun(char *fname) {
     char arg2[NSTRING];     /* value of second argument */
     char arg3[NSTRING];     /* value of third argument */
     static char result[2 * NSTRING];        /* string result */
+    int nb;                 /* Number of bytes in string */
+    struct mstr csinfo;     /* Casing info structure */
 
 /* Look the function up in the function table */
     fname[3] = 0;           /* only first 3 chars significant */
@@ -237,20 +224,34 @@ static char *gtfun(char *fname) {
     case UFOR:          return ltos(stol(arg1) || stol(arg2));
     case UFLENGTH:      return ue_itoa(strlen(arg1));
     case UFUPPER:
-        strcpy(result, arg1);
-        return mkupper(result);
     case UFLOWER:
-        strcpy(result, arg1);
-        return mklower(result);
+        utf8_recase(funcs[fnum].tag == UFUPPER? UTF8_UPPER: UTF8_LOWER,
+             arg1, -1, &csinfo);
+        strcpy(result, csinfo.str);
+        free(csinfo.str);
+        return(result);
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
     case UFASCII:       return ue_itoa((int) arg1[0]);
+/* Allow for unicode as:
+ *      decimal codepoint
+ *      hex codepoint   (0x...)
+ *      U+hex           [0x must be chars 1 and 2]
+ */
     case UFCHR:
-        result[0] = atoi(arg1);
-        result[1] = 0;
+        if (arg1[0] == 'U' && arg1[1] == '+') {
+            static char targ[20] = "0x";    /* Fudge to 0x instead */
+            strcpy(targ+2, arg1+2);         /* strtol then handles it */
+            tsp = targ;
+        }
+        else {
+            tsp = arg1;
+        }
+        nb = unicode_to_utf8(strtol(tsp, NULL, 0), result);
+        result[nb] = 0;
         return result;
-    case UFGTKEY:
-        result[0] = tgetc();
-        result[1] = 0;
+    case UFGTKEY:       /* Allow for unicode input. -> utf-8 */
+        nb = unicode_to_utf8(tgetc(), result);
+        result[nb] = 0;
         return result;
     case UFRND:         return ue_itoa((ernd() % abs(atoi(arg1))) + 1);
     case UFABS:         return ue_itoa(abs(atoi(arg1)));

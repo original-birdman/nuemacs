@@ -37,7 +37,7 @@ static int remap_c_on_intr = 0;
  * with a ^G. Used any time a confirmation is required.
  */
 int mlyesno(char *prompt) {
-    char c;                 /* input character */
+    int c;                  /* input character - tgetc() returns unicode */
     char buf[NPAT];         /* prompt to user */
 
     int res = -1;           /* NOT ABORT, TRUE or FALSE */

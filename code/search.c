@@ -1427,7 +1427,7 @@ static int replaces(int kind, int f, int n) {
     int nummatch;           /* number of found matches */
     int nlflag;             /* last char of search string a <NL>? */
     int nlrepl;             /* was a replace done on the last line? */
-    char c;                 /* input char for query */
+    int c;                  /* input char for query - tgetc() returns unicode */
     char tpat[NPAT];        /* temporary to hold search pattern */
     struct line *origline;  /* original "." position */
     int origoff;            /* and offset (for . query option) */
