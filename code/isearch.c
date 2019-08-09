@@ -374,7 +374,7 @@ int isearch(int f, int n) {
             curwp->w_dotp = curline;        /* Reset the line pointer */
             curwp->w_doto = curoff; /*  and the offset       */
             n = init_direction;     /* Reset search direction */
-            strncpy(pat, pat_save, NPAT);   /* Restore old search str */
+            strcpy(pat, pat_save);  /* Restore old search str */
             cmd_reexecute = 0;      /* Start the whole mess over  */
             goto start_over;        /* Let it take care of itself */
 
