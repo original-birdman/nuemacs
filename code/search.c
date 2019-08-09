@@ -1136,6 +1136,31 @@ static void savematch(void) {
     *ptr = '\0';
 }
 
+static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
+    int status;
+
+/* Search for the pattern for as long as n is positive (n == 0 will go
+ * through once, which is just fine).
+ */
+    do {
+
+/* We are going forwards so check for eob as otherwise the rest
+ * of this code (magical and ordinary) loops us round to the start
+ * and searches from there.
+ * Simpler to fudge the fix here....
+ */
+        if (curwp->w_dotp == curbp->b_linep) {
+            status = FALSE;
+            break;
+        }
+        if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
+            status = mcscanner(mcpat, FORWARD, PTEND);
+        else
+            status = scanner(pat, FORWARD, PTEND);
+    } while ((--n > 0) && status);
+    return status;
+}
+
 /*
  * forwsearch -- Search forward.  Get a search string from the user, and
  *      search for the string.  If found, reset the "." to be just after
@@ -1156,22 +1181,7 @@ int forwsearch(int f, int n) {
  * long as  n is positive (n == 0 will go through once, which is just fine).
  */
     if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
-        do {
-
-/* We are going forwards so check for eob as otherwise the rest
- * of this code (magical and ordinary) loops us round to the start
- * and searches from there.
- */
-            if (curwp->w_dotp == curbp->b_linep) {
-                status = FALSE;
-                break;
-            }
-
-            if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-                status = mcscanner(mcpat, FORWARD, PTEND);
-            else
-                status = scanner(pat, FORWARD, PTEND);
-        } while ((--n > 0) && status);
+        status = forwscanner(n);
 
 /* Save away the match, or complain if not there. */
 
@@ -1206,21 +1216,27 @@ int forwhunt(int f, int n) {
     if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc_type == MCNIL) {
         if (!mcstr()) return FALSE;
     }
+    status = forwscanner(n);
+
+/* Complain if not there - we already have the saved match... */
+
+    if (status != TRUE) mlwrite("Not found");
+
+    return status;
+}
+
+static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
+    int status;
+
 /* Search for the pattern for as long as n is positive (n == 0 will go
- * through once, which * is just fine).
+ * through once, which is just fine).
  */
     do {
         if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-            status = mcscanner(mcpat, FORWARD, PTEND);
+            status = mcscanner(tapcm, REVERSE, PTBEG);
         else
-            status = scanner(pat, FORWARD, PTEND);
+            status = scanner(tap, REVERSE, PTBEG);
     } while ((--n > 0) && status);
-
-/* Save away the match, or complain if not there. */
-
-    if (status == TRUE) savematch();
-    else                mlwrite("Not found");
-
     return status;
 }
 
@@ -1245,12 +1261,7 @@ int backsearch(int f, int n) {
  * as long as n is positive (n == 0 will go through once, which is just fine).
  */
     if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
-        do {
-            if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-                status = mcscanner(tapcm, REVERSE, PTBEG);
-            else
-                status = scanner(tap, REVERSE, PTBEG);
-        } while ((--n > 0) && status);
+        status = backscanner(n);
 
 /* Save away the match, or complain if not there. */
 
@@ -1287,16 +1298,11 @@ int backhunt(int f, int n) {
 /* Go search for it for as long as n is positive (n == 0 will go through
  * once, which  is just fine).
  */
-    do {
-        if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-            status = mcscanner(tapcm, REVERSE, PTBEG);
-        else
-            status = scanner(tap, REVERSE, PTBEG);
-    } while ((--n > 0) && status);
+    status = backscanner(n);
 
-/* Save away the match, or complain if not there. */
-    if (status == TRUE) savematch();
-    else                mlwrite("Not found");
+/* Complain if not there - we already have the saved match... */
+
+    if (status != TRUE) mlwrite("Not found");
 
     return status;
 }
