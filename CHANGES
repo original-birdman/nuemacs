@@ -2859,4 +2859,194 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.141
 
+========== GGR4.142
+
+Some utf8 changes
+
+bind.c
+efunc.h
+    Changed character case check in stock() to handle utf8 strings.
+    Made all internal functions static, removed them from efunc.h and
+    re-ordered some functions accordingly.
+
+input.c
+efunc.h
+line.h
+    Changed character case check on input to handle unicode chars.
+    Added ensure_uppercase() to do the mapping.
+    Move yankmb() declaration from efunc.h to line.h.
+
+eval.c
+efunc.h
+    Checked mklower() and mkupper() for utf8, but they only deal with
+    ASCII text. In the process made all internal routines static,
+    removed them from efunc.h and re-ordered some functions accordingly.
+    Reformatted/tidied code.
+
+buffer.c
+exec.c
+file.c
+isearch.c
+lock.c
+random.c
+search.c
+efunc.h
+    Removed all extern definitions of functions only used in one file
+    and made them static. Re-ordered/reformatted files in the process.
+    Removed:
+        makelist, ltoa, addline [buffer.c]
+        freewhile [exec.c]
+        ifile [file.c]
+        checknext, match_pat, promptpattern, get_char, uneat, reeat [isearch.c]
+        unlock, lckerror [lock.c]
+        tabsize (a variable), cinsert [random.c]
+        savematch, delins, rmcclear [search.c]
+        non-existent meexit, sys, shellprog, execprog
+    This shrunk the Intel x64 binary by >2%.
+
+region.c
+utf8.c
+utf8.h
+    Add a generic utf8_recase() function. Change tolower_utf8() to use
+    it. [utf8.c, utf8.h]
+    Change lowerregion() and upperregion() to be front-ends to
+    casechange_region(), which uses utf8_recase() and so now handles
+    unicode recasing. [region.c]
+    Re-ordered/reformatted region.c and utf8.c.
+
+exec.c
+region.c
+word.c
+utf8.c
+efunc.h
+utf8.h
+    Simplify ensure_case() to use utf8proc_toupper/tolower/totitle
+    directly and do nothing if the result is the same as the input.
+    Insert replacement *before* deleting original, so mark is moved
+    correctly if it directly follows the original.
+    Add code to fix-up mark location if ensure_case() changes byte-count
+    of the character.
+    Add special case of ß -> SS for UTF8_UPPER. [word.c]
+    Use the UTF8_UPPER/UTF8_LOWER/UTF8_TITLE option names from
+    utf8_recase() and changed callers to reflect this. [exec.c, word.c]
+    Remove tolower_utf8() [utf8.c/h] and change caller [exec.c] to use
+    utf8_recase().
+    Changed utf8_recase() calling sequence [utf8.c/h] to return more
+    info (via an mstr struct) and updated callers [exec.c, region.c].
+
+ansi.c
+basic.c
+eval.c
+exec.c
+ibmpc.c
+names.c
+pklock.c
+posix.c
+spawn.c
+tcap.c
+termio.c
+usage.c
+version.c
+vt52.c
+window.c
+wrapper.c
+charset.h
+ebind.h
+estruct.h
+line.h
+    Finally decided to tidy up all source files to use 4-space indenting.
+    No actual code changes except:
+    o Removed abs() from eval.c and efunc.h, as it's a C library function.
+    o Removed '#undef abs' checking from estruct.h
+
+
+Makefile
+bind.c
+buffer.c
+display.c
+eval.c
+exec.c
+fileio.c
+globals.c
+input.c
+line.c
+lock.c
+main.c
+names.c
+search.c
+utf8.c
+window.c
+word.c
+wrapper.c
+estruct.h
+edef.h
+efunc.h
+evar.h
+wrapper.h (deleted)
+    Change all malloc/realloc calls to Xmalloc/Xrealloc, so that the
+    check for failure (NULL pointer returned) is only done in one place.
+    For those calls which check for NULL, removed that test and any
+    dependent code block.
+    If such an error does occur then exit - as we are in real trouble.
+    Changed wrapper.c to contain Xmalloc() and Xrealloc() definitions
+    and removed the existing (unused) xmkstemp() and xmalloc().
+    Deleted wrapper.h [Makefile]
+    Removed the unused code for memory stats envram, EVRAM and the
+    associated $ram system variable, RAMSIZE and RAMSHOW. [eval.c,
+    globals.c, main.c, edef.h, estruct.h, evar.h]
+    Moved two bits of common code into a static get_display_code()
+    function. [exec.c]
+    Tidied up the failexit/failexit2/noram goto label usage [exec.c]
+
+main.c
+    In end_kbdmacro() restore f_arg from p_arg if we were in PLAY mode,
+    as this gets called on a macro abort, and we need to reset things so
+    that re-executing a macro (clt-C) re-executes the macro after it
+    aborts, not re-executes the failing command.
+
+search.c
+    Drop the common search-loop code into forwscanner()/backscanner().
+    This means that the end-of-buffer check is now done for forwhunt()
+    as well as forwsearch().
+
+eval.c
+input.c
+search.c
+../TODO
+    Fixes for tgetc() returning a unicode char, not an ASCII one.
+    Just change char c to int c [input.c, search.c]
+    For eval.c:
+        o Fix GTKey to handle unicode input and return a utf-8 string.
+        o Fix UPPer and LOWer to work with utf-8 strings.
+        o Fix CHR to work with codes > 255. Allow hex and U+... codes
+    Removed this from TODO list.
+
+utf8.c
+    Fix utf8_recase() to check for len == 0 after obtaining the real
+    length.
+
+isearch.c
+    Use strcpy() not strncpy() to copy back pat_save in isearch().
+    Removes compiler warning on Debian buster, and is better code.
+
+Makefile
+complet.c [deleted]
+input.c
+efunc.h
+    Included code from complet.c into input.c, as that was the only user
+    of it.
+    Made previously external routines (comp_file() and comp_buffer())
+    static.
+    Removed complet.c references. [Makefile, efunc.h]
+    Dropped matching loop from comp_file() and comp_buffer() into an
+    internal matcher() function.
+    Replaced strncpy() call for moving so_far into choices with code to
+    limit so_far size, then use strcpy(). Removes compiler warning on
+    Debian buster , and is better code.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.142
+
 ==========
