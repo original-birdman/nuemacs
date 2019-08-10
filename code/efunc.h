@@ -372,11 +372,6 @@ extern int lock(char *fname);
 extern char *dolock(char *fname);
 extern char *undolock(char *fname);
 
-/* GGR */
-/* complet.c */
-extern int comp_file(char *, char *);
-extern int comp_buffer(char *, char *);
-
 /* names.c */
 extern void init_namelookup(void);
 extern struct name_bind *func_info(fn_t);
