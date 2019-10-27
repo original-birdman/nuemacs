@@ -415,16 +415,12 @@ static void add_to_res(struct mstr *mstr, char *buf, int nc, int incr) {
 /* We will be sent a utf8 string of defined length (or -1 to look for NUL).
  * Put the result into an alloc()ed buffer on the user-given variable.
  * It is the caller's responsibility to free() this.
+ * This will *always* allocate a return string as it "cannot" fail.
+ * If the "want" key is not recognized it is treated as UTF8_TITLE
+ * (which is more likely to show up with unexpected results...)
  */
-int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
+void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
     utf8proc_int32_t (*caser)(utf8proc_int32_t);
-
-/* Quickly handle this preverse case. */
-
-    mstr->alloc = 0;        /* Currently allocated */
-    mstr->utf8c = 0;        /* None there yet */
-    mstr->uc = 0;           /* Count unicode chars as we go */
-    mstr->grphc = -1;       /* Not known */
 
 /* Set the case-mapping handler we wish to use */
 
@@ -436,23 +432,32 @@ int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
         caser = utf8proc_tolower;
         break;
     case UTF8_TITLE:
+    default:
         caser = utf8proc_totitle;
         break;
-    default:
-        return -1;
     }
 
-/* We only check this now, once we know the real length... */
+/* Initialize some counters */
+
+    mstr->utf8c = 0;        /* None there yet */
+    mstr->uc = 0;           /* Count unicode chars as we go */
+    mstr->grphc = -1;       /* Not known */
+
+/* Have we been asked to determine the length? */
 
     if (len < 1) len = strlen(in);
+
+/* Now we know the length, Quickly handle this preverse case. */
+
     if (len == 0) {
         mstr->str = Xmalloc(1);
         *(mstr->str) = '\0';
         mstr->alloc = 1;
-        return 0;
+        return;
     }
 
     mstr->str = NULL;       /* So Xrealloc() works at the start */
+    mstr->alloc = 0;        /* Currently allocated */
     int rec_incr = len + 1; /* Allocate in steps of len+1...trailing NUL */
 
     int used;
@@ -462,7 +467,7 @@ int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
         mstr->uc++;
 
 /* There may be some special cases.
- *  The German Sharp S (ß) uppercases to ẞ in libutf8proc, but it isn't
+ * The German Sharp S (ß) uppercases to ẞ in libutf8proc, but that isn't
  * used in standard German - SS is. So lower->upper isn't reversible!
  * Other special cases may be needed...
  */
@@ -488,5 +493,5 @@ int utf8_recase(int want, char *in, int len, struct mstr *mstr) {
         add_to_res(mstr, tbuf, newlen, rec_incr);
     }
     *(mstr->str+mstr->utf8c) = '\0';    /* NUL terminate it */
-    return 0;   /* Success */
+    return;     /* Success */
 }

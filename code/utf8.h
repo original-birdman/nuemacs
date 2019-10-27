@@ -49,10 +49,10 @@ struct mstr {
     int alloc;          /* Allocated size of str */
     int utf8c;          /* Bytes - excluding trailing NUL */
     int uc;             /* unicode points */
-    int grphc;          /* grapheme count*/
+    int grphc;          /* grapheme count */
 };
 
-int utf8_recase(int , char *, int, struct mstr*);
+void utf8_recase(int , char *, int, struct mstr*);
 char *tolower_utf8(char *, int, int *, int *);
 
 #endif
