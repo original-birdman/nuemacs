@@ -3022,7 +3022,7 @@ search.c
     Removed this from TODO list.
 
 utf8.c
-    Fix utf8_recase() to check for len == 0 after obtaining the real
+    Fix utf8_recase() to check for len == 0 *after* obtaining the real
     length.
 
 isearch.c
@@ -3048,5 +3048,21 @@ efunc.h
 version.h
 etc/uemacs.hlp
    Update to version GGR4.142
+
+========== GGR4.143
+
+utf8.c
+utf8.h
+    Re-order some code and extended comments about how to use
+    utf8_recase(). Changed to being a void() function - any unknown
+    casing request is handled as TITLE case. No real code change.
+
+version.c
+    Print utf8proc version as well.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.143
 
 ==========
