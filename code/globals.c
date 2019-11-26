@@ -43,7 +43,6 @@ int ctlxc = CONTROL | 'X';      /* current control X prefix char */
 int reptc = CONTROL | 'U';      /* current universal repeat char */
 int abortc = CONTROL | 'G';     /* current abort command char   */
 
-int quotec = 0x11;              /* quote char during mlreply() */
 int tabmask = 0x07;             /* tabulator mask */
 char *cname[] = {               /* names of colors              */
         "BLACK", "RED", "GREEN", "YELLOW", "BLUE",

@@ -51,7 +51,6 @@ extern int ctlxc;               /* current control X prefix char */
 extern int reptc;               /* current universal repeat char */
 extern int abortc;              /* current abort command char   */
 
-extern int quotec;              /* quote char during mlreply() */
 extern int tabmask;
 extern char *cname[];           /* names of colors              */
 extern struct kill *kbufp;      /* current kill buffer chunk pointer */
