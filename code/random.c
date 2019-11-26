@@ -26,7 +26,7 @@ int setfillcol(int f, int n) {
     if (f && (n > 0)) fillcol = n;
     else              fillcol = 72;
 
-    mlwrite(MLpre "Fill column is %d" MLpost, fillcol);
+    mlwrite(MLbkt("Fill column is %d"), fillcol);
     return TRUE;
 }
 

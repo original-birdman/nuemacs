@@ -461,7 +461,7 @@ int fillwhole(int f, int n) {
 
     gotobob(TRUE, 1);
     savline = 0;
-    mlwrite(MLpre "Filling all paragraphs in buffer.." MLpost);
+    mlwrite(MLbkt("Filling all paragraphs in buffer.."));
     while ((thisline = getcline()) > savline) {
         status = fillpara(f, n);
         savline = thisline;
@@ -588,7 +588,7 @@ int eos_chars(int f, int n) {
 
     if (n_eos == 0) strcpy(eos_str, "none");    /* Clearer for user? */
     sprintf(prompt,
-          "End of sentence characters " MLpre "currently %s" MLpost ":",
+          "End of sentence characters " MLbkt("currently %s") ":",
           eos_str);
 
     status = mlreply(prompt, buf, NLINE - 1);

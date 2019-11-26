@@ -344,7 +344,7 @@ static int end_kbdmacro(void) {
  * If we weren;t in PLAY mode, report ending the macro.
  */
     if (kbdmode == PLAY) f_arg = p_arg;
-    else                 mlwrite(MLpre "End macro" MLpost);
+    else                 mlwrite(MLbkt("End macro"));
 
     kbdmode = STOP;
 /* Reset ctlxe_togo regardless of current state */
@@ -1134,11 +1134,11 @@ int main(int argc, char **argv) {
 /* Deal with startup gotos and searches */
     if (gotoflag && searchflag) {
         update(FALSE);
-        mlwrite(MLpre "Can not search and goto at the same time!" MLpost);
+        mlwrite(MLbkt("Cannot search and goto at the same time!"));
     } else if (gotoflag) {
         if (gotoline(TRUE, gline) == FALSE) {
             update(FALSE);
-            mlwrite(MLpre "Bogus goto argument" MLpost);
+            mlwrite(MLbkt("Bogus goto argument"));
         }
     } else if (searchflag) {
         if (forwhunt(FALSE, 0) == FALSE) update(FALSE);
@@ -1452,7 +1452,7 @@ after_mb_check:
         return status;
     }
     TTbeep();
-    mlwrite(MLpre "Key not bound" MLpost);  /* complain             */
+    mlwrite(MLbkt("Key not bound"));  /* complain             */
     lastflag = 0;                           /* Fake last flags.     */
     return FALSE;
 }
@@ -1474,7 +1474,7 @@ int quickexit(int f, int n) {
              && (bp->b_flag & BFTRUNC) == 0  /* Not truncated P.K.   */
              && (bp->b_flag & BFINVS) == 0) {/* Real.                */
             curbp = bp;                 /* make that buffer cur */
-            mlwrite(MLpre "Saving %s" MLpost, bp->b_fname);
+            mlwrite(MLbkt("Saving %s"), bp->b_fname);
             mlwrite("\n");              /* So user can see filename */
             if ((status = filesave(f, n)) != TRUE) {
                 curbp = oldcb;          /* restore curbp */
@@ -1545,7 +1545,7 @@ int ctlxlp(int f, int n) {
 /* Have to save current c/f/n-last */
     p_arg = f_arg;          /* Restored on ctlxrp in execute() */
 
-    mlwrite(MLpre "Start macro" MLpost);
+    mlwrite(MLbkt("Start macro"));
     kbdptr = &kbdm[0];
     kbdend = kbdptr;
     kbdmode = RECORD;
@@ -1623,7 +1623,7 @@ int ctrlg(int f, int n) {
     UNUSED(f); UNUSED(n);
     TTbeep();
     if (kbdmode == RECORD) end_kbdmacro();
-    mlwrite(MLpre "Aborted" MLpost);
+    mlwrite(MLbkt("Aborted"));
     return ABORT;
 }
 
@@ -1634,15 +1634,15 @@ int ctrlg(int f, int n) {
 int rdonly(void) {
     TTbeep();
     if (running_function)
-        mlwrite(MLpre "%s illegal in read-only buffer: %s" MLpost,
+        mlwrite(MLbkt("%s illegal in read-only buffer: %s"),
             current_command, curbp->b_fname);
     else
-        mlwrite(MLpre "Key illegal in VIEW mode" MLpost);
+        mlwrite(MLbkt("Key illegal in VIEW mode"));
     return FALSE;
 }
 int resterr(void) {
     TTbeep();
-    mlwrite(MLpre "That command is RESTRICTED" MLpost);
+    mlwrite(MLbkt("That command is RESTRICTED"));
     return FALSE;
 }
 

@@ -95,10 +95,10 @@ static int ifile(char *fname) {
 
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
     if (s == FIOFNF) {                              /* File not found */
-        mlwrite(MLpre "No such file" MLpost);
+        mlwrite(MLbkt("No such file"));
         return FALSE;
     }
-    mlwrite(MLpre "Inserting file" MLpost);
+    mlwrite(MLbkt("Inserting file"));
 
     s = resetkey();
     if (s != TRUE) return s;
@@ -134,7 +134,7 @@ static int ifile(char *fname) {
         }
 
         if (!(nline % 300) && !silent)      /* GGR */
-             mlwrite(MLpre "Inserting file" MLpost " : %d lines", nline);
+             mlwrite(MLbkt("Inserting file") " : %d lines", nline);
 
     }
     ffclose();              /* Ignore errors. */
@@ -259,7 +259,7 @@ int getfile(char *fname, int lockfl) {
             curwp->w_linep = lp;
             curwp->w_flag |= WFMODE | WFHARD;
             cknewwindow();
-            mlwrite(MLpre "Old buffer" MLpost);
+            mlwrite(MLbkt("Old buffer"));
             return TRUE;
         }
     }
@@ -369,13 +369,13 @@ int readin(char *fname, int lockfl) {
 
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
     if (s == FIOFNF) {                              /* File not found. */
-        strcpy(readin_mesg, MLpre "New file" MLpost);
+        strcpy(readin_mesg, MLbkt("New file"));
         mlwrite(readin_mesg);
         goto out;
     }
 
 /* Read the file in */
-    if (!silent) mlwrite(MLpre "Reading file" MLpost);  /* GGR */
+    if (!silent) mlwrite(MLbkt("Reading file"));  /* GGR */
     nline = 0;
     while ((s = ffgetline()) == FIOSUC) {
         if (nline > MAXNLINE) {
@@ -405,7 +405,7 @@ int readin(char *fname, int lockfl) {
              lp1->l_used--;             /* Remove the trailing CR */
         }
         if (!(nline % 300) && !silent)  /* GGR */
-            mlwrite(MLpre "Reading file" MLpost " : %d lines", nline);
+            mlwrite(MLbkt("Reading file") " : %d lines", nline);
     }
     ffclose();                          /* Ignore errors. */
     strcpy(readin_mesg, MLpre);
@@ -574,7 +574,7 @@ int filesave(int f, int n) {
 /* Complain about truncated files */
     if ((curbp->b_flag & BFTRUNC) != 0) {
         if (mlyesno("Truncated file ... write it out") == FALSE) {
-            mlwrite(MLpre "Aborted" MLpost);
+            mlwrite(MLbkt("Aborted"));
             return FALSE;
         }
     }
@@ -582,7 +582,7 @@ int filesave(int f, int n) {
 /* Complain about narrowed buffers */
     if ((curbp->b_flag&BFNAROW) != 0) {
         if (mlyesno("Narrowed buffer: write it out anyway") != TRUE) {
-            mlwrite(MLpre "Aborted" MLpost);
+            mlwrite(MLbkt("Aborted"));
             return(FALSE);
         }
     }
@@ -613,14 +613,14 @@ int writeout(char *fn) {
 
     if ((s = ffwopen(fn)) != FIOSUC) return FALSE;  /* Open writes message */
 
-    mlwrite(MLpre "Writing..." MLpost);     /* tell us were writing */
+    mlwrite(MLbkt("Writing..."));     /* tell us were writing */
     lp = lforw(curbp->b_linep);             /* First line.          */
     nline = 0;                              /* Number of lines.     */
     while (lp != curbp->b_linep) {
         if ((s = ffputline(lp->l_text, llength(lp))) != FIOSUC) break;
         ++nline;
         if (!(nline % 300) && !silent)      /* GGR */
-            mlwrite(MLpre "Writing..." MLpost " : %d lines",nline);
+            mlwrite(MLbkt("Writing...") " : %d lines",nline);
         lp = lforw(lp);
     }
     if (s == FIOSUC) {                      /* No write error.      */
@@ -628,9 +628,9 @@ int writeout(char *fn) {
         s = ffclose();
         if (s == FIOSUC) {                  /* No close error.      */
             if (nline == 1)
-                mlwrite(MLpre "Wrote 1 line" MLpost);
+                mlwrite(MLbkt("Wrote 1 line"));
             else
-                mlwrite(MLpre "Wrote %d lines" MLpost, nline);
+                mlwrite(MLbkt("Wrote %d lines"), nline);
             }
     } else                                  /* Ignore close error   */
         ffclose();                          /* if a write error.    */

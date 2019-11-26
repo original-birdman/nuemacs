@@ -728,7 +728,7 @@ int setvar(int f, int n) {
 
 /* And get the keystroke to hold the output */
         if (get1key() == abortc) {
-            mlforce(MLpre "Macro aborted" MLpost);
+            mlforce(MLbkt("Macro aborted"));
             status = FALSE;
         }
     }

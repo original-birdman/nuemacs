@@ -72,7 +72,7 @@ int copyregion(int f, int n) {
             ++loffs;
         }
     }
-    mlwrite(MLpre "region copied" MLpost);
+    mlwrite(MLbkt("region copied"));
     return TRUE;
 }
 
@@ -370,7 +370,7 @@ int narrow(int f, int n) {
 
 /* And now remember we are narrowed */
     bp->b_flag |= BFNAROW;
-    mlwrite(MLpre "Buffer is narrowed" MLpost);
+    mlwrite(MLbkt("Buffer is narrowed"));
     return(TRUE);
 }
 
@@ -424,7 +424,7 @@ int widen(int f, int n) {
  * region in middle of screen.
  * Unless we were called with a negative n.
  */
-    mlwrite(MLpre "Buffer is widened" MLpost);
+    mlwrite(MLbkt("Buffer is widened"));
     if (n < 0) {    /* Allow message to be read, but no reposition */
         sleep(1);
     }

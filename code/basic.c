@@ -175,7 +175,7 @@ int gotoline(int f, int n) {
 /* Get an argument if one doesnt exist. */
     if (f == FALSE) {
         if ((status = mlreply("Line to GOTO: ", arg, NSTRING)) != TRUE) {
-            mlwrite(MLpre "Aborted" MLpost);
+            mlwrite(MLbkt("Aborted"));
             return status;
         }
         n = atoi(arg);
@@ -452,7 +452,7 @@ int setmark(int f, int n) {
     UNUSED(f); UNUSED(n);
     curwp->w_markp = curwp->w_dotp;
     curwp->w_marko = curwp->w_doto;
-    mlwrite(MLpre "Mark set" MLpost);
+    mlwrite(MLbkt("Mark set"));
     return TRUE;
 }
 

@@ -105,8 +105,7 @@ static int docmd(char *cline) {
     struct name_bind *nbp = name_info(tkn);
     if (nbp == NULL) {
         char ermess[NSTRING+22];
-        snprintf(ermess, NSTRING+22, "%s No such Function: %s %s",
-              MLpre, tkn, MLpost);
+        snprintf(ermess, NSTRING+22, "No such Function: %s", tkn);
         mlwrite(ermess);
         execstr = oldestr;
         status = FALSE;
@@ -223,7 +222,7 @@ int namedcmd(int f, int n) {
     else {          /* Prompt the user to get the function name to execute */
         struct name_bind *nm_info = getname("name: ");
         if (nm_info == NULL) {
-            mlwrite(MLpre "No such function" MLpost);
+            mlwrite(MLbkt("No such function"));
             return FALSE;
         }
         kfunc = nm_info->n_func;
@@ -340,7 +339,7 @@ int storemac(int f, int n) {
 
 /* Set up the new macro buffer */
     if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
-        mlwrite("Can not create macro");
+        mlwrite("Cannot create macro");
         return FALSE;
     }
 
@@ -795,7 +794,7 @@ int storeproc(int f, int n) {
 
 /* Set up the new macro buffer */
     if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
-        mlwrite("Can not create macro");
+        mlwrite("Cannot create macro");
         return FALSE;
     }
 
@@ -1143,7 +1142,7 @@ int dobuf(struct buffer *bp) {
 
 /* And get the keystroke */
             if ((c = get1key()) == abortc) {
-                mlforce(MLpre "Macro aborted" MLpost);
+                mlforce(MLbkt("Macro aborted"));
                 goto failexit2;
             }
 

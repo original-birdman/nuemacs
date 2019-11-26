@@ -26,6 +26,7 @@
 /* The character with which to start/end message line info */
 #define MLpre  "["
 #define MLpost "]"
+#define MLbkt(text) MLpre text MLpost
 
 /* A macro so we can note which parameters are unused (happens a lot
  * for f and n in handler calls) while leaving the general compiler

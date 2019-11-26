@@ -33,7 +33,7 @@ int help(int f, int n) {    /* give me some help!!!!
     if (bp == NULL) {
         fname = flook(init_files.help, FALSE, INTABLE);
         if (fname == NULL) {
-            mlwrite(MLpre "Help file is not online" MLpost);
+            mlwrite(MLbkt("Help file is not online"));
             return FALSE;
             }
     }
@@ -325,7 +325,7 @@ struct key_tab *getbind(int c) {
         index_bindings();
     }
 /* Look through the key table. We can now binary-chop this...
- * NOTE: that we don't a binary chop that ensures we find the first
+ * NOTE: that we don't do a binary chop that ensures we find the first
  * entry of any multiple ones, as there can't be such entries!
  */
     int first = 0;
@@ -403,7 +403,7 @@ int bindtokey(int f, int n) {
 
     struct name_bind *nm_info = getname(": bind-to-key ");
     if (nm_info == NULL) {
-        if (!clexec) mlwrite(MLpre "No such function" MLpost);
+        if (!clexec) mlwrite(MLbkt("No such function"));
         return FALSE;
     }
     kfunc = nm_info->n_func;
@@ -522,7 +522,7 @@ int unbindkey(int f, int n) {
 
 /* If it isn't bound, bitch */
     if (unbindchar(c) == FALSE) {
-        mlwrite(MLpre "Key not bound" MLpost);
+        mlwrite(MLbkt("Key not bound"));
         mpresf = TRUE;  /* GGR */
         return FALSE;
     }
@@ -550,12 +550,12 @@ static int buildlist(int type, char *mstring) {
 /* and get a buffer for it */
     bp = bfind("/Binding list", TRUE, 0);
     if (bp == NULL || bclear(bp) == FALSE) {
-        mlwrite("Can not display binding list");
+        mlwrite("Cannot display binding list");
         return FALSE;
     }
 
 /* Let us know this is in progress */
-    mlwrite(MLpre "Building binding list" MLpost);
+    mlwrite(MLbkt("Building binding list"));
 
 /* Disconnect the current buffer */
     if (--curbp->b_nwnd == 0) {     /* Last use.            */

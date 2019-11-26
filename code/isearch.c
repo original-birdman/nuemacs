@@ -65,7 +65,7 @@ int risearch(int f, int n) {
         curwp->w_doto = curoff;     /* offset to orig value   */
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
-        mlwrite(MLpre "search failed" MLpost); /* Say we died */
+        mlwrite(MLbkt("search failed")); /* Say we died */
         matchlen = strlen(pat);
     } else
         mlerase();      /* If happy, just erase the cmd line  */
@@ -92,7 +92,7 @@ int fisearch(int f, int n) {
         curwp->w_doto = curoff;     /* offset to orig value   */
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
-        mlwrite(MLpre "search failed" MLpost); /* Say we died */
+        mlwrite(MLbkt("search failed")); /* Say we died */
         matchlen = strlen(pat);
     } else
         mlerase();      /* If happy, just erase the cmd line  */

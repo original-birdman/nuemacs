@@ -321,7 +321,7 @@ int mlyesno(char *prompt) {
     int res = -1;           /* NOT ABORT, TRUE or FALSE */
     while(res == -1) {
         strcpy(buf, prompt);    /* build and prompt the user */
-        strcat(buf, " " MLpre "y/n" MLpost "? ");
+        strcat(buf, " " MLbkt("y/n") "? ");
         mlwrite(buf);
 
         c = tgetc();        /* get the response */

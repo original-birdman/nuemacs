@@ -167,7 +167,7 @@ static int run_one_liner(int wait, char *prompt) {
     TTopen();
 
     if (wait) {
-        mlputs(MLpre "Press <return> to continue" MLpost); /* Pause */
+        mlputs(MLbkt("Press <return> to continue")); /* Pause */
         TTflush();
         while ((s = tgetc()) != '\r' && s != ' ');
         mlputs("\r\n");
@@ -302,7 +302,7 @@ int filter_buffer(int f, int n) {
 
 /* Write it out, checking for errors */
     if (writeout(filnam1) != TRUE) {
-        mlwrite(MLpre "Cannot write filter file" MLpost);
+        mlwrite(MLbkt("Cannot write filter file"));
         strcpy(bp->b_fname, tmpnam);
         return FALSE;
     }
@@ -325,13 +325,13 @@ int filter_buffer(int f, int n) {
 
 /* Unset this flag, otherwise readin() prompts for "Discard changes" if
  * the original buffer (which we've just written out...to edit) was marked
- * as modifdied.
+ * as modifdied. 
  */
     bp->b_flag &= ~BFCHG;
 
 /* Report any failure, then continue to tidy up... */
     if (s != TRUE || ((s = readin(filnam2, FALSE)) == FALSE)) {
-        mlwrite(MLpre "Execution failed" MLpost);
+        mlwrite(MLbkt("Execution failed"));
     }
 
 /* Reset file name */

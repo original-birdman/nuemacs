@@ -219,7 +219,7 @@ int delwind(int f, int n) {
 
 /* If there is only one window, don't delete it */
     if (wheadp->w_wndp == NULL) {
-        mlwrite("Can not delete this window");
+        mlwrite("Cannot delete this window");
         return FALSE;
     }
 
@@ -519,7 +519,7 @@ int restwnd(int f, int n) {
         wp = wp->w_wndp;
     }
 
-    mlwrite(MLpre "No such window exists" MLpost);
+    mlwrite(MLbkt("No such window exists"));
     return FALSE;
 }
 
