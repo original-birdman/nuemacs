@@ -1162,38 +1162,6 @@ static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
 }
 
 /*
- * forwsearch -- Search forward.  Get a search string from the user, and
- *      search for the string.  If found, reset the "." to be just after
- *      the match string, and (perhaps) repaint the display.
- *
- * int f, n;                    default flag / numeric argument
- */
-int forwsearch(int f, int n) {
-    int status = TRUE;
-
-/* If n is negative, search backwards.
- * Otherwise proceed by asking for the search string.
- */
-    if (n < 0) return backsearch(f, -n);
-
-/* Ask the user for the text of a pattern.  If the response is TRUE
- * (responses other than FALSE are possible), search for the pattern for as
- * long as  n is positive (n == 0 will go through once, which is just fine).
- */
-    if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
-        status = forwscanner(n);
-
-/* Save away the match, or complain if not there. */
-
-        if (status == TRUE)
-            savematch();
-        else
-            mlwrite("Not found");
-    }
-    return status;
-}
-
-/*
  * forwhunt -- Search forward for a previously acquired search string.
  *      If found, reset the "." to be just after the match string,
  *      and (perhaps) repaint the display.
@@ -1225,6 +1193,40 @@ int forwhunt(int f, int n) {
     return status;
 }
 
+/*
+ * forwsearch -- Search forward.  Get a search string from the user, and
+ *      search for the string.  If found, reset the "." to be just after
+ *      the match string, and (perhaps) repaint the display.
+ *
+ * int f, n;                    default flag / numeric argument
+ */
+int forwsearch(int f, int n) {
+    int status = TRUE;
+
+    if (inreex) return forwhunt(f, n);
+
+/* If n is negative, search backwards.
+ * Otherwise proceed by asking for the search string.
+ */
+    if (n < 0) return backsearch(f, -n);
+
+/* Ask the user for the text of a pattern.  If the response is TRUE
+ * (responses other than FALSE are possible), search for the pattern for as
+ * long as  n is positive (n == 0 will go through once, which is just fine).
+ */
+    if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
+        status = forwscanner(n);
+
+/* Save away the match, or complain if not there. */
+
+        if (status == TRUE)
+            savematch();
+        else
+            mlwrite("Not found");
+    }
+    return status;
+}
+
 static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
     int status;
 
@@ -1237,37 +1239,6 @@ static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
         else
             status = scanner(tap, REVERSE, PTBEG);
     } while ((--n > 0) && status);
-    return status;
-}
-
-/*
- * backsearch -- Reverse search.  Get a search string from the user, and
- *      search, starting at "." and proceeding toward the front of the buffer.
- *      If found "." is left pointing at the first character of the pattern
- *      (the last character that was matched).
- *
- * int f, n;            default flag / numeric argument
- */
-int backsearch(int f, int n) {
-    int status = TRUE;
-
-/* If n is negative, search forwards. Otherwise proceed by asking for the
- * search string.
- */
-    if (n < 0) return forwsearch(f, -n);
-
-/* Ask the user for the text of a pattern.  If the response is TRUE
- * (responses other than FALSE are possible), search for the pattern for
- * as long as n is positive (n == 0 will go through once, which is just fine).
- */
-    if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
-        status = backscanner(n);
-
-/* Save away the match, or complain if not there. */
-
-        if (status == TRUE) savematch();
-        else                mlwrite("Not found");
-    }
     return status;
 }
 
@@ -1304,6 +1275,39 @@ int backhunt(int f, int n) {
 
     if (status != TRUE) mlwrite("Not found");
 
+    return status;
+}
+
+/*
+ * backsearch -- Reverse search.  Get a search string from the user, and
+ *      search, starting at "." and proceeding toward the front of the buffer.
+ *      If found "." is left pointing at the first character of the pattern
+ *      (the last character that was matched).
+ *
+ * int f, n;            default flag / numeric argument
+ */
+int backsearch(int f, int n) {
+    int status = TRUE;
+
+    if (inreex) return backhunt(f, n);
+
+/* If n is negative, search forwards. Otherwise proceed by asking for the
+ * search string.
+ */
+    if (n < 0) return forwsearch(f, -n);
+
+/* Ask the user for the text of a pattern.  If the response is TRUE
+ * (responses other than FALSE are possible), search for the pattern for
+ * as long as n is positive (n == 0 will go through once, which is just fine).
+ */
+    if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
+        status = backscanner(n);
+
+/* Save away the match, or complain if not there. */
+
+        if (status == TRUE) savematch();
+        else                mlwrite("Not found");
+    }
     return status;
 }
 

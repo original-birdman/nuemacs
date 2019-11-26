@@ -113,8 +113,6 @@ struct name_bind names[] = {
     {"goto-matching-fence", getfence, {0, 0}},
     {"grow-window", enlargewind, {0, 1}},
     {"handle-tab", insert_tab, {0, 0}},
-    {"hunt-forward", forwhunt, {0, 0}},
-    {"hunt-backward", backhunt, {0, 0}},
     {"help", help, {0, 1}},
     {"i-shell", spawncli, {0, 1}},
     {"incremental-search", fisearch, {0, 1}},
@@ -160,7 +158,7 @@ struct name_bind names[] = {
     {"quoted-count", quotedcount, {0, 0}},      /* GGR */
     {"read-file", fileread, {0, 0}},
     {"redraw-display", reposition, {0, 0}},
-    {"reexecute", reexecute, {1, 0}},           /* GGR */
+    {"reexecute", reexecute, {0, 0}},           /* GGR */
     {"resize-window", resize, {0, 1}},
     {"restore-window", restwnd, {0, 1}},
     {"replace-string", sreplace, {0, 0}},

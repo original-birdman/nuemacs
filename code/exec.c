@@ -17,46 +17,7 @@
 
 #include "utf8proc.h"
 
-/* Structure for remembering past commands (for reexecute) */
-
-struct line_info {
-    char *text;
-    int alloc;
-};
-struct line_seen {
-    struct line_info curr;
-    struct line_info prev;
-};
-
-static struct line_seen *lsb = NULL;
-
-/* This creates a new struct line_seen for lsb and returns the previous
- * value.
- * Users of docmd() (so dobuf() and execcmd()) should call this on entry,
- * save the returned value and ensure that they call pop_lsb with that value
- * as they return.
- */
-static struct line_seen *push_lsb(void) {
-    struct line_seen *retval = lsb;
-
-    lsb = Xmalloc(sizeof(struct line_seen));
-    lsb->curr.alloc = lsb->prev.alloc = 0;
-    lsb->curr.text = lsb->prev.text = NULL;
-    return retval;
-}
-static void pop_lsb(struct line_seen *old_p) {
-    if (lsb->curr.text) free(lsb->curr.text);
-    if (lsb->prev.text) free(lsb->prev.text);
-    free(lsb);
-    lsb = old_p;
-    return;
-}
-static void switch_lsb_lines(void) {
-    struct line_info tmp_li = lsb->curr;
-    lsb->curr = lsb->prev;
-    lsb->prev = tmp_li;
-    return;
-}
+static char *prev_line_seen = NULL;
 
 /*
  * docmd:
@@ -88,16 +49,10 @@ static int docmd(char *cline) {
 
 /* We need to take a copy of the current command line now.
  * The token parsing writes NULs into the buffer as it goes...
+ * This means we need a single point of exit, to ensure that
+ * this gets freed correctly.
  */
-    switch_lsb_lines();     /* Last curr -> prev */
-#define ALLOC_CHUNK 64
-    int want = strlen(cline) + 1;   /* Need the NUL */
-    int need = ALLOC_CHUNK*((want + ALLOC_CHUNK - 1)/ALLOC_CHUNK);
-    if (lsb->curr.alloc < need) {
-        lsb->curr.text = Xrealloc(lsb->curr.text, need);
-        lsb->curr.alloc = need;
-    }
-    strcpy(lsb->curr.text, cline);
+    char *this_line_seen = strdup(cline);
 
 /* First set up the default command values */
     f = FALSE;
@@ -107,7 +62,7 @@ static int docmd(char *cline) {
 
     if ((status = macarg(tkn)) != TRUE) {   /* and grab the first token */
         execstr = oldestr;
-        return status;
+        goto final_exit;
     }
 
 /* Process leadin argument */
@@ -124,7 +79,7 @@ static int docmd(char *cline) {
 /* and now get the command to execute */
         if ((status = macarg(tkn)) != TRUE) {
             execstr = oldestr;
-            return status;
+            goto final_exit;
         }
     }
 
@@ -132,15 +87,18 @@ static int docmd(char *cline) {
  * command line.
  * We also need to preserve the previous line as the current line,
  * which switch_lsb_lines() does - the reexecute gets sent to prev and
- * is then removed rather then the command we actually want.
+ * is then removed rather than the command we actually want.
+ * Any command we execute *could* reset prev_line_seen (by running
+ * another buffer of commands...) so make sure that prev_line_seen
+ * is set correctly at the end by swapping our copy into place.
+ * We actually run with prev_line_seen rather than our this_line_seen copy
+ * as that will get tokenized...
  */
     if (strcmp(tkn, "reexecute") == 0) {
-        switch_lsb_lines();
-        char *reex_str = Xmalloc(lsb->curr.alloc);
-        strcpy(reex_str, lsb->curr.text);
-        int status = docmd(reex_str);
-        free(reex_str);
-        return status;
+        free(this_line_seen);   /* Drop the "reexecute" */
+        this_line_seen = strdup(prev_line_seen);
+        status = docmd(prev_line_seen);
+        goto remember_cmd;
     }
 
 /* And match the token to see if it exists */
@@ -151,7 +109,8 @@ static int docmd(char *cline) {
               MLpre, tkn, MLpost);
         mlwrite(ermess);
         execstr = oldestr;
-        return FALSE;
+        status = FALSE;
+        goto final_exit;
     }
 
 /* Save the arguments and go execute the command */
@@ -162,6 +121,22 @@ static int docmd(char *cline) {
     cmdstatus = status;     /* save the status */
     clexec = oldcle;        /* restore clexec flag */
     execstr = oldestr;
+
+/* "Remember command" exit.
+ * {} needed because we start with a declaration, not statement.
+ *
+ * this_line_seen is now the command that any reexecute should reexecute
+ * in this function, so set that....
+ * Swap these two so that the one we want is saved and the other is freed.
+ */
+remember_cmd:
+    { char *ts = prev_line_seen;
+      prev_line_seen = this_line_seen;
+      this_line_seen = ts;
+    }
+/* "Just tidy up..." exit */
+final_exit:
+    free(this_line_seen);
     return status;
 }
 
@@ -239,26 +214,31 @@ char *token(char *src, char *tok, int size) {
 /*
  * Execute a named command even if it is not bound.
  */
+static fn_t last_ncfunc = NULL;
 int namedcmd(int f, int n) {
     fn_t kfunc;     /* ptr to the requested function to bind to */
 
-/* Prompt the user to get the function name to execute */
-    struct name_bind *nm_info = getname(": ");
-    if (nm_info == NULL) {
-        mlwrite(MLpre "No such function" MLpost);
-        return FALSE;
-    }
-    kfunc = nm_info->n_func;
+    if (inreex && last_ncfunc)  /* Re-use last obtained function */
+        kfunc = last_ncfunc;
+    else {          /* Prompt the user to get the function name to execute */
+        struct name_bind *nm_info = getname("name: ");
+        if (nm_info == NULL) {
+            mlwrite(MLpre "No such function" MLpost);
+            return FALSE;
+        }
+        kfunc = nm_info->n_func;
 
 /* Check whether the given command is allowed in the minibuffer, if that
  * is where we are...
  */
-    if (inmb) {
-        if (nm_info && nm_info->opt.not_mb) {
-            not_in_mb.funcname = nm_info->n_name;
-            not_in_mb.keystroke = -1;   /* No keystroke... */
-            kfunc = not_in_mb_error;    /* Change what we call... */
+        if (inmb) {
+            if (nm_info && nm_info->opt.not_mb) {
+                not_in_mb.funcname = nm_info->n_name;
+                not_in_mb.keystroke = -1;   /* No keystroke... */
+                kfunc = not_in_mb_error;    /* Change what we call... */
+            }
         }
+        last_ncfunc = kfunc;    /* Now we remember this... */
     }
 
 /* ...and then execute the command */
@@ -278,18 +258,10 @@ int execcmd(int f, int n) {
     char cmdstr[NSTRING];   /* string holding command to execute */
 
 /* Get the line wanted */
-//    if ((status = mlreply(": ", cmdstr, NSTRING)) != TRUE) return status;
-    if ((status = mlreplyall(": ", cmdstr, NSTRING)) != TRUE) return status;
+    if ((status = mlreplyall("command: ", cmdstr, NSTRING)) != TRUE) return status;
 
     execlevel = 0;
-
-/* We're only going to run one command, so the concept of saving the current
- * and previous is somewhat moot, but we need to do this so that other usage
- * bahaves as we expect.
- */
-    struct line_seen *saved_lsb = push_lsb();
     status = docmd(cmdstr);
-    pop_lsb(saved_lsb);
     return status;
 }
 
@@ -848,6 +820,10 @@ int storeproc(int f, int n) {
     return TRUE;
 }
 
+/* Buffer name for reexecute - shared by all buffer-callers */
+
+static char prev_bufn[NBUFN+1] = "";
+
 /*
  * execproc:
  *      Execute a procedure
@@ -860,25 +836,33 @@ int execproc(int f, int n) {
     int status;             /* status return */
     char bufn[NBUFN+1];     /* name of buffer to execute */
 
-/* Append the procedure name to the buffer marker tag */
-    bufn[0] = '/';
+/* Handle a reexecute */
 
-    if (input_waiting != NULL) {
-        strcpy(bufn+1, input_waiting);
-        input_waiting = NULL;   /* We've used it */
+    if (inreex && prev_bufn[0] != '\0') {
+        strcpy(bufn, prev_bufn);
     }
     else {
-        if ((status = mlreply("Execute procedure: ", &bufn[1], NBUFN)) != TRUE)
-            return status;
-        if (strlen(bufn) >= NBUFN) {
-            mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
-            sleep(1);
-            return TRUE;    /* Don't abort start-up file */
+/* Append the procedure name to the buffer marker tag */
+       bufn[0] = '/';
+
+        if (input_waiting != NULL) {
+            strcpy(bufn+1, input_waiting);
+            input_waiting = NULL;   /* We've used it */
         }
-    }
+        else {
+            if ((status = mlreply("Execute procedure: ", &bufn[1], NBUFN))
+                 != TRUE)
+                return status;
+            if (strlen(bufn) >= NBUFN) {
+                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
+                sleep(1);
+                return TRUE;    /* Don't abort start-up file */
+            }
+        }
 
 /* Construct the buffer name */
-    bufn[0] = '/';
+        bufn[0] = '/';
+    }
 
 /* Find the pointer to that buffer */
     if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
@@ -897,6 +881,11 @@ int execproc(int f, int n) {
 /* and now execute it as asked */
     while (n-- > 0)
         if ((status = dobuf(bp)) != TRUE) return status;
+
+/* dobuf() could contain commands that change prev_bufn, so reinstate
+ * it here to allow for recursion.
+ */
+    strcpy(prev_bufn, bufn);
     return TRUE;
 }
 
@@ -912,13 +901,20 @@ int execbuf(int f, int n) {
     int status;             /* status return */
     char bufn[NSTRING];     /* name of buffer to execute */
 
-/* Find out what buffer the user wants to execute */
-    if ((status = mlreply("Execute buffer: ", bufn, NBUFN)) != TRUE)
-        return status;
+/* Handle a reexecute */
 
-    if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
-        mlwrite("%%Cannot run keyboard macro when collecting it");
-        return FALSE;
+    if (inreex && prev_bufn[0] != '\0') {
+        strcpy(bufn, prev_bufn);
+    }
+    else {
+/* Find out what buffer the user wants to execute */
+        if ((status = mlreply("Execute buffer: ", bufn, NBUFN)) != TRUE)
+            return status;
+
+        if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
+            mlwrite("%%Cannot run keyboard macro when collecting it");
+            return FALSE;
+        }
     }
 
 /* Find the pointer to that buffer */
@@ -932,6 +928,10 @@ int execbuf(int f, int n) {
     status = TRUE;
     while (n-- > 0) if ((status = dobuf(bp)) != TRUE) break;
 
+/* dobuf() could contain commands that change prev_bufn, so reinstate
+ * it here to allow for recursion.
+ */
+    strcpy(prev_bufn, bufn);
     return status;
 }
 
@@ -1005,12 +1005,6 @@ int dobuf(struct buffer *bp) {
         mlwrite("%%Maximum recursion level, %d, exceeded!", MAX_RECURSE);
         return FALSE;
     }
-
-/* We need to push a new set of line_seen buffers.
- * This is another reason to ensure we always leave at single_exit, so
- * that we can switch back.
- */
-    struct line_seen *saved_lsb = push_lsb();
 
 /* Mark an executing buffer as read-only while it is being executed */
     int orig_view_bit = bp->b_mode & MDVIEW;
@@ -1382,10 +1376,12 @@ single_exit:
 /* Revert to original read-only status if it wasn't set */
 
     if (!orig_view_bit) bp->b_mode &= ~MDVIEW;
-
-    pop_lsb(saved_lsb);     /* Back to the original line_seen buffers */
     return status;
 }
+
+/* Filename for reexecute - shared by all file-callers */
+
+static char prev_fname[NSTRING] = "";
 
 /* execute a series of commands in a file
  * If given fname starts with "^", remove that character and don't
@@ -1402,13 +1398,20 @@ int execfile(int f, int n) {
     int fail_ok = 0;
     int fns = 0;
 
-    if ((status = mlreply("File to execute: ", fname, NSTRING - 1)) != TRUE)
-        return status;
+    if (inreex && prev_fname[0] != '\0') {
+        strcpy(fname, prev_fname);
 
-    if (include_level >= MAX_INCLUDE_LEVEL) {
-        mlwrite("Include depth too great (%d)!",  include_level+1);
-        return FALSE;
     }
+    else {
+        if ((status = mlreply("File to execute: ", fname, NSTRING - 1)) != TRUE)
+            return status;
+
+        if (include_level >= MAX_INCLUDE_LEVEL) {
+            mlwrite("Include depth too great (%d)!",  include_level+1);
+            return FALSE;
+        }
+    }
+
     if (fname[0] == '^') {
         fail_ok = 1;
         fns = 1;
@@ -1432,6 +1435,11 @@ int execfile(int f, int n) {
         include_level--;
         if (status != TRUE) return fail_ok? TRUE: status;
     }
+
+/* dofile() could contain commands that change prev_bufn, so reinstate
+ * it here to allow for recursion.
+ */
+    strcpy(prev_fname, fname);
     return TRUE;
 }
 

@@ -1313,35 +1313,28 @@ int execute(int c, int f, int n) {
 after_mb_check:
         thisflag = 0;
 /* GGR - implement re-execute */
-        if (inreex) {
-            if ((execfunc == fisearch) || (execfunc == forwsearch))
-                execfunc = forwhunt;
-            else if ((execfunc == risearch) || (execfunc == backsearch))
-                execfunc = backhunt;
-        }
-        else if ((execfunc != reexecute) && (execfunc != nullproc) &&
-                 (execfunc != ctlxrp)) {    /* Remember current set */
+        if ((execfunc != reexecute) && (execfunc != nullproc) &&
+            (execfunc != ctlxrp)) {     /* Remember current set */
             f_arg.func = execfunc;
             f_arg.ca.c = c;
             f_arg.ca.f = f;
             f_arg.ca.n = n;
         }
 
-        if (!inmb && kbdmode == RECORD) {
-            if (ktp->fi->opt.skip_in_macro) {   /* Quick skip... */
-                if (execfunc == namedcmd) {     /* Use next func directly.. */
+/* If we are recording a macro and:
+ *  o we are not in the minibuffer (whci is collected elswehere
+ *  o we are not re-executing (if we are we've already recorded the reexecute)
+ */
+        if (!inmb && !inreex && kbdmode == RECORD) {
+            if (ktp->fi->opt.skip_in_macro) {   /* Skip these, mostly... */
+                if (execfunc == namedcmd) {     /* Use next func directly... */
                     if ((f > 0) && (n != 1))    /* ...but record any count */
                         set_narg_kbdmacro(n);
                 }
             }
             else {                          /* Record it */
                 if ((f > 0) && (n != 1)) set_narg_kbdmacro(n);
-                char *func4macro = ktp->fi->n_name;
-                if (inreex) {       /* Handle the mapped calls */
-                    if (execfunc == forwhunt)      func4macro = "hunt-forward";
-                    else if (execfunc == backhunt) func4macro = "hunt-backward";
-                }
-                addto_kbdmacro(func4macro, 1, 0);
+                addto_kbdmacro(ktp->fi->n_name, 1, 0);
             }
         }
         if (!run_not_in_mb &&

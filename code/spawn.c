@@ -111,16 +111,43 @@ void rtfrmshell(void) {
 }
 #endif
 
-/* Run a one-liner in a subjob. When the command returns, wait for a single
- * character to be typed, then mark the screen as garbage so a full repaint is
- * done. Bound to "C-X !".
+/* Backend for running a one-liner in a subjob.
+ * When the command returns, optionally wait for a <return> before
+ * returning character to be typed, then mark the screen as garbage
+ * so a full repaint is done.
  *
  * Don't allow this in the minibuffer, as there's a forced redraw on
  * return, which ends up clearing the minibuffer data, while displaying
  * its status in the status line
+ *
+ * There are two front-ends for this.
+ * spawn (shell-command) bound to "C-X !".
+ *      This only waits for <return> if interactive (not running a macro).
+ * execprg (execute-program) bound to "C-X $".
+ *      This always waits for <return>.
  */
-int spawn(int f, int n) {
-    UNUSED(f); UNUSED(n);
+
+/* So reexecute re-runs same command.
+ * Since this can't recurse internally we only need to remember the
+ * last one, so don't need to set this after our "working".
+ * Also, only one of spawn(), execprg(), pipecmd() and filter_buffer()
+ * can ever be the "last executed" for reexecute, so they can share
+ * the prev_spawn_cmd setting.
+ */
+static char *prev_spawn_cmd = NULL;
+static int next_spawn_cmd(char *prompt, char *line) {
+    if (inreex && prev_spawn_cmd) {
+        strcpy(line, prev_spawn_cmd);
+    }
+    else {
+        int s;
+        if ((s = mlreply(prompt, line, NLINE)) != TRUE) return s;
+        prev_spawn_cmd = Xrealloc(prev_spawn_cmd, strlen(line) + 1);
+        strcpy(prev_spawn_cmd, line);
+    }
+    return TRUE;
+}
+static int run_one_liner(int wait, char *prompt) {
     int s;
     char line[NLINE];
 
@@ -131,7 +158,7 @@ int spawn(int f, int n) {
     get_orig_size();
 #endif
 #if USG | BSD
-    if ((s = mlreply("!", line, NLINE)) != TRUE) return s;
+    if ((s = next_spawn_cmd(prompt, line)) != TRUE) return s;
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
@@ -139,7 +166,7 @@ int spawn(int f, int n) {
     fflush(stdout);         /* to be sure P.K.      */
     TTopen();
 
-    if (clexec == FALSE) {
+    if (wait) {
         mlputs(MLpre "Press <return> to continue" MLpost); /* Pause */
         TTflush();
         while ((s = tgetc()) != '\r' && s != ' ');
@@ -154,44 +181,15 @@ int spawn(int f, int n) {
 #endif
 }
 
-/* Run an external program with arguments. When it returns, wait for a single
- * character to be typed, then mark the screen as garbage so a full repaint is
- * done. Bound to "C-X $".
- *
- * Don't allow this in the minibuffer, as there's a forced redraw on
- * return, which ends up clearing the minibuffer data, while displaying
- * its status in the status line
- */
+/* The two front-ends for run_one_liner */
+int spawn(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    return run_one_liner(clexec == FALSE, "!");
+}
 
 int execprg(int f, int n) {
     UNUSED(f); UNUSED(n);
-    int s;
-    char line[NLINE];
-
-/* Don't allow this command if restricted */
-    if (restflag) return resterr();
-
-#ifdef SIGWINCH
-    get_orig_size();
-#endif
-#if USG | BSD
-    if ((s = mlreply("!", line, NLINE)) != TRUE) return s;
-    ttput1c('\n');          /* Already have '\r'    */
-    TTflush();
-    TTclose();              /* stty to old modes    */
-    TTkclose();
-    dnc = system(line);
-    fflush(stdout);         /* to be sure P.K.      */
-    TTopen();
-    mlputs(MLpre "Press <return> to continue" MLpost); /* Pause */
-    TTflush();
-    while ((s = tgetc()) != '\r' && s != ' ');
-    sgarbf = TRUE;
-#ifdef SIGWINCH
-    check_for_resize();
-#endif
-    return TRUE;
-#endif
+    return run_one_liner(TRUE, "$");
 }
 
 /* Pipe a one line command into a window
@@ -218,7 +216,7 @@ int pipecmd(int f, int n) {
     get_orig_size();
 #endif
 /* Get the command to pipe in */
-    if ((s = mlreply("@", line, NLINE)) != TRUE) return s;
+    if ((s = next_spawn_cmd("@", line)) != TRUE) return s;
 
 /* Get rid of the command output buffer if it exists */
     if ((bp = bfind(bname, FALSE, 0)) != FALSE) {
@@ -295,7 +293,7 @@ int filter_buffer(int f, int n) {
     get_orig_size();
 #endif
 /* Get the filter name and its args */
-    if ((s = mlreply("#", line, NLINE)) != TRUE) return s;
+    if ((s = next_spawn_cmd("#", line)) != TRUE) return s;
 
 /* Setup the proper file names */
     bp = curbp;
@@ -324,13 +322,16 @@ int filter_buffer(int f, int n) {
 #ifdef SIGWINCH
     check_for_resize();
 #endif
-/* On failure, escape gracefully */
-    if (s != TRUE || (readin(filnam2, FALSE) == FALSE)) {
+
+/* Unset this flag, otherwise readin() prompts for "Discard changes" if
+ * the original buffer (which we've just written out...to edit) was marked
+ * as modifdied.
+ */
+    bp->b_flag &= ~BFCHG;
+
+/* Report any failure, then continue to tidy up... */
+    if (s != TRUE || ((s = readin(filnam2, FALSE)) == FALSE)) {
         mlwrite(MLpre "Execution failed" MLpost);
-        strcpy(bp->b_fname, tmpnam);
-        unlink(filnam1);
-        unlink(filnam2);
-        return s;
     }
 
 /* Reset file name */
@@ -344,5 +345,5 @@ int filter_buffer(int f, int n) {
 /* And get rid of the temporary file */
     unlink(filnam1);
     unlink(filnam2);
-    return TRUE;
+    return s;
 }

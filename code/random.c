@@ -280,6 +280,7 @@ int twiddle(int f, int n) {
  * its line splitting meaning. The character is always read, even if it is
  * inserted 0 times, for regularity. Bound to "C-Q"
  */
+static int last_qchar = 0;
 int quote(int f, int n) {
     UNUSED(f);
     int s;
@@ -287,7 +288,12 @@ int quote(int f, int n) {
 
     if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
           return rdonly();          /* we are in read only mode    */
-    c = tgetc();
+    if (inreex)                     /* Use previously-obtained char */
+        c = last_qchar;
+    else {
+        c = tgetc();
+        last_qchar = c;
+    }
     if (n < 0) return FALSE;
     if (n == 0) return TRUE;
     if (c == '\n') {
