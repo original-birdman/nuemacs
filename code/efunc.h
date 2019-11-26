@@ -113,7 +113,8 @@ extern int ovstring(int f, int n);
 extern int leaveone(int f, int n);
 extern int whitedelete(int f, int n);
 extern int quotedcount(int f, int n);
-extern int ggr_style (int f, int n);
+extern int ggr_style(int f, int n);
+extern int re_args_exec(int f, int n);
 
 /* main.c */
 extern com_arg *multiplier_check(int);

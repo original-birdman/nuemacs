@@ -217,7 +217,8 @@ static fn_t last_ncfunc = NULL;
 int namedcmd(int f, int n) {
     fn_t kfunc;     /* ptr to the requested function to bind to */
 
-    if (inreex && last_ncfunc)  /* Re-use last obtained function */
+/* Re-use last obtained function? */
+    if (inreex && last_ncfunc && RXARG(namedcmd))
         kfunc = last_ncfunc;
     else {          /* Prompt the user to get the function name to execute */
         struct name_bind *nm_info = getname("name: ");
@@ -237,12 +238,17 @@ int namedcmd(int f, int n) {
                 kfunc = not_in_mb_error;    /* Change what we call... */
             }
         }
-        last_ncfunc = kfunc;    /* Now we remember this... */
     }
 
 /* ...and then execute the command */
-    return kfunc(f, n);
+    int status = kfunc(f, n);
+    last_ncfunc = kfunc;        /* Now we remember this... */
+    return status;
 }
+
+/* Buffer name for reexecute - shared by all command-callers */
+
+static char prev_cmd[NSTRING] = "";
 
 /*
  * execcmd:
@@ -256,11 +262,18 @@ int execcmd(int f, int n) {
     int status;             /* status return */
     char cmdstr[NSTRING];   /* string holding command to execute */
 
+/* Re-use last obtained command? */
+    if (inreex && (prev_cmd[0] != '\0') && RXARG(execcmd))
+        strcpy(cmdstr, prev_cmd);
+    else {
 /* Get the line wanted */
-    if ((status = mlreplyall("command: ", cmdstr, NSTRING)) != TRUE) return status;
-
+        if ((status = mlreplyall("command: ", cmdstr, NSTRING)) != TRUE)
+            return status;
+    }
     execlevel = 0;
     status = docmd(cmdstr);
+    strcpy(prev_cmd, cmdstr);   /* Now we remember this... */
+
     return status;
 }
 
@@ -837,9 +850,9 @@ int execproc(int f, int n) {
 
 /* Handle a reexecute */
 
-    if (inreex && prev_bufn[0] != '\0') {
+/* Re-use last obtained buffer? */
+    if (inreex && (prev_bufn[0] != '\0') && RXARG(execproc))
         strcpy(bufn, prev_bufn);
-    }
     else {
 /* Append the procedure name to the buffer marker tag */
        bufn[0] = '/';
@@ -902,9 +915,9 @@ int execbuf(int f, int n) {
 
 /* Handle a reexecute */
 
-    if (inreex && prev_bufn[0] != '\0') {
+/* Re-use last obtained buffer? */
+    if (inreex && (prev_bufn[0] != '\0') && RXARG(execbuf))
         strcpy(bufn, prev_bufn);
-    }
     else {
 /* Find out what buffer the user wants to execute */
         if ((status = mlreply("Execute buffer: ", bufn, NBUFN)) != TRUE)
@@ -1397,10 +1410,9 @@ int execfile(int f, int n) {
     int fail_ok = 0;
     int fns = 0;
 
-    if (inreex && prev_fname[0] != '\0') {
+/* Re-use last obtained filename? */
+    if (inreex && (prev_fname[0] != '\0') && RXARG(execfile))
         strcpy(fname, prev_fname);
-
-    }
     else {
         if ((status = mlreply("File to execute: ", fname, NSTRING - 1)) != TRUE)
             return status;

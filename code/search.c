@@ -1203,7 +1203,7 @@ int forwhunt(int f, int n) {
 int forwsearch(int f, int n) {
     int status = TRUE;
 
-    if (inreex) return forwhunt(f, n);
+    if (inreex && RXARG(forwsearch)) return forwhunt(f, n);
 
 /* If n is negative, search backwards.
  * Otherwise proceed by asking for the search string.
@@ -1289,7 +1289,7 @@ int backhunt(int f, int n) {
 int backsearch(int f, int n) {
     int status = TRUE;
 
-    if (inreex) return backhunt(f, n);
+    if (inreex && RXARG(backsearch)) return backhunt(f, n);
 
 /* If n is negative, search forwards. Otherwise proceed by asking for the
  * search string.

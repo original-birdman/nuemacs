@@ -199,3 +199,5 @@ typedef struct {
     com_arg ca;
 } func_arg;
 extern func_arg f_arg, p_arg;
+extern struct rx_mask rx_mask[];
+extern int rxargs;

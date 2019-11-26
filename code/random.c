@@ -288,7 +288,7 @@ int quote(int f, int n) {
 
     if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
           return rdonly();          /* we are in read only mode    */
-    if (inreex)                     /* Use previously-obtained char */
+    if (inreex && RXARG(quote))     /* Use previously-obtained char? */
         c = last_qchar;
     else {
         c = tgetc();
@@ -1333,5 +1333,61 @@ int quotedcount(int f, int n) {
 int ggr_style(int f, int n) {
     UNUSED(f);
     using_ggr_style = (n > 1);
+    return TRUE;
+}
+
+int re_args_exec(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int status;
+    char buf[NLINE];
+
+    status = mlreplyall(
+         "exec set: ", buf, NLINE - 1);
+    if (status != TRUE)         /* Only act on +ve response */
+        return status;
+
+    char *rp = buf;
+    char tok[NLINE];
+    int mode = RX_ON;
+    int orig_rxargs = rxargs;
+    while(*rp != '\0') {
+        rp = token(rp, tok, NLINE);
+        if (tok[0] == '\0') break;
+        if (!strcasecmp(tok, "none")) {
+            rxargs = 0;
+            continue;
+        }
+        if (!strcasecmp(tok, "all")) {
+            rxargs = ~0;
+            continue;
+        }
+        if (!strcmp(tok, "+")) {
+            mode = RX_ON;
+            continue;
+        }
+        if (!strcmp(tok, "-")) {
+            mode = RX_OFF;
+            continue;
+        }
+        int found = 0;
+        for (struct rx_mask *rxmp = rx_mask; ; rxmp++) {
+            if (!rxmp->entry) break;
+            if (!strcmp(tok, rxmp->entry)) {
+                if (mode == RX_ON)  rxargs |= rxmp->mask;
+                else                rxargs &= ~rxmp->mask;
+                found = 1;
+                break;
+            }
+        }
+        if (found) continue;
+/* If we get here we've found something we couldn't handle, which is
+ * an error. So complain and re-instate the original setting.
+ */
+        char err_str[NSTRING*2];
+        sprintf(err_str, "Unexpected arg: %s", tok);
+        mlwrite(err_str);
+        rxargs = orig_rxargs;
+        return FALSE;
+    }
     return TRUE;
 }

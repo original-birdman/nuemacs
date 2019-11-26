@@ -15,6 +15,7 @@ struct name_bind names[] = {
     {"add-mode", setemode, {0, 0}},
     {"add-global-mode", setgmode, {0, 0}},
     {"apropos", apro, {0, 1}},
+    {"args-in-reexec", re_args_exec, {0, 0}},
     {"backward-character", backchar, {0, 0}},
     {"begin-macro", ctlxlp, {0, 0}},
     {"beginning-of-file", gotobob, {0, 0}},

@@ -44,7 +44,7 @@ void check_for_resize(void) {
 }
 #endif
 
-/* Create a subjob with a copy of the command intrepreter in it. When the
+/* Create a subjob with a copy of the command interpreter in it. When the
  * command interpreter exits, mark the screen as garbage so that you do a full
  * repaint. Bound to "^X C".
  *
@@ -134,20 +134,19 @@ void rtfrmshell(void) {
  * can ever be the "last executed" for reexecute, so they can share
  * the prev_spawn_cmd setting.
  */
-static char *prev_spawn_cmd = NULL;
-static int next_spawn_cmd(char *prompt, char *line) {
-    if (inreex && prev_spawn_cmd) {
+static char prev_spawn_cmd[NLINE] = "";
+static int next_spawn_cmd(int rxtest, char *prompt, char *line) {
+    if (inreex && (prev_spawn_cmd[0] != '\0') && rxtest) {
         strcpy(line, prev_spawn_cmd);
     }
     else {
         int s;
         if ((s = mlreply(prompt, line, NLINE)) != TRUE) return s;
-        prev_spawn_cmd = Xrealloc(prev_spawn_cmd, strlen(line) + 1);
         strcpy(prev_spawn_cmd, line);
     }
     return TRUE;
 }
-static int run_one_liner(int wait, char *prompt) {
+static int run_one_liner(int rxcopy, int wait, char *prompt) {
     int s;
     char line[NLINE];
 
@@ -158,7 +157,7 @@ static int run_one_liner(int wait, char *prompt) {
     get_orig_size();
 #endif
 #if USG | BSD
-    if ((s = next_spawn_cmd(prompt, line)) != TRUE) return s;
+    if ((s = next_spawn_cmd(rxcopy, prompt, line)) != TRUE) return s;
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
@@ -184,12 +183,12 @@ static int run_one_liner(int wait, char *prompt) {
 /* The two front-ends for run_one_liner */
 int spawn(int f, int n) {
     UNUSED(f); UNUSED(n);
-    return run_one_liner(clexec == FALSE, "!");
+    return run_one_liner(RXARG(spawn), clexec == FALSE, "!");
 }
 
 int execprg(int f, int n) {
     UNUSED(f); UNUSED(n);
-    return run_one_liner(TRUE, "$");
+    return run_one_liner(RXARG(execprg), TRUE, "$");
 }
 
 /* Pipe a one line command into a window
@@ -216,7 +215,7 @@ int pipecmd(int f, int n) {
     get_orig_size();
 #endif
 /* Get the command to pipe in */
-    if ((s = next_spawn_cmd("@", line)) != TRUE) return s;
+    if ((s = next_spawn_cmd(RXARG(pipecmd), "@", line)) != TRUE) return s;
 
 /* Get rid of the command output buffer if it exists */
     if ((bp = bfind(bname, FALSE, 0)) != FALSE) {
@@ -293,7 +292,7 @@ int filter_buffer(int f, int n) {
     get_orig_size();
 #endif
 /* Get the filter name and its args */
-    if ((s = next_spawn_cmd("#", line)) != TRUE) return s;
+    if ((s = next_spawn_cmd(RXARG(filter_buffer), "#", line)) != TRUE) return s;
 
 /* Setup the proper file names */
     bp = curbp;

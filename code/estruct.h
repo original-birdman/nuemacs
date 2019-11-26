@@ -608,6 +608,36 @@ struct while_block {
 #define HICHAR          256
 #define HIBYTE          HICHAR >> 3
 
+/* Let the user decide which functions should re-use their args when
+ * reexecing.
+ * These keys are tagged with the name of the function handler.
+ */
+#define RXARG_forwsearch    0x00000001
+#define RXARG_backsearch    0x00000002
+#define RXARG_namedcmd      0x00000004
+#define RXARG_execcmd       0x00000008
+#define RXARG_execproc      0x00000010
+#define RXARG_execbuf       0x00000020
+#define RXARG_execfile      0x00000040
+#define RXARG_quote         0x00000080
+#define RXARG_spawn         0x00000100
+#define RXARG_execprg       0x00000200
+#define RXARG_pipecmd       0x00000400
+#define RXARG_filter_buffer 0x00000800
+
+#define RX_ON  1
+#define RX_OFF 0
+
+/* Macro to allow, e.g.,  RXARG(forwsearch) in coding */
+
+#define RXARG(func) (rxargs & RXARG_ ## func)
+
+/* Used for mapping rexec args on/off */
+struct rx_mask {
+    char *entry;
+    int mask;
+};
+
 /* Typedefs that define the meta-character structure for MAGIC mode searching
  * (struct magic), and the meta-character structure for MAGIC mode replacement
  * (struct magic_replacement).

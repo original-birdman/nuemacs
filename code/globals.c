@@ -183,3 +183,23 @@ int running_function = 0;
 char *current_command = NULL;
 
 func_arg f_arg = { NULL, { META|SPEC|'C', TRUE, 1 } }, p_arg;
+
+/* Rexecute arg mappings... */
+struct rx_mask rx_mask[] = {
+    { "search-forward",         RXARG_forwsearch },
+    { "search-reverse",         RXARG_backsearch },
+    { "execute-named-command",  RXARG_namedcmd },
+    { "execute-command-line",   RXARG_execcmd },
+    { "execute-procedure",      RXARG_execproc },
+    { "run",                    RXARG_execproc },
+    { "execute-buffer",         RXARG_execbuf },
+    { "execute-file",           RXARG_execfile },
+    { "quote-character",        RXARG_quote },
+    { "shell-command",          RXARG_spawn },
+    { "execute-program",        RXARG_execprg },
+    { "pipe-command",           RXARG_pipecmd },
+    { "filter-buffer",          RXARG_filter_buffer },
+    { NULL, 0 },
+};
+/* ...and the current setting */
+int rxargs = ~0;            /* Everything on by default */
