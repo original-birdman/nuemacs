@@ -15,7 +15,7 @@ void version(void) {
 
 /* Try to get the libc version...ripped from BOINC code. */
 
-    FILE* f = popen("ldd --version 2>&1", "r");
+    FILE* f = popen("ldd --version 2>/dev/null", "r");
     if (f) {
         char buf[128];
         char xbuf[128];
@@ -24,6 +24,7 @@ void version(void) {
         while (fgets(xbuf, sizeof(xbuf), f));
         (void)pclose(f);    /* Ignore the status, though */
 /* Now print the info - just remove the leading "ldd " quickly */
-        if (strlen(retval) > 4) printf(" libc version %s", retval+4);
+        if (retval && strlen(retval) > 4)
+              printf(" libc version %s", retval+4);
     }
 }
