@@ -3042,7 +3042,7 @@ efunc.h
     internal matcher() function.
     Replaced strncpy() call for moving so_far into choices with code to
     limit so_far size, then use strcpy(). Removes compiler warning on
-    Debian buster , and is better code.
+    Debian buster, and is better code.
 
 ../CHANGES
 version.h
@@ -3065,4 +3065,116 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.143
 
+==========
+
+-----
+Changes to how re-exec (ctl-C) works for some commands that require
+further input.
+Under re-exec, just execute the previous input rather then get (the
+same) info from the user again.
+
+exec.c
+    In namedcmd() save the last function and re-use it when in
+    reexecute.
+    Also change ":" to "name:" in prompt.
+    In execcmd() change ":" to "command:" in prompt.
+    In do_cmd(), replace the line_seen *lsb structures with a
+    prev_line_seen that is always updated before exit. This handles
+    recursion (e.g. a reexecute of a command buffer that itself contains
+    reexecute commands).
+    In execproc() and execbuf() save the last buffer name and re-use it
+    when in reexecute.
+    In execfile() save the last buffer filename and re-use it when in
+    reexecute.
+
+random.c
+    In quote() save the char to quote and re-use it when in reexecute.
+
+spawn.c
+    Combine spawn() and execprg() into simple front-ends to a common
+    back-end and remember last run common, for reexecute.
+    Remember last command for pipecmd() and filter_buffer() as well,
+    using a common command-line fetcher.
+    Fix filter_buffer() to not prompt to "Discard changes" if original
+    buffer was modified.
+
+main.c
+names.c
+search.c
+    Use inreex flag internally to handle reexecuting searches rather
+    than remapping function calls to *hunt() [search.c, main.c]
+    Remove hunt-forward and hunt-backward from name binding list as they
+    are no longer needed for macro-running [names.c]
+    Put "reexecute" into the keyboard macro buffer, rather than adding a
+    copy of the actual previous command. [main.c]
+-----
+
+version.c
+    Display the GCC version used to compile, compile date/time and libc
+    version in use at run-time.
+
+globals.c
+edef.h
+    Remove unused quotec variable.
+
+basic.c
+bind.c
+eval.c
+exec.c
+file.c
+input.c
+isearch.c
+main.c
+random.c
+region.c
+spawn.c
+window.c
+word.c
+estruct.h
+    Add MLbkt macro for MLpre/MLpost bracketting of fixed text.
+    No real code change.
+
+exec.c
+globals.c
+names.c
+random.c
+search.c
+spawn.c
+edef.h
+efunc.h
+estruct.h
+    Added the ability to turn the "extended" reexecute arg functionality
+    on/off on a per-handler basis. The "args-in-reexec" command.
+    Structure data and setting. [edef.h, efunc.h, estruct.h, globals.c,
+    names.c, random.c ]
+    Add the per-handler test to current inreex checks for:
+        o namedcmd(), execproc(), execbuf() and execfile() [exec.c]
+        o Added (missed) inreex handling to execcmd() [exec.c]
+        o quote() [random.c]
+        o forwsearch() and backsearch() [search.c]
+        o spawn(), execprg(), pipecmd() and filter_buffer() [spawn.c]
+    Removed the realloc() from reexec handling by using a large enough
+    static buffer instead [spawn.c]
+
+    By default all "extended" reexecutes are on.
+    They can be manipulated by:
+        args-in-reexec arg1 arg2 arg3 ....
+        Args are process in the order found.
+        None (case-insensitive) turns all off
+        All (case-insensitive) turns all on
+        + means turn it on any succeeding commands
+        - means turn it off any succeeding commands
+        A command name (e.g. search-forward) means turn that on/off.
+    If there is an error in the args then the original setting is left
+    unchanged.
+
+version.c
+    Check we actually have a libc string before trying to print it...
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Added args-in-reexec ALL [uemacs.rc]
+    Update to version GGR4.144
 ==========

@@ -396,5 +396,9 @@ char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
 ; Testing for new keyboard macro code
 buffer-to-key /kbd_macro    ^XV
 
+; This is the default anyway, but use this as a reminder, and
+; an example of how to change it
+args-in-reexec ALL
+
 ;
 set $discmd TRUE
