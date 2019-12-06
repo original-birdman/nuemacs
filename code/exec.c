@@ -61,7 +61,6 @@ static int docmd(char *cline) {
     thisflag = 0;
 
     if ((status = macarg(tkn)) != TRUE) {   /* and grab the first token */
-        execstr = oldestr;
         goto final_exit;
     }
 
@@ -78,7 +77,6 @@ static int docmd(char *cline) {
 
 /* and now get the command to execute */
         if ((status = macarg(tkn)) != TRUE) {
-            execstr = oldestr;
             goto final_exit;
         }
     }
@@ -107,7 +105,6 @@ static int docmd(char *cline) {
         char ermess[NSTRING+22];
         snprintf(ermess, NSTRING+22, "No such Function: %s", tkn);
         mlwrite(ermess);
-        execstr = oldestr;
         status = FALSE;
         goto final_exit;
     }
@@ -119,7 +116,6 @@ static int docmd(char *cline) {
     status = (nbp->n_func)(f, n); /* call the function */
     cmdstatus = status;     /* save the status */
     clexec = oldcle;        /* restore clexec flag */
-    execstr = oldestr;
 
 /* "Remember command" exit.
  * {} needed because we start with a declaration, not statement.
@@ -136,6 +132,7 @@ remember_cmd:
 /* "Just tidy up..." exit */
 final_exit:
     free(this_line_seen);
+    execstr = oldestr;
     return status;
 }
 
