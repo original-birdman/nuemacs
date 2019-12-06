@@ -1546,7 +1546,7 @@ int ctlxlp(int f, int n) {
     p_arg = f_arg;          /* Restored on ctlxrp in execute() */
 
     mlwrite(MLbkt("Start macro"));
-    kbdptr = &kbdm[0];
+    kbdptr = kbdm;
     kbdend = kbdptr;
     kbdmode = RECORD;
     start_kbdmacro();
@@ -1610,7 +1610,7 @@ int ctlxe(int f, int n) {
 
     kbdrep = n;             /* remember how many times to execute */
     kbdmode = PLAY;         /* start us in play mode */
-    kbdptr = &kbdm[0];      /*    at the beginning */
+    kbdptr = kbdm;          /*    at the beginning */
     return TRUE;
 }
 

@@ -407,7 +407,7 @@ fvar:
 
     case '$':               /* Check for legal enviromnent var */
         for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
-            if (strcmp(&var[1], evl[vnum].var) == 0) {
+            if (strcmp(var+1, evl[vnum].var) == 0) {
                 vtype = TKENV;
                 break;
             }
@@ -415,7 +415,7 @@ fvar:
 
     case '%':               /* Check for existing legal user variable */
         for (vnum = 0; vnum < MAXVARS; vnum++)
-            if (strcmp(&var[1], uv[vnum].u_name) == 0) {
+            if (strcmp(var+1, uv[vnum].u_name) == 0) {
                 vtype = TKVAR;
                 break;
             }
@@ -423,14 +423,14 @@ fvar:
         for (vnum = 0; vnum < MAXVARS; vnum++)  /* Create a new one??? */
             if (uv[vnum].u_name[0] == 0) {
                 vtype = TKVAR;
-                strcpy(uv[vnum].u_name, &var[1]);
+                strcpy(uv[vnum].u_name, var+1);
                 break;
             }
         break;
 
     case '&':               /* Indirect operator? */
         var[4] = 0;
-        if (strcmp(&var[1], "ind") == 0) {  /* Grab token, and eval it */
+        if (strcmp(var+1, "ind") == 0) {  /* Grab token, and eval it */
             execstr = token(execstr, var, size);
             strcpy(var, getval(var));
             goto fvar;
@@ -665,7 +665,7 @@ int setvar(int f, int n) {
 
 /* First get the variable to set.. */
     if (clexec == FALSE) {
-        status = mlreply("Variable to set: ", &var[0], NVSIZE);
+        status = mlreply("Variable to set: ", var, NVSIZE);
         if (status != TRUE) return status;
     }
     else {      /* macro line argument - grab token and skip it */
@@ -684,7 +684,7 @@ int setvar(int f, int n) {
 /* Get the value for that variable */
     if (f == TRUE) strcpy(value, ue_itoa(n));
     else {
-        status = mlreply("Value: ", &value[0], NSTRING);
+        status = mlreply("Value: ", value, NSTRING);
         if (status != TRUE) return status;
     }
 
@@ -828,9 +828,9 @@ char *getval(char *token) {
     case TKARG:                 /* interactive argument */
 /* GGR - There is the possibility of an illegal overlap of args here.
  *       So it must be done via a temporary buffer.
- *              strcpy(token, getval(&token[1]));
+ *              strcpy(token, getval(token+1));
  */
-        strcpy(tbuf, getval(&token[1]));
+        strcpy(tbuf, getval(token+1));
         strcpy(token, tbuf);
         distmp = discmd;    /* echo it always! */
         discmd = TRUE;
@@ -843,9 +843,9 @@ char *getval(char *token) {
 /* Grab the right buffer
  * GGR - There is the possibility of an illegal overlap of args here.
  *       So it must be done via a temporary buffer.
- *              strcpy(token, getval(&token[1]));
+ *              strcpy(token, getval(token+1));
  */
-        strcpy(tbuf, getval(&token[1]));
+        strcpy(tbuf, getval(token+1));
         strcpy(token, tbuf);
         bp = bfind(token, FALSE, 0);
         if (bp == NULL) return errorm;

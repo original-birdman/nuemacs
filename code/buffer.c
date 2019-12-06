@@ -312,7 +312,7 @@ static int makelist(int iflag) {
 
 /* Build line to report global mode settings */
 
-    cp1 = &line[0];
+    cp1 = line;
     for (i = 0; i < 4; i++) *cp1++ = ' ';
 
 /* Output the mode codes */
@@ -330,7 +330,7 @@ static int makelist(int iflag) {
             bp = bp->b_bufp;
             continue;
         }
-        cp1 = &line[0];                 /* Start at left edge   */
+        cp1 = line;                 /* Start at left edge   */
 
 /* Output status of ACTIVE flag (has the file been read in? */
 

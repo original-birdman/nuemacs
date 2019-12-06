@@ -105,7 +105,7 @@ void ttopen(void) {
 /* Provide a smaller terminal output buffer so that the type-ahead
  * detection works better (more often)
  */
-    setbuffer(stdout, &tobuf[0], TBUFSIZ);
+    setbuffer(stdout, tobuf, TBUFSIZ);
     signal(SIGTSTP, SIG_DFL);           /* set signals so that we can */
     signal(SIGCONT, rtfrmshell);        /* suspend & restart emacs */
 #endif
@@ -115,7 +115,7 @@ void ttopen(void) {
 /* Provide a smaller terminal output buffer so that the type-ahead
  * detection works better (more often)
  */
-    setvbuf(stdout, &tobuf[0], _IOFBF, TBUFSIZ);
+    setvbuf(stdout, tobuf, _IOFBF, TBUFSIZ);
     signal(SIGTSTP, SIG_DFL);           /* set signals so that we can */
     signal(SIGCONT, rtfrmshell);        /* suspend & restart emacs */
     TTflush();

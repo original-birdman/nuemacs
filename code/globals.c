@@ -59,7 +59,7 @@ int kused[] = {[0 ... KRING_SIZE-1] = KBLOCK};
 struct window *swindow = NULL;  /* saved window pointer                 */
 int cryptflag = FALSE;          /* currently encrypting?                */
 int *kbdptr;                    /* current position in keyboard buf */
-int *kbdend = &kbdm[0];         /* ptr to end of the keyboard */
+int *kbdend = kbdm;             /* ptr to end of the keyboard */
 int kbdmode = STOP;             /* current keyboard macro mode  */
 int kbdrep = 0;                 /* number of repetitions        */
 int restflag = FALSE;           /* restricted use?              */

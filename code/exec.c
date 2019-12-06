@@ -794,7 +794,7 @@ int storeproc(int f, int n) {
 
 /* Append the procedure name to the buffer marker tag */
     bufn[0] = '/';
-    if ((status = mlreply("Procedure name: ", &bufn[1], NBUFN)) != TRUE)
+    if ((status = mlreply("Procedure name: ", bufn+1, NBUFN)) != TRUE)
          return status;
     if (strlen(bufn) >= NBUFN) {
         mlforce("Procedure name too long (store): %s. Ignored.", bufn);
@@ -859,7 +859,7 @@ int execproc(int f, int n) {
             input_waiting = NULL;   /* We've used it */
         }
         else {
-            if ((status = mlreply("Execute procedure: ", &bufn[1], NBUFN))
+            if ((status = mlreply("Execute procedure: ", bufn+1, NBUFN))
                  != TRUE)
                 return status;
             if (strlen(bufn) >= NBUFN) {
@@ -1065,7 +1065,7 @@ int dobuf(struct buffer *bp) {
         }
 
 /* If it is an endwhile directive, record the spot... */
-        if (eline[0] == '!' && strncmp(&eline[1], "endw", 4) == 0) {
+        if (eline[0] == '!' && strncmp(eline+1, "endw", 4) == 0) {
             if (scanner == NULL) {
                 mlwrite("%%!ENDWHILE with no preceding !WHILE in '%s'",
                      bp->b_bname);
