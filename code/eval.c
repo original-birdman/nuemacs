@@ -207,11 +207,20 @@ static char *gtfun(char *fname) {
     case UFCAT:
         strcpy(result, arg1);
         return strcat(result, arg2);
-    case UFLEFT:        return strncpy(result, arg1, atoi(arg2));
+    case UFLEFT:
+                       {int reslen = atoi(arg2);
+                        strncpy(result, arg1, reslen);
+                        result[reslen] = '\0';
+                        return result;
+                       }
     case UFRIGHT:
         return (strcpy(result, &arg1[(strlen(arg1) - atoi(arg2))]));
     case UFMID:
-        return (strncpy(result, &arg1[atoi(arg2) - 1], atoi(arg3)));
+                       {int reslen = atoi(arg3);
+                        strncpy(result, &arg1[atoi(arg2) - 1], atoi(arg3));
+                        result[reslen] = '\0';
+                        return result;
+                       }
     case UFNOT:         return ltos(stol(arg1) == FALSE);
     case UFEQUAL:       return ltos(atoi(arg1) == atoi(arg2));
     case UFLESS:        return ltos(atoi(arg1) < atoi(arg2));
