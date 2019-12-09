@@ -265,6 +265,7 @@ extern int next_pttable(int, int);
 extern int toggle_ptmode(int, int);
 extern int ptt_handler(int);
 extern int storeproc(int f, int n);
+extern int run_user_proc(char *, int);
 extern int execproc(int f, int n);
 extern int execbuf(int f, int n);
 extern int dobuf(struct buffer *bp);

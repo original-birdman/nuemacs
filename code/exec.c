@@ -829,49 +829,16 @@ int storeproc(int f, int n) {
     return TRUE;
 }
 
-/* Buffer name for reexecute - shared by all buffer-callers */
+/* Run a user-procedure in a buffer */
 
-static char prev_bufn[NBUFN+1] = "";
-
-/*
- * execproc:
- *      Execute a procedure
- *
- * int f, n;            default flag and numeric arg
- */
-int execproc(int f, int n) {
-    UNUSED(f);
+int run_user_proc(char *procname, int rpts) {
+    char bufn[NBUFN+1];
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
-    char bufn[NBUFN+1];     /* name of buffer to execute */
-
-/* Handle a reexecute */
-
-/* Re-use last obtained buffer? */
-    if (inreex && (prev_bufn[0] != '\0') && RXARG(execproc))
-        strcpy(bufn, prev_bufn);
-    else {
-/* Append the procedure name to the buffer marker tag */
-       bufn[0] = '/';
-
-        if (input_waiting != NULL) {
-            strcpy(bufn+1, input_waiting);
-            input_waiting = NULL;   /* We've used it */
-        }
-        else {
-            if ((status = mlreply("Execute procedure: ", bufn+1, NBUFN))
-                 != TRUE)
-                return status;
-            if (strlen(bufn) >= NBUFN) {
-                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
-                sleep(1);
-                return TRUE;    /* Don't abort start-up file */
-            }
-        }
 
 /* Construct the buffer name */
-        bufn[0] = '/';
-    }
+    bufn[0] = '/';
+    strcpy(bufn+1, procname);
 
 /* Find the pointer to that buffer */
     if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
@@ -888,14 +855,57 @@ int execproc(int f, int n) {
     }
 
 /* and now execute it as asked */
-    while (n-- > 0)
+    if (rpts <= 0) rpts = 1;
+    while (rpts-- > 0)
         if ((status = dobuf(bp)) != TRUE) return status;
+
+    return TRUE;
+}
+
+/* Buffer name for reexecute - shared by all buffer-callers */
+
+static char prev_bufn[NBUFN+1] = "";
+
+/*
+ * execproc:
+ *      Execute a procedure
+ *
+ * int f, n;            default flag and numeric arg
+ */
+int execproc(int f, int n) {
+    UNUSED(f);
+    char bufn[NBUFN];       /* name of buffer to execute */
+    int status;             /* status return */
+
+/* Handle a reexecute */
+
+/* Re-use last obtained buffer? */
+    if (inreex && (prev_bufn[0] != '\0') && RXARG(execproc))
+        strcpy(bufn, prev_bufn);
+    else {
+        if (input_waiting != NULL) {
+            strcpy(bufn, input_waiting);
+            input_waiting = NULL;   /* We've used it */
+        }
+        else {
+            if ((status = mlreply("Execute procedure: ", bufn, NBUFN))
+                 != TRUE)
+                return status;
+            if (strlen(bufn) >= NBUFN) {
+                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
+                sleep(1);
+                return TRUE;    /* Don't abort start-up file */
+            }
+        }
+    }
+
+    status = run_user_proc(bufn, n);
 
 /* dobuf() could contain commands that change prev_bufn, so reinstate
  * it here to allow for recursion.
  */
-    strcpy(prev_bufn, bufn);
-    return TRUE;
+    if (status == TRUE) strcpy(prev_bufn, bufn);
+    return status;
 }
 
 /*

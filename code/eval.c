@@ -230,6 +230,46 @@ static char *gtfun(char *fname) {
         strcpy(result, csinfo.str);
         free(csinfo.str);
         return(result);
+    case UFESCAPE:              /* Only need to escape ASCII chars */
+       {char *ip = arg1;        /* This is SHELL escaping... */
+        char *op = result;
+        while (*ip) {
+            if (*ip == '\t') {  /* tab - word separator */
+                *op++ = '\\';
+                *op++ = 't';
+                ip++;
+                continue;
+            }
+            if (*ip == '\n') {  /* newline - word separator */
+                *op++ = '\\';
+                *op++ = 'n';
+                ip++;
+                continue;
+            }
+            switch(*ip) {       /* Check for the chars we need to escape */
+            case ' ':           /* Spaces */
+            case '"':           /* Double quote */
+            case '$':           /* Environment vars */
+            case '&':           /* Backgrounding */
+            case '\'':          /* Single quote */
+            case '(':           /* Word separator */
+            case ')':           /* Word separator */
+            case '*':           /* multi-Wildcard */
+            case ';':           /* Command separator */
+            case '<':           /* Input redirection */
+            case '>':           /* Output redirection */
+            case '?':           /* single-Wildcard */
+            case '\\':          /* Escaper itself */
+            case '`':           /* Command interpolation */
+            case '{':           /* Brace expansion */
+            case '|':           /* Pipeline */
+                *op++ = '\\';   /* Escape it */
+            }
+            *op++ = *ip++;
+        }
+        *op = '\0';
+        return result;
+       }
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
     case UFASCII:       return ue_itoa((int) arg1[0]);
 /* Allow for unicode as:
@@ -273,6 +313,14 @@ static char *gtfun(char *fname) {
     case UFBXOR:        return ue_itoa(atoi(arg1) ^ atoi(arg2));
     case UFBNOT:        return ue_itoa(~atoi(arg1));
     case UFXLATE:       return xlat(arg1, arg2, arg3);
+    case UFPROCARG:
+        if (userproc_arg) return userproc_arg;
+        int distmp = discmd;    /* echo it always! */
+        discmd = TRUE;
+        int status = getstring(arg1, result, NSTRING, ctoec('\n'));
+        discmd = distmp;
+        if (status == ABORT) return errorm;
+        return result;
     }
 
     exit(-11);              /* never should get here */

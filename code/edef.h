@@ -201,3 +201,7 @@ typedef struct {
 extern func_arg f_arg, p_arg;
 extern struct rx_mask rx_mask[];
 extern int rxargs;
+
+/* To allow macro procedures to get args from C-code */
+
+extern char *userproc_arg;

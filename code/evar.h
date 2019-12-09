@@ -98,10 +98,11 @@ enum uf_val {
     UFNEG,      UFCAT,      UFLEFT,     UFRIGHT,    UFMID,
     UFNOT,      UFEQUAL,    UFLESS,     UFGREATER,  UFSEQUAL,
     UFSLESS,    UFSGREAT,   UFIND,      UFAND,      UFOR,
-    UFLENGTH,   UFUPPER,    UFLOWER,    UFTRUTH,    UFASCII,
-    UFCHR,      UFGTKEY,    UFRND,      UFABS,      UFSINDEX,
-    UFENV,      UFBIND,     UFEXIST,    UFFIND,     UFBAND,
-    UFBOR,      UFBXOR,     UFBNOT,     UFXLATE,
+    UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,   UFTRUTH,
+    UFASCII,    UFCHR,      UFGTKEY,    UFRND,      UFABS,
+    UFSINDEX,   UFENV,      UFBIND,     UFEXIST,    UFFIND,
+    UFBAND,     UFBOR,      UFBXOR,     UFBNOT,     UFXLATE,
+    UFPROCARG,
 };
 
 enum function_type {
@@ -142,6 +143,7 @@ static struct user_function funcs[] = {
  { "len", MONAMIC,  UFLENGTH }, /* string length */
  { "upp", MONAMIC,  UFUPPER },  /* uppercase string */
  { "low", MONAMIC,  UFLOWER },  /* lower case string */
+ { "esc", MONAMIC,  UFESCAPE }, /* ~ escape string */
  { "tru", MONAMIC,  UFTRUTH },  /* Truth of the universe logical test */
  { "asc", MONAMIC,  UFASCII },  /* char to integer conversion */
  { "chr", MONAMIC,  UFCHR },    /* integer to char conversion */
@@ -158,6 +160,7 @@ static struct user_function funcs[] = {
  { "bxo", DYNAMIC,  UFBXOR },   /* bitwise xor   9-10-87  jwm */
  { "bno", MONAMIC,  UFBNOT },   /* bitwise not */
  { "xla", TRINAMIC, UFXLATE },  /* XLATE character string translation */
+ { "arg", MONAMIC,  UFPROCARG}, /* Get user proc arg */
 };
 
 #endif  /* EVAR_H_ */
