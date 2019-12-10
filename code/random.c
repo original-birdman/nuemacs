@@ -991,10 +991,10 @@ int clrmes(int f, int n) {
  * This function writes a string on the message line
  * mainly for macro usage
  *
- * int f, n;            arguments ignored
+ * IFF n comes in as 2, just print to stderr - for macro debugging ONLY.
+ *
  */
 int writemsg(int f, int n) {
-    UNUSED(f); UNUSED(n);
     char *sp;               /* pointer into buf to expand %s */
     char *np;               /* ptr into nbuf */
     int status;
@@ -1014,7 +1014,8 @@ int writemsg(int f, int n) {
     *np = '\0';
 
 /* Write the message out */
-    mlforce(nbuf);
+    if (f && n == 2) fprintf(stderr, "%s\n", nbuf);
+    else             mlforce(nbuf);
     return TRUE;
 }
 
