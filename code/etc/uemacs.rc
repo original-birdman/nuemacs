@@ -400,5 +400,70 @@ buffer-to-key /kbd_macro    ^XV
 ; an example of how to change it
 args-in-reexec ALL
 
+;;;;; showdir userproc ;;;;;
+;
+; Attempt to enable uemacs to list a directory in a buffer and let you
+; browse to files... 
+; This doesn't work on Android, as pipe-command fails - probably
+; as /bin/sh isn't there and I build it on a Raspberry Pi, whch expects it.
+; I'm not worried about it....just don't enabel it there.
+;
+
+!if &not &sin $progname "android"
+
+; We have to set how many tokens to skip in the output line of the
+; /bin/ls command (defined below) to get to the start of the entryname.
+;
+ set $showdir_tokskip 8
+
+; Define the user procedure to fill a buffer with ls lines
+;
+ store-procedure showdir
+
+; Get the full pathname...may be supplied internally by C-code (&arg)
+;
+    set %udir &arg "Dir: "
+
+; Have to handle getting "", ".", "./xxx" or a relative path, as we
+; need the full pathname to open entries after changing directory
+;
+    !if &or &seq "" %udir &seq "." %udir 
+        set %udir &env PWD
+    !endif
+    !if &seq "./" &lef %udir 2
+        set %udir &cat &env PWD &rig %udir 2
+    !endif
+    !if &not &seq "/" &lef %udir 1
+        set %udir &cat &env PWD &cat "/" %udir
+    !endif
+    set %escudir &escape %udir
+
+; List the directory in a buffer (.ue_command - PIPEFILE in spawn.c)
+; Build up the ls command, and post-handling with awk/sort/etc...
+;
+    set %ucmd &cat "/bin/ls -lLh " %escudir
+    set %ucmd &cat %ucmd "| awk 'NR == 1 && $1 == ~"total~" {next;} {print;}' | sort -k 1,1.1r -k9"
+    pipe-command %ucmd
+
+; Make that window the only window
+;
+    delete-other-windows
+
+; Rename it to something else - make sure anything already there is
+; removed first
+; NOTE: that we know it isn't being displayed, as we've just set the 
+;       pipecmd window (.ue_command - PIPEFILE in spawn.c) to be the
+;       only displayed window.
+;       This //directory name must agree with the name used in main.c
+;       for its showdir handling.
+;
+    delete-buffer //directory
+    name-buffer //directory
+    change-file-name %udir
+    add-mode view       ; Turn it back on...
+    delete-mode wrap    ; Turn this off...
+ !endm
+!endif
+
 ;
 set $discmd TRUE

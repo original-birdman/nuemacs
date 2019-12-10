@@ -198,15 +198,14 @@ int execprg(int f, int n) {
  * return, which ends up clearing the minibuffer data, while displaying
  * its status in the status line
  */
+#define PIPEFILE ".ue_command"
 int pipecmd(int f, int n) {
     UNUSED(f); UNUSED(n);
     int s;                  /* return status from CLI */
     struct window *wp;      /* pointer to new window */
     struct buffer *bp;      /* pointer to buffer to zot */
     char line[NLINE];       /* command line send to shell */
-    static char bname[] = "command";
-
-    static char filnam[NSTRING] = "command";
+    static char bf_name[] = PIPEFILE;
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
@@ -218,7 +217,7 @@ int pipecmd(int f, int n) {
     if ((s = next_spawn_cmd(RXARG(pipecmd), "@", line)) != TRUE) return s;
 
 /* Get rid of the command output buffer if it exists */
-    if ((bp = bfind(bname, FALSE, 0)) != FALSE) {
+    if ((bp = bfind(bf_name, FALSE, 0)) != FALSE) {
 /* Try to make sure we are off screen */
         wp = wheadp;
         while (wp != NULL) {
@@ -236,7 +235,7 @@ int pipecmd(int f, int n) {
     TTclose();              /* stty to old modes    */
     TTkclose();
     strcat(line, ">");
-    strcat(line, filnam);
+    strcat(line, bf_name);
     dnc = system(line);
     TTopen();
     TTkopen();
@@ -253,7 +252,7 @@ int pipecmd(int f, int n) {
     if (splitwind(FALSE, 1) == FALSE) return FALSE;
 
 /* And read the stuff in */
-    if (getfile(filnam, FALSE) == FALSE) return FALSE;
+    if (getfile(bf_name, FALSE) == FALSE) return FALSE;
 
 /* Make this window in VIEW mode, update all mode lines */
     curwp->w_bufp->b_mode |= MDVIEW;
@@ -264,7 +263,7 @@ int pipecmd(int f, int n) {
     }
 
 /* And get rid of the temporary file */
-    unlink(filnam);
+    unlink(bf_name);
     return TRUE;
 }
 

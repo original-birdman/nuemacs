@@ -30,6 +30,7 @@ enum ev_val {
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
+    EVSDTKSKIP,
 };
 
 /* List of recognized environment variables. */
@@ -89,6 +90,7 @@ static struct evlist {
  { "regionlist_text", EVREGLTEXT },     /* makelist_region() indent */
  { "regionlist_number", EVREGLNUM },    /* numberlist_region() indent */
  { "autodos",   EVAUTODOS },    /* Check for DOS on read-in? */
+ { "showdir_tokskip", EVSDTKSKIP },     /* Token to skip in showdir */
 };
 
 /* The tags for user functions - used in struct evlist */

@@ -431,18 +431,19 @@ static char *gtenv(char *vname) {
     case EVHJUMP:           return(ue_itoa(hjump));
     case EVYANKMODE:        switch (yank_mode) {
                             case Old:
-                                return("old");
+                                return "old";
                                 break;
                             case GNU:
-                                return("gnu");
+                                return "gnu";
                                 break;
                             }
-                            return("");
+                            return "";
                             break;
-    case EVAUTOCLEAN:       return(ue_itoa(autoclean));
+    case EVAUTOCLEAN:       return ue_itoa(autoclean);
     case EVREGLTEXT:        return regionlist_text;
     case EVREGLNUM:         return regionlist_number;
-    case EVAUTODOS:         return(ltos(autodos));
+    case EVAUTODOS:         return ltos(autodos);
+    case EVSDTKSKIP:        return ue_itoa(showdir_tokskip);
     }
     exit(-12);              /* again, we should never get here */
 }
@@ -696,6 +697,9 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVAUTODOS:
             autodos = stol(value);
+            break;
+        case EVSDTKSKIP:
+            showdir_tokskip = atoi(value);
             break;
         }
         break;

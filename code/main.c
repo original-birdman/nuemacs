@@ -1364,6 +1364,98 @@ after_mb_check:
     f_arg.ca.f = f;
     f_arg.ca.n = n;
 
+/* If we are in the //directory buffer in view-only mode with a showdir
+ * user_proc then handle certain command chars.
+ * NOTE: that the //directory buffer name *MUST* agree with that used
+ * in the showdir userproc.
+ * Make the test short if it's going to fail...
+ */
+    int dir_browsing = 0;
+    if ((curbp->b_mode & MDVIEW) &&
+         (strcmp("//directory", curbp->b_bname) == 0)) {
+        struct buffer *sdb = bfind("/showdir", FALSE, 0);
+        dir_browsing = (sdb && (sdb->b_type == BTPROC));
+    }
+    if (dir_browsing) {
+        switch(c) {
+        case 'd':           /* Dive into entry on current line */
+        case 'o':           /* Open entry on current line */
+        case 'v':           /* View entry on current line */
+
+/* We want to get to the end of the relevant token.
+ * This is defined when setting up the showdir userproc, so that if the
+ * line-generating code is changed you dont; need to recompile uemacs to
+ * change things.
+ * Then advance a space and take the rest of the line as the entry name
+ * since we're only looking for space we can just use ASCII.
+ */
+           {int max = llength(curwp->w_dotp);
+            char *lp = curwp->w_dotp->l_text;
+            int tok = showdir_tokskip;
+            if (tok < 0) {
+                mlwrite("Error: $showdir_tokskip is undefined");
+                break;
+            }
+            int decr = 1;
+            char fname[NFILEN];
+            int fnlen;
+            for (;;) {
+                if (decr && *lp == ' ') {
+                    decr = 0;
+                    if (--tok == 0) break;
+                }
+                else
+                    if (!decr && *lp != ' ') {
+                        decr = 1;
+                    }
+                if (--max == 0) break;
+                lp++;
+            }
+            if (tok) {      /* Didn't get them all? */
+                mlwrite("Can't parse line");
+                break;
+            }
+/* Move to start of name, and get the length to endp-of-data (no NUL here) */
+            lp++;   /* Step over next space */
+            fnlen = curwp->w_dotp->l_text+llength(curwp->w_dotp) - lp;
+
+/* Now build up the full pathname
+ * Start with the current buffer filename, and append "/", unless we
+ * are actually at "/" (quick test).
+ */
+            strcpy(fname, curwp->w_bufp->b_fname);
+            if (fname[1] != '\0') strcat(fname, "/");
+/* Add in this entryname, then wpork out the full pathname length
+ * and append a NUL
+ */
+            strncat(fname, lp, fnlen);
+            int full_len = strlen(curwp->w_bufp->b_fname) + 1 + fnlen;
+            fname[full_len] = '\0';
+
+/* May be file or dir - getfile() sorts it out */
+            getfile(fname, c != 'v');   /* c.f. filefind/viewfile */
+            if (c == 'v') curwp->w_bufp->b_mode |= MDVIEW;
+            break;
+           }
+        case 'r':           /* Refresh current view */
+            getfile(curbp->b_fname, c == 'o');
+            break;
+        case 'u':           /* Up to parent. Needs run_user_proc() */
+           {char fname[NFILEN];
+            strcpy(fname, curwp->w_bufp->b_fname);
+            char *upp = strrchr(fname, '/');
+            if (upp == fname) upp++;
+            *upp = '\0';
+            userproc_arg = fname;
+            (void)run_user_proc("showdir", 1);
+            userproc_arg = NULL;
+            break;
+           }
+        }
+        lastflag = 0;       /* Fake last flags.     */
+        return TRUE;
+    }
+
 /*
  * If a space was typed, fill column is defined, the argument is non-
  * negative, wrap mode is enabled, and we are now past fill column,

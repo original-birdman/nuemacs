@@ -141,6 +141,7 @@ extern struct buffer *ptt;      /* Global pt table */
 extern int hscroll;             /* TRUE when we are scrolling horizontally */
 extern int hjump;               /* How much to jump on horizontal scroll */
 extern int autodos;             /* Auto-detect DOS file on read if set */
+extern int showdir_tokskip;     /* Tokens to skip in showdir parsing */
 
 extern const char kbdmacro_buffer[];    /* Name of the keyboard macro buffer */
 extern struct buffer *kbdmac_bp;    /* keyboard macro buffer */
