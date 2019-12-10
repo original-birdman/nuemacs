@@ -1436,7 +1436,7 @@ int execfile(int f, int n) {
     }
 /* Don't look in HOME!
  * This allows you to have uemacs.rc in HOME that includes a system one
- * by using "include-file uemacs.rc"
+ * by using "execute-file uemacs.rc"
  */
     fspec = flook(fname+fns, FALSE, INTABLE);
 
