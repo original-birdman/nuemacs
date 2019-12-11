@@ -52,7 +52,7 @@ static struct buffer *expandbp;
 
 static char so_far[NFILEN];     /* Maximal match so far     */
 
-static int matcher(char *name, int namelen, char *choices, int type) {
+static int matcher(char *name, int namelen, char *choices, int mtype) {
     char *next;                 /* Next filename to look at */
     int match_length;           /* Maximal match length     */
     char *p, *q;                /* Handy pointers           */
@@ -77,9 +77,9 @@ static int matcher(char *name, int namelen, char *choices, int type) {
     max -= l;
     unique = TRUE;
     while ((next =
-                type == COMPFILE?
+                mtype == COMPFILE?
                     getnfile():
-                    getnbuffer(name, namelen, type)
+                    getnbuffer(name, namelen, mtype)
             ) != NULL) {
         unique = FALSE;
         for (p = so_far, q = next, match_length = 0;
@@ -287,6 +287,8 @@ static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
 /* We NEVER return minibuffer buffers (CC$00nnn), and we return internal
  * [xx] buffers only if the user asked for them by specifying a picture
  * starting with [.
+ * For a type of COMPPROC we only consider buffer-names starting with '/'
+ * with a b_type of BTPROC. We return the name *without* the leading '/'.
  */
 
         int offset;
