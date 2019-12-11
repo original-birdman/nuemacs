@@ -90,6 +90,8 @@ static int matcher(char *name, int namelen, char *choices, int mtype) {
         case COMPNAME:
             next = getnname(name, namelen);
             break;
+        default:            /* If mtype arrives oddly? */
+            next = NULL;
         }
         if (next == NULL) break;
 
