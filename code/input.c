@@ -29,7 +29,7 @@ static int remap_c_on_intr = 0;
 /*      complet.c - now included here, as it is the only user.
  *
  *      A set of functions having to do with filename completion.
- *      Partof thre GGR additions.
+ *      Part of the GGR additions.
  */
 
 #include <string.h>
@@ -40,6 +40,7 @@ static char picture[NFILEN], directory[NFILEN];
 
 static char *getffile(char *), *getnfile(void);
 static char *getfbuffer(char *, int, int), *getnbuffer(char *, int, int);
+static char *getnname(char *, int);
 static short ljust(char *);
 
 static struct buffer *expandbp;
@@ -47,6 +48,7 @@ static struct buffer *expandbp;
 #define COMPFILE 1
 #define COMPBUFF 2
 #define COMPPROC 3
+#define COMPNAME 4
 
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
@@ -76,11 +78,21 @@ static int matcher(char *name, int namelen, char *choices, int mtype) {
     strcpy(choices, so_far);
     max -= l;
     unique = TRUE;
-    while ((next =
-                mtype == COMPFILE?
-                    getnfile():
-                    getnbuffer(name, namelen, mtype)
-            ) != NULL) {
+    while (1) {             /* Rather than try to put the switch in there. */
+        switch(mtype) {
+        case COMPFILE:
+            next = getnfile();
+            break;
+        case COMPBUFF:
+        case COMPPROC:
+            next = getnbuffer(name, namelen, mtype);
+            break;
+        case COMPNAME:
+            next = getnname(name, namelen);
+            break;
+        }
+        if (next == NULL) break;
+
         unique = FALSE;
         for (p = so_far, q = next, match_length = 0;
             (*p && *q && (*p == *q)); p++, q++)
@@ -319,6 +331,56 @@ static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
 }
 /* ================= End of what was complet.c ====================== */
 
+/* Functions to get the first and name name (alphabetically0 from the
+ * function name list, using the sorted index.
+ * For use by matcher() for mtype == COMPNAME.
+ */
+
+static int n_idx;
+static char *getfname(char *name, int namelen) {
+    n_idx = -1;
+    while ((n_idx = nxti_name_info(n_idx)) >= 0) { /* -1 at end of list */
+        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
+            return names[n_idx].n_name;
+    }
+    return NULL;
+}
+static char *getnname(char *name, int namelen) {
+    while ((n_idx = nxti_name_info(n_idx)) >= 0) {
+        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
+            return names[n_idx].n_name;
+        else
+            return NULL;
+    }
+    return NULL;
+}
+
+/* The function that uses getfname() and getnname() to get the matches */
+static int comp_name(char *name, char *choices) {
+    char supplied[NFILEN];  /* Maximal match so far */
+    char *p;                /* Handy pointer */
+    int unique;
+    int namelen;
+
+    *choices = 0;
+    ljust(name);
+    namelen = strlen(name);
+    if ((p = getfname(name, namelen)) == NULL)
+        return(FALSE);
+    else
+        strcpy(so_far, p);
+
+    strcpy(supplied, name);
+    unique = matcher(name, namelen, choices, COMPNAME);
+    strcpy(name, so_far);
+
+    if (unique && strcmp(name, supplied)) *choices = 0;
+
+    return(TRUE);
+}
+
+
+
 /* Ask a yes or no question in the message line. Return either TRUE, FALSE, or
  * ABORT. The ABORT status is returned if the user bumps out of the question
  * with a ^G. Used any time a confirmation is required.
@@ -371,165 +433,30 @@ int ectoc(int c) {
 }
 
 /*
- * ctoec:
- *      character to extended character
- *      pull out the CONTROL and SPEC prefixes (if possible)
- */
-int ctoec(int c) {
-    if (c >= 0x00 && c <= 0x1F) c = CONTROL | (c + '@');
-    return c;
-}
-
-/*
  * get a command name from the command line. Command completion means
  * that pressing a <SPACE> will attempt to complete an unfinished command
  * name if it is unique.
  */
 struct name_bind *getname(char *prompt) {
-    int cpos;               /* current column on screen output */
-    int c;
-    char *sp;               /* pointer to string for output */
-    struct name_bind *ffp;  /* first ptr to entry in name binding table */
-    struct name_bind *cffp; /* current ptr to entry in name binding table */
-    struct name_bind *lffp; /* last ptr to entry in name binding table */
     char buf[NSTRING];      /* buffer to hold tentative command name */
 
-/* starting at the beginning of the string buffer */
-    cpos = 0;
-
-/* If we are executing a command line get the next arg and match it */
-    if (clexec) {
-        if (macarg(buf) != TRUE) return NULL;
-        return name_info(buf);
+/* First get the name... */
+    if (clexec == FALSE) {
+        if (mlreply(prompt, buf, NSTRING, EXPNAME) != TRUE) return NULL;
     }
+    else {      /* macro line argument - grab token and skip it */
+        execstr = token(execstr, buf, NSTRING - 1);
+   }
 
-/* Prompt... */
-    mlwrite(prompt);
-    mpresf = TRUE;          /* GGR */
+/* Now check it exists */
 
-/* Build a name string from the keyboard */
-    while (TRUE) {
-#ifdef SIGWINCH
-        remap_c_on_intr = 1;
-#endif
-        c = tgetc();
-#ifdef SIGWINCH
-        remap_c_on_intr = 0;
-        if (c == UEM_NOCHAR) {  /* SIGWINCH */
-            char mlbuf[1024];
-            snprintf(mlbuf, 1024, "%s%.*s", prompt, cpos, buf);
-            mlwrite(mlbuf);
-            continue;           /* Start again... */
-        }
-#endif
-
-/* If we are at the end, just match it */
-        if (c == 0x0d) {
-            buf[cpos] = 0;  /* and match it off */
-            struct name_bind *nbp = name_info(buf);
-            if (nbp) {
-                if (kbdmode == RECORD) addto_kbdmacro(buf, 1, 0);
-                return nbp;
-            }
-            return NULL;
-        }
-        else if (c == ectoc(abortc)) {        /* Bell, abort */
-            ctrlg(FALSE, 0);
-            TTflush();
-            return NULL;
-        }
-        else if (c == 0x7F || c == 0x08) {    /* rubout/erase */
-            if (cpos != 0) {
-                TTputc('\b');           /* Local handling */
-                TTputc(' ');
-                TTputc('\b');
-                --ttcol;
-                --cpos;
-                TTflush();
-            }
-        } else if (c == 0x15) { /* C-U, kill */
-            while (cpos != 0) {
-                TTputc('\b');
-                TTputc(' ');
-                TTputc('\b');
-                --cpos;
-                --ttcol;
-            }
-            TTflush();
-        }
-        else if (c == ' ' || c == 0x1b || c == 0x09) {
-/* Attempt a completion.
- * Because of the completion code we can't use the sorted index...
- */
-            buf[cpos] = 0;  /* terminate it for us */
-            ffp = &names[0];        /* scan for matches */
-            while (ffp->n_func != NULL) {
-                if (strncmp(buf, ffp->n_name, strlen(buf)) == 0) {
-/* A possible match! More than one? */
-                    if ((ffp + 1)->n_func == NULL ||
-/* Also take an exact match, otherwise we can never match "set",
- * as other functions start with "set", so we can never get a trailing
- * space in
- */
-                        (strcmp(buf, ffp->n_name) == 0) ||
-                        (strncmp(buf, (ffp + 1)->n_name, strlen(buf)) != 0)) {
-/* No...we match, print it */
-                        sp = ffp->n_name + cpos;
-                        while (*sp) {
-                            ttput1c(*sp++);
-                            if (!zerowidth_type(*sp)) ttcol++;
-                        }
-                        TTflush();
-                        if (kbdmode == RECORD)
-                            addto_kbdmacro(ffp->n_name, 1, 0);
-                        return ffp;
-                    }
-                    else {
-/* << << << << << << << << << << << << << << << << << */
-/* try for a partial match against the list
- * first scan down until we no longer match the current input
- */
-                        lffp = (ffp + 1);
-                        while ((lffp + 1)->n_func != NULL) {
-                            if (strncmp(buf, (lffp+1)->n_name,
-                                 strlen(buf)) != 0) break;
-                            ++lffp;
-                        }
-/* and now, attempt to partial complete the string, char at a time */
-                        while (TRUE) {
-/* Add the next char in */
-                            buf[cpos] = ffp->n_name[cpos];
-/* Scan through the candidates */
-                            cffp = ffp + 1;
-                            while (cffp <= lffp) {
-                                if (cffp->n_name[cpos] != buf[cpos])
-                                     goto onward;
-                                ++cffp;
-                            }
-/* Add the character */
-                            ttput1c(buf[cpos++]);
-                            if (!zerowidth_type(buf[cpos])) ttcol++;
-                        }
-/* << << << << << << << << << << << << << << << << << */
-                    }
-                }
-                ++ffp;
-            }
-/* No match.....beep and onward */
-            TTbeep();
-onward:
-            TTflush();
-/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-        }
-        else {
-            if (cpos < NSTRING - 1 && c > ' ') {
-                buf[cpos++] = c;
-                ttput1c(c);
-                if (!zerowidth_type(c)) ttcol++;
-            }
-            TTflush();
-        }
+    struct name_bind *nbp = name_info(buf);
+    if (nbp) {
+        if (kbdmode == RECORD) addto_kbdmacro(buf, 1, 0);
+        return nbp;
     }
+    mlwrite("No such function: %s", buf);
+    return NULL;
 }
 
 /*      tgetc:  Get a key from the terminal driver, resolve any keyboard
@@ -994,6 +921,9 @@ loop:
                 break;
             case EXPPROC:
                 expanded = comp_buffer(tstring, choices, COMPPROC);
+                break;
+            case EXPNAME:
+                expanded = comp_name(tstring, choices);
                 break;
             default:        expanded = 0;
             }

@@ -188,7 +188,6 @@ extern int typahead(void);
 extern int mlyesno(char *);
 extern int mlreply(char *, char *, int, int);
 extern int ectoc(int c);
-extern int ctoec(int c);
 extern struct name_bind *getname(char *);
 extern int tgetc(void);
 extern int get1key(void);

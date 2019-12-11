@@ -206,7 +206,7 @@
  *       internal command name expansion. It doesn't use getstring().
  */
 
-enum exp_type { EXPNONE, EXPBUF, EXPFILE, EXPPROC };
+enum exp_type { EXPNONE, EXPBUF, EXPFILE, EXPPROC, EXPNAME };
 
 /*      Directive definitions   */
 
