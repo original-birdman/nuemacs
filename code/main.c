@@ -1389,8 +1389,16 @@ after_mb_check:
  * Then advance a space and take the rest of the line as the entry name
  * since we're only looking for space we can just use ASCII.
  */
-           {int max = llength(curwp->w_dotp);
-            char *lp = curwp->w_dotp->l_text;
+           {char *lp = curwp->w_dotp->l_text;
+/* Check that we can handle this type of entry.
+ * The showdir command will have foillowed all symlinks, so
+ * we're only interested in directories and files.
+ */
+            if (*lp != '-' && *lp != 'd') {
+                mlwrite("Error: showdir only views directories and files");
+                break;
+            }
+            int max = llength(curwp->w_dotp);
             int tok = showdir_tokskip;
             if (tok < 0) {
                 mlwrite("Error: $showdir_tokskip is undefined");
