@@ -2,9 +2,12 @@
 #define VERSION_H_
 
 #define PROGRAM_NAME "uemacs"
+#ifdef ANDROID
+#define PROGRAM_NAME_LONG "nuEmacs-android"
+#else
 #define PROGRAM_NAME_LONG "nuEmacs"
-
-#define VERSION "GGR4.144"
+#endif
+#define VERSION "GGR4.145"
 
 /* Print the version string. */
 void version(void);

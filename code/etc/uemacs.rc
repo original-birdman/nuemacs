@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 12 July 2017
+;                       Last Update: 11 December 2019
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -401,6 +401,7 @@ buffer-to-key /kbd_macro    ^XV
 args-in-reexec ALL
 
 ;;;;; showdir userproc ;;;;;
+;   Added at GGR4.145 - earlier versions will not support it.
 ;
 ; Attempt to enable uemacs to list a directory in a buffer and let you
 ; browse to files... 

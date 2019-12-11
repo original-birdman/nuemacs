@@ -3065,7 +3065,7 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.143
 
-==========
+========== GGR4.144
 
 -----
 Changes to how re-exec (ctl-C) works for some commands that require
@@ -3177,4 +3177,141 @@ etc/uemacs.hlp
 etc/uemacs.rc
     Added args-in-reexec ALL [uemacs.rc]
     Update to version GGR4.144
+
+========== GGR4.145
+
+exec.c
+    Simplify restoring oldestr value.
+
+buffer.c
+eval.c
+exec.c
+globals.c
+main.c
+termio.c
+    Change some simple "&var[n]" constructs to be just "var".
+
+----------
+Add support for integrating user macros into "core" functionality.
+
+eval.c
+exec.c
+globals.c
+edef.h
+efunc.h
+evar.h
+    Add a global (userproc_arg) to allow macro procedures to an arg
+    from C-code [globals.c, edef.h]
+    Add a function (run_user_proc())) to run a userproc and use it in
+    execproc() [exec.c, edef.h]
+    Add a user function (%esc) to escape a string for use as a single
+    token in an external (shell) command.
+    Add a user function (%arg) to pick up any userproc_arg arg, or
+    prompt for one if none is set [eval.c, eval.h]
+----------
+
+eval.c
+    Fix &lef and &mid code to put the trailing NUL onto the result!
+
+random.c
+    In writemsg(), if args come in as (1, 2) from "2 write-message ..."
+    then just write it directly to stderr. Only for debugging macros.
+
+exec.c
+    Edit a comment to refer to execute-file, not include-file (the code
+    was changed some time ago...).
+
+----------
+Add simple support for displaying directory content in a buffer
+for file browsing.
+
+eval.c
+fileio.c
+globals.c
+main.c
+spawn.c
+edef.h
+evar.h
+etc/uemacs.rc
+    In check_for_file() if we have a directory and a showdir userproc
+    then call it to display the entries. [fileio.c]
+    If we get to the point of "self-insert" in execute() and we are in
+    the view-only //directory buffer for a showdir userproc, then handle
+    some chars as specific actions [main.c]
+        d, o        open entry on current line
+        v           view (read-only) entry on current line
+        r           refresh current view
+        u           go up to parent directory
+    All other "self-inserts" are silently ignored...
+    Change the file and buffer name used by pipecmd() ("command" ->
+    ".ue_command") and parameterize it. [spawn.c]
+    Add showdir_tokskip system variable [eval.c, globals.c, edef.h, evar.h]
+    Add the code for the showdir userproc [etc/uemacs.rc]
+----------
+
+----------
+Rationalization of mlreply* calls.
+The terminating-character arg hasn't been used for ages, and is replaced
+by an "expansion type" option so that if getstring() is called it can
+present the correct options.
+Removed mlreplyall (which I'd added in GGR4.109). Macro functions only
+pick up one arg, so if you want to use "a list" you just need to quote
+it (e.g. char-replace in etc/uemacs.rc).
+Added expansion for user-procedure calls (a specific-case of buffer-name
+expansion).
+
+Files affected:
+
+basic.c
+bind.c
+buffer.c
+crypt.c
+eval.c
+exec.c
+file.c
+input.c
+main.c
+random.c
+search.c
+spawn.c
+utf8.c
+word.c
+efunc.h
+estruct.h
+etc/uemacs.rc
+----------
+
+etc/uemacs.rc
+    Add QUOTING_STYLE=literal to ls command in showdir.
+
+main.c
+    For the "open" (d, o, v) case in directory browsing check we are
+    handling a directory or file.
+
+input.c
+    Change type to mtype in matcher (for consistency) and add a comment
+    about what COMPPROC does.
+
+input.c
+efunc.h
+estruct.h
+    Changed getname() to use the standard getstring() function (via
+    mlreply() rather than its own hard-wired completion code.
+    Added EXPNAME expansion (using getfname()/getnname() and
+    comp_name()+matcher().  [input.c, estruct.h]
+    Removed no-longer used ctoec() function [input.c, efunc.h]
+
+exec.c
+    Don't print "No such function" on failure return from getname().
+    It has either already printed it, or the user aborted the command.
+
+input.c
+    Add default case for mtype switch in matcher().
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Update to version GGR4.145
+
 ==========
