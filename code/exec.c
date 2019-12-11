@@ -219,10 +219,7 @@ int namedcmd(int f, int n) {
         kfunc = last_ncfunc;
     else {          /* Prompt the user to get the function name to execute */
         struct name_bind *nm_info = getname("name: ");
-        if (nm_info == NULL) {
-            mlwrite(MLbkt("No such function"));
-            return FALSE;
-        }
+        if (nm_info == NULL) return FALSE;
         kfunc = nm_info->n_func;
 
 /* Check whether the given command is allowed in the minibuffer, if that
