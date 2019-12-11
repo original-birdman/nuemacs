@@ -326,7 +326,7 @@ static char *gtfun(char *fname) {
         if (userproc_arg) return userproc_arg;
         int distmp = discmd;    /* echo it always! */
         discmd = TRUE;
-        int status = getstring(arg1, result, NSTRING, ctoec('\n'));
+        int status = getstring(arg1, result, NSTRING, EXPNONE);
         discmd = distmp;
         if (status == ABORT) return errorm;
         return result;
@@ -726,7 +726,7 @@ int setvar(int f, int n) {
 
 /* First get the variable to set.. */
     if (clexec == FALSE) {
-        status = mlreply("Variable to set: ", var, NVSIZE);
+        status = mlreply("Variable to set: ", var, NVSIZE, EXPNONE);
         if (status != TRUE) return status;
     }
     else {      /* macro line argument - grab token and skip it */
@@ -745,7 +745,7 @@ int setvar(int f, int n) {
 /* Get the value for that variable */
     if (f == TRUE) strcpy(value, ue_itoa(n));
     else {
-        status = mlreply("Value: ", value, NSTRING);
+        status = mlreply("Value: ", value, NSTRING, EXPNONE);
         if (status != TRUE) return status;
     }
 
@@ -895,7 +895,7 @@ char *getval(char *token) {
         strcpy(token, tbuf);
         distmp = discmd;    /* echo it always! */
         discmd = TRUE;
-        status = getstring(token, buf, NSTRING, ctoec('\n'));
+        status = getstring(token, buf, NSTRING, EXPNONE);
         discmd = distmp;
         if (status == ABORT) return errorm;
         return buf;

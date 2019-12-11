@@ -245,8 +245,8 @@ int char_replace(int f, int n) {
     int status;
     char buf[NLINE];
 
-    status = mlreplyall(
-         "reset | repchar [U+]xxxx | [U+]xxxx[-[U+]xxxx] ", buf, NLINE - 1);
+    status = mlreply("reset | repchar [U+]xxxx | [U+]xxxx[-[U+]xxxx] ",
+          buf, NLINE - 1, EXPNONE);
     if (status != TRUE)         /* Only act on +ve response */
         return status;
 

@@ -34,7 +34,7 @@ int usebuffer(int f, int n) {
     if (f) strcpy(bufn, savnam);
     else
 /* GGR - handle saved buffer name in minibuffer */
-        if ((s = mlreply("Use buffer: ", bufn, NBUFN)) != TRUE) {
+        if ((s = mlreply("Use buffer: ", bufn, NBUFN, EXPBUF)) != TRUE) {
             if (s != ABORT) strcpy(bufn, savnam);
             else                     return(s);
         }
@@ -171,7 +171,7 @@ int killbuffer(int f, int n) {
     int s;
     char bufn[NBUFN];
 
-    if ((s = mlreply("Kill buffer: ", bufn, NBUFN)) != TRUE)
+    if ((s = mlreply("Kill buffer: ", bufn, NBUFN, EXPBUF)) != TRUE)
         return s;
     if ((bp = bfind(bufn, FALSE, 0)) == NULL)   /* Easy if unknown. */
         return TRUE;
@@ -222,7 +222,7 @@ int namebuffer(int f, int n) {
 
 /* Prompt for and get the new buffer name */
 ask:
-    if (mlreply("Change buffer name to: ", bufn, NBUFN) != TRUE)
+    if (mlreply("Change buffer name to: ", bufn, NBUFN, EXPBUF) != TRUE)
         return FALSE;
 
 /* And check for duplicates */

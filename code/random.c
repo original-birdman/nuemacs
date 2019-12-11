@@ -875,7 +875,7 @@ static int adjustmode(int kind, int global) {
 
 /* Prompt the user and get an answer */
 
-    status = mlreply(prompt, cbuf, NPAT - 1);
+    status = mlreply(prompt, cbuf, NPAT - 1, EXPNONE);
     if (status != TRUE) return status;
 
 /* Check for 1st char being uppercase */
@@ -1001,7 +1001,8 @@ int writemsg(int f, int n) {
     char buf[NPAT];         /* buffer to receive message into */
     char nbuf[NPAT * 2];    /* buffer to expand string into */
 
-    if ((status = mlreply("Message to write: ", buf, NPAT - 1)) != TRUE)
+    if ((status =
+     mlreply("Message to write: ", buf, NPAT - 1, EXPNONE)) != TRUE)
         return status;
 
 /* Expand all '%' to "%%" so mlwrite won't expect arguments */
@@ -1166,7 +1167,7 @@ int fmatch(int ch) {
  * routine they use to prompt for and get the input.
  */
 enum istr_type { RAW_STR, COOKED_STR };
-typedef int (*mlfn_t)(char *, char *, int);
+typedef int (*mlfn_t)(char *, char *, int, int);
 
 int string_getter(int f, int n, enum istr_type call_type) {
     int status;                     /* status return code */
@@ -1174,10 +1175,10 @@ int string_getter(int f, int n, enum istr_type call_type) {
     mlfn_t ml_func;
     char *prompt;
 
-/* ask for string to insert, using the requested funtion */
+/* ask for string to insert, using the requested function */
 
     if (call_type == RAW_STR) {
-        ml_func = mlreplyall;
+        ml_func = mlreply;
         prompt = "String: ";
     }
     else {
@@ -1185,7 +1186,7 @@ int string_getter(int f, int n, enum istr_type call_type) {
         prompt = "String/unicode chars: ";
     }
 
-    status = ml_func(prompt, tstring, NLINE);
+    status = ml_func(prompt, tstring, NLINE, EXPNONE);
     if (status != TRUE)
         return status;
 
@@ -1252,7 +1253,7 @@ int ovstring(int f, int n) {
     char tstring[NPAT + 1]; /* string to add */
 
 /* Ask for string to insert */
-    status = mlreplyt("String to overwrite: ", tstring, NPAT, metac);
+    status = mlreply("String to overwrite: ", tstring, NPAT, EXPNONE);
     if (status != TRUE) return status;
 
     if (f == FALSE) n = 1;
@@ -1342,8 +1343,7 @@ int re_args_exec(int f, int n) {
     int status;
     char buf[NLINE];
 
-    status = mlreplyall(
-         "exec set: ", buf, NLINE - 1);
+    status = mlreply("exec set: ", buf, NLINE - 1, EXPNONE);
     if (status != TRUE)         /* Only act on +ve response */
         return status;
 

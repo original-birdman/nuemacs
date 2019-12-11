@@ -388,10 +388,10 @@ add-global-mode "exact"
 eos-chars ".!?"
 
 ; Replacement character users
-char-replace U+0800 U+10000
+char-replace "U+0800 U+10000"
 
 ; Single UTF-16 surrogates
-char-replace U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF
+char-replace "U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF"
 
 ; Testing for new keyboard macro code
 buffer-to-key /kbd_macro    ^XV

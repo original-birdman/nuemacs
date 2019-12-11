@@ -39,13 +39,14 @@ static void close_dir(void);
 static char picture[NFILEN], directory[NFILEN];
 
 static char *getffile(char *), *getnfile(void);
-static char *getfbuffer(char *, int), *getnbuffer(char *, int);
+static char *getfbuffer(char *, int, int), *getnbuffer(char *, int, int);
 static short ljust(char *);
 
 static struct buffer *expandbp;
 
 #define COMPFILE 1
 #define COMPBUFF 2
+#define COMPPROC 3
 
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
@@ -78,7 +79,7 @@ static int matcher(char *name, int namelen, char *choices, int type) {
     while ((next =
                 type == COMPFILE?
                     getnfile():
-                    getnbuffer(name, namelen)
+                    getnbuffer(name, namelen, type)
             ) != NULL) {
         unique = FALSE;
         for (p = so_far, q = next, match_length = 0;
@@ -251,7 +252,7 @@ static short ljust(char *str) {
 }
 
 
-static int comp_buffer(char *name, char *choices) {
+static int comp_buffer(char *name, char *choices, int mtype) {
     char supplied[NFILEN];  /* Maximal match so far */
     char *p;                /* Handy pointer */
     int unique;
@@ -260,13 +261,13 @@ static int comp_buffer(char *name, char *choices) {
     *choices = 0;
     ljust(name);
     namelen = strlen(name);
-    if ((p = getfbuffer(name, namelen)) == NULL)
+    if ((p = getfbuffer(name, namelen, mtype)) == NULL)
         return(FALSE);
     else
         strcpy(so_far, p);
 
     strcpy(supplied, name);
-    unique = matcher(name, namelen, choices, COMPBUFF);
+    unique = matcher(name, namelen, choices, mtype);
     strcpy(name, so_far);
 
     if (unique && strcmp(name, supplied)) *choices = 0;
@@ -274,12 +275,12 @@ static int comp_buffer(char *name, char *choices) {
     return(TRUE);
 }
 
-static char *getfbuffer(char *bpic, int bpiclen) {
+static char *getfbuffer(char *bpic, int bpiclen, int mtype) {
     expandbp = bheadp;
-    return(getnbuffer(bpic, bpiclen));
+    return(getnbuffer(bpic, bpiclen, mtype));
 }
 
-static char *getnbuffer(char *bpic, int bpiclen) {
+static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
     char *retptr;
 
     if (expandbp) {
@@ -288,19 +289,25 @@ static char *getnbuffer(char *bpic, int bpiclen) {
  * starting with [.
  */
 
+        int offset;
+            if (mtype == COMPPROC)  offset = 1;
+            else                    offset = 0;
+
 /* We don't return a buffer if it doesn't match, or if it's a minibuffer
  * buffername (CC$) or if it's an internal buffer [xx], unless the user
  * *asked* for these.
  */
-        if ((strncmp(bpic, expandbp->b_bname, bpiclen)) ||
+        if ((mtype == COMPPROC &&
+              (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/')) ||
+            (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
             (!strncmp(expandbp->b_bname, "CC$", 3)) ||
             ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
 
             expandbp = expandbp->b_bufp;
-            return(getnbuffer(bpic, bpiclen));
+            return(getnbuffer(bpic, bpiclen, mtype));
         }
         else {
-            retptr = expandbp->b_bname;
+            retptr = expandbp->b_bname + offset;
             expandbp = expandbp->b_bufp;
             return(retptr);
         }
@@ -339,28 +346,15 @@ int mlyesno(char *prompt) {
  * macro throw the prompt away, and return the remembered response. This
  * lets macros run at full speed. The reply is always terminated by a carriage
  * return. Handle erase, kill, and abort keys.
+ * NOTE that when the function is processing macros from a (start-up) file
+ * it will get one arg at a time.
+ * BUT when run interactively it will return the entire response.
+ * So macro-file args need to be quoted...
+ * We pass on any expansion-type requested (for, eventually, getstring()).
  */
 
-int mlreply(char *prompt, char *buf, int nbuf) {
-    return nextarg(prompt, buf, nbuf, ctoec('\n'));
-}
-
-int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar) {
-    return nextarg(prompt, buf, nbuf, eolchar);
-}
-
-/* GGR
- * The bizarre thing about the two functions above is that when processing
- * macros from a (start-up) file they will get one arg at a time.
- * BUT when run interactively they will return the entire prompt.
- * This just complicates any caller's code.
- */
-int mlreplyall(char *prompt, char *buf, int nbuf) {
-    if (!clexec) return nextarg(prompt, buf, nbuf, ctoec('\n'));
-    int nb = strlen(execstr);
-    memcpy(buf, execstr, nb+1); /* Copy the NUL */
-    execstr += nb;              /* Show we've read it all */
-    return TRUE;
+int mlreply(char *prompt, char *buf, int nbuf, int exp_type) {
+    return nextarg(prompt, buf, nbuf, exp_type);
 }
 
 /*
@@ -791,8 +785,7 @@ void sigwinch_handler(int signr) {
 }
 #endif
 
-int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
-    UNUSED(eolchar);        /* Historic... */
+int getstring(char *prompt, char *buf, int nbuf, int exp_type) {
     struct buffer *bp;
     struct buffer *cb;
     char mbname[NBUFN];
@@ -818,7 +811,6 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
  *   https://stackoverflow.com/questions/5080848/disable-gcc-may-be-used-uninitialized-on-a-particular-variable
  */
     struct window wsave = wsave;
-    short bufexpand, expanded;
 
 #ifdef SIGWINCH
 /* We need to block SIGWINCH until we have set-up all of the variables
@@ -869,7 +861,6 @@ int getstring(char *prompt, char *buf, int nbuf, int eolchar) {
 #endif
         return(FALSE);
     }
-    bufexpand = (nbuf == NBUFN);
 
 /* Save real reexecution history */
 
@@ -989,10 +980,21 @@ loop:
         sp = lp->l_text;
 /* NSTRING-1, as we need to add a trailing NUL */
         if (lp->l_used < NSTRING-1) {
+            int expanded;
             memcpy(tstring, sp, lp->l_used);
             tstring[lp->l_used] = '\0';
-            if (bufexpand) expanded = comp_buffer(tstring, choices);
-            else           expanded = comp_file(tstring, choices);
+            switch(exp_type) {
+            case EXPBUF:
+                expanded = comp_buffer(tstring, choices, COMPBUFF);
+                break;
+            case EXPFILE:
+                expanded = comp_file(tstring, choices);
+                break;
+            case EXPPROC:
+                expanded = comp_buffer(tstring, choices, COMPPROC);
+                break;
+            default:        expanded = 0;
+            }
             if (expanded) {
                 savdoto = curwp->w_doto;
                 curwp->w_doto = 0;

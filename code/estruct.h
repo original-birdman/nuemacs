@@ -201,6 +201,13 @@
 #define PLAY    1               /*                playing       */
 #define RECORD  2               /*                recording     */
 
+/* Types of buffer expanding in getstring()
+ * NOTE: that getname currently has its own internal mechanism for
+ *       internal command name expansion. It doesn't use getstring().
+ */
+
+enum exp_type { EXPNONE, EXPBUF, EXPFILE, EXPPROC };
+
 /*      Directive definitions   */
 
 #define DIF             0

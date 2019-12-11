@@ -591,7 +591,7 @@ int eos_chars(int f, int n) {
           "End of sentence characters " MLbkt("currently %s") ":",
           eos_str);
 
-    status = mlreply(prompt, buf, NLINE - 1);
+    status = mlreply(prompt, buf, NLINE - 1, EXPNONE);
     if (status == FALSE) {      /* Empty response - remove item */
         if (eos_list) free (eos_list);
         n_eos = 0;

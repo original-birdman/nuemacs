@@ -359,7 +359,7 @@ static int end_kbdmacro(void) {
 int macro_helper(int f, int n) {
     UNUSED(f);
     char tag[2];                        /* Just char + NULL needed */
-    int status = mlreplyall("helper:", tag, 1);
+    int status = mlreply("helper:", tag, 1, EXPNONE);
     if (status != TRUE) return status;  /* Only act on +ve response */
     switch(tag[0]) {
     case '}':

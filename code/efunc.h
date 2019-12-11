@@ -185,10 +185,8 @@ extern int ttgetc(void);
 extern int typahead(void);
 
 /* input.c */
-extern int mlyesno(char *prompt);
-extern int mlreply(char *prompt, char *buf, int nbuf);
-extern int mlreplyt(char *prompt, char *buf, int nbuf, int eolchar);
-extern int mlreplyall(char *, char *, int);
+extern int mlyesno(char *);
+extern int mlreply(char *, char *, int, int);
 extern int ectoc(int c);
 extern int ctoec(int c);
 extern struct name_bind *getname(char *);
