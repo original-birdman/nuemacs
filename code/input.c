@@ -25,23 +25,13 @@ static int remap_c_on_intr = 0;
 #endif
 #include "line.h"
 
-/* ================================================================== */
-/*      complet.c - now included here, as it is the only user.
- *
- *      A set of functions having to do with filename completion.
- *      Part of the GGR additions.
+/* A set of functions to do with filename/buffer/name completions.
+ * Part of the GGR additions.
  */
 
 #include <string.h>
 
-static void close_dir(void);
-
 static char picture[NFILEN], directory[NFILEN];
-
-static char *getffile(char *), *getnfile(void);
-static char *getfbuffer(char *, int, int), *getnbuffer(char *, int, int);
-static char *getnname(char *, int);
-static short ljust(char *);
 
 static struct buffer *expandbp;
 
@@ -52,8 +42,203 @@ static struct buffer *expandbp;
 
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
-static char so_far[NFILEN];     /* Maximal match so far     */
+static char so_far[NFILEN];     /* Maximal match so far */
 
+static short ljust(char *str) {
+    char *p, *q;
+    short justified;
+
+    justified = FALSE;
+    p = str;
+    while (*p++ == ' ') justified = TRUE;
+    p--;
+    if (justified) {
+        q = str;
+        while (*p!=0) *q++ = *p++;
+        *q = 0;
+    }
+    return(justified);
+}
+
+/* getnfile() and getffile()
+ * Handle file name completion
+ *
+ * Here is what getffile() should do.
+ * Parse out any directory part and and file part.
+ * Open that directory, if necessary.
+ * Build a wildcard from the file part.
+ * Call getnfile() to return the first match.
+ * If the system is not case-sensitive, force lower case.
+ */
+#include <sys/types.h>
+
+#if USG
+#include <dirent.h>
+#else
+#include <sys/dir.h>
+#endif
+
+#include <sys/stat.h>
+
+static DIR *dirptr;
+static int piclen;
+static char *nameptr;
+static char suggestion[NFILEN];
+static short allfiles;
+static char fullname[NFILEN];
+
+static void close_dir(void) {
+    if (dirptr != NULL) closedir(dirptr);
+}
+
+static char *getnfile(void) {
+    unsigned short type;        /* file type */
+#if USG
+    struct dirent *dp;
+#else
+    struct direct *dp;
+#endif
+    struct stat statbuf;
+    int namelen;
+
+/* Get the next directory entry, if no more, we finish */
+    if ((dp = readdir(dirptr)) == NULL) return(NULL);
+
+    if ((allfiles ||
+         (((namelen = strlen(dp->d_name)) >= piclen) &&
+         (!strncmp(dp->d_name, picture, piclen)))) &&
+         (strcmp(dp->d_name, ".")) &&
+         (strcmp(dp->d_name, ".."))) {
+
+        strcpy(nameptr, dp->d_name);
+        stat(fullname, &statbuf);
+        type = (statbuf.st_mode & S_IFMT);
+        if ((type == S_IFREG)
+#ifdef S_IFLNK
+             || (type == S_IFLNK)
+#endif
+             || (type == S_IFDIR)) {
+            strcpy(suggestion, dp->d_name);
+            if (type == S_IFDIR) strcat(suggestion, "/");
+            return(suggestion);
+        }
+    }
+    return(getnfile());
+}
+
+static char *getffile(char *fspec) {
+    char *p;                        /* handy pointers */
+
+    dirptr = NULL;                  /* Initialise things */
+
+    fixup_fname(fspec);
+    strcpy(directory, fspec);
+
+    if ((p = strrchr(directory, '/'))) {
+        p++;
+        strcpy(picture, p);
+        *p = 0;
+        strcpy(fullname, directory);
+    }
+    else {
+        strcpy(picture, directory);
+        directory[0] = 0;
+        fullname[0] = 0;
+    }
+
+    nameptr = &fullname[strlen(fullname)];
+
+    if (!directory[0]) dirptr = opendir(".");
+    else               dirptr = opendir(directory);
+
+    if (dirptr == NULL) return(NULL);
+
+    piclen = strlen(picture);
+    allfiles = (piclen == 0);
+
+/* And return the first match (we return ONLY matches, for speed) */
+    return(getnfile());
+}
+
+/* getnbuffer() and getfbuffer()
+ * Handle buffer name completion
+ * Also handles userproc name completion, as those are just buffers with
+ * with names starting '/' and a type of BTPROC.
+ */
+
+static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
+    char *retptr;
+
+    if (expandbp) {
+/* We NEVER return minibuffer buffers (CC$00nnn), and we return internal
+ * [xx] buffers only if the user asked for them by specifying a picture
+ * starting with [.
+ * For a type of COMPPROC we only consider buffer-names starting with '/'
+ * with a b_type of BTPROC. We return the name *without* the leading '/'.
+ */
+
+        int offset;
+            if (mtype == COMPPROC)  offset = 1;
+            else                    offset = 0;
+
+/* We don't return a buffer if it doesn't match, or if it's a minibuffer
+ * buffername (CC$) or if it's an internal buffer [xx], unless the user
+ * *asked* for these.
+ */
+        if ((mtype == COMPPROC &&
+              (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/')) ||
+            (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
+            (!strncmp(expandbp->b_bname, "CC$", 3)) ||
+            ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
+
+            expandbp = expandbp->b_bufp;
+            return(getnbuffer(bpic, bpiclen, mtype));
+        }
+        else {
+            retptr = expandbp->b_bname + offset;
+            expandbp = expandbp->b_bufp;
+            return(retptr);
+        }
+    }
+    else
+        return(NULL);
+}
+
+static char *getfbuffer(char *bpic, int bpiclen, int mtype) {
+    expandbp = bheadp;
+    return(getnbuffer(bpic, bpiclen, mtype));
+}
+
+/* getnname() and getfname()
+ * Handle internal command name completions.
+ *
+ * Just uses the sorted index to step through the names in order.
+ */
+
+static int n_idx;
+static char *getfname(char *name, int namelen) {
+    n_idx = -1;
+    while ((n_idx = nxti_name_info(n_idx)) >= 0) { /* -1 at end of list */
+        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
+            return names[n_idx].n_name;
+    }
+    return NULL;
+}
+
+static char *getnname(char *name, int namelen) {
+    while ((n_idx = nxti_name_info(n_idx)) >= 0) {
+        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
+            return names[n_idx].n_name;
+        else
+            return NULL;
+    }
+    return NULL;
+}
+
+/* matcher()
+ * A routine to do the matching for completion code.
+ * The routine to get the next item to check is determined by mtype.
+ */
 static int matcher(char *name, int namelen, char *choices, int mtype) {
     char *next;                 /* Next filename to look at */
     int match_length;           /* Maximal match length     */
@@ -120,6 +305,10 @@ static int matcher(char *name, int namelen, char *choices, int mtype) {
     return unique;
 }
 
+/* Entry point for filename completion
+ * Looks for things starting with name, and if there are multiple choices
+ * builds a catenated string of them in choices.
+ */
 static int comp_file(char *name, char *choices) {
     char supplied[NFILEN];  /* Maximal match so far */
     char *p;                /* Handy pointer */
@@ -137,7 +326,7 @@ static int comp_file(char *name, char *choices) {
         strcpy(so_far, p);
 
     strcpy(supplied, name);
-    unique= matcher(name, 0, choices, COMPFILE);
+    unique = matcher(name, 0, choices, COMPFILE);
     close_dir();
     if (directory[0]) {
         strcpy(name, directory);
@@ -152,121 +341,14 @@ static int comp_file(char *name, char *choices) {
     return(TRUE);
 }
 
-/* Here is what getffile() should do.  Parse out any directory part and
- * and file part.  Open that directory, if necessary.  Build a wildcard
- * from the file part.  Call getnfile() to return the first match.  If
- * the system is not case-sensitive, force lower case.
+/* Generic entry point for completions where the getf* function selects
+ * names from an internal list.
+ * Use by mtype COMPBUFF/COMPPROC and COMPNAME.
+ * The getf* function to use is determined by mtype.
+ * Looks for things starting with name, and if there are multiple choices
+ * builds a catenated string of them in choices.
  */
-#if BSD | USG
-#include <sys/types.h>
-
-#if USG
-#include <dirent.h>
-#else
-#include <sys/dir.h>
-#endif
-
-#include <sys/stat.h>
-
-static DIR *dirptr;
-static int piclen;
-static char *nameptr;
-static char suggestion[NFILEN];
-static short allfiles;
-static char fullname[NFILEN];
-
-static char *getffile(char *fspec) {
-    char *p;                        /* handy pointers */
-
-    dirptr = NULL;                  /* Initialise things */
-
-    fixup_fname(fspec);
-    strcpy(directory, fspec);
-
-    if ((p = strrchr(directory, '/'))) {
-        p++;
-        strcpy(picture, p);
-        *p = 0;
-        strcpy(fullname, directory);
-    }
-    else {
-        strcpy(picture, directory);
-        directory[0] = 0;
-        fullname[0] = 0;
-    }
-
-    nameptr = &fullname[strlen(fullname)];
-
-    if (!directory[0]) dirptr = opendir(".");
-    else               dirptr = opendir(directory);
-
-    if (dirptr == NULL) return(NULL);
-
-    piclen = strlen(picture);
-    allfiles = (piclen == 0);
-
-/* And return the first match (we return ONLY matches, for speed) */
-    return(getnfile());
-}
-
-static char *getnfile(void) {
-    unsigned short type;        /* file type */
-#if USG
-    struct dirent *dp;
-#else
-    struct direct *dp;
-#endif
-    struct stat statbuf;
-    int namelen;
-
-/* Get the next directory entry, if no more, we finish */
-    if ((dp = readdir(dirptr)) == NULL) return(NULL);
-
-    if ((allfiles ||
-         (((namelen = strlen(dp->d_name)) >= piclen) &&
-         (!strncmp(dp->d_name, picture, piclen)))) &&
-         (strcmp(dp->d_name, ".")) &&
-         (strcmp(dp->d_name, ".."))) {
-
-        strcpy(nameptr, dp->d_name);
-        stat(fullname, &statbuf);
-        type = (statbuf.st_mode & S_IFMT);
-        if ((type == S_IFREG)
-#ifdef S_IFLNK
-             || (type == S_IFLNK)
-#endif
-             || (type == S_IFDIR)) {
-            strcpy(suggestion, dp->d_name);
-            if (type == S_IFDIR) strcat(suggestion, "/");
-            return(suggestion);
-        }
-    }
-    return(getnfile());
-}
-
-static void close_dir(void) {
-    if (dirptr != NULL) closedir(dirptr);
-}
-#endif
-
-static short ljust(char *str) {
-    char *p, *q;
-    short justified;
-
-    justified = FALSE;
-    p = str;
-    while (*p++ == ' ') justified = TRUE;
-    p--;
-    if (justified) {
-        q = str;
-        while (*p!=0) *q++ = *p++;
-        *q = 0;
-    }
-    return(justified);
-}
-
-
-static int comp_buffer(char *name, char *choices, int mtype) {
+static int comp_gen(char *name, char *choices, int mtype) {
     char supplied[NFILEN];  /* Maximal match so far */
     char *p;                /* Handy pointer */
     int unique;
@@ -275,11 +357,19 @@ static int comp_buffer(char *name, char *choices, int mtype) {
     *choices = 0;
     ljust(name);
     namelen = strlen(name);
-    if ((p = getfbuffer(name, namelen, mtype)) == NULL)
-        return(FALSE);
-    else
-        strcpy(so_far, p);
-
+    switch(mtype) {
+    case COMPBUFF:
+    case COMPPROC:
+        p = getfbuffer(name, namelen, mtype);
+        break;
+    case COMPNAME:
+        p = getfname(name, namelen);
+        break;
+    default:            /* If mtype arrives oddly? */
+        p = NULL;
+    }
+    if (p == NULL) return(FALSE);
+    strcpy(so_far, p);
     strcpy(supplied, name);
     unique = matcher(name, namelen, choices, mtype);
     strcpy(name, so_far);
@@ -289,99 +379,19 @@ static int comp_buffer(char *name, char *choices, int mtype) {
     return(TRUE);
 }
 
-static char *getfbuffer(char *bpic, int bpiclen, int mtype) {
-    expandbp = bheadp;
-    return(getnbuffer(bpic, bpiclen, mtype));
-}
-
-static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
-    char *retptr;
-
-    if (expandbp) {
-/* We NEVER return minibuffer buffers (CC$00nnn), and we return internal
- * [xx] buffers only if the user asked for them by specifying a picture
- * starting with [.
- * For a type of COMPPROC we only consider buffer-names starting with '/'
- * with a b_type of BTPROC. We return the name *without* the leading '/'.
+/* Entry point for buffer name completion. And userprocs.
+ * Front-end to comp_gen().
  */
+static int comp_buffer(char *name, char *choices, int mtype) {
+    return comp_gen(name, choices, mtype);
+}
 
-        int offset;
-            if (mtype == COMPPROC)  offset = 1;
-            else                    offset = 0;
-
-/* We don't return a buffer if it doesn't match, or if it's a minibuffer
- * buffername (CC$) or if it's an internal buffer [xx], unless the user
- * *asked* for these.
+/* Entry point for internal command name completion
+ * Front-end to comp_gen().
  */
-        if ((mtype == COMPPROC &&
-              (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/')) ||
-            (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
-            (!strncmp(expandbp->b_bname, "CC$", 3)) ||
-            ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
-
-            expandbp = expandbp->b_bufp;
-            return(getnbuffer(bpic, bpiclen, mtype));
-        }
-        else {
-            retptr = expandbp->b_bname + offset;
-            expandbp = expandbp->b_bufp;
-            return(retptr);
-        }
-    }
-    else
-        return(NULL);
-}
-/* ================= End of what was complet.c ====================== */
-
-/* Functions to get the first and name name (alphabetically0 from the
- * function name list, using the sorted index.
- * For use by matcher() for mtype == COMPNAME.
- */
-
-static int n_idx;
-static char *getfname(char *name, int namelen) {
-    n_idx = -1;
-    while ((n_idx = nxti_name_info(n_idx)) >= 0) { /* -1 at end of list */
-        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
-            return names[n_idx].n_name;
-    }
-    return NULL;
-}
-static char *getnname(char *name, int namelen) {
-    while ((n_idx = nxti_name_info(n_idx)) >= 0) {
-        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
-            return names[n_idx].n_name;
-        else
-            return NULL;
-    }
-    return NULL;
-}
-
-/* The function that uses getfname() and getnname() to get the matches */
 static int comp_name(char *name, char *choices) {
-    char supplied[NFILEN];  /* Maximal match so far */
-    char *p;                /* Handy pointer */
-    int unique;
-    int namelen;
-
-    *choices = 0;
-    ljust(name);
-    namelen = strlen(name);
-    if ((p = getfname(name, namelen)) == NULL)
-        return(FALSE);
-    else
-        strcpy(so_far, p);
-
-    strcpy(supplied, name);
-    unique = matcher(name, namelen, choices, COMPNAME);
-    strcpy(name, so_far);
-
-    if (unique && strcmp(name, supplied)) *choices = 0;
-
-    return(TRUE);
+    return comp_gen(name, choices, COMPNAME);
 }
-
-
 
 /* Ask a yes or no question in the message line. Return either TRUE, FALSE, or
  * ABORT. The ABORT status is returned if the user bumps out of the question
