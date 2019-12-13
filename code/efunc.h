@@ -226,18 +226,18 @@ extern int unmark(int f, int n);
 extern struct buffer *bfind(const char *bname, int cflag, int bflag);
 
 /* file.c */
-extern int fileread(int f, int n);
-extern int insfile(int f, int n);
-extern int filefind(int f, int n);
-extern int viewfile(int f, int n);
-extern int getfile(char *fname, int lockfl);
-extern int readin(char *fname, int lockfl);
-extern void makename(char *bname, char *fname);
-extern void unqname(char *name);
-extern int filewrite(int f, int n);
-extern int filesave(int f, int n);
-extern int writeout(char *fn);
-extern int filename(int f, int n);
+extern int fileread(int, int);
+extern int insfile(int, int);
+extern int filefind(int, int);
+extern int viewfile(int, int);
+extern int getfile(char *, int, int);
+extern int readin(char *, int);
+extern void makename(char *, char *);
+extern void unqname(char *);
+extern int filewrite(int, int);
+extern int filesave(int, int);
+extern int writeout(char *);
+extern int filename(int, int);
 
 /* fileio.c */
 extern int ffropen(char *fn);

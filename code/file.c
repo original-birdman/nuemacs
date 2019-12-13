@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -210,7 +211,7 @@ int filefind(int f, int n) {
         return s;
     }
     run_filehooks = 1;      /* set flag */
-    return getfile(fname, TRUE);
+    return getfile(fname, TRUE, TRUE);
 }
 
 int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
@@ -224,7 +225,7 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
     if ((s = mlreply("View file: ", fname, NFILEN, EXPFILE)) != TRUE)
         return s;
     run_filehooks = 1;          /* Set flag */
-    s = getfile(fname, FALSE);
+    s = getfile(fname, FALSE, TRUE);
     if (s) {                    /* If we succeed, put it in view mode */
         curwp->w_bufp->b_mode |= MDVIEW;
 
@@ -244,12 +245,37 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
  * char fname[];        file name to find
  * int lockfl;          check the file for locks?
  */
-int getfile(char *fname, int lockfl) {
+int getfile(char *fname, int lockfl, int check_dir) {
     struct buffer *bp;
     struct line *lp;
     int i;
     int s;
     char bname[NBUFN];      /* buffer name to put file */
+
+/* Check *now* if this is a directory and we've been asked to check.
+ * This prevents settign up an incomplete buffer that isn'y used by
+ * teh showdir code.
+ * If it isn't a directory, or we can't find out, just continue,
+ */
+    if (check_dir == TRUE) {
+        struct stat statbuf;
+        int status = stat(fname, &statbuf);
+        if (status == 0 && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
+/* We can only call showdir if it exists as a userproc.
+ * Also, since we expect this might end up using our global ffp, we
+ * close that now, and have our own exit, which we have to signal
+ * as an error...(we didn't really open the original entry).
+ */
+            struct buffer *sdb = bfind("/showdir", FALSE, 0);
+            if (sdb && (sdb->b_type == BTPROC)) {
+                    userproc_arg = fname;
+                    (void)run_user_proc("showdir", 1);
+                    userproc_arg = NULL;
+                    return TRUE;
+            }
+        }
+    }
+
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
             if (!swbuffer(bp, 0)) return FALSE;

@@ -252,7 +252,7 @@ int pipecmd(int f, int n) {
     if (splitwind(FALSE, 1) == FALSE) return FALSE;
 
 /* And read the stuff in */
-    if (getfile(bf_name, FALSE) == FALSE) return FALSE;
+    if (getfile(bf_name, FALSE, FALSE) == FALSE) return FALSE;
 
 /* Make this window in VIEW mode, update all mode lines */
     curwp->w_bufp->b_mode |= MDVIEW;

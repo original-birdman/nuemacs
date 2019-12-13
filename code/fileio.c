@@ -50,25 +50,6 @@ static int check_for_file(char *fn) {
     int status = fstat(fileno(ffp), &statbuf);
     if (status != 0)
         mlwrite("Cannot stat %s", fn);
-    else if ((statbuf.st_mode & S_IFMT) == S_IFDIR) {
-/* We can only call showdir if it exists as a userproc.
- * Also, since we expect this might end up using our global ffp, we
- * close that now, and have our own exit, which we have to signal
- * as an error...(we didn't really open the original entry).
- */
-            struct buffer *sdb = bfind("/showdir", FALSE, 0);
-            if (sdb && (sdb->b_type == BTPROC)) {
-                ffclose();
-                userproc_arg = fn;
-                (void)run_user_proc("showdir", 1);
-                userproc_arg = NULL;
-                return FIOERR;
-            }
-            else
-		mlwrite("Is a directory and no showdir userproc was found");
-/* We have to say we failed regardless... */
-            status = FIOERR;
-        }
     else {
         if ((statbuf.st_mode & S_IFMT) != S_IFREG) {
             mlwrite("Not a file: %s", fn);

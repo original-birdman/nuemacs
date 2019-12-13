@@ -43,7 +43,7 @@ int help(int f, int n) {    /* give me some help!!!!
 
     if (bp == NULL) {   /* and read the stuff in */
         pathexpand = FALSE; /* GGR - unset pathexpand around call */
-        int res = getfile(fname, FALSE);
+        int res = getfile(fname, FALSE, FALSE);
         pathexpand = TRUE;
         if (res == FALSE) return(FALSE);
     } else

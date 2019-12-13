@@ -1441,12 +1441,12 @@ after_mb_check:
             fname[full_len] = '\0';
 
 /* May be file or dir - getfile() sorts it out */
-            getfile(fname, c != 'v');   /* c.f. filefind/viewfile */
+            getfile(fname, c != 'v', TRUE); /* c.f. filefind/viewfile */
             if (c == 'v') curwp->w_bufp->b_mode |= MDVIEW;
             break;
            }
         case 'r':           /* Refresh current view */
-            getfile(curbp->b_fname, c == 'o');
+            getfile(curbp->b_fname, c == 'o', TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
            {char fname[NFILEN];
