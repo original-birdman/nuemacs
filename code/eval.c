@@ -16,6 +16,9 @@
 #include "util.h"
 #include "version.h"
 
+#include <stddef.h>
+#include "idxsorter.h"
+
 #define MAXVARS 255
 
 /* Return some of the contents of the kill buffer
@@ -37,13 +40,101 @@ static char *getkill(void) {
 }
 
 
-/* User variables */
-static struct user_variable uv[MAXVARS + 1];
+/* User variables. External as used by completion code in input.c */
+
+struct user_variable uv[MAXVARS + 1];
 
 /* Initialize the user variable list. */
 void varinit(void) {
     int i;
     for (i = 0; i < MAXVARS; i++) uv[i].u_name[0] = 0;
+}
+
+
+/* SORT ROUTINES
+ * Some parts are external for use by completion code in input.c
+ */
+
+int *envvar_index = NULL;
+int *next_envvar_index;
+static int evl_size = sizeof(evl)/sizeof(struct evlist);
+
+/* env var ($...) sorting */
+
+void init_envvar_index(void) {
+    struct fields fdef;
+
+    fdef.offset = offsetof(struct evlist, var);
+    fdef.type = 'S';
+    fdef.len = 0;
+    envvar_index = Xmalloc((evl_size+1)*sizeof(int));
+    idxsort_fields((unsigned char *)evl, envvar_index,
+          sizeof(struct evlist), evl_size, 1, &fdef);
+/* We want to step through this one, so need a next index too */
+    next_envvar_index = Xmalloc((evl_size+1)*sizeof(int));
+    make_next_idx(envvar_index, next_envvar_index, evl_size);
+    return;
+}
+
+/* A function to allow you to step through the index in order.
+ * For each input index, it returns the next one.
+ * If given -1, it will return the first item and when there are no
+ * further entries it will return -1.
+ * If the index is out of range it will return -2.
+ */
+int nxti_envvar(int ci) {
+    if (ci == -1) return envvar_index[0];
+    if ((ci >= 0) && (ci < evl_size)) {
+        int ni = next_envvar_index[ci];
+        if (ni >= 0) return ni;
+        return -1;
+    }
+    return -2;
+}
+
+/* User var (%...) sorting. Different - just build a sorted name array
+ * of the names which exist.
+ * We don't actually need the values for getf/nvar() in input.c
+ */
+
+char *uvnames[MAXVARS + 1];
+static int n_uvn;
+
+void sort_user_var(void) {
+    n_uvn = 0;
+    for (int i = 0; i < MAXVARS; i++) {
+
+/* There is currently no mechanism for removing a user variable
+ * once it has been created, so as soon as we reach an empty entry
+ * we've found all active ones.
+ * If a "del_user_var" functionality ever existed the break below would
+ * (probably) need to be a continue.
+ */
+        if (uv[i].u_name[0] == '\0') break;
+
+/* Need to add this one into uvnames in alphabetic order and push any
+ * followers down.
+ */
+        char *toadd = uv[i].u_name;
+        for (int j = 0; j < n_uvn; j++) {
+            if (strcmp(toadd, uvnames[j]) >= 0) continue;
+            char *xp = uvnames[j];
+            uvnames[j] = toadd;
+            toadd = xp;
+        }
+        uvnames[n_uvn] = toadd;
+        uvnames[++n_uvn] = NULL;
+    }
+    return;
+}
+
+/* Simple function to get the index of the next name.
+ * Just advance by one if there is a further entry.
+ */
+int nxti_usrvar(int ci) {
+    ci++;
+    if (ci >= 0 && ci < n_uvn) return ci;
+    return -1;
 }
 
 /* Convert a string to a numeric logical
@@ -511,7 +602,6 @@ static int svar(struct variable_description *var, char *value) {
     int vtype;      /* type of variable to set */
     int status;     /* status return */
     int c;          /* translated character */
-    char *sp;       /* scratch string pointer */
 
 /* simplify the vd structure (we are gonna look at it a lot) */
     vnum = var->v_num;
@@ -521,10 +611,8 @@ static int svar(struct variable_description *var, char *value) {
     status = TRUE;
     switch (vtype) {
     case TKVAR:             /* set a user variable */
-        if (uv[vnum].u_value != NULL) free(uv[vnum].u_value);
-        sp = Xmalloc(strlen(value) + 1);
-        strcpy(sp, value);
-        uv[vnum].u_value = sp;
+        uv[vnum].u_value = Xrealloc(uv[vnum].u_value, strlen(value) + 1);
+        strcpy(uv[vnum].u_value, value);
         break;
 
     case TKENV:             /* set an environment variable */
@@ -726,7 +814,7 @@ int setvar(int f, int n) {
 
 /* First get the variable to set.. */
     if (clexec == FALSE) {
-        status = mlreply("Variable to set: ", var, NVSIZE, EXPNONE);
+        status = mlreply("Variable to set: ", var, NVSIZE, EXPVAR);
         if (status != TRUE) return status;
     }
     else {      /* macro line argument - grab token and skip it */

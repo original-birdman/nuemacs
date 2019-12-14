@@ -39,6 +39,7 @@ static struct buffer *expandbp;
 #define COMPBUFF 2
 #define COMPPROC 3
 #define COMPNAME 4
+#define COMPVAR  5
 
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
@@ -215,24 +216,96 @@ static char *getfbuffer(char *bpic, int bpiclen, int mtype) {
  * Just uses the sorted index to step through the names in order.
  */
 
-static int n_idx;
+static int n_nidx;
 static char *getfname(char *name, int namelen) {
-    n_idx = -1;
-    while ((n_idx = nxti_name_info(n_idx)) >= 0) { /* -1 at end of list */
-        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
-            return names[n_idx].n_name;
+    n_nidx = -1;
+    while ((n_nidx = nxti_name_info(n_nidx)) >= 0) {    /* -1 at end of list */
+        if (strncmp(name, names[n_nidx].n_name, namelen) == 0)
+            return names[n_nidx].n_name;
     }
     return NULL;
 }
 
 static char *getnname(char *name, int namelen) {
-    while ((n_idx = nxti_name_info(n_idx)) >= 0) {
-        if (strncmp(name, names[n_idx].n_name, namelen) == 0)
-            return names[n_idx].n_name;
+    while ((n_nidx = nxti_name_info(n_nidx)) >= 0) {
+        if (strncmp(name, names[n_nidx].n_name, namelen) == 0)
+            return names[n_nidx].n_name;
         else
             return NULL;
     }
     return NULL;
+}
+
+/* getnvar() and getfvar()
+ * Handle internal env/user variable completions.
+ *
+ * We build the env variable sort index in getfvar once
+ * We build the use variable sort index in getfvar each time.
+ * However iff the incoming text is blank we just want to show
+ * $... %..., and if it doesn't start with $ or % we want show no match.
+ */
+extern int *envvar_index;
+extern int *usrvar_index;
+extern char *uvnames[];
+extern struct evlist evl[];
+
+/* Since we know the string will be copied immediatey after return we
+ * can just put it into a static buffer here
+ */
+
+static char *varcat(char pfx, char *name) {
+    static char pfxd_name[NVSIZE + 1];
+    pfxd_name[0] = pfx;
+    strcpy(pfxd_name+1, name);
+    return pfxd_name;
+}
+
+static int nul_state;   /* 0 = doing $, 1 = doing %, 2 = done */
+static int n_evidx, n_uvidx;
+static char *getnvar(char *name, int namelen) {
+    if (namelen == 0) {
+        if (nul_state == 1) {
+            nul_state = 2;
+            return "%...";
+        }
+        else {
+            return NULL;
+        }
+    }
+    namelen--;      /* We don't compare the leading $ or % */
+    char *mp = name + 1;
+    if (name[0] == '$') {
+/* -1 at end of list */
+        while ((n_evidx = nxti_envvar(n_evidx)) >= 0) {
+            if (strncmp(mp, evl[n_evidx].var, namelen) == 0)
+                return varcat('$', evl[n_evidx].var);
+        }
+    }
+    if (name[0] == '%') {
+        while ((n_uvidx = nxti_usrvar(n_uvidx)) >= 0) {
+            if (strncmp(mp, uvnames[n_uvidx], namelen) == 0)
+                return varcat('%', uvnames[n_uvidx]);
+        }
+    }
+    return NULL;
+}
+
+static char *getfvar(char *name, int namelen) {
+    nul_state = 0;
+    if (namelen == 0) {
+        nul_state = 1;
+        return "$...";
+    }
+/* Set up sort index and array */
+    if (name[0] == '$') {
+        if (envvar_index == NULL) init_envvar_index();
+        n_evidx = -1;
+    }
+    if (name[0] == '%') {
+        sort_user_var();
+        n_uvidx = -1;
+    }
+    return getnvar(name, namelen);
 }
 
 /* matcher()
@@ -274,6 +347,9 @@ static int matcher(char *name, int namelen, char *choices, int mtype) {
             break;
         case COMPNAME:
             next = getnname(name, namelen);
+            break;
+        case COMPVAR:
+            next = getnvar(name, namelen);
             break;
         default:            /* If mtype arrives oddly? */
             next = NULL;
@@ -365,6 +441,9 @@ static int comp_gen(char *name, char *choices, int mtype) {
     case COMPNAME:
         p = getfname(name, namelen);
         break;
+    case COMPVAR:
+        p = getfvar(name, namelen);
+        break;
     default:            /* If mtype arrives oddly? */
         p = NULL;
     }
@@ -392,6 +471,14 @@ static int comp_buffer(char *name, char *choices, int mtype) {
 static int comp_name(char *name, char *choices) {
     return comp_gen(name, choices, COMPNAME);
 }
+
+/* Entry point for internal environment/user var completion
+ * Front-end to comp_gen().
+ */
+static int comp_var(char *name, char *choices) {
+    return comp_gen(name, choices, COMPVAR);
+}
+
 
 /* Ask a yes or no question in the message line. Return either TRUE, FALSE, or
  * ABORT. The ABORT status is returned if the user bumps out of the question
@@ -925,11 +1012,11 @@ loop:
             memcpy(tstring, sp, lp->l_used);
             tstring[lp->l_used] = '\0';
             switch(exp_type) {
-            case EXPBUF:
-                expanded = comp_buffer(tstring, choices, COMPBUFF);
-                break;
             case EXPFILE:
                 expanded = comp_file(tstring, choices);
+                break;
+            case EXPBUF:
+                expanded = comp_buffer(tstring, choices, COMPBUFF);
                 break;
             case EXPPROC:
                 expanded = comp_buffer(tstring, choices, COMPPROC);
@@ -937,7 +1024,11 @@ loop:
             case EXPNAME:
                 expanded = comp_name(tstring, choices);
                 break;
-            default:        expanded = 0;
+            case EXPVAR:
+                expanded = comp_var(tstring, choices);
+                break;
+            default:
+                expanded = 0;
             }
             if (expanded) {
                 savdoto = curwp->w_doto;
@@ -945,7 +1036,7 @@ loop:
                 ldelete((long) lp->l_used, FALSE);
                 linstr(tstring);
                 if (choices[0]) {
-                    mlwrite(choices);
+                    mlwrite_one(choices);
                     size = (strlen(choices) < 42) ? 1 : 2;
                     sleep(size);
                     mlerase();

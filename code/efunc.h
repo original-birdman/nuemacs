@@ -354,6 +354,10 @@ extern int isearch(int f, int n);
 
 /* eval.c */
 extern void varinit(void);
+extern void init_envvar_index(void);
+extern int nxti_envvar(int);
+extern void sort_user_var(void);
+extern int nxti_usrvar(int);
 extern int stol(char *);
 extern int setvar(int, int);
 extern char *ue_itoa(int);

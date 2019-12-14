@@ -8,37 +8,16 @@
 #ifndef EVAR_H_
 #define EVAR_H_
 
-/* Max #chars in a var name. */
-#define NVSIZE  32
-
 /* Structure to hold user variables and their definitions. */
 struct user_variable {
         char u_name[NVSIZE + 1]; /* name of user variable */
         char *u_value;           /* value (string) */
 };
 
-/* The tags for environment variable - used in struct evlist */
-enum ev_val {
-    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVFLICKER,
-    EVCURWIDTH, EVCBUFNAME, EVCFNAME,   EVSRES,     EVDEBUG,
-    EVSTATUS,   EVPALETTE,  EVASAVE,    EVACOUNT,   EVLASTKEY,
-    EVCURCHAR,  EVDISCMD,   EVVERSION,  EVPROGNAME, EVSEED,
-    EVDISINP,   EVWLINE,    EVCWLINE,   EVTARGET,   EVSEARCH,
-    EVREPLACE,  EVMATCH,    EVKILL,     EVCMODE,    EVGMODE,
-    EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,     EVGFLAGS,
-    EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
-    EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
-/* GGR */
-    EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
-    EVSDTKSKIP,
-};
-
 /* List of recognized environment variables. */
 
-static struct evlist {
-    char *var;
-    enum ev_val tag;
-} evl[] = {
+// static struct evlist {
+struct evlist evl[] = {
  { "fillcol",   EVFILLCOL },    /* current fill column */
  { "pagelen",   EVPAGELEN },    /* number of lines used by editor */
  { "curcol",    EVCURCOL },     /* current column pos of cursor */

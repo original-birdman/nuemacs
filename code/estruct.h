@@ -206,7 +206,7 @@
  *       internal command name expansion. It doesn't use getstring().
  */
 
-enum exp_type { EXPNONE, EXPBUF, EXPFILE, EXPPROC, EXPNAME };
+enum exp_type { EXPNONE, EXPFILE, EXPBUF, EXPPROC, EXPNAME, EXPVAR };
 
 /*      Directive definitions   */
 
@@ -660,6 +660,29 @@ struct magic {
 struct magic_replacement {
     short int mc_type;
     char *rstr;
+};
+
+/* Max #chars in a var name. */
+#define NVSIZE  32
+
+/* The tags for environment variable - used in struct evlist */
+enum ev_val {
+    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVFLICKER,
+    EVCURWIDTH, EVCBUFNAME, EVCFNAME,   EVSRES,     EVDEBUG,
+    EVSTATUS,   EVPALETTE,  EVASAVE,    EVACOUNT,   EVLASTKEY,
+    EVCURCHAR,  EVDISCMD,   EVVERSION,  EVPROGNAME, EVSEED,
+    EVDISINP,   EVWLINE,    EVCWLINE,   EVTARGET,   EVSEARCH,
+    EVREPLACE,  EVMATCH,    EVKILL,     EVCMODE,    EVGMODE,
+    EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,     EVGFLAGS,
+    EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
+    EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
+/* GGR */
+    EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
+    EVSDTKSKIP,
+};
+struct evlist {
+    char *var;
+    enum ev_val tag;
 };
 
 #endif
