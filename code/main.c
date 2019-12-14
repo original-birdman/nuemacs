@@ -170,7 +170,7 @@ out_of_phase:                       /* Can only get here on error */
  */
 static int create_kbdmacro_buffer(void) {
     if ((kbdmac_bp = bfind(kbdmacro_buffer, TRUE, BFINVS)) == NULL) {
-        mlwrite("Cannot create keyboard macro buffer!");
+        mlwrite_one("Cannot create keyboard macro buffer!");
         return FALSE;
     }
     kbdmac_bp->b_type = BTPROC;     /* Mark the buffer type */
@@ -186,7 +186,7 @@ static int create_kbdmacro_buffer(void) {
  */
 static int start_kbdmacro(void) {
     if (!kbdmac_bp) {
-        mlwrite("start: no keyboard macro buffer!");
+        mlwrite_one("start: no keyboard macro buffer!");
         return FALSE;
     }
 
@@ -276,7 +276,7 @@ static void set_narg_kbdmacro(int n) {
  */
 int addto_kbdmacro(char *text, int new_command, int do_quote) {
     if (!kbdmac_bp) {
-        mlwrite("addto: no keyboard macro buffer!");
+        mlwrite_one("addto: no keyboard macro buffer!");
         return FALSE;
     }
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "addto")) return FALSE;
@@ -330,7 +330,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
  */
 static int end_kbdmacro(void) {
     if (!kbdmac_bp) {
-        mlwrite("end: no keyboard macro buffer!");
+        mlwrite_one("end: no keyboard macro buffer!");
         return FALSE;
     }
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "end")) return FALSE;
@@ -344,7 +344,7 @@ static int end_kbdmacro(void) {
  * If we weren;t in PLAY mode, report ending the macro.
  */
     if (kbdmode == PLAY) f_arg = p_arg;
-    else                 mlwrite(MLbkt("End macro"));
+    else                 mlwrite_one(MLbkt("End macro"));
 
     kbdmode = STOP;
 /* Reset ctlxe_togo regardless of current state */
@@ -806,7 +806,7 @@ com_arg *multiplier_check(int c) {
                 ca.n = ca.n * 10 + (ca.c - '0');
             }
             if ((ca.n == 0) && (mflag == -1))  /* lonely - */
-                mlwrite("Arg:");
+                mlwrite_one("Arg:");
             else
                 mlwrite("Arg: %d", ca.n * mflag);
 
@@ -821,7 +821,7 @@ com_arg *multiplier_check(int c) {
         ca.f = TRUE;
         ca.n = 4;           /* with argument of 4 */
         mflag = 0;          /* that can be discarded. */
-        mlwrite("Arg: 4");
+        mlwrite_one("Arg: 4");
         while (((ca.c = getcmd()) >= '0' && ca.c <= '9') ||
                  ca.c == reptc || ca.c == '-') {
             if (ca.c == reptc)
@@ -1134,11 +1134,11 @@ int main(int argc, char **argv) {
 /* Deal with startup gotos and searches */
     if (gotoflag && searchflag) {
         update(FALSE);
-        mlwrite(MLbkt("Cannot search and goto at the same time!"));
+        mlwrite_one(MLbkt("Cannot search and goto at the same time!"));
     } else if (gotoflag) {
         if (gotoline(TRUE, gline) == FALSE) {
             update(FALSE);
-            mlwrite(MLbkt("Bogus goto argument"));
+            mlwrite_one(MLbkt("Bogus goto argument"));
         }
     } else if (searchflag) {
         if (forwhunt(FALSE, 0) == FALSE) update(FALSE);
@@ -1172,7 +1172,7 @@ loop:
     else {
         update(FALSE);
         if (display_readin_msg) {   /* First one gets removed by update() */
-            mlwrite(readin_mesg);
+            mlwrite_one(readin_mesg);
             display_readin_msg = 0;
             movecursor(0, 0);       /* Send the cursor back to BoB */
             TTflush();
@@ -1395,13 +1395,13 @@ after_mb_check:
  * we're only interested in directories and files.
  */
             if (*lp != '-' && *lp != 'd') {
-                mlwrite("Error: showdir only views directories and files");
+                mlwrite_one("Error: showdir only views directories and files");
                 break;
             }
             int max = llength(curwp->w_dotp);
             int tok = showdir_tokskip;
             if (tok < 0) {
-                mlwrite("Error: $showdir_tokskip is undefined");
+                mlwrite_one("Error: $showdir_tokskip is undefined");
                 break;
             }
             int decr = 1;
@@ -1420,7 +1420,7 @@ after_mb_check:
                 lp++;
             }
             if (tok) {      /* Didn't get them all? */
-                mlwrite("Can't parse line");
+                mlwrite_one("Can't parse line");
                 break;
             }
 /* Move to start of name, and get the length to endp-of-data (no NUL here) */
@@ -1552,7 +1552,7 @@ after_mb_check:
         return status;
     }
     TTbeep();
-    mlwrite(MLbkt("Key not bound"));  /* complain             */
+    mlwrite_one(MLbkt("Key not bound"));  /* complain             */
     lastflag = 0;                           /* Fake last flags.     */
     return FALSE;
 }
@@ -1575,7 +1575,7 @@ int quickexit(int f, int n) {
              && (bp->b_flag & BFINVS) == 0) {/* Real.                */
             curbp = bp;                 /* make that buffer cur */
             mlwrite(MLbkt("Saving %s"), bp->b_fname);
-            mlwrite("\n");              /* So user can see filename */
+            mlwrite_one("\n");              /* So user can see filename */
             if ((status = filesave(f, n)) != TRUE) {
                 curbp = oldcb;          /* restore curbp */
                 sleep(1);
@@ -1622,7 +1622,7 @@ int quit(int f, int n) {
         if (f) exit(n);
         else   exit(GOOD);
     }
-    mlwrite("");
+    mlwrite_one("");
     return s;
 }
 
@@ -1634,18 +1634,18 @@ int quit(int f, int n) {
 int ctlxlp(int f, int n) {
     UNUSED(f); UNUSED(n);
     if (kbdmode != STOP) {
-        mlwrite("%%Macro already active");
+        mlwrite_one("%Macro already active");
         return FALSE;
     }
     if (strcmp(curbp->b_bname, kbdmacro_buffer) == 0) {
-        mlwrite("%%Cannot collect macro when in keyboard macro buffer");
+        mlwrite_one("%Cannot collect macro when in keyboard macro buffer");
         return FALSE;
     }
 
 /* Have to save current c/f/n-last */
     p_arg = f_arg;          /* Restored on ctlxrp in execute() */
 
-    mlwrite(MLbkt("Start macro"));
+    mlwrite_one(MLbkt("Start macro"));
     kbdptr = kbdm;
     kbdend = kbdptr;
     kbdmode = RECORD;
@@ -1663,7 +1663,7 @@ int ctlxlp(int f, int n) {
 int ctlxrp(int f, int n) {
     UNUSED(f); UNUSED(n);
     if (kbdmode == STOP) {
-        mlwrite("%%Macro not active");
+        mlwrite_one("%Macro not active");
         return FALSE;
     }
     if (kbdmode == RECORD) end_kbdmacro();
@@ -1700,7 +1700,7 @@ int ctlxrp(int f, int n) {
 int ctlxe(int f, int n) {
     UNUSED(f);
     if (kbdmode != STOP) {
-        mlwrite("%%Macro already active");
+        mlwrite_one("%Macro already active");
         return FALSE;
     }
     if (n <= 0) return TRUE;
@@ -1723,7 +1723,7 @@ int ctrlg(int f, int n) {
     UNUSED(f); UNUSED(n);
     TTbeep();
     if (kbdmode == RECORD) end_kbdmacro();
-    mlwrite(MLbkt("Aborted"));
+    mlwrite_one(MLbkt("Aborted"));
     return ABORT;
 }
 
@@ -1737,12 +1737,12 @@ int rdonly(void) {
         mlwrite(MLbkt("%s illegal in read-only buffer: %s"),
             current_command, curbp->b_fname);
     else
-        mlwrite(MLbkt("Key illegal in VIEW mode"));
+        mlwrite_one(MLbkt("Key illegal in VIEW mode"));
     return FALSE;
 }
 int resterr(void) {
     TTbeep();
-    mlwrite(MLbkt("That command is RESTRICTED"));
+    mlwrite_one(MLbkt("That command is RESTRICTED"));
     return FALSE;
 }
 

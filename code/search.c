@@ -246,6 +246,7 @@ int next_sstr(int f, int n) {               /* Mapped from nextwind */
 int select_sstr(int f, int n) {             /* Mapped from listbuffers */
     UNUSED(f); UNUSED(n);
     prmpt_buf.preload = (this_rt == Search)? srch_txt[0]: repl_txt[0];
+fprintf(stderr, "preload: %s\n", prmpt_buf.preload);
     return TRUE;
 }
 
@@ -282,7 +283,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     int pchr, ochr;
 
     if ((bmap = clearbits()) == NULL) {
-        mlwrite("%%Out of memory");
+        mlwrite_one("%Out of memory");
         return FALSE;
     }
 
@@ -300,7 +301,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     else mcptr->mc_type = CCL;
 
     if ((ochr = *patptr) == MC_ECCL) {
-        mlwrite("%%No characters in character class");
+        mlwrite_one("%No characters in character class");
         return FALSE;
     }
     else {
@@ -337,7 +338,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     *ppatptr = patptr;
 
     if (ochr == '\0') {
-        mlwrite("%%Character class not ended");
+        mlwrite_one("%Character class not ended");
         free(bmap);
         return FALSE;
     }
@@ -1089,7 +1090,7 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
  *      strcpy(tpat, "matching ");
  *      expandp(&c, &tpat[strlen(tpat)], NPAT/2);
  *      expandp(patptr, &tpat[strlen(tpat)], NPAT/2);
- *      mlwrite(tpat);
+ *      mlwrite_one(tpat);
  */
             if (!eq(c, *patptr++)) {
                 jump = (direct == FORWARD)? lastchfjump: lastchbjump;
@@ -1178,7 +1179,7 @@ int forwhunt(int f, int n) {
  * until after we entered the pattern.
  */
     if (pat[0] == '\0') {
-        mlwrite("No pattern set");
+        mlwrite_one("No pattern set");
         return FALSE;
     }
     if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc_type == MCNIL) {
@@ -1188,7 +1189,7 @@ int forwhunt(int f, int n) {
 
 /* Complain if not there - we already have the saved match... */
 
-    if (status != TRUE) mlwrite("Not found");
+    if (status != TRUE) mlwrite_one("Not found");
 
     return status;
 }
@@ -1222,7 +1223,7 @@ int forwsearch(int f, int n) {
         if (status == TRUE)
             savematch();
         else
-            mlwrite("Not found");
+            mlwrite_one("Not found");
     }
     return status;
 }
@@ -1259,7 +1260,7 @@ int backhunt(int f, int n) {
  * until after we entered the pattern.
  */
     if (tap[0] == '\0') {
-        mlwrite("No pattern set");
+        mlwrite_one("No pattern set");
         return FALSE;
     }
     if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && tapcm[0].mc_type == MCNIL) {
@@ -1273,7 +1274,7 @@ int backhunt(int f, int n) {
 
 /* Complain if not there - we already have the saved match... */
 
-    if (status != TRUE) mlwrite("Not found");
+    if (status != TRUE) mlwrite_one("Not found");
 
     return status;
 }
@@ -1306,7 +1307,7 @@ int backsearch(int f, int n) {
 /* Save away the match, or complain if not there. */
 
         if (status == TRUE) savematch();
-        else                mlwrite("Not found");
+        else                mlwrite_one("Not found");
     }
     return status;
 }
@@ -1398,7 +1399,7 @@ static int delins(int dlength, char *instr, int use_meta) {
 /* Zap what we gotta, * and insert its replacement. */
 
     if ((status = ldelete((long) dlength, FALSE)) != TRUE)
-        mlwrite("%%ERROR while deleting");
+        mlwrite_one("%ERROR while deleting");
     else
         if ((rmagical && use_meta) &&
                     (curwp->w_bufp->b_mode & MDMAGIC) != 0) {
@@ -1513,7 +1514,7 @@ static int replaces(int kind, int f, int n) {
 qprompt:
             update(TRUE);   /* show the proposed place to change */
             c = tgetc();    /* and input */
-            mlwrite("");    /* and clear it */
+            mlwrite_one("");    /* and clear it */
 
 /* And respond appropriately. GGR - make case-insensitive (lower..) */
 
@@ -1566,14 +1567,14 @@ qprompt:
                 /* Falls through */
 
             case BELL:      /* abort! and stay */
-                mlwrite("Aborted!");
+                mlwrite_one("Aborted!");
                 return FALSE;
 
             default:        /* bitch and beep */
                 TTbeep();
                 /* Falls through */
             case '?':       /* help me */
-                mlwrite(
+                mlwrite_one(
   "(Y)es, (N)o, (!)Do rest, (U)ndo, (^G)Abort, (.)Abort+back, (?)Help: ");
                 goto qprompt;
 
@@ -1646,11 +1647,6 @@ int expandp(char *srcstr, char *deststr, int maxlength) {
         else if ((c > 0 && c < 0x20) || c == 0x7f) { /* control character */
             *deststr++ = '^';
             *deststr++ = c ^ 0x40;
-            maxlength -= 2;
-        }
-        else if (c == '%') {
-            *deststr++ = '%';
-            *deststr++ = '%';
             maxlength -= 2;
         }
         else {                                  /* any other character */

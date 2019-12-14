@@ -189,7 +189,7 @@ int zotbuf(struct buffer *bp) {
     int s;
 
     if (bp->b_nwnd != 0) {          /* Error if on screen.  */
-        mlwrite("Buffer is being displayed");
+        mlwrite_one("Buffer is being displayed");
         return FALSE;
     }
     if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */

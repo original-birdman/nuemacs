@@ -65,7 +65,7 @@ int risearch(int f, int n) {
         curwp->w_doto = curoff;     /* offset to orig value   */
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
-        mlwrite(MLbkt("search failed")); /* Say we died */
+        mlwrite_one(MLbkt("search failed")); /* Say we died */
         matchlen = strlen(pat);
     } else
         mlerase();      /* If happy, just erase the cmd line  */
@@ -92,7 +92,7 @@ int fisearch(int f, int n) {
         curwp->w_doto = curoff;     /* offset to orig value   */
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
-        mlwrite(MLbkt("search failed")); /* Say we died */
+        mlwrite_one(MLbkt("search failed"));   /* Say we died */
         matchlen = strlen(pat);
     } else
         mlerase();      /* If happy, just erase the cmd line  */
@@ -199,7 +199,7 @@ static int promptpattern(char *prompt) {
     strcat(tpat, MLpost "<Meta>: ");
 
 /* check to see if we are executing a command line */
-    if (!clexec) mlwrite(tpat);
+    if (!clexec) mlwrite_one(tpat);
     return strlen(tpat);
 }
 
@@ -222,7 +222,7 @@ static int get_char(void) {
     cmd_reexecute = -1;     /* Say we're in real mode again     */
     update(FALSE);          /* Pretty up the screen             */
     if (cmd_offset >= CMDBUFLEN - 1) {  /* If we're getting too big ... */
-        mlwrite("? command too long");  /* Complain loudly and bitterly */
+        mlwrite_one("? command too long");  /* Complain loudly and bitterly */
         return metac;                   /* And force a quit */
     }
     c = get1key();          /* Get the next character              */
@@ -392,7 +392,7 @@ int isearch(int f, int n) {
         pat[cpos++] = c;            /* put the char in the buffer */
         if (cpos >= NPAT) {         /* too many chars in string?  */
                                     /* Yup.  Complain about it    */
-            mlwrite("? Search string too long");
+            mlwrite_one("? Search string too long");
             return TRUE;            /* Return an error            */
         }
         pat[cpos] = 0;              /* null terminate the buffer  */

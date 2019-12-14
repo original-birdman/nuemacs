@@ -73,7 +73,7 @@ int nextwind(int f, int n) {
             while (--n) wp = wp->w_wndp;
         }
         else {
-            mlwrite("Window number out of range");
+            mlwrite_one("Window number out of range");
             return FALSE;
         }
     }
@@ -219,7 +219,7 @@ int delwind(int f, int n) {
 
 /* If there is only one window, don't delete it */
     if (wheadp->w_wndp == NULL) {
-        mlwrite("Cannot delete this window");
+        mlwrite_one("Cannot delete this window");
         return FALSE;
     }
 
@@ -370,7 +370,7 @@ int enlargewind(int f, int n)
         if (n < 0)
                 return shrinkwind(f, -n);
         if (wheadp->w_wndp == NULL) {
-                mlwrite("Only one window");
+                mlwrite_one("Only one window");
                 return FALSE;
         }
         if ((adjwp = curwp->w_wndp) == NULL) {
@@ -379,7 +379,7 @@ int enlargewind(int f, int n)
                         adjwp = adjwp->w_wndp;
         }
         if (adjwp->w_ntrows <= n) {
-                mlwrite("Impossible change");
+                mlwrite_one("Impossible change");
                 return FALSE;
         }
         if (curwp->w_wndp == adjwp) {   /* Shrink below.        */
@@ -413,7 +413,7 @@ int shrinkwind(int f, int n) {
 
     if (n < 0) return enlargewind(f, -n);
     if (wheadp->w_wndp == NULL) {
-        mlwrite("Only one window");
+        mlwrite_one("Only one window");
         return FALSE;
     }
     if ((adjwp = curwp->w_wndp) == NULL) {
@@ -421,7 +421,7 @@ int shrinkwind(int f, int n) {
         while (adjwp->w_wndp != curwp) adjwp = adjwp->w_wndp;
     }
     if (curwp->w_ntrows <= n) {
-        mlwrite("Impossible change");
+        mlwrite_one("Impossible change");
         return FALSE;
     }
     if (curwp->w_wndp == adjwp) {   /* Grow below */
@@ -519,7 +519,7 @@ int restwnd(int f, int n) {
         wp = wp->w_wndp;
     }
 
-    mlwrite(MLbkt("No such window exists"));
+    mlwrite_one(MLbkt("No such window exists"));
     return FALSE;
 }
 
@@ -539,7 +539,7 @@ int newsize(int f, int n) {
 
 /* make sure it's in range */
     if (n < 3 || n > term.t_mrow + 1) {
-        mlwrite("%%Screen size out of range");
+        mlwrite_one("%Screen size out of range");
         return FALSE;
     }
 
@@ -614,7 +614,7 @@ int newwidth(int f, int n) {
 
 /* Make sure it's in range */
     if (n < 10 || n > term.t_mcol) {
-        mlwrite("%%Screen width out of range");
+        mlwrite_one("%Screen width out of range");
         return FALSE;
     }
 

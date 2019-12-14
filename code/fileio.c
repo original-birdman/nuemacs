@@ -135,7 +135,7 @@ int ffclose(void) {
 
 #if USG | BSD
     if (fclose(ffp) != FALSE) {
-        mlwrite("Error closing file");
+        mlwrite_one("Error closing file");
         return FIOERR;
     }
 #else
@@ -216,7 +216,7 @@ static int flush_write_cache(void) {
     fwrite(cache.buf, sizeof(*cache.buf), cache.len, ffp);
     cache.len = 0;
     if (ferror(ffp)) {
-        mlwrite("Write I/O error");
+        mlwrite_one("Write I/O error");
         return FIOERR;
     }
     return FIOSUC;
@@ -370,7 +370,7 @@ int ffgetline(void) {
                     eofflag = TRUE;
                 }
                 else {
-                    mlwrite("File read error");
+                    mlwrite_one("File read error");
                     return FIOERR;
                 }
             }

@@ -152,7 +152,7 @@ int linsert_byte(int n, unsigned char c) {
     lp1 = curwp->w_dotp;        /* Current line         */
     if (lp1 == curbp->b_linep) {/* At the end: special  */
         if (curwp->w_doto != 0) {
-            mlwrite("bug: linsert");
+            mlwrite_one("bug: linsert");
             return FALSE;
         }
         if ((lp2 = lalloc(n)) == NULL)  /* Allocate new line   */
@@ -227,7 +227,7 @@ int linstr(char *instr) {
 
 /* Insertion error? */
             if (status != TRUE) {
-                mlwrite("%%Out of memory while inserting");
+                mlwrite_one("%Out of memory while inserting");
                 break;
             }
             instr++;
@@ -251,7 +251,7 @@ static int lins_nc(char *instr, int nb) {
             status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
 /* Insertion error? */
             if (status != TRUE) {
-                mlwrite("%%Out of memory while inserting");
+                mlwrite_one("%Out of memory while inserting");
                 break;
             }
             instr++;
@@ -304,7 +304,7 @@ int lover(char *ostr) {
         while ((tmpc = *ostr) && status == TRUE) {
             status = (tmpc == '\n' ? lnewline() : lowrite(tmpc));
             if (status != TRUE) {   /* Insertion error? */
-                mlwrite("%%Out of memory while overwriting");
+                mlwrite_one("%Out of memory while overwriting");
                 break;
             }
             ostr++;
@@ -960,7 +960,7 @@ int yank_replace(int f, int n) {
     int do_kill = 1;
     if (!(lastflag & CFYANK)) {
         if (yank_mode == GNU) {
-           mlwrite("Last command was not a yank!");
+           mlwrite_one("Last command was not a yank!");
            return FALSE;
         }
         else

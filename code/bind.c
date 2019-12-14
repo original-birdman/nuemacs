@@ -33,7 +33,7 @@ int help(int f, int n) {    /* give me some help!!!!
     if (bp == NULL) {
         fname = flook(init_files.help, FALSE, INTABLE);
         if (fname == NULL) {
-            mlwrite(MLbkt("Help file is not online"));
+            mlwrite_one(MLbkt("Help file is not online"));
             return FALSE;
             }
     }
@@ -159,7 +159,7 @@ int deskey(int f, int n) {      /* describe the command for a certain key */
     char outseq[NSTRING];   /* output buffer for command sequence */
 
 /* Prompt the user to type us a key to describe */
-    mlwrite(": describe-key ");
+    mlwrite_one(": describe-key ");
 
 /* Get the command sequence to describe.
  * Change it to something we can print as well and dump it out.
@@ -403,7 +403,7 @@ int bindtokey(int f, int n) {
 
     struct name_bind *nm_info = getname(": bind-to-key ");
     if (nm_info == NULL) {
-        if (!clexec) mlwrite(MLbkt("No such function"));
+        if (!clexec) mlwrite_one(MLbkt("No such function"));
         return FALSE;
     }
     kfunc = nm_info->n_func;
@@ -507,7 +507,7 @@ int unbindkey(int f, int n) {
 
 /* Prompt the user to type in a key to unbind */
     if (!clexec) {
-        mlwrite(": unbind-key ");
+        mlwrite_one(": unbind-key ");
         mpresf = TRUE;      /* GGR */
     }
 
@@ -522,7 +522,7 @@ int unbindkey(int f, int n) {
 
 /* If it isn't bound, bitch */
     if (unbindchar(c) == FALSE) {
-        mlwrite(MLbkt("Key not bound"));
+        mlwrite_one(MLbkt("Key not bound"));
         mpresf = TRUE;  /* GGR */
         return FALSE;
     }
@@ -550,12 +550,12 @@ static int buildlist(int type, char *mstring) {
 /* and get a buffer for it */
     bp = bfind("/Binding list", TRUE, 0);
     if (bp == NULL || bclear(bp) == FALSE) {
-        mlwrite("Cannot display binding list");
+        mlwrite_one("Cannot display binding list");
         return FALSE;
     }
 
 /* Let us know this is in progress */
-    mlwrite(MLbkt("Building binding list"));
+    mlwrite_one(MLbkt("Building binding list"));
 
 /* Disconnect the current buffer */
     if (--curbp->b_nwnd == 0) {     /* Last use.            */
@@ -653,7 +653,7 @@ fail:   ;
         wp->w_flag |= WFMODE;
         wp = wp->w_wndp;
     }
-    mlwrite("");                        /* clear the mode line */
+    mlwrite_one("");                    /* clear the mode line */
     return TRUE;
 }
 
@@ -921,7 +921,7 @@ int buffertokey(int f, int n) {
 /* Prompt the user to type in a key to bind */
 
     if (!clexec) {
-        mlwrite(": buffer-to-key ");
+        mlwrite_one(": buffer-to-key ");
         mpresf = TRUE;          /* GGR */
     }
 

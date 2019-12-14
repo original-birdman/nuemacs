@@ -1372,9 +1372,7 @@ int re_args_exec(int f, int n) {
 /* If we get here we've found something we couldn't handle, which is
  * an error. So complain and re-instate the original setting.
  */
-        char err_str[NSTRING*2];
-        sprintf(err_str, "Unexpected arg: %s", tok);
-        mlwrite(err_str);
+        mlwrite("Unexpected arg: %s", tok);
         rxargs = orig_rxargs;
         return FALSE;
     }

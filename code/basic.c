@@ -176,7 +176,7 @@ int gotoline(int f, int n) {
     if (f == FALSE) {
         if ((status =
           mlreply("Line to GOTO: ", arg, NSTRING, EXPNONE)) != TRUE) {
-            mlwrite(MLbkt("Aborted"));
+            mlwrite_one(MLbkt("Aborted"));
             return status;
         }
         n = atoi(arg);
@@ -453,7 +453,7 @@ int setmark(int f, int n) {
     UNUSED(f); UNUSED(n);
     curwp->w_markp = curwp->w_dotp;
     curwp->w_marko = curwp->w_doto;
-    mlwrite(MLbkt("Mark set"));
+    mlwrite_one(MLbkt("Mark set"));
     return TRUE;
 }
 
@@ -468,7 +468,7 @@ int swapmark(int f, int n) {
     int odoto;
 
     if (curwp->w_markp == NULL) {
-        mlwrite("No mark in this window");
+        mlwrite_one("No mark in this window");
         return FALSE;
     }
     odotp = curwp->w_dotp;

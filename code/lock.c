@@ -42,7 +42,7 @@ int lockchk(char *fname) {
 /* If we have a full locking table, bitch and leave */
 
     if (numlocks == NLOCKS) {
-        mlwrite("LOCK ERROR: Lock table full");
+        mlwrite_one("LOCK ERROR: Lock table full");
         return ABORT;
     }
 
@@ -75,7 +75,7 @@ static void lckerror(char *errstr) {
     strcpy(obuf, errstr);
     strcat(obuf, " - ");
     strcat(obuf, strerror(errno));
-    mlwrite(obuf);
+    mlwrite_one(obuf);
 }
 
 /*

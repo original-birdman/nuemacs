@@ -72,7 +72,7 @@ int copyregion(int f, int n) {
             ++loffs;
         }
     }
-    mlwrite(MLbkt("region copied"));
+    mlwrite_one(MLbkt("region copied"));
     return TRUE;
 }
 
@@ -216,7 +216,7 @@ int getregion(struct region *rp) {
     long bsize;
 
     if (curwp->w_markp == NULL) {
-        mlwrite("No mark set in this window");
+        mlwrite_one("No mark set in this window");
         return FALSE;
     }
     if (curwp->w_dotp == curwp->w_markp) {
@@ -257,7 +257,7 @@ int getregion(struct region *rp) {
             }
         }
     }
-    mlwrite("Bug: lost mark");
+    mlwrite_one("Bug: lost mark");
     return FALSE;
 }
 
@@ -276,7 +276,7 @@ int narrow(int f, int n) {
 /* Find the proper buffer and make sure we aren't already narrow */
     bp = curwp->w_bufp;     /* find the right buffer */
     if (bp->b_flag&BFNAROW) {
-        mlwrite("This buffer is already narrowed");
+        mlwrite_one("This buffer is already narrowed");
         return(FALSE);
     }
 
@@ -325,7 +325,7 @@ int narrow(int f, int n) {
  * But leave it here just in case...
  */
     if (creg.r_size <= (long)curwp->w_dotp->l_used) {
-        mlwrite("Must narrow at least 1 full line");
+        mlwrite_one("Must narrow at least 1 full line");
         *curwp = orig_wp;       /* restore original struct */
         return(FALSE);
     }
@@ -370,7 +370,7 @@ int narrow(int f, int n) {
 
 /* And now remember we are narrowed */
     bp->b_flag |= BFNAROW;
-    mlwrite(MLbkt("Buffer is narrowed"));
+    mlwrite_one(MLbkt("Buffer is narrowed"));
     return(TRUE);
 }
 
@@ -385,7 +385,7 @@ int widen(int f, int n) {
 /* Find the proper buffer and make sure we are narrow */
     bp = curwp->w_bufp;     /* find the right buffer */
     if ((bp->b_flag&BFNAROW) == 0) {
-        mlwrite("This buffer is not narrowed");
+        mlwrite_one("This buffer is not narrowed");
         return(FALSE);
     }
 
@@ -424,7 +424,7 @@ int widen(int f, int n) {
  * region in middle of screen.
  * Unless we were called with a negative n.
  */
-    mlwrite(MLbkt("Buffer is widened"));
+    mlwrite_one(MLbkt("Buffer is widened"));
     if (n < 0) {    /* Allow message to be read, but no reposition */
         sleep(1);
     }

@@ -492,7 +492,7 @@ int mlyesno(char *prompt) {
     while(res == -1) {
         strcpy(buf, prompt);    /* build and prompt the user */
         strcat(buf, " " MLbkt("y/n") "? ");
-        mlwrite(buf);
+        mlwrite_one(buf);
 
         c = tgetc();        /* get the response */
 

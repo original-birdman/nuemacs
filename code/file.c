@@ -96,10 +96,10 @@ static int ifile(char *fname) {
 
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
     if (s == FIOFNF) {                              /* File not found */
-        mlwrite(MLbkt("No such file"));
+        mlwrite_one(MLbkt("No such file"));
         return FALSE;
     }
-    mlwrite(MLbkt("Inserting file"));
+    mlwrite_one(MLbkt("Inserting file"));
 
     s = resetkey();
     if (s != TRUE) return s;
@@ -153,7 +153,7 @@ static int ifile(char *fname) {
     if (nline > 1) strcat(readin_mesg, "s");
     if (dos_include) strcat(readin_mesg, " - from DOS file!");
     strcat(readin_mesg, MLpost);
-    mlwrite(readin_mesg);
+    mlwrite_one(readin_mesg);
 
 out:
 /* Advance to the next line and mark the window for changes */
@@ -285,7 +285,7 @@ int getfile(char *fname, int lockfl, int check_dir) {
             curwp->w_linep = lp;
             curwp->w_flag |= WFMODE | WFHARD;
             cknewwindow();
-            mlwrite(MLbkt("Old buffer"));
+            mlwrite_one(MLbkt("Old buffer"));
             return TRUE;
         }
     }
@@ -300,7 +300,7 @@ int getfile(char *fname, int lockfl, int check_dir) {
         }
     }
     if (bp == NULL && (bp = bfind(bname, TRUE, 0)) == NULL) {
-        mlwrite("Cannot create buffer");
+        mlwrite_one("Cannot create buffer");
         return FALSE;
     }
     if (--curbp->b_nwnd == 0) {     /* Undisplay.           */
@@ -396,12 +396,12 @@ int readin(char *fname, int lockfl) {
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
     if (s == FIOFNF) {                              /* File not found. */
         strcpy(readin_mesg, MLbkt("New file"));
-        mlwrite(readin_mesg);
+        mlwrite_one(readin_mesg);
         goto out;
     }
 
 /* Read the file in */
-    if (!silent) mlwrite(MLbkt("Reading file"));  /* GGR */
+    if (!silent) mlwrite_one(MLbkt("Reading file"));  /* GGR */
     nline = 0;
     while ((s = ffgetline()) == FIOSUC) {
         if (nline > MAXNLINE) {
@@ -449,7 +449,7 @@ int readin(char *fname, int lockfl) {
         if (curbp->b_mode & MDDOSLE)
             strcat(readin_mesg, " - DOS mode enabled!");
         strcat(readin_mesg, MLpost);
-        mlwrite(readin_mesg);
+        mlwrite_one(readin_mesg);
         if (s == FIOERR || s == FIOMEM) sleep(1);   /* Let it be seen */
     }
 
@@ -593,14 +593,14 @@ int filesave(int f, int n) {
     if ((curbp->b_flag & BFCHG) == 0)   /* Return, no changes.  */
         return TRUE;
     if (curbp->b_fname[0] == 0) {   /* Must have a name. */
-        mlwrite("No file name");
+        mlwrite_one("No file name");
         return FALSE;
     }
 
 /* Complain about truncated files */
     if ((curbp->b_flag & BFTRUNC) != 0) {
         if (mlyesno("Truncated file ... write it out") == FALSE) {
-            mlwrite(MLbkt("Aborted"));
+            mlwrite_one(MLbkt("Aborted"));
             return FALSE;
         }
     }
@@ -608,7 +608,7 @@ int filesave(int f, int n) {
 /* Complain about narrowed buffers */
     if ((curbp->b_flag&BFNAROW) != 0) {
         if (mlyesno("Narrowed buffer: write it out anyway") != TRUE) {
-            mlwrite(MLbkt("Aborted"));
+            mlwrite_one(MLbkt("Aborted"));
             return(FALSE);
         }
     }
@@ -639,7 +639,7 @@ int writeout(char *fn) {
 
     if ((s = ffwopen(fn)) != FIOSUC) return FALSE;  /* Open writes message */
 
-    mlwrite(MLbkt("Writing..."));     /* tell us were writing */
+    mlwrite_one(MLbkt("Writing..."));       /* tell us were writing */
     lp = lforw(curbp->b_linep);             /* First line.          */
     nline = 0;                              /* Number of lines.     */
     while (lp != curbp->b_linep) {
@@ -654,7 +654,7 @@ int writeout(char *fn) {
         s = ffclose();
         if (s == FIOSUC) {                  /* No close error.      */
             if (nline == 1)
-                mlwrite(MLbkt("Wrote 1 line"));
+                mlwrite_one(MLbkt("Wrote 1 line"));
             else
                 mlwrite(MLbkt("Wrote %d lines"), nline);
             }

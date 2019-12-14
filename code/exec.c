@@ -102,9 +102,7 @@ static int docmd(char *cline) {
 /* And match the token to see if it exists */
     struct name_bind *nbp = name_info(tkn);
     if (nbp == NULL) {
-        char ermess[NSTRING+22];
-        snprintf(ermess, NSTRING+22, "No such Function: %s", tkn);
-        mlwrite(ermess);
+        mlwrite("No such Function: %s", tkn);
         status = FALSE;
         goto final_exit;
     }
@@ -329,13 +327,13 @@ int storemac(int f, int n) {
 
 /* Must have a numeric argument to this function */
     if (f == FALSE) {
-        mlwrite("No macro specified");
+        mlwrite_one("No macro specified");
         return FALSE;
     }
 
 /* Range check the macro number */
     if (n < 1 || n > 40) {
-        mlwrite("Macro number out of range");
+        mlwrite_one("Macro number out of range");
         return FALSE;
     }
 
@@ -346,7 +344,7 @@ int storemac(int f, int n) {
 
 /* Set up the new macro buffer */
     if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
-        mlwrite("Cannot create macro");
+        mlwrite_one("Cannot create macro");
         return FALSE;
     }
 
@@ -801,7 +799,7 @@ int storeproc(int f, int n) {
 
 /* Set up the new macro buffer */
     if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
-        mlwrite("Cannot create macro");
+        mlwrite_one("Cannot create macro");
         return FALSE;
     }
 
@@ -839,7 +837,7 @@ int run_user_proc(char *procname, int rpts) {
 
 /* Find the pointer to that buffer */
     if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite("No such procedure");
+        mlwrite_one("No such procedure");
         return FALSE;
     }
 
@@ -928,14 +926,14 @@ int execbuf(int f, int n) {
             return status;
 
         if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
-            mlwrite("%%Cannot run keyboard macro when collecting it");
+            mlwrite_one("%Cannot run keyboard macro when collecting it");
             return FALSE;
         }
     }
 
 /* Find the pointer to that buffer */
     if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite("No such buffer");
+        mlwrite_one("No such buffer");
         return FALSE;
     }
 
@@ -1008,10 +1006,6 @@ int dobuf(struct buffer *bp) {
     char tkn[NSTRING];      /* buffer to evaluate an expresion in */
     int return_stat = TRUE; /* What we expect to do */
     int orig_pause_key_index_update;    /* State on entry - to be restored */
-#if     DEBUGM
-    char *sp;               /* temp for building debug string */
-    char *ep;               /* ptr to end of outline */
-#endif
 
 /* GGR - Only allow recursion up to a certain level... */
 
@@ -1061,7 +1055,7 @@ int dobuf(struct buffer *bp) {
 /* If is a BREAK directive, make a block... */
         if (eline[0] == '!' && eline[1] == 'b' && eline[2] == 'r') {
             if (scanner == NULL) {
-                mlwrite("%%!BREAK outside of any !WHILE loop");
+                mlwrite_one("%!BREAK outside of any !WHILE loop");
                 goto failexit2;
             }
             whtemp = Xmalloc(sizeof(struct while_block));
@@ -1140,7 +1134,7 @@ int dobuf(struct buffer *bp) {
             if (strlen(eline) > 80) strncat(outline, eline, 80);
             else                    strcat(outline, eline);
             strcat(outline, ">>>");
-
+#if 0
 /* Change all '%' to ':' so mlwrite won't expect arguments */
             sp = outline;
             while (*sp)
@@ -1152,6 +1146,7 @@ int dobuf(struct buffer *bp) {
                         *(ep + 1) = *ep;
                     sp += 2;            /* and advance sp past the new % */
                 }
+#endif
 
 /* Write out the debug line */
             mlforce(outline);
@@ -1179,7 +1174,7 @@ int dobuf(struct buffer *bp) {
 
 /* and bitch if it's illegal */
             if (dirnum == NUMDIRS) {
-                mlwrite("%%Unknown Directive");
+                mlwrite_one("%Unknown Directive");
                 goto failexit2;
             }
 
@@ -1203,7 +1198,7 @@ int dobuf(struct buffer *bp) {
 /* Allocate the space for the line */
             linlen = strlen(eline);
             if ((mp = lalloc(linlen)) == NULL) {
-                mlwrite ("Out of memory while storing macro");
+                mlwrite_one ("Out of memory while storing macro");
                 bp->b_exec_level--;
                 pause_key_index_update = orig_pause_key_index_update;
                 status = FALSE;
@@ -1262,7 +1257,7 @@ int dobuf(struct buffer *bp) {
                 }
 
                 if (whtemp == NULL) {
-                    mlwrite ("%%Internal While loop error");
+                    mlwrite_one("%Internal While loop error");
                     goto failexit2;
                 }
 
@@ -1294,7 +1289,7 @@ int dobuf(struct buffer *bp) {
                         }
                         glp = glp->l_fp;
                     }
-                    mlwrite("%%No such label");
+                    mlwrite_one("%No such label");
                     goto failexit2;
                 }
                 goto onward;
@@ -1318,7 +1313,7 @@ int dobuf(struct buffer *bp) {
                     }
 
                     if (whtemp == NULL) {
-                        mlwrite ("%%Internal While loop error");
+                        mlwrite_one("%Internal While loop error");
                         goto failexit2;
                     }
 
@@ -1517,7 +1512,7 @@ int cbuf(int f, int n, int bufnum) {
 
 /* Find the pointer to that buffer */
     if ((bp = bfind(bufname, FALSE, 0)) == NULL) {
-        mlwrite("Macro not defined");
+        mlwrite_one("Macro not defined");
         return FALSE;
     }
 

@@ -300,7 +300,7 @@ int filter_buffer(int f, int n) {
 
 /* Write it out, checking for errors */
     if (writeout(filnam1) != TRUE) {
-        mlwrite(MLbkt("Cannot write filter file"));
+        mlwrite_one(MLbkt("Cannot write filter file"));
         strcpy(bp->b_fname, tmpnam);
         return FALSE;
     }
@@ -329,7 +329,7 @@ int filter_buffer(int f, int n) {
 
 /* Report any failure, then continue to tidy up... */
     if (s != TRUE || ((s = readin(filnam2, FALSE)) == FALSE)) {
-        mlwrite(MLbkt("Execution failed"));
+        mlwrite_one(MLbkt("Execution failed"));
     }
 
 /* Reset file name */

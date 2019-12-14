@@ -461,12 +461,12 @@ int fillwhole(int f, int n) {
 
     gotobob(TRUE, 1);
     savline = 0;
-    mlwrite(MLbkt("Filling all paragraphs in buffer.."));
+    mlwrite_one(MLbkt("Filling all paragraphs in buffer.."));
     while ((thisline = getcline()) > savline) {
         status = fillpara(f, n);
         savline = thisline;
     }
-    mlwrite("");
+    mlwrite_one("");
     return(status);
 }
 
@@ -655,7 +655,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
             return rdonly();        /* we are in read only mode     */
 
     if (width == 0) {             /* no fill column set */
-        mlwrite("No fill column set");
+        mlwrite_one("No fill column set");
         return FALSE;
     }
     rtol = 1;           /* Direction of first padding pass */
@@ -898,7 +898,7 @@ int justpara(int f, int n) {
 /* Have to cater for tabs and multibyte chars...can't use w_doto */
     int leftmarg = getccol(FALSE);
     if (leftmarg + 10 > fillcol) {
-        mlwrite("Column too narrow");
+        mlwrite_one("Column too narrow");
         return FALSE;
     }
     int status = FALSE;
