@@ -1470,7 +1470,7 @@ void mlerase(void) {
  * GGR modified to handle utf8 strings.
  *
  * char *fmt;           format string for output
- * char *arg;           pointer to first argument to print
+ * va_list ap;          variable arg list, or NULL for no interpolation
  */
 static void mlwrite_ap(const char *fmt, va_list ap) {
     unicode_t c;            /* current char in format string */
@@ -1500,7 +1500,7 @@ static void mlwrite_ap(const char *fmt, va_list ap) {
         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
         fmt += used;
-        if (c != '%') {
+        if ((ap == NULL) || (c != '%')) {
             TTput_1uc(c);
         } else {
             if (bytes_togo <= 0) continue;
@@ -1574,6 +1574,23 @@ void mlforce(const char *fmt, ...) {
     mlwrite_ap(fmt, ap);    /* write the string out */
     va_end(ap);
     discmd = oldcmd;        /* and restore the original setting */
+    return;
+}
+
+/* Versions of mlwrite/mlforce that are printing a fixed string
+ * and want no accidental interpolation of % chars.
+ */
+void mlwrite_one(const char *fmt) {
+    mlwrite_ap(fmt, NULL);
+    return;
+}
+void mlforce_one(const char *fmt) {
+    int oldcmd;     /* original command display flag */
+    oldcmd = discmd;        /* save the discmd value */
+    discmd = TRUE;          /* and turn display on */
+    mlwrite_ap(fmt, NULL);    /* write the string out */
+    discmd = oldcmd;        /* and restore the original setting */
+    return;
 }
 
 /*

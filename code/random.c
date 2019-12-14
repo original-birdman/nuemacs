@@ -845,7 +845,7 @@ int killtext(int f, int n) {
             nextp = lforw(nextp);
         }
     } else {
-        mlwrite("neg kill");
+        mlwrite_one("neg kill");
         return FALSE;
     }
     return ldelete(chunk, TRUE);
@@ -931,7 +931,7 @@ static int adjustmode(int kind, int global) {
         }
     }
 
-    mlwrite("No such mode!");
+    mlwrite_one("No such mode!");
     return FALSE;
 }
 
@@ -995,28 +995,16 @@ int clrmes(int f, int n) {
  *
  */
 int writemsg(int f, int n) {
-    char *sp;               /* pointer into buf to expand %s */
-    char *np;               /* ptr into nbuf */
     int status;
     char buf[NPAT];         /* buffer to receive message into */
-    char nbuf[NPAT * 2];    /* buffer to expand string into */
 
     if ((status =
      mlreply("Message to write: ", buf, NPAT - 1, EXPNONE)) != TRUE)
         return status;
 
-/* Expand all '%' to "%%" so mlwrite won't expect arguments */
-    sp = buf;
-    np = nbuf;
-    while (*sp) {
-        *np++ = *sp;
-        if (*sp++ == '%') *np++ = '%';
-    }
-    *np = '\0';
-
 /* Write the message out */
-    if (f && n == 2) fprintf(stderr, "%s\n", nbuf);
-    else             mlforce(nbuf);
+    if (f && n == 2) fprintf(stderr, "%s\n", buf);
+    else             mlforce_one(buf);
     return TRUE;
 }
 
@@ -1323,7 +1311,7 @@ int quotedcount(int f, int n) {
         }
     }
     curwp->w_doto = savedpos;
-    mlwrite("Bad quoting!");
+    mlwrite_one("Bad quoting!");
     TTbeep();
     return(FALSE);
 }

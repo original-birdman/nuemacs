@@ -156,6 +156,8 @@ extern void movecursor(int row, int col);
 extern void mlerase(void);
 extern void mlwrite(const char *fmt, ...);
 extern void mlforce(const char *fmt, ...);
+extern void mlwrite_one(const char *fmt);
+extern void mlforce_one(const char *fmt);
 extern void mlputs(char *s);
 extern void getscreensize(int *widthp, int *heightp);
 extern void sizesignal(int signr);
