@@ -240,6 +240,34 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
 }
 
 /*
+ * showdir_handled
+ *  Check for the incoming pathname beign a directory.
+ *  If it is, and we have a "shodir" userproc, then let that handle it.
+ *  Return TRUE if we passed it to showdir, otherise FALSE.
+ */
+int showdir_handled(char *pname) {
+    struct stat statbuf;
+    int status = stat(pname, &statbuf);
+    if ((status == 0) && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
+/* We can only call showdir if it exists as a userproc.
+ * If it doesn't we just let the old code handle it.
+ */
+        struct buffer *sdb = bfind("/showdir", FALSE, 0);
+        if (sdb && (sdb->b_type == BTPROC)) {
+            userproc_arg = pname;
+            (void)run_user_proc("showdir", 1);
+            userproc_arg = NULL;
+        }
+        else {
+           mlwrite("No showdir userproc handler: %s", pname);
+           if (comline_processing) sleep(2);    /* Let user see it */
+        }
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/*
  * getfile()
  *
  * char fname[];        file name to find
@@ -253,28 +281,11 @@ int getfile(char *fname, int lockfl, int check_dir) {
     char bname[NBUFN];      /* buffer name to put file */
 
 /* Check *now* if this is a directory and we've been asked to check.
- * This prevents settign up an incomplete buffer that isn'y used by
- * teh showdir code.
+ * This prevents setting up an incomplete buffer that isn't used by
+ * the showdir code.
  * If it isn't a directory, or we can't find out, just continue,
  */
-    if (check_dir == TRUE) {
-        struct stat statbuf;
-        int status = stat(fname, &statbuf);
-        if (status == 0 && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
-/* We can only call showdir if it exists as a userproc.
- * Also, since we expect this might end up using our global ffp, we
- * close that now, and have our own exit, which we have to signal
- * as an error...(we didn't really open the original entry).
- */
-            struct buffer *sdb = bfind("/showdir", FALSE, 0);
-            if (sdb && (sdb->b_type == BTPROC)) {
-                    userproc_arg = fname;
-                    (void)run_user_proc("showdir", 1);
-                    userproc_arg = NULL;
-                    return TRUE;
-            }
-        }
-    }
+    if ((check_dir == TRUE) && (showdir_handled(fname) == TRUE)) return TRUE;
 
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
@@ -434,13 +445,13 @@ int readin(char *fname, int lockfl) {
             mlwrite(MLbkt("Reading file") " : %d lines", nline);
     }
     ffclose();                          /* Ignore errors. */
-    strcpy(readin_mesg, MLpre);
+    if (!silent) strcpy(readin_mesg, MLpre);
     if (s == FIOERR) {
-        strcat(readin_mesg, "I/O ERROR, ");
+        if (!silent) strcat(readin_mesg, "I/O ERROR, ");
         curbp->b_flag |= BFTRUNC;
     }
     if (s == FIOMEM) {
-        strcat(readin_mesg, "OUT OF MEMORY, ");
+        if (!silent) strcat(readin_mesg, "OUT OF MEMORY, ");
         curbp->b_flag |= BFTRUNC;
     }
     if (!silent) {                      /* GGR */

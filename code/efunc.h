@@ -232,6 +232,7 @@ extern int fileread(int, int);
 extern int insfile(int, int);
 extern int filefind(int, int);
 extern int viewfile(int, int);
+extern int showdir_handled(char *);
 extern int getfile(char *, int, int);
 extern int readin(char *, int);
 extern void makename(char *, char *);

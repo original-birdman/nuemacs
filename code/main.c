@@ -1090,25 +1090,35 @@ int main(int argc, char **argv) {
             vttidy();
             exit(1);
         }
+
+/* We need to check here whether this is a directory, as we don't want
+ * to set up a buffer if it is.
+ * This looks a bit like duplication of the getfile() code, but the
+ * buffer-pointer handling is different.
+ */
+
+        if (showdir_handled(*argv) == FALSE) {
+
 /* Set-up a buffer for this file */
-        makename(bname, *argv);
-        unqname(bname);
-        bp = bfind(bname, TRUE, 0);     /* set this to inactive */
-        strcpy(bp->b_fname, *argv);
-        bp->b_active = FALSE;
-        if (firstfile) {
-            firstbp = bp;
-            firstfile = FALSE;
-        }
+            makename(bname, *argv);
+            unqname(bname);
+            bp = bfind(bname, TRUE, 0);     /* set this to inactive */
+            strcpy(bp->b_fname, *argv);
+            bp->b_active = FALSE;
+            if (firstfile) {
+                firstbp = bp;
+                firstfile = FALSE;
+            }
 /* Set the modes appropriately */
 
-        if (viewflag) bp->b_mode |= MDVIEW;
-        if (cryptflag) {
-            bp->b_mode |= MDCRYPT;
-            bp->b_keylen = strlen(ekey);
-            myencrypt((char *) NULL, 0);
-            myencrypt(ekey, bp->b_keylen);
-            memcpy(bp->b_key, ekey, bp->b_keylen);
+            if (viewflag) bp->b_mode |= MDVIEW;
+            if (cryptflag) {
+                bp->b_mode |= MDCRYPT;
+                bp->b_keylen = strlen(ekey);
+                myencrypt((char *) NULL, 0);
+                myencrypt(ekey, bp->b_keylen);
+                memcpy(bp->b_key, ekey, bp->b_keylen);
+            }
         }
         argv++;
     }
@@ -1120,6 +1130,7 @@ int main(int argc, char **argv) {
 
 /* Done with processing command line */
 
+    comline_processing = 0;
     discmd = TRUE;          /* P.K. */
 
 /* If there are any files to read, read the first one! */

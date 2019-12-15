@@ -206,3 +206,6 @@ extern int rxargs;
 /* To allow macro procedures to get args from C-code */
 
 extern char *userproc_arg;
+
+/* Are we still processing the command line? */
+extern int comline_processing;

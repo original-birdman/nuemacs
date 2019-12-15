@@ -206,3 +206,5 @@ struct rx_mask rx_mask[] = {
 int rxargs = ~0;            /* Everything on by default */
 
 char *userproc_arg = NULL;
+
+int comline_processing = 1;
