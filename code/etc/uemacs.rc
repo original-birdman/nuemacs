@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 11 December 2019
+;                       Last Update: 15 December 2019
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -432,7 +432,9 @@ args-in-reexec ALL
         set %udir &env PWD
     !endif
     !if &seq "./" &lef %udir 2
-        set %udir &cat &env PWD &rig %udir 2
+        set %rctmp &len %udir
+        set %rctmp &sub %rctmp 2
+        set %udir &cat &env PWD &mid %udir 2 %rctmp
     !endif
     !if &not &seq "/" &lef %udir 1
         set %udir &cat &env PWD &cat "/" %udir
