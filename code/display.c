@@ -1472,7 +1472,16 @@ void mlerase(void) {
  * char *fmt;           format string for output
  * va_list ap;          variable arg list, or NULL for no interpolation
  */
-static void mlwrite_ap(const char *fmt, va_list ap) {
+
+/* Some gccs are happy to test va_list against NULL.
+ * Others are not. Even with similar gcc versiosn and the same stdarg.h
+ * So, define a union - which sems to keep everyone happy.
+ */
+typedef union {
+    char *p;
+    va_list ap;
+} npva;
+static void mlwrite_ap(const char *fmt, npva ap) {
     unicode_t c;            /* current char in format string */
 
 /* If we are not currently echoing on the command line, abort this */
@@ -1500,7 +1509,7 @@ static void mlwrite_ap(const char *fmt, va_list ap) {
         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
         fmt += used;
-        if ((ap == NULL) || (c != '%')) {
+        if ((ap.p == NULL) || (c != '%')) {
             TTput_1uc(c);
         } else {
             if (bytes_togo <= 0) continue;
@@ -1510,30 +1519,30 @@ static void mlwrite_ap(const char *fmt, va_list ap) {
 
             switch (c) {
             case 'd':
-                mlputi(va_arg(ap, int), 10);
+                mlputi(va_arg(ap.ap, int), 10);
                 break;
 
             case 'o':
-                mlputi(va_arg(ap, int), 8);
+                mlputi(va_arg(ap.ap, int), 8);
                 break;
 
             case 'x':
-                mlputi(va_arg(ap, int), 16);
+                mlputi(va_arg(ap.ap, int), 16);
                 break;
 
             case 'D':
-                mlputli(va_arg(ap, long), 10);
+                mlputli(va_arg(ap.ap, long), 10);
                 break;
 
             case 's':
-               {char *tp = va_arg(ap, char *);
+               {char *tp = va_arg(ap.ap, char *);
                 if (tp == NULL) tp = "(nil)";
                 mlputs(tp);
                 break;
                }
 
             case 'f':
-                mlputf(va_arg(ap, int));
+                mlputf(va_arg(ap.ap, int));
                 break;
 
             default:
@@ -1549,10 +1558,10 @@ static void mlwrite_ap(const char *fmt, va_list ap) {
 }
 
 void mlwrite(const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
+    npva ap;
+    va_start(ap.ap, fmt);
     mlwrite_ap(fmt, ap);
-    va_end(ap);
+    va_end(ap.ap);
     return;
 }
 
@@ -1566,13 +1575,13 @@ void mlwrite(const char *fmt, ...) {
 void mlforce(const char *fmt, ...) {
     int oldcmd;     /* original command display flag */
 
-    va_list ap;
-    va_start(ap, fmt);
+    npva ap;
+    va_start(ap.ap, fmt);
 
     oldcmd = discmd;        /* save the discmd value */
     discmd = TRUE;          /* and turn display on */
     mlwrite_ap(fmt, ap);    /* write the string out */
-    va_end(ap);
+    va_end(ap.ap);
     discmd = oldcmd;        /* and restore the original setting */
     return;
 }
@@ -1580,15 +1589,17 @@ void mlforce(const char *fmt, ...) {
 /* Versions of mlwrite/mlforce that are printing a fixed string
  * and want no accidental interpolation of % chars.
  */
+static npva nullva = { NULL };  /* Initialized to type of first member */
+
 void mlwrite_one(const char *fmt) {
-    mlwrite_ap(fmt, NULL);
+    mlwrite_ap(fmt, nullva);
     return;
 }
 void mlforce_one(const char *fmt) {
     int oldcmd;     /* original command display flag */
     oldcmd = discmd;        /* save the discmd value */
     discmd = TRUE;          /* and turn display on */
-    mlwrite_ap(fmt, NULL);    /* write the string out */
+    mlwrite_ap(fmt, nullva);    /* write the string out */
     discmd = oldcmd;        /* and restore the original setting */
     return;
 }
