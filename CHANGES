@@ -3314,4 +3314,88 @@ etc/uemacs.hlp
 etc/uemacs.rc
     Update to version GGR4.145
 
+========== GGR4.146
+
+input.c
+    Moved some routines around to avoid having to pre-declare functions.
+    Removed the "#if BSD | USG" conditional (always true for us).
+    Added comp_gen() function and made comp_buffer() and comp_name()
+    front-ends to it.
+
+bind.c
+file.c
+fileio.c
+main.c
+spawn.c
+efunc.h
+    Move the directory check to call showdir out of check_for_file()
+    and into getfile() - before any buffer is created.
+    Made the check optional for the caller.
+
+display.c
+random.c
+efunc.h
+    Added mlwrite_one() and mlforce_one() to print strings that may
+    contain '%', but don't want printf-style interpolation.
+    Could lead to missing '%' in write-message output. [display.c, efunc.h]
+    Simplified writemsg() by using mlwrite_one() and changed all other
+    1-arg mlwrite() calls to be mlwrite_one(). [random.c]
+
+eval.c
+input.c
+efunc.h
+estruct.h
+evar.h
+    Added sort routine for environment and user variable names for
+    use in the completion code in input.c and added EXPVAR and COMPVAR
+    to use it. Had to externalize uv(user_variable) and evl(struct evlist)
+    data. Had to shift some definitions from evar.h to estruct.h so that
+    input.c could see them. Simplified the user variable setting code in
+    setvar(). [eval.c, efunc.h, estruct.h, evar.h]
+    Added getfvar/getnvar functions to support a comp_var()
+    functionality in getstring(). Use mlwrite_one() when printing
+    choices to prevent loss of leading % on user vars. [input.c]
+
+basic.c
+bind.c
+buffer.c
+crypt.c
+exec.c
+file.c
+fileio.c
+input.c
+isearch.c
+line.c
+lock.c
+main.c
+random.c
+region.c
+search.c
+spawn.c
+window.c
+word.c
+    Changed all 1-arg mlwrite() calls to be mlwrite_one() and replaced
+    any %% with % in args.
+    Stop expandp() from changing % to %% [search.c]
+    Removed unnecessary string building for mlwrite() [exec.c, random.c]
+
+file.c
+globals.c
+main.c
+edef.h
+efunc.h
+    Put the directory test and showdir call into a showdir_handled()
+    function. [file.c, efunc.h]
+    Don't set readin_mesg if silent [file.c]
+    Call showdir_handled() for command line file args, so directory
+    browsing works there too. [main.c]
+    Add a comline_processing flag, so we can sleep to let an error
+    message be read [edef.h, globals.c, main.c, file.c]
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.146
+
 ==========
+
