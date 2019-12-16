@@ -875,7 +875,7 @@ static int adjustmode(int kind, int global) {
 
 /* Prompt the user and get an answer */
 
-    status = mlreply(prompt, cbuf, NPAT - 1, EXPNONE);
+    status = mlreply(prompt, cbuf, NPAT - 1, CMPLT_NONE);
     if (status != TRUE) return status;
 
 /* Check for 1st char being uppercase */
@@ -999,7 +999,7 @@ int writemsg(int f, int n) {
     char buf[NPAT];         /* buffer to receive message into */
 
     if ((status =
-     mlreply("Message to write: ", buf, NPAT - 1, EXPNONE)) != TRUE)
+     mlreply("Message to write: ", buf, NPAT - 1, CMPLT_NONE)) != TRUE)
         return status;
 
 /* Write the message out */
@@ -1174,7 +1174,7 @@ int string_getter(int f, int n, enum istr_type call_type) {
         prompt = "String/unicode chars: ";
     }
 
-    status = ml_func(prompt, tstring, NLINE, EXPNONE);
+    status = ml_func(prompt, tstring, NLINE, CMPLT_NONE);
     if (status != TRUE)
         return status;
 
@@ -1241,7 +1241,7 @@ int ovstring(int f, int n) {
     char tstring[NPAT + 1]; /* string to add */
 
 /* Ask for string to insert */
-    status = mlreply("String to overwrite: ", tstring, NPAT, EXPNONE);
+    status = mlreply("String to overwrite: ", tstring, NPAT, CMPLT_NONE);
     if (status != TRUE) return status;
 
     if (f == FALSE) n = 1;
@@ -1331,7 +1331,7 @@ int re_args_exec(int f, int n) {
     int status;
     char buf[NLINE];
 
-    status = mlreply("exec set: ", buf, NLINE - 1, EXPNONE);
+    status = mlreply("exec set: ", buf, NLINE - 1, CMPLT_NONE);
     if (status != TRUE)         /* Only act on +ve response */
         return status;
 

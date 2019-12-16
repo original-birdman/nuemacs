@@ -35,12 +35,6 @@ static char picture[NFILEN], directory[NFILEN];
 
 static struct buffer *expandbp;
 
-#define COMPFILE 1
-#define COMPBUFF 2
-#define COMPPROC 3
-#define COMPNAME 4
-#define COMPVAR  5
-
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
 static char so_far[NFILEN];     /* Maximal match so far */
@@ -174,19 +168,19 @@ static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
 /* We NEVER return minibuffer buffers (CC$00nnn), and we return internal
  * [xx] buffers only if the user asked for them by specifying a picture
  * starting with [.
- * For a type of COMPPROC we only consider buffer-names starting with '/'
+ * For a type of CMPLT_PROC we only consider buffer-names starting with '/'
  * with a b_type of BTPROC. We return the name *without* the leading '/'.
  */
 
         int offset;
-            if (mtype == COMPPROC)  offset = 1;
+            if (mtype == CMPLT_PROC)  offset = 1;
             else                    offset = 0;
 
 /* We don't return a buffer if it doesn't match, or if it's a minibuffer
  * buffername (CC$) or if it's an internal buffer [xx], unless the user
  * *asked* for these.
  */
-        if ((mtype == COMPPROC &&
+        if ((mtype == CMPLT_PROC &&
               (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/')) ||
             (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
             (!strncmp(expandbp->b_bname, "CC$", 3)) ||
@@ -338,17 +332,17 @@ static int matcher(char *name, int namelen, char *choices, int mtype) {
     unique = TRUE;
     while (1) {             /* Rather than try to put the switch in there. */
         switch(mtype) {
-        case COMPFILE:
+        case CMPLT_FILE:
             next = getnfile();
             break;
-        case COMPBUFF:
-        case COMPPROC:
+        case CMPLT_BUF:
+        case CMPLT_PROC:
             next = getnbuffer(name, namelen, mtype);
             break;
-        case COMPNAME:
+        case CMPLT_NAME:
             next = getnname(name, namelen);
             break;
-        case COMPVAR:
+        case CMPLT_VAR:
             next = getnvar(name, namelen);
             break;
         default:            /* If mtype arrives oddly? */
@@ -402,7 +396,7 @@ static int comp_file(char *name, char *choices) {
         strcpy(so_far, p);
 
     strcpy(supplied, name);
-    unique = matcher(name, 0, choices, COMPFILE);
+    unique = matcher(name, 0, choices, CMPLT_FILE);
     close_dir();
     if (directory[0]) {
         strcpy(name, directory);
@@ -419,7 +413,7 @@ static int comp_file(char *name, char *choices) {
 
 /* Generic entry point for completions where the getf* function selects
  * names from an internal list.
- * Use by mtype COMPBUFF/COMPPROC and COMPNAME.
+ * Use by mtype CMPLT_BUF/CMPLT_PROC and CMPLT_NAME.
  * The getf* function to use is determined by mtype.
  * Looks for things starting with name, and if there are multiple choices
  * builds a catenated string of them in choices.
@@ -434,14 +428,14 @@ static int comp_gen(char *name, char *choices, int mtype) {
     ljust(name);
     namelen = strlen(name);
     switch(mtype) {
-    case COMPBUFF:
-    case COMPPROC:
+    case CMPLT_BUF:
+    case CMPLT_PROC:
         p = getfbuffer(name, namelen, mtype);
         break;
-    case COMPNAME:
+    case CMPLT_NAME:
         p = getfname(name, namelen);
         break;
-    case COMPVAR:
+    case CMPLT_VAR:
         p = getfvar(name, namelen);
         break;
     default:            /* If mtype arrives oddly? */
@@ -469,14 +463,14 @@ static int comp_buffer(char *name, char *choices, int mtype) {
  * Front-end to comp_gen().
  */
 static int comp_name(char *name, char *choices) {
-    return comp_gen(name, choices, COMPNAME);
+    return comp_gen(name, choices, CMPLT_NAME);
 }
 
 /* Entry point for internal environment/user var completion
  * Front-end to comp_gen().
  */
 static int comp_var(char *name, char *choices) {
-    return comp_gen(name, choices, COMPVAR);
+    return comp_gen(name, choices, CMPLT_VAR);
 }
 
 
@@ -541,7 +535,7 @@ struct name_bind *getname(char *prompt) {
 
 /* First get the name... */
     if (clexec == FALSE) {
-        if (mlreply(prompt, buf, NSTRING, EXPNAME) != TRUE) return NULL;
+        if (mlreply(prompt, buf, NSTRING, CMPLT_NAME) != TRUE) return NULL;
     }
     else {      /* macro line argument - grab token and skip it */
         execstr = token(execstr, buf, NSTRING - 1);
@@ -813,7 +807,7 @@ void sigwinch_handler(int signr) {
 }
 #endif
 
-int getstring(char *prompt, char *buf, int nbuf, int exp_type) {
+int getstring(char *prompt, char *buf, int nbuf, int cmpl_type) {
     struct buffer *bp;
     struct buffer *cb;
     char mbname[NBUFN];
@@ -1011,20 +1005,18 @@ loop:
             int expanded;
             memcpy(tstring, sp, lp->l_used);
             tstring[lp->l_used] = '\0';
-            switch(exp_type) {
-            case EXPFILE:
+            switch(cmpl_type) {
+            case CMPLT_FILE:
                 expanded = comp_file(tstring, choices);
                 break;
-            case EXPBUF:
-                expanded = comp_buffer(tstring, choices, COMPBUFF);
+            case CMPLT_BUF:
+            case CMPLT_PROC:
+                expanded = comp_buffer(tstring, choices, cmpl_type);
                 break;
-            case EXPPROC:
-                expanded = comp_buffer(tstring, choices, COMPPROC);
-                break;
-            case EXPNAME:
+            case CMPLT_NAME:
                 expanded = comp_name(tstring, choices);
                 break;
-            case EXPVAR:
+            case CMPLT_VAR:
                 expanded = comp_var(tstring, choices);
                 break;
             default:

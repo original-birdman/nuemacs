@@ -27,7 +27,7 @@ int set_encryption_key(int f, int n) {
     disinp = FALSE;
 
 /* Get the string to use as an encrytion string */
-    status = mlreply("Encryption String: ", key, NPAT - 1, EXPNONE);
+    status = mlreply("Encryption String: ", key, NPAT - 1, CMPLT_NONE);
     mlwrite_one(" ");       /* clear it off the bottom line */
     disinp = odisinp;
     if (status != TRUE) return status;

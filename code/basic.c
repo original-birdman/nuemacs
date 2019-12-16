@@ -175,7 +175,7 @@ int gotoline(int f, int n) {
 /* Get an argument if one doesnt exist. */
     if (f == FALSE) {
         if ((status =
-          mlreply("Line to GOTO: ", arg, NSTRING, EXPNONE)) != TRUE) {
+          mlreply("Line to GOTO: ", arg, NSTRING, CMPLT_NONE)) != TRUE) {
             mlwrite_one(MLbkt("Aborted"));
             return status;
         }

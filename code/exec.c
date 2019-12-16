@@ -259,7 +259,7 @@ int execcmd(int f, int n) {
         strcpy(cmdstr, prev_cmd);
     else {
 /* Get the line wanted */
-        if ((status = mlreply("command: ", cmdstr, NSTRING, EXPNONE)) != TRUE)
+        if ((status = mlreply("command: ", cmdstr, NSTRING, CMPLT_NONE)) != TRUE)
             return status;
     }
     execlevel = 0;
@@ -280,7 +280,7 @@ int macarg(char *tok) {
 
     savcle = clexec;        /* save execution mode */
     clexec = TRUE;          /* get the argument */
-    status = nextarg("", tok, NSTRING, EXPNONE);
+    status = nextarg("", tok, NSTRING, CMPLT_NONE);
     clexec = savcle;        /* restore execution mode */
     return status;
 }
@@ -564,7 +564,7 @@ int set_pttable(int f, int n) {
         return FALSE;
     }
 
-    status = mlreply("Translation table to use? ", pttbuf+1, NBUFN-2, EXPNONE);
+    status = mlreply("Translation table to use? ", pttbuf+1, NBUFN-2, CMPLT_NONE);
     if (status != TRUE) return status;
 
 /* Find the ptt buffer */
@@ -789,7 +789,7 @@ int storeproc(int f, int n) {
 
 /* Append the procedure name to the buffer marker tag */
     bufn[0] = '/';
-    if ((status = mlreply("Procedure name: ", bufn+1, NBUFN, EXPBUF)) != TRUE)
+    if ((status = mlreply("Procedure name: ", bufn+1, NBUFN, CMPLT_BUF)) != TRUE)
          return status;
     if (strlen(bufn) >= NBUFN) {
         mlforce("Procedure name too long (store): %s. Ignored.", bufn);
@@ -808,7 +808,7 @@ int storeproc(int f, int n) {
     bp->btp_opt.skip_in_macro = 0;
     bp->btp_opt.not_mb = 0;
     while (1) {
-        mlreply("opts: ", optstr, NBUFN, EXPBUF);
+        mlreply("opts: ", optstr, NBUFN, CMPLT_BUF);
         if (optstr[0] == '\0') break;
         if (!strcmp(optstr, "skip_in_macro")) bp->btp_opt.skip_in_macro = 1;
         if (!strcmp(optstr, "not_mb"))        bp->btp_opt.not_mb = 1;
@@ -883,7 +883,7 @@ int execproc(int f, int n) {
             input_waiting = NULL;   /* We've used it */
         }
         else {
-            if ((status = mlreply("Execute procedure: ", bufn, NBUFN, EXPPROC))
+            if ((status = mlreply("Execute procedure: ", bufn, NBUFN, CMPLT_PROC))
                  != TRUE)
                 return status;
             if (strlen(bufn) >= NBUFN) {
@@ -922,7 +922,7 @@ int execbuf(int f, int n) {
         strcpy(bufn, prev_bufn);
     else {
 /* Find out what buffer the user wants to execute */
-        if ((status = mlreply("Execute buffer: ", bufn, NBUFN, EXPBUF)) != TRUE)
+        if ((status = mlreply("Execute buffer: ", bufn, NBUFN, CMPLT_BUF)) != TRUE)
             return status;
 
         if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
@@ -1414,7 +1414,7 @@ int execfile(int f, int n) {
         strcpy(fname, prev_fname);
     else {
         if ((status =
-          mlreply("File to execute: ", fname, NSTRING - 1, EXPNONE)) != TRUE)
+          mlreply("File to execute: ", fname, NSTRING - 1, CMPLT_NONE)) != TRUE)
             return status;
 
         if (include_level >= MAX_INCLUDE_LEVEL) {

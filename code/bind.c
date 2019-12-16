@@ -674,7 +674,7 @@ int apro(int f, int n) {
     char mstring[NSTRING];  /* string to match cmd names to */
     int status;             /* status return */
 
-    status = mlreply("Apropos string: ", mstring, NSTRING - 1, EXPNONE);
+    status = mlreply("Apropos string: ", mstring, NSTRING - 1, CMPLT_NONE);
     if (status != TRUE) return status;
 
     return buildlist(FALSE, mstring);
@@ -934,7 +934,7 @@ int buffertokey(int f, int n) {
  * we have two different names ending up the same.
  */
     bname[0] = '/';
-    if ((status = mlreply("macro buffer: ", bname+1, NBUFN, EXPBUF)) != TRUE)
+    if ((status = mlreply("macro buffer: ", bname+1, NBUFN, CMPLT_BUF)) != TRUE)
         return status;
     if (strlen(bname) >= NBUFN) {
          mlforce("Procedure name too long: %s. Ignored.", bname);

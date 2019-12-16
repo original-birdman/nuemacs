@@ -34,7 +34,7 @@ int fileread(int f, int n) {
 /* GGR - return any current filename for the buffer on <CR>.
  *      Useful for ^X^R <CR> to re-read current file on erroneous change
  */
-    s = mlreply("Read file: ", fname, NFILEN, EXPFILE);
+    s = mlreply("Read file: ", fname, NFILEN, CMPLT_FILE);
     if (s == ABORT) return(s);
     else if (s == FALSE) {
         if (strlen(curbp->b_fname) == 0) return(s);
@@ -185,7 +185,7 @@ int insfile(int f, int n) {
         return resterr();
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if      */
         return rdonly();        /* we are in read only mode     */
-    if ((s = mlreply("Insert file: ", fname, NFILEN, EXPFILE)) != TRUE)
+    if ((s = mlreply("Insert file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
         return s;
     if ((s = ifile(fname)) != TRUE)
         return s;
@@ -207,7 +207,7 @@ int filefind(int f, int n) {
 
     if (restflag)           /* don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("Find file: ", fname, NFILEN, EXPFILE)) != TRUE) {
+    if ((s = mlreply("Find file: ", fname, NFILEN, CMPLT_FILE)) != TRUE) {
         return s;
     }
     run_filehooks = 1;      /* set flag */
@@ -222,7 +222,7 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
 
     if (restflag)               /* Don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("View file: ", fname, NFILEN, EXPFILE)) != TRUE)
+    if ((s = mlreply("View file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
         return s;
     run_filehooks = 1;          /* Set flag */
     s = getfile(fname, FALSE, TRUE);
@@ -303,7 +303,7 @@ int getfile(char *fname, int lockfl, int check_dir) {
     makename(bname, fname); /* New buffer name.     */
     while ((bp = bfind(bname, FALSE, 0)) != NULL) {
 /* Old buffer name conflict code */
-        s = mlreply("Buffer name: ", bname, NBUFN, EXPBUF);
+        s = mlreply("Buffer name: ", bname, NBUFN, CMPLT_BUF);
         if (s == ABORT) return s;   /* ^G to just quit      */
         if (s == FALSE) {           /* CR to clobber it     */
             makename(bname, fname);
@@ -574,7 +574,7 @@ int filewrite(int f, int n) {
 
     if (restflag)           /* Don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("Write file: ", fname, NFILEN, EXPFILE)) != TRUE)
+    if ((s = mlreply("Write file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
         return s;
     if ((s = writeout(fname)) == TRUE) {
         strcpy(curbp->b_fname, fname);
@@ -690,7 +690,7 @@ int filename(int f, int n) {
 
     if (restflag)           /* Don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("Name: ", fname, NFILEN, EXPFILE)) == ABORT)
+    if ((s = mlreply("Name: ", fname, NFILEN, CMPLT_FILE)) == ABORT)
         return s;
     if (s == FALSE)
         strcpy(curbp->b_fname, "");

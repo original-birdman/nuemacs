@@ -670,7 +670,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
     in_search_prompt = 1;
     enum call_type our_rt = (srch == TRUE)? Search: Replace;
     this_rt = our_rt;           /* Set our call type for nextin_ring() */
-    status = mlreply(tpat, tpat, NPAT, EXPNONE);
+    status = mlreply(tpat, tpat, NPAT, CMPLT_NONE);
     this_rt = our_rt;           /* Set our call type for update_ring() */
     in_search_prompt = prev_in_search_prompt;
     int do_update_ring = 1;

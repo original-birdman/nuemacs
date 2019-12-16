@@ -141,7 +141,7 @@ static int next_spawn_cmd(int rxtest, char *prompt, char *line) {
     }
     else {
         int s;
-        if ((s = mlreply(prompt, line, NLINE, EXPNONE)) != TRUE) return s;
+        if ((s = mlreply(prompt, line, NLINE, CMPLT_NONE)) != TRUE) return s;
         strcpy(prev_spawn_cmd, line);
     }
     return TRUE;
