@@ -198,14 +198,14 @@ int execprg(int f, int n) {
  * return, which ends up clearing the minibuffer data, while displaying
  * its status in the status line
  */
-#define PIPEFILE ".ue_command"
+#define PIPEBUF ".ue_command"
 int pipecmd(int f, int n) {
     UNUSED(f); UNUSED(n);
     int s;                  /* return status from CLI */
     struct window *wp;      /* pointer to new window */
     struct buffer *bp;      /* pointer to buffer to zot */
-    char line[NLINE];       /* command line send to shell */
-    static char bf_name[] = PIPEFILE;
+    char line[NLINE + 16];  /* command line send to shell */
+    char comfile[16];
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
@@ -216,26 +216,18 @@ int pipecmd(int f, int n) {
 /* Get the command to pipe in */
     if ((s = next_spawn_cmd(RXARG(pipecmd), "@", line)) != TRUE) return s;
 
-/* Get rid of the command output buffer if it exists */
-    if ((bp = bfind(bf_name, FALSE, 0)) != FALSE) {
-/* Try to make sure we are off screen */
-        wp = wheadp;
-        while (wp != NULL) {
-            if (wp->w_bufp == bp) {
-                if (wp == curwp) delwind(FALSE, 1);
-                else onlywind(FALSE, 1);
-                break;
-            }
-            wp = wp->w_wndp;
-        }
-        if (zotbuf(bp) != TRUE) return FALSE;
-    }
+/* Find/create the PIPEBUF buffer, switch to it and ensure it is empty. */
+    if ((bp = bfind(PIPEBUF, TRUE, 0)) == NULL) return FALSE;
+    if (swbuffer(bp, 0) != TRUE) return FALSE;
+    if (bclear(bp) != TRUE) return FALSE;
+
 #if USG | BSD
+    sprintf(comfile, ".ue_%08x", getpid());
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
     strcat(line, ">");
-    strcat(line, bf_name);
+    strcat(line, comfile);
     dnc = system(line);
     TTopen();
     TTkopen();
@@ -252,18 +244,19 @@ int pipecmd(int f, int n) {
     if (splitwind(FALSE, 1) == FALSE) return FALSE;
 
 /* And read the stuff in */
-    if (getfile(bf_name, FALSE, FALSE) == FALSE) return FALSE;
+    if (readin(comfile, FALSE) != TRUE) return FALSE;
+    bp->b_fname[0] = '\0';      /* Zap temporary filename */
 
-/* Make this window in VIEW mode, update all mode lines */
+/* Put this window into VIEW mode.*/
     curwp->w_bufp->b_mode |= MDVIEW;
     wp = wheadp;
-    while (wp != NULL) {
+    while (wp != NULL) {    /* Update all mode lines */
         wp->w_flag |= WFMODE;
         wp = wp->w_wndp;
     }
 
 /* And get rid of the temporary file */
-    unlink(bf_name);
+    unlink(comfile);
     return TRUE;
 }
 
@@ -274,12 +267,9 @@ int filter_buffer(int f, int n) {
     UNUSED(f); UNUSED(n);
     int s;                  /* return status from CLI */
     struct buffer *bp;      /* pointer to buffer to zot */
-    char line[NLINE];       /* command line send to shell */
+    char line[NLINE + 24];  /* command line send to shell */
     char tmpnam[NFILEN];    /* place to store real file name */
-    static char bname1[] = "fltinp";
-
-    static char filnam1[] = "fltinp";
-    static char filnam2[] = "fltout";
+    char fltin[20], fltout[20];
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
@@ -296,10 +286,12 @@ int filter_buffer(int f, int n) {
 /* Setup the proper file names */
     bp = curbp;
     strcpy(tmpnam, bp->b_fname);    /* save the original name */
-    strcpy(bp->b_fname, bname1);    /* set it to our new one */
+    sprintf(fltin, ".ue_fin_%08x", getpid());
+    sprintf(fltout, ".ue_fout_%08x", getpid());
+    strcpy(bp->b_fname, fltin);    /* set it to our new one */
 
 /* Write it out, checking for errors */
-    if (writeout(filnam1) != TRUE) {
+    if (writeout(fltin) != TRUE) {
         mlwrite_one(MLbkt("Cannot write filter file"));
         strcpy(bp->b_fname, tmpnam);
         return FALSE;
@@ -309,7 +301,10 @@ int filter_buffer(int f, int n) {
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
-    strcat(line, " <fltinp >fltout");
+    strcat(line, "<");
+    strcat(line, fltin);
+    strcat(line, ">");
+    strcat(line, fltout);
     dnc = system(line);
     TTopen();
     TTkopen();
@@ -328,7 +323,7 @@ int filter_buffer(int f, int n) {
     bp->b_flag &= ~BFCHG;
 
 /* Report any failure, then continue to tidy up... */
-    if (s != TRUE || ((s = readin(filnam2, FALSE)) == FALSE)) {
+    if (s != TRUE || ((s = readin(fltout, FALSE)) == FALSE)) {
         mlwrite_one(MLbkt("Execution failed"));
     }
 
@@ -341,7 +336,7 @@ int filter_buffer(int f, int n) {
     if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
 
 /* And get rid of the temporary file */
-    unlink(filnam1);
-    unlink(filnam2);
+    unlink(fltin);
+    unlink(fltout);
     return s;
 }
