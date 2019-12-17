@@ -1155,57 +1155,59 @@ int fmatch(int ch) {
  * routine they use to prompt for and get the input.
  */
 enum istr_type { RAW_STR, COOKED_STR };
-typedef int (*mlfn_t)(char *, char *, int, int);
 
 int string_getter(int f, int n, enum istr_type call_type) {
     int status;                     /* status return code */
     char tstring[NLINE + 1];        /* string to add */
-    mlfn_t ml_func;
     char *prompt;
+    char *istrp;                    /* Final string to insert */
 
 /* ask for string to insert, using the requested function */
 
-    if (call_type == RAW_STR) {
-        ml_func = mlreply;
-        prompt = "String: ";
-    }
-    else {
-        ml_func = mlreply;
-        prompt = "String/unicode chars: ";
-    }
+    if (call_type == RAW_STR) prompt = "String: ";
+    else                      prompt = "Tokens/unicode chars: ";
 
-    status = ml_func(prompt, tstring, NLINE, CMPLT_NONE);
+    status = mlreply(prompt, tstring, NLINE, CMPLT_NONE);
     if (status != TRUE)
         return status;
 
-    char *rp = tstring;
-    char nstring[NLINE] = "";
-    int nlen = 0;
-    char tok[NLINE];
-    while(*rp != '\0') {
-        rp = token(rp, tok, NLINE);
-        if (tok[0] == '\0') break;
-        if ((call_type == COOKED_STR) && !strncmp(tok, "0x", 2)) {
-            long add = strtol(tok+2, NULL, 16);
-            nstring[nlen++] = add;
+/* For COOKED_STR we have to process this token-by-token
+ * NOTE: that this means any spaces in the string WILL BE SKIPPED!
+ */
+    if (call_type == COOKED_STR) {
+        char *rp = tstring;
+        char nstring[NLINE] = "";
+        int nlen = 0;
+        char tok[NLINE];
+        while(*rp != '\0') {
+            rp = token(rp, tok, NLINE);
+            if (tok[0] == '\0') break;
+            if (!strncmp(tok, "0x", 2)) {
+                long add = strtol(tok+2, NULL, 16);
+                nstring[nlen++] = add;
+            }
+            else if (tok[0] == 'U' && tok[1] == '+') {
+                int val = strtol(tok+2, NULL, 16);
+                int incr = unicode_to_utf8(val, nstring+nlen);
+                nlen += incr;
+            }
+            else {
+                strcat(nstring, tok);
+                nlen += strlen(tok);
+            }
+            nstring[nlen] = '\0';
         }
-        else if ((call_type == COOKED_STR) && tok[0] == 'U' && tok[1] == '+') {
-            int val = strtol(tok+2, NULL, 16);
-            int incr = unicode_to_utf8(val, nstring+nlen);
-            nlen += incr;
-        }
-        else {
-            strcat(nstring, tok);
-            nlen += strlen(tok);
-        }
-        nstring[nlen] = '\0';
+        istrp = nstring;
     }
+    else
+        istrp = tstring;
+
     if (f == FALSE) n = 1;
     if (n < 0) n = -n;
 
 /* insert it */
 
-    while (n-- && (status = linstr(nstring)));
+    while (n-- && (status = linstr(istrp)));
     return status;
 }
 

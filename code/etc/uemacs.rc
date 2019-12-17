@@ -103,7 +103,7 @@ store-procedure spell-check not_mb
     set $discmd TRUE
     set $cfname %savefile
 ;   must force buffer to be modified
-    insert-string "."
+    insert-raw-string "."
     delete-previous-character
 !endm
 ;
@@ -310,7 +310,7 @@ store-procedure expand-envvar
             !break
         !endif
         !if &equal $curcol 0
-            write-message "No envar found"
+            write-message "No envvar found"
             exchange-point-and-mark
             !finish
         !endif
@@ -319,7 +319,7 @@ store-procedure expand-envvar
 ; Need to get the text we've found - which is the name of the envvar
 ; Remove the $varname text, then look-up that (minus the $) as an envvar
     kill-region
-    insert-string &env &mid $kill 2 &len $kill
+    insert-raw-string &env &mid $kill 2 &len $kill
 !endm
 
 ;
@@ -403,11 +403,11 @@ args-in-reexec ALL
 ;;;;; showdir userproc ;;;;;
 ;   Added at GGR4.145 - earlier versions will not support it.
 ;
-; Attempt to enable uemacs to list a directory in a buffer and let you
-; browse to files... 
+; Enable uemacs to list a directory in a buffer and let you browse
+; to files and other dirs...
 ; This doesn't work on Android, as pipe-command fails - probably
-; as /bin/sh isn't there and I build it on a Raspberry Pi, whch expects it.
-; I'm not worried about it....just don't enabel it there.
+; as /bin/sh isn't there and I build it on a Raspberry Pi, which expects it.
+; I'm not worried about it....just don't enable it there.
 ;
 
 !if &not &sin $progname "android"
@@ -417,7 +417,7 @@ args-in-reexec ALL
 ;
  set $showdir_tokskip 8
 
-; Define the user procedure to fill a buffer with ls lines
+; NOW we define the user procedure to fill a buffer with ls lines
 ;
  store-procedure showdir
 
@@ -428,7 +428,7 @@ args-in-reexec ALL
 ; Have to handle getting "", ".", "./xxx" or a relative path, as we
 ; need the full pathname to open entries after changing directory
 ;
-    !if &or &seq "" %udir &seq "." %udir 
+    !if &or &seq "" %udir &seq "." %udir
         set %udir &env PWD
     !endif
     !if &seq "./" &lef %udir 2
@@ -443,7 +443,7 @@ args-in-reexec ALL
 
 ; List the directory in a buffer (.ue_command - PIPEFILE in spawn.c)
 ; Build up the ls command, and post-handling with awk/sort/etc...
-; We'll force literla filenames with the QUOTING_STYLE environment variable,
+; We'll force literal filenames with the QUOTING_STYLE environment variable,
 ; in case ls doesn't have the --quoting-style option...
 ; We could add a 2>/dev/null to the ls command to remove "Not found"
 ; messages from dangling symlinks - but they don't affect the uemacs display
@@ -459,7 +459,7 @@ args-in-reexec ALL
 
 ; Rename it to something else - make sure anything already there is
 ; removed first
-; NOTE: that we know it isn't being displayed, as we've just set the 
+; NOTE: that we know it isn't being displayed, as we've just set the
 ;       pipecmd window (.ue_command - PIPEFILE in spawn.c) to be the
 ;       only displayed window.
 ;       This //directory name must agree with the name used in main.c
