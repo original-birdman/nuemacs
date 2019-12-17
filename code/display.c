@@ -401,7 +401,7 @@ static void updgar(void) {
         vscreen[i]->v_fcolor = gfcolor;
         vscreen[i]->v_bcolor = gbcolor;
 #endif
-/* We only ever free the extended parts from the virtual screnn info, not the
+/* We only ever free the extended parts from the virtual screen info, not the
  * physical one, so set the no_free flag here.
  */
         txt = pscreen[i]->v_text;
@@ -992,7 +992,7 @@ static void updext(void) {
     lbound = curcol - rcursor + 1;
     taboff = lbound + curwp->w_fcol;
 
-/* Scan through the line outputing characters to the virtual screen
+/* Scan through the line outputting characters to the virtual screen
  * once we reach the left edge.
  */
     vtmove(currow, -taboff);    /* start scanning offscreen */
@@ -1020,7 +1020,7 @@ static void updext(void) {
  * RAINBOW version of this routine uses fast video.
  */
 #if     MEMMAP
-/*      UPDATELINE specific code for the IBM-PC and other compatables */
+/*      UPDATELINE specific code for the IBM-PC and other compatibles */
 
 static int updateline(int row, struct video *vp1, struct video *vp2) {
     struct grapheme *cp1;
@@ -1464,7 +1464,7 @@ void mlerase(void) {
  * position. A small class of printf like format items is handled. Assumes the
  * stack grows down; this assumption is made by the "++" in the argument scan
  * loop. Set the "message line" flag TRUE.
- * The handling is now hived off to mlwrite_ap, whch can be called by
+ * The handling is now hived off to mlwrite_ap, which can be called by
  * either mlwrite or mlforce.
  *
  * GGR modified to handle utf8 strings.
@@ -1474,7 +1474,7 @@ void mlerase(void) {
  */
 
 /* Some gccs are happy to test va_list against NULL.
- * Others are not. Even with similar gcc versiosn and the same stdarg.h
+ * Others are not. Even with similar gcc version and the same stdarg.h
  * So, define a union - which sems to keep everyone happy.
  */
 typedef union {

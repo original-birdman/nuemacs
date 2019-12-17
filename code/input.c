@@ -59,7 +59,7 @@ static short ljust(char *str) {
  * Handle file name completion
  *
  * Here is what getffile() should do.
- * Parse out any directory part and and file part.
+ * Parse out any directory and file parts.
  * Open that directory, if necessary.
  * Build a wildcard from the file part.
  * Call getnfile() to return the first match.
@@ -243,7 +243,7 @@ extern int *usrvar_index;
 extern char *uvnames[];
 extern struct evlist evl[];
 
-/* Since we know the string will be copied immediatey after return we
+/* Since we know the string will be copied immediately after return we
  * can just put it into a static buffer here
  */
 
@@ -765,10 +765,10 @@ void sigwinch_handler(int signr) {
 
     UNUSED(signr);
 
-/* We need to get back to how things were before we arrived in teh
+/* We need to get back to how things were before we arrived in the
  * minibuffer.
  * So we save the current settings, restore the originals, let the
- * resize code run, re-fetch teh original (in case they ahve changed)
+ * resize code run, re-fetch the original (in case they have changed)
  * the restore the ones we arrived with.
  */
     struct buffer *mb_bp = curbp;
@@ -849,7 +849,7 @@ int getstring(char *prompt, char *buf, int nbuf, int cmpl_type) {
         mb_winp = (struct window *)Xmalloc(sizeof(struct window));
         mb_winp->w_wndp = NULL;               /* Initialize window    */
 #if COLOR
-/* initalize colors to global defaults */
+/* initialize colors to global defaults */
         mb_winp->w_fcolor = gfcolor;
         mb_winp->w_bcolor = gbcolor;
 #endif

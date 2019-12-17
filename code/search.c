@@ -21,7 +21,7 @@
  *      source (aside from this one) for inspiration.  I did make use of
  *      Allen Hollub's bitmap routines as published in Doctor Dobb's Journal,
  *      June, 1985 and modified them for the limited needs of character class
- *      matching.  Any inefficiences, bugs, stupid coding examples, etc.,
+ *      matching.  Any inefficiencies, bugs, stupid coding examples, etc.,
  *      are therefore my own responsibility.
  *
  * April 1987: John M. Gamble
@@ -32,11 +32,11 @@
  *      and added the globals matchline, matchoff, patmatch, and
  *      mlenold.
  *      This gave us the ability to unreplace regular expression searches,
- *      and to put the matched string into an evironment variable.
+ *      and to put the matched string into an environment variable.
  *      SOON TO COME: Meta-replacement characters!
  *
- *      25-apr-87       DML
- *      - cleaned up an unneccessary if/else in forwsearch() and
+ *      25-Apr-87       DML
+ *      - cleaned up an unnecessary if/else in forwsearch() and
  *        backsearch()
  *      - savematch() failed to malloc room for the terminating byte
  *        of the match string (stomp...stomp...). It does now. Also
@@ -362,7 +362,7 @@ static int biteq(int bc, char *cclmap) {
  *      closure, such as a newline, beginning of line symbol, or another
  *      closure symbol.
  *
- *      Coding comment (jmg):  yes, i know i have gotos that are, strictly
+ *      Coding comment (jmg):  yes, I know I have gotos that are, strictly
  *      speaking, unnecessary.  But right now we are so cramped for
  *      code space that i will grab what i can in order to remain
  *      within the 64K limit.  C compilers actually do very little
@@ -445,7 +445,7 @@ static int mcstr(void) {
  * structure assignment - your compiler may not like that.
  * If the status is not good, nil out the meta-pattern.
  * The only way the status would be bad is from the cclmake() routine,
- * and the bitmap for that member is guarenteed to be freed.
+ * and the bitmap for that member is guaranteed to be freed.
  * So we stomp a MCNIL value there, and call mcclear() to free any
  * other bitmaps.
  */
@@ -646,7 +646,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
     char saved_base[NSTRING];
 
 /* We save the base of the prompt for previn_ring to use.
- * Since this code can be re-enterd we have to save (and resotree at
+ * Since this code can be re-entered we have to save (and restore at
  * the end) the current value.
  */
     strcpy(saved_base, current_base);
@@ -832,7 +832,7 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
 /* We are now at the character that made us fail.
  * Try to match the rest of the pattern.
  * Shrink the closure by one for each failure.
- * Since closure matches *zero* or more occurences of a pattern, a match
+ * Since closure matches *zero* or more occurrences of a pattern, a match
  * may start even if the previous loop matched no characters.
  */
             mcptr++;
@@ -890,7 +890,7 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
         mcptr++;
     }                       /* End of mcptr loop. */
 
-/* A SUCCESSFULL MATCH!!!  Reset the "." pointers. */
+/* A SUCCESSFUL MATCH!!!  Reset the "." pointers. */
 
 success:
     *pcwline = curline;
@@ -940,7 +940,7 @@ int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end) {
         matchlen = 0;
 
         if (amatch(mcpatrn, direct, &curline, &curoff)) {
-/* A SUCCESSFULL MATCH!!! Reset the global "." pointers. */
+/* A SUCCESSFUL MATCH!!! Reset the global "." pointers. */
             if (beg_or_end == PTEND) {      /* at end of string */
                 curwp->w_dotp = curline;
                 curwp->w_doto = curoff;
@@ -961,9 +961,9 @@ int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end) {
 /*
  * fbound -- Return information depending on whether we may search no
  *      further.  Beginning of file and end of file are the obvious
- *      cases, but we may want to add further optional boundry restrictions
+ *      cases, but we may want to add further optional boundary restrictions
  *      in future, a' la VMS EDT.  At the moment, just return TRUE or
- *      FALSE depending on if a boundry is hit (ouch),
+ *      FALSE depending on if a boundary is hit (ouch),
  *      when we have found a matching trailing character.
  */
 static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
@@ -1098,7 +1098,7 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
             }
         }
 
-/* A SUCCESSFULL MATCH!!! Reset the global "." pointers */
+/* A SUCCESSFUL MATCH!!! Reset the global "." pointers */
         if (beg_or_end == PTEND) {      /* at end of string */
             curwp->w_dotp = scanline;
             curwp->w_doto = scanoff;
@@ -1335,7 +1335,7 @@ int scanmore(char *patrn, int dir) {
     return sts;             /* else, don't even try       */
 }
 
-/*      Settting up search jump tables.
+/*      Setting up search jump tables.
  *      the default for any character to jump
  *      is the pattern length
  */
@@ -1362,7 +1362,7 @@ void setpattern(const char apat[], const char tap[]) {
 
 /* The last character will have the pattern length unless there are
  * duplicates of it. Get the number to jump from the arrays delta, and
- * overwrite with zeroes in delta duplicating the CASE.
+ * overwrite with zeros in delta duplicating the CASE.
  */
     lastchfjump = patlenadd + deltaf[ch_as_uc(apat[patlenadd])];
     deltaf[ch_as_uc(apat[patlenadd])] = 0;
@@ -1667,9 +1667,9 @@ int expandp(char *srcstr, char *deststr, int maxlength) {
 /*
  * boundry -- Return information depending on whether we may search no
  *      further.  Beginning of file and end of file are the obvious
- *      cases, but we may want to add further optional boundry restrictions
+ *      cases, but we may want to add further optional boundary restrictions
  *      in future, a' la VMS EDT.  At the moment, just return TRUE or
- *      FALSE depending on if a boundry is hit (ouch).
+ *      FALSE depending on if a boundary is hit (ouch).
  */
 int boundry(struct line *curline, int curoff, int dir) {
     int border;

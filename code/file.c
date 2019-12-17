@@ -241,9 +241,9 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
 
 /*
  * showdir_handled
- *  Check for the incoming pathname beign a directory.
- *  If it is, and we have a "shodir" userproc, then let that handle it.
- *  Return TRUE if we passed it to showdir, otherise FALSE.
+ *  Check for the incoming pathname being a directory.
+ *  If it is, and we have a "showdir" userproc, then let that handle it.
+ *  Return TRUE if we passed it to showdir, otherwise FALSE.
  */
 int showdir_handled(char *pname) {
     struct stat statbuf;
@@ -563,7 +563,7 @@ void unqname(char *name) {
  * to that file.
  * Update the remembered file name and clear the buffer changed flag.
  * This handling of file names is different from the earlier versions and
- * is more compatable with Gosling EMACS than with ITS EMACS.
+ * is more compatible with Gosling EMACS than with ITS EMACS.
  * Bound to "C-X C-W".
  */
 int filewrite(int f, int n) {

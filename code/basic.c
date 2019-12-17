@@ -149,7 +149,7 @@ int forw_grapheme(int n) {
  * as the rest of the utf8 code does.
  */
             int saved_doto = curwp->w_doto;
-            curwp->w_doto = 
+            curwp->w_doto =
                  next_utf8_offset(curwp->w_dotp->l_text, curwp->w_doto,
                                   llength(curwp->w_dotp), TRUE);
             moved += curwp->w_doto - saved_doto;
@@ -172,7 +172,7 @@ int gotoline(int f, int n) {
     int status;
     char arg[NSTRING]; /* Buffer to hold argument. */
 
-/* Get an argument if one doesnt exist. */
+/* Get an argument if one doesn't exist. */
     if (f == FALSE) {
         if ((status =
           mlreply("Line to GOTO: ", arg, NSTRING, CMPLT_NONE)) != TRUE) {
@@ -246,7 +246,7 @@ int forwline(int f, int n) {
     dlp = curwp->w_dotp;
     while (n-- && dlp != curbp->b_linep) dlp = lforw(dlp);
 
-/* Reseting the current position */
+/* Resetting the current position */
 
     curwp->w_dotp = dlp;
     curwp->w_doto = getgoal(dlp);
@@ -281,7 +281,7 @@ int backline(int f, int n) {
     dlp = curwp->w_dotp;
     while (n-- && lback(dlp) != curbp->b_linep) dlp = lback(dlp);
 
-/* Reseting the current position */
+/* Resetting the current position */
 
     curwp->w_dotp = dlp;
     curwp->w_doto = getgoal(dlp);
@@ -341,7 +341,7 @@ int gotobop(int f, int n) {
     return TRUE;
 }
 
-/* Go forword to the end of the current paragraph
+/* Go forward to the end of the current paragraph
  * Here we look for an empty line to delimit the beginning of a paragraph.
  *
  * int f, n;            default Flag & Numeric argument
@@ -360,7 +360,7 @@ int gotoeop(int f, int n) {
         if (suc)                    /* of next line if not at EOF */
             curwp->w_dotp = lforw(curwp->w_dotp);
 
-/* Then scan forword until we hit an empty line or E-O-Buffer... */
+/* Then scan forward until we hit an empty line or E-O-Buffer... */
         while (curwp->w_dotp != curbp->b_linep) {
             if (!curline_empty())   /* GGR */
                 curwp->w_dotp = lforw(curwp->w_dotp);
@@ -458,7 +458,7 @@ int setmark(int f, int n) {
 }
 
 /* Swap the values of "." and "mark" in the current window. This is pretty
- * easy, bacause all of the hard work gets done by the standard routine
+ * easy, because all of the hard work gets done by the standard routine
  * that moves the mark about. The only possible error is "no mark". Bound to
  * "C-X C-X".
  */

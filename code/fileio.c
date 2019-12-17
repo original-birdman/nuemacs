@@ -421,7 +421,7 @@ void fixup_fname(char *fn) {
     if (have_pwd >= 0 &&
         fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) {
 /* We have to count the leading occurrences of ../ and append what is left
- * to $PWD less the number of occurences.
+ * to $PWD less the number of occurrences.
  */
         int dd_cnt = 1;             /* We know we have one */
         char *fnwp = fn+2;

@@ -80,7 +80,7 @@ int copyregion(int f, int n) {
  * unicode(utf8) aware.
  * Zap all of the lower case characters in the region to upper case.
  * Use the region code to set the limits, then work through each line
- * in order re-casign tehe text on that line which needs to be changed.
+ * in order re-casing the text on that line which needs to be changed.
  * Involves fiddling with the line buffer structures.
  * Call "lchange" to ensure that redisplay is done in all buffers.
  * Bound to "C-X C-L".
@@ -155,7 +155,7 @@ static int casechange_region(int newcase) { /* The handling function */
                 llength(linep) += b_more;   /* Fix-up length */
             }
             else {
-/* Need to allocate a new line structure to replace the currewnt one... */
+/* Need to allocate a new line structure to replace the current one... */
                 struct line *newl = lalloc(llength(linep) + b_more);
 /* Copy in and leading text on this line... */
                 if (b_offs) memcpy(newl->l_text, linep->l_text, b_offs);
@@ -264,7 +264,7 @@ int getregion(struct region *rp) {
 /* GGR extensions to regions */
 
 /* Narrow-to-region (^X-<) makes all but the current region in
- * the current buffer invisable and unchangable
+ * the current buffer invisible and unchangeable
  */
 int narrow(int f, int n) {
     UNUSED(f); UNUSED(n);

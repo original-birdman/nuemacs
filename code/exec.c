@@ -64,7 +64,7 @@ static int docmd(char *cline) {
         goto final_exit;
     }
 
-/* Process leadin argument */
+/* Process leading argument */
     if (gettyp(tkn) != TKCMD) {
         f = TRUE;
 /* GGR - There is the possibility of an illegal overlap of args here.

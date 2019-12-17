@@ -325,7 +325,7 @@ static int makelist(int iflag) {
 /* Output the list of buffers */
 
     while (bp != NULL) {
-/* Skip invisable buffers if iflag is false */
+/* Skip invisible buffers if iflag is false */
         if (((bp->b_flag & BFINVS) != 0) && (iflag != TRUE)) {
             bp = bp->b_bufp;
             continue;
@@ -467,7 +467,7 @@ int anycb(void) {
  * Find a buffer, by name. Return a pointer to the buffer structure
  * associated with it.
  * If the buffer is not found and the "cflag" is TRUE, create it.
- * The "bflag" is the settings for the flags in in buffer.
+ * The "bflag" is the settings for the flags in the buffer.
  */
 struct buffer *bfind(const char *bname, int cflag, int bflag) {
     struct buffer *bp;
@@ -545,7 +545,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
 
 /*
  * This routine blows away all of the text in a buffer.
- * If the buffer is marked as changed then we ask if it is ok to blow it away;
+ * If the buffer is marked as changed then we ask if it is OK to blow it away;
  * this is to save the user the grief of losing text.
  * The window chain is nearly always wrong if this gets called; the caller
  * must arrange for the updates that are required.

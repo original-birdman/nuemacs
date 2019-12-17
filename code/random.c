@@ -237,7 +237,7 @@ int twiddle(int f, int n) {
  * after point -  except when you are at the end of a line....
  * This inconsistency seems odd. Prime emacs always acted on the two chars
  * preceding point, which was great for fixing typos as you made them.
- * If the ggr-style is set then twiddle will act on the two preceding chars.
+ * If ggr-style is set then twiddle will act on the two preceding chars.
  *
  * So where the right-hand character is depends on the mode and if you're
  * not in GGR style then it depends on whether you are at the end-of-line
@@ -262,7 +262,7 @@ int twiddle(int f, int n) {
 /* We know where the two characters start, and how many bytes each has.
  * So we take a copy of each and put them back in the reverse order.
  * If we are twiddling *around* point we might now be in the "middle" of
- * a character, so we have to reset to the original colum.
+ * a character, so we have to reset to the original column.
  * This is the start of the now R/h character (i.e what was L/h).
  */
     memcpy(rch_buf, l_buf + rch_st, rch_nb);
@@ -387,7 +387,7 @@ int detab(int f, int n) {
 }
 
 /*
- * change spaces to tabs where posible
+ * change spaces to tabs where possible
  *
  * int f, n;            default flag and numeric repeat count
  */
@@ -415,7 +415,7 @@ int entab(int f, int n) {
             if ((fspace >= 0) && (nextab(fspace) <= ccol)) {
                 if (ccol - fspace < 2) fspace = -1;
                 else {
-/* There is a bug here dealing with mixed space/tabed lines.......
+/* There is a bug here dealing with mixed space/tabbed lines.......
  * it will get fixed.  (when?)
  */
                     back_grapheme(ccol - fspace);
@@ -744,8 +744,8 @@ int deblank(int f, int n) {
  * of the previous line. Assumes tabs are every eight characters. Quite simple.
  * Figure out the indentation of the current line. Insert a newline by calling
  * the standard routine. Insert the indentation by inserting the right number
- * of tabs and spaces. Return TRUE if all ok. Return FALSE if one of the
- * subcomands failed. Normally bound to "C-J".
+ * of tabs and spaces. Return TRUE if all OK. Return FALSE if one of the
+ * subcommands failed. Normally bound to "C-J".
  */
 int indent(int f, int n) {
     UNUSED(f);
@@ -1231,7 +1231,7 @@ int rawstring(int f, int n) {
 }
 
 /*
- * ask for and overwite a string into the current
+ * ask for and overwrite a string into the current
  * buffer at the current point
  *
  * int f, n;            ignored arguments

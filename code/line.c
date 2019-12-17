@@ -460,7 +460,7 @@ int lputgrapheme(struct grapheme *gp) {
  * header line can be thought of as always being a successful operation, even
  * if nothing is done, and this makes the kill buffer work "right". Easy cases
  * can be done by shuffling data around. Hard cases require that lines be moved
- * about in memory. Return FALSE on error and TRUE if all looks ok. Called by
+ * about in memory. Return FALSE on error and TRUE if all looks OK. Called by
  * "ldelete" only.
  */
 static int ldelnewline(void) {
@@ -904,7 +904,7 @@ int yankmb(int f, int n) {
  * If we just let things run and yank (say) 2 complete lines, the current
  * point will be at the start of the third line. With SCROLLCODE set (which
  * is now hard-wired) this will be on-screen so nothing gets redrawn - the
- * added text is left positioned just off the top of the screen; which is  
+ * added text is left positioned just off the top of the screen; which is
  * a bit disconcerting.
  * So if the next line is the same as the previous line (which can only
  * happen if we are in a single-line buffer, when both point to the headp)

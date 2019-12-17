@@ -3,7 +3,7 @@
  *      This file is for functions having to do with key bindings,
  *      descriptions, help commands and startup file.
  *
- *      Written 11-feb-86 by Daniel Lawrence
+ *      Written 11-Feb-86 by Daniel Lawrence
  *      Modified by Petri Kutvonen
  */
 
@@ -310,7 +310,7 @@ struct key_tab *getbind(int c) {
 /* We don't want to re-index for each keybinding change when processing
  * start-up files.
  * So we have a flag for whether the index is up-to-date, and another
- * one as to whether we should update it or just do a linear seach.
+ * one as to whether we should update it or just do a linear search.
  */
 
     if (!key_index_valid) {
@@ -741,7 +741,7 @@ static int along_path(char *fname, char *fspec) {
 #endif
 
 /* GGR - function to set pathname from the command-line
- * This overides the compiled-in defaults
+ * This overrides the compiled-in defaults
  */
 void set_pathname(char *cl_string) {
     int slen;
@@ -766,7 +766,7 @@ void set_pathname(char *cl_string) {
  * Look up the existence of a file along the normal or PATH
  * environment variable. Look first in the HOME directory if
  * asked and possible.
- * GGR - added mode flag detemines whether to look along PATH
+ * GGR - added mode flag determines whether to look along PATH
  * or in the set list of directories.
  *
  * char *fname;         base file name to search for

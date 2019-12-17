@@ -7,7 +7,7 @@
 
 /*
  * Defining this to 1 breaks tcapopen() - it doesn't check if the
- * sceen size has changed.
+ * screen size has changed.
  *      -lbt
  */
 #define USE_BROKEN_OPTIMIZATION 0

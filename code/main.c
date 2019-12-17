@@ -341,7 +341,7 @@ static int end_kbdmacro(void) {
 
 /* If we were in PLAY mode, restore the current c/f/n-last.
  * Otherwise it gets lost if macro has aborted.
- * If we weren;t in PLAY mode, report ending the macro.
+ * If we weren't in PLAY mode, report ending the macro.
  */
     if (kbdmode == PLAY) f_arg = p_arg;
     else                 mlwrite_one(MLbkt("End macro"));
@@ -465,7 +465,7 @@ static int set_time_stamp(int days_back) {
  * Scan through the buffers and look for modified ones associated
  * with files. For all it finds it tries to save them in ~/uemacs-dumps.
  * If any buffers are narrowed it widens them before dumping.
- * Since we are dying we don't preserve the curent working dir.
+ * Since we are dying we don't preserve the current working dir.
  */
 static void dump_modified_buffers(void) {
 
@@ -894,7 +894,7 @@ int main(int argc, char **argv) {
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
 #endif
-/* Add a handler for other signals, whcih will exit */
+/* Add a handler for other signals, which will exit */
     sigact.sa_handler = exit_via_signal;
     sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
 /* The SIGTERM is there so you can trace a loop by sending one */
@@ -907,7 +907,7 @@ int main(int argc, char **argv) {
     sigaction(SIGHUP, &sigact, &oldact);
 #endif
 
-/* GGR The rest of intialisation is done after processing optional args */
+/* GGR The rest of intialization is done after processing optional args */
     varinit();              /* initialise user variables */
 
     viewflag = FALSE;       /* view mode defaults off in command line */
@@ -919,9 +919,9 @@ int main(int argc, char **argv) {
 
 /* Set up the initial keybindings.  Must be done early, before any
  * command line processing.
- * NOTE that we must initialize the namelooup indexing first, i.e. before
+ * NOTE that we must initialize the namelookup indexing first, i.e. before
  * calling extend_keytab().
- * We need to allow for the additonal ENDL_KMAP and ENDS_KMAP entries,
+ * We need to allow for the additional ENDL_KMAP and ENDS_KMAP entries,
  * which mark the End-of-List and End-of-Structure, and round up to the
  * next KEYTAB_INCR boundary.
  */
@@ -1235,7 +1235,7 @@ void edinit(char *bname) {
     wp->w_marko = 0;
     wp->w_toprow = 0;
 #if     COLOR
-/* initalize colors to global defaults */
+/* initialize colors to global defaults */
     wp->w_fcolor = gfcolor;
     wp->w_bcolor = gbcolor;
 #endif
@@ -1395,14 +1395,14 @@ after_mb_check:
 
 /* We want to get to the end of the relevant token.
  * This is defined when setting up the showdir userproc, so that if the
- * line-generating code is changed you dont; need to recompile uemacs to
+ * line-generating code is changed you don't need to recompile uemacs to
  * change things.
  * Then advance a space and take the rest of the line as the entry name
  * since we're only looking for space we can just use ASCII.
  */
            {char *lp = curwp->w_dotp->l_text;
 /* Check that we can handle this type of entry.
- * The showdir command will have foillowed all symlinks, so
+ * The showdir command will have followed all symlinks, so
  * we're only interested in directories and files.
  */
             if (*lp != '-' && *lp != 'd') {
@@ -1444,7 +1444,7 @@ after_mb_check:
  */
             strcpy(fname, curwp->w_bufp->b_fname);
             if (fname[1] != '\0') strcat(fname, "/");
-/* Add in this entryname, then wpork out the full pathname length
+/* Add in this entryname, then work out the full pathname length
  * and append a NUL
  */
             strncat(fname, lp, fnlen);
@@ -1706,7 +1706,7 @@ int ctlxrp(int f, int n) {
 /* ======================================================================
  * Execute a macro.
  * The command argument is the number of times to loop. Quit as soon as a
- * command gets an error. Return TRUE if all ok, else FALSE.
+ * command gets an error. Return TRUE if all OK, else FALSE.
  */
 int ctlxe(int f, int n) {
     UNUSED(f);

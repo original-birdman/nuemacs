@@ -400,7 +400,7 @@ void egaclose(void) {
  *
  * @row:    row of screen to place outstr on.
  * @outstr: string to write out (must be term.t_ncol long).
- * @forg:   forground color of string to write.
+ * @forg:   foreground color of string to write.
  * @bacg:   background color.
  */
 void scwrite(int row, char *outstr, int forg, int bacg) {

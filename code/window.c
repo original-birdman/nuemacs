@@ -88,7 +88,7 @@ int nextwind(int f, int n) {
 }
 
 /* This command makes the previous window (previous => up the screen) the
- * current window. There arn't any errors, although the command does not do a
+ * current window. There aren't any errors, although the command does not do a
  * lot if there is 1 window.
  */
 int prevwind(int f, int n) {
@@ -160,7 +160,7 @@ int mvupwind(int f, int n) {
 /* This command makes the current window the only window on the screen. Bound
  * to "C-X 1". Try to set the framing so that "." does not have to move on the
  * display. Some care has to be taken to keep the values of dot and mark in
- * the buffer structures right if the distruction of a window makes a buffer
+ * the buffer structures right if the destruction of a window makes a buffer
  * become undisplayed.
  */
 int onlywind(int f, int n) {
@@ -232,7 +232,7 @@ int delwind(int f, int n) {
         wp = wp->w_wndp;
     }
 
-/* Find recieving window and give up our space */
+/* Find receiving window and give up our space */
     wp = wheadp;
     if (curwp->w_toprow == 0) {
 /* Find the next window down */

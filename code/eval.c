@@ -800,7 +800,7 @@ static int svar(struct variable_description *var, char *value) {
  * Also used by names.c
  *
  * int f;               default flag
- * int n;               numeric arg (can overide prompted value)
+ * int n;               numeric arg (can override prompted value)
  */
 int setvar(int f, int n) {
     int status;                     /* status return */
@@ -841,7 +841,7 @@ int setvar(int f, int n) {
     status = svar(&vd, value);
 
 #if DEBUGM
-/* If $debug == TRUE, every assignment will echo a statment to
+/* If $debug == TRUE, every assignment will echo a statement to
  * that effect here.
  */
     if (macbug) {
@@ -890,7 +890,7 @@ int setvar(int f, int n) {
 /*
  * ue_itoa:
  *      integer to ascii string.......... This is too
- *      inconsistant to use the system's
+ *      inconsistent to use the system's
  *
  * int i;               integer to translate to a string
  */

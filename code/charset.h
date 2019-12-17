@@ -3,7 +3,7 @@
 #ifndef CHARSET_H_
 #define CHARSET_H_
 
-/* A description of control charactes for the status command */
+/* A description of control characters for the status command */
 
 static char *charset[] =
 {

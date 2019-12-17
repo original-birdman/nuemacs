@@ -489,7 +489,7 @@ int killpara(int f, int n) {
         curwp->w_markp = curwp->w_dotp;
         curwp->w_marko = curwp->w_doto;
 
-/* Gon to the beginning of the paragraph */
+/* Go to the beginning of the paragraph */
         gotobop(FALSE, 1);
         curwp->w_doto = 0;  /* force us to the beginning of line */
 
@@ -701,7 +701,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 
 /* Get the next character.
  * lgetgrapheme will return a NL at the end of line
- * If we get to end end-of-line without having got any word chars since the
+ * If we get to end-of-line without having got any word chars since the
  * previous end-of-line then we are at the end of a paragraph
  */
         struct grapheme gi;
@@ -881,7 +881,7 @@ int fillpara(int f, int n) {
 
 /* Fill the current paragraph using the current column as
  * the indent.
- * Remove any exisiting leading whitespace in the paragraph.
+ * Remove any existing leading whitespace in the paragraph.
  *
  * int f, n;            deFault flag and Numeric argument
  */

@@ -43,7 +43,7 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
  */
     if (c < 0xc0) return 1;
 
-/* Ok, it's 11xxxxxx, do a stupid decode */
+/* OK, it's 11xxxxxx, do a stupid decode */
     mask = 0x20;
     bytes = 2;
     while (c & mask) {
@@ -58,7 +58,7 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
 
     value = c & (mask-1);
 
-/* Ok, do the bytes */
+/* OK, do the bytes */
     for (i = 1; i < bytes; i++) {
         c = line[i];
         if ((c & 0xc0) != 0x80) return 1;
@@ -174,7 +174,7 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
                 }
 /* Have we found a valid start code?
  * NOTE that the test needs marker as an unsigned char, to stop sign
- * extention in the test.
+ * extension in the test.
  */
                 if ((c & ~valmask) == ch_as_uc(marker)) {
                     addin = (c & valmask);
@@ -366,7 +366,7 @@ unsigned int uclen_utf8(char *str) {
     return len;
 }
 
-/* Compare two utf8 buffers case-insensitvely.
+/* Compare two utf8 buffers case-insensitively.
  * This assumes that the second buffer is already lowercased.
  */
 int nocasecmp_utf8(char *tbuf, int t_start, int t_maxlen,
@@ -447,7 +447,7 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
 
     if (len < 1) len = strlen(in);
 
-/* Now we know the length, Quickly handle this preverse case. */
+/* Now we know the length, Quickly handle this perverse case. */
 
     if (len == 0) {
         mstr->str = Xmalloc(1);

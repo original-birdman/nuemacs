@@ -26,7 +26,7 @@ int set_encryption_key(int f, int n) {
     odisinp = disinp;
     disinp = FALSE;
 
-/* Get the string to use as an encrytion string */
+/* Get the string to use as an encryption string */
     status = mlreply("Encryption String: ", key, NPAT - 1, CMPLT_NONE);
     mlwrite_one(" ");       /* clear it off the bottom line */
     disinp = odisinp;
@@ -107,7 +107,7 @@ int set_encryption_key(int f, int n) {
  *      This resets all internal control information.  Typically (and
  *      specifically in the case on MICRO-emacs) you would use a "vector"
  *      of 0.  Other values can be used to customize your editor to be
- *      "incompatable" with the normally distributed version.  For
+ *      "incompatible" with the normally distributed version.  For
  *      this purpose, the best results will be obtained by avoiding
  *      multiples of 95.
  *
@@ -127,9 +127,9 @@ int set_encryption_key(int f, int n) {
  *      range of printable characters (' ' to '~'), all "control"
  *      and "high-bit" characters are left unaltered.
  *
- *      The key is a variant autokey, derived from a wieghted sum
+ *      The key is a variant autokey, derived from a weighted sum
  *      of all the previous clear text and cipher text.  A counter
- *      is used as salt to obiterate any simple cyclic behavior
+ *      is used as salt to obliterate any simple cyclic behavior
  *      from the clear text, and key feedback is used to assure
  *      that the entire message is based on the original key,
  *      preventing attacks on the last part of the message as if
@@ -149,7 +149,7 @@ int set_encryption_key(int f, int n) {
  *
  *      The choice, entry, storage, manipulation, alteration,
  *      protection and security of the keys themselves are the
- *      responsiblity of the user.
+ *      responsibility of the user.
  *
  *
  * char *bptr;          buffer of characters to be encrypted
@@ -183,8 +183,8 @@ debug++;
 
 /* Feed the upper few bits of the key back into itself.
  * This ensures that the starting key affects the entire message.
- * We also ensure tha the key only occupies teh lower 29-bits at most.
- * This is so that the aritmetic calculation later which impliments
+ * We also ensure that the key only occupies the lower 29-bits at most.
+ * This is so that the arithmetic calculation later which implements
  * our autokey, won't overflow, making the key go negative.
  * Machine behavior in these cases does not tend to be portable.
  */

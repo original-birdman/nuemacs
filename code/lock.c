@@ -58,7 +58,7 @@ int lockchk(char *fname) {
 
     lname[++numlocks - 1] = (char *)Xmalloc(strlen(tmpname) + 1);
 
-/* Everthing is cool, add it to the table */
+/* Everything is cool, add it to the table */
 
     lname[++numlocks - 1] = tmpname;
     return TRUE;
@@ -88,7 +88,7 @@ static void lckerror(char *errstr) {
 static int unlock(char *fname) {
     char *locker;   /* undolock return string */
 
-/* Unclock and return */
+/* Unlock and return */
 
     locker = undolock(fname);
     if (locker == NULL) return TRUE;

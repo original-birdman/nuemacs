@@ -293,7 +293,7 @@ we_are_done:
     link = -elem0;
     int fi = 0;
 /* Beyond here we don't have to deal with elem0! So no need to use
- * the get_index/set_index macros - just rememeber to use [n-1]...
+ * the get_index/set_index macros - just remember to use [n-1]...
  */
     while (link) {
         new_link = abs(index[link-1]);

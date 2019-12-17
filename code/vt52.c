@@ -97,7 +97,7 @@ vt52eeop() {
     ttputc('J');
 }
 
-/* Set the reverse video state 
+/* Set the reverse video state
  * TRUE = reverse video, FALSE = normal video
  */
 vt52rev(int status) {

@@ -323,7 +323,7 @@ int filter_buffer(int f, int n) {
 
 /* Unset this flag, otherwise readin() prompts for "Discard changes" if
  * the original buffer (which we've just written out...to edit) was marked
- * as modifdied. 
+ * as modified.
  */
     bp->b_flag &= ~BFCHG;
 

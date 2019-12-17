@@ -185,7 +185,7 @@ char *current_command = NULL;
 
 func_arg f_arg = { NULL, { META|SPEC|'C', TRUE, 1 } }, p_arg;
 
-/* Rexecute arg mappings... */
+/* reexecute arg mappings... */
 struct rx_mask rx_mask[] = {
     { "search-forward",         RXARG_forwsearch },
     { "search-reverse",         RXARG_backsearch },

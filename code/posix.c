@@ -31,8 +31,8 @@
 #define XCASE 0000004
 #endif
 
-/* None of these is defiend in CygWin, so set them to 0.
- * Note that these are not actually POSIX, and not implemenetd in Linux
+/* None of these is defined in CygWin, so set them to 0.
+ * Note that these are not actually POSIX, and not implemented in Linux
  */
 #ifdef __CYGWIN__
 #define XCASE 0

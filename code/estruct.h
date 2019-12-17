@@ -530,7 +530,7 @@ struct name_bind {
 
 /* The editor holds deleted text chunks in the struct kill buffer. The
  * kill buffer is logically a stream of ascii characters, however
- * due to its unpredicatable size, it gets implemented as a linked
+ * due to its unpredictable size, it gets implemented as a linked
  * list of chunks. (The d_ prefix is for "deleted" text, as k_
  * was taken up by the keycode structure).
  */
@@ -539,7 +539,7 @@ struct kill {
     char d_chunk[KBLOCK];  /* Deleted text. */
 };
 
-/* When emacs' command interpetor needs to get a variable's name,
+/* When emacs' command interpreter needs to get a variable's name,
  * rather than it's value, it is passed back as a variable description
  * structure. The v_num field is a index into the appropriate variable table.
  */
