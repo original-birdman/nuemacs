@@ -246,7 +246,6 @@ int next_sstr(int f, int n) {               /* Mapped from nextwind */
 int select_sstr(int f, int n) {             /* Mapped from listbuffers */
     UNUSED(f); UNUSED(n);
     prmpt_buf.preload = (this_rt == Search)? srch_txt[0]: repl_txt[0];
-fprintf(stderr, "preload: %s\n", prmpt_buf.preload);
     return TRUE;
 }
 
