@@ -165,8 +165,6 @@ not_in_mb_st not_in_mb = { NULL, 0 };
 
 int pause_key_index_update = 0;
 
-int in_search_prompt = 0;
-
 prmpt_buf_st prmpt_buf = { NULL, 0, "" };
 
 enum yank_type last_yank = None;

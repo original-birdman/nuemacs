@@ -907,7 +907,7 @@ int main(int argc, char **argv) {
     sigaction(SIGHUP, &sigact, &oldact);
 #endif
 
-/* GGR The rest of intialization is done after processing optional args */
+/* GGR The rest of initialization is done after processing optional args */
     varinit();              /* initialise user variables */
 
     viewflag = FALSE;       /* view mode defaults off in command line */
@@ -1282,25 +1282,6 @@ int execute(int c, int f, int n) {
         fn_t execfunc = ktp->hndlr.k_fp;
         if (execfunc == nullproc) return(TRUE);
         int run_not_in_mb = 0;
-/* Special handling for nextwind/prevwind key-bindings, which get
- * re-mapped when being prompted for a search string.
- * Since the mapped-from functions are flagged with not_mb we have
- * to skip the minibuffer check.
- */
-        if (in_search_prompt) {
-            if (execfunc == nextwind) {
-                execfunc = next_sstr;
-                goto after_mb_check;
-            }
-            if (execfunc == prevwind) {
-                execfunc = prev_sstr;
-                goto after_mb_check;
-            }
-            if (execfunc == listbuffers) {
-                execfunc = select_sstr;
-                goto after_mb_check;
-            }
-        }
         if (inmb) {
             if (ktp->k_type == FUNC_KMAP && ktp->fi->opt.not_mb) {
                 run_not_in_mb = 1;
@@ -1321,7 +1302,6 @@ int execute(int c, int f, int n) {
             not_in_mb.keystroke = c;
             execfunc = not_in_mb_error;
         }
-after_mb_check:
         thisflag = 0;
 /* GGR - implement re-execute */
         if ((execfunc != reexecute) && (execfunc != nullproc) &&
@@ -1434,7 +1414,7 @@ after_mb_check:
                 mlwrite_one("Can't parse line");
                 break;
             }
-/* Move to start of name, and get the length to endp-of-data (no NUL here) */
+/* Move to start of name, and get the length to end-of-data (no NUL here) */
             lp++;   /* Step over next space */
             fnlen = curwp->w_dotp->l_text+llength(curwp->w_dotp) - lp;
 

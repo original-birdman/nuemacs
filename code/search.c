@@ -660,21 +660,16 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * and use the previous pattern.
  * Then, if it's the search string, make a reversed pattern.
  * *Then*, make the meta-pattern, if we are defined that way.
- * Since search is recursive (you can search a search string) we
- * have to remember the in_search_prompt value of when we arrived.
- * We also have set this_rt before and after the mlreplyt() call.
+ * We set this_rt before and after the mlreply() call.
  */
 
-    int prev_in_search_prompt = in_search_prompt;
-    in_search_prompt = 1;
     enum call_type our_rt = (srch == TRUE)? Search: Replace;
     this_rt = our_rt;           /* Set our call type for nextin_ring() */
-    status = mlreply(tpat, tpat, NPAT, CMPLT_NONE);
+    status = mlreply(tpat, tpat, NPAT, CMPLT_SRCH);
     this_rt = our_rt;           /* Set our call type for update_ring() */
-    in_search_prompt = prev_in_search_prompt;
     int do_update_ring = 1;
 /*
- * status values from mlreplyt (-> getstring()) are
+ * status values from mlreply (-> getstring()) are
  *  ABORT  (something went wrong)
  *  FALSE  the result (tpat) is empty
  *  TRUE   we have something in tpat

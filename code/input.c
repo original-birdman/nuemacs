@@ -174,7 +174,7 @@ static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
 
         int offset;
             if (mtype == CMPLT_PROC)  offset = 1;
-            else                    offset = 0;
+            else                      offset = 0;
 
 /* We don't return a buffer if it doesn't match, or if it's a minibuffer
  * buffername (CC$) or if it's an internal buffer [xx], unless the user
@@ -940,8 +940,12 @@ int getstring(char *prompt, char *buf, int nbuf, int cmpl_type) {
 
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
+ *
+ * We start by ensuring that the minibuiffer display is empty...
  */
 loop:
+    mlwrite("");
+    mbupdate();
 
 /* Execute the "command" macro...normally null */
     saveflag = lastflag;        /* preserve lastflag through this */
@@ -962,7 +966,9 @@ loop:
         prmpt_buf.preload = NULL;    /* One-time usage */
     }
 
-/* Prepend the prompt to the beginning of the visible line */
+/* Prepend the prompt to the beginning of the visible line (i.e.
+ * ahead of any preload.
+ */
     savdoto = curwp->w_doto;
     curwp->w_doto = 0;
     linstr(procopy);
@@ -973,11 +979,13 @@ loop:
     int real_hscroll;
     real_hscroll = hscroll;
     hscroll = FALSE;
-    curwp->w_flag |= WFMODE;    /* Need to update the modeline... */
+    curwp->w_flag |= WFMODE | WFEDIT;    /* Need to update the modeline... */
     mbupdate();                 /* Will set modeline to prompt... */
     hscroll = real_hscroll;
 
-/* Remove the prompt from the beginning of the visible line */
+/* Remove the prompt from the beginning of the buffer for the visible line.
+ * This is so that the buffer contents at the end contain just the response.
+ */
     curwp->w_doto = 0;
     ldelete((long)prolen, FALSE);
     curwp->w_doto = savdoto;
@@ -993,11 +1001,24 @@ loop:
     if (c == UEM_NOCHAR) goto loop;
 #endif
 
-/* Filename expansion code:
- * a list of matches is temporarily displayed in the minibuffer.
- * THIS ONLY USES THE TEXT ON THE CURRENT LINE, and uses ALL OF IT.
+/* Check for any numeric prefix
+ * This looks for Esc<n> prefixes and returns c/f/n in carg.
+ * The "c" arg may be the start of a numeric prefix (e.g.Esc2) so
+ * from here on it's carg->c that needs to be checked.
  */
-    if (c == (CONTROL|'I')) {
+    com_arg *carg = multiplier_check(c);
+
+/* Various completion code options
+ * Usually a list of matches is temporarily displayed in the minibuffer.
+ * THIS ONLY USES THE TEXT ON THE CURRENT LINE, and uses ALL OF IT.
+ * (The CMPLT_SRCH handling is a little different. Not really a
+ * completion, but it fits nicely into this placement.
+ */
+    if (carg->c == (CONTROL|'I')) {
+        if (cmpl_type == CMPLT_SRCH) {
+            prev_sstr(0, carg->n == 0? 1: carg->n);
+            goto loop;
+        }
         lp = curwp->w_dotp;
         sp = lp->l_text;
 /* NSTRING-1, as we need to add a trailing NUL */
@@ -1044,17 +1065,26 @@ loop:
             goto loop;
         }
     }
-/* End of filename expansion code */
 
-/* Check for any numeric prefix */
+/* Some further "hard-wired" key-bindings - aka minibuffer specials. */
 
-    com_arg *carg = multiplier_check(c);
-
-/* Intercept minibuffer specials.. <NL> and ^G */
-
-    if ((carg->c == (CONTROL|'M')) || (carg->c == (CTLX|CONTROL|'C')))
+    switch(carg->c) {           /* The default is to do nothing here */
+    case META|CONTROL|'I':      /* Only for CMPLT_SRCH */
+        if (cmpl_type == CMPLT_SRCH) {
+            next_sstr(0, carg->n == 0? 1: carg->n);
+            goto loop;
+        }
+        break;
+    case CTLX|CONTROL|'I':      /* Only for CMPLT_SRCH */
+        if (cmpl_type == CMPLT_SRCH) {
+            select_sstr(0, 1);
+            goto loop;
+        }
+        break;
+    case CONTROL|'M':           /* General */
+    case CTLX|CONTROL|'C':
         goto submit;
-    else if (carg->c == (CONTROL|'G')) {
+    case CONTROL|'G':           /* General */
         status = ABORT;
         buf = "";               /* Don't return garbage */
         goto abort;
@@ -1064,8 +1094,10 @@ loop:
  * No need to mlerase any numeric arg as either:
  *  o the command will edit the minibuffer, which will be redrawn, or
  *  o the command will execute, so the minibuffer will be erased anyway.
+ * However, we do need to unset the flag saying there is something there
+ * so that we don't have to wait on things like Esc2a (== "aa").
  */
-
+    mpresf = FALSE;
     execute(carg->c, carg->f, carg->n);
     if (mpresf) {
         sleep(1);

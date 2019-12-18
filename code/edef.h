@@ -164,8 +164,6 @@ extern not_in_mb_st not_in_mb;
 
 extern int pause_key_index_update;  /* If set, don't update keytab index */
 
-extern int in_search_prompt;        /* Set when prompting for search string */
-
 typedef struct {
     char *preload;              /* text to preload into getstring() result */
     int update;                 /* Set to make getstring() update its prompt */
