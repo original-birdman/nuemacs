@@ -237,8 +237,6 @@ CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
 
 LIBS = -lcurses     # SYSV
 LFLAGS = -hbx
-BINDIR = /usr/bin
-LIBDIR = /usr/lib
 
 #Let's try to find libcurses/libncurses etc.
 # Start by finding term.h (for Oleg's router distros)
@@ -257,38 +255,11 @@ $(PROGRAM): $(OBJ)
 	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_ARM) \
            $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
 
-SPARSE=sparse
-SPARSE_FLAGS=-D__LITTLE_ENDIAN__ -D__x86_64__ -D__linux__ -D__unix__
-
-sparse:
-	$(SPARSE) $(SPARSE_FLAGS) $(DEFINES) $(SRC)
-
 clean:
 	$(E) "  CLEAN"
 	$(Q) rm -f $(PROGRAM) core lintout makeout tags makefile.bak *.o
 
-install: $(PROGRAM)
-	strip $(PROGRAM)
-	cp em ${BINDIR}
-	cp emacs.hlp ${LIBDIR}
-	cp emacs.rc ${LIBDIR}/.emacsrc
-	chmod 755 ${BINDIR}/em
-	chmod 644 ${LIBDIR}/emacs.hlp ${LIBDIR}/.emacsrc
-
-lint:	${SRC}
-	@rm -f lintout
-	lint ${LFLAGS} ${SRC} >lintout
-	cat lintout
-
-errs:
-	@rm -f makeout
-	make em >makeout
-
-tags:	${SRC}
-	@rm -f tags
-	ctags ${SRC}
-
-# Thee use makefile rather than Makefile so that you don't run them by
+# These use makefile rather than Makefile so that you don't run them by
 # mistake.
 #
 source:
@@ -319,6 +290,13 @@ depend: ${SRC}
 .c.o:
 	$(E) "  CC      " $@
 	$(Q) ${CC} ${CFLAGS} ${DEFINES} -c $*.c
+
+# Add BUILDER definition for version.c
+#
+uname_N := $(shell sh -c 'uname -n 2>/dev/null || echo unknown')
+version.o: version.c
+	$(E) "  CC      " $@
+	$(Q) ${CC} ${CFLAGS} ${DEFINES} -DBUILDER=$(uname_N) -c $*.c
 
 bt_error:
 	@echo "ERROR: Unable to find libbacktrace"

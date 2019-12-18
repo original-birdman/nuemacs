@@ -5,11 +5,17 @@
 
 #include "utf8proc.h"
 
+/* How to Stringize a defined parameter...*/
+#define str(s) #s
+#define xstr(s) str(s)
+
 void version(void) {
     printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);
 #if defined(__GNUC__)
-    printf(" Compiled by GCC %s on %s at %s\n",
-        __VERSION__, __DATE__, __TIME__);
+    printf(" Compiled on %s, by GCC %s, on %s at %s\n",
+        xstr(BUILDER), __VERSION__, __DATE__, __TIME__);
+#else
+    printf(" Compiled on %s\n", xstr(BUILDER));
 #endif
     printf(" utf8proc version %s\n", utf8proc_version());
 
