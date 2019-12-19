@@ -324,15 +324,10 @@ extern int filter_buffer(int f, int n);
 
 /* search.c */
 
-/* next_sstr, prev_sstr and select_sstr must *not* be made bindable
- * in names.c!!!
- * They are remapped from nextwind/prevwind when in the search mini-buffer
- */
 extern void init_search_ringbuffers(void);
 extern void new_prompt(char *);
-extern int next_sstr(int, int);
-extern int prev_sstr(int, int);
-extern int select_sstr(int, int);
+extern void rotate_sstr(int);
+extern void select_sstr(void);
 
 extern int forwsearch(int f, int n);
 extern int forwhunt(int f, int n);

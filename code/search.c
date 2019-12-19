@@ -170,83 +170,53 @@ void new_prompt(char *dflt_str) {
 }
 
 /*
- * nextin_ring and previn_ring are always called with non -ve n
+ * Here are the two callable search/replace string manipulating functions.
+ * They are called from the CMPL_* code in input.c when you are searching
+ * or replacing.
+ * For rotate_sstr the "natural" thing to do is to go back to the previous
+ * string so +ve args go backwards in the array.
  */
+void rotate_sstr(int n) {
 
-static void previn_ring(int n, char *dstr, char *txt[]) {
-    char *tmp_txt[RING_SIZE];
+    while (n < 0) n += RING_SIZE;       /* Make it +ve... */
+    int rotator = n % RING_SIZE;        /* ...so this is not -ve */
+    if (rotator == 0) return;           /* No movement */
+    rotator = RING_SIZE - rotator;      /* So we go the right way */
 
-    int rotate_count = n % RING_SIZE;
-    if (rotate_count == 0) return;              /* No movement */
-    rotate_count = RING_SIZE - rotate_count;    /* So we go the right way */
 /* Rotate by <n> by mapping into a temp array then memcpy back */
-    int dx = rotate_count;
-    for (int ix = 0; ix < RING_SIZE; ix++, dx++) {
-        dx %= RING_SIZE;
-        tmp_txt[dx] = txt[ix];
+
+    char *tmp_txt[RING_SIZE];
+    char **txt, *dstr;
+    if (this_rt == Search) {
+        txt = srch_txt;
+        dstr = pat;
     }
-    memcpy(txt, tmp_txt, sizeof(tmp_txt));
-    strcpy(dstr, txt[0]);
+    else {
+        txt = repl_txt;
+        dstr = rpat;
+    }
+    for (int ix = 0; ix < RING_SIZE; ix++, rotator++) {
+        rotator %= RING_SIZE;
+        tmp_txt[rotator] = txt[ix];
+    }
+    memcpy(txt, tmp_txt, sizeof(tmp_txt));  /* Copy rotated array back */
+    strcpy(dstr, txt[0]);                   /* Update (r)pat */
 
 /* We need to make getstring() show this new value in its prompt.
  * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
- * to tell getsring() to use it.
+ * to tell getstring() to use it.
  */
     new_prompt(dstr);
-
     return;
-}
-
-/* nextin_ring is done as (RING_SIZE - n) in previn_ring() */
-
-static void nextin_ring(int n, char *dstr, char *txt[]) {
-    if (n == 0) return;
-    int revn = RING_SIZE - n;   /* This result can be -ve ... */
-    revn %= RING_SIZE;
-    revn += RING_SIZE;          /* ... so this ensures we get +ve */
-    previn_ring(revn, dstr, txt);
-    return;
-}
-
-/*
- * Here are the callable functions. They must *NOT* be put into the
- * names[] array in names.c as they cannot be bound to any key!
- * They are called by mapping commands that are invalid in the minibuffer
- * when you are searching.
- */
-int prev_sstr(int f, int n) {               /* Mapped from prevwind */
-    if (n < 0) return next_sstr(f, -n);
-    switch(this_rt) {
-    case Search:
-        previn_ring(n, pat,  srch_txt);
-        break;
-    case Replace:
-        previn_ring(n, rpat, repl_txt);
-        break;
-    }
-    return TRUE;
-}
-int next_sstr(int f, int n) {               /* Mapped from nextwind */
-    if (n < 0) return prev_sstr(f, -n);
-    switch(this_rt) {
-    case Search:
-        nextin_ring(n, pat,  srch_txt);
-        break;
-    case Replace:
-        nextin_ring(n, rpat, repl_txt);
-        break;
-    }
-    return TRUE;
 }
 
 /* Setting prmpt_buf.preload makes getstring() add it into the result buffer
  * at the start of its next get-character loop.
  * It will be inserted into any current search string at the current point.
  */
-int select_sstr(int f, int n) {             /* Mapped from listbuffers */
-    UNUSED(f); UNUSED(n);
+void select_sstr(void) {
     prmpt_buf.preload = (this_rt == Search)? srch_txt[0]: repl_txt[0];
-    return TRUE;
+    return;
 }
 
 /*

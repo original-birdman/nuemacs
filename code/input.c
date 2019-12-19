@@ -960,7 +960,10 @@ loop:
         prmpt_buf.update = 0;
     }
 
-/* Have we been asked to load (a search string)? */
+/* Have we been asked to load a (search/replace) string?.
+ * If so, insert it into our buffer (which is the result buffer) now,
+ * which inserts it at the "current location".
+ */
     if (prmpt_buf.preload) {
         linstr(prmpt_buf.preload);
         prmpt_buf.preload = NULL;    /* One-time usage */
@@ -1016,7 +1019,7 @@ loop:
  */
     if (carg->c == (CONTROL|'I')) {
         if (cmpl_type == CMPLT_SRCH) {
-            prev_sstr(0, carg->n == 0? 1: carg->n);
+            rotate_sstr(carg->n);
             goto loop;
         }
         lp = curwp->w_dotp;
@@ -1071,13 +1074,13 @@ loop:
     switch(carg->c) {           /* The default is to do nothing here */
     case META|CONTROL|'I':      /* Only for CMPLT_SRCH */
         if (cmpl_type == CMPLT_SRCH) {
-            next_sstr(0, carg->n == 0? 1: carg->n);
+            rotate_sstr(-(carg->n));
             goto loop;
         }
         break;
     case CTLX|CONTROL|'I':      /* Only for CMPLT_SRCH */
         if (cmpl_type == CMPLT_SRCH) {
-            select_sstr(0, 1);
+            select_sstr();
             goto loop;
         }
         break;
