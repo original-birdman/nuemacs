@@ -3397,5 +3397,115 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.146
 
-==========
+========== GGR4.147
 
+display.c
+    Use a union for va_list/NULL arg passing in mlwrite_ap() calls.
+    gcc on Raspberry Pi (arm) complains otherwise.
+
+etc/uemacs.rc
+    Fix the handling of "./"xxx directory names.
+
+basic.c     bind.c      buffer.c    crypt.c     eval.c      exec.c
+file.c      input.c     main.c      random.c    search.c    spawn.c
+utf8.c      word.c      estruct.h
+    Merge the EXP* enum and COMP* defines into a CMPL_* enum.
+
+
+basic.c     bind.c      buffer.c    charset.h   crypt.c     display.c
+estruct.h   eval.c      exec.c      file.c      fileio.c    globals.c
+ibmpc.c     idxsorter.c input.c     line.c      lock.c      main.c
+posix.c     random.c    region.c    search.c    spawn.c     tcap.c
+utf8.c      utf8.h      vt52.c      window.c    word.c
+    Spell-check the block comments.
+
+random.c
+etc/uemacs.rc
+    Fix insert-raw-string to really insert it raw (preserving spaces).
+    So insert-string *actually* inserts tokens (handling 0x.. and U+...
+    character specifications).
+    insert-raw-string inserts its arg as-is. [random.c]
+    Change insert-string calls to insert-raw-string, as that is what we
+    actually want (particularly expand-envvar) [etc/uemacs.rc]
+
+spawn.c
+    Tag temporary files for pipecmd() and filter_buffer() with the pid
+    of the uemacs process.
+    Simplify(?) pipecmd() by just re-using any PIPEBUF buffer and
+    switching from getfile() to readin() to get the result.
+
+search.c
+    Remove a left-behind debug 'fprintf(stderr, "preload...' call.
+
+globals.c
+input.c
+main.c
+search.c
+edef.h
+estruct.h
+    Added the search prompt to the list of context-specific completions,
+    although it's not really "completion".
+    o <tab> will set the default search string to the previous one in
+        the search ring.
+    o Esc<tab> will set the default search string to the next one in the
+        search ring.
+    o ^X<tab> will insert the default search string into the search
+        buffer.
+    The previous remapping of prevwind, nextwind and listbuffers to
+    these functions while searching has been removed.
+    NOTE: that this does mean that ^X<tab> (i.e. ^X^I == handle-tab)
+          can't be used in the minibuffer (to insert a tab char).
+
+version.c
+Makefile
+    Added the hostname of the building system to the version
+    information. [version.c, Makefile]
+    Removed the unused sparse, install (which was wrong...), lint, errs
+    and tags nodes.
+
+input.c
+search.c
+efunc.h
+    Since the *_sstr function no longer need to have a "bindable"
+    function calling syntax, simplify this, and combine
+    prev_sstr/next_sstr into rotate_sstr.
+
+exec.c
+input.c
+search.c
+efunc.h
+estruct.h
+    Change enum exp_type to cmplt_type, for consistency with member names,
+    and used this in function prototypes.
+
+bind.c
+    Apply apropos filter to procedure buffer bindings too.
+
+exec.c
+input.c
+estruct.h
+    Added CMPLT_PHON for Phonetic Table completion. [all]
+    Use CMPLT_FILE in execfile(). [exec.c]
+
+input.c
+    Correct getnbuffer() to skip //minib* names for minibuffers, not the
+    old CC$ prefix.
+
+etc/uemacs.hlp
+ebind.h
+estruct.h
+    Edited to update current information and keybindings. [etc/uemacs.hlp]
+    Remove keybindings for newsize() and newwidth() - SIGWIN now handles
+    this automatically. [ebind.h]
+    Fix type in comment [estruct.h]
+
+etc/uemacs.rc
+    Remove the unbinding of M-^T, as it is no longer bound - so we get
+    an error and the rest of the file is ignored...
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.147
+
+==========
