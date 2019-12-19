@@ -207,8 +207,8 @@
  */
 
 enum cmplt_type {
-    CMPLT_NONE, CMPLT_FILE, CMPLT_BUF, CMPLT_PROC, CMPLT_NAME, CMPLT_VAR,
-    CMPLT_SRCH,
+    CMPLT_NONE, CMPLT_FILE, CMPLT_BUF, CMPLT_PROC, CMPLT_PHON, CMPLT_NAME,
+    CMPLT_VAR,  CMPLT_SRCH,
 };
 
 /*      Directive definitions   */

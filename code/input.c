@@ -158,10 +158,12 @@ static char *getffile(char *fspec) {
 /* getnbuffer() and getfbuffer()
  * Handle buffer name completion
  * Also handles userproc name completion, as those are just buffers with
- * with names starting '/' and a type of BTPROC.
+ * names starting '/' and a type of BTPROC.
+ * and phonetic translation table name completion, which are just buffers
+ * with names starting '/' and a type of BTPHON.
  */
 
-static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
+static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
     char *retptr;
 
     if (expandbp) {
@@ -173,8 +175,9 @@ static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
  */
 
         int offset;
-            if (mtype == CMPLT_PROC)  offset = 1;
-            else                      offset = 0;
+            if ((mtype == CMPLT_PROC) ||
+                (mtype == CMPLT_PHON)) offset = 1;
+            else                       offset = 0;
 
 /* We don't return a buffer if it doesn't match, or if it's a minibuffer
  * buffername (CC$) or if it's an internal buffer [xx], unless the user
@@ -182,6 +185,8 @@ static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
  */
         if ((mtype == CMPLT_PROC &&
               (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/')) ||
+            (mtype == CMPLT_PHON &&
+              (expandbp->b_type != BTPHON || expandbp->b_bname[0] != '/')) ||
             (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
             (!strncmp(expandbp->b_bname, "CC$", 3)) ||
             ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
@@ -199,7 +204,7 @@ static char *getnbuffer(char *bpic, int bpiclen, int mtype) {
         return(NULL);
 }
 
-static char *getfbuffer(char *bpic, int bpiclen, int mtype) {
+static char *getfbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
     expandbp = bheadp;
     return(getnbuffer(bpic, bpiclen, mtype));
 }
@@ -306,7 +311,8 @@ static char *getfvar(char *name, int namelen) {
  * A routine to do the matching for completion code.
  * The routine to get the next item to check is determined by mtype.
  */
-static int matcher(char *name, int namelen, char *choices, int mtype) {
+static int matcher(char *name, int namelen, char *choices,
+      enum cmplt_type mtype) {
     char *next;                 /* Next filename to look at */
     int match_length;           /* Maximal match length     */
     char *p, *q;                /* Handy pointers           */
@@ -337,6 +343,7 @@ static int matcher(char *name, int namelen, char *choices, int mtype) {
             break;
         case CMPLT_BUF:
         case CMPLT_PROC:
+        case CMPLT_PHON:
             next = getnbuffer(name, namelen, mtype);
             break;
         case CMPLT_NAME:
@@ -418,7 +425,7 @@ static int comp_file(char *name, char *choices) {
  * Looks for things starting with name, and if there are multiple choices
  * builds a catenated string of them in choices.
  */
-static int comp_gen(char *name, char *choices, int mtype) {
+static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
     char supplied[NFILEN];  /* Maximal match so far */
     char *p;                /* Handy pointer */
     int unique;
@@ -430,6 +437,7 @@ static int comp_gen(char *name, char *choices, int mtype) {
     switch(mtype) {
     case CMPLT_BUF:
     case CMPLT_PROC:
+    case CMPLT_PHON:
         p = getfbuffer(name, namelen, mtype);
         break;
     case CMPLT_NAME:
@@ -455,7 +463,7 @@ static int comp_gen(char *name, char *choices, int mtype) {
 /* Entry point for buffer name completion. And userprocs.
  * Front-end to comp_gen().
  */
-static int comp_buffer(char *name, char *choices, int mtype) {
+static int comp_buffer(char *name, char *choices, enum cmplt_type mtype) {
     return comp_gen(name, choices, mtype);
 }
 
@@ -1035,6 +1043,7 @@ loop:
                 break;
             case CMPLT_BUF:
             case CMPLT_PROC:
+            case CMPLT_PHON:
                 expanded = comp_buffer(tstring, choices, ctype);
                 break;
             case CMPLT_NAME:
