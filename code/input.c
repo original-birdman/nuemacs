@@ -510,8 +510,8 @@ int mlyesno(char *prompt) {
  * We pass on any expansion-type requested (for, eventually, getstring()).
  */
 
-int mlreply(char *prompt, char *buf, int nbuf, int exp_type) {
-    return nextarg(prompt, buf, nbuf, exp_type);
+int mlreply(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
+    return nextarg(prompt, buf, nbuf, ctype);
 }
 
 /*
@@ -807,7 +807,7 @@ void sigwinch_handler(int signr) {
 }
 #endif
 
-int getstring(char *prompt, char *buf, int nbuf, int cmpl_type) {
+int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     struct buffer *bp;
     struct buffer *cb;
     char mbname[NBUFN];
@@ -1018,7 +1018,7 @@ loop:
  * completion, but it fits nicely into this placement.
  */
     if (carg->c == (CONTROL|'I')) {
-        if (cmpl_type == CMPLT_SRCH) {
+        if (ctype == CMPLT_SRCH) {
             rotate_sstr(carg->n);
             goto loop;
         }
@@ -1029,13 +1029,13 @@ loop:
             int expanded;
             memcpy(tstring, sp, lp->l_used);
             tstring[lp->l_used] = '\0';
-            switch(cmpl_type) {
+            switch(ctype) {
             case CMPLT_FILE:
                 expanded = comp_file(tstring, choices);
                 break;
             case CMPLT_BUF:
             case CMPLT_PROC:
-                expanded = comp_buffer(tstring, choices, cmpl_type);
+                expanded = comp_buffer(tstring, choices, ctype);
                 break;
             case CMPLT_NAME:
                 expanded = comp_name(tstring, choices);
@@ -1073,13 +1073,13 @@ loop:
 
     switch(carg->c) {           /* The default is to do nothing here */
     case META|CONTROL|'I':      /* Only for CMPLT_SRCH */
-        if (cmpl_type == CMPLT_SRCH) {
+        if (ctype == CMPLT_SRCH) {
             rotate_sstr(-(carg->n));
             goto loop;
         }
         break;
     case CTLX|CONTROL|'I':      /* Only for CMPLT_SRCH */
-        if (cmpl_type == CMPLT_SRCH) {
+        if (ctype == CMPLT_SRCH) {
             select_sstr();
             goto loop;
         }

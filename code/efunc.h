@@ -188,13 +188,13 @@ extern int typahead(void);
 
 /* input.c */
 extern int mlyesno(char *);
-extern int mlreply(char *, char *, int, int);
+extern int mlreply(char *, char *, int, enum cmplt_type);
 extern int ectoc(int c);
 extern struct name_bind *getname(char *);
 extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);
-extern int getstring(char *prompt, char *buf, int nbuf, int eolchar);
+extern int getstring(char *, char *, int , enum cmplt_type);
 
 /* bind.c */
 extern int help(int f, int n);
@@ -256,7 +256,7 @@ extern int namedcmd(int f, int n);
 extern int execcmd(int f, int n);
 extern char *token(char *src, char *tok, int size);
 extern int macarg(char *tok);
-extern int nextarg(char *prompt, char *buffer, int size, int terminator);
+extern int nextarg(char *, char *, int, enum cmplt_type);
 extern int storemac(int f, int n);
 extern void ptt_free(struct buffer *);
 extern int storepttable(int, int);

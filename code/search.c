@@ -171,7 +171,7 @@ void new_prompt(char *dflt_str) {
 
 /*
  * Here are the two callable search/replace string manipulating functions.
- * They are called from the CMPL_* code in input.c when you are searching
+ * They are called from the CMPLT_* code in input.c when you are searching
  * or replacing.
  * For rotate_sstr the "natural" thing to do is to go back to the previous
  * string so +ve args go backwards in the array.

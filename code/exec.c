@@ -294,11 +294,11 @@ int macarg(char *tok) {
  * int size;                    size of the buffer
  * int terminator;              terminating char to be used on interactive fetch
  */
-int nextarg(char *prompt, char *buffer, int size, int exp_type) {
+int nextarg(char *prompt, char *buffer, int size, enum cmplt_type ctype) {
     char tbuf[NSTRING];     /* string buffer for some workings */
 
 /* If we are interactive, go get it! */
-    if (clexec == FALSE) return getstring(prompt, buffer, size, exp_type);
+    if (clexec == FALSE) return getstring(prompt, buffer, size, ctype);
 
 /* Grab token and advance past */
     execstr = token(execstr, buffer, size);

@@ -206,7 +206,7 @@
  *       internal command name expansion. It doesn't use getstring().
  */
 
-enum exp_type {
+enum cmplt_type {
     CMPLT_NONE, CMPLT_FILE, CMPLT_BUF, CMPLT_PROC, CMPLT_NAME, CMPLT_VAR,
     CMPLT_SRCH,
 };
