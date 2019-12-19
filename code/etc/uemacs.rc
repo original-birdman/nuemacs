@@ -351,7 +351,6 @@ buffer-to-key rm-dflt-repl              M-^D
 bind-to-key incremental-search          M-^I
 buffer-to-key lr-justify                M-^J    ; Previously Esc-J in 3.9e
 bind-to-key next-pttable                M-^P
-unbind-key                              M-^T
 bind-to-key i-shell                     M-^U
 bind-to-key execute-file                M-^X
 bind-to-key yank-minibuffer             M-^Y
