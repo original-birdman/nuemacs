@@ -167,7 +167,7 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
     char *retptr;
 
     if (expandbp) {
-/* We NEVER return minibuffer buffers (CC$00nnn), and we return internal
+/* We NEVER return minibuffer buffers (//minibnnnn), and we return internal
  * [xx] buffers only if the user asked for them by specifying a picture
  * starting with [.
  * For a type of CMPLT_PROC we only consider buffer-names starting with '/'
@@ -188,7 +188,7 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
             (mtype == CMPLT_PHON &&
               (expandbp->b_type != BTPHON || expandbp->b_bname[0] != '/')) ||
             (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
-            (!strncmp(expandbp->b_bname, "CC$", 3)) ||
+            (!strncmp(expandbp->b_bname, "//minib", 7)) ||
             ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
 
             expandbp = expandbp->b_bufp;
