@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.146 Help Index     (15 December 2019)
+=>                   nuEmacs GGR4.146 Help Index     (19 December 2019)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -31,7 +31,7 @@ different one.
 Backward character ....      ^B         Forward character .....      ^F
 Previous word ......... Meta  B         Next word ............. Meta  F
 Beginning of line .....      ^A         End of line ...........      ^E
-Previous line .........  ^P or ^Z       Next line .............      ^N
+Previous line ......... ^P or ^Z        Next line .............      ^N
 Previous paragraph .... Meta  P         Next paragraph ........ Meta  N
 Previous page ......... Meta  V         Next page .............      ^V
 Beginning of file ..... Meta  <         End of file ........... Meta  >
@@ -41,9 +41,9 @@ Find file .............   ^X ^F         Quick exit ............ Meta  Z
 View file .............   ^X ^V         Exit emacs ............   ^X ^C
 Insert file ...........   ^X ^I
 Change file name ......   ^X  N         Filter buffer .........   ^X  #
-Save file .............   ^X ^S
+Save file .............   ^X ^S (^X S)
 Read file .............   ^X ^R
-Write file ............   ^X ^W         Execute file .......... not bound
+Write file ............   ^X ^W         Execute file .......... Meta ^X
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS CHARACTER COMMANDS
 Newline ...............      ^M         Transpose characters ..      ^T
@@ -62,6 +62,9 @@ WRAP   :: Automatic carriage return     ^ $  Beginning and end of line
 VIEW   :: View only, don't change       .    Any character   \c   Character c
 CMODE  :: C program indenting           c*   Any number of character c
 EXACT  :: Match case in search          [ ]  Character class
+PHON   :: Phonetic input handling
+CRYPT  :: encryption mode active        SAVE   :: auto-save mode
+DOSLE  :: DOS line endings              EQUIV  :: (not yet in use)
 -------------------------------------------------------------------------------
 =>                      KEYS AND COMMANDS
 Bind to key ........... Meta  K         Help ..................   ^X  ?
@@ -75,7 +78,7 @@ Execute named command . Meta  X     ::  be bound to Esc.
 =>                      DELETING AND INSERTING
 Delete previous character    ^H         Delete next character .      ^D
 Delete previous word .. Meta ^H         Delete next word ...... Meta  D
-Leave on whitespace ... Meta space      Deleet all whitspace .. Meta  \
+Leave one whitespace .. Meta space      Delete all whitespace . Meta  \
 Kill to end of line ...      ^K         Set mark ..............      ^@
 Kill region ...........      ^W         Yank ..................      ^Y
 Kill paragraph ........ Meta ^W         Exchange point and mark   ^X ^X
@@ -108,15 +111,17 @@ Copy region ........... Meta  W     ::  the mark and the current position.
             kill-ring buffer entry
         Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
         replace.
+
+Yank last minibuffer .. Meta ^Y  (10 in a ring, numeric arg allowed)
 -------------------------------------------------------------------------------
 =>                      FORMATTING
 Case word upper ....... Meta  U         Case word lower ....... Meta  L
 Case region upper .....   ^X ^U         Case region lower .....   ^X ^L
 Case word capitalize .. Meta  C         Trim line .............   ^X ^T
-                                        Detab line ............   ^X ^A
+                                        Detab line ............   ^X ^D
 Set fill column .......   ^X  F         Entab line ............   ^X ^E
-Fill paragraph ........ Meta  Q         Change screen size .... Meta ^D
-Justify paragraph ..... Meta  J         Change screen width ... Meta ^T
+Fill paragraph ........ Meta  Q
+Justify paragraph ..... Meta  J
 Left and right Justify  Meta ^J         Narrow to region ......   ^X  <
 Make list from region   Meta  /         Widen from region .....   ^X  >
 Number list from region   ^X  /
@@ -136,23 +141,22 @@ Select buffer .........   ^X  B         Unmark buffer ......... Meta  ~
 List buffers ..........   ^X ^B
 Delete buffer .........   ^X  K         Write message ......... not bound
 Name buffer ........... Meta ^N         Clear message line .... not bound
-Filter buffer .........   ^X  #
-Pipe command ..........   ^X  @         Execute buffer ........ not bound
+Filter buffer .........   ^X  #         Execute buffer ........ not bound
 -------------------------------------------------------------------------------
 =>                      SEARCHING AND REPLACING
-Search forward ........ Meta  S     ::  End string with Meta.
-Incremental search ....   ^X  S     ::  Search next ^X, stop Meta, cancel ^G.
+Search forward ........ Meta  S     ::  End string with <CR>.
+Incremental search .... Meta ^I     ::  stop Meta, cancel ^G, back ^R, fwd ^S
 Search reverse ........      ^R
-Reverse incremental search              Hunt forward ..........  Alt-S
-.......................   ^X  R         Hunt backward .........  Alt-R
+Reverse incremental search      ^X  R
 Replace string ........ Meta  R
 Query replace string .. Meta  %     ::  Yes/no Y/N, replace rest !, cancel ^G.
 
-    When at the search (or replace) prompt you can move back and
-    forwards though the last 10 strings using ^XO (Next window) and ^XP
-    (Previous window).  The current default string can be inserted into
-    the real search buffer, at the current cursor point, with ^X^B (List
-    buffers).
+    When at the search (or replace) prompt you can move through the last
+    10 strings using ^I (tab) for the previous string and Esc^I for the
+    next one.
+    The currently selected default string can be inserted into the
+    current search/replace buffer, at the current cursor point, with ^X^I.
+Unset default replace string .. Meta ^D
 -------------------------------------------------------------------------------
 =>                      ACCESSING THE OPERATING SYSTEM
 Quick exit ............ Meta  Z     ::  Write out all changed buffers and exit.
@@ -186,7 +190,7 @@ Set encryption key .... Meta  E         Wrap word ............. not bound
 Count words ........... Meta ^C         Update screen ......... not bound
 -------------------------------------------------------------------------------
 =>                      SYSTEM VARIABLES
-Set ................... Meta ^A         Current buffer name ... $cbufname
+Set ................... ^X ^A           Current buffer name ... $cbufname
 Tabulator (4, 8)....... $tab            Current file name ..... $cfname
 Screen resolution ..... $sres       ::  NORMAL, CGA, EGA, VGA
 Display commands ...... $discmd     ::  TRUE, FALSE
@@ -203,15 +207,19 @@ Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
 &seq, &sle, &sgr ........................... String comparisons
 &sin ....................................... String index
 -------------------------------------------------------------------------------
-=>                      FILE NAME COMPLETION
+=>                        NAME COMPLETION
 
-File name completion can be used with all file commands (find-file,
-view-file, ...) but it works only under UNIX and MS-DOS. It is invoked
-by a <Tab>. If more than one possible completion exists they are displayed
+Name completion can be used in the prompts for various context-aware
+commands. It is invoked by a <Tab>.
+Matches are done against files, buffer names, user procedures, phonetic
+translation tables, function names and environment/user variables.
+
+If more than one possible completion exists they are displayed
 in the minibuffer and the longest common part is retained for you to add
 to. The minibuffer is an editable buffer line.
-Shell expansion is handled and leading ".." dirs are taken relative to
-the $PWD environment variable.
+
+For file completion, shell expansion is handled and leading ".." dirs
+are taken relative to the $PWD environment variable.
 -------------------------------------------------------------------------------
 =>                MACRO functions and user variables
 eos-chars <string of characters>
@@ -225,9 +233,9 @@ char-replace
     emulator.
     char-replace reset
         resets everything to no replace, replace-char 0xFFFD
-    char-replace repchar U+xxxx
+    char-replace "repchar U+xxxx"
         sets the replace-char to U+xxxx
-    char-replace U+xxxx | U+xxxx-U+xxxx
+    char-replace "U+xxxx | U+xxxx-U+xxxx"
         sets the given character (range) to be replaced
 
 store-procedure <proc-name>
@@ -269,7 +277,7 @@ store-pttable <ptt-name>
         display-code XX
 
     where XX is a 2-character code to display in the mode line when it
-    is on.  It is preceded by "P-" and defaults to the first two
+    is on, where is preceded by "P-", and defaults to the first two
     characters of the table name.
 
 toggle-ptmode

@@ -429,7 +429,7 @@ struct buffer {
 #define MDVIEW  0x0010          /* read-only buffer             */
 #define MDOVER  0x0020          /* overwrite mode               */
 #define MDMAGIC 0x0040          /* regular expresions in search */
-#define MDCRYPT 0x0080          /* encrytion mode active        */
+#define MDCRYPT 0x0080          /* encryption mode active       */
 #define MDASAVE 0x0100          /* auto-save mode               */
 #define MDEQUIV 0x0200          /* match equivalent chars       */
 #define MDDOSLE 0x0400          /* DOS line endings             */
