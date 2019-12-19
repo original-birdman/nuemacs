@@ -580,13 +580,15 @@ static int buildlist(int type, char *mstring) {
     wp->w_marko = 0;
 
     for (int ni = nxti_name_info(-1); ni >= 0; ni = nxti_name_info(ni)) {
+
+/* If we are executing an apropos command.....
+ * ...and current string doesn't include the search string
+ */
+        if ((type == FALSE) && !strstr(names[ni].n_name, mstring)) continue;
+
 /* Add in the command name */
         strcpy(outseq, names[ni].n_name);
         cpos = strlen(outseq);
-
-/* If we are executing an apropos command.....
- * ...and current string doesn't include the search string */
-        if (type == FALSE && strstr(outseq, mstring) == FALSE) goto fail;
 
 /* Search down for any keys bound to this. */
         ktp = getbyfnc(names[ni].n_func);
@@ -612,9 +614,6 @@ static int buildlist(int type, char *mstring) {
             outseq[cpos] = 0;
             if (linstr(outseq) != TRUE) return FALSE;
         }
-
-/* ...and on to the next name */
-fail:   ;
     }
 
 /* Now we go through all the key_table looking for proc buf bindings.
@@ -625,6 +624,13 @@ fail:   ;
     cpos = 0;
     int found = 0;
     for (ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
+
+/* If we are executing an apropos command.....
+ * ...and current string doesn't include the search string
+ */
+
+        if ((type == FALSE) && !strstr(ktp->hndlr.pbp, mstring)) continue;
+
         if (ktp->k_type == PROC_KMAP) {
             if (!found) {
                 if (linstr("\nProcedure bindings\n") != TRUE) return FALSE;
