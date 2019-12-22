@@ -86,6 +86,10 @@ static void close_dir(void) {
     if (dirptr != NULL) closedir(dirptr);
 }
 
+/* What to show in the minibuffer if completion doesn't find anything */
+
+#define NOMATCH "No match"
+
 static char *getnfile(void) {
     unsigned short type;        /* file type */
 #if USG
@@ -397,6 +401,8 @@ static int comp_file(char *name, char *choices) {
     ljust(name);
     if ((p = getffile(name)) == NULL) {
         close_dir();
+        mlwrite(NOMATCH);
+        sleep(1);
         return(FALSE);
     }
     else
@@ -449,7 +455,11 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
     default:            /* If mtype arrives oddly? */
         p = NULL;
     }
-    if (p == NULL) return(FALSE);
+    if (p == NULL) {
+        mlwrite(NOMATCH);
+        sleep(1);
+        return(FALSE);
+    }
     strcpy(so_far, p);
     strcpy(supplied, name);
     unique = matcher(name, namelen, choices, mtype);
@@ -1052,7 +1062,7 @@ loop:
             case CMPLT_VAR:
                 expanded = comp_var(tstring, choices);
                 break;
-            default:
+            default:            /* Do nothing... */
                 expanded = 0;
             }
             if (expanded) {
@@ -1081,18 +1091,12 @@ loop:
 /* Some further "hard-wired" key-bindings - aka minibuffer specials. */
 
     switch(carg->c) {           /* The default is to do nothing here */
-    case META|CONTROL|'I':      /* Only for CMPLT_SRCH */
-        if (ctype == CMPLT_SRCH) {
-            rotate_sstr(-(carg->n));
-            goto loop;
-        }
-        break;
-    case CTLX|CONTROL|'I':      /* Only for CMPLT_SRCH */
-        if (ctype == CMPLT_SRCH) {
-            select_sstr();
-            goto loop;
-        }
-        break;
+    case META|CONTROL|'I':      /* Only act for CMPLT_SRCH */
+        if (ctype == CMPLT_SRCH) rotate_sstr(-(carg->n));
+        goto loop;
+    case CTLX|CONTROL|'I':      /* Only act for CMPLT_SRCH */
+        if (ctype == CMPLT_SRCH) select_sstr();
+        goto loop;
     case CONTROL|'M':           /* General */
     case CTLX|CONTROL|'C':
         goto submit;
