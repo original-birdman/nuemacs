@@ -118,13 +118,7 @@ int swbuffer(struct buffer *bp, int macro_OK) {
 /* Save last name so we can switch back to it on empty MB reply */
     if (!inmb && do_savnam) strcpy(savnam, curbp->b_bname);
 
-    if (--curbp->b_nwnd == 0) {     /* Last use. */
-        curbp->b_dotp = curwp->w_dotp;
-        curbp->b_doto = curwp->w_doto;
-        curbp->b_markp = curwp->w_markp;
-        curbp->b_marko = curwp->w_marko;
-        curbp->b_fcol = curwp->w_fcol;
-    }
+    if (--curbp->b_nwnd == 0) windata_to_buffer(curwp, curbp);  /* Last use */
     curbp = bp;                     /* Switch. */
     if (curbp->b_active != TRUE)    /* buffer not active yet */
         make_active(curbp);
@@ -419,13 +413,7 @@ int listbuffers(int f, int n) {
     if (blistp->b_nwnd == 0) {      /* Not on screen yet.   */
         if ((wp = wpopup()) == NULL) return FALSE;
         bp = wp->w_bufp;
-        if (--bp->b_nwnd == 0) {
-            bp->b_dotp = wp->w_dotp;
-            bp->b_doto = wp->w_doto;
-            bp->b_markp = wp->w_markp;
-            bp->b_marko = wp->w_marko;
-            bp->b_fcol = wp->w_fcol;
-        }
+        if (--bp->b_nwnd == 0) windata_to_buffer(wp, bp);
         wp->w_bufp = blistp;
         ++blistp->b_nwnd;
     }

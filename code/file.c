@@ -161,11 +161,7 @@ out:
     curwp->w_flag |= WFHARD | WFMODE;
 
 /* Copy window parameters back to the buffer structure */
-    curbp->b_dotp = curwp->w_dotp;
-    curbp->b_doto = curwp->w_doto;
-    curbp->b_markp = curwp->w_markp;
-    curbp->b_marko = curwp->w_marko;
-    curbp->b_fcol = curwp->w_fcol;
+    windata_to_buffer(curwp, curbp);
 
     if (s == FIOERR) return FALSE;      /* False if error. */
     return TRUE;
@@ -314,13 +310,8 @@ int getfile(char *fname, int lockfl, int check_dir) {
         mlwrite_one("Cannot create buffer");
         return FALSE;
     }
-    if (--curbp->b_nwnd == 0) {     /* Undisplay.           */
-        curbp->b_dotp = curwp->w_dotp;
-        curbp->b_doto = curwp->w_doto;
-        curbp->b_markp = curwp->w_markp;
-        curbp->b_marko = curwp->w_marko;
-        curbp->b_fcol = curwp->w_fcol;
-    }
+    if (--curbp->b_nwnd == 0) windata_to_buffer(curwp, curbp);  /* Undisplay */
+
 /* GGR - remember last buffer */
     if (!inmb) strcpy(savnam, curbp->b_bname);
 

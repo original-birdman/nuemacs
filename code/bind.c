@@ -558,13 +558,7 @@ static int buildlist(int type, char *mstring) {
     mlwrite_one(MLbkt("Building binding list"));
 
 /* Disconnect the current buffer */
-    if (--curbp->b_nwnd == 0) {     /* Last use.            */
-        curbp->b_dotp = curwp->w_dotp;
-        curbp->b_doto = curwp->w_doto;
-        curbp->b_markp = curwp->w_markp;
-        curbp->b_marko = curwp->w_marko;
-        curbp->b_fcol = curwp->w_fcol;
-    }
+    if (--curbp->b_nwnd == 0) windata_to_buffer(curwp, curbp);  /* Last use */
 
 /* Connect the current window to this buffer */
     curbp = bp;             /* make this buffer current in current window */

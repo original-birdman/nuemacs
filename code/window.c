@@ -156,6 +156,15 @@ int mvupwind(int f, int n) {
     curwp->w_doto = 0;
     return TRUE;
 }
+/* Internal routine to flush window data to buffer data on window closing */
+void windata_to_buffer(struct window *fwp, struct buffer *ubp) {
+    ubp->b_dotp = fwp->w_dotp;
+    ubp->b_doto = fwp->w_doto;
+    ubp->b_markp = fwp->w_markp;
+    ubp->b_marko = fwp->w_marko;
+    ubp->b_fcol = fwp->w_fcol;
+    return;
+}
 
 /* This command makes the current window the only window on the screen. Bound
  * to "C-X 1". Try to set the framing so that "." does not have to move on the
@@ -172,25 +181,13 @@ int onlywind(int f, int n) {
     while (wheadp != curwp) {
         wp = wheadp;
         wheadp = wp->w_wndp;
-        if (--wp->w_bufp->b_nwnd == 0) {
-            wp->w_bufp->b_dotp = wp->w_dotp;
-            wp->w_bufp->b_doto = wp->w_doto;
-            wp->w_bufp->b_markp = wp->w_markp;
-            wp->w_bufp->b_marko = wp->w_marko;
-            wp->w_bufp->b_fcol = wp->w_fcol;
-        }
+        if (--wp->w_bufp->b_nwnd == 0) windata_to_buffer(wp, wp->w_bufp);
         free((char *) wp);
     }
     while (curwp->w_wndp != NULL) {
         wp = curwp->w_wndp;
         curwp->w_wndp = wp->w_wndp;
-        if (--wp->w_bufp->b_nwnd == 0) {
-            wp->w_bufp->b_dotp = wp->w_dotp;
-            wp->w_bufp->b_doto = wp->w_doto;
-            wp->w_bufp->b_markp = wp->w_markp;
-            wp->w_bufp->b_marko = wp->w_marko;
-            wp->w_bufp->b_fcol = wp->w_fcol;
-        }
+        if (--wp->w_bufp->b_nwnd == 0) windata_to_buffer(wp, wp->w_bufp);
         free((char *) wp);
     }
     lp = curwp->w_linep;
@@ -256,13 +253,7 @@ int delwind(int f, int n) {
     }
 
 /* Get rid of the current window */
-    if (--curwp->w_bufp->b_nwnd == 0) {
-        curwp->w_bufp->b_dotp = curwp->w_dotp;
-        curwp->w_bufp->b_doto = curwp->w_doto;
-        curwp->w_bufp->b_markp = curwp->w_markp;
-        curwp->w_bufp->b_marko = curwp->w_marko;
-        curwp->w_bufp->b_fcol = curwp->w_fcol;
-    }
+    if (--curwp->w_bufp->b_nwnd == 0) windata_to_buffer(wp, wp->w_bufp);
     if (lwp == NULL) wheadp = curwp->w_wndp;
     else             lwp->w_wndp = curwp->w_wndp;
     free((char *) curwp);
@@ -566,13 +557,8 @@ int newsize(int f, int n) {
             if (wp->w_toprow > n - 2) {
 
 /* Save the point/mark if needed */
-                if (--wp->w_bufp->b_nwnd == 0) {
-                    wp->w_bufp->b_dotp = wp->w_dotp;
-                    wp->w_bufp->b_doto = wp->w_doto;
-                    wp->w_bufp->b_markp = wp->w_markp;
-                    wp->w_bufp->b_marko = wp->w_marko;
-                    wp->w_bufp->b_fcol = wp->w_fcol;
-                }
+                if (--wp->w_bufp->b_nwnd == 0)
+                     windata_to_buffer(wp, wp->w_bufp);
 
 /* Update curwp and lastwp if needed */
                 if (wp == curwp) curwp = wheadp;
