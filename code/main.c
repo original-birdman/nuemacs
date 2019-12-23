@@ -982,7 +982,11 @@ int main(int argc, char **argv) {
                 break;
             case 'c':
             case 'C':       /* GGR -c replacement of default rc */
-                rcfile = opt;
+/* ffropen() will expand any relative/~ pathname *IN PLACE* so
+ * we need a copy of the command line option!
+ */
+                rcfile = Xmalloc(NFILEN);
+                strcpy(rcfile, opt);
                 break;
             case 'd':
             case 'D':       /* GGR -d for config/help directory */
@@ -1036,7 +1040,12 @@ int main(int argc, char **argv) {
             case 'x':       /* GGR: -x for eXtra rc file */
             case 'X':
                 if (rcnum < sizeof(rcextra)/sizeof(rcextra[0]))
-                     rcextra[rcnum++] = opt;
+/* ffropen() will expand any relative/~ pathname *IN PLACE* so
+ * we need a copy of the command line option!
+ */
+                rcextra[rcnum] = Xmalloc(NFILEN);
+                strcpy(rcextra[rcnum], opt);
+                rcnum++;
                 break;
             default:        /* unknown switch - ignore this for now */
                 break;
@@ -1066,8 +1075,15 @@ int main(int argc, char **argv) {
 /* GGR - Now process initialisation files before processing rest of comline */
     silent = TRUE;
     if (!rcfile || !startup(rcfile)) startup("");
+    if (rcfile) {
+        free(rcfile);
+        rcfile = NULL;
+    }
     if (rcnum) {
-        for (unsigned int n = 0; n < rcnum; n++) startup(rcextra[n]);
+        for (unsigned int n = 0; n < rcnum; n++) {
+            startup(rcextra[n]);
+            free(rcextra[n]);
+        }
     }
     silent = FALSE;
 
@@ -1096,7 +1112,6 @@ int main(int argc, char **argv) {
  * This looks a bit like duplication of the getfile() code, but the
  * buffer-pointer handling is different.
  */
-
         if (showdir_handled(*argv) == FALSE) {
 
 /* Set-up a buffer for this file */
