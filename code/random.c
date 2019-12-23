@@ -996,10 +996,10 @@ int clrmes(int f, int n) {
  */
 int writemsg(int f, int n) {
     int status;
-    char buf[NPAT];         /* buffer to receive message into */
+    char buf[NSTRING];          /* buffer to receive message into */
 
     if ((status =
-     mlreply("Message to write: ", buf, NPAT - 1, CMPLT_NONE)) != TRUE)
+     mlreply("Message to write: ", buf, NSTRING - 1, CMPLT_NONE)) != TRUE)
         return status;
 
 /* Write the message out */
