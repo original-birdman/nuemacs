@@ -243,14 +243,20 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
  */
 int showdir_handled(char *pname) {
     struct stat statbuf;
-    int status = stat(pname, &statbuf);
+
+/* Have to expand it - to allow for ~ usage */
+
+    char *exp_pname = Xmalloc(NFILEN);
+    strcpy(exp_pname, pname);
+    fixup_full(exp_pname);     /* Make absolute pathname */
+    int status = stat(exp_pname, &statbuf);
     if ((status == 0) && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
 /* We can only call showdir if it exists as a userproc.
- * If it doesn't we just let the old code handle it.
+ * If it doesn't we report that...
  */
         struct buffer *sdb = bfind("/showdir", FALSE, 0);
         if (sdb && (sdb->b_type == BTPROC)) {
-            userproc_arg = pname;
+            userproc_arg = exp_pname;
             (void)run_user_proc("showdir", 1);
             userproc_arg = NULL;
         }
@@ -258,9 +264,13 @@ int showdir_handled(char *pname) {
            mlwrite("No showdir userproc handler: %s", pname);
            if (comline_processing) sleep(2);    /* Let user see it */
         }
-        return TRUE;
+        status = TRUE;
     }
-    return FALSE;
+    else {
+        status = FALSE;
+    }
+    free(exp_pname);
+    return status;
 }
 
 /*

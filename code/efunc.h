@@ -251,6 +251,7 @@ extern int ffputline(char *buf, int nbuf);
 extern int ffgetline(void);
 extern int fexist(char *fname);
 extern void fixup_fname(char *);
+extern void fixup_full(char *);
 
 /* exec.c */
 extern int namedcmd(int f, int n);

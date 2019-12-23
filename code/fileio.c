@@ -483,4 +483,36 @@ void fixup_fname(char *fn) {
     }
     return;
 }
+
+/* This one expands a leading "." (for current dir) as well */
+
+void fixup_full(char *fn) {
+    char fn_copy[NFILEN];
+    char *p;
+
+/* We look for just a "." and, if found, handle it.
+ * Otherwise we call fixup_fname() to do what it can do.
+ */
+    if (have_pwd >= 0 &&
+        fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')) {
+        if (have_pwd == 0) {
+            if ((p = getenv("PWD")) == NULL) have_pwd = -1;
+            else {
+                if (*p == '/') {    /* Only if valid path.. */
+                    strcpy(pwd_var, p);
+                    have_pwd = 1;
+                }
+                else
+                    have_pwd = -1;
+            }
+        }
+        if (have_pwd == 1) {
+            strcpy(fn_copy, pwd_var);
+            if (fn[1] == '/') strcat(fn_copy, fn+1);
+            strcpy(fn, fn_copy);
+        }
+    }
+    else fixup_fname(fn);
+    return;
+}
 #endif

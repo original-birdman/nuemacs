@@ -420,24 +420,31 @@ args-in-reexec ALL
 ;
  store-procedure showdir
 
-; Get the full pathname...may be supplied internally by C-code (&arg)
+; Get the full pathname...expected to be supplied internally by C-code
+; (&arg) and that wuill have been expanded to a full-pathname.
+; If the user calls this "manually" (Esc-x execute-procedure showdir)
+; we fallback to the (original) macro code to srot it out.
 ;
     set %udir &arg "Dir: "
 
-; Have to handle getting "", ".", "./xxx" or a relative path, as we
-; need the full pathname to open entries after changing directory
+; We *expect* to be given a full pathname, so check that first
 ;
-    !if &or &seq "" %udir &seq "." %udir
-        set %udir &env PWD
-    !endif
-    !if &seq "./" &lef %udir 2
-        set %rctmp &len %udir
-        set %rctmp &sub %rctmp 2
-        set %udir &cat &env PWD &mid %udir 2 %rctmp
-    !endif
     !if &not &seq "/" &lef %udir 1
-        set %udir &cat &env PWD &cat "/" %udir
+        !if &or &seq "" %udir &seq "." %udir
+            set %udir &env PWD
+        !endif
+        !if &seq "./" &lef %udir 2
+            set %rctmp &len %udir
+            set %rctmp &sub %rctmp 2
+            set %udir &cat &env PWD &mid %udir 2 %rctmp
+        !endif
+        !if &not &seq "/" &lef %udir 1
+            set %udir &cat &env PWD &cat "/" %udir
+        !endif
     !endif
+
+; shell-escape this so we can interpolate it into a command line
+;
     set %escudir &escape %udir
 
 ; List the directory in a buffer (.ue_command - PIPEFILE in spawn.c)
