@@ -500,3 +500,15 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
     *(mstr->str+mstr->utf8c) = '\0';    /* NUL terminate it */
     return;     /* Success */
 }
+
+/* The Julia utf8 library has a bug(?) for U+00a8 and U+00b4.
+ * It marks them as zero-width *v2.3+) but they aren't
+ */
+int utf8char_width(unicode_t c) {
+    switch(c) {
+    case 0x00a8:
+    case 0x00b4:
+        return 1;
+    }
+    return utf8proc_charwidth(c);
+}

@@ -337,7 +337,7 @@ static void vtputc(unsigned int c) {
         return;
     }
 
-    int cw = utf8proc_charwidth(c);
+    int cw = utf8char_width(c);
     if (vtcol >= 0) {
         set_grapheme(&(vp->v_text[vtcol]), c, 0);
 /* This code assumes that a NUL byte will not be displayed */
@@ -1006,7 +1006,7 @@ static void updext(void) {
 /* And put a '$' in column 1. but if this is a multi-width character we also
  * need to change any following NULs to spaces
  */
-    int cw = utf8proc_charwidth(vscreen[currow]->v_text[0].uc);
+    int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
     set_grapheme(&(vscreen[currow]->v_text[0]), '$', 0);
     for (int pcol = cw - 1; pcol > 0; pcol--) {
         set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ', 0);

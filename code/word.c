@@ -15,6 +15,7 @@
 #include "line.h"
 
 #include "utf8proc.h"
+#include "utf8.h"
 
 /* This is set by inword() when a call tests a grapheme with a
  * zero-width work-break attached.
@@ -757,7 +758,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
                         wbuf[wi++] = gi.ex[xc];
                 }
             }
-            wordlen += utf8proc_charwidth(gi.uc);
+            wordlen += utf8char_width(gi.uc);
 /* Free-up any allocated grapheme space...and on to next char */
             if (gi.ex != NULL) free(gi.ex);
             continue;
