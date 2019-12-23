@@ -47,7 +47,10 @@ struct user_variable uv[MAXVARS + 1];
 /* Initialize the user variable list. */
 void varinit(void) {
     int i;
-    for (i = 0; i < MAXVARS; i++) uv[i].u_name[0] = 0;
+    for (i = 0; i < MAXVARS; i++) {
+        uv[i].u_name[0] = 0;
+        uv[i].u_value = NULL;
+    }
 }
 
 
