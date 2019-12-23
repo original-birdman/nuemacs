@@ -96,15 +96,20 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8) {
     *utf8 = c;
 /* We have a unicode point - anything over 0x7f is multi-byte */
     if (c >= 0x80) {
-        unsigned int prefix = 0x40;
+/* The next two values will be the prefix and maximum values storable
+ * in the final (-> first) byte *after* we've shifted them.
+ */
+        unsigned int prefix = 0x80;
+        unsigned max = 0x3f;
         char *p = utf8;
         do {
             *p++ = 0x80 + (c & 0x3f);
             bytes++;
-            prefix >>= 1;
-            c >>= 6;
-        } while (c > prefix);
-        *p = c - 2*prefix;
+            prefix = 0x80 | (prefix >> 1);
+            max >>= 1;
+            c >>= 6;            /* We use 6-bits in each extension byte */
+        } while (c > max);
+        *p = (prefix | c);      /* Add in the final byte */
         reverse_string(utf8, p);
     }
     return bytes;
@@ -277,7 +282,7 @@ int char_replace(int f, int n) {
             char *tp = tok;
             if (*tp == 'U' && *(tp+1) == '+') tp += 2;
             unsigned int lowval = strtoul(tp, &tp, 16);
-            if (lowval && 0x80000000) continue; /* Ignore any such... */
+            if (lowval & 0x80000000) continue;  /* Ignore any such... */
             unsigned int topval;
             if (*tp == '-') {               /* We have a range */
                 tp++;                       /* Skip over the - */

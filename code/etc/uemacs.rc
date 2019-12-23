@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 15 December 2019
+;                       Last Update: 23 December 2019
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -387,7 +387,7 @@ add-global-mode "exact"
 eos-chars ".!?"
 
 ; Replacement character users
-char-replace "U+0800 U+10000"
+char-replace U+0800
 
 ; Single UTF-16 surrogates
 char-replace "U+D800 U+DB7F-U+DB80 U+DBFF-U+DC00 U+DF80 U+DFFF"
