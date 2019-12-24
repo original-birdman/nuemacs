@@ -70,6 +70,7 @@ struct evlist evl[] = {
  { "regionlist_number", EVREGLNUM },    /* numberlist_region() indent */
  { "autodos",   EVAUTODOS },    /* Check for DOS on read-in? */
  { "showdir_tokskip", EVSDTKSKIP },     /* Token to skip in showdir */
+ { "uproc_opts",    EVUPROCOPTS },  /* Flags when processing &arg */
 };
 
 /* The tags for user functions - used in struct evlist */

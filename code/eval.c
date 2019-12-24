@@ -423,6 +423,8 @@ static char *gtfun(char *fname) {
         int status = getstring(arg1, result, NSTRING, CMPLT_NONE);
         discmd = distmp;
         if (status == ABORT) return errorm;
+        if (uproc_opts & UPROC_FIXUP) fixup_full(result);
+        uproc_opts = 0;     /* Always reset flags after use */
         return result;
     }
 
@@ -538,6 +540,7 @@ static char *gtenv(char *vname) {
     case EVREGLNUM:         return regionlist_number;
     case EVAUTODOS:         return ltos(autodos);
     case EVSDTKSKIP:        return ue_itoa(showdir_tokskip);
+    case EVUPROCOPTS:       return ue_itoa(uproc_opts);
     }
     exit(-12);              /* again, we should never get here */
 }
@@ -791,6 +794,9 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVSDTKSKIP:
             showdir_tokskip = atoi(value);
+            break;
+        case EVUPROCOPTS:
+            uproc_opts = strtol(value, NULL, 0);    /* Allow hex input */
             break;
         }
         break;

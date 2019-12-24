@@ -167,6 +167,8 @@
 /* GGR - Increase
  * NFILEN(80), NLINE(256) and NSTRING(128) to 513 each
  * NBUFN(16) to 32
+ * Also, since result[NSTRING] in eval.c is used to get pathnames
+ * NSTRING should be at least as large as NFILEN.
  */
 #define NBINDS  256             /* max # of bound keys          */
 #define NFILEN  513             /* # of bytes, file name        */
@@ -681,11 +683,15 @@ enum ev_val {
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
-    EVSDTKSKIP,
+    EVSDTKSKIP, EVUPROCOPTS,
 };
 struct evlist {
     char *var;
     enum ev_val tag;
 };
+
+/* Settings for userproc_opt */
+
+#define UPROC_FIXUP 0x0000001
 
 #endif

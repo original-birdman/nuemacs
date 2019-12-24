@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 23 December 2019
+;                       Last Update: 24 December 2019
 ;
 set $discmd FALSE
 write-message "[Setting up....]"
@@ -421,26 +421,21 @@ args-in-reexec ALL
  store-procedure showdir
 
 ; Get the full pathname...expected to be supplied internally by C-code
-; (&arg) and that wuill have been expanded to a full-pathname.
+; (&arg) and that will have been expanded to a full-pathname.
 ; If the user calls this "manually" (Esc-x execute-procedure showdir)
-; we fallback to the (original) macro code to srot it out.
+; and gets prompted we will *still* expand it.
 ;
+; We have to set the flags just before an call - they are reset on use.
+;
+    set $uproc_opts 0x01
     set %udir &arg "Dir: "
 
 ; We *expect* to be given a full pathname, so check that first
+; This should not fail!
 ;
     !if &not &seq "/" &lef %udir 1
-        !if &or &seq "" %udir &seq "." %udir
-            set %udir &env PWD
-        !endif
-        !if &seq "./" &lef %udir 2
-            set %rctmp &len %udir
-            set %rctmp &sub %rctmp 2
-            set %udir &cat &env PWD &mid %udir 2 %rctmp
-        !endif
-        !if &not &seq "/" &lef %udir 1
-            set %udir &cat &env PWD &cat "/" %udir
-        !endif
+        write-message &cat "Not an absolute path: " %udir
+        !return
     !endif
 
 ; shell-escape this so we can interpolate it into a command line

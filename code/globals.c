@@ -153,6 +153,7 @@ int hscroll = FALSE;
 int hjump = 1;
 int autodos = TRUE;     /* Default is to do the check */
 int showdir_tokskip = -1;
+int uproc_opts = 0;
 
 const char kbdmacro_buffer[] = "//kbd_macro";
 struct buffer *kbdmac_bp = NULL;
