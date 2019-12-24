@@ -243,10 +243,10 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
  */
 int showdir_handled(char *pname) {
     struct stat statbuf;
+    char exp_pname[NFILEN];
 
-/* Have to expand it - to allow for ~ usage */
+/* Have to expand it *now* to allow for ~ usage in dir-check */
 
-    char *exp_pname = Xmalloc(NFILEN);
     strcpy(exp_pname, pname);
     fixup_full(exp_pname);     /* Make absolute pathname */
     int status = stat(exp_pname, &statbuf);
@@ -269,7 +269,6 @@ int showdir_handled(char *pname) {
     else {
         status = FALSE;
     }
-    free(exp_pname);
     return status;
 }
 
