@@ -481,6 +481,33 @@ void fixup_fname(char *fn) {
             }
         }
     }
+
+/* Convert any multiple consecutive "/" to "/" and strip any
+ * trailing "/"...
+ * Change any "/./" entries to "/".
+ */
+    char *from, *to;
+    int prev_was_slash = 0;
+    int slashdot_state = 0;     /* 1 seen '/', 2 seen '.' */
+    for (from = fn, to = fn; *from; from++) {
+        if (prev_was_slash && (*from == '/')) continue;
+        if ((slashdot_state == 2) && (*from != '/')) slashdot_state = 0;
+        if (slashdot_state == 1) {
+            if (*from == '.') slashdot_state = 2;
+            else              slashdot_state = 0;
+        }
+        if (*from == '/') {
+            prev_was_slash = 1;
+            if (slashdot_state == 2) to -= 2;   /* Remove the ./ */
+            slashdot_state = 1;                 /* We have the / */
+        }
+        else prev_was_slash = 0;
+        *to++ = *from;
+    }
+    if (prev_was_slash) to--;
+    if (slashdot_state == 2) to -= 2;
+    *to = '\0';
+
     return;
 }
 
@@ -512,7 +539,7 @@ void fixup_full(char *fn) {
             strcpy(fn, fn_copy);
         }
     }
-    else fixup_fname(fn);
+    fixup_fname(fn);    /* For "/" handling ... */
     return;
 }
 #endif
