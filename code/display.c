@@ -1505,6 +1505,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
+    if (bytes_togo == 0) return;        /* Nothing else...clear line only */
     while (bytes_togo > 0) {
         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
         bytes_togo -= used;

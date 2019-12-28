@@ -1000,7 +1000,7 @@ loop:
     int real_hscroll;
     real_hscroll = hscroll;
     hscroll = FALSE;
-    curwp->w_flag |= WFMODE | WFEDIT;    /* Need to update the modeline... */
+    curwp->w_flag |= WFMODE;    /* Need to update the modeline... */
     mbupdate();                 /* Will set modeline to prompt... */
     hscroll = real_hscroll;
 
