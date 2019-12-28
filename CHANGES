@@ -3508,4 +3508,116 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.147
 
+========== GGR4.148
+
+input.c
+    Disable "standard" Esc<tab> and ^X<tab> actions in getstring()
+    minibuffer. Print "No match" on completion attempts which fail.
+
+bind.c
+buffer.c
+file.c
+window.c
+efunc.h
+    Add a windata_to_buffer() function to handle the 10 occurrences of
+    flush window data to buffer data on window closing.
+
+utf8.c
+etc/uemacs.rc
+    Correct an "&&" to be "&", which meant char-replace hasn't been
+    working properly!
+    Fix unicode_to_utf8() to work for 4-byte uf8 strings.
+    As a result, remove U+10000 from char-replace [etc/uemacs.rc]
+
+display.c
+utf8.c
+word.c
+utf8.h
+    Add an interlude to Julia utf8lib's utf8proc_charwidth() as it
+    incorrectly marks U+00a8 and U+00b4 as zero-width.
+    Could be extended if other corrections are needed.
+
+random.c
+    Increase the message buffer size from NPAT(128) to NSTRING(513).
+    You might wish (and I did so wish) to write a longish message to
+    stderr (2 write-message ...).
+
+main.c
+    Must take a copy of any startup filenames mentioned on the command
+    line, as their value may be edited *in-place* by fixup_fname().
+
+file.c
+fileio.c
+efunc.h
+etc/uemacs.rc
+    Add fixup_full(), which expands a leading "." (and calls
+    fixup_fname() otherwise). Needed as the showdir userproc expects to
+    have an absolute pathname. [fileio.c, efunc.h]
+    Changed the showdir userproc to first test it has an absolute
+    pathname, and only if not, try to work it out. [etc/uemacs.rc]
+    Take a copy of the file path and call fixup_full() before calling
+    showdir userproc. [file.c]
+
+eval.c
+    Initialize the values of user variables to NULL at startup.
+
+file.c
+    Use local variable for exp_pname rather than malloc/free one.
+
+fileio.c
+    Make fixup_full() always call fixup_fname().
+    Extend fixup_fname() to change all "/./" to "/".
+
+eval.c
+globals.c
+evar.h
+edef.h
+estruct.h
+etc/uemacs.rc
+    Add $uproc_opts system variable to allow macros to control &arg
+    handling [eval.c, globals.c, edef.h, estruct.h, evar.h]
+    Run fixup_full() if UPROC_FIXUP is set in uproc_opts [eval.c]
+    Remove showdir macro code to create an absolute path with a
+    $uproc_opts setting to get it done internally, but leave in a check
+    that it does have an absolute path [etc/uemacs.rc]
+
+fileio.c
+    Fixes to fixup_full().
+    Extend fixup_fname() "..". ".". "//" handling and let it handle
+    things after just prepending $PWD.
+
+estruct.h
+basic.c     bind.c      buffer.c    display.c   eval.c      exec.c
+file.c      input.c     isearch.c   line.c      main.c      random.c
+region.c    search.c    window.c    word.c
+    Put five items that switch between the window and buffer structs
+    into a struct locs, so that it can be copied in one go.
+    w_dotp, w_markp, w_dodo, w_marko, w_fcol -> w.* (same for b_*).
+
+bind.c
+buffer.c
+file.c
+window.c
+efunc.h
+    Replace the windata_to_buffer() function with inline copying of the
+    struct locs items.
+
+display.c
+input.c
+    If mlwrite_ap has been sent an empty format, return straight after
+    clearing the minibuffer line. Not doing this resulted in the
+    mlwrite("") at loop: in getstring() wiping out the start of the
+    prompt if you typed the same characters in the reply. [display.c]
+    Remove an unneeded WFEDIT setting left over from some earlier testing.
+    [input.c]
+
+buffer.c
+window.c
+    Use structure copies (struct locs) for 3 more instances.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.148
+
 ==========
