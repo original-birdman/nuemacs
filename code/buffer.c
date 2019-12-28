@@ -127,22 +127,14 @@ int swbuffer(struct buffer *bp, int macro_OK) {
     curwp->w_linep = bp->b_linep;   /* For macros, ignored. */
     curwp->w_flag |= WFMODE | WFFORCE | WFHARD;     /* Quite nasty. */
     if (bp->b_nwnd++ == 0) {        /* First use.           */
-        curwp->w.dotp = bp->b.dotp;
-        curwp->w.doto = bp->b.doto;
-        curwp->w.markp = bp->b.markp;
-        curwp->w.marko = bp->b.marko;
-        curwp->w.fcol = bp->b.fcol;
+        curwp->w = bp->b;
         cknewwindow();
         return TRUE;
     }
     wp = wheadp;                    /* Look for old.        */
     while (wp != NULL) {
         if (wp != curwp && wp->w_bufp == bp) {
-            curwp->w.dotp = wp->w.dotp;
-            curwp->w.doto = wp->w.doto;
-            curwp->w.markp = wp->w.markp;
-            curwp->w.marko = wp->w.marko;
-            curwp->w.fcol = wp->w.fcol;
+            curwp->w = wp->w;
             break;
         }
         wp = wp->w_wndp;

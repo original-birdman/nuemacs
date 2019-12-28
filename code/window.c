@@ -282,11 +282,7 @@ int splitwind(int f, int n) {
     wp = Xmalloc(sizeof(struct window));
     ++curbp->b_nwnd;                        /* Displayed twice.     */
     wp->w_bufp = curbp;
-    wp->w.dotp = curwp->w.dotp;
-    wp->w.doto = curwp->w.doto;
-    wp->w.markp = curwp->w.markp;
-    wp->w.marko = curwp->w.marko;
-    wp->w.fcol = curwp->w.fcol;
+    wp->w = curwp->w;
     wp->w_flag = 0;
     wp->w_force = 0;
 #if     COLOR
