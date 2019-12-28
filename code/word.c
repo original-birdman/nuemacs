@@ -43,12 +43,12 @@ int wrapword(int f, int n)
 
 /* Back up until we aren't in a word, make sure there's a break in the line */
     cnt = 0;
-    while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) != ' ')
+    while (((c = lgetc(curwp->w.dotp, curwp->w.doto)) != ' ')
          && (c != '\t')) {
         cnt++;
         if (back_grapheme(1) <= 0) return FALSE;
 /* If we make it to the beginning, start a new line */
-        if (curwp->w_doto == 0) {
+        if (curwp->w.doto == 0) {
             gotoeol(FALSE, 0);
             return lnewline();
         }
@@ -66,8 +66,8 @@ int wrapword(int f, int n)
     }
 
 /* Make sure the display is not horizontally scrolled */
-    if (curwp->w_fcol != 0) {
-        curwp->w_fcol = 0;
+    if (curwp->w.fcol != 0) {
+        curwp->w.fcol = 0;
         curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
     }
     return TRUE;
@@ -143,7 +143,7 @@ void ensure_case(int want_case) {
         return;
     }
 
-    int saved_doto = curwp->w_doto;     /* Save position */
+    int saved_doto = curwp->w.doto;     /* Save position */
     struct grapheme gc;
     int orig_utf8_len = lgetgrapheme(&gc, FALSE);     /* Doesn't move doto */
 /* We only look at the base character for casing.
@@ -174,13 +174,13 @@ void ensure_case(int want_case) {
  * in byte count
  */
         if ((new_utf8_len != orig_utf8_len) &&      /* Byte count changed */
-            (curwp->w_markp == curwp->w_dotp) &&    /* Same line... */
-            (curwp->w_marko > curwp->w_doto)) {     /* and beyond dot? */
-            curwp->w_markp += (new_utf8_len - orig_utf8_len);
+            (curwp->w.markp == curwp->w.dotp) &&    /* Same line... */
+            (curwp->w.marko > curwp->w.doto)) {     /* and beyond dot? */
+            curwp->w.markp += (new_utf8_len - orig_utf8_len);
         }
     }
     ldelete(orig_utf8_len, FALSE);
-    curwp->w_doto = saved_doto + doto_adj;          /* Restore positon */
+    curwp->w.doto = saved_doto + doto_adj;          /* Restore positon */
     lchange(WFHARD);
     return;
 }
@@ -285,8 +285,8 @@ int delfword(int f, int n) {
     thisflag |= CFKILL;     /* this command is a kill */
 
 /* Save the current cursor position */
-    dotp = curwp->w_dotp;
-    doto = curwp->w_doto;
+    dotp = curwp->w.dotp;
+    doto = curwp->w.doto;
 
 /* Figure out how many characters to give the axe */
     size = 0;
@@ -311,7 +311,7 @@ int delfword(int f, int n) {
         while (n--) {
 
 /* If we are at EOL; skip to the beginning of the next */
-            while (curwp->w_doto == llength(curwp->w_dotp)) {
+            while (curwp->w.doto == llength(curwp->w.dotp)) {
                 moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 ++size;     /* Will move one to next line */
@@ -335,8 +335,8 @@ int delfword(int f, int n) {
         }
     }
 /* Restore the original position and delete the words */
-    curwp->w_dotp = dotp;
-    curwp->w_doto = doto;
+    curwp->w.dotp = dotp;
+    curwp->w.doto = doto;
     return ldelete(size, TRUE);
 }
 
@@ -427,7 +427,7 @@ bckdel:
 int inword(void) {
     struct grapheme gc;
 
-    if (curwp->w_doto == llength(curwp->w_dotp))
+    if (curwp->w.doto == llength(curwp->w.dotp))
         return FALSE;
     (void)lgetgrapheme(&gc, FALSE);
 
@@ -487,12 +487,12 @@ int killpara(int f, int n) {
         gotoeop(FALSE, 1);
 
 /* Set the mark here */
-        curwp->w_markp = curwp->w_dotp;
-        curwp->w_marko = curwp->w_doto;
+        curwp->w.markp = curwp->w.dotp;
+        curwp->w.marko = curwp->w.doto;
 
 /* Go to the beginning of the paragraph */
         gotobop(FALSE, 1);
-        curwp->w_doto = 0;  /* force us to the beginning of line */
+        curwp->w.doto = 0;  /* force us to the beginning of line */
 
 /* And delete it */
         if ((status = killregion(FALSE, 1)) != TRUE) return status;
@@ -664,8 +664,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 /* Since mark might be within the current paragraph its status after
  * this is undefined, so we cn play with it.
  */
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = curwp->w_doto;
+    curwp->w.markp = curwp->w.dotp;
+    curwp->w.marko = curwp->w.doto;
     if (!gotoeop(FALSE, 1)) return FALSE;
     if (!getregion(&f_region)) return FALSE;
 
@@ -675,8 +675,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 
 /* Go to the start of the region */
 
-    curwp->w_dotp = f_region.r_linep;
-    curwp->w_doto = f_region.r_offset;
+    curwp->w.dotp = f_region.r_linep;
+    curwp->w.doto = f_region.r_offset;
 
 /* Initialize various info */
 
@@ -689,7 +689,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * line (plus 1, for luck...) in case there is no word-break in it.
  * So we allocate it dynamically.
  */
-    wbuf_ents = llength(curwp->w_dotp) + 1;
+    wbuf_ents = llength(curwp->w.dotp) + 1;
     wbuf = Xmalloc(MFACTOR*wbuf_ents);
     wordlen = wi = 0;
 
@@ -718,8 +718,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * Remember we are using unicode_t, while llength is char
  * Make sure we check the *next* line length
  */
-            if (llength(lforw(curwp->w_dotp)) >= wbuf_ents) {
-                wbuf_ents = llength(lforw(curwp->w_dotp)) + 1;
+            if (llength(lforw(curwp->w.dotp)) >= wbuf_ents) {
+                wbuf_ents = llength(lforw(curwp->w.dotp)) + 1;
                 wbuf = Xrealloc(wbuf, MFACTOR*wbuf_ents);
                 if (space_ind) {    /* We're padding */
                      space_ind =
@@ -778,7 +778,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
             if (pending_space) {
                 if (space_ind) {
 /* We need to save the doto location, not clength, to allow for unicode */
-                     space_ind[nspaces] = curwp->w_doto;
+                     space_ind[nspaces] = curwp->w.doto;
                      nspaces++;
                 }
             }
@@ -792,11 +792,11 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  *
  * Remember where we are on the line.
  */
-                int end_doto = curwp->w_doto;
+                int end_doto = curwp->w.doto;
                 gap = width - clength;  /* How much we need to add (in columns) */
                 while (gap > 0) {
                     if (rtol) for (int ns = nspaces-1; ns >= 0; ns--) {
-                        curwp->w_doto = space_ind[ns];
+                        curwp->w.doto = space_ind[ns];
                         linsert_byte(1, ' ');
                         end_doto++;     /* A space is one byte... */
                         rtol = 0;       /* So next pass goes other way */
@@ -807,7 +807,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
                     }
                     if (gap <= 0) break;
                     for (int ns = 0; ns < nspaces; ns++) {
-                        curwp->w_doto = space_ind[ns];
+                        curwp->w.doto = space_ind[ns];
                         linsert_byte(1, ' ');
                         end_doto++;     /* A space is one byte... */
                         rtol = 1;       /* So next pass goes other way */
@@ -819,7 +819,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
                 }
                 nspaces = 0;
 /* Fix up our location in the line to be where we were, plus added spaces */
-                curwp->w_doto = end_doto;
+                curwp->w.doto = end_doto;
             }
             lnewline();
             pending_space = 0;
@@ -839,14 +839,14 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 
 /* And add a last newline for the end of our new paragraph, unless at
  * end of last paragraph, in which case just got to last line */
-    if (lforw(curwp->w_dotp) != curbp->b_linep) lnewline();
+    if (lforw(curwp->w.dotp) != curbp->b_linep) lnewline();
     else gotoeob(FALSE, 1);
     free(wbuf);     /* Mustn't forget these... */
     if (space_ind) free(space_ind);
 
 /* Make sure the display is not horizontally scrolled */
-    if (curwp->w_fcol != 0) {
-        curwp->w_fcol = 0;
+    if (curwp->w.fcol != 0) {
+        curwp->w.fcol = 0;
         curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
     }
 
@@ -896,7 +896,7 @@ int justpara(int f, int n) {
     }
     if (n == 0) n = 1;
 
-/* Have to cater for tabs and multibyte chars...can't use w_doto */
+/* Have to cater for tabs and multibyte chars...can't use w.doto */
     int leftmarg = getccol(FALSE);
     if (leftmarg + 10 > fillcol) {
         mlwrite_one("Column too narrow");
@@ -909,7 +909,7 @@ int justpara(int f, int n) {
         gotoeol(FALSE, 1);          /* In case we are already at bop */
         gotobop(FALSE, 1);
         (void)whitedelete(1, 1);    /* Don't care whether there was any */
-        curwp->w_doto = 0;          /* Should be 0 anyway... */
+        curwp->w.doto = 0;          /* Should be 0 anyway... */
         for (int i = 0; i < leftmarg; i++) linsert_byte(1, ' ');
         status = filler(leftmarg, fillcol, &fp_ctl);
         if (status != TRUE) break;
@@ -964,8 +964,8 @@ static int region_listmaker(int f, int n) {
         togo = left;
         flp = lforw(flp);
     }
-    curwp->w_dotp = flp;                /* Fix up line and ... */
-    curwp->w_doto = togo;               /* ... offset for end-of-range */
+    curwp->w.dotp = flp;                /* Fix up line and ... */
+    curwp->w.doto = togo;               /* ... offset for end-of-range */
 
 /* We want to get to EOP, but if we are at the end of the last line
  * (which is a likely marking scenario for a region) we don't want to go
@@ -975,27 +975,27 @@ static int region_listmaker(int f, int n) {
  */
     backword(FALSE, 1);
     gotoeop(FALSE, 1);
-    struct line *eopline = curwp->w_dotp;
+    struct line *eopline = curwp->w.dotp;
 
 /* Now we go back to the beginning and advance by end of paragraphs
  * until we find the one we just found. This gives us the loop count.
  */
 
-    curwp->w_dotp = f_region.r_linep;
-    curwp->w_doto = f_region.r_offset;
+    curwp->w.dotp = f_region.r_linep;
+    curwp->w.doto = f_region.r_offset;
     int pc = 0;
     while(1) {
         pc++;
         gotoeop(FALSE, 1);
-        if (eopline == curwp->w_dotp) break;
+        if (eopline == curwp->w.dotp) break;
     }
 
 /* Back to the start and get to start of the paragraph.
  * To handle already being at the bop, or on an empty line, we
  * actually go to eop first.
  */
-    curwp->w_dotp = f_region.r_linep;
-    curwp->w_doto = f_region.r_offset;
+    curwp->w.dotp = f_region.r_linep;
+    curwp->w.doto = f_region.r_offset;
     gotoeop(FALSE, 1);              /* In case we are already at bop */
     gotobop(FALSE, 1);
 
@@ -1005,7 +1005,7 @@ static int region_listmaker(int f, int n) {
         (void)whitedelete(1, 1);    /* Don't care whether there was any */
         ix++;                       /* Insert the counter */
         int cc = snprintf(label, sizeof(label)-1, lbl_fmt, ix);
-        curwp->w_doto = 0;          /* Should be 0 anyway... */
+        curwp->w.doto = 0;          /* Should be 0 anyway... */
         linstr(label);
         status = filler(cc, fillcol, &fp_ctl);
 
@@ -1024,13 +1024,13 @@ static int region_listmaker(int f, int n) {
  * But note that this will *not* propagate any current paragraph counter!
  */
 
-    struct line *here_dotp = curwp->w_dotp;
-    int here_doto = curwp->w_doto;
+    struct line *here_dotp = curwp->w.dotp;
+    int here_doto = curwp->w.doto;
     forw_grapheme(1);
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = curwp->w_doto;
-    curwp->w_dotp = here_dotp;
-    curwp->w_doto = here_doto;
+    curwp->w.markp = curwp->w.dotp;
+    curwp->w.marko = curwp->w.doto;
+    curwp->w.dotp = here_dotp;
+    curwp->w.doto = here_doto;
 
     return status;
 }

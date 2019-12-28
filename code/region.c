@@ -37,8 +37,8 @@ int killregion(int f, int n) {
         if (save_to_kill_ring) kdelete();   /* command, so do magic */
     }
     thisflag |= CFKILL;     /* kill buffer stuff.   */
-    curwp->w_dotp = region.r_linep;
-    curwp->w_doto = region.r_offset;
+    curwp->w.dotp = region.r_linep;
+    curwp->w.doto = region.r_offset;
     return ldelete(region.r_size, save_to_kill_ring);
 }
 
@@ -104,12 +104,12 @@ int copyregion(int f, int n) {
  * than a function...
  */
 #define MarkDotFixup(amount) \
-    if ((curwp->w_markp == linep) && \
-        (curwp->w_marko == (b_offs + this_blen))) \
-          curwp->w_marko += amount; \
-    if ((curwp->w_dotp == linep) && \
-        (curwp->w_doto == (b_offs + this_blen))) \
-          curwp->w_doto += amount
+    if ((curwp->w.markp == linep) && \
+        (curwp->w.marko == (b_offs + this_blen))) \
+          curwp->w.marko += amount; \
+    if ((curwp->w.dotp == linep) && \
+        (curwp->w.doto == (b_offs + this_blen))) \
+          curwp->w.doto += amount
 
 static int casechange_region(int newcase) { /* The handling function */
     struct region region;
@@ -172,8 +172,8 @@ static int casechange_region(int newcase) { /* The handling function */
 /* If mark or dot were on this old line then we need to move them to
  * the new one
  */
-                if (curwp->w_markp == linep) curwp->w_markp = newl;
-                if (curwp->w_dotp == linep)  curwp->w_dotp = newl;
+                if (curwp->w.markp == linep) curwp->w.markp = newl;
+                if (curwp->w.dotp == linep)  curwp->w.dotp = newl;
                 free(linep);
                 linep = newl;
             }
@@ -215,33 +215,33 @@ int getregion(struct region *rp) {
     long fsize;
     long bsize;
 
-    if (curwp->w_markp == NULL) {
+    if (curwp->w.markp == NULL) {
         mlwrite_one("No mark set in this window");
         return FALSE;
     }
-    if (curwp->w_dotp == curwp->w_markp) {
-        rp->r_linep = curwp->w_dotp;
-        if (curwp->w_doto < curwp->w_marko) {
-            rp->r_offset = curwp->w_doto;
-            rp->r_size = (long) (curwp->w_marko - curwp->w_doto);
+    if (curwp->w.dotp == curwp->w.markp) {
+        rp->r_linep = curwp->w.dotp;
+        if (curwp->w.doto < curwp->w.marko) {
+            rp->r_offset = curwp->w.doto;
+            rp->r_size = (long) (curwp->w.marko - curwp->w.doto);
         }
         else {
-            rp->r_offset = curwp->w_marko;
-            rp->r_size = (long) (curwp->w_doto - curwp->w_marko);
+            rp->r_offset = curwp->w.marko;
+            rp->r_size = (long) (curwp->w.doto - curwp->w.marko);
         }
         return TRUE;
     }
-    blp = curwp->w_dotp;
-    bsize = (long) curwp->w_doto;
-    flp = curwp->w_dotp;
-    fsize = (long) (llength(flp) - curwp->w_doto + 1);
+    blp = curwp->w.dotp;
+    bsize = (long) curwp->w.doto;
+    flp = curwp->w.dotp;
+    fsize = (long) (llength(flp) - curwp->w.doto + 1);
     while (flp != curbp->b_linep || lback(blp) != curbp->b_linep) {
         if (flp != curbp->b_linep) {
             flp = lforw(flp);
-            if (flp == curwp->w_markp) {
-                rp->r_linep = curwp->w_dotp;
-                rp->r_offset = curwp->w_doto;
-                rp->r_size = fsize + curwp->w_marko;
+            if (flp == curwp->w.markp) {
+                rp->r_linep = curwp->w.dotp;
+                rp->r_offset = curwp->w.doto;
+                rp->r_size = fsize + curwp->w.marko;
                 return TRUE;
              }
              fsize += llength(flp) + 1;
@@ -249,10 +249,10 @@ int getregion(struct region *rp) {
          if (lback(blp) != curbp->b_linep) {
             blp = lback(blp);
             bsize += llength(blp) + 1;
-            if (blp == curwp->w_markp) {
+            if (blp == curwp->w.markp) {
                 rp->r_linep = blp;
-                rp->r_offset = curwp->w_marko;
-                rp->r_size = bsize - curwp->w_marko;
+                rp->r_offset = curwp->w.marko;
+                rp->r_size = bsize - curwp->w.marko;
                 return TRUE;
             }
         }
@@ -292,23 +292,23 @@ int narrow(int f, int n) {
  * it is not at the start of a line.
  */
     while (lp != bp->b_linep) {
-        if (lp == curwp->w_dotp) {          /* doto */
+        if (lp == curwp->w.dotp) {          /* doto */
             fix_up = 1;
             break;
         }
-        else if (lp == curwp->w_markp) {    /* mark */
+        else if (lp == curwp->w.markp) {    /* mark */
             fix_up = -1;
             break;
         }
         lp = lforw(lp);
     }
-    if ((fix_up == 1) && (curwp->w_marko > 0)) {
-        curwp->w_markp = lforw(curwp->w_markp);
-        curwp->w_marko = 0;
+    if ((fix_up == 1) && (curwp->w.marko > 0)) {
+        curwp->w.markp = lforw(curwp->w.markp);
+        curwp->w.marko = 0;
     }
-    else if ((fix_up == -1) && (curwp->w_doto > 0)) {
-        curwp->w_dotp = lforw(curwp->w_dotp);
-        curwp->w_doto = 0;
+    else if ((fix_up == -1) && (curwp->w.doto > 0)) {
+        curwp->w.dotp = lforw(curwp->w.dotp);
+        curwp->w.doto = 0;
     }
 
 /* Find the boundaries of the current region */
@@ -316,15 +316,15 @@ int narrow(int f, int n) {
         *curwp = orig_wp;       /* restore original struct */
         return(status);
     }
-    curwp->w_dotp = creg.r_linep;   /* only by full lines please! */
-    curwp->w_doto = 0;
+    curwp->w.dotp = creg.r_linep;   /* only by full lines please! */
+    curwp->w.doto = 0;
     creg.r_size += (long)creg.r_offset;
 
 /* Might no longer be possible for this to happen because we now move
  * to the start of next line after the later of mark/doto.
  * But leave it here just in case...
  */
-    if (creg.r_size <= (long)curwp->w_dotp->l_used) {
+    if (creg.r_size <= (long)curwp->w.dotp->l_used) {
         mlwrite_one("Must narrow at least 1 full line");
         *curwp = orig_wp;       /* restore original struct */
         return(FALSE);
@@ -344,11 +344,11 @@ int narrow(int f, int n) {
         creg.r_size -= (long)32000;
     }
     forw_grapheme((int)creg.r_size);
-    curwp->w_doto = 0;              /* only full lines! */
+    curwp->w.doto = 0;              /* only full lines! */
 
 /* Archive the bottom fragment */
-    if (bp->b_linep != curwp->w_dotp) {
-        bp->b_botline = curwp->w_dotp;
+    if (bp->b_linep != curwp->w.dotp) {
+        bp->b_botline = curwp->w.dotp;
         bp->b_botline->l_bp->l_fp = bp->b_linep;
         bp->b_linep->l_bp->l_fp = (struct line *)NULL;
         bp->b_linep->l_bp = bp->b_botline->l_bp;
@@ -359,10 +359,10 @@ int narrow(int f, int n) {
     while (wp) {
         if (wp->w_bufp == bp) {
             wp->w_linep = creg.r_linep;
-            wp->w_dotp = creg.r_linep;
-            wp->w_doto = 0;
-            wp->w_markp = creg.r_linep;
-            wp->w_marko = 0;
+            wp->w.dotp = creg.r_linep;
+            wp->w.doto = 0;
+            wp->w.markp = creg.r_linep;
+            wp->w.marko = 0;
             wp->w_flag |= (WFHARD|WFMODE);
         }
         wp = wp->w_wndp;

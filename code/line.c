@@ -58,26 +58,26 @@ void lfree(struct line *lp) {
     wp = wheadp;
     while (wp != NULL) {
         if (wp->w_linep == lp) wp->w_linep = lp->l_fp;
-        if (wp->w_dotp == lp) {
-            wp->w_dotp = lp->l_fp;
-            wp->w_doto = 0;
+        if (wp->w.dotp == lp) {
+            wp->w.dotp = lp->l_fp;
+            wp->w.doto = 0;
         }
-        if (wp->w_markp == lp) {
-            wp->w_markp = lp->l_fp;
-            wp->w_marko = 0;
+        if (wp->w.markp == lp) {
+            wp->w.markp = lp->l_fp;
+            wp->w.marko = 0;
         }
         wp = wp->w_wndp;
     }
     bp = bheadp;
     while (bp != NULL) {
         if (bp->b_nwnd == 0) {
-            if (bp->b_dotp == lp) {
-                bp->b_dotp = lp->l_fp;
-                bp->b_doto = 0;
+            if (bp->b.dotp == lp) {
+                bp->b.dotp = lp->l_fp;
+                bp->b.doto = 0;
             }
-            if (bp->b_markp == lp) {
-                bp->b_markp = lp->l_fp;
-                bp->b_marko = 0;
+            if (bp->b.markp == lp) {
+                bp->b.markp = lp->l_fp;
+                bp->b.marko = 0;
             }
         }
         bp = bp->b_bufp;
@@ -149,9 +149,9 @@ int linsert_byte(int n, unsigned char c) {
     if (curbp->b_mode & MDVIEW) /* don't allow this command if */
         return rdonly();        /* we are in read only mode    */
     lchange(WFEDIT);
-    lp1 = curwp->w_dotp;        /* Current line         */
+    lp1 = curwp->w.dotp;        /* Current line         */
     if (lp1 == curbp->b_linep) {/* At the end: special  */
-        if (curwp->w_doto != 0) {
+        if (curwp->w.doto != 0) {
             mlwrite_one("bug: linsert");
             return FALSE;
         }
@@ -163,11 +163,11 @@ int linsert_byte(int n, unsigned char c) {
         lp1->l_bp = lp2;
         lp2->l_bp = lp3;
         for (i = 0; i < n; ++i) lp2->l_text[i] = c;
-        curwp->w_dotp = lp2;
-        curwp->w_doto = n;
+        curwp->w.dotp = lp2;
+        curwp->w.doto = n;
         return TRUE;
     }
-    doto = curwp->w_doto;                   /* Save for later.      */
+    doto = curwp->w.doto;                   /* Save for later.      */
     if (lp1->l_used + n > lp1->l_size) {    /* Hard: reallocate     */
         if ((lp2 = lalloc(lp1->l_used + n)) == NULL) return FALSE;
         cp1 = &lp1->l_text[0];
@@ -193,13 +193,13 @@ int linsert_byte(int n, unsigned char c) {
     wp = wheadp;                    /* Update windows       */
     while (wp != NULL) {
         if (wp->w_linep == lp1) wp->w_linep = lp2;
-        if (wp->w_dotp == lp1) {
-            wp->w_dotp = lp2;
-            if (wp == curwp || wp->w_doto > doto) wp->w_doto += n;
+        if (wp->w.dotp == lp1) {
+            wp->w.dotp = lp2;
+            if (wp == curwp || wp->w.doto > doto) wp->w.doto += n;
         }
-        if (wp->w_markp == lp1) {
-            wp->w_markp = lp2;
-            if (wp->w_marko > doto) wp->w_marko += n;
+        if (wp->w.markp == lp1) {
+            wp->w.markp = lp2;
+            if (wp->w.marko > doto) wp->w.marko += n;
         }
         wp = wp->w_wndp;
     }
@@ -286,9 +286,9 @@ int linsert_uc(int n, unicode_t c) {
  * int c;       character to overwrite on current position
  */
 static int lowrite(unicode_t c) {
-    if (curwp->w_doto < curwp->w_dotp->l_used &&
-         (lgetc(curwp->w_dotp, curwp->w_doto) != '\t' ||
-         ((curwp->w_doto) & tabmask) == tabmask))
+    if (curwp->w.doto < curwp->w.dotp->l_used &&
+         (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
+         ((curwp->w.doto) & tabmask) == tabmask))
                 ldelgrapheme(1, FALSE);
     return linsert_uc(1, c);
 }
@@ -343,16 +343,16 @@ int lnewline(void) {
     if (force_newline) {
         force_newline = 0;          /* Reset the force */
     }
-    else if (curwp->w_dotp->l_used
-             && curwp->w_doto == curwp->w_dotp->l_used
-             && lforw(curwp->w_dotp) == curbp->b_linep) {
-        curwp->w_dotp = lforw(curwp->w_dotp);
-        curwp->w_doto = 0;
+    else if (curwp->w.dotp->l_used
+             && curwp->w.doto == curwp->w.dotp->l_used
+             && lforw(curwp->w.dotp) == curbp->b_linep) {
+        curwp->w.dotp = lforw(curwp->w.dotp);
+        curwp->w.doto = 0;
         return TRUE;
     }
 
-    lp1 = curwp->w_dotp;    /* Get the address and  */
-    doto = curwp->w_doto;   /* offset of "."        */
+    lp1 = curwp->w.dotp;    /* Get the address and  */
+    doto = curwp->w.doto;   /* offset of "."        */
     if ((lp2 = lalloc(doto)) == NULL)   /* New first half line      */
         return FALSE;
     cp1 = &lp1->l_text[0];  /* Shuffle text around  */
@@ -376,13 +376,13 @@ int lnewline(void) {
  */
      while (wp != NULL) {
         if (wp->w_linep == lp1)      wp->w_linep = lp2;
-        if (wp->w_dotp == lp1) {
-            if (wp->w_doto < doto)   wp->w_dotp = lp2;
-            else                     wp->w_doto -= doto;
+        if (wp->w.dotp == lp1) {
+            if (wp->w.doto < doto)   wp->w.dotp = lp2;
+            else                     wp->w.doto -= doto;
         }
-        if (wp->w_markp == lp1) {
-            if (wp->w_marko <= doto) wp->w_markp = lp2;
-            else                     wp->w_marko -= doto;
+        if (wp->w.markp == lp1) {
+            if (wp->w.marko <= doto) wp->w.markp = lp2;
+            else                     wp->w.marko -= doto;
         }
         wp = wp->w_wndp;
     }
@@ -393,37 +393,37 @@ int lnewline(void) {
  * Returns the number of bytes used up by the utf8 string.
  */
 int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
-    int len = llength(curwp->w_dotp);
+    int len = llength(curwp->w.dotp);
 
 /* Fudge in NL if at eol.
  * ldelgrapheme needs to know there is one char to step over
  * Also, return nothing if out of range(!).
  */
-    if (curwp->w_doto == len) {
+    if (curwp->w.doto == len) {
         gp->uc = 0x0a;
         gp->cdm = 0;
         gp->ex = NULL;
         return 1;
     }
-    if (curwp->w_doto >= len) {
+    if (curwp->w.doto >= len) {
         gp->uc = 0;
         gp->cdm = 0;
         gp->ex = NULL;
         return 0;
     }
-    char *buf = curwp->w_dotp->l_text;
-    int used = utf8_to_unicode(buf, curwp->w_doto, len, &(gp->uc));
+    char *buf = curwp->w.dotp->l_text;
+    int used = utf8_to_unicode(buf, curwp->w.doto, len, &(gp->uc));
     gp->cdm = 0;
     gp->ex = NULL;
     unicode_t uc;
-    int xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
+    int xtra = utf8_to_unicode(buf, curwp->w.doto+used, len, &uc);
     if (!zerowidth_type(uc)) {
         return used;
     }
     used += xtra;
     gp->cdm = uc;
     for (int xc = 0;;xc++) {
-        xtra = utf8_to_unicode(buf, curwp->w_doto+used, len, &uc);
+        xtra = utf8_to_unicode(buf, curwp->w.doto+used, len, &uc);
         if (!zerowidth_type(uc)) break;
         used += xtra;
         if (!utf8_len_only) {
@@ -473,7 +473,7 @@ static int ldelnewline(void) {
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
         return rdonly();            /* we are in read only mode     */
-    lp1 = curwp->w_dotp;
+    lp1 = curwp->w.dotp;
     lp2 = lp1->l_fp;
     if (lp2 == curbp->b_linep) {    /* At the buffer end.           */
         if (lp1->l_used == 0)       /* Blank line.                  */
@@ -487,13 +487,13 @@ static int ldelnewline(void) {
         wp = wheadp;
         while (wp != NULL) {
             if (wp->w_linep == lp2) wp->w_linep = lp1;
-            if (wp->w_dotp == lp2) {
-                wp->w_dotp = lp1;
-                wp->w_doto += lp1->l_used;
+            if (wp->w.dotp == lp2) {
+                wp->w.dotp = lp1;
+                wp->w.doto += lp1->l_used;
             }
-            if (wp->w_markp == lp2) {
-                wp->w_markp = lp1;
-                wp->w_marko += lp1->l_used;
+            if (wp->w.markp == lp2) {
+                wp->w.markp = lp1;
+                wp->w.marko += lp1->l_used;
             }
             wp = wp->w_wndp;
         }
@@ -516,17 +516,17 @@ static int ldelnewline(void) {
     wp = wheadp;
     while (wp != NULL) {
         if (wp->w_linep == lp1 || wp->w_linep == lp2) wp->w_linep = lp3;
-        if (wp->w_dotp == lp1)
-            wp->w_dotp = lp3;
-        else if (wp->w_dotp == lp2) {
-            wp->w_dotp = lp3;
-            wp->w_doto += lp1->l_used;
+        if (wp->w.dotp == lp1)
+            wp->w.dotp = lp3;
+        else if (wp->w.dotp == lp2) {
+            wp->w.dotp = lp3;
+            wp->w.doto += lp1->l_used;
         }
-        if (wp->w_markp == lp1)
-            wp->w_markp = lp3;
-        else if (wp->w_markp == lp2) {
-            wp->w_markp = lp3;
-            wp->w_marko += lp1->l_used;
+        if (wp->w.markp == lp1)
+            wp->w.markp = lp3;
+        else if (wp->w.markp == lp2) {
+            wp->w.markp = lp3;
+            wp->w.marko += lp1->l_used;
         }
         wp = wp->w_wndp;
     }
@@ -571,8 +571,8 @@ int ldelete(long n, int kflag) {
     if (curbp->b_mode & MDVIEW) /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
     while (n != 0) {
-        dotp = curwp->w_dotp;
-        doto = curwp->w_doto;
+        dotp = curwp->w.dotp;
+        doto = curwp->w.doto;
         if (dotp == curbp->b_linep)     /* Hit end of buffer.   */
             return FALSE;
         chunk = dotp->l_used - doto;    /* Size of chunk.       */
@@ -599,13 +599,13 @@ int ldelete(long n, int kflag) {
         dotp->l_used -= chunk;
         wp = wheadp;                    /* Fix windows          */
         while (wp != NULL) {
-            if (wp->w_dotp == dotp && wp->w_doto >= doto) {
-                wp->w_doto -= chunk;
-                if (wp->w_doto < doto) wp->w_doto = doto;
+            if (wp->w.dotp == dotp && wp->w.doto >= doto) {
+                wp->w.doto -= chunk;
+                if (wp->w.doto < doto) wp->w.doto = doto;
             }
-            if (wp->w_markp == dotp && wp->w_marko >= doto) {
-                wp->w_marko -= chunk;
-                if (wp->w_marko < doto) wp->w_marko = doto;
+            if (wp->w.markp == dotp && wp->w.marko >= doto) {
+                wp->w.marko -= chunk;
+                if (wp->w.marko < doto) wp->w.marko = doto;
             }
             wp = wp->w_wndp;
         }
@@ -626,7 +626,7 @@ char *getctext(void) {
     static char rline[NSTRING]; /* line to return */
 
 /* Find the contents of the current line and its length */
-    lp = curwp->w_dotp;
+    lp = curwp->w.dotp;
     sp = lp->l_text;
     size = lp->l_used;
     if (size >= NSTRING) size = NSTRING - 1;
@@ -648,7 +648,7 @@ int putctext(char *iline) {
     int status;
 
 /* Delete the current line */
-    curwp->w_doto = 0;      /* starting at the beginning of the line */
+    curwp->w.doto = 0;      /* starting at the beginning of the line */
     if ((status = killtext(TRUE, 1)) != TRUE) return status;
 
 /* Insert the new line */
@@ -804,8 +804,8 @@ int yank(int f, int n) {
  * This ensure that we have a valid region after any yank for any
  * re-kill or yank_replace().
  */
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = curwp->w_doto;
+    curwp->w.markp = curwp->w.dotp;
+    curwp->w.marko = curwp->w.doto;
 
 /* Make sure there is something to yank */
     if (kbufh[0] == NULL) {
@@ -824,7 +824,7 @@ int yank(int f, int n) {
  * happen if we are in a single-line buffer, when both point to the headp)
  * we set a flag to do a final reposition().
  */
-    int need_reposition = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
+    int need_reposition = (lforw(curwp->w.dotp) == lback(curwp->w.dotp));
 
 /* Handle the end of buffer. If we do nothing the mark will move with it
  * whereas we want it to stay after the last current character (any final
@@ -833,7 +833,7 @@ int yank(int f, int n) {
  * line from there, offset zero. (same code is in yankmb())
  */
     struct line *fixup_line = NULL;
-    if (curwp->w_dotp == curbp->b_linep && curwp->w_doto == 0)
+    if (curwp->w.dotp == curbp->b_linep && curwp->w.doto == 0)
          fixup_line = lback(curbp->b_linep);
 
 /* For each time.... */
@@ -859,8 +859,8 @@ int yank(int f, int n) {
 
 /* Do any fixup for the original mark being at end of buffer */
     if (fixup_line) {
-        curwp->w_markp = lforw(fixup_line);
-        curwp->w_marko = 0;
+        curwp->w.markp = lforw(fixup_line);
+        curwp->w.marko = 0;
     }
     thisflag |= CFYANK;         /* This is a yank */
     last_yank = NormalYank;     /* Save the type */
@@ -890,8 +890,8 @@ int yankmb(int f, int n) {
  * This ensure that we have a valid region after any yank for any
  * re-kill or yank_replace().
  */
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = curwp->w_doto;
+    curwp->w.markp = curwp->w.dotp;
+    curwp->w.marko = curwp->w.doto;
 
 /* Make sure there is something to yank */
     if (lastmb[0] && strlen(lastmb[0]) == 0) {
@@ -910,7 +910,7 @@ int yankmb(int f, int n) {
  * happen if we are in a single-line buffer, when both point to the headp)
  * we set a flag to do a final reposition().
  */
-    int need_reposition = (lforw(curwp->w_dotp) == lback(curwp->w_dotp));
+    int need_reposition = (lforw(curwp->w.dotp) == lback(curwp->w.dotp));
 
 /* Handle the end of buffer. If we do nothing the mark will move with it
  * whereas we want it to stay after the last current character (any final
@@ -919,7 +919,7 @@ int yankmb(int f, int n) {
  * line from there, offset zero. (same code is in yankmb())
  */
     struct line *fixup_line = NULL;
-    if (curwp->w_dotp == curbp->b_linep /* && curwp->w_doto == 0 */)
+    if (curwp->w.dotp == curbp->b_linep /* && curwp->w.doto == 0 */)
          fixup_line = lback(curbp->b_linep);
 
     while (n--) {
@@ -937,8 +937,8 @@ int yankmb(int f, int n) {
 
 /* Do any fixup for the original mark being at end of buffer */
     if (fixup_line) {
-        curwp->w_markp = lforw(fixup_line);
-        curwp->w_marko = 0;
+        curwp->w.markp = lforw(fixup_line);
+        curwp->w.marko = 0;
     }
     thisflag |= CFYANK;         /* This is a yank */
     last_yank = MiniBufferYank; /* Save the type */
@@ -974,8 +974,8 @@ int yank_replace(int f, int n) {
     if (do_kill) {              /* May not be killing */
         struct region region;
         if ((s = getregion(&region)) != TRUE) return s;
-        curwp->w_dotp = region.r_linep;
-        curwp->w_doto = region.r_offset;
+        curwp->w.dotp = region.r_linep;
+        curwp->w.doto = region.r_offset;
 /* Don't put killed text onto kill ring */
         if ((s = ldelete(region.r_size, FALSE)) != TRUE) return s;
     }

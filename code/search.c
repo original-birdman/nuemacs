@@ -888,8 +888,8 @@ int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end) {
 
 /* Setup local scan pointers to global ".". */
 
-    curline = curwp->w_dotp;
-    curoff = curwp->w_doto;
+    curline = curwp->w.dotp;
+    curoff = curwp->w.doto;
 
 /* Scan each character until we hit the head link record. */
 
@@ -906,12 +906,12 @@ int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end) {
         if (amatch(mcpatrn, direct, &curline, &curoff)) {
 /* A SUCCESSFUL MATCH!!! Reset the global "." pointers. */
             if (beg_or_end == PTEND) {      /* at end of string */
-                curwp->w_dotp = curline;
-                curwp->w_doto = curoff;
+                curwp->w.dotp = curline;
+                curwp->w.doto = curoff;
             }
             else {        /* at beginning of string */
-                curwp->w_dotp = matchline;
-                curwp->w_doto = matchoff;
+                curwp->w.dotp = matchline;
+                curwp->w.doto = matchoff;
             }
             curwp->w_flag |= WFMOVE;        /* flag that we've moved */
             return TRUE;
@@ -1020,8 +1020,8 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
 
 /* Set up local pointers to global ".". */
 
-    curline = curwp->w_dotp;
-    curoff = curwp->w_doto;
+    curline = curwp->w.dotp;
+    curoff = curwp->w.doto;
 
 /* Scan each character until we hit the head link record.
  * Get the character resolving newlines, offset by the pattern length,
@@ -1064,12 +1064,12 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
 
 /* A SUCCESSFUL MATCH!!! Reset the global "." pointers */
         if (beg_or_end == PTEND) {      /* at end of string */
-            curwp->w_dotp = scanline;
-            curwp->w_doto = scanoff;
+            curwp->w.dotp = scanline;
+            curwp->w.doto = scanoff;
         }
         else {                          /* at beginning of string */
-            curwp->w_dotp = matchline;
-            curwp->w_doto = matchoff;
+            curwp->w.dotp = matchline;
+            curwp->w.doto = matchoff;
         }
         curwp->w_flag |= WFMOVE;        /* Flag that we have moved.*/
         return TRUE;
@@ -1114,7 +1114,7 @@ static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
  * and searches from there.
  * Simpler to fudge the fix here....
  */
-        if (curwp->w_dotp == curbp->b_linep) {
+        if (curwp->w.dotp == curbp->b_linep) {
             status = FALSE;
             break;
         }
@@ -1448,8 +1448,8 @@ static int replaces(int kind, int f, int n) {
 /* Save original . position, init the number of matches and substitutions,
  * and scan through the file.
  */
-    origline = curwp->w_dotp;
-    origoff = curwp->w_doto;
+    origline = curwp->w.dotp;
+    origoff = curwp->w.doto;
     numsub = 0;
     nummatch = 0;
 
@@ -1469,7 +1469,7 @@ static int replaces(int kind, int f, int n) {
 
 /* Check if we are on the last line. */
 
-        nlrepl = (lforw(curwp->w_dotp) == curwp->w_bufp->b_linep);
+        nlrepl = (lforw(curwp->w.dotp) == curwp->w_bufp->b_linep);
 
 /* Check for query. */
 
@@ -1504,29 +1504,29 @@ qprompt:
                     TTbeep();
                     goto pprompt;
                 }
-                curwp->w_dotp = lastline;
-                curwp->w_doto = lastoff;
+                curwp->w.dotp = lastline;
+                curwp->w.doto = lastoff;
                 lastline = NULL;
                 lastoff = 0;
 
 /* Delete the new string. */
                 back_grapheme(rlength);
-                matchline = curwp->w_dotp;
-                matchoff = curwp->w_doto;
+                matchline = curwp->w.dotp;
+                matchoff = curwp->w.doto;
                 status = delins(rlength, patmatch, FALSE);
                 if (status != TRUE) return status;
 
 /* Record one less substitution, Backup, save our place, and  reprompt. */
                 --numsub;
                 back_grapheme(mlenold);
-                matchline = curwp->w_dotp;
-                matchoff = curwp->w_doto;
+                matchline = curwp->w.dotp;
+                matchoff = curwp->w.doto;
                 goto pprompt;
 
             case '.':       /* abort! and return */
 /* Restore old position */
-                curwp->w_dotp = origline;
-                curwp->w_doto = origoff;
+                curwp->w.dotp = origline;
+                curwp->w.doto = origoff;
                 curwp->w_flag |= WFMOVE;
                 /* Falls through */
 
@@ -1556,8 +1556,8 @@ qprompt:
 
 /* Save our position, since we may undo this. */
         if (kind) {
-            lastline = curwp->w_dotp;
-            lastoff = curwp->w_doto;
+            lastline = curwp->w.dotp;
+            lastoff = curwp->w.doto;
         }
 
         numsub++;       /* increment # of substitutions */

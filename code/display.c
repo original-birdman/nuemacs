@@ -540,7 +540,7 @@ static int reframe(struct window *wp) {
         }
         for (; i <= (int) (wp->w_ntrows); i++) {
 /* If the line is in the window, no reframe */
-            if (lp == wp->w_dotp) {
+            if (lp == wp->w.dotp) {
 /* If not _quite_ in, we'll reframe gently */
                 if (i < 0 || i == wp->w_ntrows) {
 /* If the terminal can't help, then we're simply outside */
@@ -582,7 +582,7 @@ static int reframe(struct window *wp) {
         i = wp->w_ntrows / 2;
 
 /* Backup to new line at top of window */
-    lp = wp->w_dotp;
+    lp = wp->w.dotp;
     while (i != 0 && lback(lp) != wp->w_bufp->b_linep) {
         --i;
         lp = lback(lp);
@@ -629,7 +629,7 @@ static void updone(struct window *wp) {
 /* Search down the line we want */
     lp = wp->w_linep;
     sline = wp->w_toprow;
-    while (lp != wp->w_dotp) {
+    while (lp != wp->w.dotp) {
         ++sline;
         lp = lforw(lp);
     }
@@ -637,7 +637,7 @@ static void updone(struct window *wp) {
 /* And update the virtual line */
     vscreen[sline]->v_flag |= VFCHG;
     vscreen[sline]->v_flag &= ~VFREQ;
-    taboff = wp->w_fcol;
+    taboff = wp->w.fcol;
     vtmove(sline, -taboff);
     show_line(lp);
 #if     COLOR
@@ -661,7 +661,7 @@ static void updall(struct window *wp) {
 /* Search down the lines, updating them */
     lp = wp->w_linep;
     sline = wp->w_toprow;
-    taboff = wp->w_fcol;
+    taboff = wp->w.fcol;
     while (sline < wp->w_toprow + wp->w_ntrows) {
 
 /* And update the virtual line */
@@ -699,7 +699,7 @@ void updpos(void) {
 /* Find the current row */
     lp = curwp->w_linep;
     currow = curwp->w_toprow;
-    while (lp != curwp->w_dotp) {
+    while (lp != curwp->w.dotp) {
         ++currow;
         lp = lforw(lp);
     }
@@ -707,25 +707,25 @@ void updpos(void) {
 /* Find the current column */
     curcol = 0;
     i = 0;
-    while (i < curwp->w_doto) {
+    while (i < curwp->w.doto) {
         unicode_t c;
-        int bytes = utf8_to_unicode(lp->l_text, i, curwp->w_doto, &c);
+        int bytes = utf8_to_unicode(lp->l_text, i, curwp->w.doto, &c);
         i += bytes;
         update_screenpos_for_char(curcol, c);
     }
 
 /* Adjust by the current first column position */
 
-    curcol -= curwp->w_fcol;
+    curcol -= curwp->w.fcol;
 
 /* Make sure it is not off the left side of the screen */
     while (curcol < 0) {
-        if (curwp->w_fcol >= hjump) {
+        if (curwp->w.fcol >= hjump) {
             curcol += hjump;
-            curwp->w_fcol -= hjump;
+            curwp->w.fcol -= hjump;
         } else {
-            curcol += curwp->w_fcol;
-            curwp->w_fcol = 0;
+            curcol += curwp->w.fcol;
+            curwp->w.fcol = 0;
         }
         curwp->w_flag |= WFHARD | WFMODE;
     }
@@ -734,7 +734,7 @@ void updpos(void) {
     if (hscroll) {
         while (curcol >= term.t_ncol - 1) {
             curcol -= hjump;
-            curwp->w_fcol += hjump;
+            curwp->w.fcol += hjump;
             curwp->w_flag |= WFHARD | WFMODE;
         }
     } else {
@@ -775,9 +775,9 @@ void upddex(void) {
         while ((i < wp->w_toprow + wp->w_ntrows) &&
              (lp != wp->w_bufp->b_linep)) {
             if (vscreen[i]->v_flag & VFEXT) {
-                if ((wp != curwp) || (lp != wp->w_dotp) ||
+                if ((wp != curwp) || (lp != wp->w.dotp) ||
                      (curcol < term.t_ncol - 1)) {
-                    taboff = wp->w_fcol;
+                    taboff = wp->w.fcol;
                     vtmove(i, -taboff);
                     show_line(lp);
                     vteeol();
@@ -990,13 +990,13 @@ static void updext(void) {
 /* Calculate what column the real cursor will end up in */
     rcursor = ((curcol - term.t_ncol) % term.t_scrsiz) + term.t_margin;
     lbound = curcol - rcursor + 1;
-    taboff = lbound + curwp->w_fcol;
+    taboff = lbound + curwp->w.fcol;
 
 /* Scan through the line outputting characters to the virtual screen
  * once we reach the left edge.
  */
     vtmove(currow, -taboff);    /* start scanning offscreen */
-    lp = curwp->w_dotp;         /* line to output */
+    lp = curwp->w.dotp;         /* line to output */
     show_line(lp);
 
 /* Truncate the virtual line, restore tab offset */
@@ -1314,8 +1314,8 @@ static void modeline(struct window *wp) {
     strcpy(tline, " " MLpre);
 
 /* Are we horizontally scrolled? */
-    if (wp->w_fcol > 0) {
-        strcat(tline, ue_itoa(wp->w_fcol));
+    if (wp->w.fcol > 0) {
+        strcat(tline, ue_itoa(wp->w.fcol));
         strcat(tline, "> ");
     }
 
@@ -1394,7 +1394,7 @@ static void modeline(struct window *wp) {
                 ++numlines;
                 lp = lforw(lp);
             }
-            if (wp->w_dotp == bp->b_linep) {
+            if (wp->w.dotp == bp->b_linep) {
                 msg = " Bot ";
             } else {
                 ratio = 0;

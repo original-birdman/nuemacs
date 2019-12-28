@@ -568,10 +568,10 @@ static int buildlist(int type, char *mstring) {
     wp->w_bufp = bp;
     wp->w_linep = bp->b_linep;
     wp->w_flag = WFHARD | WFFORCE;
-    wp->w_dotp = bp->b_dotp;
-    wp->w_doto = bp->b_doto;
-    wp->w_markp = NULL;
-    wp->w_marko = 0;
+    wp->w.dotp = bp->b.dotp;
+    wp->w.doto = bp->b.doto;
+    wp->w.markp = NULL;
+    wp->w.marko = 0;
 
     for (int ni = nxti_name_info(-1); ni >= 0; ni = nxti_name_info(ni)) {
 
@@ -646,8 +646,8 @@ static int buildlist(int type, char *mstring) {
 
     curwp->w_bufp->b_mode |= MDVIEW;    /* put this buffer view mode */
     curbp->b_flag &= ~BFCHG;            /* don't flag this as a change */
-    wp->w_dotp = lforw(bp->b_linep);    /* back to the beginning */
-    wp->w_doto = 0;
+    wp->w.dotp = lforw(bp->b_linep);    /* back to the beginning */
+    wp->w.doto = 0;
     wp = wheadp;                        /* and update ALL mode lines */
     while (wp != NULL) {
         wp->w_flag |= WFMODE;

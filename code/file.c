@@ -105,16 +105,16 @@ static int ifile(char *fname) {
     if (s != TRUE) return s;
 
 /* Back up a line and save the mark here */
-    curwp->w_dotp = lback(curwp->w_dotp);
-    curwp->w_doto = 0;
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = 0;
+    curwp->w.dotp = lback(curwp->w.dotp);
+    curwp->w.doto = 0;
+    curwp->w.markp = curwp->w.dotp;
+    curwp->w.marko = 0;
 
     nline = 0;
     int dos_include = 0;
     while ((s = ffgetline()) == FIOSUC) {
         lp1 = fline;            /* Allocate by ffgetline..*/
-        lp0 = curwp->w_dotp;    /* line previous to insert */
+        lp0 = curwp->w.dotp;    /* line previous to insert */
         lp2 = lp0->l_fp;        /* line after insert */
 
 /* Re-link new line between lp0 and lp2 */
@@ -124,7 +124,7 @@ static int ifile(char *fname) {
         lp1->l_fp = lp2;
 
 /* And advance and write out the current line */
-        curwp->w_dotp = lp1;
+        curwp->w.dotp = lp1;
         ++nline;
 
 /* Check for a DOS line ending on line 1 */
@@ -139,7 +139,7 @@ static int ifile(char *fname) {
 
     }
     ffclose();              /* Ignore errors. */
-    curwp->w_markp = lforw(curwp->w_markp);
+    curwp->w.markp = lforw(curwp->w.markp);
     strcpy(readin_mesg, MLpre);
     if (s == FIOERR) {
         strcat(readin_mesg, "I/O ERROR, ");
@@ -157,7 +157,7 @@ static int ifile(char *fname) {
 
 out:
 /* Advance to the next line and mark the window for changes */
-    curwp->w_dotp = lforw(curwp->w_dotp);
+    curwp->w.dotp = lforw(curwp->w.dotp);
     curwp->w_flag |= WFHARD | WFMODE;
 
 /* Copy window parameters back to the buffer structure */
@@ -295,7 +295,7 @@ int getfile(char *fname, int lockfl, int check_dir) {
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
             if (!swbuffer(bp, 0)) return FALSE;
-            lp = curwp->w_dotp;
+            lp = curwp->w.dotp;
             i = curwp->w_ntrows / 2;
             while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
             curwp->w_linep = lp;
@@ -468,10 +468,10 @@ out:
     for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if (wp->w_bufp == curbp) {
             wp->w_linep = lforw(curbp->b_linep);
-            wp->w_dotp = lforw(curbp->b_linep);
-            wp->w_doto = 0;
-            wp->w_markp = NULL;
-            wp->w_marko = 0;
+            wp->w.dotp = lforw(curbp->b_linep);
+            wp->w.doto = 0;
+            wp->w.markp = NULL;
+            wp->w.marko = 0;
             wp->w_flag |= WFMODE | WFHARD;
         }
     }

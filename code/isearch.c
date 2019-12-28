@@ -52,8 +52,8 @@ int risearch(int f, int n) {
 
 /* Remember the initial . on entry: */
 
-    curline = curwp->w_dotp;    /* Save the current line pointer  */
-    curoff = curwp->w_doto;     /* Save the current offset        */
+    curline = curwp->w.dotp;    /* Save the current line pointer  */
+    curoff = curwp->w.doto;     /* Save the current offset        */
 
 /* Make sure the search doesn't match where we already are:   */
 
@@ -61,8 +61,8 @@ int risearch(int f, int n) {
 
     if (!(isearch(f, -n))) {        /* Call ISearch backwards */
                                     /* If error in search:    */
-        curwp->w_dotp = curline;    /* Reset line pointer and */
-        curwp->w_doto = curoff;     /* offset to orig value   */
+        curwp->w.dotp = curline;    /* Reset line pointer and */
+        curwp->w.doto = curoff;     /* offset to orig value   */
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
         mlwrite_one(MLbkt("search failed")); /* Say we died */
@@ -81,15 +81,15 @@ int fisearch(int f, int n) {
 
 /* Remember the initial . on entry: */
 
-    curline = curwp->w_dotp;        /* Save the current line pointer */
-    curoff = curwp->w_doto;         /* Save the current offset       */
+    curline = curwp->w.dotp;        /* Save the current line pointer */
+    curoff = curwp->w.doto;         /* Save the current offset       */
 
 /* Do the search */
 
     if (!(isearch(f, n))) {         /* Call ISearch forwards  */
                                     /* If error in search:    */
-        curwp->w_dotp = curline;    /* Reset line pointer and */
-        curwp->w_doto = curoff;     /* offset to orig value   */
+        curwp->w.dotp = curline;    /* Reset line pointer and */
+        curwp->w.doto = curoff;     /* offset to orig value   */
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
         mlwrite_one(MLbkt("search failed"));   /* Say we died */
@@ -118,8 +118,8 @@ static int match_pat(char *patrn) {
 
 /* Setup the local scan pointer to current "." */
 
-    curline = curwp->w_dotp;    /* Get the current line structure  */
-    curoff = curwp->w_doto;     /* Get the offset within that line */
+    curline = curwp->w.dotp;    /* Get the current line structure  */
+    curoff = curwp->w.doto;     /* Get the offset within that line */
 
 /* Top of per character compare loop: */
 
@@ -161,8 +161,8 @@ static int checknext(char chr, char *patrn, int dir) {
 
 /* Setup the local scan pointer to current "." */
 
-    curline = curwp->w_dotp;    /* Get the current line structure     */
-    curoff = curwp->w_doto;     /* Get the offset within that line    */
+    curline = curwp->w.dotp;    /* Get the current line structure     */
+    curoff = curwp->w.doto;     /* Get the offset within that line    */
 
     if (dir > 0) {              /* If searching forward               */
         if (curoff == llength(curline)) {   /* If at end of line  */
@@ -178,8 +178,8 @@ static int checknext(char chr, char *patrn, int dir) {
  * that we've moved
  */
         if ((status = eq(buffchar, chr)) != 0) {
-            curwp->w_dotp = curline;
-            curwp->w_doto = curoff;
+            curwp->w.dotp = curline;
+            curwp->w.doto = curoff;
             curwp->w_flag |= WFMOVE;
         }
         return status;              /* And return the status       */
@@ -297,8 +297,8 @@ int isearch(int f, int n) {
     cmd_offset = 0;         /* Start at the beginning of the buff */
     cmd_buff[0] = '\0';     /* Init the command buffer            */
     strncpy(pat_save, pat, NPAT);   /* Save the old pattern string   */
-    curline = curwp->w_dotp;        /* Save the current line pointer */
-    curoff = curwp->w_doto; /* Save the current offset            */
+    curline = curwp->w.dotp;        /* Save the current line pointer */
+    curoff = curwp->w.doto; /* Save the current offset            */
     init_direction = n;     /* Save the initial search direction  */
 
 /* This is a good place to start a re-execution: */
@@ -371,8 +371,8 @@ int isearch(int f, int n) {
                 return TRUE;        /* No, just exit        */
             --cmd_offset;           /* Back up over Rubout  */
             cmd_buff[--cmd_offset] = '\0';  /* Yes, delete last char */
-            curwp->w_dotp = curline;        /* Reset the line pointer */
-            curwp->w_doto = curoff; /*  and the offset       */
+            curwp->w.dotp = curline;        /* Reset the line pointer */
+            curwp->w.doto = curoff; /*  and the offset       */
             n = init_direction;     /* Reset search direction */
             strcpy(pat, pat_save);  /* Restore old search str */
             cmd_reexecute = 0;      /* Start the whole mess over  */

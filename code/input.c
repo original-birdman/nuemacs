@@ -873,7 +873,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 #endif
         mb_winp->w_toprow = term.t_nrow;
         mb_winp->w_ntrows = 1;
-        mb_winp->w_fcol = 0;
+        mb_winp->w.fcol = 0;
         mb_winp->w_force = 0;
         mb_winp->w_flag = WFMODE | WFHARD;    /* Full.                */
     }
@@ -990,10 +990,10 @@ loop:
 /* Prepend the prompt to the beginning of the visible line (i.e.
  * ahead of any preload.
  */
-    savdoto = curwp->w_doto;
-    curwp->w_doto = 0;
+    savdoto = curwp->w.doto;
+    curwp->w.doto = 0;
     linstr(procopy);
-    curwp->w_doto = savdoto + prolen;
+    curwp->w.doto = savdoto + prolen;
 
 /* Fix up the screen - we do NOT want horizontal scrolling in the mb */
 
@@ -1007,9 +1007,9 @@ loop:
 /* Remove the prompt from the beginning of the buffer for the visible line.
  * This is so that the buffer contents at the end contain just the response.
  */
-    curwp->w_doto = 0;
+    curwp->w.doto = 0;
     ldelete((long)prolen, FALSE);
-    curwp->w_doto = savdoto;
+    curwp->w.doto = savdoto;
 
 /* Get the next command (character) from the keyboard */
 #ifdef SIGWINCH
@@ -1040,7 +1040,7 @@ loop:
             rotate_sstr(carg->n);
             goto loop;
         }
-        lp = curwp->w_dotp;
+        lp = curwp->w.dotp;
         sp = lp->l_text;
 /* NSTRING-1, as we need to add a trailing NUL */
         if (lp->l_used < NSTRING-1) {
@@ -1066,8 +1066,8 @@ loop:
                 expanded = 0;
             }
             if (expanded) {
-                savdoto = curwp->w_doto;
-                curwp->w_doto = 0;
+                savdoto = curwp->w.doto;
+                curwp->w.doto = 0;
                 ldelete((long) lp->l_used, FALSE);
                 linstr(tstring);
                 if (choices[0]) {

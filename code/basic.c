@@ -26,9 +26,9 @@
  */
 static int curline_empty(void) {
     char c;
-    int end = llength(curwp->w_dotp);
+    int end = llength(curwp->w.dotp);
     for (int ci = 0; ci < end; ci++) {
-        c = lgetc(curwp->w_dotp, ci);
+        c = lgetc(curwp->w.dotp, ci);
         if (c != ' ' || c != '\t') return FALSE;
     }
     return TRUE;
@@ -59,7 +59,7 @@ static int getgoal(struct line *dlp) {
  */
 int gotobol(int f, int n) {
     UNUSED(f); UNUSED(n);
-    curwp->w_doto = 0;
+    curwp->w.doto = 0;
     return TRUE;
 }
 
@@ -84,10 +84,10 @@ int back_grapheme(int n) {
     if (n < 0) return forw_grapheme(-n);
     int moved = 0;
     while (n--) {
-        if (curwp->w_doto == 0) {
-            if ((lp = lback(curwp->w_dotp)) == curbp->b_linep) return -moved;
-            curwp->w_dotp = lp;
-            curwp->w_doto = llength(lp);
+        if (curwp->w.doto == 0) {
+            if ((lp = lback(curwp->w.dotp)) == curbp->b_linep) return -moved;
+            curwp->w.dotp = lp;
+            curwp->w.doto = llength(lp);
             curwp->w_flag |= WFMOVE;
             moved++;
         }
@@ -95,10 +95,10 @@ int back_grapheme(int n) {
 /* GGR - We must cater for utf8 characters in the same way
  * as the rest of the utf8 code does.
  */
-            int saved_doto = curwp->w_doto;
-            curwp->w_doto =
-                 prev_utf8_offset(curwp->w_dotp->l_text, curwp->w_doto, TRUE);
-            moved += saved_doto - curwp->w_doto;
+            int saved_doto = curwp->w.doto;
+            curwp->w.doto =
+                 prev_utf8_offset(curwp->w.dotp->l_text, curwp->w.doto, TRUE);
+            moved += saved_doto - curwp->w.doto;
         }
     }
     return moved;
@@ -114,7 +114,7 @@ int backchar(int f, int n) {
  */
 int gotoeol(int f, int n) {
     UNUSED(f); UNUSED(n);
-    curwp->w_doto = llength(curwp->w_dotp);
+    curwp->w.doto = llength(curwp->w.dotp);
     return TRUE;
 }
 
@@ -136,11 +136,11 @@ int forw_grapheme(int n) {
     if (n < 0) return back_grapheme(-n);
     int moved = 0;
     while (n--) {
-        int len = llength(curwp->w_dotp);
-        if (curwp->w_doto == len) {
-            if (curwp->w_dotp == curbp->b_linep) return -moved;
-            curwp->w_dotp = lforw(curwp->w_dotp);
-            curwp->w_doto = 0;
+        int len = llength(curwp->w.dotp);
+        if (curwp->w.doto == len) {
+            if (curwp->w.dotp == curbp->b_linep) return -moved;
+            curwp->w.dotp = lforw(curwp->w.dotp);
+            curwp->w.doto = 0;
             curwp->w_flag |= WFMOVE;
             moved++;
         }
@@ -148,11 +148,11 @@ int forw_grapheme(int n) {
 /* GGR - We must cater for utf8 characters in the same way
  * as the rest of the utf8 code does.
  */
-            int saved_doto = curwp->w_doto;
-            curwp->w_doto =
-                 next_utf8_offset(curwp->w_dotp->l_text, curwp->w_doto,
-                                  llength(curwp->w_dotp), TRUE);
-            moved += curwp->w_doto - saved_doto;
+            int saved_doto = curwp->w.doto;
+            curwp->w.doto =
+                 next_utf8_offset(curwp->w.dotp->l_text, curwp->w.doto,
+                                  llength(curwp->w.dotp), TRUE);
+            moved += curwp->w.doto - saved_doto;
         }
     }
     return moved;
@@ -201,8 +201,8 @@ int gotoline(int f, int n) {
  */
 int gotobob(int f, int n) {
     UNUSED(f); UNUSED(n);
-    curwp->w_dotp = lforw(curbp->b_linep);
-    curwp->w_doto = 0;
+    curwp->w.dotp = lforw(curbp->b_linep);
+    curwp->w.doto = 0;
     curwp->w_flag |= WFHARD;
     return TRUE;
 }
@@ -213,8 +213,8 @@ int gotobob(int f, int n) {
  */
 int gotoeob(int f, int n) {
     UNUSED(f); UNUSED(n);
-    curwp->w_dotp = curbp->b_linep;
-    curwp->w_doto = 0;
+    curwp->w.dotp = curbp->b_linep;
+    curwp->w.doto = 0;
     curwp->w_flag |= WFHARD;
     return TRUE;
 }
@@ -231,7 +231,7 @@ int forwline(int f, int n) {
 
 /* If we are on the last line as we start....fail the command */
 
-    if (curwp->w_dotp == curbp->b_linep) return FALSE;
+    if (curwp->w.dotp == curbp->b_linep) return FALSE;
 
 /* If the last command was not a line move, reset the goal column */
 
@@ -243,13 +243,13 @@ int forwline(int f, int n) {
 
 /* And move the point down */
 
-    dlp = curwp->w_dotp;
+    dlp = curwp->w.dotp;
     while (n-- && dlp != curbp->b_linep) dlp = lforw(dlp);
 
 /* Resetting the current position */
 
-    curwp->w_dotp = dlp;
-    curwp->w_doto = getgoal(dlp);
+    curwp->w.dotp = dlp;
+    curwp->w.doto = getgoal(dlp);
     curwp->w_flag |= WFMOVE;
     return TRUE;
 }
@@ -266,7 +266,7 @@ int backline(int f, int n) {
 
 /* If we are on the first line as we start....fail the command */
 
-    if (lback(curwp->w_dotp) == curbp->b_linep) return FALSE;
+    if (lback(curwp->w.dotp) == curbp->b_linep) return FALSE;
 
 /* If the last command was not a line move, reset the goal column */
 
@@ -278,13 +278,13 @@ int backline(int f, int n) {
 
 /* And move the point up */
 
-    dlp = curwp->w_dotp;
+    dlp = curwp->w.dotp;
     while (n-- && lback(dlp) != curbp->b_linep) dlp = lback(dlp);
 
 /* Resetting the current position */
 
-    curwp->w_dotp = dlp;
-    curwp->w_doto = getgoal(dlp);
+    curwp->w.dotp = dlp;
+    curwp->w.doto = getgoal(dlp);
     curwp->w_flag |= WFMOVE;
     return TRUE;
 }
@@ -323,12 +323,12 @@ int gotobop(int f, int n) {
 /* First scan back until we are in a word... */
         suc = back_grapheme(1);
         while ((suc > 0) && at_whitespace()) suc = back_grapheme(1);
-        curwp->w_doto = 0;          /* ...and go to the B-O-Line */
+        curwp->w.doto = 0;          /* ...and go to the B-O-Line */
 
 /* Then scan back until we hit an empty line or B-O-buffer... */
-        while (lback(curwp->w_dotp) != curbp->b_linep) {
+        while (lback(curwp->w.dotp) != curbp->b_linep) {
             if (!curline_empty())
-                curwp->w_dotp = lback(curwp->w_dotp);
+                curwp->w.dotp = lback(curwp->w.dotp);
             else
                 break;
         }
@@ -356,14 +356,14 @@ int gotoeop(int f, int n) {
 /* First scan forward until we are in/looking at a word... */
         suc = 1;
         while ((suc > 0) && at_whitespace()) suc = forw_grapheme(1);
-        curwp->w_doto = 0;          /* ...and go to the B-O-Line */
+        curwp->w.doto = 0;          /* ...and go to the B-O-Line */
         if (suc)                    /* of next line if not at EOF */
-            curwp->w_dotp = lforw(curwp->w_dotp);
+            curwp->w.dotp = lforw(curwp->w.dotp);
 
 /* Then scan forward until we hit an empty line or E-O-Buffer... */
-        while (curwp->w_dotp != curbp->b_linep) {
+        while (curwp->w.dotp != curbp->b_linep) {
             if (!curline_empty())   /* GGR */
-                curwp->w_dotp = lforw(curwp->w_dotp);
+                curwp->w.dotp = lforw(curwp->w.dotp);
             else
                 break;
         }
@@ -371,7 +371,7 @@ int gotoeop(int f, int n) {
 /* ...and then backward until we are in a word */
         suc = back_grapheme(1);
         while ((suc > 0) && at_whitespace()) suc = back_grapheme(1);
-        curwp->w_doto = llength(curwp->w_dotp); /* and to the EOL */
+        curwp->w.doto = llength(curwp->w.dotp); /* and to the EOL */
     }
     curwp->w_flag |= WFMOVE;  /* force screen update */
     return TRUE;
@@ -409,8 +409,8 @@ int forwpage(int f, int n) {
         while (n-- && lforw(lp) != curbp->b_linep) lp = lforw(lp);
     }
     curwp->w_linep = lp;
-    curwp->w_dotp = lp;
-    curwp->w_doto = 0;
+    curwp->w.dotp = lp;
+    curwp->w.doto = 0;
     curwp->w_flag |= WFHARD | WFKILLS;
     return TRUE;
 }
@@ -440,8 +440,8 @@ int backpage(int f, int n) {
     lp = curwp->w_linep;
     while (n-- && lback(lp) != curbp->b_linep) lp = lback(lp);
     curwp->w_linep = lp;
-    curwp->w_dotp = lp;
-    curwp->w_doto = 0;
+    curwp->w.dotp = lp;
+    curwp->w.doto = 0;
     curwp->w_flag |= WFHARD | WFINS;
     return TRUE;
 }
@@ -451,8 +451,8 @@ int backpage(int f, int n) {
  */
 int setmark(int f, int n) {
     UNUSED(f); UNUSED(n);
-    curwp->w_markp = curwp->w_dotp;
-    curwp->w_marko = curwp->w_doto;
+    curwp->w.markp = curwp->w.dotp;
+    curwp->w.marko = curwp->w.doto;
     mlwrite_one(MLbkt("Mark set"));
     return TRUE;
 }
@@ -467,16 +467,16 @@ int swapmark(int f, int n) {
     struct line *odotp;
     int odoto;
 
-    if (curwp->w_markp == NULL) {
+    if (curwp->w.markp == NULL) {
         mlwrite_one("No mark in this window");
         return FALSE;
     }
-    odotp = curwp->w_dotp;
-    odoto = curwp->w_doto;
-    curwp->w_dotp = curwp->w_markp;
-    curwp->w_doto = curwp->w_marko;
-    curwp->w_markp = odotp;
-    curwp->w_marko = odoto;
+    odotp = curwp->w.dotp;
+    odoto = curwp->w.doto;
+    curwp->w.dotp = curwp->w.markp;
+    curwp->w.doto = curwp->w.marko;
+    curwp->w.markp = odotp;
+    curwp->w.marko = odoto;
     curwp->w_flag |= WFMOVE;
     return TRUE;
 }

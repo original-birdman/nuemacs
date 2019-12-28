@@ -94,8 +94,8 @@ void make_active(struct buffer *nbp) {
     curbp = nbp;
     readin(nbp->b_fname, TRUE);
     curbp = real_curbp;
-    nbp->b_dotp = lforw(nbp->b_linep);
-    nbp->b_doto = 0;
+    nbp->b.dotp = lforw(nbp->b_linep);
+    nbp->b.doto = 0;
     return;
 }
 
@@ -127,22 +127,22 @@ int swbuffer(struct buffer *bp, int macro_OK) {
     curwp->w_linep = bp->b_linep;   /* For macros, ignored. */
     curwp->w_flag |= WFMODE | WFFORCE | WFHARD;     /* Quite nasty. */
     if (bp->b_nwnd++ == 0) {        /* First use.           */
-        curwp->w_dotp = bp->b_dotp;
-        curwp->w_doto = bp->b_doto;
-        curwp->w_markp = bp->b_markp;
-        curwp->w_marko = bp->b_marko;
-        curwp->w_fcol = bp->b_fcol;
+        curwp->w.dotp = bp->b.dotp;
+        curwp->w.doto = bp->b.doto;
+        curwp->w.markp = bp->b.markp;
+        curwp->w.marko = bp->b.marko;
+        curwp->w.fcol = bp->b.fcol;
         cknewwindow();
         return TRUE;
     }
     wp = wheadp;                    /* Look for old.        */
     while (wp != NULL) {
         if (wp != curwp && wp->w_bufp == bp) {
-            curwp->w_dotp = wp->w_dotp;
-            curwp->w_doto = wp->w_doto;
-            curwp->w_markp = wp->w_markp;
-            curwp->w_marko = wp->w_marko;
-            curwp->w_fcol = wp->w_fcol;
+            curwp->w.dotp = wp->w.dotp;
+            curwp->w.doto = wp->w.doto;
+            curwp->w.markp = wp->w.markp;
+            curwp->w.marko = wp->w.marko;
+            curwp->w.fcol = wp->w.fcol;
             break;
         }
         wp = wp->w_wndp;
@@ -267,8 +267,8 @@ static int addline(char *text) {
     lp->l_bp = blistp->b_linep->l_bp;
     blistp->b_linep->l_bp = lp;
     lp->l_fp = blistp->b_linep;
-    if (blistp->b_dotp == blistp->b_linep)  /* If "." is at the end */
-        blistp->b_dotp = lp;                /* move it to new line  */
+    if (blistp->b.dotp == blistp->b_linep)  /* If "." is at the end */
+        blistp->b.dotp = lp;                /* move it to new line  */
     return TRUE;
 }
 
@@ -421,10 +421,10 @@ int listbuffers(int f, int n) {
     while (wp != NULL) {
         if (wp->w_bufp == blistp) {
             wp->w_linep = lforw(blistp->b_linep);
-            wp->w_dotp = lforw(blistp->b_linep);
-            wp->w_doto = 0;
-            wp->w_markp = NULL;
-            wp->w_marko = 0;
+            wp->w.dotp = lforw(blistp->b_linep);
+            wp->w.doto = 0;
+            wp->w.markp = NULL;
+            wp->w.marko = 0;
             wp->w_flag |= WFMODE | WFHARD;
         }
         wp = wp->w_wndp;
@@ -508,11 +508,11 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         bp->b_topline = NULL;   /* GGR - for widen and  */
         bp->b_botline = NULL;   /* GGR - shrink windows */
         bp->b_active = TRUE;
-        bp->b_dotp = lp;
-        bp->b_doto = 0;
-        bp->b_markp = NULL;
-        bp->b_marko = 0;
-        bp->b_fcol = 0;
+        bp->b.dotp = lp;
+        bp->b.doto = 0;
+        bp->b.markp = NULL;
+        bp->b.marko = 0;
+        bp->b.fcol = 0;
         bp->b_flag = bflag;
         bp->b_mode = gmode;
         bp->b_nwnd = 0;
@@ -560,11 +560,11 @@ int bclear(struct buffer *bp) {
 
     while ((lp = lforw(bp->b_linep)) != bp->b_linep) lfree(lp);
 
-    bp->b_dotp = bp->b_linep;           /* Fix "."              */
-    bp->b_doto = 0;
-    bp->b_markp = NULL;                 /* Invalidate "mark"    */
-    bp->b_marko = 0;
-    bp->b_fcol = 0;
+    bp->b.dotp = bp->b_linep;           /* Fix "."              */
+    bp->b.doto = 0;
+    bp->b.markp = NULL;                 /* Invalidate "mark"    */
+    bp->b.marko = 0;
+    bp->b.fcol = 0;
     return TRUE;
 }
 

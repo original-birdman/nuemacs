@@ -313,6 +313,20 @@ enum cmplt_type {
 #define exit(a) cexit(a)
 #endif
 
+/* Some data is kept on a per-window view when a file is displayed in a
+ * window, and this is copied back to the file's buffer structure when
+ * the window is closed.
+ * Since this is common to struct window and struct buffer we'll make
+ * it a struct as well, allowing a simple copy.
+ */
+struct locs {
+    struct line *dotp;      /* Line containing "."          */
+    struct line *markp;     /* Line containing "mark"       */
+    int doto;               /* Byte offset for "."          */
+    int marko;              /* Byte offset for "mark"       */
+    int fcol;               /* first column displayed       */
+}; 
+
 /* There is a window structure allocated for every active display window. The
  * windows are kept in a big list, in top to bottom screen order, with the
  * listhead at "wheadp". Each window contains its own values of dot and mark.
@@ -325,10 +339,7 @@ struct window {
     struct window *w_wndp;  /* Next window                  */
     struct buffer *w_bufp;  /* Buffer displayed in window   */
     struct line *w_linep;   /* Top line in the window       */
-    struct line *w_dotp;    /* Line containing "."          */
-    struct line *w_markp;   /* Line containing "mark"       */
-    int w_doto;             /* Byte offset for "."          */
-    int w_marko;            /* Byte offset for "mark"       */
+    struct locs w;
     int w_toprow;           /* Origin 0 top row of window   */
     int w_ntrows;           /* # of rows of text in window  */
     char w_force;           /* If NZ, forcing row.          */
@@ -337,7 +348,6 @@ struct window {
     char w_fcolor;          /* current forground color      */
     char w_bcolor;          /* current background color     */
 #endif
-    int w_fcol;             /* first column displayed       */
 };
 
 #define WFFORCE 0x01            /* Window needs forced reframe  */
@@ -389,19 +399,15 @@ struct func_opts {
 
 struct buffer {
     struct buffer *b_bufp;  /* Link to next struct buffer   */
-    struct line *b_dotp;    /* Link to "." struct line structure */
-    struct line *b_markp;   /* The same as the above two,   */
     struct line *b_linep;   /* Link to the header struct line */
     struct line *b_topline; /* Link to narrowed top text    */
     struct line *b_botline; /* Link to narrowed bottom text */
     struct ptt_ent *ptt_headp;
-    int b_type;             /* Type of buffer */
+    struct locs b;
     struct func_opts btp_opt;   /* Only for b_type = BTPROC */
+    int b_type;             /* Type of buffer */
     int b_exec_level;       /* Recursion level */
-    int b_doto;             /* Offset of "." in above struct line */
-    int b_marko;            /* but for the "mark"           */
     int b_mode;             /* editor mode of this buffer   */
-    int b_fcol;             /* first col to display         */
     int b_EOLmissing;       /* When read in... */
     int b_keylen;           /* encrypted key len            */
     char b_active;          /* window activated flag        */

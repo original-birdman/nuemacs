@@ -144,7 +144,7 @@ int mvupwind(int f, int n) {
     curwp->w_flag |= WFHARD;        /* Mode line is OK. */
 
     for (i = 0; i < curwp->w_ntrows; ++i) {
-        if (lp == curwp->w_dotp) return TRUE;
+        if (lp == curwp->w.dotp) return TRUE;
         if (lp == curbp->b_linep) break;
         lp = lforw(lp);
     }
@@ -152,17 +152,17 @@ int mvupwind(int f, int n) {
     lp = curwp->w_linep;
     i = curwp->w_ntrows / 2;
     while (i-- && lp != curbp->b_linep) lp = lforw(lp);
-    curwp->w_dotp = lp;
-    curwp->w_doto = 0;
+    curwp->w.dotp = lp;
+    curwp->w.doto = 0;
     return TRUE;
 }
 /* Internal routine to flush window data to buffer data on window closing */
 void windata_to_buffer(struct window *fwp, struct buffer *ubp) {
-    ubp->b_dotp = fwp->w_dotp;
-    ubp->b_doto = fwp->w_doto;
-    ubp->b_markp = fwp->w_markp;
-    ubp->b_marko = fwp->w_marko;
-    ubp->b_fcol = fwp->w_fcol;
+    ubp->b.dotp = fwp->w.dotp;
+    ubp->b.doto = fwp->w.doto;
+    ubp->b.markp = fwp->w.markp;
+    ubp->b.marko = fwp->w.marko;
+    ubp->b.fcol = fwp->w.fcol;
     return;
 }
 
@@ -291,11 +291,11 @@ int splitwind(int f, int n) {
     wp = Xmalloc(sizeof(struct window));
     ++curbp->b_nwnd;                        /* Displayed twice.     */
     wp->w_bufp = curbp;
-    wp->w_dotp = curwp->w_dotp;
-    wp->w_doto = curwp->w_doto;
-    wp->w_markp = curwp->w_markp;
-    wp->w_marko = curwp->w_marko;
-    wp->w_fcol = curwp->w_fcol;
+    wp->w.dotp = curwp->w.dotp;
+    wp->w.doto = curwp->w.doto;
+    wp->w.markp = curwp->w.markp;
+    wp->w.marko = curwp->w.marko;
+    wp->w.fcol = curwp->w.fcol;
     wp->w_flag = 0;
     wp->w_force = 0;
 #if     COLOR
@@ -307,7 +307,7 @@ int splitwind(int f, int n) {
     ntrl = (curwp->w_ntrows - 1) - ntru;    /* Lower size           */
     lp = curwp->w_linep;
     ntrd = 0;
-    while (lp != curwp->w_dotp) {
+    while (lp != curwp->w.dotp) {
         ++ntrd;
         lp = lforw(lp);
     }
@@ -628,7 +628,7 @@ int getwpos(void) {
 /* Search down the line we want */
     lp = curwp->w_linep;
     sline = 1;
-    while (lp != curwp->w_dotp) {
+    while (lp != curwp->w.dotp) {
         ++sline;
         lp = lforw(lp);
     }

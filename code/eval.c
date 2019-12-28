@@ -492,9 +492,9 @@ static char *gtenv(char *vname) {
     case EVACOUNT:          return ue_itoa(gacount);
     case EVLASTKEY:         return ue_itoa(lastkey);
     case EVCURCHAR:
-        return (curwp->w_dotp->l_used == curwp->w_doto ?
+        return (curwp->w.dotp->l_used == curwp->w.doto ?
             ue_itoa('\n') :
-            ue_itoa(lgetc(curwp->w_dotp, curwp->w_doto)));
+            ue_itoa(lgetc(curwp->w.dotp, curwp->w.doto)));
     case EVDISCMD:          return ltos(discmd);
     case EVVERSION:         return VERSION;
     case EVPROGNAME:        return PROGRAM_NAME_LONG;
@@ -513,7 +513,7 @@ static char *gtenv(char *vname) {
     case EVGMODE:           return ue_itoa(gmode);
     case EVTPAUSE:          return ue_itoa(term.t_pause);
     case EVPENDING:         return ltos(typahead());
-    case EVLWIDTH:          return ue_itoa(llength(curwp->w_dotp));
+    case EVLWIDTH:          return ue_itoa(llength(curwp->w.dotp));
     case EVLINE:            return getctext();
     case EVGFLAGS:          return ue_itoa(gflags);
     case EVRVAL:            return ue_itoa(rval);
@@ -522,7 +522,7 @@ static char *gtenv(char *vname) {
     case EVSCROLLJUMP:      return ue_itoa(scrolljump);
     case EVSCROLL:          return ltos(term.t_scroll != NULL);
     case EVINMB:            return ue_itoa(inmb);
-    case EVFCOL:            return(ue_itoa(curwp->w_fcol));
+    case EVFCOL:            return(ue_itoa(curwp->w.fcol));
     case EVHSCROLL:         return(ltos(hscroll));
     case EVHJUMP:           return(ue_itoa(hjump));
     case EVYANKMODE:        switch (yank_mode) {
@@ -754,8 +754,8 @@ static int svar(struct variable_description *var, char *value) {
         case EVINMB:
             break;
         case EVFCOL:
-            curwp->w_fcol = atoi(value);
-            if (curwp->w_fcol < 0) curwp->w_fcol = 0;
+            curwp->w.fcol = atoi(value);
+            if (curwp->w.fcol < 0) curwp->w.fcol = 0;
             curwp->w_flag |= WFHARD | WFMODE;
             break;
         case EVHSCROLL:
@@ -1010,28 +1010,28 @@ char *getval(char *token) {
 
 /* If the buffer is displayed, get the window vars instead of the buffer vars */
         if (bp->b_nwnd > 0) {
-            curbp->b_dotp = curwp->w_dotp;
-            curbp->b_doto = curwp->w_doto;
+            curbp->b.dotp = curwp->w.dotp;
+            curbp->b.doto = curwp->w.doto;
         }
 
 /* Make sure we are not at the end */
-        if (bp->b_linep == bp->b_dotp) return errorm;
+        if (bp->b_linep == bp->b.dotp) return errorm;
 
 /* Grab the line as an argument */
-        blen = bp->b_dotp->l_used - bp->b_doto;
+        blen = bp->b.dotp->l_used - bp->b.doto;
         if (blen >= NSTRING)        /* GGR >= to allow for NUL */
             blen = NSTRING - 1;
-        memcpy(buf, bp->b_dotp->l_text + bp->b_doto, blen);
+        memcpy(buf, bp->b.dotp->l_text + bp->b.doto, blen);
         buf[blen] = 0;
 
 /* And step the buffer's line ptr ahead a line */
-        bp->b_dotp = bp->b_dotp->l_fp;
-        bp->b_doto = 0;
+        bp->b.dotp = bp->b.dotp->l_fp;
+        bp->b.doto = 0;
 
 /* If displayed buffer, reset window ptr vars */
         if (bp->b_nwnd > 0) {
-            curwp->w_dotp = curbp->b_dotp;
-            curwp->w_doto = 0;
+            curwp->w.dotp = curbp->b.dotp;
+            curwp->w.doto = 0;
             curwp->w_flag |= WFMOVE;
         }
 

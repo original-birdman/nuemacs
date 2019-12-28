@@ -647,7 +647,7 @@ int ptt_handler(int c) {
  * So insert the unicode character before testing...
  */
 
-    int orig_doto = curwp->w_doto;
+    int orig_doto = curwp->w.doto;
     if (linsert_uc(1, c) != TRUE) return FALSE;
 
     for (struct ptt_ent *ptr = ptt->ptt_headp; ptr; ptr = ptr->nextp) {
@@ -657,7 +657,7 @@ int ptt_handler(int c) {
 
 /* We need to know where <n> unicode chars back starts */
         int start_at = unicode_back_utf8(ptr->from_len_uc,
-             curwp->w_dotp->l_text, curwp->w_doto);
+             curwp->w.dotp->l_text, curwp->w.doto);
         if (ptr->caseset != CASESET_OFF) {
 /*
  * Need a unicode-case insensitive strncmp!!!
@@ -666,8 +666,8 @@ int ptt_handler(int c) {
  * chars first.
  */
             if (start_at < 0) continue; /* Insufficient chars */
-            if (nocasecmp_utf8(curwp->w_dotp->l_text,
-                 start_at, curwp->w_dotp->l_used,
+            if (nocasecmp_utf8(curwp->w.dotp->l_text,
+                 start_at, curwp->w.dotp->l_used,
                  ptr->from, 0, ptr->from_len)) continue;
         }
         else {
@@ -675,19 +675,19 @@ int ptt_handler(int c) {
  * We need to check there are sufficient chars to check, then
  * just compare the bytes.
  */
-            if (curwp->w_doto < ptr->from_len) continue;
-            if (strncmp(curwp->w_dotp->l_text+start_at,
+            if (curwp->w.doto < ptr->from_len) continue;
+            if (strncmp(curwp->w.dotp->l_text+start_at,
                  ptr->from, ptr->from_len)) continue;
         }
-        if (ptr->bow_only && (curwp->w_doto > ptr->from_len)) { /* Not BOL */
+        if (ptr->bow_only && (curwp->w.doto > ptr->from_len)) { /* Not BOL */
 /* Need to step back to the start of the preceding grapheme and get the
  * base Unicode char from there.
  */
-            int offs = prev_utf8_offset(curwp->w_dotp->l_text,
+            int offs = prev_utf8_offset(curwp->w.dotp->l_text,
                  start_at, TRUE);
             unicode_t prev_uc;
-            (void)utf8_to_unicode(curwp->w_dotp->l_text,
-                 offs, curwp->w_dotp->l_used, &prev_uc);
+            (void)utf8_to_unicode(curwp->w.dotp->l_text,
+                 offs, curwp->w.dotp->l_used, &prev_uc);
 
             const char *uc_class =
                  utf8proc_category_string((utf8proc_int32_t)prev_uc);
@@ -698,13 +698,13 @@ int ptt_handler(int c) {
  * If we are doing case-setting on the replacement then we
  * need to know the case of the first character.
  */
-        curwp->w_doto = start_at;
+        curwp->w.doto = start_at;
         int edit_case = 0;
         int set_case = UTF8_CKEEP;
         if (ptr->caseset != CASESET_OFF) {
             unicode_t fc;
-            (void)utf8_to_unicode(curwp->w_dotp->l_text, start_at,
-                 curwp->w_dotp->l_used, &fc);
+            (void)utf8_to_unicode(curwp->w.dotp->l_text, start_at,
+                 curwp->w.dotp->l_used, &fc);
             utf8proc_category_t  need_edit_type;
             if (ptr->caseset == CASESET_LOWI_ALL ||
                 ptr->caseset == CASESET_LOWI_ONE) {
@@ -728,7 +728,7 @@ int ptt_handler(int c) {
 
         if (edit_case && (ptr->caseset != CASESET_OFF)) {
             int count = ptr->to_len_uc;
-            curwp->w_doto = start_at;
+            curwp->w.doto = start_at;
             ensure_case(set_case);
             forw_grapheme(1);
             if (ptr->caseset == CASESET_CAPI_ONE) { /* Just step over chars */
@@ -768,7 +768,7 @@ int ptt_handler(int c) {
  * But we've just inserted the unichar we are deleting, so it can't
  * consist of multiple unicode chars - so we'll only delete the one.
  */
-    curwp->w_doto = orig_doto;
+    curwp->w.doto = orig_doto;
     ldelgrapheme(1, FALSE);
     return FALSE;
 }
@@ -1350,15 +1350,15 @@ int dobuf(struct buffer *bp) {
             wp = wheadp;
             while (wp != NULL) {
                 if (wp->w_bufp == bp) { /* And point it */
-                    wp->w_dotp = lp;
-                    wp->w_doto = 0;
+                    wp->w.dotp = lp;
+                    wp->w.doto = 0;
                     wp->w_flag |= WFHARD;
                 }
                 wp = wp->w_wndp;
             }
 /* In any case set the buffer . */
-            bp->b_dotp = lp;
-            bp->b_doto = 0;
+            bp->b.dotp = lp;
+            bp->b.doto = 0;
             free(einit);
             execlevel = 0;
             freewhile(whlist);
