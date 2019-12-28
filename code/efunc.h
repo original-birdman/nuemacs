@@ -41,7 +41,6 @@ extern int nextwind(int f, int n);
 extern int prevwind(int f, int n);
 extern int mvdnwind(int f, int n);
 extern int mvupwind(int f, int n);
-extern void windata_to_buffer(struct window *, struct buffer *);
 extern int onlywind(int f, int n);
 extern int delwind(int f, int n);
 extern int splitwind(int f, int n);

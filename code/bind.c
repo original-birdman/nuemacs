@@ -558,7 +558,7 @@ static int buildlist(int type, char *mstring) {
     mlwrite_one(MLbkt("Building binding list"));
 
 /* Disconnect the current buffer */
-    if (--curbp->b_nwnd == 0) windata_to_buffer(curwp, curbp);  /* Last use */
+    if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Last use */
 
 /* Connect the current window to this buffer */
     curbp = bp;             /* make this buffer current in current window */

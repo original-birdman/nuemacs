@@ -118,7 +118,7 @@ int swbuffer(struct buffer *bp, int macro_OK) {
 /* Save last name so we can switch back to it on empty MB reply */
     if (!inmb && do_savnam) strcpy(savnam, curbp->b_bname);
 
-    if (--curbp->b_nwnd == 0) windata_to_buffer(curwp, curbp);  /* Last use */
+    if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Last use */
     curbp = bp;                     /* Switch. */
     if (curbp->b_active != TRUE)    /* buffer not active yet */
         make_active(curbp);
@@ -413,7 +413,7 @@ int listbuffers(int f, int n) {
     if (blistp->b_nwnd == 0) {      /* Not on screen yet.   */
         if ((wp = wpopup()) == NULL) return FALSE;
         bp = wp->w_bufp;
-        if (--bp->b_nwnd == 0) windata_to_buffer(wp, bp);
+        if (--bp->b_nwnd == 0) bp->b = wp->w;
         wp->w_bufp = blistp;
         ++blistp->b_nwnd;
     }

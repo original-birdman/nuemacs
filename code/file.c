@@ -161,7 +161,7 @@ out:
     curwp->w_flag |= WFHARD | WFMODE;
 
 /* Copy window parameters back to the buffer structure */
-    windata_to_buffer(curwp, curbp);
+    curbp->b = curwp->w;
 
     if (s == FIOERR) return FALSE;      /* False if error. */
     return TRUE;
@@ -319,7 +319,7 @@ int getfile(char *fname, int lockfl, int check_dir) {
         mlwrite_one("Cannot create buffer");
         return FALSE;
     }
-    if (--curbp->b_nwnd == 0) windata_to_buffer(curwp, curbp);  /* Undisplay */
+    if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Undisplay */
 
 /* GGR - remember last buffer */
     if (!inmb) strcpy(savnam, curbp->b_bname);

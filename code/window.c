@@ -156,15 +156,6 @@ int mvupwind(int f, int n) {
     curwp->w.doto = 0;
     return TRUE;
 }
-/* Internal routine to flush window data to buffer data on window closing */
-void windata_to_buffer(struct window *fwp, struct buffer *ubp) {
-    ubp->b.dotp = fwp->w.dotp;
-    ubp->b.doto = fwp->w.doto;
-    ubp->b.markp = fwp->w.markp;
-    ubp->b.marko = fwp->w.marko;
-    ubp->b.fcol = fwp->w.fcol;
-    return;
-}
 
 /* This command makes the current window the only window on the screen. Bound
  * to "C-X 1". Try to set the framing so that "." does not have to move on the
@@ -181,13 +172,13 @@ int onlywind(int f, int n) {
     while (wheadp != curwp) {
         wp = wheadp;
         wheadp = wp->w_wndp;
-        if (--wp->w_bufp->b_nwnd == 0) windata_to_buffer(wp, wp->w_bufp);
+        if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
         free((char *) wp);
     }
     while (curwp->w_wndp != NULL) {
         wp = curwp->w_wndp;
         curwp->w_wndp = wp->w_wndp;
-        if (--wp->w_bufp->b_nwnd == 0) windata_to_buffer(wp, wp->w_bufp);
+        if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
         free((char *) wp);
     }
     lp = curwp->w_linep;
@@ -253,7 +244,7 @@ int delwind(int f, int n) {
     }
 
 /* Get rid of the current window */
-    if (--curwp->w_bufp->b_nwnd == 0) windata_to_buffer(wp, wp->w_bufp);
+    if (--curwp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
     if (lwp == NULL) wheadp = curwp->w_wndp;
     else             lwp->w_wndp = curwp->w_wndp;
     free((char *) curwp);
@@ -557,8 +548,7 @@ int newsize(int f, int n) {
             if (wp->w_toprow > n - 2) {
 
 /* Save the point/mark if needed */
-                if (--wp->w_bufp->b_nwnd == 0)
-                     windata_to_buffer(wp, wp->w_bufp);
+                if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
 
 /* Update curwp and lastwp if needed */
                 if (wp == curwp) curwp = wheadp;
