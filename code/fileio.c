@@ -404,6 +404,14 @@ int fexist(char *fn) {
 
 #if BSD | USG
 
+/* Routines to "fix-up" a filename.
+ * fixup_fname() will replace any ~id at the start with its absolute path
+ * replacement, and prepend $PWD to any leading ".." or ".".
+ * It then strips out multiple consecutive "/"s and handles internal
+ * ".." and "." entries.
+ * fixup_full() expands any leading "." to an absolute name (which we
+ * don't always wish to do) then calls fixup_fname() with what it has.
+ */
 #include <libgen.h>
 #include <pwd.h>
 
@@ -415,48 +423,9 @@ void fixup_fname(char *fn) {
     char *p, *q;
     struct passwd *pwptr;
 
-/* We start with looking for either ../ or ~ at the start (we can't have
- * both).
- */
-    if (have_pwd >= 0 &&
-        fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) {
-/* We have to count the leading occurrences of ../ and append what is left
- * to $PWD less the number of occurrences.
- */
-        int dd_cnt = 1;             /* We know we have one */
-        char *fnwp = fn+2;
-        while (*fnwp) {
-            while (*++fnwp == '/'); /* Skip over any '/' */
-            if (*fnwp == '.' && *(fnwp+1) == '.' &&
-                  (*(fnwp+2) == '/' || *(fnwp+2) == '\0')) {
-                dd_cnt++;
-                fnwp = fnwp+2;
-                continue;
-            }
-            break;
-        }
-        if (have_pwd == 0) {
-            if ((p = getenv("PWD")) == NULL) have_pwd = -1;
-            else {
-                if (*p == '/') {    /* Only if valid path.. */
-                    strcpy(pwd_var, p);
-                    have_pwd = 1;
-                }
-                else
-                    have_pwd = -1;
-            }
-        }
-        if (have_pwd == 1) {
-            strcpy(fn_copy, pwd_var);
-            p = fn_copy;
-            while(dd_cnt--) p = dirname(p);
-            strcpy(fn_copy, p);
-            strcat(fn_copy, "/");
-            strcat(fn_copy, fnwp);
-            strcpy(fn, fn_copy);
-        }
-    }
-    else if (fn[0]=='~') {          /* HOME dir wanted... */
+/* Look for a ~ at the start. */
+
+    if (fn[0]=='~') {          /* HOME dir wanted... */
         if (fn[1]=='/' || fn[1]==0) {
             if ((p = getenv("HOME")) != NULL) {
                 strcpy(fn_copy, fn);
@@ -481,47 +450,10 @@ void fixup_fname(char *fn) {
             }
         }
     }
-
-/* Convert any multiple consecutive "/" to "/" and strip any
- * trailing "/"...
- * Change any "/./" entries to "/".
- */
-    char *from, *to;
-    int prev_was_slash = 0;
-    int slashdot_state = 0;     /* 1 seen '/', 2 seen '.' */
-    for (from = fn, to = fn; *from; from++) {
-        if (prev_was_slash && (*from == '/')) continue;
-        if ((slashdot_state == 2) && (*from != '/')) slashdot_state = 0;
-        if (slashdot_state == 1) {
-            if (*from == '.') slashdot_state = 2;
-            else              slashdot_state = 0;
-        }
-        if (*from == '/') {
-            prev_was_slash = 1;
-            if (slashdot_state == 2) to -= 2;   /* Remove the ./ */
-            slashdot_state = 1;                 /* We have the / */
-        }
-        else prev_was_slash = 0;
-        *to++ = *from;
-    }
-    if (prev_was_slash) to--;
-    if (slashdot_state == 2) to -= 2;
-    *to = '\0';
-
-    return;
-}
-
-/* This one expands a leading "." (for current dir) as well */
-
-void fixup_full(char *fn) {
-    char fn_copy[NFILEN];
-    char *p;
-
-/* We look for just a "." and, if found, handle it.
- * Otherwise we call fixup_fname() to do what it can do.
- */
-    if (have_pwd >= 0 &&
-        fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')) {
+    else if ((have_pwd >= 0) &&
+  ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
+   (fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')))) {
+/* Just prepend $PWD - the slash_* loop at the end will fix up '.' and ".." */
         if (have_pwd == 0) {
             if ((p = getenv("PWD")) == NULL) have_pwd = -1;
             else {
@@ -535,11 +467,141 @@ void fixup_full(char *fn) {
         }
         if (have_pwd == 1) {
             strcpy(fn_copy, pwd_var);
-            if (fn[1] == '/') strcat(fn_copy, fn+1);
+            strcat(fn_copy, "/");
+            strcat(fn_copy, fn);
             strcpy(fn, fn_copy);
         }
     }
-    fixup_fname(fn);    /* For "/" handling ... */
+
+/* Convert any multiple consecutive "/" to "/" and strip any
+ * trailing "/"...
+ * Change any "/./" entries to "/".
+ * Strip out ".." entries and their parent  (xxx/../yyy -> yyy)
+ */
+    char *from, *to;
+    int prev_was_slash = 0;
+    int slash_dot_state = 1;    /* 1 seen '/', 2 seen '.' */
+    int slash_d_d_state = 1;    /* 1 seen '/', 2 seen '.' , 3 see '..' */
+    char *resets[512];          /* location of slashes+1 */
+    int rsi = 0;                /* Index into resets - points at "next" one */
+    int resettable;             /* Count increments on not . or .. */
+
+/* Work out the first reset - this should never get reset by the
+ * rest of the algorithm.
+ * resettable only gets incremented when we find somewhere we can reset to,
+ * which means that leading ".." entries don't get removed.
+ */
+    if (fn[0] != '/') {
+        resets[0] = fn;
+        rsi = 1;
+        resettable = 1;
+    }
+    else resettable = 0;
+
+    for (from = fn, to = fn; *from; from++) {
+/* Ignore a repeat '/' */
+        if (prev_was_slash && (*from == '/')) continue;
+/* Reset states on no '/' */
+        if ((slash_dot_state == 2) && (*from != '/')) slash_dot_state = 0;
+        if ((slash_d_d_state == 3) && (*from != '/')) slash_d_d_state = 0;
+/* If at '/' do we need to "go back"? */
+        if (*from == '/') {
+            prev_was_slash = 1;
+            if (slash_dot_state == 2) {
+                to = resets[--rsi];
+                resettable--;
+            }
+            else if (slash_d_d_state == 3) {
+                if ((fn[0] == '/') || (resettable >= 2)) {
+                    rsi -= 2;
+                    if (rsi < 0) rsi = 0;
+                    resettable -= 2;
+                    if (resettable < 1) resettable = 1;
+                    to = resets[rsi];
+                }
+                else {
+                    *to++ = '/';
+                }
+            }
+            else {
+                resettable++;
+                *to++ = '/';
+            }
+            slash_dot_state = 1;            /* We have the / */
+            slash_d_d_state = 1;            /* We have the / */
+            resets[rsi++] = to;             /* Will be ... */
+        }
+        else {
+/* Copy the character we've been processing */
+            prev_was_slash = 0;
+            *to++ = *from;
+/* Advance states on '.', clear on not '.' */
+            if (*from == '.') {
+               if (slash_dot_state == 1) slash_dot_state = 2;
+               if (slash_d_d_state == 2) slash_d_d_state = 3;
+               if (slash_d_d_state == 1) slash_d_d_state = 2;
+            }
+            else {
+                slash_dot_state = 0;
+                slash_d_d_state = 0;
+            }
+        }
+    }
+/* For "./" this next line goes to before start of buffer, but we
+ * fix that with the to <= fn check.
+ */
+    if (prev_was_slash) to--;
+    if (slash_dot_state == 2) to -= 2;
+    if (slash_d_d_state == 3) {
+        if ((fn[0] == '/') || (resettable >= 2)) {
+            rsi -= 2;
+            if (rsi < 0) rsi = 0;
+            resettable -= 2;
+            if (resettable < 1) resettable = 1;
+            to = resets[rsi] - 1;   /* Remove trailing / */
+        }
+    }
+    if (to <= fn) to = fn+1;    /* Just have '/' or '.' left...keep it */
+    *to = '\0';
+
+    return;
+}
+
+/* This one expands a leading "." (for current dir) as well.
+ * It also handles anything not starting with a / or ~/ the same way.
+ * We don't usually want this, as we want "code.c" to stay as "code.c"
+ * but for directory browsing we always need the full path.
+ */
+
+void fixup_full(char *fn) {
+    char fn_copy[NFILEN];
+    char *p;
+
+/* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
+ * Then we call fixup_fname() to do what it can do, which includes
+ * stripping out redundant '.'s and handling ".."s.
+ */
+    if (have_pwd >= 0 && (fn[0] != '/' && fn[0] != '~')) {
+        if (have_pwd == 0) {
+            if ((p = getenv("PWD")) == NULL) have_pwd = -1;
+            else {
+                if (*p == '/') {    /* Only if valid path.. */
+                    strcpy(pwd_var, p);
+                    have_pwd = 1;
+                }
+                else
+                    have_pwd = -1;
+            }
+        }
+        if (have_pwd == 1) {
+            strcpy(fn_copy, pwd_var);
+            strcat(fn_copy, "/");
+            strcat(fn_copy, fn);
+            strcpy(fn, fn_copy);
+        }
+    }
+
+    fixup_fname(fn);    /* For '/', '.' and ".."  handling */
     return;
 }
 #endif
