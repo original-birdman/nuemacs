@@ -94,6 +94,7 @@ printf( \
 "      -g<n>        go to line <n> (same as +<n>)"        NL \
 "      -i           insecure mode - look in current dir"  NL \
 "      -k<key>      encryption key"                       NL \
+"      -m           message for mini-buffer at start-up"  NL \
 "      -n           accept null chars (now always true)"  NL \
 "      -r           restrictive use"                      NL \
 "      -s<str>      initial search string"                NL \
@@ -944,6 +945,7 @@ int main(int argc, char **argv) {
  * after this first loop. The second loop then deals with files nominated
  * by the user.
  */
+    char *mbuf_mess = NULL;
     while (--argc) {
         argv++;         /* Point at the next token */
                         /* Process Switches */
@@ -964,7 +966,7 @@ int main(int argc, char **argv) {
                  verflag = strlen(arg);
             key1 = *arg;
 /* Allow options to be given as separate tokens */
-            if (strchr("cCdDgGkKsSxX", key1)) {
+            if (strchr("cCdDgGkKmMsSxX", key1)) {
                 opt = *argv + 2;
                 if (*opt == '\0' && argc > 0 && !strchr("-@", *(*argv + 1))) {
                     if (--argc <= 0) {
@@ -1014,6 +1016,10 @@ int main(int argc, char **argv) {
                     cryptflag = TRUE;
                      strcpy(ekey, opt);
                 }
+                break;
+            case 'm':       /* -m message for mini-buffer */
+            case 'M':
+                mbuf_mess = opt;
                 break;
             case 'n':       /* -n accept null chars */
             case 'N':
@@ -1197,12 +1203,13 @@ loop:
     }
     else {
         update(FALSE);
-        if (display_readin_msg) {   /* First one gets removed by update() */
-            mlwrite_one(readin_mesg);
+        if (display_readin_msg ||   /* First one gets removed by update() */
+              mbuf_mess) {          /* Specifc user message */
             int scol = curcol;
             int srow = currow;
-            mlwrite_one(readin_mesg);
+            mlwrite_one(mbuf_mess? mbuf_mess: readin_mesg);
             display_readin_msg = 0;
+            mbuf_mess = NULL;
             movecursor(srow, scol); /* Send the cursor back to where it was */
             TTflush();
         }
