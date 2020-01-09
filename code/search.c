@@ -119,7 +119,7 @@ void init_search_ringbuffers(void) {
  * However - we don't want to push anything out if there is an empty entry.
  */
 int nring_free = RING_SIZE;
-static void update_ring(char *str) {
+static void update_ring(const char *str) {
     char **txt;
     if (this_rt == Search) txt = srch_txt;
     else                   txt = repl_txt;
@@ -1305,6 +1305,9 @@ int scanmore(char *patrn, int dir) {
  */
 void setpattern(const char apat[], const char tap[]) {
     int i;
+
+/* Add pattern to search run if called during command line processing */
+    if (comline_processing) update_ring(apat);
 
     patlenadd = matchlen - 1;
 

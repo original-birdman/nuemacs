@@ -1199,8 +1199,11 @@ loop:
         update(FALSE);
         if (display_readin_msg) {   /* First one gets removed by update() */
             mlwrite_one(readin_mesg);
+            int scol = curcol;
+            int srow = currow;
+            mlwrite_one(readin_mesg);
             display_readin_msg = 0;
-            movecursor(0, 0);       /* Send the cursor back to BoB */
+            movecursor(srow, scol); /* Send the cursor back to where it was */
             TTflush();
         }
         c = getcmd();

@@ -83,7 +83,7 @@ int nextbuffer(int f, int n) {
 /*
  * Make a buffer active...by reading in (possibly delayed) a file.
  */
-void make_active(struct buffer *nbp) {
+static void make_active(struct buffer *nbp) {
 
 /* Set this now to avoid a potential loop if a file-hook prompts */
     nbp->b_active = TRUE;
