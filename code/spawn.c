@@ -205,7 +205,7 @@ int pipecmd(int f, int n) {
     struct window *wp;      /* pointer to new window */
     struct buffer *bp;      /* pointer to buffer to zot */
     char line[NLINE + 16];  /* command line send to shell */
-    char comfile[16];
+    char comfile[NFILEN];
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
@@ -222,7 +222,9 @@ int pipecmd(int f, int n) {
     if (bclear(bp) != TRUE) return FALSE;
 
 #if USG | BSD
-    sprintf(comfile, ".ue_%08x", getpid());
+    char *hp = getenv("HOME");
+    if (!hp || (*hp == '\0')) hp = "."; /* Default if absent */
+    sprintf(comfile, "%s/.ue_%08x", hp, getpid());
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
@@ -269,7 +271,7 @@ int filter_buffer(int f, int n) {
     struct buffer *bp;      /* pointer to buffer to zot */
     char line[NLINE + 24];  /* command line send to shell */
     char tmpnam[NFILEN];    /* place to store real file name */
-    char fltin[20], fltout[20];
+    char fltin[NFILEN], fltout[NFILEN];
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
@@ -286,8 +288,10 @@ int filter_buffer(int f, int n) {
 /* Setup the proper file names */
     bp = curbp;
     strcpy(tmpnam, bp->b_fname);    /* save the original name */
-    sprintf(fltin, ".ue_fin_%08x", getpid());
-    sprintf(fltout, ".ue_fout_%08x", getpid());
+    char *hp = getenv("HOME");
+    if (!hp || (*hp == '\0')) hp = "."; /* Default if absent */
+    sprintf(fltin, "%s/.ue_fin_%08x", hp, getpid());
+    sprintf(fltout, "%s/.ue_fout_%08x", hp, getpid());
     strcpy(bp->b_fname, fltin);    /* set it to our new one */
 
 /* Write it out, checking for errors */
