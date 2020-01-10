@@ -1872,7 +1872,7 @@ efunc.h
 input.c
     Changes to getstring().
     o Update the prompt if prmpt_buf.update is set.
-    o Preload teh resutl buffer if prmpt_buf.preload is set.
+    o Preload the result buffer if prmpt_buf.preload is set.
 
 main.c
     o Call init_search_ringbuffers().
@@ -2329,7 +2329,7 @@ input.c
 
 display.c
 efunc.h
-    Make newscreensize() and external function.
+    Make newscreensize() an external function.
 
 edef.h
 globals.c
@@ -3619,5 +3619,32 @@ window.c
 version.h
 etc/uemacs.hlp
     Update to version GGR4.148
+
+========== GGR4.149
+
+buffer.c
+main.c
+search.c
+    Declare make_active as static, since it's only used internally
+    [buffer.c]
+    When displaying a mini-buffer message at start-up put the cursor
+    back to where it was, not (0,0). It may be positioned anywhere
+    within the file (-g/+ option). [main.c]
+    If setpattern() is called during command-line parsing add the
+    pattern to the search ring. Add const to update_ring() arg to remove
+    a compiler warning that resulted. [search.c]
+
+main.c
+    Add a -m option to define a message to be displayed in the minibuffer
+    after start-up (overriding any "Read n lines" message). [main.c]
+
+spawn.c
+    When using < and > in system() commands put the temp files into HOME
+    (if defined and not empty) rather than the current directory.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.149
 
 ==========
