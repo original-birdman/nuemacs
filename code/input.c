@@ -130,7 +130,23 @@ static char *getffile(char *fspec) {
 
     dirptr = NULL;                  /* Initialise things */
 
+/* fixup_fname will strip any trailing '/'
+ * This leads to a "loop", as the rest of this code would just add it back
+ * and so we never get to the point of looking for entries within it.
+ * So, if one is there on entry, put it back after fixup_fname does its work.
+ * NOTE: that we check for the end offset being > 0, as that means "/" isn't
+ * treated as a trailing slash.
+ */
+    int had_trailing_hash;
+    int fspec_eoff = strlen(fspec) - 1;
+    if (fspec_eoff) had_trailing_hash = (fspec[fspec_eoff] == '/');
+    else            had_trailing_hash = 0;
     fixup_fname(fspec);
+    if (had_trailing_hash) {
+        char *ep = fspec+fspec_eoff;
+        *ep++ = '/';
+        *ep = '\0';
+    }
     strcpy(directory, fspec);
 
     if ((p = strrchr(directory, '/'))) {
