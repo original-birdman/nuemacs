@@ -179,10 +179,10 @@ static inline int TTputgrapheme(struct grapheme *gp) {
     ttcol++;
     return status;
 }
-/* Output a single character. mlwrite, mlput* may send zerowidth ones */
+/* Output a single character. mlwrite, mlput* may send Combining ones */
 static inline int TTput_1uc(unicode_t uc) {
     int status = TTputc(display_for(uc));
-    if (!zerowidth_type(uc)) ttcol++;
+    if (!combining_type(uc)) ttcol++;
     return status;
 }
 
@@ -280,7 +280,7 @@ static void vtputc(unsigned int c) {
 
     vp = vscreen[vtrow];
 
-    if (zerowidth_type((unicode_t)c)) {
+    if (combining_type((unicode_t)c)) {
 /* Only extend a grapheme if we have a prev-char within screen width */
         if (vtcol > 0 && (vtcol <= term.t_ncol)) {
             extend_grapheme(&(vp->v_text[vtcol-1]), c);

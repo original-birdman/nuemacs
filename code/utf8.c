@@ -118,7 +118,8 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8) {
 /* GGR functions to get offset of previous/next character in a buffer.
  * Added here to keep utf8 character handling together
  * Optional (grapheme_start):
- *    check the following character(s) for being zero-width too.
+ *    check the following character(s) for having a non-zero Combining
+ *    Class too.
  */
 int
  next_utf8_offset(char *buf, int offset, int max_offset, int grapheme_start) {
@@ -130,9 +131,9 @@ int
     int offs = offset;
     offs += utf8_to_unicode(buf, offs, max_offset, &c);
     if (grapheme_start) {
-        while(1) {      /* Look for any attached zero-width modifiers */
+        while(1) {      /* Look for any attached Combining modifiers */
             int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
-            if (!zerowidth_type(c)) break;
+            if (!combining_type(c)) break;
             offs += next_incr;
         }
     }
@@ -146,7 +147,7 @@ int
  * the length we have found) we use that.
  * If we fail along the way we revert to the original "back one byte".
  * Optional (grapheme_start):
- *    if we find a zero-width character we go back to the next previous one.
+ *    if we find a Combining character we go back to the next previous one.
  */
 int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
 
@@ -193,40 +194,21 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
             }
         }
         if (got_utf8) res = poss;
-    } while(grapheme_start && (offs >= 0) && zerowidth_type(res));
+    } while(grapheme_start && (offs >= 0) && combining_type(res));
     return offs;
 }
 
-/* Check whether the character is a zero-width one - needed for
+/* Check whether the character is a Combining Class one - needed for
  * grapheme handling in display.c
+ * The combi_range array is largish for a check-per-character but
+ * since most expected characters are below the first entry it
+ * will actually be quick.
  */
-
-static struct range_t {
-    unicode_t start;
-    unicode_t end;
-    int       type;     /* Possibly not needed... */
-} const zero_width[] = { /* THIS LIST MUST BE IN SORTED ORDER!! */
-    {0x02B0, 0x02FF, SPMOD_L},  /* Spacing Modifier Letters */
-    {0x0300, 0x036F, COM_DIA},  /* Combining Diacritical Marks */
-    {0x1AB0, 0x1AFF, COM_DIA},  /* Combining Diacritical Marks Extended */
-    {0x1DC0, 0x1DFF, COM_DIA},  /* Combining Diacritical Marks Supplement */
-    {0x200B, 0x200D, ZW_JOIN},  /* Zero-width space, non-joiner, joiner */
-    {0x200E, 0x200F, DIR_MRK},  /* L2R, R2L mark */
-    {0x202A, 0x202E, DIR_MRK},  /* More L2R, R2L marks */
-    {0X2060, 0X206F, ZW_JOIN},  /* Other ZW joiners */
-    {0x20D0, 0x20FF, COM_DIA},  /* Combining Diacritical Marks for Symbols */
-    {0xFE20, 0xFE2F, COM_DIA},  /* Combining Half Marks */
-    {UEM_NOCHAR, UEM_NOCHAR, 0} /* End of list marker */
-};
-static int spmod_l_is_zw = 0;   /* Probably not?? */
-int zerowidth_type(unicode_t uc) {
-    for (int rc = 0; zero_width[rc].start != UEM_NOCHAR; rc++) {
-        if (uc < zero_width[rc].start) return 0;
-        if (uc <= zero_width[rc].end) {
-            if ((zero_width[rc].type == SPMOD_L) && !spmod_l_is_zw)
-                return 0;
-            return zero_width[rc].type;
-        }
+#include "combi.h"
+int combining_type(unicode_t uc) {
+    for (int rc = 0; combi_range[rc].start != UEM_NOCHAR; rc++) {
+        if (uc < combi_range[rc].start) return 0;
+        if (uc <= combi_range[rc].end)  return 1;
     }
     return 0;
 }
@@ -485,7 +467,7 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
  * run through the case-mapper, just copy it verbatim.
  */
         unicode_t nuc;
-        if (zerowidth_type(uc) || ((nuc = caser(uc)) == uc)) {
+        if (combining_type(uc) || ((nuc = caser(uc)) == uc)) {
             add_to_res(mstr, in+offset, used, rec_incr);
             continue;
         }

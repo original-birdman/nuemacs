@@ -417,14 +417,14 @@ int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
     gp->ex = NULL;
     unicode_t uc;
     int xtra = utf8_to_unicode(buf, curwp->w.doto+used, len, &uc);
-    if (!zerowidth_type(uc)) {
+    if (!xtra || !combining_type(uc)) {
         return used;
     }
     used += xtra;
     gp->cdm = uc;
     for (int xc = 0;;xc++) {
         xtra = utf8_to_unicode(buf, curwp->w.doto+used, len, &uc);
-        if (!zerowidth_type(uc)) break;
+        if (!xtra || !combining_type(uc)) break;
         used += xtra;
         if (!utf8_len_only) {
             gp->ex = Xrealloc(gp->ex, (xc+2)*sizeof(unicode_t));
@@ -539,7 +539,7 @@ static int ldelnewline(void) {
  * ldelete() really fundamentally works on bytes, not characters.
  * It is used for things like "scan 5 words forwards, and remove
  * the bytes we scanned".
- * GGR - cater for zero-width characters...with lgetgrapheme.
+ * GGR - cater for combining characters...with lgetgrapheme.
  *
  * If you want to delete character-places<, use ldelgrapheme().
  */

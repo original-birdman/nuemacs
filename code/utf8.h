@@ -30,7 +30,7 @@ int prev_utf8_offset(char *, int, int);
 #define ZW_JOIN 2
 #define SPMOD_L 3
 #define DIR_MRK 4
-int zerowidth_type(unicode_t);
+int combining_type(unicode_t);
 int char_replace(int, int);
 unicode_t display_for(unicode_t);
 
