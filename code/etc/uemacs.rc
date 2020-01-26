@@ -89,7 +89,7 @@ store-procedure spell-check not_mb
     set %savefile $cfname
     write-file "Temp.spell"
     write-message "~n[Starting spelling checker..]  ~n~r"
-    !force shell-command &cat "culspell Temp.spell " %extras
+    !force execute-program &cat "culspell Temp.spell " %extras
     !if &seq $status TRUE
       write-message "[Pulling (corrected) buffer back in..]~n~r"
       read-file "Temp.spell"
