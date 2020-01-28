@@ -614,6 +614,8 @@ struct while_block {
 #define MC_BOL          '^'     /* Beginning of line. */
 #define MC_EOL          '$'     /* End of line. */
 #define MC_CLOSURE      '*'     /* Closure - does not extend past newline. */
+#define MC_ONEPLUS      '+'     /* non-zero Closure. */
+#define MC_RANGE        '{'     /* Ranged Closure. */
 #define MC_DITTO        '&'     /* Use matched string in replacement. */
 #define MC_ESC          '\\'    /* Escape - suppress meta-meaning. */
 
@@ -660,12 +662,17 @@ struct rx_mask {
  * (struct magic), and the meta-character structure for MAGIC mode replacement
  * (struct magic_replacement).
  */
+struct range {
+    int low;
+    int high;
+};
 struct magic {
     short int mc_type;
     union {
         int lchar;
         char *cclmap;
     } u;
+    struct range cl_lim;
 };
 
 struct magic_replacement {

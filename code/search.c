@@ -72,6 +72,7 @@
  */
 #include <stdio.h>
 #include <ctype.h>
+#include <limits.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -324,6 +325,27 @@ static int biteq(int bc, char *cclmap) {
     return (*(cclmap + (bc >> 3)) & BIT(bc & 7)) ? TRUE : FALSE;
 }
 
+static int get_lim(char **patptr, char ec, int dflt) {
+    char *rptr = *patptr + 1;
+    int ch_found = 0;
+    char rchr;
+    while ((rchr = *(++(*patptr))) != '\0') {
+        if (rchr == ec) {
+            ch_found = 1;
+            break;
+        }
+    }
+    if (!ch_found) {
+        mlforce("Invalid range pattern");
+        return -1;
+    }
+    if (rptr == *patptr) return dflt; /* empty... */
+    **patptr = '\0';
+    int retval = atoi(rptr);
+    **patptr = ec;
+    return retval;
+}
+
 /*
  * mcstr -- Set up the 'magic' array.  The closure symbol is taken as
  *      a literal character when (1) it is the first character in the
@@ -380,6 +402,7 @@ static int mcstr(void) {
             does_closure = TRUE;
             break;
         case MC_CLOSURE:
+        case MC_ONEPLUS:
 /* Does the closure symbol mean closure here? If so, back up to the
  * previous element and indicate it is enclosed.
  */
@@ -387,6 +410,21 @@ static int mcstr(void) {
             mj--;
             mcptr--;
             mcptr->mc_type |= CLOSURE;
+            mcptr->cl_lim.low = (pchr == MC_ONEPLUS)? 1: 0;
+            mcptr->cl_lim.high = INT_MAX;    /* Not quite infinity */
+            magical = TRUE;
+            does_closure = FALSE;
+            break;
+        case MC_RANGE:
+            if (!does_closure) goto litcase;
+            mj--;
+            mcptr--;
+            mcptr->mc_type |= CLOSURE;
+/* Need to get the limits here....hard wire 1&3 for testing */
+            mcptr->cl_lim.low = get_lim(&patptr, ',', 0);
+            if (mcptr->cl_lim.low < 0) return FALSE;    /* mlerror?!? */
+            mcptr->cl_lim.high = get_lim(&patptr, '}', INT_MAX);
+            if (mcptr->cl_lim.high < 0) return FALSE;   /* mlerror?!? */
             magical = TRUE;
             does_closure = FALSE;
             break;
@@ -396,7 +434,8 @@ static int mcstr(void) {
                 magical = TRUE;
             } /* Falls through */
         default:
-            litcase:mcptr->mc_type = LITCHAR;
+litcase:
+            mcptr->mc_type = LITCHAR;
             mcptr->u.lchar = pchr;
             does_closure = (pchr != '\n');
             break;
@@ -786,18 +825,24 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
         if (mcptr->mc_type & CLOSURE) {
 /* Try to match as many characters as possible against the current
  * meta-character.  A newline never matches a closure.
+ * We now alllow a lower limit to this match...
  */
+            int lo_lim = mcptr->cl_lim.low;
+            int hi_lim = mcptr->cl_lim.high;
             nchars = 0;
             while (c != '\n' && mceq(c, mcptr)) {
                 c = nextch(&curline, &curoff, direct);
                 nchars++;
+                if (nchars >= hi_lim) break;
             }
+            if (nchars < lo_lim) return FALSE;
 
 /* We are now at the character that made us fail.
  * Try to match the rest of the pattern.
  * Shrink the closure by one for each failure.
  * Since closure matches *zero* or more occurrences of a pattern, a match
  * may start even if the previous loop matched no characters.
+ * (We actually now alllow a lower limit to this match...)
  */
             mcptr++;
 
@@ -808,8 +853,7 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
                     matchlen += nchars;
                     goto success;
                 }
-
-                if (nchars-- == 0) return FALSE;
+                if (--nchars < lo_lim) return FALSE;
             }
         }
         else {        /* Not closure. */
