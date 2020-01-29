@@ -325,25 +325,29 @@ static int biteq(int bc, char *cclmap) {
     return (*(cclmap + (bc >> 3)) & BIT(bc & 7)) ? TRUE : FALSE;
 }
 
-static int get_lim(char **patptr, char ec, int dflt) {
-    char *rptr = *patptr + 1;
-    int ch_found = 0;
+static char *get_lims(char *patp, struct magic *mcp, int first_call) {
+    char *rptr = patp + 1;      /* Remember where we start */
     char rchr;
-    while ((rchr = *(++(*patptr))) != '\0') {
-        if (rchr == ec) {
-            ch_found = 1;
-            break;
-        }
+    while ( (rchr = *(++patp)) != '\0' ) {
+        if (rchr < '0' || rchr > '9') break;    /* End of numbers */
     }
-    if (!ch_found) {
+    if ((rchr == ',') && first_call) {  /* OK */
+        mcp->cl_lim.low = atoi(rptr);
+        return get_lims(patp, mcp, 0);
+    }
+    if ((rchr == '}') && first_call) {  /* OK */
+        mcp->cl_lim.low = atoi(rptr);
+        mcp->cl_lim.high = mcp->cl_lim.low;
+        return patp;
+    }
+/* Not a first_call, so we MUST end on a '}' */
+    if (rptr == patp) mcp->cl_lim.high = INT_MAX;  /* Empty -> MAX */
+    else              mcp->cl_lim.high = atoi(rptr);
+    if ((rchr != '}') || mcp->cl_lim.high < mcp->cl_lim.low) {
         mlforce("Invalid range pattern");
-        return -1;
+        return NULL;
     }
-    if (rptr == *patptr) return dflt; /* empty... */
-    **patptr = '\0';
-    int retval = atoi(rptr);
-    **patptr = ec;
-    return retval;
+    return patp;
 }
 
 /*
@@ -420,11 +424,12 @@ static int mcstr(void) {
             mj--;
             mcptr--;
             mcptr->mc_type |= CLOSURE;
-/* Need to get the limits here....hard wire 1&3 for testing */
-            mcptr->cl_lim.low = get_lim(&patptr, ',', 0);
-            if (mcptr->cl_lim.low < 0) return FALSE;    /* mlerror?!? */
-            mcptr->cl_lim.high = get_lim(&patptr, '}', INT_MAX);
-            if (mcptr->cl_lim.high < 0) return FALSE;   /* mlerror?!? */
+/* Need to get the limits here. Allow {m,n}, {,n}, {m,}, {,}, {}.
+ * Missing m is taken as 0. Missign n as INT_MAX (2**31 -1).
+ * m must be <= n
+ */
+            patptr = get_lims(patptr, mcptr, 1);
+            if (!patptr) return FALSE;
             magical = TRUE;
             does_closure = FALSE;
             break;
@@ -434,8 +439,7 @@ static int mcstr(void) {
                 magical = TRUE;
             } /* Falls through */
         default:
-litcase:
-            mcptr->mc_type = LITCHAR;
+litcase:    mcptr->mc_type = LITCHAR;
             mcptr->u.lchar = pchr;
             does_closure = (pchr != '\n');
             break;
@@ -830,7 +834,8 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
             int lo_lim = mcptr->cl_lim.low;
             int hi_lim = mcptr->cl_lim.high;
             nchars = 0;
-            while (c != '\n' && mceq(c, mcptr)) {
+/* A high limit of 0 (range 0->0) is valid! */
+            if (hi_lim > 0) while (c != '\n' && mceq(c, mcptr)) {
                 c = nextch(&curline, &curoff, direct);
                 nchars++;
                 if (nchars >= hi_lim) break;
