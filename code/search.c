@@ -344,7 +344,7 @@ static char *get_lims(char *patp, struct magic *mcp, int first_call) {
     if (rptr == patp) mcp->cl_lim.high = INT_MAX;  /* Empty -> MAX */
     else              mcp->cl_lim.high = atoi(rptr);
     if ((rchr != '}') || mcp->cl_lim.high < mcp->cl_lim.low) {
-        mlforce("Invalid range pattern");
+        mlwrite_one("Invalid range pattern");
         return NULL;
     }
     return patp;
@@ -432,6 +432,30 @@ static int mcstr(void) {
             if (!patptr) return FALSE;
             magical = TRUE;
             does_closure = FALSE;
+            break;
+        case MC_MINIMAL:
+            if (mj == 0) goto litcase;
+/* Not at start, so if we can do closure we set it up for 0/1
+ * and, if we can't, we check that the previus entry IS a closure
+ * and set that for minimal matchin, complaining if it isn't
+ * a closure.
+ */
+            mj--;
+            mcptr--;
+            magical = TRUE;
+            if (does_closure) {
+                mcptr->mc_type |= CLOSURE;
+                mcptr->cl_lim.low = 0;
+                mcptr->cl_lim.high = 1;
+                does_closure = FALSE;
+            }
+            else {
+                if (!(mcptr->mc_type & CLOSURE)) {
+                    mlwrite_one("? after non-closure!!");
+                    return FALSE;
+                }
+                mcptr->mc_type |= MINCLOS;
+            }
             break;
         case MC_ESC:
             if (*(patptr + 1) != '\0') {
@@ -798,7 +822,6 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
     int c;                          /* character at current position */
     struct line *curline;           /* current line during scan */
     int curoff;                     /* position within current line */
-    int nchars;
 
 /* Set up local scan pointers to ".", and get the current character.
  * Then loop around the pattern pointer until success or failure.
@@ -826,39 +849,85 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
     while (mcptr->mc_type != MCNIL) {
         c = nextch(&curline, &curoff, direct);
 
+next_magic:
         if (mcptr->mc_type & CLOSURE) {
 /* Try to match as many characters as possible against the current
  * meta-character.  A newline never matches a closure.
  * We now alllow a lower limit to this match...
+ * We might also now want the shortest match...
  */
-            int lo_lim = mcptr->cl_lim.low;
             int hi_lim = mcptr->cl_lim.high;
-            nchars = 0;
-/* A high limit of 0 (range 0->0) is valid! */
-            if (hi_lim > 0) while (c != '\n' && mceq(c, mcptr)) {
+            if (hi_lim == 0) {  /* A zero-length match - currently valid */
+                mcptr++;
+                goto next_magic;
+            }
+            int lo_lim = mcptr->cl_lim.low;
+            int nchars = 0;
+
+/* First check that we have the minimum matches at the start.
+ * If not, then we have failed early.
+ */
+            while (nchars < lo_lim) {
+                if (!((c != '\n') && mceq(c, mcptr))) break;
                 c = nextch(&curline, &curoff, direct);
                 nchars++;
-                if (nchars >= hi_lim) break;
             }
             if (nchars < lo_lim) return FALSE;
 
+/* Now add in more matches for the current pattern and check whether
+ * what is left of the string matches the rest of the magic/regex
+ * patterns.
+ *
+ * For a MINCLOS match we just keep adding the current pattern until we
+ * find a match, or have no more current pattern to add (== failure).
+ * NOTE: that nextch() gets the char at curline/curoff and advances
+ *      the position for the *next character*. We need to undo this
+ *      effect here...
+ *      We've already checked lo_lim characters are OK, so must now start
+ *      the amatch() loop check with the rest of the string *INCLUDING the
+ *      one we have stashed in c" against the rest of the regex.
+ *      So we start with one backtrack on nextch()
+ */
+            if (mcptr->mc_type & MINCLOS) {
+                (void)nextch(&curline, &curoff, direct ^ REVERSE);
+                while (nchars <= hi_lim) {
+                    if (amatch(mcptr+1, direct, &curline, &curoff)) {
+                        matchlen += nchars;
+                        goto success;
+                    }
+                    if (!mceq(c, mcptr)) break;
+                    c = nextch(&curline, &curoff, direct);
+                    nchars++;
+                }
+                return FALSE;
+            }
+
+/* For a MAXIMUM match we eat as many of the current char as possible
+ * first, then backtrack until we find a match. Or fail if we don't.
+ */
+            else {
+                while (nchars < hi_lim) {
+                    if (!((c != '\n') && mceq(c, mcptr))) break;
+                    c = nextch(&curline, &curoff, direct);
+                    nchars++;
+                }
+
 /* We are now at the character that made us fail.
- * Try to match the rest of the pattern.
- * Shrink the closure by one for each failure.
+ * Try to match the rest of the pattern, shrinking the closure by one for
+ * each failure.
  * Since closure matches *zero* or more occurrences of a pattern, a match
  * may start even if the previous loop matched no characters.
- * (We actually now alllow a lower limit to this match...)
+ * (NOTE: We actually now allow a lower limit to this match...)
  */
-            mcptr++;
+                while(1) {
+                    (void)nextch(&curline, &curoff, direct ^ REVERSE);
 
-            for (;;) {
-                c = nextch(&curline, &curoff, direct ^ REVERSE);
-
-                if (amatch(mcptr, direct, &curline, &curoff)) {
-                    matchlen += nchars;
-                    goto success;
+                    if (amatch(mcptr+1, direct, &curline, &curoff)) {
+                        matchlen += nchars;
+                        goto success;
+                    }
+                    if (--nchars < lo_lim) return FALSE;
                 }
-                if (--nchars < lo_lim) return FALSE;
             }
         }
         else {        /* Not closure. */

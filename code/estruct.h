@@ -603,7 +603,8 @@ struct while_block {
 #define BOL             5
 #define EOL             6
 #define DITTO           7
-#define CLOSURE         256     /* An or-able value. */
+#define CLOSURE         0x00000100  /* An or-able value. >= 256  */
+#define MINCLOS         0x00000200
 #define MASKCL          (CLOSURE - 1)
 
 #define MC_ANY          '.'     /* 'Any' character (except newline). */
@@ -616,6 +617,7 @@ struct while_block {
 #define MC_CLOSURE      '*'     /* Closure - does not extend past newline. */
 #define MC_ONEPLUS      '+'     /* non-zero Closure. */
 #define MC_RANGE        '{'     /* Ranged Closure. */
+#define MC_MINIMAL      '?'     /* Shortest Closure OR 0/1 match. */
 #define MC_DITTO        '&'     /* Use matched string in replacement. */
 #define MC_ESC          '\\'    /* Escape - suppress meta-meaning. */
 
