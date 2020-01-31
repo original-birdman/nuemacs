@@ -1139,7 +1139,7 @@ loop:
 
 /* Whatever dumb modes, they've put on, allow only the sensible... */
 
-    curbp->b_mode &= (MDEXACT|MDOVER|MDMAGIC|MDPHON|MDEQUIV);
+    curbp->b_mode &= (MDEXACT|MDOVER|MDMAGIC|MDPHON|MDUNICO);
     goto loop;
 
 submit:     /* Tidy up */

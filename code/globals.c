@@ -14,9 +14,9 @@ int flickcode = FALSE;          /* do flicker supression?       */
 char *mode2name[] = {           /* Display name of modes        */
                                 /* Also text when checking them */
         "Wrap",  "Cmode", "Phon",  "Exact", "View",
-        "Over",  "Magic", "Crypt", "Asave", "eQuiv", "Dos",
+        "Over",  "Magic", "Crypt", "Asave", "Unico", "Dos",
 };
-char modecode[] = "WCPEVOMYAQD";/* letters to represent modes   */
+char modecode[] = "WCPEVOMYAUD";/* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
 #if IBMPC
