@@ -3647,4 +3647,64 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.149
 
+========== GGR4.150
+
+input.c
+    In getfile() add back any trailing '/' after calling fixup_fname().
+
+display.c   line.c      random.c    utf8.c      utf8.h
+tools/(.gitignore Makefile combi-class.c combi.h combi.info)
+    In lgetgrapheme() check that we actually used some of the buffer
+    before continuing to loop. [line.c]
+    Rename zerowidth_type() to combining_type(), as that is what it
+    is actually meant to be testing. [all]
+    Generate the range data (combi.h) for combining_type() from a
+    program (tools/combi-class) which queries the utf8proc lib for all
+    non-zero combining class characters. (tools/*). This should be
+    regenerated for any utf8proc update, and the new combi.h copied into
+    the code/ directory.
+
+line.h
+    Correct the update_screenpos_for_char() macro to use utf8char_width()
+    not utf8proc_charwidth(), allowing fix overrides to take effect.
+
+etc/uemacs.rc
+    Change shell-command to execute-program so you always have to hit
+    <return> as culspell ends.
+    Otherwise a file with no error looks really odd (it appears to do
+    nothing) and it does let you know that the spell check has actually
+    ended! 
+
+search.c
+estruct.h
+    Extended regex code to handle a range for repeat matches.
+    + for 1 to "infinity" and {m,n} for m to n.
+
+search.c
+    Allow {,n}, {m,}, {,}, {} for regex ranges too.
+
+search.c
+estruct.h
+    Allow ? after a closure to mean "minimum length match".
+
+globals.c
+input.c
+estruct.h
+etc/uemacs.rc
+    Rename the (unused) EQUIV mode to be UNICO.
+
+estruct.h
+search.c
+    Allow \n (newline), \s (whitespace) and \t (tab) in Magic mode.
+
+utf8.c
+    Extended utf8char_width() with a longer list of unicode chars
+    incorrectly zero-length tagged in utf8proc v2.3+.
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.150
+
 ==========
