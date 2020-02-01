@@ -484,12 +484,41 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
 }
 
 /* The Julia utf8 library has a bug(?) for U+00a8 and U+00b4.
- * It marks them as zero-width *v2.3+) but they aren't
+ * It marks them as zero-width (v2.3+) but they aren't
+ * Also true for U+00B8, U+02C2-U+02C5, U+02D2-U+02DF, U+02E5-U+02EB,
+ * U+02ED. Possibly others..
  */
 int utf8char_width(unicode_t c) {
     switch(c) {
     case 0x00a8:
     case 0x00b4:
+    case 0x00b8:
+    case 0x02c2:
+    case 0x02c3:
+    case 0x02c4:
+    case 0x02c5:
+    case 0x02d2:
+    case 0x02d3:
+    case 0x02d4:
+    case 0x02d5:
+    case 0x02d6:
+    case 0x02d7:
+    case 0x02d8:
+    case 0x02d9:
+    case 0x02da:
+    case 0x02db:
+    case 0x02dc:
+    case 0x02dd:
+    case 0x02de:
+    case 0x02df:
+    case 0x02e5:
+    case 0x02e6:
+    case 0x02e7:
+    case 0x02e8:
+    case 0x02e9:
+    case 0x02ea:
+    case 0x02eb:
+    case 0x02ed:
         return 1;
     }
     return utf8proc_charwidth(c);
