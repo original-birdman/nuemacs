@@ -603,6 +603,7 @@ struct while_block {
 #define BOL             5
 #define EOL             6
 #define DITTO           7
+#define WSPACE          8
 #define CLOSURE         0x00000100  /* An or-able value. >= 256  */
 #define MINCLOS         0x00000200
 #define MASKCL          (CLOSURE - 1)

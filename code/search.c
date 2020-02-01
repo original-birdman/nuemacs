@@ -296,6 +296,13 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
 
         case MC_ESC:
             pchr = *++patptr;
+            if (pchr == 's') {  /* \s is Whitespace */
+                setbit(' ', bmap);
+                setbit('\t', bmap);
+                setbit('\n', bmap);
+                setbit('\r', bmap);
+                break;
+            }
             /* Falls through */
         default:
             setbit(pchr, bmap);
@@ -436,8 +443,8 @@ static int mcstr(void) {
         case MC_MINIMAL:
             if (mj == 0) goto litcase;
 /* Not at start, so if we can do closure we set it up for 0/1
- * and, if we can't, we check that the previus entry IS a closure
- * and set that for minimal matchin, complaining if it isn't
+ * and, if we can't, we check that the previous entry IS a closure
+ * and set that for minimal matching, complaining if it isn't
  * a closure.
  */
             mj--;
@@ -458,9 +465,24 @@ static int mcstr(void) {
             }
             break;
         case MC_ESC:
-            if (*(patptr + 1) != '\0') {
-                pchr = *++patptr;
+            pchr = *(patptr + 1);
+            if (pchr) {         /* MC_ESC at EOB is taken literally... */
+                patptr++;       /* Advance to next char */
                 magical = TRUE;
+                switch (pchr) {
+                case 's':
+                    mcptr->mc_type = WSPACE;
+                    goto pchr_done;
+                    break;
+                case 'n':
+                    pchr = 0x0a;
+                    break;
+                case 't':
+                    pchr = 0x09;
+                    break;
+                default:
+                    pchr = *patptr;
+                }
             } /* Falls through */
         default:
 litcase:    mcptr->mc_type = LITCHAR;
@@ -468,6 +490,7 @@ litcase:    mcptr->mc_type = LITCHAR;
             does_closure = (pchr != '\n');
             break;
         }               /* End of switch. */
+pchr_done:
         mcptr++;
         patptr++;
         mj++;
@@ -601,7 +624,7 @@ static int mceq(int bc, struct magic *mt) {
         result = eq(bc, mt->u.lchar);
         break;
 
-    case ANY:
+    case ANY:                   /* Any EXCEPT newline */
         result = (bc != '\n');
         break;
 
@@ -620,6 +643,16 @@ static int mceq(int bc, struct magic *mt) {
             result &= !biteq(CHCASE(bc), mt->u.cclmap);
         }
         break;
+
+    case WSPACE:
+        switch (bc) {
+        case ' ':
+        case '\t':
+        case '\n':
+        case '\r':
+            return TRUE;
+        }
+        return FALSE;
 
     default:
         mlwrite("mceq: what is %d?", mt->mc_type);
@@ -868,7 +901,7 @@ next_magic:
  * If not, then we have failed early.
  */
             while (nchars < lo_lim) {
-                if (!((c != '\n') && mceq(c, mcptr))) break;
+                if (!mceq(c, mcptr)) break;
                 c = nextch(&curline, &curoff, direct);
                 nchars++;
             }
@@ -907,7 +940,7 @@ next_magic:
  */
             else {
                 while (nchars < hi_lim) {
-                    if (!((c != '\n') && mceq(c, mcptr))) break;
+                    if (!mceq(c, mcptr)) break;
                     c = nextch(&curline, &curoff, direct);
                     nchars++;
                 }
