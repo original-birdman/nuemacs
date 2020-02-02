@@ -217,7 +217,7 @@ endif
 #
 ifeq ($(strip $(ANDROID)),1)
     uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
-    ifeq ($(uname_M),arm7l)
+    ifneq ($(uname_M),armv7l)
         .DEFAULT_GOAL := notarm_error
     else
         STATIC=-static
@@ -310,7 +310,7 @@ utf8_error:
 	@echo "  See https://julialang.org/utf8proc"
 
 notarm_error:
-	@echo "ERROR: You may only use the ANDROID option on an ARM (arm7l) system"
+	@echo "ERROR: You may only use the ANDROID option on an ARM (armv7l) system"
 
 # DO NOT DELETE THIS LINE -- make depend uses it
 
