@@ -923,13 +923,9 @@ int justpara(int f, int n) {
 
 /* Reformat the paragraphs containing the region into a list.
  * This is actually called via front-ends which set the format
- * to use. It must not be made user-callable.
- *
- * int f, n;            deFault flag and Numeric argument
+ * to use.
  */
-static const char *lbl_fmt;
-static int region_listmaker(int f, int n) {
-    UNUSED(f);
+static int region_listmaker(const char *lbl_fmt, int n) {
     char label[80];
     struct region f_region; /* Formatting region */
     struct filler_control fp_ctl;
@@ -1023,7 +1019,6 @@ static int region_listmaker(int f, int n) {
  * will reformat the next paragraph, which makes more sense.
  * But note that this will *not* propagate any current paragraph counter!
  */
-
     struct line *here_dotp = curwp->w.dotp;
     int here_doto = curwp->w.doto;
     forw_grapheme(1);
@@ -1042,8 +1037,8 @@ static int region_listmaker(int f, int n) {
  * int f, n;            deFault flag and Numeric argument
  */
 int makelist_region(int f, int n) {
-    lbl_fmt = regionlist_text;
-    int status = region_listmaker(f, n);
+    UNUSED(f);
+    int status = region_listmaker(regionlist_text, n);
     return status;
 }
 
@@ -1054,7 +1049,7 @@ int makelist_region(int f, int n) {
  * int f, n;            deFault flag and Numeric argument
  */
 int numberlist_region(int f, int n) {
-    lbl_fmt = regionlist_number;
-    int status = region_listmaker(f, n);
+    UNUSED(f);
+    int status = region_listmaker(regionlist_number, n);
     return status;
 }

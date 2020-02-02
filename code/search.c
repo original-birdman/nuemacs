@@ -1237,11 +1237,9 @@ static void savematch(void) {
     struct line *curline;           /* line of last match */
     int curoff;                     /* offset "      "    */
 
-/* Free any existing match string, then attempt to allocate a new one. */
+/* (re)allocate a pattern match. */
 
-    if (patmatch != NULL) free(patmatch);
-
-    ptr = patmatch = Xmalloc(matchlen + 1);
+    ptr = patmatch = Xrealloc(patmatch, matchlen + 1);
 
     curoff = matchoff;
     curline = matchline;
