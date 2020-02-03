@@ -39,17 +39,17 @@ static int curline_empty(void) {
  * column, return the best choice for the offset. The offset is returned.
  * Used by "C-N" and "C-P".
  */
-static int getgoal(struct line *dlp) {
-    int col = 0;
-    int dbo = 0;
+static int offset_for_curgoal(struct line *dlp) {
+    int col = 0;        /* Cursor display column */
+    int dbo = 0;        /* Byte offset within dlp */
     int len = llength(dlp);
 
     while (dbo < len) {
         unicode_t c;
-        int width = utf8_to_unicode(dlp->l_text, dbo, len, &c);
+        int bytes_used = utf8_to_unicode(dlp->l_text, dbo, len, &c);
         update_screenpos_for_char(col, c);
         if (col > curgoal) break;
-        dbo += width;
+        dbo += bytes_used;
     }
     return dbo;
 }
@@ -249,7 +249,7 @@ int forwline(int f, int n) {
 /* Resetting the current position */
 
     curwp->w.dotp = dlp;
-    curwp->w.doto = getgoal(dlp);
+    curwp->w.doto = offset_for_curgoal(dlp);
     curwp->w_flag |= WFMOVE;
     return TRUE;
 }
@@ -284,7 +284,7 @@ int backline(int f, int n) {
 /* Resetting the current position */
 
     curwp->w.dotp = dlp;
-    curwp->w.doto = getgoal(dlp);
+    curwp->w.doto = offset_for_curgoal(dlp);
     curwp->w_flag |= WFMOVE;
     return TRUE;
 }

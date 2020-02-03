@@ -83,7 +83,7 @@ int currow;                     /* Cursor row                   */
 int curcol;                     /* Cursor column                */
 int thisflag;                   /* Flags, this command          */
 int lastflag;                   /* Flags, last command          */
-int curgoal;                    /* Goal for C-P, C-N            */
+int curgoal;                    /* Display column goal for C-P, C-N */
 struct window *curwp;           /* Current window               */
 struct buffer *curbp;           /* Current buffer               */
 struct window *wheadp;          /* Head of list of windows      */
