@@ -39,22 +39,6 @@ static struct buffer *expandbp;
 
 static char so_far[NFILEN];     /* Maximal match so far */
 
-static short ljust(char *str) {
-    char *p, *q;
-    short justified;
-
-    justified = FALSE;
-    p = str;
-    while (*p++ == ' ') justified = TRUE;
-    p--;
-    if (justified) {
-        q = str;
-        while (*p!=0) *q++ = *p++;
-        *q = 0;
-    }
-    return(justified);
-}
-
 /* getnfile() and getffile()
  * Handle file name completion
  *
@@ -413,8 +397,6 @@ static int comp_file(char *name, char *choices) {
 
     *choices = 0;
 
-/* Left-justify the user's input */
-    ljust(name);
     if ((p = getffile(name)) == NULL) {
         close_dir();
         mlwrite(NOMATCH);
@@ -454,7 +436,6 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
     int namelen;
 
     *choices = 0;
-    ljust(name);
     namelen = strlen(name);
     switch(mtype) {
     case CMPLT_BUF:
