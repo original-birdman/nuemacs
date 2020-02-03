@@ -462,12 +462,12 @@ struct region {
  * one terminal type.
  */
 struct terminal {
-    short t_mrow;               /* max number of rows allowable  */
-    short t_nrow;               /* current number of rows used   */
-    short t_mcol;               /* max Number of columns.        */
-    short t_ncol;               /* current Number of columns.    */
-    short t_margin;             /* min margin for extended lines */
-    short t_scrsiz;             /* size of scroll region "       */
+    int t_mrow;                 /* max number of rows allowable  */
+    int t_nrow;                 /* current number of rows used   */
+    int t_mcol;                 /* max Number of columns.        */
+    int t_ncol;                 /* current Number of columns.    */
+    int t_margin;               /* min margin for extended lines */
+    int t_scrsiz;               /* size of scroll region "       */
     int t_pause;                /* # times thru update to pause  */
     void (*t_open)(void);       /* Open terminal at the start.   */
     void (*t_close)(void);      /* Close terminal at end.        */
@@ -670,7 +670,7 @@ struct range {
     int high;
 };
 struct magic {
-    short int mc_type;
+    int mc_type;
     union {
         int lchar;
         char *cclmap;
@@ -679,7 +679,7 @@ struct magic {
 };
 
 struct magic_replacement {
-    short int mc_type;
+    int mc_type;
     char *rstr;
 };
 

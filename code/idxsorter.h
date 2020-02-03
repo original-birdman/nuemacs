@@ -2,8 +2,8 @@
 
 struct fields {
     int offset;         /* byte offset from start of record */
+    int len;            /* field length in chars, or bytes */
     char type;          /* C, S, U, P or I */
-    short len;          /* field length in chars, or bytes */
 };
 
 /* The function call itself */

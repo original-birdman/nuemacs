@@ -89,8 +89,8 @@ static int lastchfjump, lastchbjump;
  * if not, then we don't have to use the slower MAGIC mode
  * search functions.
  */
-static short int magical;
-static short int rmagical;
+static int magical;
+static int rmagical;
 static struct magic mcpat[NPAT]; /* The magic pattern. */
 static struct magic tapcm[NPAT]; /* The reversed magic pattern. */
 static struct magic_replacement rmcpat[NPAT]; /* Replacement magic array. */
