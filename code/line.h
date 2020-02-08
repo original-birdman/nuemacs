@@ -41,9 +41,7 @@ extern int lnewline(void);
 extern int ldelete(long n, int kflag);
 extern int ldelgrapheme(long n, int kflag);
 extern int lgetgrapheme(struct grapheme *, int);
-#ifdef CURRENTLY_UNUSED
 extern int lputgrapheme(struct grapheme *gp);
-#endif
 extern char *getctext(void);
 extern int putctext(char *iline);
 extern void kdelete(void);

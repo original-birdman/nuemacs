@@ -166,10 +166,11 @@ void ensure_case(int want_case) {
     else {
         unicode_t nuc = caser(gc.uc);   /* Get the case-translated uc */
         if (nuc == gc.uc) return;       /* No change */
-        char utf8_repl[8];
-        int new_utf8_len = unicode_to_utf8(nuc, utf8_repl);
+        int start = curwp->w.doto;
         gc.uc = nuc;
-        linsert_uc(1, gc.uc);           /* Inserts unicode */
+        lputgrapheme(&gc);              /* Insert the whole thing */
+        int new_utf8_len = curwp->w.doto - start;   /* Bytes added */
+
 /* If mark is on this line we may have to update it to reflect any change
  * in byte count
  */
@@ -180,7 +181,7 @@ void ensure_case(int want_case) {
         }
     }
     ldelete(orig_utf8_len, FALSE);
-    curwp->w.doto = saved_doto + doto_adj;          /* Restore positon */
+    curwp->w.doto = saved_doto + doto_adj;          /* Restore position */
     lchange(WFHARD);
     return;
 }

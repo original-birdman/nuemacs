@@ -435,7 +435,6 @@ int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
     return used;
 }
 
-#ifdef CURRENTLY_UNUSED
 /* Put the grapheme structure into the buffer at the current point.
  * Just a simple matter of running linsert_uc() on each unicode char.
  */
@@ -452,7 +451,6 @@ int lputgrapheme(struct grapheme *gp) {
     }
     return status;
 }
-#endif
 
 /*
  * Delete a newline. Join the current line with the next line. If the next line
