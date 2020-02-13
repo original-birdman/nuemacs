@@ -129,7 +129,7 @@ static struct user_function funcs[] = {
  { "tru", MONAMIC,  UFTRUTH },  /* Truth of the universe logical test */
  { "asc", MONAMIC,  UFASCII },  /* char to integer conversion */
  { "chr", MONAMIC,  UFCHR },    /* integer to char conversion */
- { "gtk", NILNAMIC, UFGTKEY },  /* get 1 charater */
+ { "gtk", NILNAMIC, UFGTKEY },  /* get 1 Unicode character */
  { "rnd", MONAMIC,  UFRND },    /* get a random number */
  { "abs", MONAMIC,  UFABS },    /* absolute value of a number */
  { "sin", DYNAMIC,  UFSINDEX }, /* find the index of one string in another */

@@ -491,10 +491,13 @@ static char *gtenv(char *vname) {
     case EVASAVE:           return ue_itoa(gasave);
     case EVACOUNT:          return ue_itoa(gacount);
     case EVLASTKEY:         return ue_itoa(lastkey);
-    case EVCURCHAR:
-        return (curwp->w.dotp->l_used == curwp->w.doto ?
-            ue_itoa('\n') :
-            ue_itoa(lgetc(curwp->w.dotp, curwp->w.doto)));
+    case EVCURCHAR:     /* Make this return the current Unicode char */
+        if (curwp->w.dotp->l_used == curwp->w.doto) return ue_itoa('\n');
+        struct grapheme gc;
+        (void)build_next_grapheme(curwp->w.dotp->l_text,
+             curwp->w.doto, curwp->w.dotp->l_used, &gc);
+        if (gc.ex) free(gc.ex);
+        return ue_itoa(gc.uc);
     case EVDISCMD:          return ltos(discmd);
     case EVVERSION:         return VERSION;
     case EVPROGNAME:        return PROGRAM_NAME_LONG;
