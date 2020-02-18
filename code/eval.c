@@ -374,7 +374,12 @@ static char *gtfun(char *fname) {
         return result;
        }
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
-    case UFASCII:       return ue_itoa((int) arg1[0]);
+    case UFASCII: {     /* Return base unicode char - but keep name... */
+        struct grapheme gc;
+        (void)build_next_grapheme(arg1, 0, -1, &gc);
+        if (gc.ex) free(gc.ex);
+        return ue_itoa(gc.uc);
+    }
 /* Allow for unicode as:
  *      decimal codepoint
  *      hex codepoint   (0x...)
