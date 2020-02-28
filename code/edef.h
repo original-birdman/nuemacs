@@ -208,3 +208,6 @@ extern char *userproc_arg;
 
 /* Are we still processing the command line? */
 extern int comline_processing;
+
+/* The real status of the last command !force'd in a buffer macro */
+extern char *force_status;

@@ -16,7 +16,6 @@ struct user_variable {
 
 /* List of recognized environment variables. */
 
-// static struct evlist {
 struct evlist evl[] = {
  { "fillcol",   EVFILLCOL },    /* current fill column */
  { "pagelen",   EVPAGELEN },    /* number of lines used by editor */
@@ -71,6 +70,7 @@ struct evlist evl[] = {
  { "autodos",   EVAUTODOS },    /* Check for DOS on read-in? */
  { "showdir_tokskip", EVSDTKSKIP },     /* Token to skip in showdir */
  { "uproc_opts",    EVUPROCOPTS },  /* Flags when processing &arg */
+ { "force_status",  EVFORCESTAT },  /* Actual status when forced to OK */
 };
 
 /* The tags for user functions - used in struct evlist */

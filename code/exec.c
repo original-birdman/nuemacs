@@ -1342,7 +1342,15 @@ int dobuf(struct buffer *bp) {
 /* Execute the statement */
 
         status = docmd(eline);
-        if (force) status = TRUE;       /* force the status */
+        if (force) {                /* Set force_status, so we can check */
+            if (status == TRUE) {
+                force_status = "PASSED";
+            }
+            else {
+                force_status = "FAILED";
+                status = TRUE;      /* force the status */
+            }
+        }
 
 /* Check for a command error */
         if (status != TRUE) {

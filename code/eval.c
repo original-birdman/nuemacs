@@ -549,6 +549,7 @@ static char *gtenv(char *vname) {
     case EVAUTODOS:         return ltos(autodos);
     case EVSDTKSKIP:        return ue_itoa(showdir_tokskip);
     case EVUPROCOPTS:       return ue_itoa(uproc_opts);
+    case EVFORCESTAT:       return force_status;
     }
     exit(-12);              /* again, we should never get here */
 }

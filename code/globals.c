@@ -207,3 +207,5 @@ int rxargs = ~0;            /* Everything on by default */
 char *userproc_arg = NULL;
 
 int comline_processing = 1;
+
+char *force_status = "UNSET";
