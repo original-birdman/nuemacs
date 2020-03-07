@@ -16,9 +16,6 @@
 #include "efunc.h"
 #include "line.h"
 
-/* Max number of lines from one file. */
-#define MAXNLINE 10000000
-
 /* Read a file into the current buffer.
  * This is really easy; all you do is find the name of the file and
  * call the standard "read a file into the current buffer" code.
@@ -415,10 +412,6 @@ int readin(char *fname, int lockfl) {
     if (!silent) mlwrite_one(MLbkt("Reading file"));  /* GGR */
     nline = 0;
     while ((s = ffgetline()) == FIOSUC) {
-        if (nline > MAXNLINE) {
-            s = FIOMEM;
-            break;
-        }
         lp1 = fline;                    /* Allocated by ffgetline() */
         lp2 = lback(curbp->b_linep);
         lp2->l_fp = lp1;
