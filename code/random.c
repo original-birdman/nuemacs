@@ -681,8 +681,7 @@ int insbrace(int n, int c) {
         if (target < getccol(FALSE)) /* on doit detruire des caracteres */
             while (getccol(FALSE) > target) backdel(FALSE, 1);
         else {          /* on doit en inserer */
-            while (target - getccol(FALSE) >= 8) linsert_byte(1, '\t');
-            linsert_byte(target - getccol(FALSE), ' ');
+            linsert_byte(target - getccol(FALSE), ' '); /* spaces, not tabs */
         }
     }
 /* And insert the required brace(s) */
