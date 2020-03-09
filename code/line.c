@@ -447,7 +447,7 @@ int lputgrapheme(struct grapheme *gp) {
     int xc = 0;
     while (gp->ex[xc] != UEM_NOCHAR) {
         status = linsert_uc(1, gp->ex[xc]);
-        if (status) return status;
+        if (!status) return status;
     }
     return status;
 }
