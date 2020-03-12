@@ -3,6 +3,8 @@
 
 #include "utf8.h"
 
+#define BLOCK_SIZE 16 /* Line block chunk size. */
+
 /*
  * All text is kept in circularly linked lists of "struct line" structures.
  * These begin at the header line (which is the blank line beyond the

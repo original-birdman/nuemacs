@@ -22,8 +22,6 @@
 #include "efunc.h"
 #include "utf8.h"
 
-#define BLOCK_SIZE 16 /* Line block chunk size. */
-
 static int force_newline = 0;   /* lnewline may need to be told this */
 
 /*

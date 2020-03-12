@@ -305,6 +305,9 @@ int ffputline(char *buf, int nbuf) {
  * buffer (fline).
  * Complain about lines at the end of the file that don't have a newline.
  * Check for I/O errors too. Return status.
+ *
+ * NOTE: that the fline gets linked in to the buffer lines, so doesn't
+ * need to be freed here...
  */
 
 /* Helper routine to add text into fline, re-allocating it if required */
@@ -318,16 +321,16 @@ static int add_to_fline(int len) {
         newlen = len + fline->l_used;
     }
     if (newlen >= 0) {      /* Need a new/bigger fline */
-        struct line *nl = lalloc(newlen);
-        if (nl == NULL) return FALSE;
-        if (fline) {
-            nl->l_used = fline->l_used;
-            memcpy(nl->l_text, fline->l_text, fline->l_used);
-            free(fline);
+        if (fline) {        /* realloc.... */
+            int newsize = (newlen + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
+            fline = (struct line *)Xrealloc(fline, sizeof(struct line) + newsize);
+            fline->l_size = newsize;    /* Don't update l_used YET!! */
         }
-        else
-            nl->l_used = 0; /* Need to set to how much is in there *now* */
-        fline = nl;
+        else {              /* alloc.... */
+            fline = lalloc(newlen);
+            if (fline == NULL) return FALSE;
+            fline->l_used = 0;  /* Set was is actually there NOW!! */
+        }
     }
     memcpy(fline->l_text+fline->l_used, cache.buf+cache.rst, len);
     fline->l_used += len;   /* Record the real size of the line */
