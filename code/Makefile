@@ -258,6 +258,7 @@ $(PROGRAM): $(OBJ)
 clean:
 	$(E) "  CLEAN"
 	$(Q) rm -f $(PROGRAM) core lintout makeout tags makefile.bak *.o
+	$(Q) rm -f *.tfile uetest.rc
 
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.
