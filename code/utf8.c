@@ -198,11 +198,67 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
     return offs;
 }
 
+/* Routines to build full graphemes...
+ * Build the grapheme starting at the current position and return
+ * the offset that follows it.
+ * So repeated calls move forwards through the buffer.
+ * If offs == max -> newline.
+ * If offs > max -> nul
+ */
+int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
+    unicode_t c;
+
+/* Allow (buf, 0, -1, &gc) to work for NUL-terminated buf string */
+    if ((offs == 0) && (max == -1)) max = strlen(buf);
+    if (offs >= max) {
+        if (offs == max) set_grapheme(gc, '\n', 1);
+        else             set_grapheme(gc, '\0', 1);
+        return ++offs;
+    }
+
+    offs += utf8_to_unicode(buf, offs, max, &(gc->uc));
+    gc->cdm = 0;    /* Must initialize.. */
+    gc->ex = NULL;  /* ..these two. */
+    int first = 1;
+    while(1) {      /* Look for any attached Combining modifiers */
+        int next_incr = utf8_to_unicode(buf, offs, max, &c);
+        if (!combining_type(c)) break;
+        offs += next_incr;
+        if (first) {
+            gc->cdm = c;
+        }
+        else {
+/* Need to create or extend an ex section */
+            int xc = 0;
+            if (gc->ex != NULL) {
+                while(gc->ex[xc] != UEM_NOCHAR) xc++;
+            }
+            gc->ex = Xrealloc(gc->ex, (xc+2)*sizeof(unicode_t));
+            gc->ex[xc] = c;
+            gc->ex[xc+1] = UEM_NOCHAR;
+	}
+    }
+    return offs;
+}
+/* Find the start of the prevous grapheme, get that grapheme then
+ * return the offset *of its start*.
+ * So repeated calls move backwards through the buffer.
+ * NOTE: that we don't handle the NUL-terminated buf string here!
+ */
+int build_prev_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
+    int final_off = prev_utf8_offset(buf, offs, TRUE);
+    build_next_grapheme(buf, final_off, max, gc);
+    return final_off;
+}
+
 /* Check whether the character is a Combining Class one - needed for
  * grapheme handling in display.c
  * The combi_range array is largish for a check-per-character but
  * since most expected characters are below the first entry it
  * will actually be quick.
+ * A better(?) test would just be to get the utf8proc_category_string()
+ * for the character and see whether it starts with "M" (Mn, Mc, Me).
+ * But still include a lower range chekc at least....
  */
 #include "combi.h"
 int combining_type(unicode_t uc) {
@@ -244,7 +300,7 @@ int char_replace(int f, int n) {
         if (tok[0] == '\0') break;
         if (!strcmp(tok, "reset")) {
             if (remap != NULL) {
-                free(remap);
+                Xfree(remap);
                 remap = NULL;
                 repchar = DFLT_REPCHAR;
             }
@@ -522,4 +578,126 @@ int utf8char_width(unicode_t c) {
         return 1;
     }
     return utf8proc_charwidth(c);
+}
+
+/* GGR Some functions to handle struct grapheme usage */
+
+/* Set the entry to an ASCII character.
+ * Checks for previous extended cdm usage and frees any such found
+ * unless the no_free flag is set (which it is for a pscreen setting).
+ */
+void set_grapheme(struct grapheme *gp, unicode_t uc, int no_free) {
+    gp->uc = uc;
+    gp->cdm = 0;
+    if (!no_free && gp->ex != NULL) {
+        Xfree(gp->ex);
+        gp->ex = NULL;
+    }
+    return;
+}
+
+/* Convert a grapheme to a dynamically-allocated byte-array (passed in)
+ * May recase the base character
+ * Returns the currently allocated size.
+ */
+int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen, int nocase) {
+    char ub[6];
+    int ulen;
+    int reslen;
+
+    if (nocase) ulen = unicode_to_utf8(utf8proc_toupper(gc->uc), ub);
+    else        ulen = unicode_to_utf8(gc->uc, ub);
+
+    if (ulen+1 > alen) {
+        *rp = Xrealloc(*rp, alen+16);
+        alen += 16;
+    }
+    memcpy(*rp, ub, ulen);
+    reslen = ulen;
+    if (!gc->cdm) goto done;
+
+    ulen = unicode_to_utf8(gc->cdm, ub);
+    if (reslen+ulen+1 > alen) {
+        *rp = Xrealloc(*rp, alen+16);
+        alen += 16;
+    }
+    memcpy(*rp+reslen, ub, ulen);
+    reslen += ulen;
+    unicode_t *uc_ex = gc->ex;
+    while (uc_ex) {
+        ulen = unicode_to_utf8(*uc_ex++, ub);
+        if (reslen+ulen+1 > alen) {
+            *rp = Xrealloc(*rp, alen+16);
+            alen += 16;
+        }
+        memcpy(*rp+reslen, ub, ulen);
+        reslen += ulen;
+    }
+done:
+    *(*rp+reslen) = '\0';
+    return alen;
+}
+/* Only interested in same/not same here
+ * Add some simple case testing via flags.
+ * Assume only the base character is case-dependent, and that combining
+ * marks must always be in the same order.
+ */
+struct gr_array {
+    char *bytes;
+    int alloc;
+};
+
+static struct gr_array gr1 = { NULL, 0 };
+static struct gr_array gr2 = { NULL, 0 };
+
+int same_grapheme(struct grapheme *gp1, struct grapheme *gp2, int flags) {
+    if ((flags & USE_WPBMODE) && !(curwp->w_bufp->b_mode & MDEXACT)) {
+        if (utf8proc_toupper(gp1->uc) != utf8proc_toupper(gp2->uc))
+            goto check_equiv;
+    }
+    else {
+        if (gp1->uc != gp2->uc) goto check_equiv;
+    }
+    if (gp1->cdm != gp2->cdm) return FALSE;
+    if ((gp1->ex == NULL) && (gp2->ex == NULL)) return TRUE;
+    if ((gp1->ex == NULL) && (gp2->ex != NULL)) goto check_equiv;
+    if ((gp1->ex != NULL) && (gp2->ex == NULL)) goto check_equiv;
+/* Have to compare the ex lists!... */
+    unicode_t *ex1 = gp1->ex;
+    unicode_t *ex2 = gp2->ex;
+    while(1) {
+        if (*ex1 != *ex2) goto check_equiv;
+        if ((*ex1 == UEM_NOCHAR) || (*ex2 == UEM_NOCHAR)) break;
+        ex1++; ex2++;
+    }
+    if ((*ex1 == UEM_NOCHAR) && (*ex2 == UEM_NOCHAR)) return TRUE;
+
+/* If we fail anywhere above we also need to check if we've been asked
+ * to do equivalence checking...which ONLY applies in Magic mode!
+ * The Unicode normalization info is in Standard Annexx #15:
+ *  https://unicode.org/reports/tr15
+ */
+check_equiv:
+    if (!((flags & USE_WPBMODE) &&
+         (curwp->w_bufp->b_mode & MDMAGIC) &&
+         (curwp->w_bufp->b_mode & MDEQUIV))) {
+        return FALSE;
+    }
+
+/* We have to turn the graphemes into byte arrays, normalize them and
+ * check the result.
+ * Also need to allow for case-insensitivity on the first char.
+ */
+    int nocase = !(curwp->w_bufp->b_mode & MDEXACT);
+    gr1.alloc = grapheme_to_bytes(gp1, &gr1.bytes, gr1.alloc, nocase);
+    gr2.alloc = grapheme_to_bytes(gp2, &gr2.bytes, gr2.alloc, nocase);
+
+/* Now convert these to NFKC, compare and free the temp strings */
+
+    utf8proc_uint8_t *nfkc1 = utf8proc_NFKC((utf8proc_uint8_t *)gr1.bytes);
+    utf8proc_uint8_t *nfkc2 = utf8proc_NFKC((utf8proc_uint8_t *)gr2.bytes);
+    int res = !strcmp((char *)nfkc1, (char *)nfkc2);
+    Xfree(nfkc1);
+    Xfree(nfkc2);
+    return res;
 }

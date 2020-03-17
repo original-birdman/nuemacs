@@ -156,21 +156,18 @@ int set_encryption_key(int f, int n) {
  * unsigned len;        number of characters in the buffer
  *
  **********/
-static int debug;
 void myencrypt(char *bptr, unsigned len) {
     int cc; /* current character being considered */
 
-//    static int32_t key = 0; /* 29 bit encipherment key */
     static int key = 0; /* 29 bit encipherment key */
     static int salt = 0;    /* salt to spice up key with */
 
     if (!bptr) {            /* is there anything here to encrypt? */
         key = len;          /* set the new key */
         salt = len;         /* set the new salt */
-debug = 0;
         return;
     }
-debug++;
+
 /* We got though every *byte* in the buffer.
  * Leave anything below space alone and map the rest into their own
  * range, which also means we can never generate a newline, which would

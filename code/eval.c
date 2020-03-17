@@ -331,7 +331,7 @@ static char *gtfun(char *fname) {
         utf8_recase(funcs[fnum].tag == UFUPPER? UTF8_UPPER: UTF8_LOWER,
              arg1, -1, &csinfo);
         strcpy(result, csinfo.str);
-        free(csinfo.str);
+        Xfree(csinfo.str);
         return(result);
     case UFESCAPE:              /* Only need to escape ASCII chars */
        {char *ip = arg1;        /* This is SHELL escaping... */
@@ -377,7 +377,7 @@ static char *gtfun(char *fname) {
     case UFASCII: {     /* Return base unicode char - but keep name... */
         struct grapheme gc;
         (void)build_next_grapheme(arg1, 0, -1, &gc);
-        if (gc.ex) free(gc.ex);
+        if (gc.ex) Xfree(gc.ex);
         return ue_itoa(gc.uc);
     }
 /* Allow for unicode as:
@@ -431,6 +431,8 @@ static char *gtfun(char *fname) {
         if (uproc_opts & UPROC_FIXUP) fixup_full(result);
         uproc_opts = 0;     /* Always reset flags after use */
         return result;
+    case UFGRPTEXT:
+        return group_match(atoi(arg1));
     }
 
     exit(-11);              /* never should get here */
@@ -501,7 +503,7 @@ static char *gtenv(char *vname) {
         struct grapheme gc;
         (void)build_next_grapheme(curwp->w.dotp->l_text,
              curwp->w.doto, curwp->w.dotp->l_used, &gc);
-        if (gc.ex) free(gc.ex);
+        if (gc.ex) Xfree(gc.ex);
         return ue_itoa(gc.uc);
     case EVDISCMD:          return ltos(discmd);
     case EVVERSION:         return VERSION;
@@ -515,7 +517,7 @@ static char *gtenv(char *vname) {
         return ue_itoa(curgoal);
     case EVSEARCH:          return pat;
     case EVREPLACE:         return rpat;
-    case EVMATCH:           return (patmatch == NULL) ? "" : patmatch;
+    case EVMATCH:           return group_match(0);
     case EVKILL:            return getkill();
     case EVCMODE:           return ue_itoa(curbp->b_mode);
     case EVGMODE:           return ue_itoa(gmode);
@@ -706,18 +708,6 @@ static int svar(struct variable_description *var, char *value) {
         case EVTARGET:
             curgoal = atoi(value);
             thisflag = saveflag;
-            break;
-        case EVSEARCH:
-            strcpy(pat, value);
-            rvstrcpy(tap, pat);
-#if     MAGIC
-            mcclear();
-#endif
-            new_prompt(value);  /* Let gestring() know, via the search code */
-            break;
-        case EVREPLACE:
-            strcpy(rpat, value);
-            new_prompt(value);  /* Let gestring() know, via the search code */
             break;
         case EVMATCH:
             break;

@@ -13,3 +13,8 @@ void *Xrealloc(void *optr, size_t size) {
     if (!ret) die("realloc: Out of memory");
     return ret;
 }
+
+void Xfree(void *ptr) {
+    free(ptr);
+    return;
+}

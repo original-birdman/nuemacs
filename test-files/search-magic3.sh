@@ -124,7 +124,7 @@ execute-procedure report-status
 beginning-of-file
 ; ====
 search-forward 789\n
-  set %curtest Placing search 
+  set %curtest "Placing search"
   set %expline 4
   set %expcol 0
   set %expchar &asc H
@@ -165,7 +165,7 @@ execute-procedure check-position
 end-of-file
 ; ====
 search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
-  set %curtest Reverse search
+  set %curtest "Reverse search"
   set %expline 14
   set %expcol 5
   set %expchar &asc T
@@ -176,11 +176,11 @@ set %test-report "  negative reverse search"
 execute-procedure report-status
 ; ====
 !force search-reverse \p{M}
-  set %curtest Reverse search for Mark (none there)
+  set %curtest "Reverse search for Mark (none there)"
   set %expline 14
   set %expcol 5
   set %expchar &asc T
-  set %expmatch Td:8)[
+  set %expmatch ""
 execute-procedure check-position
 
 ;

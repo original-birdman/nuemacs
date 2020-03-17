@@ -112,7 +112,7 @@ int lockrel(void) {
     if (numlocks > 0)
         for (i = 0; i < numlocks; ++i) {
             if ((s = unlock(lname[i])) != TRUE) status = s;
-            free(lname[i]);
+            Xfree(lname[i]);
         }
     numlocks = 0;
     return status;

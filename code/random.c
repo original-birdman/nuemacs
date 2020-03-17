@@ -75,7 +75,7 @@ int showcpos(int f, int n) {
                 if (glyi.ex != NULL) {
                     for (unicode_t *xc = glyi.ex; *xc != UEM_NOCHAR; xc++)
                         uc_used++;
-                    free(glyi.ex);
+                    Xfree(glyi.ex);
                 }
             }
         }

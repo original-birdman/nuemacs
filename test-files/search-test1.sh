@@ -8,8 +8,14 @@
 prog='$1 != "--" {print substr($0, 4);}'
 
 # Need the -b because of the non-Unicode (invalid) 0xf1 bytes.
+# But Entware systems don't understand it, and work without it.
 #
-awk -b "$prog" > test1.tfile <<EOD
+if awk -b '{}' /dev/null >/dev/null 2>&1; then
+    AWKARG=-b
+else
+    AWKARG=
+fi
+awk $AWKARG "$prog" > test1.tfile <<EOD
 -- 0123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
@@ -130,13 +136,13 @@ search-forward δένmañanaСЕ
   set %expmatch δένmañanaСЕ
 execute-procedure check-position
 ; ====
-; Force this. It should fail, so not move anything...
+; Force this. It should fail, so not move anything...and match nothing
 !force search-forward δένmañanaСЕ
   set %curtest Search2
   set %expline 22
   set %expcol 13
   set %expchar &asc Й
-  set %expmatch δένmañanaСЕ
+  set %expmatch ""
 execute-procedure check-position
 
 ; Now turn off Exact mode - should get two more search successes
@@ -161,14 +167,18 @@ search-forward δένmañanaСЕ
   set %expmatch ΔΈΝMAÑANAСЕ
 execute-procedure check-position
 ; ====
-; Force this. It should fail, so not move anything...
+; Force this. It should fail, so not move anything...and match nothing
 !force search-forward δένmañanaСЕ
   set %curtest Search4-e
   set %expline 24
   set %expcol 13
   set %expchar &asc Й
-  set %expmatch ΔΈΝMAÑANAСЕ
+  set %expmatch ""
 execute-procedure check-position
+
+set %test-report &cat "exec status: " $force_status
+execute-procedure report-status
+
 ; ====
 search-reverse δένmañanaСЕ
   set %curtest BackSearch4-e

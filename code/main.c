@@ -734,7 +734,7 @@ void dumpdir_tidy(void) {
               Dump_Index " rewrite error: %s\n", strerror(errno));
         linstr(info_message);
     }
-    if (lp) free(lp);
+    if (lp) Xfree(lp);
 
 revert_to_start_fd:
     status = fchdir(start_fd);
@@ -1035,7 +1035,7 @@ int main(int argc, char **argv) {
                 strncpy(pat, opt, NPAT);
 /* GGR - set-up some more things for the FAST search algorithm */
                 rvstrcpy(tap, pat);
-                mlenold = matchlen = strlen(pat);
+                srch_patlen = strlen(pat);
                 setpattern(pat, tap);
                 break;
             case 'v':       /* -v for View File */
@@ -1082,13 +1082,13 @@ int main(int argc, char **argv) {
     silent = TRUE;
     if (!rcfile || !startup(rcfile)) startup("");
     if (rcfile) {
-        free(rcfile);
+        Xfree(rcfile);
         rcfile = NULL;
     }
     if (rcnum) {
         for (unsigned int n = 0; n < rcnum; n++) {
             startup(rcextra[n]);
-            free(rcextra[n]);
+            Xfree(rcextra[n]);
         }
     }
     silent = FALSE;

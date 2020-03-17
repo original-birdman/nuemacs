@@ -180,7 +180,7 @@ int zotbuf(struct buffer *bp) {
     }
     if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
         return s;
-    free((char *) bp->b_linep);     /* Release header line. */
+    Xfree((char *) bp->b_linep);     /* Release header line. */
     bp1 = NULL;                     /* Find the header.     */
     bp2 = bheadp;
     while (bp2 != bp) {
@@ -192,7 +192,7 @@ int zotbuf(struct buffer *bp) {
         bheadp = bp2;
     else
         bp1->b_bufp = bp2;
-    free((char *) bp);              /* Release buffer block */
+    Xfree((char *) bp);              /* Release buffer block */
     return TRUE;
 }
 
@@ -477,7 +477,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
     if (cflag != FALSE) {
         bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
         if ((lp = lalloc(0)) == NULL) {
-            free((char *) bp);
+            Xfree((char *) bp);
             return NULL;
         }
 /* Find the place in the list to insert this buffer */

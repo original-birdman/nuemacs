@@ -20,7 +20,6 @@
 #include "efunc.h"
 
 #if TERMCAP
-// #if !defined(__CYGWIN__) && !defined(__MSYS__)
 #if !defined(__MSYS__)
 #include <curses.h>
 #include <term.h>

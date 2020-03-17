@@ -41,8 +41,8 @@ struct evlist evl[] = {
  { "wline",     EVWLINE },      /* # of lines in current window */
  { "cwline",    EVCWLINE },     /* current screen line in window */
  { "target",    EVTARGET },     /* target for line moves */
- { "search",    EVSEARCH },     /* search pattern */
- { "replace",   EVREPLACE },    /* replacement pattern */
+ { "search",    EVSEARCH },     /* search pattern (read-only) */
+ { "replace",   EVREPLACE },    /* replacement pattern (read_only) */
  { "match",     EVMATCH },      /* last matched magic pattern */
  { "kill",      EVKILL },       /* kill buffer (read only) */
  { "cmode",     EVCMODE },      /* mode of current buffer */
@@ -84,7 +84,7 @@ enum uf_val {
     UFASCII,    UFCHR,      UFGTKEY,    UFRND,      UFABS,
     UFSINDEX,   UFENV,      UFBIND,     UFEXIST,    UFFIND,
     UFBAND,     UFBOR,      UFBXOR,     UFBNOT,     UFXLATE,
-    UFPROCARG,
+    UFPROCARG,  UFGRPTEXT,
 };
 
 enum function_type {
@@ -143,6 +143,7 @@ static struct user_function funcs[] = {
  { "bno", MONAMIC,  UFBNOT },   /* bitwise not */
  { "xla", TRINAMIC, UFXLATE },  /* XLATE character string translation */
  { "arg", MONAMIC,  UFPROCARG}, /* Get user proc arg */
+ { "grp", MONAMIC,  UFGRPTEXT}, /* Text in group for last match */
 };
 
 #endif  /* EVAR_H_ */

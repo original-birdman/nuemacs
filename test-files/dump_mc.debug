@@ -1,0 +1,133 @@
+/* Dump the struct magic structure at mp */
+
+#include "../code/utf8.h"
+
+#define DUMP_MATCH(message) \
+   dump_mc((union magicp)mcpat, MATCHER, message, __LINE__);
+#define DUMP_REPLACE(message) \
+   dump_mc((union magicp)rmcpat, REPLACER, message, __LINE__);
+
+union magicp { struct magic *mmp; struct magic_replacement *rmp; };
+enum d_type { MATCHER, REPLACER };  /* So pointer advance can work */
+static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
+    int depth = 0;
+    char ucbuf[8];
+    int uclen;
+    if (!header) header = "anon";
+    fprintf(stderr, "%s (at line %d)\n", header, line);
+    int i = 0;
+
+/* We can dump struct magic_replacement data too - just need to ensure
+ * that both structures have thexs same named things in teh same place
+ * where they are used in both.
+ * Which means that both have to start with struct mg_info then union val.
+ */
+//    struct magic_replacement *rmp = (struct magic_replacement *)mp;
+    while(i < 30) {     /* Put a limit on it...*/
+        fprintf(stderr, "(gp %d) ", mp.mmp->mc.group_num);
+        fprintf(stderr, "%*d (%p): ", (2*depth+1), ++i, mp.mmp);
+        switch(mp.mmp->mc.type) {
+        case LITCHAR:
+            fprintf(stderr, " literal %c(%02x)\n", mp.mmp->val.lchar,
+                 mp.mmp->val.lchar);
+            break;
+        case ANY:
+            fprintf(stderr, " any byte\n");
+            break;
+        case SGRP: {
+            fprintf(stderr, " start group %d (next CHOICE %p)\n",
+                 mp.mmp->mc.group_num, mp.mmp->x.next_or);
+            depth++;
+            break;
+        }
+        case EGRP:
+            fprintf(stderr, " end group %d\n", mp.mmp->mc.group_num);
+            if (mp.mmp->mc.group_num == 0) {
+                fprintf(stderr, "====================\n");
+                goto done;
+            }
+            depth--;
+            break;
+        case CHOICE:
+            fprintf(stderr, " CHOICE (link %p) for group %d\n",
+                 mp.mmp->x.next_or, mp.mmp->mc.group_num);
+            break;
+        case CCL:
+            fprintf(stderr, " Char Class []");
+            if (mp.mmp->x.xt_cclmap) {
+                fprintf(stderr, " - Extended:\n");
+                struct xccl *xp = mp.mmp->x.xt_cclmap;
+                int j = 0;
+                while(j < 30) {         /* Put a limit on it */
+                    fprintf(stderr, "%*c + %2d (%p): ",
+                         (2*depth+1), ' ', ++j, xp);
+                    switch(xp->xc.type) {
+                    case CCL:
+                        fprintf(stderr, " Closure range %d->%d\n",
+                             xp->xval.cl_lim.low, xp->xval.cl_lim.high);
+                        break;
+                    case UCPROP:
+                        fprintf(stderr, " Prop: %s\n", xp->xval.prop);
+                        break;
+                    case UCLITL:
+                        uclen = unicode_to_utf8(xp->xval.uchar, ucbuf);
+                        ucbuf[uclen] = '\0';
+                        fprintf(stderr, " UC literal %s(%02x)\n",
+                             ucbuf, xp->xval.uchar);
+                        break;
+                    case UCGRAPH:
+                        uclen = unicode_to_utf8(xp->xval.gc.uc, ucbuf);
+                        ucbuf[uclen] = '\0';
+                        fprintf(stderr, " UC grapheme based on %s(%02x)\n",
+                             ucbuf, xp->xval.gc.uc);
+                        break;
+                    case EGRP:
+                        fprintf(stderr, " end extended CC list\n");
+                        break;
+                    default:
+                        fprintf(stderr, " unexpected type %d!\n", xp->xc.type);
+                    }
+                    if (xp->xc.type == EGRP) break;
+                    xp++;
+                }
+            }
+            else fprintf(stderr, " - bitmap\n");
+            break;
+        case UCLITL:
+            uclen = unicode_to_utf8(mp.mmp->val.uchar, ucbuf);
+            ucbuf[uclen] = '\0';
+            fprintf(stderr, " UC literal %s(%02x)\n", ucbuf, mp.mmp->val.uchar);
+            break;
+        case UCGRAPH:
+            uclen = unicode_to_utf8(mp.mmp->val.gc.uc, ucbuf);
+            ucbuf[uclen] = '\0';
+            fprintf(stderr, " UC grapheme based on %s(%02x)\n",
+                 ucbuf, mp.mmp->val.gc.uc);
+            break;
+        case ANYGPH:
+            fprintf(stderr, " any grapheme at all\n");
+            break;
+        case UCPROP:
+            fprintf(stderr, " Prop: %s\n", mp.mmp->val.prop);
+            break;
+/* Now the struct magic_replacement specific ones */
+        case REPL_VAR:
+            fprintf(stderr, " Add var: %s\n", mp.rmp->val.varname);
+            break;
+        case REPL_GRP:
+            fprintf(stderr, " Add match group: %d\n", mp.rmp->mc.group_num);
+            break;
+        }
+        if (mp.mmp->mc.negate_test) fprintf(stderr, "    negated test\n");
+        if (mp.mmp->mc.repeat) {
+            fprintf(stderr, "    %s repeat (%d->%d)\n",
+                 (mp.mmp->mc.min_repeat)? ">> (minimum)": ">>", 
+                 mp.mmp->cl_lim.low, mp.mmp->cl_lim.high);
+	}
+        if (type == MATCHER) mp.mmp++;
+        else    mp.rmp++;
+    }
+done:
+    depth--;
+    return;
+}

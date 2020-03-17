@@ -439,7 +439,7 @@ struct buffer {
 #define MDMAGIC 0x0040          /* regular expresions in search */
 #define MDCRYPT 0x0080          /* encryption mode active       */
 #define MDASAVE 0x0100          /* auto-save mode               */
-#define MDUNICO 0x0200          /* Unicode searching            */
+#define MDEQUIV 0x0200          /* Equivalent unicode searching */
 #define MDDOSLE 0x0400          /* DOS line endings             */
 
 #define NUMMODES    11          /* # of defined modes           */
@@ -572,65 +572,6 @@ struct while_block {
 #define BTWHILE         1
 #define BTBREAK         2
 
-/*
- * Incremental search defines.
- */
-#define CMDBUFLEN       256     /* Length of our command buffer */
-
-#define IS_ABORT        0x07    /* Abort the isearch */
-#define IS_BACKSP       0x08    /* Delete previous char */
-#define IS_TAB          0x09    /* Tab character (allowed search char) */
-#define IS_NEWLINE      0x0D    /* New line from keyboard (Carriage return) */
-#define IS_QUOTE        0x11    /* Quote next character */
-#define IS_REVERSE      0x12    /* Search backward */
-#define IS_FORWARD      0x13    /* Search forward */
-#define IS_VMSQUOTE     0x16    /* VMS quote character */
-#define IS_VMSFORW      0x18    /* Search forward for VMS */
-#define IS_QUIT         0x1B    /* Exit the search */
-#define IS_RUBOUT       0x7F    /* Delete previous character */
-
-/* IS_QUIT is no longer used, the variable metac is used instead */
-
-/*
- * Defines for the metacharacters in the regular expression
- * search routines.
- */
-#define MCNIL           0       /* Like the '\0' for strings. */
-#define LITCHAR         1       /* Literal character, or string. */
-#define ANY             2
-#define CCL             3
-#define NCCL            4
-#define BOL             5
-#define EOL             6
-#define DITTO           7
-#define WSPACE          8
-#define CLOSURE         0x00000100  /* An or-able value. >= 256  */
-#define MINCLOS         0x00000200
-#define MASKCL          (CLOSURE - 1)
-
-#define MC_ANY          '.'     /* 'Any' character (except newline). */
-#define MC_CCL          '['     /* Character class. */
-#define MC_NCCL         '^'     /* Negate character class. */
-#define MC_RCCL         '-'     /* Range in character class. */
-#define MC_ECCL         ']'     /* End of character class. */
-#define MC_BOL          '^'     /* Beginning of line. */
-#define MC_EOL          '$'     /* End of line. */
-#define MC_CLOSURE      '*'     /* Closure - does not extend past newline. */
-#define MC_ONEPLUS      '+'     /* non-zero Closure. */
-#define MC_RANGE        '{'     /* Ranged Closure. */
-#define MC_MINIMAL      '?'     /* Shortest Closure OR 0/1 match. */
-#define MC_DITTO        '&'     /* Use matched string in replacement. */
-#define MC_ESC          '\\'    /* Escape - suppress meta-meaning. */
-
-#define BIT(n)          (1 << (n))      /* An integer with one bit set. */
-#define CHCASE(c)       ((c) ^ DIFCASE) /* Toggle the case of a letter. */
-
-/* HICHAR - 1 is the largest character we will deal with.
- * HIBYTE represents the number of bytes in the bitmap.
- */
-#define HICHAR          256
-#define HIBYTE          HICHAR >> 3
-
 /* Let the user decide which functions should re-use their args when
  * reexecing.
  * These keys are tagged with the name of the function handler.
@@ -661,32 +602,12 @@ struct rx_mask {
     int mask;
 };
 
-/* Typedefs that define the meta-character structure for MAGIC mode searching
- * (struct magic), and the meta-character structure for MAGIC mode replacement
- * (struct magic_replacement).
- */
-struct range {
-    int low;
-    int high;
-};
-struct magic {
-    int mc_type;
-    union {
-        int lchar;
-        char *cclmap;
-    } u;
-    struct range cl_lim;
-};
-
-struct magic_replacement {
-    int mc_type;
-    char *rstr;
-};
-
 /* Max #chars in a var name. */
 #define NVSIZE  32
 
-/* The tags for environment variable - used in struct evlist */
+/* The tags for environment variable - used in struct evlist so needed
+ * here.
+ */
 enum ev_val {
     EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVFLICKER,
     EVCURWIDTH, EVCBUFNAME, EVCFNAME,   EVSRES,     EVDEBUG,
@@ -695,12 +616,13 @@ enum ev_val {
     EVDISINP,   EVWLINE,    EVCWLINE,   EVTARGET,   EVSEARCH,
     EVREPLACE,  EVMATCH,    EVKILL,     EVCMODE,    EVGMODE,
     EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,     EVGFLAGS,
-    EVRVAL,     EVTAB,      VOVERLAP,  EVSCROLLJUMP,
+    EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
     EVSDTKSKIP, EVUPROCOPTS, EVFORCESTAT,
 };
+
 struct evlist {
     char *var;
     enum ev_val tag;

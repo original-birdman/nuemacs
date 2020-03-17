@@ -82,7 +82,7 @@ void lfree(struct line *lp) {
     }
     lp->l_bp->l_fp = lp->l_fp;
     lp->l_fp->l_bp = lp->l_bp;
-    free((char *)lp);
+    Xfree((char *)lp);
 }
 
 /*
@@ -177,7 +177,7 @@ int linsert_byte(int n, unsigned char c) {
         lp2->l_fp = lp1->l_fp;
         lp1->l_fp->l_bp = lp2;
         lp2->l_bp = lp1->l_bp;
-        free((char *)lp1);
+        Xfree((char *)lp1);
     }
     else {                          /* Easy: in place       */
         lp2 = lp1;                  /* Pretend new line     */
@@ -496,7 +496,7 @@ static int ldelnewline(void) {
         lp1->l_used += lp2->l_used;
         lp1->l_fp = lp2->l_fp;
         lp2->l_fp->l_bp = lp1;
-        free((char *)lp2);
+        Xfree((char *)lp2);
         return TRUE;
     }
     if ((lp3 = lalloc(lp1->l_used + lp2->l_used)) == NULL) return FALSE;
@@ -526,8 +526,8 @@ static int ldelnewline(void) {
         }
         wp = wp->w_wndp;
     }
-    free((char *)lp1);
-    free((char *)lp2);
+    Xfree((char *)lp1);
+    Xfree((char *)lp2);
     return TRUE;
 }
 
@@ -669,7 +669,7 @@ void kdelete(void) {
         struct kill *tp = kbufh[KRING_SIZE-1];
         while (tp != NULL) {
             np = tp->d_next;
-            free(tp);
+            Xfree(tp);
             tp = np;
         }
     }
@@ -715,7 +715,7 @@ static void rotate_lastmb_ring(int n) {
  */
 void addto_lastmb_ring(char *mb_text) {
     rotate_lastmb_ring(-1);
-    if (lastmb[0]) free(lastmb[0]);
+    if (lastmb[0]) Xfree(lastmb[0]);
     lastmb[0] = strdup(mb_text);
     return;
 }

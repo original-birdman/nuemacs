@@ -29,6 +29,23 @@
 #include "efunc.h"
 #include "line.h"
 
+/*
+ * Incremental search defines.
+ */
+#define CMDBUFLEN       256     /* Length of our command buffer */
+
+#define IS_ABORT        0x07    /* Abort the isearch */
+#define IS_BACKSP       0x08    /* Delete previous char */
+#define IS_TAB          0x09    /* Tab character (allowed search char) */
+#define IS_NEWLINE      0x0D    /* New line from keyboard (Carriage return) */
+#define IS_QUOTE        0x11    /* Quote next character */
+#define IS_REVERSE      0x12    /* Search backward */
+#define IS_FORWARD      0x13    /* Search forward */
+#define IS_VMSQUOTE     0x16    /* VMS quote character */
+#define IS_VMSFORW      0x18    /* Search forward for VMS */
+#define IS_QUIT         0x1B    /* Exit the search */
+#define IS_RUBOUT       0x7F    /* Delete previous character */
+
 static int echo_char(int c, int col);
 
 /* A couple of "own" variables for re-eat */
@@ -66,10 +83,9 @@ int risearch(int f, int n) {
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
         mlwrite_one(MLbkt("search failed")); /* Say we died */
-        matchlen = strlen(pat);
     } else
         mlerase();      /* If happy, just erase the cmd line  */
-    matchlen = strlen(pat);
+    srch_patlen = strlen(pat);
     return TRUE;
 }
 
@@ -93,10 +109,9 @@ int fisearch(int f, int n) {
         curwp->w_flag |= WFMOVE;    /* Say we've moved        */
         update(FALSE);              /* And force an update    */
         mlwrite_one(MLbkt("search failed"));   /* Say we died */
-        matchlen = strlen(pat);
     } else
         mlerase();      /* If happy, just erase the cmd line  */
-    matchlen = strlen(pat);
+    srch_patlen = strlen(pat);
     return TRUE;
 }
 
@@ -148,16 +163,17 @@ static int match_pat(char *patrn) {
  * If the compare fails, we return FALSE and assume the caller will call
  * scanmore or something.
  *
- * char chr;            Next char to look for
+ * int chr;             Next unicode char to look for
  * char *patrn;         The entire search string (incl chr)
  * int dir;             Search direction
  */
-static int checknext(char chr, char *patrn, int dir) {
+static int checknext(int chr, char *patrn, int dir) {
 /* Check next character in search string */
     struct line *curline;   /* current line during scan           */
     int curoff;             /* position within current line       */
-    int buffchar;           /* character at current position      */
+    unicode_t buffchar;     /* character at current position      */
     int status;             /* how well things go                 */
+    int nb;
 
 /* Setup the local scan pointer to current "." */
 
@@ -171,13 +187,22 @@ static int checknext(char chr, char *patrn, int dir) {
                 return FALSE;           /* Abort if end of buffer */
             curoff = 0; /* Start at the beginning of the line  */
             buffchar = '\n';            /* And say the next char is NL */
-        } else
-            buffchar = lgetc(curline, curoff++);    /* Get the next char */
+            nb = 1;
+        }
+        else {                  /* Allow for Unicode */
+            nb = utf8_to_unicode(curline->l_text, curoff, curline->l_used,
+                 &buffchar);
+            curoff += nb;
+        }
 /* Is it what we're looking for?
  * If yes, set the buffer's point to the matched character and say
  * that we've moved
  */
-        if ((status = eq(buffchar, chr)) != 0) {
+        if (nb == 1)
+            status = eq(buffchar, chr);
+        else
+            status = unicode_eq(buffchar, chr);
+        if (status != 0) {
             curwp->w.dotp = curline;
             curwp->w.doto = curoff;
             curwp->w_flag |= WFMOVE;
@@ -200,7 +225,19 @@ static int promptpattern(char *prompt) {
 
 /* check to see if we are executing a command line */
     if (!clexec) mlwrite_one(tpat);
-    return strlen(tpat);
+
+/* This now needs the grapheme length of the byte array... */
+
+    int glen = 0;
+    int tplen = strlen(tpat);
+    int tpi = 0;
+    while (tpi < tplen) {
+        struct grapheme dummy_gc;
+        tpi = build_next_grapheme(tpat, tpi, tplen, &dummy_gc);
+        if (dummy_gc.ex) Xfree(dummy_gc.ex);
+        glen++;
+    }
+    return glen;
 }
 
 /* Routine to get the next character from the input stream.  If we're reading
@@ -306,7 +343,7 @@ int isearch(int f, int n) {
     start_over:
 
 /* Ask the user for the text of a pattern */
-    col = promptpattern("ISearch: ");   /* Prompt, remember the col */
+    col = promptpattern("ISearch:");    /* Prompt, remember the col */
 
     cpos = 0;               /* Start afresh               */
     status = TRUE;          /* Assume everything's cool   */
@@ -318,9 +355,15 @@ int isearch(int f, int n) {
     c = ectoc(expc = get_char());   /* Get the first character    */
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
 /* Reuse old search string?   */
-/* Yup, find the length and re-echo the string    */
-        for (cpos = 0; pat[cpos] != 0; cpos++)
-            col = echo_char(pat[cpos], col);
+/* Yup, find the grapheme length and re-echo the string    */
+        cpos = 0;
+        int plen = strlen(pat);
+        while (pat[cpos] != 0) {
+            unicode_t uc;
+            cpos += utf8_to_unicode(pat, cpos, plen, &uc);
+            col = echo_char(uc, col);
+	}
+
         if (c == IS_REVERSE) {      /* forward search?        */
             n = -1;             /* No, search in reverse  */
             back_grapheme(1);   /* Be defensive about EOB */
@@ -389,11 +432,25 @@ int isearch(int f, int n) {
 
 /* I guess we got something to search for, so search for it */
 
-        pat[cpos++] = c;            /* put the char in the buffer */
-        if (cpos >= NPAT) {         /* too many chars in string?  */
+/* Handle unicode...more than 1 byte */
+        char ucb[6];
+        int nb;
+        if (c > 0x7f) {
+            nb = unicode_to_utf8(c, ucb);
+        }
+        else {
+            nb = 1;
+            ucb[0] = c;
+        }
+        char *ucbp = ucb;
+        int togo = nb;
+        while (togo--) {
+            pat[cpos++] = *(ucbp++);/* put the char in the buffer */
+            if (cpos >= NPAT) {     /* too many chars in string?  */
                                     /* Yup.  Complain about it    */
-            mlwrite_one("? Search string too long");
-            return TRUE;            /* Return an error            */
+                mlwrite_one("? Search string too long");
+                return TRUE;        /* Return an error            */
+            }
         }
         pat[cpos] = 0;              /* null terminate the buffer  */
         col = echo_char(c, col);    /* Echo the character         */
@@ -403,7 +460,7 @@ int isearch(int f, int n) {
         }
         else                        /* Otherwise, we must have won */
             if (!(status = checknext(c, pat, n)))   /* See if match  */
-                status = scanmore(pat, n);  /* or find the next match */
+             status = scanmore(pat, n); /* or find the next match */
         c = ectoc(expc = get_char());   /* Get the next char        */
     }                               /* for {;;} */
 }

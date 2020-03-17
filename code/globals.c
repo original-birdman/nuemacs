@@ -14,9 +14,9 @@ int flickcode = FALSE;          /* do flicker supression?       */
 char *mode2name[] = {           /* Display name of modes        */
                                 /* Also text when checking them */
         "Wrap",  "Cmode", "Phon",  "Exact", "View",
-        "Over",  "Magic", "Crypt", "Asave", "Unico", "Dos",
+        "Over",  "Magic", "Crypt", "Asave", "eQuiv", "Dos",
 };
-char modecode[] = "WCPEVOMYAUD";/* letters to represent modes   */
+char modecode[] = "WCPEVOMYAQD";/* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
 #if IBMPC
@@ -98,18 +98,9 @@ char rpat[NPAT+1];              /* replacement pattern          */
 
 struct line *fline;             /* dynamic return line */
 
-/* The variable matchlen holds the length of the matched
- * string - used by the replace functions.
- * The variable patmatch holds the string that satisfies
- * the search command.
- * The variables matchline and matchoff hold the line and
- * offset position of the *start* of match.
+/* The variable srch_patlen holds the length of the search pattern
  */
-unsigned int matchlen = 0;
-unsigned int mlenold = 0;
-char *patmatch = NULL;
-struct line *matchline = NULL;
-int matchoff = 0;
+unsigned int srch_patlen = 0;
 
 /* directive name table:
         This holds the names of all the directives....  */

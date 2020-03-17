@@ -336,13 +336,14 @@ extern int backsearch(int f, int n);
 extern int backhunt(int f, int n);
 extern int scanmore(char *, int);
 extern void setpattern(const char[], const char[]);
+extern int unicode_eq(unsigned int, unsigned int);
 extern int eq(unsigned char bc, unsigned char pc);
 extern void rvstrcpy(char *rvstr, char *str);
 extern int sreplace(int f, int n);
 extern int qreplace(int f, int n);
 extern int expandp(char *srcstr, char *deststr, int maxlength);
 extern int boundry(struct line *curline, int curoff, int dir);
-extern void mcclear(void);
+extern char *group_match(int);
 
 /* isearch.c */
 extern int risearch(int f, int n);
@@ -384,5 +385,6 @@ extern int nxti_name_info(int);
 
 extern void *Xmalloc(size_t);
 extern void *Xrealloc(void *, size_t);
+extern void *Xfree(void *);
 
 #endif

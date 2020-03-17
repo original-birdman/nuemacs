@@ -363,7 +363,7 @@ static int unbindchar(int c) {
     if (!ktp) return FALSE;
 
 /* If this was a procedure mapping, free the buffer reference */
-    if (ktp->k_type == PROC_KMAP) free(ktp->hndlr.pbp);
+    if (ktp->k_type == PROC_KMAP) Xfree(ktp->hndlr.pbp);
 
 /* save the pointer and scan to the end of the table */
     sktp = ktp;
@@ -447,7 +447,7 @@ int bindtokey(int f, int n) {
     ktp = getbind(c);
     if (ktp) {              /* If it exists, change it... */
         if (ktp->k_type == PROC_KMAP) { /* Need to free the name */
-            free(ktp->hndlr.pbp);       /* Free the name */
+            Xfree(ktp->hndlr.pbp);       /* Free the name */
             ktp->hndlr.pbp = NULL;
         }
         destp = ktp;

@@ -65,13 +65,16 @@
  *      has been called first.
  *      Modified by Petri Kutvonen
  *
- * 2018
+ * 2018+
  * Various bits of the above no longer apply, but it's left for posterity.
  * The FATS search code is now hard-wired, as is a "magic" (regex) search.
  * There is also a navigable set of search and replace string buffers.
+ *
+ * scanner() is now fast_scanner() and mcscanner() is now step_scanner().
  */
 #include <stdio.h>
 #include <ctype.h>
+#include <unistd.h>
 #include <limits.h>
 
 #include "estruct.h"
@@ -79,24 +82,170 @@
 #include "efunc.h"
 #include "line.h"
 
+#include "utf8proc.h"
+
+/* Defines for the types in struct magic (and struct magic_replacement)
+ * The pattern now ends when Group0 closes, so there is no longer
+ * any need for the old MCNIL.
+ */
+#define LITCHAR         1       /* Literal character, or string. */
+#define ANY             2
+#define CCL             3
+#define BOL             4
+#define EOL             5
+#define UCLITL          6
+#define UCGRAPH         7
+#define ANYGPH          8
+#define UCPROP          9
+#define UCKIND          10
+#define SGRP            11
+#define EGRP            12
+#define CHOICE          13
+#define REPL_VAR        14
+#define REPL_GRP        15
+
+/* Defines for the metacharacters in the regular expression patterns. */
+
+#define MC_ANY          '.'     /* 'Any' character (except newline). */
+#define MC_CCL          '['     /* Character class. */
+#define MC_NCCL         '^'     /* Negate character class. */
+#define MC_RCCL         '-'     /* Range in character class. */
+#define MC_ECCL         ']'     /* End of character class. */
+#define MC_SGRP         '('     /* Start a grouping */
+#define MC_EGRP         ')'     /* End a grouping */
+#define MC_BOL          '^'     /* Beginning of line. */
+#define MC_EOL          '$'     /* End of line. */
+#define MC_REPEAT       '*'     /* == Closure. */
+#define MC_ONEPLUS      '+'     /* non-zero Closure. */
+#define MC_RANGE        '{'     /* Ranged Closure. */
+#define MC_OR           '|'     /* OR choice */
+#define MC_MINIMAL      '?'     /* Shortest Closure OR 0/1 match. */
+#define MC_REPL         '$'     /* Use matching group/var in replacement. */
+#define MC_ESC          '\\'    /* Escape - suppress meta-meaning. */
+
+#define BIT(n)          (1 << (n))      /* An integer with one bit set. */
+#define CHCASE(c)       ((c) ^ DIFCASE) /* Toggle the case of a letter. */
+
+/* HICHAR - 1 is the largest character we will deal with.
+ * HIBYTE represents the number of bytes in the bitmap.
+ */
+#define HICHAR          256
+#define HIBYTE          HICHAR >> 3
+#define MAXASCII        0x7f
+
+/* Typedefs that define the meta-character structure for MAGIC mode searching
+ * (struct magic), and replacement (struct magic_replacement).
+ */
+struct range {
+    unsigned int low;
+    unsigned int high;
+};
+struct mg_info {
+    unsigned int type :8;
+    unsigned int group_num :8;  /* Which group is start/ending */
+    unsigned int repeat :1;
+    unsigned int min_repeat :1;
+    unsigned int negate_test :1;
+};
+
+struct xccl {
+    struct mg_info xc;          /* for type and negate_test (prop only) */
+    union {
+        struct range cl_lim;    /* low/high codepoint to test */
+        char prop[4];           /* +ve or -ve */
+        unicode_t uchar;        /* A Unicode character point */
+        struct grapheme gc;     /* A Unicode grapheme */
+    } xval;
+};
+
+/* Keep the first two entries (struct mg_info and union val)
+ * in the next two structures "in sync" for common items, then
+ * dump_mc can report on both easily.
+ */
+struct magic {
+    struct mg_info mc;
+    union {                     /* Can only be one at a time */
+        char *cclmap;           /* Pointer */
+        int lchar;              /* An ASCII char */
+        unicode_t uchar;        /* A Unicode character point */
+        struct grapheme gc;     /* A Unicode grapheme */
+        char prop[4];           /* Direct - 2 chars + NULL */
+        struct magic *gpm;      /* Group handling sub pattern */
+    } val;
+    struct range cl_lim;        /* Limits if mc.repeat set */
+    union {                     /* Extended info */
+        struct xccl *xt_cclmap; /* Pointer */
+        struct magic *next_or;  /* next alternative check */
+    } x;
+};
+
+struct magic_replacement {
+    struct mg_info mc;
+    union {                     /* Can only be one at a time */
+        int lchar;              /* An ASCII char */
+        unicode_t uchar;        /* A Unicode character point */
+        struct grapheme gc;     /* A Unicode grapheme */
+        char *varname;          /* malloc()ed varname */
+    } val;
+};
+
+/* Group status and information.
+ * We cannot have more than NPAT/2 groups (in fact probably NPAT/3)
+ * +1, since we start at 0.
+ */
+#define NGRP (NPAT/2 + 1)
+
+/* The group_info data contains some only used when building the
+ * struct magic array and some only used when processing it.
+ */
+enum GP_state { GPOPEN, GPCLOSED };
+struct group_info {
+    struct magic *next_choice;  /* In mcstr(), where to put OR for this group
+                                 * In amatch()/step_scanner(), where the next
+                                 * OR is. */
+    struct magic *gpend;        /* Where the group pattern ends */
+    struct line *mline;         /* Buffer location of match */
+    int start;
+    int len;
+    int base;                   /* byte count of chars matched before *start*
+                                 * of group.
+                                 * ambytes is reset to this on CHOICE. */
+    int parent_group;           /* Group to fall into when this group ends */
+    enum GP_state state;        /* For group balancing check in mcstr() */
+};
+static struct group_info grp_info[NGRP];
+static const struct group_info null_grp_info =
+     { NULL, NULL, NULL, 0, 0, 0, 0, GPOPEN };
+static char *grp_text[NGRP];
+
+/* State information variables. */
+
 static int patlenadd;
 static int deltaf[HICHAR],deltab[HICHAR];
 static int lastchfjump, lastchbjump;
 
-/*
- * The variables magical and rmagical determine whether there
+/* Set start_line to NULL when not running a magic search!!
+ * This defines the starting location for a search, and is used in boundry()
+ * for reverse searching to add a boundary condition.
+ */
+static struct {
+    struct line* start_line;
+    int start_point;
+} magic_search = { NULL, 0};
+
+/* The variables magical and rmagical determine whether there
  * were actual metacharacters in the search and replace strings -
  * if not, then we don't have to use the slower MAGIC mode
  * search functions.
+ * slow_scan will be set if we need the step_scanner().
  */
-static int magical;
-static int rmagical;
+static int rmagical = FALSE;
 static struct magic mcpat[NPAT]; /* The magic pattern. */
-static struct magic tapcm[NPAT]; /* The reversed magic pattern. */
 static struct magic_replacement rmcpat[NPAT]; /* Replacement magic array. */
 
-/* Search ring buffer code...
- */
+static int slow_scan = FALSE;
+
+/* Search ring buffer code... */
 #define RING_SIZE 10
 
 static char *srch_txt[RING_SIZE], *repl_txt[RING_SIZE];
@@ -112,6 +261,11 @@ void init_search_ringbuffers(void) {
         repl_txt[ix] = Xmalloc(1);
         *(repl_txt[ix]) = '\0';
     }
+/* Initialize the group text pointers - these are only
+ * allocated on request, and freed/reset on each ne pattern
+ * set-up.
+ */
+    for (int gi = 0; gi < NGRP; gi++) grp_text[gi] = NULL;
 }
 
 /* The new string goes in place at the top, pushing the others down
@@ -155,8 +309,7 @@ static void update_ring(const char *str) {
     return;
 }
 
-/*
- * A function to regenerate the prompt string with the given
+/* A function to regenerate the prompt string with the given
  * text as the default.
  * Also called from svar() if it sets $replace or $search
  */
@@ -170,8 +323,7 @@ void new_prompt(char *dflt_str) {
     return;
 }
 
-/*
- * Here are the two callable search/replace string manipulating functions.
+/* Here are the two callable search/replace string manipulating functions.
  * They are called from the CMPLT_* code in input.c when you are searching
  * or replacing.
  * For rotate_sstr the "natural" thing to do is to go back to the previous
@@ -220,8 +372,7 @@ void select_sstr(void) {
     return;
 }
 
-/*
- * clearbits -- Allocate and zero out a CCL bitmap.
+/* clearbits -- Allocate and zero out a CCL bitmap.
  */
 static char *clearbits(void) {
     char *cclstart;
@@ -234,96 +385,394 @@ static char *clearbits(void) {
     return cclstart;
 }
 
-/*
- * setbit -- Set a bit (ON only) in the bitmap.
+/* Function to get text between {} braces.
+ * The returned string is the text (without the braces), stored in a
+ * static buffer. So the caller must handle it before calling here again.
+ * It does not process the text in any way, so can do a byte-scan.
+ */
+static char btxt[512];
+static char *brace_text(char *fp) {
+    char *tp = btxt;
+    int max = 511;
+    while (max--) {
+        if (!*fp) break;
+        *tp++ = *fp++;
+        if (*fp == '}') {
+            *tp = '\0';
+            return btxt;
+        }
+    }
+    return NULL;
+}
+
+/* There are following routines with a lot of conditional blocks.
+ * This pushes the code over to the right and can make it more difficlut
+ * to follow because of resulting code line wrapping.
+ * The following macros can be used for the start/end of block tests,
+ * which mean that uemacs won't try to indent to the wrong level.
+ */
+#define TEST_BLOCK(x) if (x) {
+#define END_TEST(x) }
+#define WHILE_BLOCK(x) while (x) {
+#define END_WHILE(x) }
+
+/* Define an End of List struct mg_info type, with null flags */
+static struct mg_info null_mg = { EGRP, 0, 0, 0, 0 };
+
+/* setbit -- Set a bit (ON only) in the bitmap.
+ * This is used for all 256 values in non-Magic (fast_scanner) mode.
  */
 static void setbit(int bc, char *cclmap) {
     bc = bc & 0xFF;
     if (bc < HICHAR) *(cclmap + (bc >> 3)) |= BIT(bc & 7);
 }
 
+/* parse_error
+ * A simple routine to dispaly where errors occur in patterns
+ * Assumes that pptr arrives set to one beyond the error point AND
+ * that this is a pointer into pat!
+ */
+static void parse_error(char *pptr, char *message) {    /* Helper routine */
+    char byte_saved = *pptr;
+    *pptr = '\0';   /* Temporarily fudge in end-of-string */
+    mlwrite("%s<-: %s!", pat, message);
+    *pptr = byte_saved;
+    return;
+}
+
 /*
- * cclmake -- create the bitmap for the character class.
- *      ppatptr is left pointing to the end-of-character-class character,
- *      so that a loop may automatically increment with safety.
+ * add2_xt_cclmap - add a new entry to the end of the xt_cclmap list
+ *                  returns the ptr to the new entry *not* the base of
+ *                  the list (which is stored in mp->x.xt_cclmap.
+ */
+static int uni_ccl_cnt;     /* add2_xt_cclmap isn't recursive... */
+static struct xccl *add2_xt_cclmap(struct magic *mp, int type) {
+    uni_ccl_cnt++;
+    struct xccl *xp =
+         Xrealloc(mp->x.xt_cclmap, (uni_ccl_cnt)*sizeof(struct xccl));
+    mp->x.xt_cclmap = xp;
+    xp += uni_ccl_cnt - 1;  /* Point to the last one */
+    xp->xc = null_mg;       /* (re)Mark end of list */
+    xp--;                   /* Where we want to add the new one */
+    xp->xc.type = type;
+    return xp;
+}
+
+/* cclmake -- create the bitmap for the character class.
+ *      On success ppatptr is left pointing to the end-of-character-class
+ *      character, so that a loop may automatically increment with safety.
+ *      - indicates a range, but it is literal if the first or last character
+ *      ] is literal if the first character (so you can't have an empty class!)
+ *      [ is literal anywhere
  */
 static int cclmake(char **ppatptr, struct magic *mcptr) {
     char *bmap;
     char *patptr;
-    int pchr, ochr;
+    char *btext;
+
+/* We always set up the bitmap structure */
 
     if ((bmap = clearbits()) == NULL) {
-        mlwrite_one("%Out of memory");
+        mlwrite_one("Out of memory");
         return FALSE;
     }
-
-    mcptr->u.cclmap = bmap;
+    mcptr->val.cclmap = bmap;
     patptr = *ppatptr;
 
-/* Test the initial character(s) in ccl for special cases - negate ccl, or
- *  an end ccl  character as a first character.  Anything else gets set
- * in the bitmap.
+/* Test the initial character(s) in ccl for the special cases of negate ccl.
+ * Anything else gets set in the class mapping.
  */
+    mcptr->mc.type = CCL;
     if (*++patptr == MC_NCCL) {
         patptr++;
-        mcptr->mc_type = NCCL;
+        mcptr->mc.negate_test = 1;
     }
-    else mcptr->mc_type = CCL;
+    else
+        mcptr->mc.negate_test = 0;
+    mcptr->x.xt_cclmap = NULL;      /* So we can Xrealloc on it */
+    uni_ccl_cnt = 1;                /* Space for EGRP(0) at end if used */
 
-    if ((ochr = *patptr) == MC_ECCL) {
-        mlwrite_one("%No characters in character class");
-        return FALSE;
+/* We can't handle things as we reach them, as we might have a range defined
+ * and it's only when we get to the '-' (MC_RCCL) that we know this
+ * so we must save each character until we know what the next one is.
+ */
+    struct grapheme prev_gc;
+    int first = 1;
+    int ccl_ended = 0;
+
+/* Really need to run this through one final time when MC_ECCL is seen
+ * Seeing NUL is an error!!!
+ * We always get graphemes...
+ * patptr will be pointing to the next unread char thorugh the loop.
+ */
+    WHILE_BLOCK(*patptr)
+    struct grapheme gc;
+    patptr += build_next_grapheme(patptr, 0, -1, &gc);
+
+    TEST_BLOCK(!first && gc.uc == MC_RCCL && gc.cdm == 0)
+/* We have a range when we get here.
+ * But range character loses its meaning if it is the last character in
+ * the class. See if it is...
+ * NOTE: that it will also be taken literally if it is the first character.
+ */
+    patptr += build_next_grapheme(patptr, 0, -1, &gc);
+    if (gc.uc == MC_ECCL && gc.cdm == 0) {  /* Is end of class... */
+        setbit(MC_RCCL, bmap);              /* ...so mark it */
+        goto switch_current_to_prev;        /* Which will exit the loop */
+    }
+
+/* We can also have a range based on Unicode chars.
+ * So, what do we have next...we've just read it.
+ */
+    unicode_t low, high;
+    if (gc.cdm || prev_gc.cdm) {
+        parse_error(patptr, "Cannot use combined chars in ranges");
+        if (gc.ex) {            /* Our responsibility! */
+            Xfree(gc.ex);
+            gc.ex = NULL;
+        }
+        if (prev_gc.ex) {   /* Our responsibility! */
+            Xfree(prev_gc.ex);
+            prev_gc.ex = NULL;
+        }
+        goto error_exit;
+    }
+    low = prev_gc.uc;
+    high = gc.uc;
+
+/* If high > MAXASCII then we need to use an extended CCL, otherwise
+ * we can set the bit pattern.
+ */
+    if (high <= MAXASCII) {
+        while (low <= high) setbit(low++, bmap);
     }
     else {
-        if (ochr == MC_ESC) ochr = *++patptr;
-        setbit(ochr, bmap);
-        patptr++;
+        struct xccl *xp = add2_xt_cclmap(mcptr, CCL);
+        xp->xval.cl_lim.low = low;
+        xp->xval.cl_lim.high = high;
     }
+/* We've used the current character, so remove it... */
+    goto invalidate_current;
+    END_TEST(!first....)           /* End of range handling */
 
-    while (ochr != '\0' && (pchr = *patptr) != MC_ECCL) {
-        switch (pchr) {
-/* Range character loses its meaning if it is the last character in
- *the class.
+/* For the first char/grapheme there is no more to do - except to handle
+ * the loop transition
  */
-        case MC_RCCL:
-            if (*(patptr + 1) == MC_ECCL) setbit(pchr, bmap);
-            else {
-                pchr = *++patptr;
-                while (++ochr <= pchr)
-                    setbit(ochr, bmap);
-                }
-            break;
-
-        case MC_ESC:
-            pchr = *++patptr;
-            if (pchr == 's') {  /* \s is Whitespace */
-                setbit(' ', bmap);
-                setbit('\t', bmap);
-                setbit('\n', bmap);
-                setbit('\r', bmap);
-                break;
-            }
-            /* Falls through */
-        default:
-            setbit(pchr, bmap);
-            break;
+    if (first) {
+        if (gc.uc == MC_ECCL) {     /* Take it literally */
+            setbit(MC_ECCL, bmap);
+            goto invalidate_current;
         }
-        patptr++;
-        ochr = pchr;
+        goto switch_current_to_prev;
     }
 
-    *ppatptr = patptr;
-
-    if (ochr == '\0') {
-        mlwrite_one("%Character class not ended");
-        free(bmap);
-        return FALSE;
+/* Now deal with the *previously* seen item
+ * Do we have a previous grapheme?
+ */
+    if (prev_gc.uc > 0x7f) {    /* We have Unicode to handle */
+/* We set the real type later... */
+        struct xccl *xp = add2_xt_cclmap(mcptr, 0);
+        if (prev_gc.cdm) {
+            xp->xc.type = UCGRAPH;
+/* Structure copy - will copy any malloced gc.ex (i.e. copy the pointer),
+ * so we don't need to free() it at the end if all has gone OK.
+ */
+            xp->xval.gc = prev_gc;
+            prev_gc.ex = NULL;  /* So we don't try to free it... */
+        }
+        else {
+            xp->xc.type = UCLITL;
+            xp->xval.uchar = prev_gc.uc;
+        }
+        goto switch_current_to_prev;
     }
-    return TRUE;
+
+/* Must have an ASCII char now (in prev_gc.uc) */
+
+    switch (prev_gc.uc) {
+    case MC_ESC:
+        switch (gc.uc) {     /* All MUST finish with goto!! */
+        case 'u': {
+            if (*patptr != '{') {       /* balancer: } */
+                parse_error(patptr, "\\u{} not started");
+                return FALSE;
+            }
+            btext = brace_text(++patptr);
+            if (!btext) {
+                parse_error(patptr, "\\u{} not ended");
+                return FALSE;
+            }
+            struct xccl *xp = add2_xt_cclmap(mcptr, UCLITL);
+            xp->xval.uchar = strtol(btext, NULL, 16);
+
+/* For the moment(?), don't validate we have a hex-only field) */
+            patptr += strlen(btext);
+            goto invalidate_current;
+        }
+        case 'k':       /* "kind of" char - just check base unicode */
+        case 'K':       /* Not "kind of" ... */
+            if (*(patptr) != '{') { /* } balancer */
+                parse_error(patptr, "\\k/K{} not started");
+                return FALSE;
+            }
+            btext = brace_text(++patptr);
+            if (!btext) {
+                parse_error(patptr, "\\%k/K{} not ended");
+                return FALSE;
+            }
+            struct grapheme kgc;
+            int klen = strlen(btext);
+            int bc = build_next_grapheme(btext, 0, klen, &kgc);
+            if (bc != klen) {
+                parse_error(patptr,
+                     "\\k{} must only contain one unicode char");
+                return FALSE;
+            }
+            if (kgc.cdm) {
+                parse_error(patptr,
+                     "\\k{} must only contain a base character");
+                if (kgc.ex) {       /* Our responsibility! */
+                    Xfree(kgc.ex);
+                    kgc.ex = NULL;
+                }
+                return FALSE;
+            }
+            struct xccl *xp = add2_xt_cclmap(mcptr, UCKIND);
+            xp->xval.uchar = kgc.uc;
+            xp->xc.negate_test = (gc.uc == 'K');
+            patptr += strlen(btext);
+            goto invalidate_current;
+        case 'p':
+        case 'P': {
+            if (*patptr != '{') {       /* balancer: } */
+                parse_error(patptr, "\\p/P{} not started");
+                return FALSE;
+            }
+            btext = brace_text(++patptr);
+            if (!btext) {
+                parse_error(patptr, "\\p/P{} not ended");
+                return FALSE;
+            }
+            struct xccl *xp = add2_xt_cclmap(mcptr, UCPROP);
+            xp->xc.negate_test = (gc.uc == 'P');
+/* For the moment(?), don't validate what we have.
+ * Copy up to 2 chars (no more) and force the first to be Upper case and the
+ * second, if there, to lower. This allows a simple comparison with the
+ * result of a utf8proc_category_string() call.
+ */
+            xp->xval.prop[0] = '?';     /* Unknown default */
+            xp->xval.prop[1] = '\0';    /* terminate sring */
+            if (btext[0]) xp->xval.prop[0] = btext[0] & (~DIFCASE);
+            if (btext[1]) xp->xval.prop[1] = btext[1] | DIFCASE;
+            xp->xval.prop[2] = '\0';    /* Ensure NUL terminated */
+            patptr += strlen(btext);
+            goto invalidate_current;
+	}
+        case 'd':
+        case 'D': {
+            struct xccl *xp = add2_xt_cclmap(mcptr, UCPROP);
+            xp->xc.negate_test = (gc.uc == 'D');
+            xp->xval.prop[0] = 'N';     /* Numeric... */
+            xp->xval.prop[1] = 'd';     /* ...digit */
+            xp->xval.prop[2] = '\0';    /* Ensure NUL terminated */
+            goto invalidate_current;
+        }
+        case 'w':                       /* Letter, _, 0-9 */
+        case 'W': {
+            int negate_it = (gc.uc == 'W');
+            struct xccl *xp = add2_xt_cclmap(mcptr, UCPROP);
+            xp->xc.negate_test = negate_it;
+            xp->xval.prop[0] = 'L';     /* Letter... */
+            xp->xval.prop[1] = '\0';    /* Ensure NUL terminated */
+/* We can't really (un)set a bit pattern here for the negative case,
+ * So set up some UCLITL tests instead.
+ */
+            xp = add2_xt_cclmap(mcptr, UCLITL);
+            xp->xc.negate_test = negate_it;
+            xp->xval.uchar = ch_as_uc('_');
+            xp = add2_xt_cclmap(mcptr, CCL);
+            xp->xc.negate_test = negate_it;
+            xp->xval.cl_lim.low = ch_as_uc('0');
+            xp->xval.cl_lim.high = ch_as_uc('9');
+            goto invalidate_current;
+        }
+        case 's':               /* \s is Whitespace */
+        case 'S': {
+/* We need to add a test for the Unicode "Pattern White Space" chars
+ *  U+0009 CHARACTER TABULATION
+ *  U+000A LINE FEED
+ *  U+000B LINE TABULATION
+ *  U+000C FORM FEED
+ *  U+000D CARRIAGE RETURN
+ *  U+0020 SPACE
+ *  U+0085 NEXT LINE
+ *  U+200E LEFT-TO-RIGHT MARK
+ *  U+200F RIGHT-TO-LEFT MARK
+ *  U+2028 LINE SEPARATOR
+ *  U+2029 PARAGRAPH SEPARATOR
+ */
+            static int wsp_ints[] =
+                 { 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0x85,
+                   0x200E, 0x200F, 0x2028, 0x2029, UEM_NOCHAR };
+            int negate_it = (gc.uc == 'S');
+            struct xccl *xp;
+            for (int *wsp = wsp_ints; *wsp != UEM_NOCHAR; wsp++) {
+                xp = add2_xt_cclmap(mcptr, UCLITL);
+                xp->xc.negate_test = negate_it;
+                xp->xval.uchar = *wsp;
+            }
+            goto invalidate_current;
+        }
+        default:                /* Set bit for current char */
+            setbit(gc.uc, bmap);
+            goto invalidate_current;
+        }
+    default:                /* Not MC_ESC - normal processing */
+        setbit(prev_gc.uc, bmap);
+        goto switch_current_to_prev;
+    }
+/* We must NOT drop to here from above!!!
+ * We are sent here if the loop has already dealt with the current
+ * character in order to fetch another one...
+ */
+    parse_error(patptr, "Parsing code problem in cclmake!");
+    goto error_exit;
+
+invalidate_current:
+    patptr += build_next_grapheme(patptr, 0, -1, &gc);
+
+switch_current_to_prev:
+    if (gc.uc == MC_ECCL) {     /* We've hit the end! */
+        ccl_ended = 1;
+        break;  /* All done */
+    }
+    first = 0;
+    prev_gc = gc;
+    END_WHILE(*patptr)
+
+/* Caller expects us to leave this at "last handled", and we are on next
+ * to be handled.
+ */
+    *ppatptr = --patptr;
+
+    if (ccl_ended) return TRUE;     /* All looks OK */
+
+    parse_error(patptr, "Character class not ended");
+
+error_exit:
+    Xfree(bmap);
+/* Must also free any extended grapheme parts in any UCGRAPH entries. */
+    struct xccl *xp = mcptr->x.xt_cclmap;
+    if (xp) while (xp->xc.type != EGRP) {
+        if (xp->xc.type == UCGRAPH) {
+            if (xp->xval.gc.ex) Xfree(xp->xval.gc.ex);
+        }
+        xp++;
+    }
+    return FALSE;
 }
 
-/*
- * biteq -- is the character in the bitmap?
+/* biteq -- is the character in the bitmap?
  */
 static int biteq(int bc, char *cclmap) {
     bc = bc & 0xFF;
@@ -332,7 +781,10 @@ static int biteq(int bc, char *cclmap) {
     return (*(cclmap + (bc >> 3)) & BIT(bc & 7)) ? TRUE : FALSE;
 }
 
-static char *get_lims(char *patp, struct magic *mcp, int first_call) {
+/* set_lims - get the low/high values for a repeating range.
+ * Recurses (once at most).
+ */
+static char *set_lims(char *patp, struct magic *mcp, int first_call) {
     char *rptr = patp + 1;      /* Remember where we start */
     char rchr;
     while ( (rchr = *(++patp)) != '\0' ) {
@@ -340,7 +792,7 @@ static char *get_lims(char *patp, struct magic *mcp, int first_call) {
     }
     if ((rchr == ',') && first_call) {  /* OK */
         mcp->cl_lim.low = atoi(rptr);
-        return get_lims(patp, mcp, 0);
+        return set_lims(patp, mcp, 0);
     }
     if ((rchr == '}') && first_call) {  /* OK */
         mcp->cl_lim.low = atoi(rptr);
@@ -348,259 +800,609 @@ static char *get_lims(char *patp, struct magic *mcp, int first_call) {
         return patp;
     }
 /* Not a first_call, so we MUST end on a '}' */
-    if (rptr == patp) mcp->cl_lim.high = INT_MAX;  /* Empty -> MAX */
+    if (rptr == patp) mcp->cl_lim.high = INT_MAX; /* Empty -> MAX */
     else              mcp->cl_lim.high = atoi(rptr);
     if ((rchr != '}') || mcp->cl_lim.high < mcp->cl_lim.low) {
-        mlwrite_one("Invalid range pattern");
+        parse_error(patp, "Invalid range pattern");
         return NULL;
     }
     return patp;
 }
 
-/*
- * mcstr -- Set up the 'magic' array.  The closure symbol is taken as
+/* mcclear -- Free up any CCL bitmaps, and reset the struct magic search
+ * array.
+ */
+static void mcclear(void) {
+    struct magic *mcptr = mcpat;
+
+    while (mcptr->mc.type != EGRP && mcptr->mc.group_num > 0) {
+        if ((mcptr->mc.type) == CCL) {
+            Xfree(mcptr->val.cclmap);
+            if (mcptr->x.xt_cclmap) {
+                struct xccl *xp = mcptr->x.xt_cclmap;
+/* Free any extended gc allocs within the xccl alloc */
+                while(xp->xc.type != EGRP) {
+                    if (xp->xc.type == UCGRAPH) {
+                        if (xp->xval.gc.ex) Xfree(xp->xval.gc.ex);
+                    }
+                xp++;
+                }
+                Xfree(mcptr->x.xt_cclmap);
+            }
+	}
+        if ((mcptr->mc.type) == UCGRAPH)
+            if (mcptr->val.gc.ex) Xfree(mcptr->val.gc.ex);
+        mcptr++;
+    }
+/* We need to reset type and flags here */
+    mcpat[0].mc = null_mg;
+}
+
+/* rmcclear -- Free up any extended unicode chars, varnames and reset
+ * the struct magic_replacement array.
+ */
+static void rmcclear(void) {
+    struct magic_replacement *rmcptr;
+
+    rmcptr = rmcpat;
+
+    while (rmcptr->mc.type != EGRP) {
+        switch(rmcptr->mc.type) {
+        case UCGRAPH:
+            if (rmcptr->val.gc.ex) Xfree (rmcptr->val.gc.ex);
+            break;
+        case REPL_VAR:
+            Xfree(rmcptr->val.varname);
+            break;
+        default:
+            ;
+        }
+        rmcptr++;
+    }
+    rmcpat[0].mc = null_mg;
+}
+
+/* mcstr -- Set up the 'magic' array.  The closure symbol is taken as
  *      a literal character when (1) it is the first character in the
  *      pattern, and (2) when preceded by a symbol that does not allow
- *      closure, such as a newline, beginning of line symbol, or another
- *      closure symbol.
+ *      repeat, such as a newline, beginning of line symbol, or another
+ *      repeat symbol.
  *
  *      Coding comment (jmg):  yes, I know I have gotos that are, strictly
  *      speaking, unnecessary.  But right now we are so cramped for
  *      code space that i will grab what i can in order to remain
  *      within the 64K limit.  C compilers actually do very little
  *      in the way of optimizing - they expect you to do that.
+ *
+ *      NOTE! This code works out whether we need to use step_scanner()
+ *      (Unicode search string or active regex chars found while in
+ *       MAGIC mode) or fast_scanner().
+ *
+ *      ALSO NOTE! It expects its caller to call mcclear() if this fails.
+ *      This allows a quick "return FALSE" on any parsing error.
+ *      BUT!! we do need to ensure that the final type is EGRP(0) at all
+ *      times to allow this!!
  */
+
+static int group_cntr;  /* Number of possible groups in search pattern */
+
 static int mcstr(void) {
-    struct magic *mcptr, *rtpcm;
-    char *patptr;
+    struct magic *mcptr = mcpat;
+    char *patptr = pat;
     int mj;
     int pchr;
     int status = TRUE;
-    int does_closure = FALSE;
+    int can_repeat = FALSE;
+    char *btext;
 
 /* If we had metacharacters in the struct magic array previously,
- * free up any bitmaps that may have been allocated.
+ * free up any bitmaps that may have been allocated (before we
+ * reset slow_scan).
  */
-    if (magical) mcclear();
+    if (slow_scan) mcclear();
+    group_cntr = 0;
+    grp_info[0].state = GPOPEN;
+    grp_info[0].parent_group = -1;  /* None */
+    int curr_group = 0;
 
-    magical = FALSE;
+/* Each group has to start with a group-holder, so that we
+ * can chain any OR groups from it.
+ */
+    mcptr->mc = null_mg;            /* Initialize fields */
+    mcptr->mc.type = SGRP;
+    mcptr->mc.group_num = group_cntr;
+    mcptr->x.next_or = NULL;
+    grp_info[0].next_choice = mcptr;    /* Where to put the next CHOICE */
+    mcptr++;
+
+    int using_magic = ((curwp->w_bufp->b_mode & MDMAGIC) != 0);
+    slow_scan = using_magic;    /* The default case */
     mj = 0;
-    mcptr = mcpat;
-    patptr = pat;
 
-    while ((pchr = *patptr) && status) {
-        switch (pchr) {
-        case MC_CCL:
-            status = cclmake(&patptr, mcptr);
-            magical = TRUE;
-            does_closure = TRUE;
-            break;
-        case MC_BOL:
-            if (mj != 0) goto litcase;
-            mcptr->mc_type = BOL;
-            magical = TRUE;
-            does_closure = FALSE;
-            break;
-        case MC_EOL:
-            if (*(patptr + 1) != '\0') goto litcase;
-            mcptr->mc_type = EOL;
-            magical = TRUE;
-            does_closure = FALSE;
-            break;
-        case MC_ANY:
-            mcptr->mc_type = ANY;
-            magical = TRUE;
-            does_closure = TRUE;
-            break;
-        case MC_CLOSURE:
-        case MC_ONEPLUS:
-/* Does the closure symbol mean closure here? If so, back up to the
- * previous element and indicate it is enclosed.
+    WHILE_BLOCK((pchr = *patptr) && status)
+    mcptr->mc = null_mg;        /* Initialize fields */
+    mcptr->mc.group_num = curr_group;
+/* Is the next character non-ASCII? */
+    struct grapheme gc;
+    int bc = build_next_grapheme(patptr, 0, -1, &gc);
+    if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
+
+/* We won't have called mcstr() for Exact + non-Magic, so if we
+ * find a non-ASCII code we need to use the step_scanner().
  */
-            if (!does_closure) goto litcase;
-            mj--;
-            mcptr--;
-            mcptr->mc_type |= CLOSURE;
-            mcptr->cl_lim.low = (pchr == MC_ONEPLUS)? 1: 0;
-            mcptr->cl_lim.high = INT_MAX;    /* Not quite infinity */
-            magical = TRUE;
-            does_closure = FALSE;
-            break;
-        case MC_RANGE:
-            if (!does_closure) goto litcase;
-            mj--;
-            mcptr--;
-            mcptr->mc_type |= CLOSURE;
+        slow_scan = TRUE;   /* The only case that sets this for non-MAGIC */
+        can_repeat = TRUE;
+        patptr += bc;
+        if (!gc.cdm)    {   /* No combining marks */
+            mcptr->mc.type = UCLITL;
+            mcptr->val.uchar = gc.uc;
+        }
+        else {
+            mcptr->mc.type = UCGRAPH;
+/* We copy all of the data into our saved one. This means that any
+ * malloc'ed ex parts get their pointers copied, and there is no more to
+ * do here. Any freeing will be done in mcclear()/
+ */
+            mcptr->val.gc = gc;
+        }
+        goto pchr_done_noincr;
+    }
+
+/* IMPORTANT!!!!
+ * If we AREN'T using magic then EVERYTHING is literal!!!
+ * And since we know we have a bare ASCII char (any other would be trapped
+ * in the preceding test) we just set a LITCHAR test here.
+ */
+    if (!using_magic) {     /* Non-magic mode ASCII */
+        mcptr->mc.type = LITCHAR;
+        mcptr->val.lchar = pchr;
+        goto pchr_done;
+    }
+/* We have an unescaped char to look at... */
+    switch (pchr) {
+    case MC_CCL:
+        status = cclmake(&patptr, mcptr);
+        can_repeat = TRUE;
+        break;
+    case MC_SGRP:
+        group_cntr++;
+/* We allocate 1 more than the counter (so we can then index by group number)
+ * Group0 is used for the overall match.
+ */
+        grp_info[group_cntr].state = GPOPEN;
+        grp_info[group_cntr].parent_group = curr_group;
+        curr_group = group_cntr;
+        mcptr->mc.type = SGRP;
+        mcptr->mc.group_num = group_cntr;           /* Set correct one */
+        mcptr->x.next_or = NULL;                    /* No OR yet... */
+        grp_info[group_cntr].next_choice = mcptr;   /* but it  would go here */
+        can_repeat = TRUE;
+        break;
+    case MC_EGRP:
+        mcptr->mc.type = EGRP;  /* Close group */
+        curr_group = grp_info[curr_group].parent_group;
+/* We close the highest open group... */
+        int closed_ok = 0;
+        for (int gc = group_cntr; gc >= 0; gc--) {
+            if (grp_info[gc].state == GPOPEN) {
+                grp_info[gc].state = GPCLOSED;
+                grp_info[gc].gpend = mcptr;
+                closed_ok = 1;
+                break;
+            }
+        }
+        if (!closed_ok) {
+            parse_error(patptr, "no group to end");
+            return FALSE;
+        }
+        break;
+    case MC_BOL:
+        if (mj != 0) {
+            parse_error(patptr, "must be first");
+            return FALSE;
+        }
+        mcptr->mc.type = BOL;
+        can_repeat = FALSE;
+        break;
+    case MC_EOL:
+        if (*(patptr + 1) != '\0') {
+            parse_error(patptr, "must be last");
+            return FALSE;
+        }
+        mcptr->mc.type = EOL;
+        can_repeat = FALSE;
+        break;
+    case MC_ANY:
+        mcptr->mc.type = ANY;
+        can_repeat = TRUE;
+        break;
+    case MC_REPEAT:
+    case MC_ONEPLUS:
+/* Does the closure symbol mean repeat here? If so, back up to the
+ * previous element and indicate it is enclosed.
+ * If not, that's an error...
+ */
+        if (!can_repeat) {
+            parse_error(patptr, "repeating a non-repeatable item");
+            return FALSE;
+        }
+        mj--;
+        mcptr--;
+        mcptr->mc.repeat = 1;
+        mcptr->cl_lim.low = (pchr == MC_ONEPLUS)? 1: 0;
+        mcptr->cl_lim.high = INT_MAX;     /* Not quite infinity */
+        can_repeat = FALSE;
+        break;
+    case MC_RANGE:
+        if (!can_repeat) {
+            parse_error(patptr, "repeating a non-repeatable item");
+            return FALSE;
+        }
+        mj--;
+        mcptr--;
+        mcptr->mc.repeat = 1;
 /* Need to get the limits here. Allow {m,n}, {,n}, {m,}, {,}, {}.
- * Missing m is taken as 0. Missign n as INT_MAX (2**31 -1).
+ * Missing m is taken as 0. Missing n as INT_MAX (2**31 -1).
  * m must be <= n
  */
-            patptr = get_lims(patptr, mcptr, 1);
-            if (!patptr) return FALSE;
-            magical = TRUE;
-            does_closure = FALSE;
-            break;
-        case MC_MINIMAL:
-            if (mj == 0) goto litcase;
-/* Not at start, so if we can do closure we set it up for 0/1
- * and, if we can't, we check that the previous entry IS a closure
+        patptr = set_lims(patptr, mcptr, 1);
+        if (!patptr) return FALSE;
+        can_repeat = FALSE;
+        break;
+    case MC_MINIMAL:
+        if (mj == 0) {
+            parse_error(patptr, "nothing to minimally repeat");
+            return FALSE;
+        }
+/* Not at start, so if we can do repeat we set it up for 0/1
+ * and, if we can't, we check that the previous entry IS a repeat
  * and set that for minimal matching, complaining if it isn't
- * a closure.
+ * a repeat or is already minimized.
  */
-            mj--;
-            mcptr--;
-            magical = TRUE;
-            if (does_closure) {
-                mcptr->mc_type |= CLOSURE;
-                mcptr->cl_lim.low = 0;
-                mcptr->cl_lim.high = 1;
-                does_closure = FALSE;
+        mj--;
+        mcptr--;
+        if (can_repeat) {
+            mcptr->mc.repeat = 1;
+            mcptr->cl_lim.low = 0;
+            mcptr->cl_lim.high = 1;
+            mcptr->mc.min_repeat = 1;
+        }
+        else {
+            if (!(mcptr->mc.repeat)) {
+                parse_error(patptr, "minimalizing a non-repeatable item");
+                return FALSE;
             }
-            else {
-                if (!(mcptr->mc_type & CLOSURE)) {
-                    mlwrite_one("? after non-closure!!");
+            if (mcptr->mc.min_repeat) {
+                parse_error(patptr, "already minimized item");
+                return FALSE;
+            }
+            mcptr->mc.min_repeat = 1;
+        }
+        can_repeat = FALSE;
+        break;
+/* When we have an OR we link its location back into the previous OR
+ * (or the start of the group if there is no previous OR) using next_orlink.
+ * This means we can try each option in turn and if it fails, move onto any
+ * following one.
+ */
+    case MC_OR:
+        mcptr->mc.type = CHOICE;
+/* Add this to the OR chain for this group and mark where next OR
+ * has to be added
+ */
+        mcptr->x.next_or = NULL;            /* No following OR yet */
+        grp_info[curr_group].next_choice->x.next_or = mcptr;    /* Chain */
+        grp_info[curr_group].next_choice = mcptr;   /* Where next link goes */
+        can_repeat = FALSE;
+        break;
+
+/* MC_ESC is no longer just "escape next char"
+ * For Unicode regexes it can also be the lead-in for:
+ *  X       any Unicode grapheme
+ *  u       Unicode char in hex (as in \u{0062})
+ *  p       match Unicode property (e.g. \p{L} or \p{LU} \p{LL}...)
+ *  P       Not match Unicode property
+ * and we also allow:
+ *  s       whitespace
+ *  n       newline
+ *  r       carriage return
+ *  f       form feed
+ *  t       tab
+ */
+    case MC_ESC:
+        pchr = *(patptr + 1);
+        if (pchr) {         /* MC_ESC at EOB is taken literally... */
+            patptr++;       /* Advance to next char */
+            switch (pchr) { /* The first few MUST finish with goto!! */
+            case 'X':
+                mcptr->mc.type = ANYGPH;
+                can_repeat = TRUE;
+                goto pchr_done;
+/* These all use a {} text fetcher */
+            case 'u':       /* Unicode char in hex */
+                patptr++;
+                if (*(patptr) != '{') { /* } balancer */
+                    parse_error(patptr, "opening { expected");
                     return FALSE;
                 }
-                mcptr->mc_type |= MINCLOS;
-            }
-            break;
-        case MC_ESC:
-            pchr = *(patptr + 1);
-            if (pchr) {         /* MC_ESC at EOB is taken literally... */
-                patptr++;       /* Advance to next char */
-                magical = TRUE;
-                switch (pchr) {
-                case 's':
-                    mcptr->mc_type = WSPACE;
-                    goto pchr_done;
-                    break;
-                case 'n':
-                    pchr = 0x0a;
-                    break;
-                case 't':
-                    pchr = 0x09;
-                    break;
-                default:
-                    pchr = *patptr;
+                btext = brace_text(++patptr);
+                if (!btext) {
+                    parse_error(patptr, "found no closing }");
+                    return FALSE;
                 }
-            } /* Falls through */
-        default:
-litcase:    mcptr->mc_type = LITCHAR;
-            mcptr->u.lchar = pchr;
-            does_closure = (pchr != '\n');
-            break;
-        }               /* End of switch. */
+                mcptr->mc.type = UCLITL;
+/* For the moment(?), don't validate we have a hex-only field) */
+                mcptr->val.uchar = strtol(btext, NULL, 16);
+                can_repeat = TRUE;
+                patptr += strlen(btext);
+                goto pchr_done;
+            case 'k':       /* "kind of" char - just check base unicode */
+            case 'K':       /* Not "kind of" ... */
+                patptr++;
+                if (*(patptr) != '{') { /* } balancer */
+                    parse_error(patptr, "opening { expected");
+                    return FALSE;
+                }
+                btext = brace_text(++patptr);
+                if (!btext) {
+                    parse_error(patptr, "found no closing }");
+                    return FALSE;
+                }
+                struct grapheme kgc;
+                int klen = strlen(btext);
+                int bc = build_next_grapheme(btext, 0, klen, &kgc);
+                if (bc != klen) {
+                    parse_error(patptr+1,
+                         "\\k{} must only contain one unicode char");
+                    return FALSE;
+                }
+                if (kgc.cdm) {
+                    parse_error(patptr+1,
+                         "\\k{} may only contain a base character");
+                    return FALSE;
+                }
+                mcptr->mc.type = UCKIND;
+                mcptr->val.uchar = kgc.uc;
+                if (kgc.ex) {       /* Our responsibility! */
+                    Xfree(kgc.ex);
+                    kgc.ex = NULL;
+                }
+                mcptr->mc.negate_test = (pchr == 'K');
+                can_repeat = TRUE;
+                patptr += strlen(btext);
+                goto pchr_done;
+            case 'p':
+            case 'P':
+                patptr++;
+                if (*(patptr) != '{') { /* } balancer */
+                    parse_error(patptr, "opening { expected");
+                    return FALSE;
+                }
+                btext = brace_text(++patptr);
+                if (!btext) {
+                    parse_error(patptr, "found no closing }");
+                    return FALSE;
+                }
+                mcptr->mc.type = UCPROP;
+/* For the moment(?), don't validate what we have.
+ * Copy up to 2 chars (no more) and force the first to be Upper case and the
+ * second, if there, to lower. This allows a simple comparison with the
+ * result of a utf8proc_category_string() call.
+ */
+                mcptr->val.prop[0] = '?';     /* Fail by default */
+                mcptr->val.prop[1] = '\0';    /* terminate sring */
+                if (btext[0]) mcptr->val.prop[0] = btext[0] & (~DIFCASE);
+                if (btext[1]) mcptr->val.prop[1] = btext[1] | DIFCASE;
+                mcptr->val.prop[2] = '\0';    /* Ensure NUL terminated */
+                mcptr->mc.negate_test = (pchr == 'P');
+                can_repeat = TRUE;
+                patptr += strlen(btext);
+                goto pchr_done;
+            case 'd':
+            case 'D':
+                mcptr->mc.type = UCPROP;
+                mcptr->val.prop[0] = 'N';     /* Numeric... */
+                mcptr->val.prop[1] = 'd';     /* ...digit */
+                mcptr->val.prop[2] = '\0';    /* Ensure NUL terminated */
+                mcptr->mc.negate_test = (pchr == 'D');
+                can_repeat = TRUE;
+                goto pchr_done;
+/* w/W is word chars and s/S is whitespace.
+ * All four can be passod off to cclmake generically.
+ */
+            case 'w':                       /* Letter, _, 0-9 */
+            case 'W':
+            case 's':
+            case 'S': {
+                static char SETTER[] = "[\\X]";
+                SETTER[2] = (pchr | DIFCASE);   /* Quick lowercase ASCII */
+                char *dpatptr = SETTER;
+                (void)cclmake(&dpatptr, mcptr);
+                mcptr->mc.negate_test = !(pchr & DIFCASE);  /* If UPPER */
+                can_repeat = TRUE;
+                goto pchr_done;
+            }
+            case 'n':
+                pchr = '\n';
+                break;
+            case 'r':
+                pchr = '\r';
+                break;
+            case 'f':
+                pchr = '\f';
+                break;
+            case 't':
+                pchr = '\t';
+                break;
+            default:
+                pchr = *patptr;
+            }
+        } /* Falls through */
+    default:
+        mcptr->mc.type = LITCHAR;
+        mcptr->val.lchar = pchr;
+        can_repeat = 1;
+        break;
+    }               /* End of switch on original pchr */
 pchr_done:
-        mcptr++;
-        patptr++;
-        mj++;
-    }                       /* End of while. */
+    patptr++;
+pchr_done_noincr:
+    mcptr++;
+    mj++;
+    END_WHILE(pchr = *patptr....)       /* End of while. */
 
 /* Close off the meta-string. */
+    mcptr->mc = null_mg;
 
-    mcptr->mc_type = MCNIL;
-
-/* Set up the reverse array, if the status is good.  Please note the
- * structure assignment - your compiler may not like that.
- * If the status is not good, nil out the meta-pattern.
- * The only way the status would be bad is from the cclmake() routine,
- * and the bitmap for that member is guaranteed to be freed.
- * So we stomp a MCNIL value there, and call mcclear() to free any
- * other bitmaps.
- */
-    if (status) {
-        rtpcm = tapcm;
-        while (--mj >= 0) {
-#if USG | BSD
-            *rtpcm++ = *--mcptr;
-#endif
+/* We close the highest open group... */
+    int closed_ok = 0;
+    for (int gc = group_cntr; gc >= 0; gc--) {
+        if (grp_info[gc].state == GPOPEN) {
+            grp_info[gc].state = GPCLOSED;
+            closed_ok = 1;
+            break;
         }
-        rtpcm->mc_type = MCNIL;
     }
-    else {
-        (--mcptr)->mc_type = MCNIL;
-        mcclear();
+    if (!closed_ok) {
+        parse_error(patptr, "unbalanced group at end");
+        return FALSE;
     }
+
+    if (grp_info[0].state != GPCLOSED) {    /* Must be closed at the end... */
+        parse_error(patptr-1, "unterminated grouping");
+        return FALSE;
+    }
+
+/* The only way the status would be bad is from the cclmake() routine,
+ * and the bitmap for that member is guaranteed to be freed.
+ */
     return status;
 }
 
-/*
- * rmcstr -- Set up the replacement 'magic' array.  Note that if there
+/* rmcstr -- Set up the replacement 'magic' array.  Note that if there
  *      are no meta-characters encountered in the replacement string,
  *      the array is never actually created - we will just use the
  *      character array rpat[] as the replacement string.
  */
 static int rmcstr(void) {
-    struct magic_replacement *rmcptr;
-    char *patptr;
-    int status = TRUE;
-    int mj;
+    struct magic_replacement *rmcptr = rmcpat;
+    char *patptr = rpat;
+    char *btext;
 
-    patptr = rpat;
-    rmcptr = rmcpat;
-    mj = 0;
+/* If we had metacharacters in the struct magic_replacement array previously,
+ * free up any parts that may have been allocated (before we
+ * reset slow_scan).
+ */
+    if (rmagical) rmcclear();
     rmagical = FALSE;
 
-    while (*patptr && status == TRUE) {
-        switch (*patptr) {
-        case MC_DITTO:
+    while (*patptr) {
+        rmcptr->mc = null_mg;       /* Initialize fields */
 
-/* If there were non-magical characters in the string before reaching this
- * character, plunk it in the replacement array before processing the
- * current meta-character.
+/* Is the next character non-ASCII?
+ * If so we know it can't be a control sequence (the only one of which
+ * starts with a '$').
  */
-            if (mj != 0) {
-                rmcptr->mc_type = LITCHAR;
-                rmcptr->rstr = Xmalloc(mj + 1);
-                strncpy(rmcptr->rstr, patptr - mj, mj);
-                rmcptr++;
-                mj = 0;
+        struct grapheme gc;
+        int bc;
+        bc = build_next_grapheme(patptr, 0, -1, &gc);
+        if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
+            patptr += bc;
+            if (!gc.cdm)    {   /* No combining marks */
+                rmcptr->mc.type = UCLITL;
+                rmcptr->val.uchar = gc.uc;
             }
-            rmcptr->mc_type = DITTO;
-            rmcptr++;
-            rmagical = TRUE;
-            break;
-
-        case MC_ESC:
-            rmcptr->mc_type = LITCHAR;
-
-/* We Xmalloc mj plus two here, instead of one, because we have to count the
- * current character.
+            else {
+                rmcptr->mc.type = UCGRAPH;
+/* We copy all of the data into our saved one. This means that any
+ * malloc'ed ex parts get their pointers copied, and there is no more to
+ * do here. Any freeing will be done in mcclear()/
  */
-            rmcptr->rstr = Xmalloc(mj + 2);
-            strncpy(rmcptr->rstr, patptr - mj, mj + 1);
+                rmcptr->val.gc = gc;
+            }
+            goto pchr_done_noincr;
+        }
 
-/* If MC_ESC is not the last character in the string, find out what it is
- * escaping, and overwrite the last character with it.
- */
-            if (*(patptr + 1) != '\0')
-                *((rmcptr->rstr) + mj) = *++patptr;
-
-            rmcptr++;
-            mj = 0;
+        switch (*patptr) {
+        case MC_REPL:
+            patptr++;
+            if (*patptr != '{') {       /* balancer: } */
+                parse_error(patptr, "$ without {...}");
+                return FALSE;
+            }
+            btext = brace_text(++patptr);
+            if (!btext) {
+                parse_error(patptr, "${} not ended");
+                return FALSE;
+            }
+/* What do we have?
+ * Can be $var, %var or number... */
+            switch(btext[0]) {
+            case '$':
+            case '%':
+                rmcptr->mc.type = REPL_VAR;
+/* Adding 1 for NUL */
+                rmcptr->val.varname = Xmalloc(strlen(btext)+1);
+                strcpy(rmcptr->val.varname, btext);
+                break;
+            default:    /* Assume a group number... */
+                rmcptr->mc.type = REPL_GRP;
+                rmcptr->mc.group_num = atoi(btext);
+                break;
+            }
             rmagical = TRUE;
+            patptr += strlen(btext);
             break;
-
-        default:
-            mj++;
+        case MC_ESC:        /* Just insert the next grapheme! */
+            if (!*(++patptr)) {     /* Can't be last char */
+                parse_error(patptr, "dangling \\ at end");
+                return FALSE;
+	    }
+            rmagical = TRUE;    /* Can't do literal now... */
+	    /* Fall through - to handle next char... */
+        default:            /* Need to test for ASCII again after MC_ESC */
+            bc = build_next_grapheme(patptr, 0, -1, &gc);
+            if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
+                patptr += bc;
+                if (!gc.cdm)    {   /* No combining marks so just UCLITL */
+                    rmcptr->mc.type = UCLITL;
+                    rmcptr->val.uchar = gc.uc;
+                }
+                else {              /* Has combining marks, so UCGRAPH */
+                    rmcptr->mc.type = UCGRAPH;
+/* We copy all of the data into our saved one. This means that any
+ * malloc'ed ex parts get their pointers copied, and there is no more to
+ * do here. Any freeing will be done in rmcclear()/
+ */
+                    rmcptr->val.gc = gc;
+                }
+                goto pchr_done_noincr;
+            }
+/* Must just be ASCII then */
+            rmcptr->mc.type = LITCHAR;
+            rmcptr->val.lchar = *patptr;
         }
         patptr++;
-    }
-
-    if (rmagical && mj > 0) {
-        rmcptr->mc_type = LITCHAR;
-        rmcptr->rstr = Xmalloc(mj + 1);
-        strncpy(rmcptr->rstr, patptr - mj, mj);
         rmcptr++;
+pchr_done_noincr:;
     }
 
-    rmcptr->mc_type = MCNIL;
-    return status;
+    rmcptr->mc = null_mg;
+    return TRUE;
 }
 
-/*
- * eq -- Compare two characters.  The "bc" comes from the buffer, "pc"
+/* unicode_eq -- Compare two unicode characters.
+ *  If we are not in EXACT mode, fold out the case.
+ */
+int unicode_eq(unsigned int bc, unsigned int pc) {
+    if (bc == pc) return TRUE;
+    if ((curwp->w_bufp->b_mode & MDEXACT) != 0) return FALSE;
+    return (utf8proc_toupper(bc) == utf8proc_toupper(pc));
+}
+
+/* eq -- Compare two characters.  The "bc" comes from the buffer, "pc"
  *      from the pattern.  If we are not in EXACT mode, fold out the case.
+ *  Used by fast_scanner.
  */
 int eq(unsigned char bc, unsigned char pc) {
     if ((curwp->w_bufp->b_mode & MDEXACT) == 0) {
@@ -610,96 +1412,170 @@ int eq(unsigned char bc, unsigned char pc) {
     return bc == pc;
 }
 
-/*
- * mceq -- meta-character equality with a character.  In Kernighan & Plauger's
- *      Software Tools, this is the function omatch(), but i felt there
- *      were too many functions with the 'match' name already.
+/* mgpheq -- meta-character equality with a grapheme.
+ *  Used by step_scanner.
  */
-static int mceq(int bc, struct magic *mt) {
-    int result;
-
-    bc = bc & 0xFF;
-    switch (mt->mc_type & MASKCL) {
+static int mgpheq(struct grapheme *gc, struct magic *mt) {
+    int res;
+    switch(mt->mc.type) {
     case LITCHAR:
-        result = eq(bc, mt->u.lchar);
+        if (gc->cdm) res = FALSE;   /* Can't have combining bits */
+        else         res = eq(gc->uc, mt->val.lchar);
         break;
 
-    case ANY:                   /* Any EXCEPT newline */
-        result = (bc != '\n');
+    case ANY:                   /* Any EXCEPT newline or UEM_NOCHAR */
+        res = (gc->uc != '\n' && gc->uc != UEM_NOCHAR);
         break;
 
-    case CCL:
-        if (!(result = biteq(bc, mt->u.cclmap))) {
-            if ((curwp->w_bufp->b_mode & MDEXACT) == 0 && (isletter(bc))) {
-                result = biteq(CHCASE(bc), mt->u.cclmap);
+/* Match ANY grapheme, incl NL, but not UEM_NOCHAR (*IMPORTANT*)! */
+    case ANYGPH:
+        res = (gc->uc != UEM_NOCHAR);
+        break;
+
+/* The CCL logic allows for inverted logic in the UCPROP test as well
+ * as the inverted logic in the overall CCL test.
+ *
+ * So [t1t2t3]  is t1 OR t2 OR t3
+ *    [^t1t2t3] is NOT (t1 OR t2 OR t3) == (NOT t1) AND (NOT t2) AND (NOT t3)
+ * hence:
+ *  test - result for:  a   1   !
+ *   [\w\s]             T   T   F
+ *   [^\w\s]            F   F   T
+ *   [\W\S]             T   T   T       Not all that useful....
+ *   [^\W\S]            F   F   F       ...nor is this.
+ *
+ * So for any test we can stop as soon as one part is TRUE.
+ */
+    case CCL:                   /* Now have to allow for extended CCL too */
+        if (gc->uc && 0x80) {
+            res = FALSE;        /* So we drop into xt_cclmap tests */
+        }
+        else if (!(res = biteq(gc->uc, mt->val.cclmap))) {
+            if ((curwp->w_bufp->b_mode & MDEXACT) == 0 && (isletter(gc->uc))) {
+                res = biteq(CHCASE(gc->uc), mt->val.cclmap);
+            }
+        }
+        if (!res && mt->x.xt_cclmap) {
+            int done = 0;
+            for (struct xccl *xp = mt->x.xt_cclmap; !done && !res; xp++) {
+                switch(xp->xc.type) {
+                case EGRP:
+                    done = 1;
+                    break;
+/* This is for a range above MAXASCII.
+ * NOTE that there is no case handling here. Non-ASCII case-mapping
+ * doesn't fit well with ranges.
+ */
+                case CCL:    /* Cannot have any combining bit */
+                    if (gc->cdm)
+                        res = FALSE;
+                    else
+                        res = ((xp->xval.cl_lim.low <= gc->uc) &&
+                               (xp->xval.cl_lim.high >= gc->uc));
+                    break;
+/* Whether UCLITL can contain any combining bit depends on whether
+ * EQUIV mode is on. If it is then it is possible for a literal
+ * unicode char to match a base char + combining char.
+ * e.g.
+ *    Å can be U+212B, U+00C5 or U+0041+U+030A
+ *    ñ can be U+006E+U+0303 or U+00F1
+ * So, if EQUIV mode is on (Magic must be on for us to be here)
+ * we run same_grapheme() on the teh pair to match, otherwise
+ * we run through a simpler test.
+ */
+                case UCLITL:    /* Cannot have any combining bit */
+                    if (curwp->w_bufp->b_mode & MDEQUIV) {
+                        struct grapheme testgc;
+                        testgc.uc = xp->xval.uchar;
+                        testgc.cdm = 0;
+                        testgc.ex = NULL;
+                        return same_grapheme(gc, &testgc, USE_WPBMODE);
+                    }
+                    if (gc->cdm) {
+                        res = FALSE;
+                        break;
+                    }           /* Fall through */
+                case UCKIND:    /* May have any combining bit */
+                    if (curwp->w_bufp->b_mode & MDEXACT) {
+                        res = (xp->xval.uchar == gc->uc);
+                    }
+                    else {      /* Upper so Greek sigmas work (2l->1U) */
+                        res = (utf8proc_toupper(xp->xval.uchar) ==
+                               utf8proc_toupper(gc->uc));
+                    }
+                    break;
+/* May have any combining bit, but only the base character is tested */
+                case UCPROP: {
+                    const char *uccat = utf8proc_category_string(gc->uc);
+                    int testlen = strlen(xp->xval.prop); /* 1 or 2 */
+                    res = !strncmp(uccat, xp->xval.prop, testlen);
+                    break;
+                }
+                default:        /* Nothing else can match */
+                    break;
+                }
+                if (xp->xc.negate_test) res = !res;
             }
         }
         break;
-
-    case NCCL:
-        result = !biteq(bc, mt->u.cclmap);
-
-        if ((curwp->w_bufp->b_mode & MDEXACT) == 0 && (isletter(bc))) {
-            result &= !biteq(CHCASE(bc), mt->u.cclmap);
+/* Whether UCLITL can contain any combining bit depends on whether
+ * EQUIV mode is on. If it is then it is possible for a literal
+ * unicode char to match a base char + combining char.
+ * e.g.
+ *    Å can be U+212B, U+00C5 or U+0041+U+030A
+ *    ñ can be U+006E+U+0303 or U+00F1
+ * So, if EQUIV mode is on (Magic must be on for us to be here)
+ * we run same_grapheme() on the teh pair to match, otherwise
+ * we run through a simpler test.
+ */
+    case UCLITL:    /* Cannot have any combining bit */
+        if (curwp->w_bufp->b_mode & MDEQUIV) {
+            struct grapheme testgc;
+            testgc.uc = mt->val.uchar;
+            testgc.cdm = 0;
+            testgc.ex = NULL;
+            return same_grapheme(gc, &testgc, USE_WPBMODE);
+        }
+        if (gc->cdm) {
+            res = FALSE;
+            break;
+        }           /* Fall through */
+    case UCKIND:    /* May have any combining bit */
+        if (curwp->w_bufp->b_mode & MDEXACT) {
+            res = (mt->val.uchar == gc->uc);
+        }
+        else {      /* Upper so Greek sigmas work (2l->1U) */
+            res = (utf8proc_toupper(mt->val.uchar) ==
+                   utf8proc_toupper(gc->uc));
         }
         break;
 
-    case WSPACE:
-        switch (bc) {
-        case ' ':
-        case '\t':
-        case '\n':
-        case '\r':
-            return TRUE;
-        }
-        return FALSE;
-
-    default:
-        mlwrite("mceq: what is %d?", mt->mc_type);
-        result = FALSE;
+    case UCGRAPH: {
+        res = same_grapheme(gc, &(mt->val.gc), USE_WPBMODE);
         break;
-
-    }                       /* End of switch. */
-
-    return result;
-}
-
-/*
- * mcclear -- Free up any CCL bitmaps, and MCNIL the struct magic search
- * arrays.
- */
-void mcclear(void) {
-    struct magic *mcptr;
-
-    mcptr = mcpat;
-
-    while (mcptr->mc_type != MCNIL) {
-        if ((mcptr->mc_type & MASKCL) == CCL ||
-            (mcptr->mc_type & MASKCL) == NCCL)
-            free(mcptr->u.cclmap);
-        mcptr++;
     }
-    mcpat[0].mc_type = tapcm[0].mc_type = MCNIL;
-}
-
-/*
- * rmcclear -- Free up any strings, and MCNIL the struct magic_replacement
- * array.
- */
-static void rmcclear(void) {
-    struct magic_replacement *rmcptr;
-
-    rmcptr = rmcpat;
-
-    while (rmcptr->mc_type != MCNIL) {
-        if (rmcptr->mc_type == LITCHAR) free(rmcptr->rstr);
-        rmcptr++;
+    case UCPROP: {  /* Only tested against the base character...  */
+        const char *uccat = utf8proc_category_string(gc->uc);
+        int testlen = strlen(mt->val.prop); /* 1 or 2 */
+        res = !strncmp(uccat, mt->val.prop, testlen);
+        break;
     }
-    rmcpat[0].mc_type = MCNIL;
+    default:    /* Should never get here... */
+        mlforce("mgpheq: what is %d?", mt->mc.type);
+        sleep(2);
+        res = FALSE;
+    }
+
+/* ODD to free it here, but once we've tested it we've done with it. */
+    if (gc->ex) {           /* Our responsibility! */
+        Xfree(gc->ex);
+        gc->ex = NULL;
+    }
+    if (mt->mc.negate_test) res = !res;
+    return res;
 }
 
-/*
- * readpattern -- Read a pattern.  Stash it in apat.
+/* readpattern -- Read a pattern.  Stash it in apat.
  * If it is the search string, create the reverse pattern and the
  * magic pattern, assuming we are in MAGIC mode (and defined that way).
  * Apat is not updated if the user types in an empty line.
@@ -783,76 +1659,154 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * the length for substitution purposes.
  */
         if (srch) {
+            slow_scan = FALSE;      /* May change in mcstr() */
             rvstrcpy(tap, apat);
-            mlenold = matchlen = strlen(apat);
+            srch_patlen = strlen(apat);
             setpattern(apat, tap);
         }
 
-/* Only make the meta-pattern if in magic mode, since the pattern in
- * question might have an invalid meta combination.
+/* Note that we always rebuild any meta-pattern from scratch even if
+ * we used the default pattern (which is reasonable, since it might not
+ * be the last one, now we have a search ring!).
+ * If we are NOT in Magic mode then if Exact mode is on we will never
+ * use the meta-pattern, so there is no point in setting it up.
+ * If that is not the case then we call mcstr/rmcstr, getting *them* to
+ * determine whether there is any "magic" and setting slow_scan accordingly.
+ * NOTE that for the NOT Magic/NOT Exact case then the presence of any
+ * non-ASCII byte in the search string means we use the meta-pattern code,
+ * to cater for Unicode case-mapping.
+ * We only ever build the replacement magic when in MAGIC mode.
+ * The mcstr() and rmcstr() procedure structure data is only freed
+ * the next time each is called.
  */
-        if ((curwp->w_bufp->b_mode & MDMAGIC) == 0) {
-            mcclear();
-            rmcclear();
-        } else
+
+        if ((curwp->w_bufp->b_mode & MDMAGIC) ||
+            (!(curwp->w_bufp->b_mode & MDEXACT) && srch)) {
             status = srch ? mcstr() : rmcstr();
+        }
     }
     strcpy(current_base, saved_base);   /* Revert any change */
 
     return status;
 }
 
-/*
- * nextch -- retrieve the next/previous character in the buffer,
+/* nextgph -- retrieve the next/previous grapheme in the buffer,
  *      and advance/retreat the point.
- *      The order in which this is done is significant, and depends
- *      upon the direction of the search.  Forward searches look at
- *      the current character and move, reverse searches move and
- *      look at the character.
+ *  The order in which this is done is significant, and depends
+ *  upon the direction of the search.  Forward searches gets the
+ *  graphame from the current point and move beyond it, while
+ *  reverse searches get the previous grapheme and move to its start.
+ * NOTE!!! that we return a pointer to a static, internal struct grapheme.
+ * It is the CALLERs responsibility to deal with any alloc's on gc.ex!!
+ *  Used by step_scanner.
  */
-static int nextch(struct line **pcurline, int *pcuroff, int dir) {
-    struct line *curline;
-    int curoff;
-    int c;
+#define POS_ONLY 0x10000000
+static struct grapheme null_gc = { UEM_NOCHAR, 0, NULL };
+static struct grapheme gc;
+static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
+     int *bytes_used, int dir) {
+
+    int offs_4_nl;
+    int nextoff, curoff;
+    struct line *nextline, *curline;
+    gc = null_gc;
+
+    int pos_only;
+    if (dir & POS_ONLY) {
+        pos_only = 1;
+        dir = dir & ~POS_ONLY;
+    }
+    else
+        pos_only = 0;
 
     curline = *pcurline;
     curoff = *pcuroff;
 
-    if (dir == FORWARD) {
-        if (curoff == llength(curline)) {   /* if at EOL */
-            curline = lforw(curline);       /* skip to next line */
-            curoff = 0;
-            c = '\n';                       /* and return a <NL> */
+    offs_4_nl = (dir == FORWARD)? llength(curline): 0;
+    if (curoff == offs_4_nl) {      /* Need to change lines */
+        if (dir == FORWARD) {
+            nextline = lforw(curline);
+            nextoff = 0;
         }
-        else c = lgetc(curline, curoff++);  /* get the char  */
-    }
-    else {                                  /* Reverse. */
-        if (curoff == 0) {
-            curline = lback(curline);
-            curoff = llength(curline);
-            c = '\n';
+        else {
+            nextline = lback(curline);
+            nextoff = llength(nextline);
         }
-        else c = lgetc(curline, --curoff);
+        if (bytes_used) *bytes_used = 1;
+/* Fudge in a newline char. HOWEVER, if we are at the end of buffer (in
+ * either direction) we set an invalid character. This will fail
+ * comparisons, *including* the ANYGPH check in mgpheq()
+ * Note that going FORWARD we are at EOB when "on" the marker, while when
+ * in reverse it is if we are about to go onto it.
+ */
+        if ((dir == FORWARD && curline == curbp->b_linep) ||
+            (dir == REVERSE && nextline == curbp->b_linep))
+            gc.uc = UEM_NOCHAR;
+        else
+            gc.uc = '\n';
     }
-    *pcurline = curline;
-    *pcuroff = curoff;
+    else {
+        if (pos_only) { /* Just get the position in the current line */
+            if (dir == FORWARD)
+                nextoff = next_utf8_offset(curline->l_text, curoff,
+                     llength(curline), TRUE);
+            else
+                nextoff = prev_utf8_offset(curline->l_text, curoff, TRUE);
 
-    return c;
+        }
+        else {          /* Get the grapheme from the current line */
+            typedef int (*fn_gcall)(char *, int, int, struct grapheme *);
+            fn_gcall get_graph;
+            if (dir == FORWARD) get_graph = build_next_grapheme;
+            else                get_graph = build_prev_grapheme;
+            nextoff = get_graph(curline->l_text, curoff, llength(curline), &gc);
+        }
+        nextline = curline;
+        if (bytes_used) *bytes_used = abs(nextoff - curoff);
+    }
+    *pcurline = nextline;
+    *pcuroff = nextoff;
+    return &gc;
 }
 
-/*
- * amatch -- Search for a meta-pattern in either direction.  Based on the
- *      recursive routine amatch() (for "anchored match") in
+/* amatch -- Search for a meta-pattern, now *always* in the forwards
+ *      direction.
+ *      Based on the recursive routine amatch() (for "anchored match") in
  *      Kernighan & Plauger's "Software Tools".
  *
+ * The return value from this is now the number of bytes matched
+ * with a -ve number meaning FAILed.
+ *  Used by step_scanner
+ *
  * struct magic *mcptr;         string to scan for
- * int direct;          which way to go.
  * struct line **pcwline;       current line during scan
- * int *pcwoff;         position within current line
+ * int *pcwoff;                 position within current line
  */
-static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
-     int *pcwoff) {
-    int c;                          /* character at current position */
+
+/* check_next() - helper routine to fetch next char or grapheme.
+ * Returns number of bytes used, or -1 on no match.
+ *  Used by step_scanner
+ */
+static int check_next(struct line **cline, int *coff, struct magic *mcptr) {
+
+    int used;
+    struct grapheme *gc = nextgph(cline, coff, &used, FORWARD);
+    if (!mgpheq(gc, mcptr)) used = -1;  /* Show we failed... */
+/* mgpheq() will have freed any malloc()ed gc->ex parts */
+    return used;
+}
+
+/* The pre_match value here tells us whether this amatch call is anchored
+ * to a buffer location or whether the first match of a repeat may
+ * be shortened.
+ * Use the number of already-matched chars when calling amatch()
+ * Returns the total match length (in bytes!) from here to the end,
+ * or AMFAIL on failure to match.
+ *  Used by step_scanner
+ */
+#define AMFAIL -1
+static int amatch(struct magic *mcptr, struct line **pcwline, int *pcwoff,
+     int pre_match) {
     struct line *curline;           /* current line during scan */
     int curoff;                     /* position within current line */
 
@@ -861,225 +1815,300 @@ static int amatch(struct magic *mcptr, int direct, struct line **pcwline,
  */
     curline = *pcwline;
     curoff = *pcwoff;
+    int ambytes = 0;                /* Bytes *we've* matched */
 
-/* The beginning-of-line and end-of-line metacharacters do not compare
- * against characters, they compare against positions.
- * BOL is guaranteed to be at the start of the pattern for forward searches
- * and at the end of the pattern for reverse searches.
- * The reverse is true for EOL.
- * So, for a start, we check for them on entry.
+/* We come back here with curline/curoff reset for CHOICEs */
+
+try_next_choice:;
+    int first = 1;
+    while (1) {
+        int bytes_used = 0;         /* Bytes on this pass, not yet in ambytes */
+
+/* Handle start/end groups
  */
-    if (mcptr->mc_type == BOL) {
-        if (curoff != 0) return FALSE;
-        mcptr++;
-    }
+        switch(mcptr->mc.type) {
+        case SGRP:
+        case CHOICE:
+/* If this is a CHOICE and this is NOT the first pass round the loop
+ * then we have SUCCEEDED (but only this group!), so we need to skip
+ * to the end of it (to run the EGRP block to finalize the match).
+ * Otherwise a CHOICE *restarts* a group.
+ */
+            if ((mcptr->mc.type == CHOICE) && !first) {
+                mcptr = grp_info[mcptr->mc.group_num].gpend;
+                continue;
+            }
+            grp_info[mcptr->mc.group_num].mline = curline;
+            grp_info[mcptr->mc.group_num].start = curoff;
+            grp_info[mcptr->mc.group_num].len = 0;
+/* Need to remember where the start if the match is */
+            grp_info[mcptr->mc.group_num].base = pre_match + ambytes;
+            grp_info[mcptr->mc.group_num].state = GPOPEN;
+            grp_info[mcptr->mc.group_num].next_choice = mcptr->x.next_or;
+            goto next_entry;
+        case EGRP:
+            grp_info[mcptr->mc.group_num].len =
+                 (pre_match + ambytes) - grp_info[mcptr->mc.group_num].base;
+            grp_info[mcptr->mc.group_num].state = GPCLOSED;
+            if (mcptr->mc.group_num == 0) goto success;
+            goto next_entry;
+        }
+        int used;
 
-    if (mcptr->mc_type == EOL) {
-        if (curoff != llength(curline)) return FALSE;
-        mcptr++;
-    }
-
-    while (mcptr->mc_type != MCNIL) {
-        c = nextch(&curline, &curoff, direct);
-
-next_magic:
-        if (mcptr->mc_type & CLOSURE) {
-/* Try to match as many characters as possible against the current
- * meta-character.  A newline never matches a closure.
- * We now alllow a lower limit to this match...
+        TEST_BLOCK(mcptr->mc.repeat)
+/* Try to get as many matches as possible against the current meta-character.
+ * We now allow a lower limit to this match...
  * We might also now want the shortest match...
  */
-            int hi_lim = mcptr->cl_lim.high;
-            if (hi_lim == 0) {  /* A zero-length match - currently valid */
-                mcptr++;
-                goto next_magic;
-            }
-            int lo_lim = mcptr->cl_lim.low;
-            int nchars = 0;
+        int hi_lim = mcptr->cl_lim.high;
+        if (hi_lim == 0) {  /* A zero-length match - currently valid */
+            goto next_entry;
+        }
+
+        int lo_lim = mcptr->cl_lim.low;
+        int nmatch = 0;     /* Match count...not chars */
 
 /* First check that we have the minimum matches at the start.
  * If not, then we have failed early.
  */
-            while (nchars < lo_lim) {
-                if (!mceq(c, mcptr)) break;
-                c = nextch(&curline, &curoff, direct);
-                nchars++;
-            }
-            if (nchars < lo_lim) return FALSE;
+        while (nmatch < lo_lim) {
+            int nb = check_next(&curline, &curoff, mcptr);
+            if (nb < 0) break;
+            bytes_used += nb;       /* Add to our running count */
+            nmatch++;
+        }
+        if (nmatch < lo_lim) goto failed;
+
+/* If the pattern is a min_repeat that is unanchored (no preceding match)
+ * then anything more than a minimum must fail, so that we get the shortest
+ * match at the start.
+ * This may not be the first pattern test, as it is possible for patterns
+ * to match nothing (e.g. a*)
+ */
+        if (!pre_match && !ambytes) { /* No prev match */
+            if (mcptr->mc.min_repeat) hi_lim = lo_lim;
+        }
 
 /* Now add in more matches for the current pattern and check whether
  * what is left of the string matches the rest of the magic/regex
  * patterns.
  *
- * For a MINCLOS match we just keep adding the current pattern until we
+ * For a min_repeat match we just keep adding the current pattern until we
  * find a match, or have no more current pattern to add (== failure).
- * NOTE: that nextch() gets the char at curline/curoff and advances
+ * NOTE: that nextgph() gets the grapheme at curline/curoff and advances
  *      the position for the *next character*. We need to undo this
  *      effect here...
- *      We've already checked lo_lim characters are OK, so must now start
- *      the amatch() loop check with the rest of the string *INCLUDING the
- *      one we have stashed in c" against the rest of the regex.
- *      So we start with one backtrack on nextch()
  */
-            if (mcptr->mc_type & MINCLOS) {
-                (void)nextch(&curline, &curoff, direct ^ REVERSE);
-                while (nchars <= hi_lim) {
-                    if (amatch(mcptr+1, direct, &curline, &curoff)) {
-                        matchlen += nchars;
-                        goto success;
-                    }
-                    if (!mceq(c, mcptr)) break;
-                    c = nextch(&curline, &curoff, direct);
-                    nchars++;
+        if (mcptr->mc.min_repeat) {
+            while (nmatch <= hi_lim) {
+                int sub_ambytes = amatch(mcptr+1, &curline, &curoff,
+                     pre_match+ambytes+bytes_used);
+                if (sub_ambytes >= 0) {     /* Successful sub-match */
+                    bytes_used += sub_ambytes;
+                    ambytes += bytes_used;
+                    goto success;   /* We've now matched the rest */
                 }
-                return FALSE;
+                int nb = check_next(&curline, &curoff, mcptr);
+                if (nb < 0) break;
+                bytes_used += nb;
+                nmatch++;
             }
+            goto failed;
+        }
 
 /* For a MAXIMUM match we eat as many of the current char as possible
  * first, then backtrack until we find a match. Or fail if we don't.
  */
-            else {
-                while (nchars < hi_lim) {
-                    if (!mceq(c, mcptr)) break;
-                    c = nextch(&curline, &curoff, direct);
-                    nchars++;
+        else {
+            while (nmatch < hi_lim) {
+                struct line *pline = curline;
+                int poff = curoff;
+                int nb = check_next(&curline, &curoff, mcptr);
+                if (nb < 0) {   /* Undo move... */
+                    curline = pline;
+                    curoff = poff;
+                    break;
                 }
+                bytes_used += nb;   /* Count the success */
+                nmatch++;
+            }
 
-/* We are now at the character that made us fail.
- * Try to match the rest of the pattern, shrinking the closure by one for
- * each failure.
- * Since closure matches *zero* or more occurrences of a pattern, a match
+/* We are now at the character that made us fail (no match or beyond hi_lim).
+ * Try to match the rest of the pattern, shrinking the repeat by one
+ * before each successive test.
+ * Since repeat matches *zero* or more occurrences of a pattern, a match
  * may start even if the previous loop matched no characters.
  * (NOTE: We actually now allow a lower limit to this match...)
+ * There is no need to test individual chars/graphemes on the way back
+ * as we already tested them to get here in the first place. We're just
+ * adjusting curline and curoff.
+ * Once amatch() succeeds we can goto success as we know the rest of
+ * the pattern has matched (that's what amatch() does).
  */
-                while(1) {
-                    (void)nextch(&curline, &curoff, direct ^ REVERSE);
-
-                    if (amatch(mcptr+1, direct, &curline, &curoff)) {
-                        matchlen += nchars;
-                        goto success;
-                    }
-                    if (--nchars < lo_lim) return FALSE;
+            while(1) {
+                int sub_ambytes = amatch(mcptr+1, &curline, &curoff,
+                     pre_match+ambytes+bytes_used);
+                if (sub_ambytes >= 0) {
+                    bytes_used += sub_ambytes;
+                    ambytes += bytes_used;
+                    goto success;
                 }
+                (void)nextgph(&curline, &curoff, &used, POS_ONLY|REVERSE);
+                bytes_used -= used;
+                if (--nmatch < lo_lim) goto failed;
             }
         }
-        else {        /* Not closure. */
+        goto next_entry;    /* To next loop entry.... */
+        END_TEST(mcptr->mc.repeat)
 
-/* The only way we'd get a BOL metacharacter at this point is at the end
- * of the reversed pattern.
+/* The only way we'd get a BOL metacharacter here is at the end of the
+ * reversed pattern.
  * The only way we'd get an EOL metacharacter here is at the end of a
- * regular pattern. So if we match one or the other, and are at the
- * appropriate position, we are guaranteed success (since the next
- * pattern character has to be MCNIL).
- * Before we report success, however, we back up by one character, so
- * as to leave the cursor in the correct position.
+ * regular pattern.
+ * So if we match one or the other, and are at the appropriate position we
+ * are guaranteed success (since the next pattern character has to be EGRP).
+ * So BEFORE we read the next entry we'll check for these two, that way we
+ * don't need to back-up if the test succeeds.
  * For example, a search for ")$" will leave the cursor at the end of the
  * line, while a search for ")<NL>" will leave the cursor at the
  * beginning of the next line.
  * This follows the notion that the meta-character '$' (and likewise
  * '^') match positions, not characters.
  */
-            if (mcptr->mc_type == BOL) {
-                if (curoff == llength(curline)) {
-                    c = nextch(&curline, &curoff, direct ^ REVERSE);
-                    goto success;
-                } else
-                    return FALSE;
-            }
-
-            if (mcptr->mc_type == EOL) {
-                if (curoff == 0) {
-                    c = nextch(&curline, &curoff, direct ^ REVERSE);
-                    goto success;
-                } else
-                    return FALSE;
-            }
-
-/* Neither BOL nor EOL, so go through the meta-character equal function. */
-
-            if (!mceq(c, mcptr)) return FALSE;
+        switch(mcptr->mc.type) {
+        case BOL:
+        case EOL:
+            if (curoff == (mcptr->mc.type == BOL)? llength(curline): 0)
+                goto next_entry;
+            else
+                goto failed;
         }
 
+/* The "Not a repeat" cases */
+
+        int nb = check_next(&curline, &curoff, mcptr);
+        if (nb < 0) goto failed;
+        bytes_used += nb;
+
 /* Increment the length counter and advance the pattern pointer. */
-        matchlen++;
+next_entry:
+        ambytes += bytes_used;
+        first = 0;
         mcptr++;
     }                       /* End of mcptr loop. */
 
-/* A SUCCESSFUL MATCH!!!  Reset the "." pointers. */
+/* A SUCCESSFUL MATCH!!!  Set the "." pointers to the end of the match */
 
 success:
     *pcwline = curline;
     *pcwoff = curoff;
 
-    return TRUE;
+    return ambytes;
+
+failed:
+/* If we failed, but have a further choice, go back to near the start
+ * of this function, but with a new mcptr and the saved curline+curoff
+ * and ambytes from the group start.
+ * But first we have to undo any group matches for higher groups,
+ * since these are now no longer valid.
+ * And we need to do this for all failures.
+ */
+    for (int gi = mcptr->mc.group_num + 1; gi <= group_cntr; gi++) {
+        grp_info[gi] = null_grp_info;
+    }
+    if (grp_info[mcptr->mc.group_num].next_choice) {
+        mcptr = grp_info[mcptr->mc.group_num].next_choice;
+        curline = grp_info[mcptr->mc.group_num].mline;
+        curoff = grp_info[mcptr->mc.group_num].start;
+        ambytes = grp_info[mcptr->mc.group_num].base;
+        goto try_next_choice;
+    }
+/* For a total failure, undo this group matcn info too */
+    grp_info[mcptr->mc.group_num] = null_grp_info;
+    return AMFAIL;
 }
 
-/*
- * mcscanner -- Search for a meta-pattern in either direction.  If found,
- *      reset the "." to be at the start or just after the match string,
- *      and (perhaps) repaint the display.
+/* step_scanner -- Search for a meta-pattern in either direction.
+ *  If found, reset the "." to be at the start or just after the match
+ *  string, and (perhaps) repaint the display.
+ * NOTE: that for a REVERSE search will step towards the start of the file
+ * but always check against the pattern-match in a "forwards" direction.
  *
  * struct magic *mcpatrn;                       pointer into pattern
  * int direct;                  which way to go.
  * int beg_or_end;              put point at beginning or end of pattern.
  */
-int mcscanner(struct magic *mcpatrn, int direct, int beg_or_end) {
+int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
     struct line *curline;   /* current line during scan */
     int curoff;             /* position within current line */
 
-/* If we are going in reverse, then the 'end' is actually the beginning
- * of the pattern.  Toggle it.
+/* We never actually test in reverse for step_scanner(), so there is no
+ * need to toggle beg_or_end here.
  */
-    beg_or_end ^= direct;
-
-/* Save the old matchlen length, in case it is very different (closure)
- * from the old length. This is important for query-replace undo command.
- */
-    mlenold = matchlen;
 
 /* Setup local scan pointers to global ".". */
 
     curline = curwp->w.dotp;
     curoff = curwp->w.doto;
 
-/* Scan each character until we hit the head link record. */
+/* If we are searching backwards we need to go back one column
+ * before looking, otherwise we might match without moving!
+ */
+    if (direct == REVERSE)
+         (void)nextgph(&curline, &curoff, NULL, POS_ONLY|REVERSE);
 
+    magic_search.start_line = curline;
+    magic_search.start_point = curoff;
+
+    for (int gi = 0; gi <= group_cntr; gi++) {
+        grp_info[gi] = null_grp_info;
+    }
+
+/* Scan each character until we hit the head link record. */
     while (!boundry(curline, curoff, direct)) {
 
 /* Save the current position in case we need to restore it on a match,
- * and initialize matchlen to zero in case we are doing a search for
- * replacement.
  */
-        matchline = curline;
-        matchoff = curoff;
-        matchlen = 0;
+        struct line *matchline = curline;
+        int matchoff = curoff;
+        int amres = amatch(mcpatrn, &curline, &curoff, 0);
 
-        if (amatch(mcpatrn, direct, &curline, &curoff)) {
-/* A SUCCESSFUL MATCH!!! Reset the global "." pointers. */
-            if (beg_or_end == PTEND) {      /* at end of string */
+        if (amres >= 0) {       /* A SUCCESSFUL MATCH!!! */
+            grp_info[0].mline = matchline;
+            grp_info[0].start = matchoff;
+            grp_info[0].len = amres;
+            grp_info[0].state = GPCLOSED;
+
+/* Reset the global "." pointers. */
+            if (beg_or_end == PTEND) {        /* Go to end of string */
                 curwp->w.dotp = curline;
                 curwp->w.doto = curoff;
             }
-            else {        /* at beginning of string */
+            else {                          /* Go to beginning of string */
                 curwp->w.dotp = matchline;
                 curwp->w.doto = matchoff;
             }
             curwp->w_flag |= WFMOVE;        /* flag that we've moved */
+            magic_search.start_line = NULL;
             return TRUE;
         }
 
-        nextch(&curline, &curoff, direct);  /* Advance the cursor. */
+/* NEEDS TO BE next_grapheme for step_scanner
+ * Just need to get the position, though, not the actual grapheme.
+ */
+        (void)nextgph(&curline, &curoff, NULL, POS_ONLY | direct);
     }
+    magic_search.start_line = NULL;
     return FALSE;                           /* We could not find a match. */
 }
 
-/*
- * fbound -- Return information depending on whether we may search no
+/* fbound -- Return information depending on whether we may search no
  *      further.  Beginning of file and end of file are the obvious
  *      cases, but we may want to add further optional boundary restrictions
  *      in future, a' la VMS EDT.  At the moment, just return TRUE or
  *      FALSE depending on if a boundary is hit (ouch),
  *      when we have found a matching trailing character.
+ *  Used by fast_scanner
  */
 static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
     int spare, curoff;
@@ -1094,10 +2123,10 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
             spare = curoff - llength(curline);
             while (spare > 0) {
                 curline = lforw(curline);   /* skip to next line */
-                curoff = spare - 1;
-                spare = curoff - llength(curline);
                 if (curline == curbp->b_linep)
                     return TRUE;            /* hit end of buffer */
+                curoff = spare - 1;
+                spare = curoff - llength(curline);
             }
             if (spare == 0) {
                 jump = deltaf[(int) '\n'];
@@ -1133,7 +2162,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
         }
 /* the last character matches, so back up to start of possible match */
 
-        curoff += matchlen;
+        curoff += srch_patlen;
         spare = curoff - llength(curline);
         while (spare > 0) {
             curline = lforw(curline);/* skip back a line */
@@ -1147,14 +2176,56 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
     return FALSE;
 }
 
-/*
- * scanner -- Search for a pattern in either direction.  If found,
- *      reset the "." to be at the start or just after the match string,
- *      and (perhaps) repaint the display.
- *      Fast version using simplified version of Boyer and Moore
- *      Software-Practice and Experience, vol 10, 501-506 (1980)
+/* nextch -- retrieve the next/previous byte (character) in the buffer,
+ *      and advance/retreat the point.
+ *      The order in which this is done is significant, and depends
+ *      upon the direction of the search.  Forward searches look at
+ *      the current character and move, reverse searches move and
+ *      look at the character.
+ *  Used by fast_scanner
  */
-int scanner(const char *patrn, int direct, int beg_or_end) {
+static int nextch(struct line **pcurline, int *pcuroff, int dir) {
+    struct line *curline;
+    int curoff;
+    int c;
+
+    curline = *pcurline;
+    curoff = *pcuroff;
+
+    if (dir == FORWARD) {
+        if (curoff == llength(curline)) {   /* if at EOL */
+            curline = lforw(curline);       /* skip to next line */
+            curoff = 0;
+            c = '\n';                       /* and return a <NL> */
+        }
+        else c = lgetc(curline, curoff++);  /* get the char  */
+    }
+    else {                                  /* Reverse. */
+        if (curoff == 0) {
+            curline = lback(curline);
+            curoff = llength(curline);
+            c = '\n';
+        }
+        else c = lgetc(curline, --curoff);
+    }
+    *pcurline = curline;
+    *pcuroff = curoff;
+
+    return c;
+}
+
+/*  fast_scanner -- Search for a pattern in either direction.
+ *  If found, reset the "." to be at the start or just after the
+ *  match string, and (perhaps) repaint the display.
+ *  Fast version using simplified version of Boyer and Moore
+ *  Software-Practice and Experience, vol 10, 501-506 (1980)
+ *
+ * Unlike the step_scanner, which always runs matches from "left to right",
+ * the fast scanner runs them in either direction, and has a jump
+ * table for each direction.
+ * It stores match information in the entry for group 0.
+ */
+int fast_scanner(const char *patrn, int direct, int beg_or_end) {
     int c;                          /* character at current position */
     const char *patptr;             /* pointer into pattern */
     struct line *curline;           /* current line during scan */
@@ -1186,9 +2257,8 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
 /* Save the current position in case we match the search string at
  * this point.
  */
-
-        matchline = curline;
-        matchoff = curoff;
+        struct line *matchline = curline;
+        int matchoff = curoff;
 /* Setup scanning pointers. */
         scanline = curline;
         scanoff = curoff;
@@ -1197,7 +2267,6 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
 /* Scan through the pattern for a match. */
         while (*patptr != '\0') {
             c = nextch(&scanline, &scanoff, direct);
-
 /*
  * Debugging info, show the character and the remains of the string
  * it is being compared with.
@@ -1223,35 +2292,37 @@ int scanner(const char *patrn, int direct, int beg_or_end) {
             curwp->w.doto = matchoff;
         }
         curwp->w_flag |= WFMOVE;        /* Flag that we have moved.*/
+/* Put the match info into group 0 */
+        grp_info[0].mline = matchline;
+        grp_info[0].start = matchoff;
+        grp_info[0].len = srch_patlen;
         return TRUE;
 fail:;                                  /* continue to search */
     }
     return FALSE;                       /* We could not find a match */
 }
 
-/*
- * savematch -- We found the pattern?  Let's save it away.
+/* Internal routine to initialize thse at the start of any search
  */
-static void savematch(void) {
-    char *ptr;                      /* pointer to last match string */
-    struct line *curline;           /* line of last match */
-    int curoff;                     /* offset "      "    */
-
-/* (re)allocate a pattern match. */
-
-    ptr = patmatch = Xrealloc(patmatch, matchlen + 1);
-
-    curoff = matchoff;
-    curline = matchline;
-
-    for (unsigned int j = 0; j < matchlen; j++)
-        *ptr++ = nextch(&curline, &curoff, FORWARD);
-
-    *ptr = '\0';
+static void init_group_status(void) {
+/* If we allocated any result strings, free them now... */
+    for (int gi = 0; gi < NGRP; gi++) {
+        if (grp_text[gi]) {
+            Xfree(grp_text[gi]);
+            grp_text[gi] = NULL;
+        }
+    }
+/* ...and also initialize group matching info */
+    for (int gi = 0; gi <= group_cntr; gi++) {
+        grp_info[gi] = null_grp_info;
+    }
+    return;
 }
 
 static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
     int status;
+
+    init_group_status();    /* Forget the past */
 
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which is just fine).
@@ -1267,10 +2338,8 @@ static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
             status = FALSE;
             break;
         }
-        if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-            status = mcscanner(mcpat, FORWARD, PTEND);
-        else
-            status = scanner(pat, FORWARD, PTEND);
+        if (slow_scan)  status = step_scanner(mcpat, FORWARD, PTEND);
+        else            status = fast_scanner(pat, FORWARD, PTEND);
     } while ((--n > 0) && status);
     return status;
 }
@@ -1295,7 +2364,7 @@ int forwhunt(int f, int n) {
         mlwrite_one("No pattern set");
         return FALSE;
     }
-    if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc_type == MCNIL) {
+    if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc.type == EGRP) {
         if (!mcstr()) return FALSE;
     }
     status = forwscanner(n);
@@ -1331,12 +2400,9 @@ int forwsearch(int f, int n) {
     if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
         status = forwscanner(n);
 
-/* Save away the match, or complain if not there. */
+/* Complain if not there. */
 
-        if (status == TRUE)
-            savematch();
-        else
-            mlwrite_one("Not found");
+        if (status != TRUE) mlwrite_one("Not found");
     }
     return status;
 }
@@ -1344,14 +2410,14 @@ int forwsearch(int f, int n) {
 static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
     int status;
 
+    init_group_status();    /* Forget the past */
+
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which is just fine).
  */
     do {
-        if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-            status = mcscanner(tapcm, REVERSE, PTBEG);
-        else
-            status = scanner(tap, REVERSE, PTBEG);
+        if (slow_scan)  status = step_scanner(mcpat, REVERSE, PTBEG);
+        else            status = fast_scanner(tap, REVERSE, PTBEG);
     } while ((--n > 0) && status);
     return status;
 }
@@ -1376,7 +2442,7 @@ int backhunt(int f, int n) {
         mlwrite_one("No pattern set");
         return FALSE;
     }
-    if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && tapcm[0].mc_type == MCNIL) {
+    if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc.type == EGRP) {
         if (!mcstr()) return FALSE;
     }
 
@@ -1417,10 +2483,9 @@ int backsearch(int f, int n) {
     if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
         status = backscanner(n);
 
-/* Save away the match, or complain if not there. */
+/* Complain if not there. */
 
-        if (status == TRUE) savematch();
-        else                mlwrite_one("Not found");
+        if (status != TRUE) mlwrite_one("Not found");
     }
     return status;
 }
@@ -1431,20 +2496,35 @@ int backsearch(int f, int n) {
 int scanmore(char *patrn, int dir) {
     int sts;                /* search status              */
 
-    rvstrcpy(tap, patrn);   /* Put reversed string in tap */
-    mlenold = matchlen = strlen(patrn);
-    setpattern(patrn, tap);
+/* Run mcstr to determine which scanner to use.
+ * There is no MAGIC mode here, so force it off while we check.
+ */
+    int real_mode = curwp->w_bufp->b_mode;
+    curwp->w_bufp->b_mode &= ~MDMAGIC;
+    mcstr();
+    curwp->w_bufp->b_mode = real_mode;
 
-    if (dir < 0)            /* reverse search?            */
-        sts = scanner(tap, REVERSE, PTBEG);
-    else                    /* Nope. Go forward           */
-        sts = scanner(patrn, FORWARD, PTEND);
+    if (slow_scan) {
+        if (dir < 0)            /* reverse search?            */
+            sts = step_scanner(mcpat, REVERSE, PTBEG);
+        else                    /* Nope. Go forward           */
+            sts = step_scanner(mcpat, FORWARD, PTEND);
+    }
+    else {
+        rvstrcpy(tap, patrn);   /* Put reversed string in tap */
+        srch_patlen = strlen(patrn);
+        setpattern(patrn, tap);
+
+        if (dir < 0)            /* reverse search?            */
+            sts = fast_scanner(tap, REVERSE, PTBEG);
+        else                    /* Nope. Go forward           */
+            sts = fast_scanner(patrn, FORWARD, PTEND);
+    }
 
     if (!sts) {
         TTputc(BELL);   /* Feep if search fails       */
         TTflush();      /* see that the feep feeps    */
     }
-
     return sts;             /* else, don't even try       */
 }
 
@@ -1458,11 +2538,10 @@ void setpattern(const char apat[], const char tap[]) {
 /* Add pattern to search run if called during command line processing */
     if (comline_processing) update_ring(apat);
 
-    patlenadd = matchlen - 1;
-
+    patlenadd = srch_patlen - 1;
     for (i = 0; i < HICHAR; i++) {
-        deltaf[i] = matchlen;
-        deltab[i] = matchlen;
+        deltaf[i] = srch_patlen;
+        deltab[i] = srch_patlen;
     }
 
 /* Now put in the characters contained in the pattern, duplicating the CASE
@@ -1503,47 +2582,186 @@ void rvstrcpy(char *rvstr, char *str) {
     *rvstr = '\0';
 }
 
-/*
- * delins -- Delete a specified length from the current point
- *      then either insert the string directly, or make use of
- *      replacement meta-array.
+/* Work out the replacement text for the current match.
+ * The working buffer is never freed - only grows as needed.
  */
-static int delins(int dlength, char *instr, int use_meta) {
-    int status;
-    struct magic_replacement *rmcptr;
+static struct {
+    char *buf;
+    int len;
+    int alloc;
+} repl = { NULL, 0, 0 };
+#define REPL_INCR 100
+static void append_to_repl_buf(char *buf, int nb) {
+    if (nb == -1) nb = strlen(buf);
+    int space_needed = (repl.len + nb + 1) - repl.alloc;
+    if (space_needed > 0) { /* Round up to next REPL_INCR */
+        space_needed = repl.len + nb + 1;
+        space_needed += (REPL_INCR - (space_needed % REPL_INCR));
+        repl.buf = Xrealloc(repl.buf, space_needed);
+        repl.alloc = space_needed;
+    }
+    memcpy(repl.buf+repl.len, buf, nb);
+    repl.len += nb;
+    return;
+}
 
-/* Zap what we gotta, * and insert its replacement. */
+static char *getrepl(void) {
 
-    if ((status = ldelete((long) dlength, FALSE)) != TRUE)
-        mlwrite_one("%ERROR while deleting");
-    else
-        if ((rmagical && use_meta) &&
-                    (curwp->w_bufp->b_mode & MDMAGIC) != 0) {
-            rmcptr = rmcpat;
-            while (rmcptr->mc_type != MCNIL && status == TRUE) {
-                if (rmcptr->mc_type == LITCHAR)
-                    status = linstr(rmcptr->rstr);
-                else
-                    status = linstr(patmatch);
-                rmcptr++;
+/* Process rmcpat .... */
+    repl.len = 0;   /* Start afresh */
+    struct magic_replacement *rmcptr = rmcpat;
+    char ucb[6];
+    int nb;
+    while (rmcptr->mc.type != EGRP) {
+        switch(rmcptr->mc.type) {
+        case LITCHAR:
+            ucb[0] = rmcptr->val.lchar;
+            append_to_repl_buf(ucb, 1);
+            break;
+        case UCLITL:
+            nb = unicode_to_utf8(rmcptr->val.uchar, ucb);
+            append_to_repl_buf(ucb, nb);
+            break;
+        case UCGRAPH:
+            nb = unicode_to_utf8(rmcptr->val.gc.uc, ucb);
+            append_to_repl_buf(ucb, nb);
+            if (!rmcptr->val.gc.cdm) break;
+            nb = unicode_to_utf8(rmcptr->val.gc.cdm, ucb);
+            append_to_repl_buf(ucb, nb);
+            unicode_t *uc_ex = rmcptr->val.gc.ex;
+            while (uc_ex) {
+                nb = unicode_to_utf8(*uc_ex++, ucb);
+                append_to_repl_buf(ucb, nb);
             }
+            break;
+        case REPL_VAR: {
+            char *vval = getval(rmcptr->val.varname);
+            append_to_repl_buf(vval, -1);
+            break;
         }
-        else status = linstr(instr);
+        case REPL_GRP: {
+            char *gval = group_match(rmcptr->mc.group_num);
+            append_to_repl_buf(gval, -1);
+            break;
+        }
+        default:;
+        }
+    rmcptr++;
+    }
+    repl.buf[repl.len] = '\0';
+    return repl.buf;
+}
+
+/* last_match info -- this is used to get the last match in a query replace
+ * to allow a one-level undo.
+ * The data is put in place by delins().
+ * It can be invalidated by setting mline to NULL;
+ * match and replace are never freed, just overwritten and realloc()ed
+ */
+static struct {
+    char *match;            /* Text of the match */
+    char *replace;          /* Text of the replacing string */
+    struct line *mline;     /* Line it is on */
+    int moff;               /* Start offset on mline */
+    int mlen;               /* Length of match */
+    int rlen;               /* Length of the replacement */
+    int m_alloc;            /* Allocated size of match */
+    int r_alloc;            /* Allocated size of replace */
+} last_match = { NULL, NULL, NULL, 0, 0, 0, 0, 0 };
+
+/* delins -- delete the match and insert the replacement
+ * We need to end up at the end of the replacement string.
+ */
+static int delins(char *repstr) {
+    int status;
+
+    last_match.rlen = strlen(repstr);
+    int needed = last_match.rlen + 1;
+    if (needed > last_match.r_alloc) {
+        last_match.replace = Xrealloc(last_match.replace, needed);
+        last_match.r_alloc = needed;
+    }
+    strcpy(last_match.replace, repstr);
+
+/* Save the matched string.
+ * NOTE that we cannot save mline until the end, as it might change!
+ */
+    needed = grp_info[0].len + 1;
+    if (needed > last_match.m_alloc) {
+        last_match.match = Xrealloc(last_match.match, needed);
+        last_match.m_alloc = needed;
+    }
+    struct line *sline = curwp->w.dotp;
+    int soff = curwp->w.doto;
+    char *mptr = last_match.match;
+    for (int j = 0; j < grp_info[0].len; j++)
+        *mptr++ = nextch(&sline, &soff, FORWARD);
+    *mptr = '\0';
+    last_match.mline = NULL;    /* Set at the end */
+    last_match.moff = curwp->w.doto;
+    last_match.mlen = grp_info[0].len;
+
+/* Remember where we are - carefully...
+ * When we insert text the line may need to be reallocated, so we
+ * can't save its current value and expect that to persist.
+ * But we can save the previous line, and later use that one's next.
+ * Saving the offset is OK.
+ */
+    struct line *pline = lback(curwp->w.dotp);
+    int doff = curwp->w.doto;
+
+/* Step over what we matched...and remember the match */
+
+    int togo;
+    togo = grp_info[0].len;
+    while (togo > 0) togo -= forw_grapheme(1);
+
+
+/* Add what we need to add */
+
+    int added;
+    if (!rmagical) {
+        added = strlen(rpat);
+        status = linstr(rpat);
+    }
+    else {
+        char *repl_text = getrepl();
+        added = strlen(repl_text);
+        status = linstr(repl_text);
+    }
+    last_match.rlen = added;
+
+/* Go back to where we were and delete what we have to replace.
+ * ldelete() only deletes forwards, so we go to the start of the
+ * matched text (which we know!) first.
+ */
+    curwp->w.dotp = lforw(pline);
+    curwp->w.doto = doff;
+    status = ldelete(grp_info[0].len, FALSE);
+    last_match.mline = curwp->w.dotp;   /* Now known */
+
+/* Finally we need to get to the end of what we've put in as
+ * a replacement, so need to know how long it is...
+ */
+    togo = added;
+    while (togo > 0) togo -= forw_grapheme(1);
 
     return status;
 }
 
 /*
  * replaces -- Search for a string and replace it with another
- *      string.  Query might be enabled (according to kind).
+ *      string.  Query might be enabled (according to query).
  *
- * int kind;            Query enabled flag
+ * int query            Query enabled flag
  * int f;               default flag
  * int n;               # of repetitions wanted
+ *
+ * NOTE: that this ONLY EVER RUNS FORWARDS!!!
+ *  so on a match we will be at the END of the string to replace.
  */
-static int replaces(int kind, int f, int n) {
+static int replaces(int query, int f, int n) {
     int status;             /* success flag on pattern inputs */
-    int rlength;            /* length of replacement string */
     int numsub;             /* number of substitutions */
     int nummatch;           /* number of found matches */
     int nlflag;             /* last char of search string a <NL>? */
@@ -1554,6 +2772,7 @@ static int replaces(int kind, int f, int n) {
     int origoff;            /* and offset (for . query option) */
     struct line *lastline;  /* position of last replace and */
     int lastoff;            /* offset (for 'u' query option) */
+    int undone = 0;         /* Set if we undo a replace */
 
     if (curbp->b_mode & MDVIEW) /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
@@ -1564,8 +2783,8 @@ static int replaces(int kind, int f, int n) {
 
 /* Ask the user for the text of a pattern. */
 
-    if ((status = readpattern((kind == FALSE ? "Replace" : "Query replace"),
-                                  pat, TRUE)) != TRUE)
+    if ((status = readpattern((query? "Query replace": "Replace"),
+         pat, TRUE)) != TRUE)
         return status;
 
 /* Ask for the replacement string. */
@@ -1573,29 +2792,16 @@ static int replaces(int kind, int f, int n) {
     if ((status = readpattern("with", rpat, FALSE)) == ABORT)
         return status;
 
-/* Find the length of the replacement string. */
-
-    rlength = strlen(rpat);
-
 /* Set up flags so we can make sure not to do a recursive replace on
- * the last line.
+ * the last line beacuse we're replacing the final newline...
  */
-    nlflag = (pat[matchlen - 1] == '\n');
+    nlflag = (pat[srch_patlen - 1] == '\n');
     nlrepl = FALSE;
-
-    if (kind) {
-/* Build query replace question string. */
-        strcpy(tpat, "Replace '");
-        expandp(pat, tpat+strlen(tpat), NPAT / 3);
-        strcat(tpat, "' with '");
-        expandp(rpat, tpat+strlen(tpat), NPAT / 3);
-        strcat(tpat, "'? ");
 
 /* Initialize last replaced pointers. */
 
-        lastline = NULL;
-        lastoff = 0;
-    }
+    lastline = NULL;
+    lastoff = 0;
 
 /* Save original . position, init the number of matches and substitutions,
  * and scan through the file.
@@ -1604,18 +2810,21 @@ static int replaces(int kind, int f, int n) {
     origoff = curwp->w.doto;
     numsub = 0;
     nummatch = 0;
+    last_match.mline = NULL;    /* No last match, yet */
 
     while ((f == FALSE || n > nummatch) &&
            (nlflag == FALSE || nlrepl == FALSE)) {
 
-/* Search for the pattern. If we search with a regular expression,
- * matchlen is reset to the true length of the matched string.
+        char *match_p, *repl_p;
+
+/* Search for the pattern. The true length of the matched string ends up
+ * in grp_info[0].len
  */
-        if ((magical && curwp->w_bufp->b_mode & MDMAGIC) != 0) {
-            if (!mcscanner(mcpat, FORWARD, PTBEG)) break;
+        if (slow_scan) {
+            if (!step_scanner(mcpat, FORWARD, PTBEG)) break;
         }
         else {
-            if (!scanner(pat, FORWARD, PTBEG)) break;  /* all done */
+            if (!fast_scanner(pat, FORWARD, PTBEG)) break;  /* all done */
         }
         ++nummatch;     /* Increment # of matches */
 
@@ -1625,8 +2834,33 @@ static int replaces(int kind, int f, int n) {
 
 /* Check for query. */
 
-        if (kind) {     /* Get the query. */
-            pprompt:mlwrite(tpat, pat, rpat);
+        if (query) {     /* Get the query. */
+pprompt:
+
+/* Build query replace question string dynamically.
+ * Both group_match(0) and getrepl() may change on successive matches
+ * in Magic mode.
+ * To allow for undo we set repl_p here and pass it to delins().
+ */
+            if (undone) {
+                undone = 0;
+                match_p = last_match.match;
+                if (rmagical) repl_p = last_match.replace;
+                else          repl_p = rpat;
+            }
+            else {
+                match_p = group_match(0);
+                if (rmagical) repl_p = getrepl();
+                else          repl_p = rpat;
+            }
+            strcpy(tpat, "Replace '");
+            expandp(match_p, tpat+strlen(tpat), NPAT / 3);
+            strcat(tpat, "' with '");
+/* rpat can't change on an undo unless rmagical is set */
+            expandp(repl_p, tpat+strlen(tpat), NPAT/3);
+            strcat(tpat, "'? ");
+
+            mlwrite(tpat, pat, rpat);
 qprompt:
             update(TRUE);   /* show the proposed place to change */
             c = tgetc();    /* and input */
@@ -1638,7 +2872,6 @@ qprompt:
             switch (c) {
             case 'y':       /* yes, substitute */
             case ' ':
-                savematch();
                 break;
 
             case 'n':       /* no, onword */
@@ -1646,33 +2879,51 @@ qprompt:
                 continue;
 
             case '!':       /* yes/stop asking */
-                kind = FALSE;
+                query = FALSE;
                 break;
 
             case 'u':       /* undo last and re-prompt */
 
-/* Restore old position. */
-                if (lastline == NULL) { /* There is nothing to undo. */
+/* Set the undone flag early, since even if we can't undo we do
+ * want to use the previous match.
+ */
+                undone = 1;
+
+/* In order to be able to undo the previous replace (one-level only!!)
+ * we need to know:
+ *  1. what the previously matched text was (so it can be restored)
+ *  2. the starting position of the replacement (so we know where to work)
+ *  3. the length of what was replaced (so we know how much to remove)
+ *
+ *  So we need to remember this information on each match, and invalidate
+ *  any match each time we start.
+ */
+
+ /* Restore old position. */
+                if (last_match.mline == NULL) { /* Nothing to undo. */
+                    mlwrite_one("No previous match to undo");
                     TTbeep();
+                    sleep(1);
                     goto pprompt;
                 }
-                curwp->w.dotp = lastline;
-                curwp->w.doto = lastoff;
-                lastline = NULL;
+                curwp->w.dotp = last_match.mline;
+                struct line *pline = lback(last_match.mline);
+                curwp->w.doto = last_match.moff;
+                last_match.mline = NULL;        /* Invalidate it */
                 lastoff = 0;
 
-/* Delete the new string. */
-                back_grapheme(rlength);
-                matchline = curwp->w.dotp;
-                matchoff = curwp->w.doto;
-                status = delins(rlength, patmatch, FALSE);
-                if (status != TRUE) return status;
+/* Delete the replacement we put in, then insert the last match.
+ * This will leave us at the end of it. We actually want to be at the
+ * start, so go there. We use prev-line and forw(prev-line) as that
+ * works even in the current line gets reallocated from the insert.
+ */
+                ldelete(last_match.rlen, FALSE);
+                linstr(last_match.match);
+                curwp->w.dotp = lforw(pline);
+                curwp->w.doto = last_match.moff;
 
-/* Record one less substitution, Backup, save our place, and  reprompt. */
+/* Record one less substitution and reprompt. */
                 --numsub;
-                back_grapheme(mlenold);
-                matchline = curwp->w.dotp;
-                matchoff = curwp->w.doto;
                 goto pprompt;
 
             case '.':       /* abort! and return */
@@ -1695,22 +2946,24 @@ qprompt:
                 goto qprompt;
 
             }       /* end of switch */
-        }           /* end of "if kind" */
+        }           /* end of "if query" */
 
-/* GGR fix */
-        else if ((rmagical && curwp->w_bufp->b_mode & MDMAGIC) != 0)
-            savematch();
+/* Stop a potential loop.... */
+        if ((lastline == curwp->w.dotp) &&
+            (lastoff == curwp->w.doto)) {
+            mlwrite_one("Replacing at same point (loop). Aborting...");
+            return FALSE;
+        }
 
 /* Delete the sucker, and insert its replacement. */
 
-        status = delins(matchlen, rpat, TRUE);
+        status = delins(repl_p);
         if (status != TRUE) return status;
 
-/* Save our position, since we may undo this. */
-        if (kind) {
-            lastline = curwp->w.dotp;
-            lastoff = curwp->w.doto;
-        }
+/* Save our position. We may undo this, and want to detect loops anyway. */
+
+        lastline = curwp->w.dotp;
+        lastoff = curwp->w.doto;
 
         numsub++;       /* increment # of substitutions */
     }
@@ -1786,16 +3039,64 @@ int expandp(char *srcstr, char *deststr, int maxlength) {
  *      cases, but we may want to add further optional boundary restrictions
  *      in future, a' la VMS EDT.  At the moment, just return TRUE or
  *      FALSE depending on if a boundary is hit (ouch).
+ *      The end of file is now taken to be *on* the last line (b_linep)
+ *      rather than at the end of the "last line with buffer text" so that
+ *      we can include the terminating newline (which we always assume is
+ *      there) in a search.
  */
 int boundry(struct line *curline, int curoff, int dir) {
     int border;
 
     if (dir == FORWARD) {
-        border = (curoff == llength(curline)) &&
-             (lforw(curline) == curbp->b_linep);
+        border = (curline == curbp->b_linep);
     }
     else {
-        border = (curoff == 0) && (lback(curline) == curbp->b_linep);
+/* Reverse searching has an additional boundary to consider - the
+ * original point.
+ */
+        if ((curline == magic_search.start_line) &&
+            (curoff > magic_search.start_point)) {
+             border = TRUE;
+        }
+        else {
+            border = (curoff == 0) && (lback(curline) == curbp->b_linep);
+	}
     }
     return border;
+}
+
+/* Return a malloc()ed copy of the text for the given group in
+ * the last match.
+ * If a group doesn't exist or has no match then an emtpy string is
+ * returned.
+ * We only allocate each group text on demand for each search.
+ * Any allocated space is freed by the reset for a new search.
+ */
+char *group_match(int grp) {
+/* Is there a match to return? */
+    if ((grp < 0) || (grp > group_cntr)) return "";
+    if (!grp_info[grp].mline) return "";
+/* Have we already sorted out this match for this search? */
+    grp_text[grp] = Xmalloc(grp_info[grp].len + 1);
+/* So create this match text for this search... */
+    char *dp = grp_text[grp];
+    int togo = grp_info[grp].len;
+    struct line *cline = grp_info[grp].mline;
+    int coff = grp_info[grp].start;
+    while(togo > 0) {
+        int on_cline = llength(cline) - coff;
+        if (on_cline > togo) on_cline = togo;
+        memcpy(dp, (cline->l_text)+coff, on_cline);
+        dp += on_cline;
+        togo -= on_cline;
+/* Add in the newline, of needed, and switch to next line */
+        if (togo > 0) {
+            *dp++ = '\n';
+            togo--;
+            cline = lforw(cline);
+            coff = 0;
+        }
+    }
+    *dp = '\0';
+    return grp_text[grp];
 }

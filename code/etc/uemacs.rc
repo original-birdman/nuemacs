@@ -174,7 +174,7 @@ store-procedure lr-justify not_mb   ; Left and right justify paragraph
 ; Toggle local/global modes
 ;
 store-procedure _mytoggle-mode
-    write-message &cat &cat "Toggle " %type-mode " mode (FHWCPEVOMYAUD): "
+    write-message &cat &cat "Toggle " %type-mode " mode (FHWCPEVOMYAQD): "
     set %report " "
     set %modesel &upper &gtkey
     !if &or &seq %modesel "" &seq %modesel "~n"
@@ -248,9 +248,9 @@ store-procedure _mytoggle-mode
         set %what "ASAVE"
         !goto doit
     !endif
-    !if &seq %modesel "U"
+    !if &seq %modesel "Q"
         set %bit 512
-        set %what "UNICO"
+        set %what "EQUIV"
         !goto doit
     !endif
     !if &seq %modesel "D"

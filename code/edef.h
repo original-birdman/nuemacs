@@ -98,11 +98,7 @@ extern char pat[];              /* Search pattern.              */
 extern char tap[];              /* Reversed pattern array.      */
 extern char rpat[];             /* Replacement pattern.         */
 
-extern unsigned int matchlen;
-extern unsigned int mlenold;
-extern char *patmatch;
-extern struct line *matchline;
-extern int matchoff;
+extern unsigned int srch_patlen;
 
 extern char *dname[];           /* Directive name table.        */
 

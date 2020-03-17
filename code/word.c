@@ -415,7 +415,7 @@ bckdel:
         }
         op = kp;
         kp = kp->d_next;
-        free(op);           /* kinsert() Xmallocs, so we free */
+        Xfree(op);          /* kinsert() Xmallocs, so we free */
     }
     return(status);
 }
@@ -595,7 +595,7 @@ int eos_chars(int f, int n) {
 
     status = mlreply(prompt, buf, NLINE - 1, CMPLT_NONE);
     if (status == FALSE) {      /* Empty response - remove item */
-        if (eos_list) free (eos_list);
+        if (eos_list) Xfree (eos_list);
         n_eos = 0;
     }
     else if (status == TRUE) {  /* Some response - set item */
@@ -761,7 +761,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
             }
             wordlen += utf8char_width(gi.uc);
 /* Free-up any allocated grapheme space...and on to next char */
-            if (gi.ex != NULL) free(gi.ex);
+            if (gi.ex != NULL) Xfree(gi.ex);
             continue;
         }
 
@@ -842,8 +842,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * end of last paragraph, in which case just got to last line */
     if (lforw(curwp->w.dotp) != curbp->b_linep) lnewline();
     else gotoeob(FALSE, 1);
-    free(wbuf);     /* Mustn't forget these... */
-    if (space_ind) free(space_ind);
+    Xfree(wbuf);    /* Mustn't forget these... */
+    if (space_ind) Xfree(space_ind);
 
 /* Make sure the display is not horizontally scrolled */
     if (curwp->w.fcol != 0) {

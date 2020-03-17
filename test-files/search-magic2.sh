@@ -196,13 +196,12 @@ search-forward "\u{03b4}"
   set %expchar &asc έ
   set %expmatch δ
 execute-procedure check-position
-!force search-forward "\u{03b4}"    ; Check it fails
+!force search-forward "\u{03b4}"    ; Check it fails and matches nothing
   set %curtest Search3
   set %expline 11
   set %expcol 3
   set %expchar &asc έ
-  set %expmatch "ΔΈΝ."
-  set %expmatch δ
+  set %expmatch ""
 execute-procedure check-position
 
 set %test-report "  \u{03b4}, not Exact"

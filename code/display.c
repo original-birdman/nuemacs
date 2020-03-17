@@ -82,22 +82,6 @@ static void mlputf(int s);
 static void putline(int row, int col, char *buf);
 #endif
 
-/* GGR Some functions to handle struct grapheme usage */
-
-/* Set the entry to an ASCII character.
- * Checks for previous extended cdm usage and frees any such found
- * unless the no_free flag is set (which it is for a pscreen setting).
- */
-static void set_grapheme(struct grapheme *gp, unicode_t uc, int no_free) {
-    gp->uc = uc;
-    gp->cdm = 0;
-    if (!no_free && gp->ex != NULL) {
-        free(gp->ex);
-        gp->ex = NULL;
-    }
-    return;
-}
-
 /* Add a unicode character as a cdm or dynamic ex entry
  */
 static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
@@ -125,38 +109,19 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
  * Could just be defined as:
  *      #define clone_grapheme(to, from)   *to = *from
  * but we'll just inline it instead.
+ * Just in case we ever need to do something different...
  */
 static inline void
   clone_grapheme(struct grapheme *gtarget, struct grapheme *gsource) {
-    gtarget->uc = gsource->uc;
-    gtarget->cdm = gsource->cdm;
-    gtarget->ex = gsource->ex;
+    *gtarget = *gsource;
     return;
 }
 
-/* Only interested in same/not same here
- */
-static int grapheme_same(struct grapheme *gp1, struct grapheme *gp2) {
-    if (gp1->uc != gp2->uc) return FALSE;
-    if (gp1->cdm != gp2->cdm) return FALSE;
-    if ((gp1->ex == NULL) && (gp2->ex == NULL)) return TRUE;
-    if ((gp1->ex == NULL) && (gp2->ex != NULL)) return FALSE;
-    if ((gp1->ex != NULL) && (gp2->ex == NULL)) return FALSE;
-/* Have to compare the ex lists!... */
-    unicode_t *ex1 = gp1->ex;
-    unicode_t *ex2 = gp2->ex;
-    while(1) {
-        if (*ex1 != *ex2) return FALSE;
-        if ((*ex1 == UEM_NOCHAR) || (*ex2 == UEM_NOCHAR)) break;
-        ex1++; ex2++;
-    }
-    return ((*ex1 == UEM_NOCHAR) && (*ex2 == UEM_NOCHAR));
-}
-
+/* This now does a case-sensitive check in same_grapheme() */
 static int
-  grapheme_same_array(struct grapheme *gp1, struct grapheme *gp2, int nelem) {
+  same_grapheme_array(struct grapheme *gp1, struct grapheme *gp2, int nelem) {
     for (int i = 0; i < nelem; i++) {
-        if (!grapheme_same(gp1+i, gp2+i)) return FALSE;
+        if (!same_grapheme(gp1+i, gp2+i, 0)) return FALSE;
     }
     return TRUE;
 }
@@ -222,7 +187,7 @@ void vtinit(void) {
 /* GGR - clear things out at the start.
  * We can't use set_grapheme() until after we have initialized
  * We only need to initialize vscreen, as we do all assigning
- * (including Xmalloc()/free()) there.
+ * (including Xmalloc()/Xfree()) there.
  * Need to clear it *all* out now! */
 
         for (int j = 0; j < term.t_mcol; j++) {
@@ -862,7 +827,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
         end = endofline(vpv->v_text, cols);
         if (end == 0)
             target = first;         /* newlines */
-        else if (grapheme_same_array(vpp->v_text, vpv->v_text, end))
+        else if (same_grapheme_array(vpp->v_text, vpv->v_text, end))
             target = first + 1;     /* broken line newlines */
         else
             target = first;
@@ -963,7 +928,7 @@ static int texttest(int vrow, int prow) {
     struct video *vpv = vscreen[vrow];      /* virtual screen image */
     struct video *vpp = pscreen[prow];      /* physical screen image */
 
-    return grapheme_same_array(vpv->v_text, vpp->v_text, term.t_ncol);
+    return same_grapheme_array(vpv->v_text, vpp->v_text, term.t_ncol);
 }
 
 /*
@@ -1140,7 +1105,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
 #endif
 
 /* Advance past any common chars at the left */
-    while (cp1 != &vp1->v_text[term.t_ncol] && grapheme_same(cp1, cp2)) {
+    while (cp1 != &vp1->v_text[term.t_ncol] && same_grapheme(cp1, cp2, 0)) {
         ++cp1;
         ++cp2;
     }
@@ -1162,7 +1127,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
     cp3 = &vp1->v_text[term.t_ncol];
     cp4 = &vp2->v_text[term.t_ncol];
 
-    while (grapheme_same(&(cp3[-1]), &(cp4[-1]))) {
+    while (same_grapheme(&(cp3[-1]), &(cp4[-1]), 0)) {
         --cp3;
         --cp4;
         if (!is_space(&(cp3[0])))   /* Note if any nonblank */
@@ -1331,13 +1296,24 @@ static void modeline(struct window *wp) {
     else      mwp = wp;
     int mode_mask = 1;
     for (i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
+        if (mode_mask == MDEQUIV)       /* Never displayed */
+            continue;
         if (mwp->w_bufp->b_mode & mode_mask) {
-            if (firstm != TRUE) strcat(tline, " ");
+            if (!firstm) strcat(tline, " ");
             firstm = FALSE;
-            if (mode_mask == MDPHON)
-                  strcat(tline, ptt->ptt_headp->display_code);
-            else
-                  strcat(tline, mode2name[i]);
+            switch(mode_mask) {
+            case MDPHON:
+                strcat(tline, ptt->ptt_headp->display_code);
+                break;
+            case MDMAGIC:
+/* How we display Magic depends on whether Equiv mode is on. */
+                if (mwp->w_bufp->b_mode & MDEQUIV) {
+                    strcat(tline, "MgEqv");
+                    break;
+                }   /* Fall through */
+            default:
+                strcat(tline, mode2name[i]);
+            }
         }
         mode_mask <<= 1;
     }
@@ -1481,6 +1457,16 @@ typedef union {
     char *p;
     va_list ap;
 } npva;
+
+/* Routine for use by mlwrite*+mlput* routines so that nothing
+ * is printed beyond the last column, to prevent mini-buffer wrapping
+ * messing up the display.
+ */
+static int TTput_1uc_lim(unicode_t uc) {
+    if (ttcol < term.t_ncol) return TTput_1uc(uc);
+    return FALSE;
+}
+
 static void mlwrite_ap(const char *fmt, npva ap) {
     unicode_t c;            /* current char in format string */
 
@@ -1507,11 +1493,14 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     int bytes_togo = strlen(fmt);
     if (bytes_togo == 0) return;        /* Nothing else...clear line only */
     while (bytes_togo > 0) {
+/* If we are about to go into the last column, put a $ there and stop,
+ * otherwise we get wrap-around and the display messes up.
+ */
         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
         fmt += used;
         if ((ap.p == NULL) || (c != '%')) {
-            TTput_1uc(c);
+            TTput_1uc_lim(c);
         } else {
             if (bytes_togo <= 0) continue;
             int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
@@ -1535,6 +1524,11 @@ static void mlwrite_ap(const char *fmt, npva ap) {
                 mlputli(va_arg(ap.ap, long), 10);
                 break;
 
+            case 'c':
+                c = va_arg(ap.ap, int);
+                TTput_1uc(c);
+                break;
+
             case 's':
                {char *tp = va_arg(ap.ap, char *);
                 if (tp == NULL) tp = "(nil)";
@@ -1547,7 +1541,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
                 break;
 
             default:
-                TTput_1uc(c);
+                TTput_1uc_lim(c);
             }
         }
     }
@@ -1619,7 +1613,7 @@ void mlputs(char *s) {
     int idx = 0;
     while (idx < nbytes) {
         idx += utf8_to_unicode(s, idx, nbytes, &c);
-        TTput_1uc(c);
+        TTput_1uc_lim(c);
     }
 }
 
@@ -1633,14 +1627,14 @@ static void mlputi(int i, int r) {
 
     if (i < 0) {
         i = -i;
-        TTput_1uc('-');
+        TTput_1uc_lim('-');
     }
 
     q = i / r;
 
     if (q != 0) mlputi(q, r);
 
-    TTput_1uc(hexdigits[i % r]);
+    TTput_1uc_lim(hexdigits[i % r]);
 }
 
 /*
@@ -1651,14 +1645,14 @@ static void mlputli(long l, int r) {
 
     if (l < 0) {
         l = -l;
-        TTput_1uc('-');
+        TTput_1uc_lim('-');
     }
 
     q = l / r;
 
     if (q != 0) mlputli(q, r);
 
-    TTput_1uc((int) (l % r) + '0');
+    TTput_1uc_lim((int) (l % r) + '0');
 }
 
 /*
@@ -1676,9 +1670,9 @@ static void mlputf(int s) {
 
 /* Send out the integer portion */
     mlputi(i, 10);
-    TTput_1uc('.');
-    TTput_1uc((f / 10) + '0');
-    TTput_1uc((f % 10) + '0');
+    TTput_1uc_lim('.');
+    TTput_1uc_lim((f / 10) + '0');
+    TTput_1uc_lim((f % 10) + '0');
 }
 
 #if RAINBOW

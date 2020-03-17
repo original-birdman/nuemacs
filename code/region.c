@@ -136,11 +136,11 @@ static int casechange_region(int newcase) { /* The handling function */
         char *repstr = mstr.str;            /* ...to simple local vars */
         if (replen == this_blen) {          /* Easy - just overwrite */
             memcpy(linep->l_text+b_offs, repstr, replen);
-            free(repstr);
+            Xfree(repstr);
         }
         else if (replen < this_blen) {      /* So guaranteed the space */
             memcpy(linep->l_text+b_offs, repstr, replen);
-            free(repstr);
+            Xfree(repstr);
             ccr_Tail_Copy;
             int b_less = this_blen - replen;
             llength(linep) -= b_less;       /* Fix-up length */
@@ -151,7 +151,7 @@ static int casechange_region(int newcase) { /* The handling function */
             if ((linep->l_size - linep->l_used) >= b_more) {    /* OK */
                 ccr_Tail_Copy;  /* Must move the tail out-of-the-way first!! */
                 memcpy(linep->l_text+b_offs, repstr, replen);
-                free(repstr);
+                Xfree(repstr);
                 llength(linep) += b_more;   /* Fix-up length */
             }
             else {
@@ -161,7 +161,7 @@ static int casechange_region(int newcase) { /* The handling function */
                 if (b_offs) memcpy(newl->l_text, linep->l_text, b_offs);
 /* Copy in the replacement text */
                 memcpy(newl->l_text+b_offs, repstr, replen);
-                free(repstr);
+                Xfree(repstr);
 /* Copy in and trailing text on this line... */
                 ccr_Tail_Copy;
 /* Now need to replace the current line with the new one in the linked list */
@@ -174,7 +174,7 @@ static int casechange_region(int newcase) { /* The handling function */
  */
                 if (curwp->w.markp == linep) curwp->w.markp = newl;
                 if (curwp->w.dotp == linep)  curwp->w.dotp = newl;
-                free(linep);
+                Xfree(linep);
                 linep = newl;
             }
             MarkDotFixup(b_more);

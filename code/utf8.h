@@ -26,6 +26,14 @@ struct grapheme {
 int next_utf8_offset(char *, int, int, int);
 int prev_utf8_offset(char *, int, int);
 
+int build_next_grapheme(char *, int, int, struct grapheme *);
+int build_prev_grapheme(char *, int, int, struct grapheme *);
+
+void set_grapheme(struct grapheme *, unicode_t, int);
+/* Flags for same_grapheme */
+#define USE_WPBMODE 0x00000001
+int same_grapheme(struct grapheme *, struct grapheme *, int);
+
 #define COM_DIA 1
 #define ZW_JOIN 2
 #define SPMOD_L 3

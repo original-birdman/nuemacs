@@ -93,7 +93,7 @@ static int docmd(char *cline) {
  * as that will get tokenized...
  */
     if (strcmp(tkn, "reexecute") == 0) {
-        free(this_line_seen);   /* Drop the "reexecute" */
+        Xfree(this_line_seen);   /* Drop the "reexecute" */
         this_line_seen = strdup(prev_line_seen);
         status = docmd(prev_line_seen);
         goto remember_cmd;
@@ -129,7 +129,7 @@ remember_cmd:
     }
 /* "Just tidy up..." exit */
 final_exit:
-    free(this_line_seen);
+    Xfree(this_line_seen);
     execstr = oldestr;
     return status;
 }
@@ -367,9 +367,9 @@ void ptt_free(struct buffer *bp) {
     struct ptt_ent *ptr = bp->ptt_headp;
     while(ptr) {
         fwdptr = ptr->nextp;
-        free(ptr->from);
-        free(ptr->to);
-        free(ptr);
+        Xfree(ptr->from);
+        Xfree(ptr->to);
+        Xfree(ptr);
         ptr = fwdptr;
     }
     bp->ptt_headp = NULL;
@@ -959,7 +959,7 @@ int execbuf(int f, int n) {
  * struct while_block *wp;              head of structure to free
  */
 static void freewhile(struct while_block *wp) {
-    for (struct while_block *fwp = wp; fwp; fwp = fwp->w_next) free(fwp);
+    for (struct while_block *fwp = wp; fwp; fwp = fwp->w_next) Xfree(fwp);
 }
 
 /*
@@ -1367,7 +1367,7 @@ int dobuf(struct buffer *bp) {
 /* In any case set the buffer . */
             bp->b.dotp = lp;
             bp->b.doto = 0;
-            free(einit);
+            Xfree(einit);
             execlevel = 0;
             freewhile(whlist);
             bp->b_exec_level--;
@@ -1376,7 +1376,7 @@ int dobuf(struct buffer *bp) {
         }
 
 onward:                 /* On to the next line */
-        free(einit);
+        Xfree(einit);
         lp = lp->l_fp;
     }
 
