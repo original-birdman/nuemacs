@@ -12,6 +12,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <utf8proc.h>
 #include "utf8.h"
 
 /* Initialized global external declarations. */
@@ -207,3 +208,6 @@ extern int comline_processing;
 
 /* The real status of the last command !force'd in a buffer macro */
 extern char *force_status;
+
+/* The default Equiv function handler */
+extern utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *);

@@ -1,3 +1,5 @@
+#include <utf8proc.h>
+
 #include "estruct.h"
 #include "edef.h"
 
@@ -200,3 +202,5 @@ char *userproc_arg = NULL;
 int comline_processing = 1;
 
 char *force_status = "UNSET";
+
+utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *) = utf8proc_NFKC;

@@ -71,6 +71,7 @@ struct evlist evl[] = {
  { "showdir_tokskip", EVSDTKSKIP },     /* Token to skip in showdir */
  { "uproc_opts",    EVUPROCOPTS },  /* Flags when processing &arg */
  { "force_status",  EVFORCESTAT },  /* Actual status when forced to OK */
+ { "equiv_type",    EVEQUIVTYPE },  /* Function to use for Equiv mode */
 };
 
 /* The tags for user functions - used in struct evlist */

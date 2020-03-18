@@ -552,6 +552,12 @@ static char *gtenv(char *vname) {
     case EVSDTKSKIP:        return ue_itoa(showdir_tokskip);
     case EVUPROCOPTS:       return ue_itoa(uproc_opts);
     case EVFORCESTAT:       return force_status;
+    case EVEQUIVTYPE:
+            if (equiv_handler == utf8proc_NFC)  return "NFC";
+            if (equiv_handler == utf8proc_NFD)  return "NFD";
+            if (equiv_handler == utf8proc_NFKD) return "NFKD";
+            else                                return "NFKC";
+            break;
     }
     exit(-12);              /* again, we should never get here */
 }
@@ -796,6 +802,15 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVUPROCOPTS:
             uproc_opts = strtol(value, NULL, 0);    /* Allow hex input */
+            break;
+/* Set the Equiv handler. Default is utf8proc_NFKC.
+ * Just in case this could usefully produce different results...
+ */
+        case EVEQUIVTYPE:
+            if (!strcasecmp("NFC", value))       equiv_handler = utf8proc_NFC;
+            else if (!strcasecmp("NFD", value))  equiv_handler = utf8proc_NFD;
+            else if (!strcasecmp("NFKD", value)) equiv_handler = utf8proc_NFKD;
+            else                                 equiv_handler = utf8proc_NFKC;
             break;
         }
         break;

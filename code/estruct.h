@@ -441,6 +441,8 @@ struct buffer {
 #define MDASAVE 0x0100          /* auto-save mode               */
 #define MDEQUIV 0x0200          /* Equivalent unicode searching */
 #define MDDOSLE 0x0400          /* DOS line endings             */
+/* Equiv mode only applies in Magic mode, so this is useful */
+#define MD_MAGEQV (MDMAGIC | MDEQUIV)
 
 #define NUMMODES    11          /* # of defined modes           */
 
@@ -620,7 +622,7 @@ enum ev_val {
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
-    EVSDTKSKIP, EVUPROCOPTS, EVFORCESTAT,
+    EVSDTKSKIP, EVUPROCOPTS, EVFORCESTAT, EVEQUIVTYPE,
 };
 
 struct evlist {

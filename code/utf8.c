@@ -673,16 +673,21 @@ int same_grapheme(struct grapheme *gp1, struct grapheme *gp2, int flags) {
     if ((*ex1 == UEM_NOCHAR) && (*ex2 == UEM_NOCHAR)) return TRUE;
 
 /* If we fail anywhere above we also need to check if we've been asked
- * to do equivalence checking...which ONLY applies in Magic mode!
- * The Unicode normalization info is in Standard Annexx #15:
+ * to do equivalence checking...which ONLY applies in Magic mode (and
+ * hence only if the flags have asked us to check the buffer mode).
+ * It also cannot make a difference if the base char is ASCII and there
+ * is no combining character (which is likely to be by far the most common
+ * case, and so worth checking).
+ * The Unicode normalization info is in Standard Annex #15:
  *  https://unicode.org/reports/tr15
  */
 check_equiv:
     if (!((flags & USE_WPBMODE) &&
-         (curwp->w_bufp->b_mode & MDMAGIC) &&
-         (curwp->w_bufp->b_mode & MDEQUIV))) {
-        return FALSE;
+          ((curwp->w_bufp->b_mode & MD_MAGEQV) == MD_MAGEQV))) {
+        return FALSE;       /* Not asking for Magic+Equiv */
     }
+    if (gp1->uc <= 0x7f && !gp1->cdm) return FALSE;
+    if (gp2->uc <= 0x7f && !gp2->cdm) return FALSE;
 
 /* We have to turn the graphemes into byte arrays, normalize them and
  * check the result.
@@ -692,10 +697,12 @@ check_equiv:
     gr1.alloc = grapheme_to_bytes(gp1, &gr1.bytes, gr1.alloc, nocase);
     gr2.alloc = grapheme_to_bytes(gp2, &gr2.bytes, gr2.alloc, nocase);
 
-/* Now convert these to NFKC, compare and free the temp strings */
+/* Now convert these with the defined equiv_handler, compare then free
+ * the temp strings.
+ */
 
-    utf8proc_uint8_t *nfkc1 = utf8proc_NFKC((utf8proc_uint8_t *)gr1.bytes);
-    utf8proc_uint8_t *nfkc2 = utf8proc_NFKC((utf8proc_uint8_t *)gr2.bytes);
+    utf8proc_uint8_t *nfkc1 = equiv_handler((utf8proc_uint8_t *)gr1.bytes);
+    utf8proc_uint8_t *nfkc2 = equiv_handler((utf8proc_uint8_t *)gr2.bytes);
     int res = !strcmp((char *)nfkc1, (char *)nfkc2);
     Xfree(nfkc1);
     Xfree(nfkc2);
