@@ -545,6 +545,10 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
  * U+02ED. Possibly others..
  */
 int utf8char_width(unicode_t c) {
+/* We expect to get mostly ASCII, with a known width of 1, so
+ * handle that quickly.
+ */
+    if ((c >= 0x20) && (c < 0x7f)) return 1;
     switch(c) {
     case 0x00a8:
     case 0x00b4:

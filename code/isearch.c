@@ -506,5 +506,6 @@ static int echo_char(int c, int col) {
     } else
         TTputc(c);                  /* Otherwise, output raw char */
     TTflush();                      /* Flush the output           */
-    return ++col;                   /* return the new column no   */
+    int cw = utf8char_width(c);
+    return col + cw;                /* return the new column no   */
 }
