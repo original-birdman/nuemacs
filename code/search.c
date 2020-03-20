@@ -861,7 +861,10 @@ static void rmcclear(void) {
     }
     rmcpat[0].mc = null_mg;
 }
-
+#define DEBUG 0
+#if DEBUG
+#include "../test-files/dump_mc.debug"
+#endif
 /* mcstr -- Set up the 'magic' array.  The closure symbol is taken as
  *      a literal character when (1) it is the first character in the
  *      pattern, and (2) when preceded by a symbol that does not allow
@@ -941,7 +944,7 @@ static int mcstr(void) {
             mcptr->mc.type = UCGRAPH;
 /* We copy all of the data into our saved one. This means that any
  * malloc'ed ex parts get their pointers copied, and there is no more to
- * do here. Any freeing will be done in mcclear()/
+ * do here. Any freeing will be done in mcclear().
  */
             mcptr->val.gc = gc;
         }
@@ -1276,6 +1279,9 @@ pchr_done_noincr:
 /* The only way the status would be bad is from the cclmake() routine,
  * and the bitmap for that member is guaranteed to be freed.
  */
+#if DEBUG
+DUMP_MATCH("From mcstr");
+#endif
     return status;
 }
 
@@ -2237,7 +2243,6 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 /* If we are going in reverse, then the 'end' is actually the beginning
  * of the pattern.  Toggle it.
  */
-
     beg_or_end ^= direct;
 
 /* Set up local pointers to global ".". */
@@ -2291,10 +2296,16 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
             curwp->w.dotp = matchline;
             curwp->w.doto = matchoff;
         }
-        curwp->w_flag |= WFMOVE;        /* Flag that we have moved.*/
 /* Put the match info into group 0 */
-        grp_info[0].mline = matchline;
-        grp_info[0].start = matchoff;
+        if (direct == FORWARD) {
+            grp_info[0].mline = matchline;
+            grp_info[0].start = matchoff;
+        }
+        else {
+            grp_info[0].mline = scanline;
+            grp_info[0].start = scanoff;
+        }
+        curwp->w_flag |= WFMOVE;        /* Flag that we have moved.*/
         grp_info[0].len = srch_patlen;
         return TRUE;
 fail:;                                  /* continue to search */
