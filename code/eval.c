@@ -715,6 +715,10 @@ static int svar(struct variable_description *var, char *value) {
             curgoal = atoi(value);
             thisflag = saveflag;
             break;
+        case EVREPLACE:
+            strcpy(rpat, value);
+            new_prompt(value);  /* Let gestring() know, via the search code */
+            break;
         case EVMATCH:
             break;
         case EVKILL:
