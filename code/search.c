@@ -1480,10 +1480,10 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  *    Å can be U+212B, U+00C5 or U+0041+U+030A
  *    ñ can be U+006E+U+0303 or U+00F1
  * So, if EQUIV mode is on (Magic must be on for us to be here)
- * we run same_grapheme() on the teh pair to match, otherwise
+ * we run same_grapheme() on the the pair to match, otherwise
  * we run through a simpler test.
  */
-                case UCLITL:    /* Cannot have any combining bit */
+                case UCLITL:    /* Can it have any combining bit? */
                     if (curwp->w_bufp->b_mode & MDEQUIV) {
                         struct grapheme testgc;
                         testgc.uc = xp->xval.uchar;
@@ -1525,10 +1525,10 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  *    Å can be U+212B, U+00C5 or U+0041+U+030A
  *    ñ can be U+006E+U+0303 or U+00F1
  * So, if EQUIV mode is on (Magic must be on for us to be here)
- * we run same_grapheme() on the teh pair to match, otherwise
+ * we run same_grapheme() on the the pair to match, otherwise
  * we run through a simpler test.
  */
-    case UCLITL:    /* Cannot have any combining bit */
+    case UCLITL:    /* Can it have any combining bit? */
         if (curwp->w_bufp->b_mode & MDEQUIV) {
             struct grapheme testgc;
             testgc.uc = mt->val.uchar;
@@ -2770,8 +2770,6 @@ static int replaces(int query, int f, int n) {
     char tpat[NPAT];        /* temporary to hold search pattern */
     struct line *origline;  /* original "." position */
     int origoff;            /* and offset (for . query option) */
-    struct line *lastline;  /* position of last replace and */
-    int lastoff;            /* offset (for 'u' query option) */
     int undone = 0;         /* Set if we undo a replace */
 
     if (curbp->b_mode & MDVIEW) /* don't allow this command if  */
@@ -2797,11 +2795,6 @@ static int replaces(int query, int f, int n) {
  */
     nlflag = (pat[srch_patlen - 1] == '\n');
     nlrepl = FALSE;
-
-/* Initialize last replaced pointers. */
-
-    lastline = NULL;
-    lastoff = 0;
 
 /* Save original . position, init the number of matches and substitutions,
  * and scan through the file.
@@ -2910,7 +2903,6 @@ qprompt:
                 struct line *pline = lback(last_match.mline);
                 curwp->w.doto = last_match.moff;
                 last_match.mline = NULL;        /* Invalidate it */
-                lastoff = 0;
 
 /* Delete the replacement we put in, then insert the last match.
  * This will leave us at the end of it. We actually want to be at the
@@ -2948,10 +2940,12 @@ qprompt:
             }       /* end of switch */
         }           /* end of "if query" */
 
-/* Stop a potential loop.... */
-        if ((lastline == curwp->w.dotp) &&
-            (lastoff == curwp->w.doto)) {
-            mlwrite_one("Replacing at same point (loop). Aborting...");
+/* Stop a potential loop...
+ * If we've matched a zero-length match (which could happen in Magic mode)
+ * then we'd loop forever.
+ */
+        if (grp_info[0].len == 0) {
+            mlwrite_one("Replacing a zero-length match (loop). Aborting...");
             return FALSE;
         }
 
@@ -2959,11 +2953,6 @@ qprompt:
 
         status = delins(repl_p);
         if (status != TRUE) return status;
-
-/* Save our position. We may undo this, and want to detect loops anyway. */
-
-        lastline = curwp->w.dotp;
-        lastoff = curwp->w.doto;
 
         numsub++;       /* increment # of substitutions */
     }
