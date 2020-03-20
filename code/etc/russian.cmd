@@ -6,7 +6,7 @@
 ;
 store-pttable russian
 ;
-; Need caseset-off here to stop recursive match eating sucessive
+; Need caseset-off here to stop recursive match eating successive
 ; ` or ' (so ```` only produces 1 Ъ as it keeps matching ъ`
 ; when ignoring case)
 ;
@@ -34,7 +34,7 @@ store-pttable russian
    zh    ж
    кh    х
    kh    х
-; Next is Cryliic small IE
+; Next is Cyrillic small IE
    е'    э
    e'    э
    a     а
@@ -42,7 +42,7 @@ store-pttable russian
    v     в
    g     г
    d     д
-; Next is Latin e => Cryliic small IE
+; Next is Latin e => Cyrillic small IE
    e     е
    z     з
    i     и
