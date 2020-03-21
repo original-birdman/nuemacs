@@ -1213,6 +1213,9 @@ static void modeline(struct window *wp) {
     if (inmb) bp = mb_info.main_bp;
     else      bp = wp->w_bufp;
 
+/* Display mini-buffer bits at the start.
+ * These *do* need to use wp->w_bufp.
+ */
     if (inmb) {
         char mbprompt[20];
         vtputc(lchar);
@@ -1229,14 +1232,31 @@ static void modeline(struct window *wp) {
             while ((c = *cp++) != 0) vtputc(c);
         }
 
-        vtputc('{');        /* Use this for the mini-buffer modes */
-/* Display modes...as single chars */
+/* Display modes for the mini-buffer as single chars within {}
+ * The modes-as-words later within [] are left as those in the main buffer.
+ */
+        vtputc('{');
         int using_phon = 0;
-        for (int i = 0; i < NUMMODES; i++)  /* add in the mode flags */
-            if (mbp->b_mode & (1 << i)) {
-                if (modecode[i] == 'P') using_phon = 1;
-                else vtputc(modecode[i]);
+        int mode_mask = 1;
+        for (int i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
+            if (mbp->b_mode & mode_mask) {
+                switch(mode_mask) {
+                case MDEQUIV:           /* Never displayed alone */
+                    break;
+                case MDPHON:
+                    using_phon = 1;
+                    break;
+                case MDMAGIC:
+                    vtputc('M');
+/* Append "q" if Equiv mode is on. */
+                    if (mbp->b_mode & MDEQUIV) vtputc('q');
+                    break;
+                default:
+                    vtputc(modecode[i]);
+                }
             }
+            mode_mask <<= 1;
+        }
         if (using_phon) show_utf8(ptt->ptt_headp->display_code);
         vtputc('}');
         vtputc('>');

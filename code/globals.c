@@ -18,7 +18,7 @@ char *mode2name[] = {           /* Display name of modes        */
         "Wrap",  "Cmode", "Phon",  "Exact", "View",
         "Over",  "Magic", "Crypt", "Asave", "eQuiv", "Dos",
 };
-char modecode[] = "WCPEVOMYAQD";/* letters to represent modes   */
+char modecode[] = "WCPEVOMYAqD";/* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
 #if IBMPC
