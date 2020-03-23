@@ -2836,7 +2836,13 @@ static int replaces(int query, int f, int n) {
 
         nlrepl = (lforw(curwp->w.dotp) == curwp->w_bufp->b_linep);
 
-/* Check for query. */
+/* Set match_p and repl_p */
+
+        match_p = group_match(0);
+        if (rmagical) repl_p = getrepl();
+        else          repl_p = rpat;
+
+/* Check for query mode. */
 
         if (query) {     /* Get the query. */
 pprompt:
@@ -2850,11 +2856,6 @@ pprompt:
                 undone = 0;
                 match_p = last_match.match;
                 if (rmagical) repl_p = last_match.replace;
-                else          repl_p = rpat;
-            }
-            else {
-                match_p = group_match(0);
-                if (rmagical) repl_p = getrepl();
                 else          repl_p = rpat;
             }
             strcpy(tpat, "Replace '");
