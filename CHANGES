@@ -12,7 +12,7 @@ Makefile:
 
 epath.h:
    Fix a left-over from build testing - change the startup file name
-   from  nuemacs.rc to uemacs.rc
+   from nuemacs.rc to uemacs.rc
 
 word.c
    Change justpara() so that it can handle unicode characters, based on
@@ -265,11 +265,11 @@ epath.h
    Add INTABLE and INPATH modes to flook(). Fix calls in bind.c,
    eval.c, exec.c, spawn.c
    to use the appropriate setting.
-   Only look in current directory in flook() is the insecure (-i)
+   Add -i (insecure) command line option and associated global flag.
+   Only look in current directory in flook() if the insecure (-i)
    command line option has been given.
    Add set_pathname() to bind.c to allow the command-line processing to
    alter the directory path to one given location.
-   Add -i (insecure) command line option and associated global flag.
    Alter the structure set-ups in epath.h.  You can now set the default
    table values by defining DFLT_PATH in the compilation options.  The
    help and start-up file names are now uemacs.hlp and uemacs.rc in all
@@ -803,7 +803,7 @@ random.c
 ptt/russian.cmd
 ptt/czech.cmd
 etc/uemacs.rc
-   Added a Russian pttable and moved the toggle-ptmode key binding to
+   Added a Russian pttable and moved the toggle-pttmode key binding to
    the main start-up file.
 
 etc/uemacs.hlp
@@ -1126,7 +1126,7 @@ etc/uemacs.rc
    edef.h, evar.h]
    Made update() re-entrant (by restoring incoming displaying value,
    not FALSE, at end) so that updpos() can call it (since it calls
-   updpos()) to ensure we get an update as the cursor gets to the
+   update()) to ensure we get an update as the cursor gets to the
    screen edge.
    Switch off horizontal scrolling around update() in the minibuffer
    [getstring() in input.c]
@@ -1212,12 +1212,6 @@ etc/uemacs.rc
    the key strokes is currently unaltered, but these key-bidings may
    swap once this has moved beyond the experimental stage.
    Added insert-raw-string and macro-helper functions to enable this.
-
-      modified:   edef.h
-      modified:   file.c
-      modified:   fileio.c
-      modified:   globals.c
-
 
 file.c
 fileio.c
@@ -2246,8 +2240,8 @@ main.c
     Added libbacktrace information to the PREREQUISITE file.
 
 line.c
-    Change the reposition() in when yanking into an empty buffer to
-    put as much yanked text as possible on screen.
+    Change the reposition() in yank() when yanking into an empty buffer
+    to put as much yanked text as possible on screen.
 
 main.c
     Extended the stack dump handling to:
@@ -2430,7 +2424,6 @@ globals.c
 random.c
     Remove modename[] and just use mode2name[] case-insensitively in tests.
 
-
 buffer.c
 file.c
     Run resetkey() after file-hooks run [file.c]
@@ -2531,8 +2524,7 @@ tcap.c
     If __CYGWIN__ is set, define __linux__  [estruct.h]
     Set compilation options if under CygWin [Makefile]
     Set undefined (non-POSIX) XCASE, ECHOPRT and PENDIN to 0 [posix.c]
-    Do include curses.h and term,.h for CygWin [tcap.c]
-
+    Do include curses.h and term.h for CygWin [tcap.c]
 
 display.c
 eval.c
@@ -2553,7 +2545,6 @@ display.c
 
 estruct.h fileio.c
     Assume CTRLZ is NOT SET!
-
 
 bind.c complet.c ebind.h epath.h estruct.h file.c fileio.c input.c
 main.c spawn.c termio.c
@@ -2674,7 +2665,7 @@ line.c
 
 Makefile
 epath.h
-    Enable a static arm7l build for Android (for use with SS Helper).
+    Enable a static armv7l build for Android (for use with SS Helper).
 
 random.c
     Count { and } more intelligently in C-mode, so it works better for
@@ -3673,7 +3664,7 @@ etc/uemacs.rc
     <return> as culspell ends.
     Otherwise a file with no error looks really odd (it appears to do
     nothing) and it does let you know that the spell check has actually
-    ended! 
+    ended!
 
 search.c
 estruct.h
@@ -3707,4 +3698,344 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.150
 
-==========
+========== GGR4.151
+
+Makefile
+    Fix typo in (my) ANDROID build test.
+
+search.c
+word.c
+    Tidy-up in passing...
+    Conditional free() then Xmalloc() -> Xrealloc() [search.c]
+    Better arg handling [word.c]
+
+basic.c
+globals.c
+    Rename getgoal() to be offset_for_curgoal(), update related comment
+    and variable name to make it more clear what it is.
+
+input.c
+    Remove ljust(). Filenames starting with spaces are valid (if,
+    perhaps, a little odd).
+
+search.c
+estruct.h
+idxsorter.h
+    Change all shorts to ints. We don't have space issues, so using
+    "native" lengths makes more sense.
+    o struct terminal and struct magic/magic_replacement [estruct.h]
+    o struct fields [idxsorter.h]
+    o magical and rmagical [search.c]
+
+tools/utf8file_to_unicode.pl
+    Added a simple script to decode (small) utf8 files to unicode.
+    Useful for debugging...
+
+line.c
+word.c
+line.h
+    Activated the lputgrapheme() code [line.c, line.h]
+    Fixed ensure_case to carry-over any combining marks on a grapheme
+    when changing case [word.c]
+
+tools/utf8file_to_unicode.pl
+    Handle the invalid unicode (iso8859-1?) chars that uemacs actually
+    allows.
+    Added some comments.
+
+eval.c
+    Change $curchar to be the Unicode char (not ASCII byte) at point.
+    Change &asc function to return the base unicode char.
+    These do *not* add in any combining characters!
+
+test-files/search-magic1.sh
+test-files/search-magic2.sh
+test-files/search-magic3.sh
+test-files/search-magic4.sh
+test-files/search-test1.sh
+    Add some test scripts for magic search testing.
+
+eval.c
+    Change the &asc function to return the unicode point of the base of
+    the next grapheme, not just an ASCII byte (but keep the same name).
+    Needed for test scripts to check where they are.
+
+exec.c
+eval.c
+globals.c
+estruct.h
+evar.h
+edef.h
+    Add a $force_status environment variable to keep the actual status
+    of any !force's command. Useful in test scripts.
+
+file.c
+    Remove the line count check. There was a maximum of 10000000 set
+    but we may as well keep going as long as malloc() can handle it.
+
+random.c
+    Only insert spaces (never tabs) in insbrace().
+
+line.c
+    Correct (reverse) the logic on extended character insertion in
+    lputgrapheme().
+
+fileio.c
+line.c
+line.h
+    Reallocate rather than malloc/copy/free in add_to_fline.
+
+Makefile
+    Remove *.tfile and uetest.rc in clean option.
+
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+    Enabled unicode searching
+    This is some of the changes made along the way. Rather than commit
+    a multitude of changes and minor fixes I decided to get the basic
+    code changed and do one large commit of it.
+
+Plan A:
+    Duplicate all of the search code, update the copy to use Unicode and
+    add calls between them according to whether we needed Unicode.
+Result:
+    Too complicated. many of the sub-calls would become very messy where
+    they shared data and hence couldn't really be duplicated.
+
+Plan B:
+    Start by adding Unicode handling just for basic searching (not Magic
+    mode).
+Result:
+    This also became very messy with having to decide whether to check a
+    byte or create a grapheme to check. Also the interaction with the
+    jump patterns was not clear.
+
+Plan C:
+    Make Unicode searching use the Magic mode!
+    Spilt a Unicode search string into (new) Magic Types and just adapt
+    the Magic code to use them.
+Perceived advantages:
+    Magic code already works. Just need to worry about each individual
+    new type and the progressing forwards/backwards through the file
+    should follow.
+    Should be able to handle Magic mode at the same time - just
+    dependent on the new Types.
+
+    So the following changes are all about piggy-backing onto the Magic
+    mode search code (which became step_scanner), then adding more (and
+    Unicode) regex matching to Magic mode.
+
+display.c
+utf8.c
+utf8.h
+    set_grapheme() and grapheme_same() moved from display.c to utf8.c
+    and made external functions.
+    Renamed grapheme_same[_array]() to same_grapheme[_array]().
+    Simplify clone_grapheme() [display.c]
+
+search.c
+estruct.h
+    In readpattern(), check for a unicode char in the search string
+    (byte > 0x7f) unless we are in Exact and non-Magic mode.
+
+    In mcstr() added UCLITL and UCGRAPH types for "magic" searching. If
+    we hit a byte in the search pattern which is > 0x7f add it as one
+    of these new types.
+
+    In mcclear() free any gc->ex allocs in UCGRAPH types.
+
+    In amatch(), handle UCLITL and UCGRAPH mc_type entries.
+
+    Change boundry() to check for "on last line" (b_linep) rather than
+    at the end of the "line pointing at b_linep" so that we can include
+    the terminating newline in a search.
+
+search.c
+    Rename scanner() to fast_scanner() and mcscanner to step_scanner().
+
+search.c
+estruct.h
+    Changed "struct magic" layout. turned mc_type into bit field structure.
+    Renamed "magical" to "slow_scan" [search.c]
+    Call mcstr() for all search patterns and use that to work out
+    whether to use fast_scanner or step_scanner.
+
+search.c
+estruct.h
+    Removed NCCL as an mc.type and added a negate_test flag instead.
+    Added get_grapheme flag to struct magic.
+
+../test-files/dump_mc.debug
+    Code that can be included to dump the struct magic(_replacement)
+    info for debugging.
+
+search.c
+    Added brace_text() function.
+    Added handlers for \X, \u, \P and \p to mcstr().
+    Added nextgph() function and use it to step in step_scanner()
+
+search.c
+estruct.h
+    Added extended CCL code. Can now put
+     o property tests
+     o Unicode chars and Unicode ranges
+     o Graphemes
+    into character class lists ([..]).
+
+isearch.c
+search.c
+estruct.h
+    The Incremental search defines (IS_) moved to isearch.c
+    The metacharacter defines and structure moved to search.c
+    (MCNIL... MC_ANY...
+     struct range/mg_info/xccl/magic/magic_replacement)
+
+search.c
+    Remove mceq() usage and use mgpheq() for all magic tests.
+    Change cclmake() to read/use graphemes.
+    Added \d, \D, \w, \W and \S to cclmake CCL handling, and
+    extended \s character set.
+
+search.c
+    replaces() need to remember the location of the last replace
+    location to prevent a loop changing nothing with nothing.
+
+search.c
+    Renamed "closure" to "repeat", to reflect what it does, rather than
+    what it is in abstract terms.
+
+search.c
+    Implement grouping by allowing struct magic to contain a pointer to
+    another struct magic item.
+    mcstr() and mclear() now take args to cater for recursion.
+
+search.c
+    Remove the reverse magic patterns and instead do reverse magic
+    searches by stepping backwards through the file but performing the
+    match using the forward code. Add a new boundry() condition for
+    reverse searching so that it cannot advance past the original point.
+    Non-magic searching still uses a reverse pattern.
+
+search.c
+    Remove MCNIL. An EGRP for group 0 is now the equivalent.
+
+display.c
+    Stop mini-buffer messages at ncol-1, to prevent wrapping messing up
+    the display.
+
+search.c
+    Added group (()) and choice (|) handling code.
+    Removed the struct magic * entry from struct magic and hence removed
+    recursion for mcstr() and mclear(). The magic structure is now just
+    a linear list again. Much simpler...
+
+eval.c
+search.c
+efunc.h
+evar.h
+    Added a &grp function, to allow access to the text found in each
+    group of a magic match. Mainly for testing purposes.
+
+display.c
+globals.c
+input.c
+estruct.h
+etc/uemacs.rc
+    Rename the (unused) UNICO mode back to EQUIV, as that is how it is
+    now going to be used. It only applies in MAGIC mode.
+
+search.c
+utf8.c
+    Implemented \k{x} (a "kind of" x) and EQUIV character matching.
+    Added grapheme_to_bytes() [utf8.c]
+    Extended same_grapheme() to check for grapheme EQUIValence.
+
+globals.c
+main.c
+search.c
+edef.h
+    Removed srch_patlen_old. No longer used.
+
+bind.c      buffer.c    display.c   eval.c      exec.c      line.c
+lock.c      main.c      random.c    region.c    search.c    window.c
+word.c      utf8.c
+    Change all free() to be Xfree().
+
+bind.c      buffer.c    crypt.c     display.c   edef.h      efunc.h
+estruct.h   eval.c      evar.h      exec.c      globals.c   input.c
+isearch.c   line.c      lock.c      main.c      random.c    region.c
+search.c    tcap.c      utf8.c      utf8.h      window.c    word.c
+wrapper.c
+etc/uemacs.rc
+../test-files/search-magic2.sh
+../test-files/search-magic3.sh
+../test-files/search-test1.sh
+../test-files/dump_mc.debug
+    Finally committed the "basic" Magic Unicode changes in one go.
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+
+eval.c
+globals.c
+utf8.c
+edef.h
+estruct.h
+evar.h
+    Check for bare ASCII before running check_equiv code in
+    same_grapheme(). [utf8.c]
+    Add option to set which equivalence method to use (NFC, NFD, NFKC,
+    NFKD) with a default of NFKC. Handled by the system variables
+    $equiv_type.
+
+isearch.c
+utf8.c
+    Fixes for the prompt display in incremental search mode.
+    In echo_char(), add the charwidth to col when leaving, not always
+    increment by one. [isearch.c]
+    Check for (most likely) ASCII char first in utf8char_width() [utf8.c]
+
+eval.c
+    Reinstated setting EVREPLACE. Needed for NUL-ifying it.
+
+search.c
+    Change incremental replace loop detection to just look for a zero
+    length match.
+
+etc/accents.cmd
+etc/russian.cmd
+    Added a Phonetic Translation table for ease of adding Western
+    European accented characters. [accents.cmd]
+    Corrected some spelling errors in comments. [russian.cmd]
+
+search.c
+    Correct the saving of the match string (group0) in Exact, reverse
+    searching.
+
+display.c
+globals.c
+    Fix mini-buffer modeline display to allow for Equiv mode.
+
+search.c
+    Set match_p and repl_p outside of query block, so replace-string
+    works (not just query-replace-string).
+
+autotest/dump_mc.debug
+autotest/search-char_classes.sh
+autotest/search-classes_in_closures.sh
+autotest/search-groups.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-repeats.sh
+autotest/search-u_hex.sh
+    Moved the dump code and test files into a (new) subdirectory
+    of code/ and renamed the test files by what they test.
+    Added search-u_hex.sh and search-groups.sh.
+
+search.c
+    Initialize prev_gc to avoid a compiler warning in gcc 4.4.7.
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.151
+
+========== GGR4.152

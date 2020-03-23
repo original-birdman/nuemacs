@@ -325,7 +325,7 @@ struct locs {
     int doto;               /* Byte offset for "."          */
     int marko;              /* Byte offset for "mark"       */
     int fcol;               /* first column displayed       */
-}; 
+};
 
 /* There is a window structure allocated for every active display window. The
  * windows are kept in a big list, in top to bottom screen order, with the

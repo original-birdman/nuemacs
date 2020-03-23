@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       GGR version
-;                       Last Update: 31 January 2020
+;                       Last Update: 16 March 2020
 ;
 set $discmd FALSE
 write-message "[Setting up....]"

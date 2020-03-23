@@ -4,7 +4,7 @@ says it should be).  Or make it use lgetgrapheme, and treat as a
 word-char anything whose base is a word-char.  Or both...
 
 Also look at getting zero-width joiners handled in word wrapping (where
-you can set a ZW optional break).
+you can set a ZW optional break)?
 Non-break spaces are already OK as they aren't spaces...
 
 ========== Search Issues!!! ==========
@@ -15,60 +15,8 @@ Normal search
      diacritical mark (but a zero-width joiner is OK!).
      NOTE: that for reverse searching this means looking at what
      precedes the test (in a way...).
+     Only applies for fast_scanner (since step_scanner matches graphemes
+     anyway).
+     Is this worth doing? Is it happening anyway?
 
-  2. Has to be able to handle case-insensitive Unicode matches.
-
-
-Magic search
-
-  1. Has to be able to handle Unicode char range (bitmaps).
-
-  2. Has to be able to handle case-insensitive Unicode matches.
-
-  3. Possibly allow a range for a base char with a constant set of
-     extended parts?
-
-  4. Add \.. syntax for
-        X       a Unicode grapheme
-        u       Unicode char in hex (as in \u0062)
-        p       match Unicode property (e.g. \pL or \pLU \pLL...)
-        P       Not match Unicode property
-
-General Notes when changing the above:
-
-(NOTE: the following bits may no longer be true,. It might be simpler to
-keep the current MAGIC code and add a new one for Unicode mode)
-
-DIFCASE and CHCASE need to go (estruct.h, input.c and search.c).
-Also all of:
-
- LASTUL LASTLL isupper  isxletter isxlower isxupper  [estruct.h only]
- isletter                       [estruct.h, search.c, word.c]
- islower                        [estruct.h, search.c, input.c]
-
-
-  Currently uemacs searching is:
-
-    Mode     Method
-     Exact - byte-by-byte, with jump table.
-    ^Exact - byte-by-byte, with jump table (set-up by adding lower and
-             upper cases to the jump table, assuming only ASCII chars)
-
-  The intention is to use this (hence the eQuiv -> Unico name-change):
-
-    +E-u-m - Current FAST byte search
-    -e-u-m - Current FAST byte search - ASCII case-insensitive
-    +E+U-m - Search using graphemes
-    -e+U-m - Search using COMPAT graphemes (if possible...)
-    +E-u+M - Current MAGIC and eq() code (ASCII bytes)
-    -e-u+M - Current MAGIC and eq() code (ASCII bytes) - scase-insensitive
-    +E+U+M - Search using graphemes
-    -e+U+M - Search using COMPAT graphemes (if possible...)
-
-     E/e == exact, U/u == Unico, M/m == Magic mode
 ====================
-
-NOTE: that the usage in input.c handles mapping of, e.g., Esc-a to
-Esc-A. Currently non-ascii characters (from AltGr usage on a keyboard)
-can be bound (bind-to-key) separately by case.
-
