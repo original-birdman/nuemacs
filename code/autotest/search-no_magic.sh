@@ -3,6 +3,7 @@
 
 # Test for Unicode searching.
 
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
 prog='$1 != "--" {print substr($0, 4);}'
@@ -15,7 +16,12 @@ if awk -b '{}' /dev/null >/dev/null 2>&1; then
 else
     AWKARG=
 fi
-awk $AWKARG "$prog" > test1.tfile <<EOD
+
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+# Write out the test input file
+# It's written here with row and column markers.
+#
+awk $AWKARG "$prog" > autotest.tfile <<EOD
 -- 0123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
@@ -37,26 +43,31 @@ awk $AWKARG "$prog" > test1.tfile <<EOD
 17
 18   Here's one at the end of a line - touché
 19
-20 Can this be found case-sensitive and insensitive?
+20 Can these be found case-sensitive and insensitive?
 -- 0123456789012345678901234567890123456789012345678901234567890123456789
 21
 22 οὐδένmañanaСЕЙЧАС
 23 οὐδένmañanaсейчас
 24 ΟὐΔΈΝMAÑANAСЕЙЧАС
 25
-26 And don't forget that I need to check that a match (ANY MATCH!) isn't
-27 followed by a combining character (which would raise odd issues for
-28 replace).
+26 And here's a list of active Magic characters, which should all be
+27 taken literally.
+28 
+29 (a|b)*\s\p{L}[]??END
 EOD
 
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+# Write out the uemacs start-up file, that will run the tests
+#
 cat >uetest.rc <<'EOD'
 ; Some uemacs code to run tests on testfile
 ; Put test results into a specific buffer (test-reports)...
 ; ...and switch to that buffer at the end.
 
 ; After a search I need to check that $curcol, $curline $curchar and
-; $match  are what I expect them to be.
+; $match are what I expect them to be.
 ;
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure report-status
   select-buffer test-reports
   insert-raw-string %test-report
@@ -67,8 +78,9 @@ store-procedure report-status
 set %fail 0
 set %ok 0
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure check-position
-;   Expects these to have been set, since it tests them all.
+;   These expected values must be set, since this tests them all.
 ; %expline      the line for the match
 ; %expcol       the column for the match
 ; %expchar      the expected "char" at point (R/h side) at the match
@@ -82,6 +94,7 @@ store-procedure check-position
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
+
   !if &equ $curcol %expcol
     set %test-report &cat %curtest &cat " - column OK: " $curcol
     set %ok &add %ok 1
@@ -101,6 +114,7 @@ store-procedure check-position
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
+    set %test-report &cat %test-report &cat " expected: " %expchar
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
@@ -116,87 +130,110 @@ store-procedure check-position
   execute-procedure report-status
 !endm
 
-find-file test1.tfile
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+store-procedure check-matchcount
+;   This expected value must be set, since this tests it.
+; %expcount         number of successful matches
+  !if &equ %mcount %expcount
+    set %test-report &cat %curtest &cat " match count OK: " %mcount
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " match count WRONG, got: " &cat %mcount &cat " expected: " %expcount
+    set %fail &add %fail 1
+  !endif
+  execute-procedure report-status
+!endm
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; START running the code!
+;
+find-file autotest.tfile
 
 set %test-report "START: Various search tests"
 execute-procedure report-status
 
-set %test-report "   δένmañanaСЕ searches"
+; ==== Run in EXACT mode
+;
+set %test-report "   δένmañanaСЕ searches - EXACT"
 execute-procedure report-status
 beginning-of-file
 add-mode Exact
 delete-mode Magic
 
-; ====
-search-forward δένmañanaСЕ
+set %mcount 0
+*again1
+  !force search-forward δένmañanaСЕ
+  !if &seq $force_status PASSED
+     set %mcount &add %mcount 1
+     !goto again1
+  !endif
+; Where did we end up, and how many searches succeeded?
   set %curtest Search1
   set %expline 22
   set %expcol 13
   set %expchar &asc Й
+  set %expmatch ""      ; We'll have failed, so no match
+execute-procedure check-position
+  set %expcount 1
+execute-procedure check-matchcount
+; Reverse search and check match
+  search-reverse δένmañanaСЕ
+  set %curtest Search1-reversed
+  set %expline 22
+  set %expcol 2
+  set %expchar &asc δ
   set %expmatch δένmañanaСЕ
 execute-procedure check-position
-; ====
-; Force this. It should fail, so not move anything...and match nothing
-!force search-forward δένmañanaСЕ
-  set %curtest Search2
-  set %expline 22
-  set %expcol 13
-  set %expchar &asc Й
-  set %expmatch ""
-execute-procedure check-position
 
-; Now turn off Exact mode - should get two more search successes
+; ==== Re-run in non-EXACT mode
+;
+set %test-report "   δένmañanaСЕ searches - no EXACT"
+execute-procedure report-status
+beginning-of-file
 delete-mode Exact
+delete-mode Magic
 
-set %test-report "   δένmañanaСЕ searches - no Exact"
-execute-procedure report-status
-; ====
-search-forward δένmañanaСЕ
-  set %curtest Search2-e
-  set %expline 23
-  set %expcol 13
-  set %expchar &asc й
-  set %expmatch δένmañanaсе
-execute-procedure check-position
-; ====
-search-forward δένmañanaСЕ
-  set %curtest Search3-e
+set %mcount 0
+*again2
+  !force search-forward δένmañanaСЕ
+  !if &seq $force_status PASSED
+     set %mcount &add %mcount 1
+     !goto again2
+  !endif
+; Where did we end up, and how many searches succeeded?
+  set %curtest Search2
   set %expline 24
   set %expcol 13
   set %expchar &asc Й
-  set %expmatch ΔΈΝMAÑANAСЕ
+  set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
-; ====
-; Force this. It should fail, so not move anything...and match nothing
-!force search-forward δένmañanaСЕ
-  set %curtest Search4-e
-  set %expline 24
-  set %expcol 13
-  set %expchar &asc Й
-  set %expmatch ""
-execute-procedure check-position
-
-set %test-report &cat "exec status: " $force_status
-execute-procedure report-status
-
-; ====
-search-reverse δένmañanaСЕ
-  set %curtest BackSearch4-e
+  set %expcount 3
+execute-procedure check-matchcount
+; Reverse search and check match
+  search-reverse δένmañanaСЕ
+  set %curtest Search2-reversed
   set %expline 24
   set %expcol 2
   set %expchar &asc Δ
   set %expmatch ΔΈΝMAÑANAСЕ
 execute-procedure check-position
-; ====
-search-reverse δένmañanaСЕ
-  set %curtest Search2-e
-  set %expline 23
-  set %expcol 2
-  set %expchar &asc δ
-  set %expmatch δένmañanaсе
+
+; ==== Check that Magic active characters are taken literally
+;
+set %test-report "   Magic active characters are taken literally"
+execute-procedure report-status
+beginning-of-file
+search-forward (a|b)*\s\p{L}[]??E
+; Where did we end up, and wat did we match?
+  set %curtest Search3
+  set %expline 29
+  set %expcol 18
+  set %expchar &asc N
+  set %expmatch (a|b)*\s\p{L}[]??E
 execute-procedure check-position
 
-
+; Show the report...
+;
 select-buffer test-reports
 newline
 insert-raw-string &cat &cat "END: ok: " %ok &cat " fail: " %fail

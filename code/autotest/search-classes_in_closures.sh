@@ -1,15 +1,20 @@
 #!/bin/sh
 #
 
-# Simple testing of Character Classes
+# Simple testing of Character Classes within Closures
 
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
 prog='$1 != "--" {print substr($0, 4);}'
 
-awk "$prog" > magic3.tfile <<EOD
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+# Write out the test input file
+# It's written here with row and column markers.
+#
+awk "$prog" > autotest.tfile <<EOD
 -- 0123456789012345678901234567890123456789012345678901234567890123456789
-01 Note sure whether the best test of CCLs is to have lots
+01 Not sure whether the best test of CCLs is to have lots
 02 of alternating classes or not?
 03 Here are some numbers 0123456789
 04 Here, numbers interspersed with differing punctuation (all Po):
@@ -26,6 +31,9 @@ awk "$prog" > magic3.tfile <<EOD
 15 EOF
 EOD
 
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+# Write out the uemacs start-up file, that will run the tests
+#
 cat >uetest.rc <<'EOD'
 ; Some uemacs code to run tests on testfile
 ; Put test results into a specific buffer (test-reports)...
@@ -34,6 +42,7 @@ cat >uetest.rc <<'EOD'
 ; After a search I need to check that $curcol, $curline $curchar and
 ; $match  are what I expect them to be.
 ;
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure report-status
   select-buffer test-reports
   insert-raw-string %test-report
@@ -44,6 +53,7 @@ store-procedure report-status
 set %fail 0
 set %ok 0
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure check-position
 ;   Expects these to have been set, since it tests them all.
 ; %expline      the line for the match
@@ -59,6 +69,7 @@ store-procedure check-position
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
+
   !if &equ $curcol %expcol
     set %test-report &cat %curtest &cat " - column OK: " $curcol
     set %ok &add %ok 1
@@ -78,9 +89,9 @@ store-procedure check-position
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
+    set %test-report &cat %test-report &cat " expected: " %expchar
     set %fail &add %fail 1
   !endif
-  set  %test-report &cat %test-report &cat " (match: " &cat $match ")"
   execute-procedure report-status
 
   !if &seq $match %expmatch
@@ -94,93 +105,45 @@ store-procedure check-position
   execute-procedure report-status
 !endm
 
-find-file magic3.tfile
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; START running the code! 
+;
+find-file autotest.tfile
+
+set %test-report "START: Various Character Class/Closure tests"
+execute-procedure report-status
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+set %test-report "   [\p{Nd}\p{Po}]* searches"
+execute-procedure report-status
+beginning-of-file
+add-mode Exact
 add-mode Magic
 
-set %test-report "START: Various Character Class tests"
-execute-procedure report-status
-
-set %test-report "   \p{Nd}\p{Po} searches"
-execute-procedure report-status
-beginning-of-file
 ; ====
-search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
-  set %curtest Search1
-  set %expline 5
-  set %expcol 11
-  set %expchar &asc 3
-  set %expmatch 0,1.2;
-execute-procedure check-position
-search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
-  set %curtest Search2
-  set %expline 5
-  set %expcol 19
-  set %expchar &asc 7
-  set %expmatch 3:4'5!6*
-execute-procedure check-position
-
-set %test-report "  \P searches"
-execute-procedure report-status
-beginning-of-file
-; ====
-search-forward 789\n
-  set %curtest "Placing search"
-  set %expline 4
+search-forward [\p{Nd}\p{Po}]*\X\n
+  set %curtest [\p{Nd}\p{Po}]*\X\n
+  set %expline 2
   set %expcol 0
-  set %expchar &asc H
-  set %expmatch 789~n
+  set %expchar &asc o
+  set %expmatch s~n
 execute-procedure check-position
 ; ====
-search-forward \P{L}
-  set %curtest Search not Letter 
-  set %expline 4
-  set %expcol 5
-  set %expchar &asc " "
-  set %expmatch ,
+search-forward [\p{Nd}\p{Po}]+\X\n      ; Don't test this one...
+search-forward [\p{Nd}\p{Po}]+\X\n
+  set %curtest [\p{Nd}\p{Po}]+\X\n
+  set %expline 6
+  set %expcol 0
+  set %expchar &asc N
+  set %expmatch 0,1.2;3:4'5!6*7@8?9~n
 execute-procedure check-position
-
-set %test-report "  \p{SM}{5} search"
-execute-procedure report-status
-beginning-of-file
 ; ====
-search-forward \p{SM}{5}
-  set %curtest Search1
-  set %expline 9
-  set %expcol 6
-  set %expchar &asc ~~
-  set %expmatch +<=>|
-execute-procedure check-position
-
-set %test-report "  6-class search"
-execute-procedure report-status
-beginning-of-file
-; ====
-search-forward \p{Lm}\p{Sm}\p{Ps}\p{Pe}\p{Nd}\p{Po}
-  set %curtest Search1
-  set %expline 13
-  set %expcol 11
-  set %expchar &asc z
-  set %expmatch ˊ±{]3@
-execute-procedure check-position
-end-of-file
-; ====
-search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
-  set %curtest "Reverse search"
-  set %expline 14
-  set %expcol 5
-  set %expchar &asc T
-  set %expmatch Td:8)[
-execute-procedure check-position
-
-set %test-report "  negative reverse search"
-execute-procedure report-status
-; ====
-!force search-reverse \p{M}
-  set %curtest "Reverse search for Mark (none there)"
-  set %expline 14
-  set %expcol 5
-  set %expchar &asc T
-  set %expmatch ""
+search-reverse \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
+  set %curtest "Search back for NPNPNPNP"
+  set %expline 5
+  set %expcol 15
+  set %expchar &asc 5
+  set %expmatch 5!6*7@8?
 execute-procedure check-position
 
 ;

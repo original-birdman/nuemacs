@@ -1,13 +1,26 @@
 #!/bin/sh
 #
 
-# Test for Unicode searching.
+# Simple testing of Magic-mode properties
 
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
 prog='$1 != "--" {print substr($0, 4);}'
 
-awk "$prog" > magic2.tfile <<EOD
+# Need the -b because of the non-Unicode (invalid) 0xf1 bytes.
+# But Entware systems don't understand it, and work without it.
+#
+if awk -b '{}' /dev/null >/dev/null 2>&1; then
+    AWKARG=-b
+else
+    AWKARG=
+fi
+
+# Write out the test input file
+# It's written here with row and column markers.
+#
+awk $AWKARG "$prog" > autotest.tfile <<EOD
 -- 0123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
@@ -28,6 +41,9 @@ awk "$prog" > magic2.tfile <<EOD
 16 replace). Some more numbers + text 912 TEST.
 EOD
 
+# -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+# Write out the uemacs start-up file, that will run the tests
+#
 cat >uetest.rc <<'EOD'
 ; Some uemacs code to run tests on testfile
 ; Put test results into a specific buffer (test-reports)...
@@ -36,6 +52,7 @@ cat >uetest.rc <<'EOD'
 ; After a search I need to check that $curcol, $curline $curchar and
 ; $match  are what I expect them to be.
 ;
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure report-status
   select-buffer test-reports
   insert-raw-string %test-report
@@ -46,8 +63,9 @@ store-procedure report-status
 set %fail 0
 set %ok 0
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure check-position
-;   Expects these to have been set, since it tests them all.
+;   Expects these to have been set, since this tests them all.
 ; %expline      the line for the match
 ; %expcol       the column for the match
 ; %expchar      the expected "char" at point (R/h side) at the match
@@ -61,6 +79,7 @@ store-procedure check-position
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
+
   !if &equ $curcol %expcol
     set %test-report &cat %curtest &cat " - column OK: " $curcol
     set %ok &add %ok 1
@@ -77,6 +96,7 @@ store-procedure check-position
   !endif
   !if &equ $curchar %expchar
     set %test-report &cat %curtest &cat " - at OK: " %pchar
+    set %test-report &cat %test-report &cat " expected: " %expchar
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
@@ -94,9 +114,24 @@ store-procedure check-position
   execute-procedure report-status
 !endm
 
-; Open the test file
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+store-procedure check-matchcount
+;   This expected value must be set, since this tests it.
+; %expcount         number of successful matches
+  !if &equ %mcount %expcount
+    set %test-report &cat %curtest &cat " match count OK: " %mcount
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " match count WRONG, got: " &cat %mcount &cat " expected: " %expcount
+    set %fail &add %fail 1
+  !endif
+  execute-procedure report-status
+!endm
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; START running the code!
 ;
-find-file magic2.tfile
+find-file autotest.tfile
 
 set %test-report "START: Various Magic property tests"
 execute-procedure report-status
@@ -105,6 +140,7 @@ beginning-of-file
 add-mode Exact
 add-mode Magic
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Upper, punctuation - \p{Lu}{3}\p{P}"
 execute-procedure report-status
 ; ====
@@ -115,6 +151,7 @@ search-forward \p{Lu}{3}\p{P}   ; should match ΔΈΝ. ...
   set %expchar 10
   set %expmatch ΔΈΝ.
 execute-procedure check-position
+
 ; ====
 search-forward \p{Lu}{3}\p{P}   ; ...now TCH!
   set %curtest Search2
@@ -122,108 +159,68 @@ search-forward \p{Lu}{3}\p{P}   ; ...now TCH!
   set %expcol 62
   set %expchar &asc )
   set %expmatch TCH!
-
 execute-procedure check-position
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  !upper, space, 3 numbers - \P{Lu} \p{N}{3}"
 execute-procedure report-status
 beginning-of-file
-; ====
-search-forward "\P{Lu} \p{N}{3}"   ; NOT upper letter, space, 3 numbers...
-  set %curtest Search1
-  set %expline 5
-  set %expcol 35
-  set %expchar &asc 1
-  set %expmatch "s 777"
-execute-procedure check-position
-; ====
-search-forward "\P{Lu} \p{N}{3}"
-  set %curtest Search2
-  set %expline 5
-  set %expcol 49
-  set %expchar &asc ١
-  set %expmatch "c ٧٧٧"
-execute-procedure check-position
-; ====
-search-forward "\P{Lu} \p{N}{3}"
+
+set %mcount 0
+*again1
+  !force search-forward "\P{Lu} \p{N}{3}"   ; NOT upper ltr, space, 3 nmbrs...
+  !if &seq $force_status PASSED
+     set %mcount &add %mcount 1
+     !goto again1
+  !endif
+; Where did we end up, and how many searches succeeded?
   set %curtest Search3
-  set %expline 5
-  set %expcol 68
-  set %expchar &asc १
-  set %expmatch "i ७७७"
+  set %expline 16
+  set %expcol 38
+  set %expchar &asc " "
+  set %expmatch ""      ; We'll have failed, so no match
+execute-procedure check-position
+  set %expcount 4
+execute-procedure check-matchcount
+
+; Reverse search and check match
+  search-reverse "\P{Lu} \p{N}{3}"
+  set %curtest Search3-reversed
+  set %expline 16
+  set %expcol 33
+  set %expchar &asc t
+  set %expmatch "t 912"
 execute-procedure check-position
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  lower, anything, Upper - \p{Ll}\X\p{LU}
 execute-procedure report-status
 beginning-of-file
-; ====
-search-forward "\p{Ll}\X\p{LU}" ;
-  set %curtest Search1
-  set %expline 2
+
+set %mcount 0
+*again2
+  !force search-forward "\p{Ll}\X\p{LU}"
+  !if &seq $force_status PASSED
+     set %mcount &add %mcount 1
+     !goto again2
+  !endif
+; Where did we end up, and how many searches succeeded?
+  set %curtest Search4
+  set %expline 14
+  set %expcol 23
+  set %expchar &asc " "
+  set %expmatch ""      ; We'll have failed, so no match
+execute-procedure check-position
+  set %expcount 9
+execute-procedure check-matchcount
+
+; Reverse search (x2) and check match
+2 search-reverse "\p{Ll}\X\p{LU}"
+  set %curtest Search4-reversed-twice
+  set %expline 12
   set %expcol 1
-  set %expchar &asc n
-  set %expmatch ν~nI
-execute-procedure check-position
-search-forward "\p{Ll}\X\p{LU}"
-  set %curtest Search2
-  set %expline 2
-  set %expcol 4
-  set %expchar &asc P
-  set %expmatch "n U"
-execute-procedure check-position
-search-forward "\p{Ll}\X\p{LU}"
-  set %curtest Search3          ; As ὐ doesn't Uppercase...
-  set %expline 2
-  set %expcol 13
-  set %expchar &asc Ν           ; Capital Greek Nu
+  set %expchar &asc ὐ
   set %expmatch ὐΔΈ
-execute-procedure check-position
-
-set %test-report "  \u{03b4}"
-execute-procedure report-status
-; Continue from current position
-search-forward "\u{03b4}"
-  set %curtest Search1
-  set %expline 10
-  set %expcol 3
-  set %expchar &asc έ
-  set %expmatch δ
-execute-procedure check-position
-search-forward "\u{03b4}"
-  set %curtest Search2
-  set %expline 11
-  set %expcol 3
-  set %expchar &asc έ
-  set %expmatch δ
-execute-procedure check-position
-!force search-forward "\u{03b4}"    ; Check it fails and matches nothing
-  set %curtest Search3
-  set %expline 11
-  set %expcol 3
-  set %expchar &asc έ
-  set %expmatch ""
-execute-procedure check-position
-
-set %test-report "  \u{03b4}, not Exact"
-execute-procedure report-status
-; Continue from current position
-delete-mode Exact                   ; For one more success
-search-forward "\u{03b4}"
-  set %curtest Search4-e
-  set %expline 12
-  set %expcol 3
-  set %expchar &asc Έ
-  set %expmatch Δ
-execute-procedure check-position
-set %test-report "  \u{03b4}, not Exact, reversed"
-execute-procedure report-status
-; Continue from current position
-search-reverse "\u{03b4}"           ; Check a back search...
-  set %curtest BackSearch4-e
-  set %expline 12
-  set %expcol 2
-  set %expchar &asc Δy
-  set %expmatch Δ
 execute-procedure check-position
 
 select-buffer test-reports
