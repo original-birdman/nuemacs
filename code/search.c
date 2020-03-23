@@ -465,6 +465,7 @@ static struct xccl *add2_xt_cclmap(struct magic *mp, int type) {
  *      ] is literal if the first character (so you can't have an empty class!)
  *      [ is literal anywhere
  */
+static struct grapheme null_gc = { UEM_NOCHAR, 0, NULL };
 static int cclmake(char **ppatptr, struct magic *mcptr) {
     char *bmap;
     char *patptr;
@@ -496,7 +497,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
  * and it's only when we get to the '-' (MC_RCCL) that we know this
  * so we must save each character until we know what the next one is.
  */
-    struct grapheme prev_gc;
+    struct grapheme prev_gc =  null_gc;
     int first = 1;
     int ccl_ended = 0;
 
@@ -1707,7 +1708,6 @@ static int readpattern(char *prompt, char *apat, int srch) {
  *  Used by step_scanner.
  */
 #define POS_ONLY 0x10000000
-static struct grapheme null_gc = { UEM_NOCHAR, 0, NULL };
 static struct grapheme gc;
 static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
      int *bytes_used, int dir) {
