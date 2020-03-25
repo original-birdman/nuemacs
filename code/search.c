@@ -406,7 +406,7 @@ static char *brace_text(char *fp) {
 }
 
 /* There are following routines with a lot of conditional blocks.
- * This pushes the code over to the right and can make it more difficlut
+ * This pushes the code over to the right and can make it more difficult
  * to follow because of resulting code line wrapping.
  * The following macros can be used for the start/end of block tests,
  * which mean that uemacs won't try to indent to the wrong level.
@@ -428,7 +428,7 @@ static void setbit(int bc, char *cclmap) {
 }
 
 /* parse_error
- * A simple routine to dispaly where errors occur in patterns
+ * A simple routine to display where errors occur in patterns
  * Assumes that pptr arrives set to one beyond the error point AND
  * that this is a pointer into pat!
  */
@@ -504,27 +504,27 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
 /* Really need to run this through one final time when MC_ECCL is seen
  * Seeing NUL is an error!!!
  * We always get graphemes...
- * patptr will be pointing to the next unread char thorugh the loop.
+ * patptr will be pointing to the next unread char through the loop.
  */
     WHILE_BLOCK(*patptr)
     struct grapheme gc;
     patptr += build_next_grapheme(patptr, 0, -1, &gc);
 
-    TEST_BLOCK(!first && gc.uc == MC_RCCL && gc.cdm == 0)
-/* We have a range when we get here.
- * But range character loses its meaning if it is the last character in
- * the class. See if it is...
- * NOTE: that it will also be taken literally if it is the first character.
+/* Check for a range character.
+ * But it will be taken literally if it is the first character or the
+ * last character in the class. See if it is...
  */
-    patptr += build_next_grapheme(patptr, 0, -1, &gc);
-    if (gc.uc == MC_ECCL && gc.cdm == 0) {  /* Is end of class... */
-        setbit(MC_RCCL, bmap);              /* ...so mark it */
-        goto switch_current_to_prev;        /* Which will exit the loop */
-    }
+    TEST_BLOCK(!first && gc.uc == MC_RCCL && gc.cdm == 0)
 
 /* We can also have a range based on Unicode chars.
- * So, what do we have next...we've just read it.
+ * So, what do we have next...let's look.
+ * We overwrite gc here, but we know it was MC_RCCL.
  */
+    patptr += build_next_grapheme(patptr, 0, -1, &gc);
+    if (gc.uc == MC_ECCL && gc.cdm == 0) {  /* - was at end -> literal */
+        setbit(MC_RCCL, bmap);  /* ...so mark it */
+        goto handle_prev;       /* to handle previous char and exit loop */
+    }
     unicode_t low, high;
     if (gc.cdm || prev_gc.cdm) {
         parse_error(patptr, "Cannot use combined chars in ranges");
@@ -560,13 +560,14 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
  * the loop transition.
  * We must not go to switch_current_to_prev, as that check for the end
  * of the class if current char is MC_ECCL. And on the first pass
- * MC_ECCL is *NOT* the end of teh class, but a literal.
+ * MC_ECCL is *NOT* the end of the class, but a literal.
  */
     if (first) goto loop_transition;
 
 /* Now deal with the *previously* seen item
- * Do we have a previous grapheme?
+ * Do we have a previous non-ASCII grapheme?
  */
+handle_prev:
     if (prev_gc.uc > 0x7f) {    /* We have Unicode to handle */
 /* We set the real type later... */
         struct xccl *xp = add2_xt_cclmap(mcptr, 0);
@@ -1207,7 +1208,7 @@ static int mcstr(void) {
                 can_repeat = TRUE;
                 goto pchr_done;
 /* w/W is word chars and s/S is whitespace.
- * All four can be passod off to cclmake generically.
+ * All four can be passed off to cclmake() generically.
  */
             case 'w':                       /* Letter, _, 0-9 */
             case 'W':
@@ -1479,7 +1480,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  *    Å can be U+212B, U+00C5 or U+0041+U+030A
  *    ñ can be U+006E+U+0303 or U+00F1
  * So, if EQUIV mode is on (Magic must be on for us to be here)
- * we run same_grapheme() on the the pair to match, otherwise
+ * we run same_grapheme() on the pair to match, otherwise
  * we run through a simpler test.
  */
                 case UCLITL:    /* Can it have any combining bit? */
@@ -1524,7 +1525,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  *    Å can be U+212B, U+00C5 or U+0041+U+030A
  *    ñ can be U+006E+U+0303 or U+00F1
  * So, if EQUIV mode is on (Magic must be on for us to be here)
- * we run same_grapheme() on the the pair to match, otherwise
+ * we run same_grapheme() on the pair to match, otherwise
  * we run through a simpler test.
  */
     case UCLITL:    /* Can it have any combining bit? */
@@ -1693,7 +1694,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
  *      and advance/retreat the point.
  *  The order in which this is done is significant, and depends
  *  upon the direction of the search.  Forward searches gets the
- *  graphame from the current point and move beyond it, while
+ *  grapheme from the current point and move beyond it, while
  *  reverse searches get the previous grapheme and move to its start.
  * NOTE!!! that we return a pointer to a static, internal struct grapheme.
  * It is the CALLERs responsibility to deal with any alloc's on gc.ex!!
@@ -2021,7 +2022,7 @@ failed:
         ambytes = grp_info[mcptr->mc.group_num].base;
         goto try_next_choice;
     }
-/* For a total failure, undo this group matcn info too */
+/* For a total failure, undo this group match info too */
     grp_info[mcptr->mc.group_num] = null_grp_info;
     return AMFAIL;
 }
@@ -2305,7 +2306,7 @@ fail:;                                  /* continue to search */
     return FALSE;                       /* We could not find a match */
 }
 
-/* Internal routine to initialize thse at the start of any search
+/* Internal routine to initialize these at the start of any search
  */
 static void init_group_status(void) {
 /* If we allocated any result strings, free them now... */
@@ -2794,7 +2795,7 @@ static int replaces(int query, int f, int n) {
         return status;
 
 /* Set up flags so we can make sure not to do a recursive replace on
- * the last line beacuse we're replacing the final newline...
+ * the last line because we're replacing the final newline...
  */
     nlflag = (pat[srch_patlen - 1] == '\n');
     nlrepl = FALSE;
@@ -3060,7 +3061,7 @@ int boundry(struct line *curline, int curoff, int dir) {
 
 /* Return a malloc()ed copy of the text for the given group in
  * the last match.
- * If a group doesn't exist or has no match then an emtpy string is
+ * If a group doesn't exist or has no match then an empty string is
  * returned.
  * We only allocate each group text on demand for each search.
  * Any allocated space is freed by the reset for a new search.
