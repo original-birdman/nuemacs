@@ -1393,7 +1393,8 @@ int execute(int c, int f, int n) {
         dir_browsing = (sdb && (sdb->b_type == BTPROC));
     }
     if (dir_browsing) {
-        switch(c) {
+        int test_char = c | DIFCASE;    /* Quick lowercase */
+        switch(test_char) {
         case 'd':           /* Dive into entry on current line */
         case 'o':           /* Open entry on current line */
         case 'v':           /* View entry on current line */
@@ -1457,12 +1458,12 @@ int execute(int c, int f, int n) {
             fname[full_len] = '\0';
 
 /* May be file or dir - getfile() sorts it out */
-            getfile(fname, c != 'v', TRUE); /* c.f. filefind/viewfile */
-            if (c == 'v') curwp->w_bufp->b_mode |= MDVIEW;
+            getfile(fname, test_char != 'v', TRUE); /* c.f. filefind/viewfile */
+            if (test_char == 'v') curwp->w_bufp->b_mode |= MDVIEW;
             break;
            }
         case 'r':           /* Refresh current view */
-            getfile(curbp->b_fname, c == 'o', TRUE);
+            getfile(curbp->b_fname, test_char == 'o', TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
            {char fname[NFILEN];
