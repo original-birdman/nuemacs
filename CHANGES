@@ -4039,3 +4039,50 @@ etc/uemacs.hlp
     Update to version GGR4.151
 
 ========== GGR4.152
+
+display.c
+    Fix the display of DOS mode in the modeline.
+
+etc/accents.cmd
+    Fix typos. case-set off/on should be caseset off/on.
+
+autotest/dump_mc.debug
+    Print out the bitmap for character classes.
+    Fix utf8.h include, which was failing after the move from
+    test-files.
+
+search.c
+    Handle a "]" as the first character in a class correctly. It will be
+    taken literally, but might be the start of a range, not just a
+    literal character to match.
+    Fix the check for ASCII when matching character classes, so that
+    they actually work.
+
+search.c
+    Fix handling of "-" when it is the first or last character in a
+    class (and hence is literal, not a range specifier).
+
+autotest/search-char_classes.sh
+autotest/search-props2.sh
+    Renamed search-char_classes.sh to search-props2.sh (as it actually
+    tests properties) and added search-char_classes.sh.
+
+Makefile
+    Added a test-clean node to clean up temporary testing files without
+    removing *.o and uemacs.
+
+etc/uemacs.hlp
+    Added a description of the new Magic mode regex functionality and
+    change the (very old) %list-indent-text entry to be regionlist_text
+    and regionlist_number.
+
+main.c
+    Fix directory-browsing key-handling to be case-insensitive.
+
+../CHANGES
+../README
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.152
+
+==========

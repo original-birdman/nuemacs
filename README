@@ -58,11 +58,16 @@ Other changes so far made are:
     you do nothing else after the yank.
     Also works after yank-minibuffer.
     Note that yanking rotates the kill-ring list.
+  o Opening a directory will list the files in the directory and let you
+    select one to open.
+    Requires a user procedure (defined in the standard uemacs.rc) to run.
+  o Extended name-completion in prompts to work with file names, buffer
+    names, user procedures, phonetic translation tables, function names
+    and uemacs environment/user variables.
+  o Removed the 1 million line input reading restriction.
+  o Greatly extended Magic-mode regex capability for searching and
+    enabled it to work with Unicode characters.
 
-Other changes to be made are:
-  o better handle utf8 strings (ongoing...),
-  o make some buffers dynamically allocatable to cater for very long
-    pieces of text and enlarge others,
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in

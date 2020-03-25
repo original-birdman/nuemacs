@@ -45,6 +45,17 @@ Change file name ......   ^X  N         Filter buffer .........   ^X  #
 Save file .............   ^X ^S (^X S)
 Read file .............   ^X ^R
 Write file ............   ^X ^W         Execute file .......... Meta ^X
+
+Openign a directory (rather than a file) will present you with a list of
+files which you may browse and open. When viewgin this list (which will
+be in a buffer named //directory):
+
+Typing      result
+ d or o     Dive into/Open entry on current line.
+ v          View entry on current line.
+ r          Refresh current view.
+ u          Up to parent.
+
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS CHARACTER COMMANDS
 Newline ...............      ^M         Transpose characters ..      ^T
