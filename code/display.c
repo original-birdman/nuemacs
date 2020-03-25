@@ -1316,23 +1316,23 @@ static void modeline(struct window *wp) {
     else      mwp = wp;
     int mode_mask = 1;
     for (i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
-        if (mode_mask == MDEQUIV)       /* Never displayed */
-            continue;
-        if (mwp->w_bufp->b_mode & mode_mask) {
-            if (!firstm) strcat(tline, " ");
-            firstm = FALSE;
-            switch(mode_mask) {
-            case MDPHON:
-                strcat(tline, ptt->ptt_headp->display_code);
-                break;
-            case MDMAGIC:
-/* How we display Magic depends on whether Equiv mode is on. */
-                if (mwp->w_bufp->b_mode & MDEQUIV) {
-                    strcat(tline, "MgEqv");
+        if (mode_mask != MDEQUIV) {     /* MDEQUIV never displayed alone */
+            if (mwp->w_bufp->b_mode & mode_mask) {
+                if (!firstm) strcat(tline, " ");
+                firstm = FALSE;
+                switch(mode_mask) {
+                case MDPHON:
+                    strcat(tline, ptt->ptt_headp->display_code);
                     break;
-                }   /* Fall through */
-            default:
-                strcat(tline, mode2name[i]);
+                case MDMAGIC:
+/* How we display Magic depends on whether Equiv mode is on. */
+                    if (mwp->w_bufp->b_mode & MDEQUIV) {
+                        strcat(tline, "MgEqv");
+                        break;
+                    }   /* Fall through */
+                default:
+                    strcat(tline, mode2name[i]);
+                }
             }
         }
         mode_mask <<= 1;
