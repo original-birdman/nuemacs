@@ -557,15 +557,12 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     END_TEST(!first....)           /* End of range handling */
 
 /* For the first char/grapheme there is no more to do - except to handle
- * the loop transition
+ * the loop transition.
+ * We must not go to switch_current_to_prev, as that check for the end
+ * of the class if current char is MC_ECCL. And on the first pass
+ * MC_ECCL is *NOT* the end of teh class, but a literal.
  */
-    if (first) {
-        if (gc.uc == MC_ECCL) {     /* Take it literally */
-            setbit(MC_ECCL, bmap);
-            goto invalidate_current;
-        }
-        goto switch_current_to_prev;
-    }
+    if (first) goto loop_transition;
 
 /* Now deal with the *previously* seen item
  * Do we have a previous grapheme?
@@ -732,13 +729,13 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
         setbit(prev_gc.uc, bmap);
         goto switch_current_to_prev;
     }
-/* We must NOT drop to here from above!!!
- * We are sent here if the loop has already dealt with the current
- * character in order to fetch another one...
- */
+/* We must NOT drop to here from above!!! */
     parse_error(patptr, "Parsing code problem in cclmake!");
     goto error_exit;
 
+/* We are sent here if the loop has already dealt with the current
+ * character, in order to fetch another one...
+ */
 invalidate_current:
     patptr += build_next_grapheme(patptr, 0, -1, &gc);
 
@@ -747,6 +744,7 @@ switch_current_to_prev:
         ccl_ended = 1;
         break;  /* All done */
     }
+loop_transition:
     first = 0;
     prev_gc = gc;
     END_WHILE(*patptr)
@@ -862,10 +860,7 @@ static void rmcclear(void) {
     }
     rmcpat[0].mc = null_mg;
 }
-#define DEBUG 0
-#if DEBUG
-#include "../test-files/dump_mc.debug"
-#endif
+
 /* mcstr -- Set up the 'magic' array.  The closure symbol is taken as
  *      a literal character when (1) it is the first character in the
  *      pattern, and (2) when preceded by a symbol that does not allow
@@ -1280,9 +1275,6 @@ pchr_done_noincr:
 /* The only way the status would be bad is from the cclmake() routine,
  * and the bitmap for that member is guaranteed to be freed.
  */
-#if DEBUG
-DUMP_MATCH("From mcstr");
-#endif
     return status;
 }
 
@@ -1454,7 +1446,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  * So for any test we can stop as soon as one part is TRUE.
  */
     case CCL:                   /* Now have to allow for extended CCL too */
-        if (gc->uc && 0x80) {
+        if (gc->uc & 0x80) {
             res = FALSE;        /* So we drop into xt_cclmap tests */
         }
         else if (!(res = biteq(gc->uc, mt->val.cclmap))) {
