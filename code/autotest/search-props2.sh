@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 
-# Simple testing of Magic-mode Character Classes
+# Simple testing of Magic-mode properties (part2)
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
@@ -14,7 +14,20 @@ prog='$1 != "--" {print substr($0, 4);}'
 #
 awk "$prog" > autotest.tfile <<EOD
 -- 0123456789012345678901234567890123456789012345678901234567890123456789
-01 match - ]xyzzy[
+01 Not sure whether the best test of CCLs is to have lots
+02 of alternating classes or not?
+03 Here are some numbers 0123456789
+04 Here, numbers interspersed with differing punctuation (all Po):
+05      0,1.2;3:4'5!6*7@8?9
+06 Now some other P classes (PePs)*
+07      ][}{)(
+08 Some symbols (all Sm)
+09  +<=>|~¬±𝝯𝞉
+10 And some Letter Modifiers...
+11      ˆˈˊˌˎː
+12 So now a sequence of Lm Sm Ps Pe Nd Po Ll Lu, then reversed
+13      ˊ±{]3@zQ
+14      Td:8)[|ˆ
 15 EOF
 EOD
 
@@ -98,124 +111,92 @@ store-procedure check-position
 find-file autotest.tfile
 add-mode Magic
 
-set %test-report "START: Various Character Class tests"
+set %test-report "START: Various property tests (part 2)"
 execute-procedure report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-set %test-report "   ] in position 1 (start of range)"
+set %test-report "   \p{Nd}\p{Po} searches"
 execute-procedure report-status
 beginning-of-file
 ; ====
-search-forward []-c]
+search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest Search1
-  set %expline 1
-  set %expcol 2
-  set %expchar &asc t
-  set %expmatch a
+  set %expline 5
+  set %expcol 11
+  set %expchar &asc 3
+  set %expmatch 0,1.2;
 execute-procedure check-position
-search-forward []-c]+
+search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest Search2
-  set %expline 1
-  set %expcol 4
-  set %expchar &asc h
-  set %expmatch c
+  set %expline 5
+  set %expcol 19
+  set %expchar &asc 7
+  set %expmatch 3:4'5!6*
 execute-procedure check-position
 
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-set %test-report "   ] in position 1 (literal)"
+set %test-report "  \P searches"
 execute-procedure report-status
 beginning-of-file
 ; ====
-search-forward []nq]
-  set %curtest Search1
-  set %expline 1
-  set %expcol 9
-  set %expchar &asc x
-  set %expmatch ]
+search-forward 789\n
+  set %curtest "Placing search"
+  set %expline 4
+  set %expcol 0
+  set %expchar &asc H
+  set %expmatch 789~n
 execute-procedure check-position
-
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-set %test-report "   - in position 1 (literal)"
-execute-procedure report-status
-beginning-of-file
 ; ====
-search-forward [-xyz]
-  set %curtest Search1
-  set %expline 1
-  set %expcol 7
+search-forward \P{L}
+  set %curtest Search not Letter 
+  set %expline 4
+  set %expcol 5
   set %expchar &asc " "
-  set %expmatch -
-execute-procedure check-position
-search-forward [-xyz]+
-  set %curtest Search2
-  set %expline 1
-  set %expcol 14
-  set %expchar &asc [
-  set %expmatch xyzzy
+  set %expmatch ,
 execute-procedure check-position
 
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-; This should do the same as the above - the "-" has moved, but the
-; effect should be indentical.
-set %test-report "   - in final position (literal)"
+set %test-report "  \p{SM}{5} search"
 execute-procedure report-status
 beginning-of-file
 ; ====
-search-forward [xyz-]
+search-forward \p{SM}{5}
   set %curtest Search1
-  set %expline 1
-  set %expcol 7
-  set %expchar &asc " "
-  set %expmatch -
-execute-procedure check-position
-search-forward [xyz-]+
-  set %curtest Search2
-  set %expline 1
-  set %expcol 14
-  set %expchar &asc [
-  set %expmatch xyzzy
+  set %expline 9
+  set %expcol 6
+  set %expchar &asc ~~
+  set %expmatch +<=>|
 execute-procedure check-position
 
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-set %test-report "   - as range"
+set %test-report "  6-class search"
 execute-procedure report-status
 beginning-of-file
 ; ====
-search-forward [x-z]
+search-forward \p{Lm}\p{Sm}\p{Ps}\p{Pe}\p{Nd}\p{Po}
   set %curtest Search1
-  set %expline 1
-  set %expcol 10
-  set %expchar &asc y
-  set %expmatch x
+  set %expline 13
+  set %expcol 11
+  set %expchar &asc z
+  set %expmatch ˊ±{]3@
 execute-procedure check-position
-search-forward [x-z]+
-  set %curtest Search2
-  set %expline 1
-  set %expcol 14
-  set %expchar &asc [
-  set %expmatch yzzy
-execute-procedure check-position
-
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-set %test-report "   - as range - inverted"
-execute-procedure report-status
-beginning-of-file
+end-of-file
 ; ====
-search-forward [^x-z]
-  set %curtest Search1
-  set %expline 1
-  set %expcol 1
-  set %expchar &asc a
-  set %expmatch m
-execute-procedure check-position
-search-forward [^x-z]+
-  set %curtest Search2
-  set %expline 1
-  set %expcol 9
-  set %expchar &asc x
-  set %expmatch "atch - ]"
+search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
+  set %curtest "Reverse search"
+  set %expline 14
+  set %expcol 5
+  set %expchar &asc T
+  set %expmatch Td:8)[
 execute-procedure check-position
 
+set %test-report "  negative reverse search"
+execute-procedure report-status
+; ====
+!force search-reverse \p{M}
+  set %curtest "Reverse search for Mark (none there)"
+  set %expline 14
+  set %expcol 5
+  set %expchar &asc T
+  set %expmatch ""
+execute-procedure check-position
 
 ;
 select-buffer test-reports
