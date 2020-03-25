@@ -1,21 +1,22 @@
-=>                   nuEmacs GGR4.151 Help Index     (23 March 2020)
+=>                   nuEmacs GGR4.152 Help Index     (25 March 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
 .. Miscellaneous character commands
-.. Mode commands
+.. Buffer mode commands
 .. Keys and commands
 .. Deleting and inserting
 .. Formatting
 .. Window commands
 .. Buffer commands
 .. Searching and replacing
+.. Search modes
 .. Accessing the operating system
 .. Macro commands
 .. Miscellaneous
-.. Functions
 .. System variables
-.. File name completion
+.. Functions
+.. Name completion
 .. MACRO functions and user variables
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
@@ -53,18 +54,33 @@ Handle tab ............      ^I         Quote character .......   ^X  Q
 Goto line ............. Meta  G         Abort command .........      ^G
 Goto matching fence ... Meta ^F
 -------------------------------------------------------------------------------
-=>                      MODE COMMANDS
+=>                      BUFFER MODE COMMANDS
 Add mode ..............   ^X  M         Add global mode	....... Meta  M
 Delete mode ...........   ^X ^M         Delete global mode .... Meta ^M
 Toggle mode ...........   ^X  T         Toggle global mode .... Meta  T
-OVER   :: Overwrite, don't insert       MAGIC  :: Match patterns in search
-WRAP   :: Automatic carriage return     ^ $  Beginning and end of line
-VIEW   :: View only, don't change       .    Any character   \c   Character c
-CMODE  :: C program indenting           c*   Any number of character c
-EXACT  :: Match case in search          [ ]  Character class
-PHON   :: Phonetic input handling
-CRYPT  :: encryption mode active        SAVE   :: auto-save mode
-DOSLE  :: DOS line endings              EQUIV  :: (not yet in use)
+
+Various buffer modes exist.
+toggle-lmode (^XT) will (un)set the mode in the current buffer while
+toggle-gmode (Meta T) will (un)set the global mode (which means that it
+will be turned on/off in new buffers *not* that it gets turned on in all
+current buffers!).
+
+F   autodos     Check a file for having DOS line endings when reading
+                it into a buffer and set the DOS mode if it does.
+                This is actually a GLOBAL-ONLY mode.
+H   hscroll     Horizontal scrolling.
+W   wrap        Auto-wrap text at fill column.
+C   cmode       Help with formatting C code ({} matching, indent on newline)
+P   phon        Use the current Phonetic Translation table.
+E   exact       Use Exact mode when searching (see below).
+V   view        Use view mode (no editing allowed).
+O   over        Overwrite, not insert, when typing.
+M   magic       Magic mode (see below).
+Y   crypt       Use an encrypted mode for files.
+A   asave       Autosave the file periodically.
+Q   equiv       Use equivalence mode when searching (see below).
+D   dos         Write out file with DOS line endings.
+
 -------------------------------------------------------------------------------
 =>                      KEYS AND COMMANDS
 Bind to key ........... Meta  K         Help ..................   ^X  ?
@@ -147,16 +163,127 @@ Filter buffer .........   ^X  #         Execute buffer ........ not bound
 Search forward ........ Meta  S     ::  End string with <CR>.
 Incremental search .... Meta ^I     ::  stop Meta, cancel ^G, back ^R, fwd ^S
 Search reverse ........      ^R
-Reverse incremental search      ^X  R
+Reverse incremental search  ^X R
 Replace string ........ Meta  R
 Query replace string .. Meta  %     ::  Yes/no Y/N, replace rest !, cancel ^G.
+Unset default replace string .. Meta ^D
 
     When at the search (or replace) prompt you can move through the last
     10 strings using ^I (tab) for the previous string and Esc^I for the
     next one.
     The currently selected default string can be inserted into the
     current search/replace buffer, at the current cursor point, with ^X^I.
-Unset default replace string .. Meta ^D
+
+-------------------------------------------------------------------------------
+=>                      SEARCH MODES
+There are 3 modes which affect how searching works.
+
+EXACT   This means that the search will look for the string in the case
+        that you entered it in.
+MAGIC   Activates various regular expression features. See below.
+EQUIV   Has an effect in Magic mode only. Compare characters that are
+        equivalent (so, e.g.,  e + acute accent (two Unicode points U+65
+        and U+301)) matches the single Unicode point e-with-acute (U+e9).
+        This uses the NFKC method by default, but can be switched to
+        NFC, NFD or NFKD by setting $equiv_type.
+
+MAGIC mode details.
+    This enables the following regular expression features when
+    searching. It works for search-forward (Meta S), search-reverse
+    (Meta R), replace-string (^R) and query-replace-string (Meta %).
+    It does not work in incremental-search (Meta ^I).
+
+^ and $
+    These match the start and end of a line respectively.
+    They can *only* be placed at the start (^) or end ($) of the search
+    string.
+    The difference between these and \n is that these are zero-width
+    matches. So a search for "end$" will find "end" at the end of a
+    line, set the position to be the end of that line and the matched
+    string will be "end" (3 characters). However, a search for "end\n"
+    will find "end" at the end of a line but include the newline in the
+    match so will set the position to be the beginning of the next line
+    and the matched string will be "end\n" (4 characters).
+
+(...)
+    Denotes a group. These can be used in replacement strings by using
+    ${n} for the contents that matched the corresponding group.
+    Groups are counted from 1 based on their opening "(".
+    Groups may be nested.
+    The entire match is found in ${0}.
+    The value of ${n} for any group that didn't take place in the final
+    match is "", the empty string.
+    There is a &grp function, so you can get the text of a matched group
+    after a search in a script.  It takes a numeric arg for the group
+    number you want.
+
+Repeats
+    You can use *, ?, + and {m,n} for repeats of the preceding entity
+    (character, character class or group). This will force the entity
+    to match between m and n times.
+    * == {0,∞}, + == {1,∞} and ? == {0,1}.
+    By default these will match as much as possible (greedy) but
+    appending ? to a repeat makes it a minimal repeat.
+    If you use a repeat count on a group, only the last-matched contents
+    are saved for ${n} use.
+
+|
+    You can use | to give choices for a match within a group.
+    They are tried left-to-right.
+
+[...]
+    Denotes a character class.
+    A character class is matched against a single grapheme and contains
+    a list of possible options. If any option matches the class matches.
+    It may contain characters, properties, \d, \s, \S, \w, \W and \k{}
+    entries.
+    You can specify a range of characters with, e.g., "a-e", which would
+    match a, b, c, d, or e. There is no case-folding on ranges, as
+    non-ASCII case-mapping doesn't fit well with ranges. If "-" is the
+    first or last character in the [...] it is taken literally.
+    If the first character after the opening [ is ] then it is taken
+    literally. So you cannot have an empty class.
+    If the first character after the opening [ is ^ then the result is
+    negated.
+
+\X
+    Match any grapheme (including newline)
+
+\d
+    Match any numeric digit. (Actually a short-cut for \p{Nd}).
+    \D matches any non-numeric digit.
+
+\s
+    Match any whitespace. \S matches any non-whitespace.
+
+\n \r \f \t
+    Match newline, carriage-return, form-feed and tab respectively.
+
+\w
+    Match any word character. \W matches any non-word character.
+
+\p{Xx}
+    Match the Unicode property of a character.
+    e.g. \p{Lu} is Uppercase Letter, \p{Ll} is lowercase letter.
+    uemacs lets you use \p{L} as any letter.
+    \P{} inverts the result.
+    Properties are *not* affected by the Exact setting.
+    Properties are only tested against the base character of any
+    grapheme containing combining characters.
+
+\u{hhhh}
+    Can be used to enter the Unicode point hhhh (in hex).
+
+\k{n}
+    Will match any grapheme with a base Unicode point of n, ignoring
+    any combining characters.
+
+\
+    Take the next character literally, unless it is one of the special
+    \-sequences described above.
+    So \\ is a literal "\" and hence things like \\X become the literal
+    string "\X".
+
 -------------------------------------------------------------------------------
 =>                      ACCESSING THE OPERATING SYSTEM
 Quick exit ............ Meta  Z     ::  Write out all changed buffers and exit.
@@ -203,16 +330,20 @@ Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
 &equ, &les, &gre ........................... Arithmetic comparisons
 &not, &and, &or ............................ Logical
 &lef s len, &rig s pos, &mid s pos len ..... Substring
-&cat, &len, &upp, &low, &asc, &chr ......... Other string operations
+&cat, &len, &upp, &low, &asc, &chr, &esc ... Other string operations
 &seq, &sle, &sgr ........................... String comparisons
 &sin ....................................... String index
+&exi, &fin, ................................ File operations
+&ban, &bor, &bxo, &bno ..................... Bit operations
+&ind, &tru, &gtk, &rnd, &env, &bin, &xla ... Miscellaneous
+&arg n, &grp n .............................    "   "
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
 
 Name completion can be used in the prompts for various context-aware
 commands. It is invoked by a <Tab>.
 Matches are done against files, buffer names, user procedures, phonetic
-translation tables, function names and environment/user variables.
+translation tables, function names and uemacs environment/user variables.
 
 If more than one possible completion exists they are displayed
 in the minibuffer and the longest common part is retained for you to add
@@ -225,7 +356,7 @@ are taken relative to the $PWD environment variable.
 eos-chars <string of characters>
     This defines which characters to treat as end of sentence ones so
     that they have an extra space appended when justifying paragraphs.
-    The default is none.
+    The default is none, but the default uemacs.rc sets it to ".!?"
 
 char-replace
     Allows you to define the on-screen representation of characters -
@@ -242,7 +373,7 @@ store-procedure <proc-name>
     Store a user-defined set of macro commands with the given name
     (which can be a maximum of 14 characters in length).
 
-buffer-to-key <proc-name>   <key-spec>
+buffer-to-key <proc-name> <key-spec>
     Bind the user-defined procedure <proc-name> to the given key.
 
 store-pttable <ptt-name>
@@ -283,18 +414,22 @@ store-pttable <ptt-name>
 toggle-ptmode
     This turns pttable usage on and off.  Normally it just toggles the
     current state, but a positive argument will force it on and a
-    negative one off. You must have a pttable defined.
+    negative one off. You must have a pttable defined (loaded).
     The ptmode state is per-buffer, but which pttable is active (if you
     have more then one defined) is global - so the same table applies to
     all buffers with the ptmode state on.
+    It can be on in the mini-buffer, but needs to be activated in each
+    minibuffer, as each one starts afresh.
 
 set-pttable <ptt-name>
     Make <ptt-name> the currently-active pttable.
 
-%list-indent-text
-    This is a user variable that is used by the numberlist-region macro
-    to determine that label used on the first line of a paragraph (and
-    hence defines the indent for the rest of the paragraph).
-    It is a printf format string that may contain AT MOST one numeric
-    field descriptor.
-    The default setting in uemacs.rc is " %2d. ".
+regionlist_text and regionlist_number
+    These are uemacs environment variables that are used by the
+    makelist-region and numberlist-region functions respectively to
+    determine that label used on the first line of a paragraph or list
+    (and hence defines the indent for the rest of the paragraph/list).
+    regionlist_text is just a string, whereas regionlist_number is a
+    printf format string that may contain AT MOST one numeric field
+    descriptor.
+    The default settings are " o " and " %2d. ".
