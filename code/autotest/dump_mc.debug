@@ -1,6 +1,9 @@
+#ifndef _DUMP_MC_DEBUG_
+#define _DUMP_MC_DEBUG_
+
 /* Dump the struct magic structure at mp */
 
-#include "../code/utf8.h"
+#include "../utf8.h"
 
 #define DUMP_MATCH(message) \
    dump_mc((union magicp)mcpat, MATCHER, message, __LINE__);
@@ -91,7 +94,31 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
                     xp++;
                 }
             }
-            else fprintf(stderr, " - bitmap\n");
+            else {
+                fprintf(stderr, " - bitmap:\n");
+
+/* Assume the system is little-endian.
+ * It makes more sense (is easier to anaylze) the output if we
+ * print the bits in increasing order from the left.
+ * So we need to "invert" each individual byte...
+ */
+                unsigned char *pc = (unsigned char *)mp.mmp->val.cclmap;
+                fprintf(stderr, " >");
+                for (i = 0; i < HIBYTE; i++) {
+                    if (!(i%4)) fprintf(stderr, " ");
+                    unsigned char orig_byte = *pc++;
+                    unsigned char orig_mask = 0x01;
+                    unsigned char print_byte = 0;
+                    unsigned char print_mask = 0x80;
+                    while (print_mask) {
+                        if (orig_byte & orig_mask) print_byte |= print_mask;
+                        orig_mask <<= 1;
+                        print_mask >>= 1;
+                    }
+                    fprintf(stderr, "%02x", print_byte);
+                }
+                fprintf(stderr, "\n");
+            }
             break;
         case UCLITL:
             uclen = unicode_to_utf8(mp.mmp->val.uchar, ucbuf);
@@ -131,3 +158,5 @@ done:
     depth--;
     return;
 }
+
+#endif
