@@ -260,11 +260,14 @@ clean:
 	$(Q) rm -f $(PROGRAM) core lintout makeout tags makefile.bak *.o
 	$(Q) rm -f *.tfile uetest.rc
 
+test-clean:
+	$(Q) rm -f *.tfile uetest.rc
+
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.
 #
 source:
-	-@mv makefile makefile.bak
+	-@mv -f makefile makefile.bak
 	@echo "# (GNU)Makefile for emacs, updated `date`" >makefile
 	@echo '' >>makefile
 	@echo PROGRAM=uemacs >>makefile
@@ -272,6 +275,9 @@ source:
 	@echo OBJ=`ls *.c | sed s/c$$/o/` >>makefile
 	@echo HDR=`ls *.h` >>makefile
 	@echo '' >>makefile
+	@echo '# DO NOT DELETE THIS LINE' >>makefile
+	@echo '# make depend bits will be added after this' >>makefile
+	@echo '# when make depensd is run' >>makefile
 	@sed -n -e '/^# DO NOT ADD OR MODIFY/,$$p' <makefile.bak >>makefile
 
 depend: ${SRC}
@@ -323,7 +329,7 @@ buffer.o: buffer.c estruct.h utf8.h edef.h efunc.h line.h
 crypt.o: crypt.c estruct.h utf8.h edef.h efunc.h
 display.o: display.c estruct.h utf8.h edef.h efunc.h line.h version.h
 eval.o: eval.c estruct.h utf8.h edef.h efunc.h evar.h line.h util.h \
- version.h
+ version.h idxsorter.h
 exec.o: exec.c estruct.h utf8.h edef.h efunc.h line.h
 file.o: file.c estruct.h utf8.h edef.h efunc.h line.h
 fileio.o: fileio.c estruct.h utf8.h edef.h efunc.h line.h
