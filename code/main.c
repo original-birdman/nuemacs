@@ -1300,9 +1300,42 @@ int not_in_mb_error(int f, int n) {
 int execute(int c, int f, int n) {
     int status;
 
-/* If the keystroke is a bound function...do it */
+/* If the keystroke is a bound function...do it.
+ * However, we'll handle Space and B/b as special in VIEW mode
+ * and <Return> as special in VIEW and dir_browsing mode (which is only
+ * active in VIEW mode).
+ */
+    int dir_browsing = 0;
+    struct key_tab *ktp = NULL;
+    if (((c & 0x7fffffff) < 0x7f || c == (CONTROL|'M')) &&
+        (curbp->b_mode & MDVIEW)) {
+        if (c == ' ') {
+            ktp = getbyfnc(forwpage);
+        }
+        else if ((c | DIFCASE) == 'b') {
+            ktp = getbyfnc(backpage);
+        }
+/* If we are in the //directory buffer in view-only mode with a showdir
+ * user_proc then handle certain command chars.
+ * NOTE: that the //directory buffer name *MUST* agree with that used
+ * in the showdir userproc.
+ * Make the test short if it's going to fail...
+ * We need to do this *now* in order to trap newline for this...and
+ * just remap it to the character that implements what we want it to do...
+ * ALSO note that since we've handled Space and B above, these cannot take
+ * on any different meaning within the dirctory browsing window.
+ */
+        else if (!strcmp("//directory", curbp->b_bname)) {
+            struct buffer *sdb = bfind("/showdir", FALSE, 0);
+            dir_browsing = (sdb && (sdb->b_type == BTPROC));
+        }
+        if (c == (CONTROL|'M')) {
+            if (dir_browsing) c = 'd';
+            else ktp = getbyfnc(forwpage);
+        }
+    }
+    if (!ktp) ktp = getbind(c);
 
-    struct key_tab *ktp = getbind(c);
     if (ktp) {
         fn_t execfunc = ktp->hndlr.k_fp;
         if (execfunc == nullproc) return(TRUE);
@@ -1380,21 +1413,9 @@ int execute(int c, int f, int n) {
     f_arg.ca.f = f;
     f_arg.ca.n = n;
 
-/* If we are in the //directory buffer in view-only mode with a showdir
- * user_proc then handle certain command chars.
- * NOTE: that the //directory buffer name *MUST* agree with that used
- * in the showdir userproc.
- * Make the test short if it's going to fail...
- */
-    int dir_browsing = 0;
-    if ((curbp->b_mode & MDVIEW) &&
-         (strcmp("//directory", curbp->b_bname) == 0)) {
-        struct buffer *sdb = bfind("/showdir", FALSE, 0);
-        dir_browsing = (sdb && (sdb->b_type == BTPROC));
-    }
     if (dir_browsing) {
         int test_char = c | DIFCASE;    /* Quick lowercase */
-        switch(test_char) {
+        switch(test_char) { /* NOTE: Space and 'b' *cannot* be used here! */
         case 'd':           /* Dive into entry on current line */
         case 'o':           /* Open entry on current line */
         case 'v':           /* View entry on current line */
@@ -1462,8 +1483,11 @@ int execute(int c, int f, int n) {
             if (test_char == 'v') curwp->w_bufp->b_mode |= MDVIEW;
             break;
            }
-        case 'r':           /* Refresh current view */
-            getfile(curbp->b_fname, test_char == 'o', TRUE);
+        case 'a':           /* Refresh current view A->Z */
+        case 'z':           /* Refresh current view Z->A */
+        case 'r':           /* Refresh current view old->new */
+        case 't':           /* Refresh current view new->old */
+            getfile(curbp->b_fname, FALSE, TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
            {char fname[NFILEN];

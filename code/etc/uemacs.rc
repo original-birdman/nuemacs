@@ -415,6 +415,7 @@ args-in-reexec ALL
 ; /bin/ls command (defined below) to get to the start of the entryname.
 ;
  set $showdir_tokskip 8
+ set %showdir_last_lsopts "-lLAh "  ; Set the default...
 
 ; NOW we define the user procedure to fill a buffer with ls lines
 ;
@@ -450,8 +451,39 @@ args-in-reexec ALL
 ; messages from dangling symlinks - but they don't affect the uemacs display
 ; (they end up in the "other" window and show up on exit).
 ;
-    set %ucmd &cat "QUOTING_STYLE=literal /bin/ls -lLh " %escudir
-    set %ucmd &cat %ucmd "| awk 'NR == 1 && $1 == ~"total~" {next;} {print;}' | sort -k 1,1.1r -k9"
+; Which order we use depends on the key used to get us here.
+; NOTE!! The %lsopt requires the trailing space!!
+;
+; First - did we get a specific sort request? If so, use it.
+; Otherwise, use the previous sort used.
+; Always remember the method used.
+;
+    set %lkey &upp &chr $lastkey
+    !if &gre &sin "TRAZ" %lkey 0
+        !if &seq %lkey R        ; Old -> New
+            set %lsopt "-lLAhtr "
+        !else
+        !if &seq %lkey T        ; New -> Old
+            set %lsopt "-lLAht "
+        !else
+        !if &seq %lkey Z        ; Z -> A
+            set %lsopt "-lLAhr "
+        !else                   ; A -> Z (default)
+            set %lsopt "-lLAh "
+        !endif
+        !endif
+        !endif
+    !else
+        set %lsopt %showdir_last_lsopts
+    !endif
+    set %showdir_last_lsopts %lsopt     ; Remember last used...
+    set %ucmd &cat "QUOTING_STYLE=literal /bin/ls " &cat %lsopt &cat %escudir
+
+; The initial list is sent to sort to move all dirs to the top.
+; Actually we just do a stable sort on char1, so get blocks of:
+;   blockdevs, chardevs, dirs, pipes, sockets, files.
+;
+    set %ucmd &cat %ucmd "| awk 'NR == 1 && $1 == ~"total~" {next;} {print;}' | sort -k 1.1,1.1r -s"
     pipe-command %ucmd
 
 ; Make that window the only window
