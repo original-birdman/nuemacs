@@ -78,10 +78,6 @@ static void mlputi(int i, int r);
 static void mlputli(long l, int r);
 static void mlputf(int s);
 
-#if RAINBOW
-static void putline(int row, int col, char *buf);
-#endif
-
 /* Add a unicode character as a cdm or dynamic ex entry
  */
 static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
@@ -981,8 +977,7 @@ static void updext(void) {
 /*
  * Update a single line. This does not know how to use insert or delete
  * character sequences; we are using VT52 functionality. Update the physical
- * row and column variables. It does try an exploit erase to end of line. The
- * RAINBOW version of this routine uses fast video.
+ * row and column variables. It does try an exploit erase to end of line.
  */
 #if     MEMMAP
 /*      UPDATELINE specific code for the IBM-PC and other compatibles */
@@ -1022,28 +1017,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
  * struct video *vp2;   physical screen image
  */
 static int updateline(int row, struct video *vp1, struct video *vp2) {
-#if RAINBOW
-/* UPDATELINE specific code for the DEC rainbow 100 micro  */
 
-    struct grapheme *cp1;
-    struct grapheme *cp2;
-    int nch;
-
-/* Since we don't know how to make the rainbow do this, turn it off */
-    flags &= (~VFREV & ~VFREQ);
-
-    cp1 = &vp1->v_text[0];  /* Use fast video. */
-    cp2 = &vp2->v_text[0];
-    putline(row + 1, 1, cp1);
-    nch = term.t_ncol;
-
-    do {
-        *cp2 = *cp1;
-        ++cp2;
-        ++cp1;
-    } while (--nch);
-    *flags &= ~VFCHG;
-#else
 /* UPDATELINE code for all other versions          */
 
     struct grapheme *cp1;
@@ -1164,7 +1138,6 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
 #endif
     vp1->v_flag &= ~VFCHG;  /* Flag this line as updated */
     return TRUE;
-#endif
 }
 #endif
 
@@ -1694,17 +1667,6 @@ static void mlputf(int s) {
     TTput_1uc_lim((f / 10) + '0');
     TTput_1uc_lim((f % 10) + '0');
 }
-
-#if RAINBOW
-
-static void putline(int row, int col, char *buf) {
-    int n;
-
-    n = strlen(buf);
-    if (col + n - 1 > term.t_ncol) n = term.t_ncol - col + 1;
-    Put_Data(row, col, n, buf);
-}
-#endif
 
 /* Get terminal size from system.
    Store number of lines into *heightp and width into *widthp.
