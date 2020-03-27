@@ -58,7 +58,6 @@ struct evlist evl[] = {
  { "jump",      EVSCROLLJUMP }, /* Number of lines jump on scroll */
  { "scroll",    EVSCROLL },     /* scroll enabled */
  { "inmb",      EVINMB },       /* In mini-buffer (read only) */
-
  { "fcol",      EVFCOL },       /* first displayed column in curent window */
  { "hjump",     EVHJUMP },      /* horizontal screen jump size */
  { "hscroll",   EVHSCROLL },    /* horizontal scrolling flag */
@@ -126,7 +125,7 @@ static struct user_function funcs[] = {
  { "len", MONAMIC,  UFLENGTH }, /* string length */
  { "upp", MONAMIC,  UFUPPER },  /* uppercase string */
  { "low", MONAMIC,  UFLOWER },  /* lower case string */
- { "esc", MONAMIC,  UFESCAPE }, /* ~ escape string */
+ { "esc", MONAMIC,  UFESCAPE }, /* SHELL escape string */
  { "tru", MONAMIC,  UFTRUTH },  /* Truth of the universe logical test */
  { "asc", MONAMIC,  UFASCII },  /* char to integer conversion */
  { "chr", MONAMIC,  UFCHR },    /* integer to char conversion */

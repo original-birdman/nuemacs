@@ -203,10 +203,7 @@
 #define PLAY    1               /*                playing       */
 #define RECORD  2               /*                recording     */
 
-/* Types of buffer expanding in getstring()
- * NOTE: that getname currently has its own internal mechanism for
- *       internal command name expansion. It doesn't use getstring().
- */
+/* Types of buffer expanding in getstring() */
 
 enum cmplt_type {
     CMPLT_NONE, CMPLT_FILE, CMPLT_BUF, CMPLT_PROC, CMPLT_PHON, CMPLT_NAME,
@@ -227,7 +224,7 @@ enum cmplt_type {
 #define DFORCE          9
 #define DFINISH        10       /* GGR */
 
-#define NUMDIRS         11      /* GGR */
+#define NUMDIRS        11       /* GGR */
 
 /*
  * PTBEG, PTEND, FORWARD, and REVERSE are all toggle-able values for

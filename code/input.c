@@ -540,9 +540,8 @@ int ectoc(int c) {
     return c;
 }
 
-/*
- * get a command name from the command line. Command completion means
- * that pressing a <SPACE> will attempt to complete an unfinished command
+/* get a command name from the command line. Command completion means
+ * that pressing a <TAB> will attempt to complete an unfinished command
  * name if it is unique.
  */
 struct name_bind *getname(char *prompt) {
