@@ -1516,14 +1516,10 @@ int execute(int c, int f, int n) {
                 execute(META | SPEC | 'W', FALSE, 1);
 
     if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
-#if     IBMPC
-        || (c >= 0x80 && c <= 0xFE)) {
-#else
 #if     BSD || USG       /* 8BIT P.K. */
         || (c >= 0xA0 && c <= 0x10FFFF)) {
 #else
         ) {
-#endif
 #endif
 
 /* GGR - Implement Phonetic Translation iff we are about to self-insert.

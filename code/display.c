@@ -52,9 +52,7 @@ struct video {
 #define VFCOL   0x0010          /* color change requested       */
 
 static struct video **vscreen;          /* Virtual screen. */
-#if MEMMAP == 0
 static struct video **pscreen;          /* Physical screen. */
-#endif
 
 static int displaying = FALSE;
 #if UNIX
@@ -883,9 +881,6 @@ static int scrolls(int inserts) {   /* returns true if it does something */
                 vpp->v_flag &= ~VFREV;
                 vpp->v_flag |= ~VFREQ;
             }
-#if MEMMAP
-            vscreen[to + i]->v_flag &= ~VFCHG;
-#endif
         }
         if (inserts) {
             from = target;
@@ -895,7 +890,6 @@ static int scrolls(int inserts) {   /* returns true if it does something */
             from = target + count;
             to = match + count;
         }
-#if MEMMAP == 0
         for (i = from; i < to; i++) {
             struct grapheme *txt;
             txt = pscreen[i]->v_text;
@@ -903,7 +897,6 @@ static int scrolls(int inserts) {   /* returns true if it does something */
             for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ', 1);
             vscreen[i]->v_flag |= VFCHG;
         }
-#endif
         return TRUE;
     }
     return FALSE;
@@ -979,36 +972,6 @@ static void updext(void) {
  * character sequences; we are using VT52 functionality. Update the physical
  * row and column variables. It does try an exploit erase to end of line.
  */
-#if     MEMMAP
-/*      UPDATELINE specific code for the IBM-PC and other compatibles */
-
-static int updateline(int row, struct video *vp1, struct video *vp2) {
-    struct grapheme *cp1;
-    struct grapheme *cp2;
-    int nch;
-
-    cp1 = &vp1->v_text[0];
-    cp2 = &vp2->v_text[0];
-    nch = term.t_ncol;
-    do {
-        clone_grapheme(cp2, cp1);
-        ++cp2;
-        ++cp1;
-    } while (--nch);
-#if COLOR
-    scwrite(row, vp1->v_text, vp1->v_rfcolor, vp1->v_rbcolor);
-    vp1->v_fcolor = vp1->v_rfcolor;
-    vp1->v_bcolor = vp1->v_rbcolor;
-#else
-    if (vp1->v_flag & VFREQ) scwrite(row, vp1->v_text, 0, 7);
-    else                     scwrite(row, vp1->v_text, 7, 0);
-#endif
-    vp1->v_flag &= ~(VFCHG | VFCOL);        /* flag this line as changed */
-    return TRUE;
-}
-
-#else
-
 /*
  * updateline()
  *
@@ -1076,7 +1039,6 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
 #endif
         return TRUE;
     }
-#endif
 
 /* Advance past any common chars at the left */
     while (cp1 != &vp1->v_text[term.t_ncol] && same_grapheme(cp1, cp2, 0)) {
@@ -1737,11 +1699,7 @@ void mberase(void) {
     vp1->v_bcolor = gbcolor;
 #endif
 
-#if MEMMAP
-    updateline(term.t_nrow, vp1, NULL);
-#else
     updateline(term.t_nrow, vp1, pscreen[term.t_nrow]);
-#endif
     return;
 }
 

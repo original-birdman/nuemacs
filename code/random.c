@@ -883,11 +883,7 @@ static int adjustmode(int kind, int global) {
 #endif
 
 /* Test it first against the colors we know */
-#if IBMPC
-    for (i = 0; i <= NCOLORS; i++) {
-#else
     for (i = 0; i < NCOLORS; i++) {
-#endif
     if (strcasecmp(cbuf, cname[i]) == 0) {
 /* Finding the match, we set the color */
 #if COLOR

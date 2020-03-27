@@ -2,16 +2,16 @@
 
 PROGRAM=uemacs
 
-SRC=ansi.c basic.c bind.c buffer.c crypt.c display.c eval.c \
-	exec.c file.c fileio.c globals.c ibmpc.c idxsorter.c input.c \
+SRC=basic.c bind.c buffer.c crypt.c display.c eval.c \
+	exec.c file.c fileio.c globals.c idxsorter.c input.c \
 	isearch.c line.c lock.c main.c names.c pklock.c posix.c random.c \
-	region.c search.c spawn.c tcap.c termio.c usage.c utf8.c \
-	version.c vt52.c window.c word.c wrapper.c
-OBJ=ansi.o basic.o bind.o buffer.o crypt.o display.o eval.o \
-	exec.o file.o fileio.o globals.o ibmpc.o idxsorter.o input.o \
+	region.c search.c spawn.c tcap.c usage.c utf8.c \
+	version.c window.c word.c wrapper.c
+OBJ=basic.o bind.o buffer.o crypt.o display.o eval.o \
+	exec.o file.o fileio.o globals.o idxsorter.o input.o \
 	isearch.o line.o lock.o main.o names.o pklock.o posix.o \
-	random.o region.o search.o spawn.o tcap.o termio.o usage.o \
-	utf8.o version.o vt52.o window.o word.o wrapper.o
+	random.o region.o search.o spawn.o tcap.o usage.o \
+	utf8.o version.o window.o word.o wrapper.o
 HDR=charset.h ebind.h edef.h efunc.h epath.h estruct.h evar.h \
 	idxsorter.h line.h usage.h utf8.h util.h version.h
 
@@ -192,7 +192,7 @@ ifeq ($(strip $(NOTRACE)),)
 #
     ifneq ($(strip $(BCKTLIB)),)
 # Now set the compilation options for it...
-# -g1 is sufficient to get the line numbers (but nt for variable debugging)
+# -g1 is sufficient to get the line numbers (but not for variable debugging)
 # We can still do -Ox optimizing.
         TRACE_OPTS = -g1 -DNUTRACE
     endif
@@ -203,14 +203,14 @@ endif
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 ifeq ($(uname_S),Linux)
- DEFINES=-DAUTOCONF -DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
+ DEFINES=-DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 else ifeq ($(uname_S),FreeBSD)
- DEFINES=-DAUTOCONF -DPOSIX -DSYSV -D_FREEBSD_C_SOURCE -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
+ DEFINES=-DPOSIX -DSYSV -D_FREEBSD_C_SOURCE -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
 else ifeq ($(uname_S),Darwin)
- DEFINES=-DAUTOCONF -DPOSIX -DSYSV -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
+ DEFINES=-DPOSIX -DSYSV -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
 # CygWin is just like Linux....
 else ifeq ($(firstword $(subst -, ,$(uname_S))),CYGWIN_NT)
- DEFINES=-DAUTOCONF -DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
+ DEFINES=-DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 endif
 
 # Are we building an ARM version for an Android 'phone?
@@ -321,7 +321,6 @@ notarm_error:
 
 # DO NOT DELETE THIS LINE -- make depend uses it
 
-ansi.o: ansi.c estruct.h utf8.h edef.h
 basic.o: basic.c estruct.h utf8.h edef.h efunc.h line.h
 bind.o: bind.c estruct.h utf8.h edef.h efunc.h epath.h line.h util.h \
  idxsorter.h
@@ -334,7 +333,6 @@ exec.o: exec.c estruct.h utf8.h edef.h efunc.h line.h
 file.o: file.c estruct.h utf8.h edef.h efunc.h line.h
 fileio.o: fileio.c estruct.h utf8.h edef.h efunc.h line.h
 globals.o: globals.c estruct.h utf8.h edef.h
-ibmpc.o: ibmpc.c estruct.h utf8.h edef.h
 idxsorter.o: idxsorter.c idxsorter.h
 input.o: input.c estruct.h utf8.h edef.h efunc.h line.h
 isearch.o: isearch.c estruct.h utf8.h edef.h efunc.h line.h
@@ -349,11 +347,9 @@ region.o: region.c estruct.h utf8.h edef.h efunc.h line.h
 search.o: search.c estruct.h utf8.h edef.h efunc.h line.h
 spawn.o: spawn.c estruct.h utf8.h edef.h efunc.h
 tcap.o: tcap.c estruct.h utf8.h edef.h efunc.h
-termio.o: termio.c
 usage.o: usage.c usage.h
 utf8.o: utf8.c estruct.h utf8.h edef.h efunc.h
 version.o: version.c version.h
-vt52.o: vt52.c estruct.h utf8.h edef.h
 window.o: window.c estruct.h utf8.h edef.h efunc.h line.h
 word.o: word.c estruct.h utf8.h edef.h efunc.h line.h
 wrapper.o: wrapper.c usage.h

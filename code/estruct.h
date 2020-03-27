@@ -38,8 +38,6 @@
 
 /* Machine/OS definitions. */
 
-#if defined(AUTOCONF) || defined(BSD) || defined(SYSV)
-
 /* Cygwin is (as far as we are concerned) just like Linux */
 
 #ifdef __CYGWIN__
@@ -68,39 +66,7 @@
 #define USG 0
 #endif
 
-#else
-
-#define BSD     0               /* UNIX BSD 4.2 and ULTRIX      */
-#define USG     0               /* UNIX system V                */
-
-#endif                          /*autoconf */
-
-#ifndef AUTOCONF
-
-/*      Compiler definitions                    */
-#define UNIX    0               /* a random UNIX compiler */
-
-#else
-
 #define UNIX    (BSD | USG)
-
-#endif                          /*autoconf */
-
-#ifndef AUTOCONF
-
-/*   Special keyboard definitions            */
-
-#define VT220   0               /* Use keypad escapes P.K.      */
-#define VT100   0               /* Handle VT100 style keypad.   */
-
-/*      Terminal Output definitions             */
-
-#define ANSI    0               /* ANSI escape sequences        */
-#define VT52    0               /* VT52 terminal (Zenith).      */
-#define TERMCAP 0               /* Use TERMCAP                  */
-#define IBMPC   1               /* IBM-PC CGA/MONO/EGA driver   */
-
-#else
 
 #define VT220   UNIX
 #define VT100   0
@@ -109,21 +75,12 @@
 #define VT52    0
 #define TERMCAP UNIX
 
-#endif /* Autoconf. */
-
 /*      Configuration options   */
 
 #define CLRMSG  0  /* space clears the message line with no insert */
 #define DEBUGM  1  /* $debug triggers macro debugging              */
 #define VISMAC  0  /* update display during keyboard macros        */
 #define REVSTA  1  /* Status line appears in reverse video         */
-
-#ifndef AUTOCONF
-
-#define COLOR   1  /* color commands and windows                   */
-#define FILOCK  1  /* file locking under unix BSD 4.2              */
-
-#else
 
 #define COLOR   1
 #ifdef  SVR4
@@ -132,17 +89,11 @@
 #define FILOCK  BSD
 #endif
 
-#endif /* Autoconf. */
-
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
 
 /* Define some ability flags. */
 
-#if IBMPC
-#define MEMMAP  1
-#else
 #define MEMMAP  0
-#endif
 
 #if USG | BSD
 #define ENVFUNC 1

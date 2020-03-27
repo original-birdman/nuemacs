@@ -21,11 +21,7 @@ char *mode2name[] = {           /* Display name of modes        */
 char modecode[] = "WCPEVOMYAqD";/* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
-#if IBMPC
-int gfcolor = 8;                /* global forgrnd color (white) */
-#else
 int gfcolor = 7;                /* global forgrnd color (white) */
-#endif
 int gbcolor = 0;                /* global backgrnd color (black) */
 int gasave = 256;               /* global ASAVE size            */
 int gacount = 256;              /* count until next ASAVE       */
@@ -49,9 +45,6 @@ int tabmask = 0x07;             /* tabulator mask */
 char *cname[] = {               /* names of colors              */
         "BLACK", "RED", "GREEN", "YELLOW", "BLUE",
         "MAGENTA", "CYAN", "WHITE"
-#if IBMPC
-            , "HIGH"
-#endif
 };
 struct kill *kbufp = NULL;      /* current kill buffer chunk pointer    */
 struct kill *kbufh[] = {[0 ... KRING_SIZE-1] = NULL};
