@@ -259,7 +259,7 @@ static void index_keystr(void) {
  * further entries it will return NULL.
  * If the pointer is out of range it will also return NULL.
  */
-struct key_tab *next_getbyfnc(struct key_tab *cp) {
+static struct key_tab *next_getbyfnc(struct key_tab *cp) {
     if (!keystr_index_valid) index_keystr();
     if (cp == NULL) return &keytab[keystr_index[0]];
 /* Convert pointer to index and work from that... */

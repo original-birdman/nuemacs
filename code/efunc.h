@@ -199,6 +199,7 @@ extern int getstring(char *, char *, int , enum cmplt_type);
 /* bind.c */
 extern int help(int f, int n);
 extern int deskey(int f, int n);
+extern struct key_tab *getbyfnc(fn_t func);
 extern struct key_tab *getbind(int);
 extern int bindtokey(int f, int n);
 extern int unbindkey(int f, int n);
