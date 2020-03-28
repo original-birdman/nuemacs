@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.152 Help Index     (25 March 2020)
+=>                   nuEmacs GGR4.153 Help Index     (28 March 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -46,16 +46,23 @@ Save file .............   ^X ^S (^X S)
 Read file .............   ^X ^R
 Write file ............   ^X ^W         Execute file .......... Meta ^X
 
-Openign a directory (rather than a file) will present you with a list of
-files which you may browse and open. When viewgin this list (which will
+Opening a directory (rather than a file) will present you with a list of
+files which you may browse and open. When viewing this list (which will
 be in a buffer named //directory):
 
-Typing      result
+Typing      Result
  d or o     Dive into/Open entry on current line.
+  or Return
  v          View entry on current line.
- r          Refresh current view.
  u          Up to parent.
+ a          Switch to sort-by-name mode if in time mode.
+            If already in name mode, toggle between A->z and z->A sorting.
+ t          Switch to sort-by-time mode if in name mode.
+            If already in time mode, toggle between newest and oldest first.
+ h          Toggle the display of hidden (dot) files.
+ r          Refresh the current view in the current mode.
 
+The current mode is remembered when you move through the directory tree.
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS CHARACTER COMMANDS
 Newline ...............      ^M         Transpose characters ..      ^T
@@ -92,6 +99,9 @@ A   asave       Autosave the file periodically.
 Q   equiv       Use equivalence mode when searching (see below).
 D   dos         Write out file with DOS line endings.
 
+In VIEW mode the following ASCII keys are active:
+Space or Return     Go forward one page
+b B                 Go back one page
 -------------------------------------------------------------------------------
 =>                      KEYS AND COMMANDS
 Bind to key ........... Meta  K         Help ..................   ^X  ?

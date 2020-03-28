@@ -4085,4 +4085,69 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.152
 
+========== GGR4.153
+
+display.c
+    Remove (long-since unused) #ifdef RAINBOW code.
+
+bind.c
+efunc.h
+    Mark next_getbyfnc() as a static function. [bind.c]
+    Add getbyfnc() - from bind.c [efunc.h]
+
+input.c
+estruct.h
+evar.h
+    Remove/fix comment about getname having its own internal command
+    name expansion, as it no longer does. [estruct.h, input.c]
+    Note that &esc does SHELL escape, *not* ~ escape. [evar.h]
+
+main.c
+etc/uemacs.rc
+    Extend directory-browsing display sorting with A (A->z), Z (z->A),
+    T (by mod-time, newest first) and R (by mod-time, oldest first).
+    For o/u/d displays it uses the last used method (start default: A).
+    In VIEW mode make Return and Space go down a page and b/B go up a
+    page.
+
+Makefile
+display.c   globals.c   main.c      random.c    estruct.h
+ansi.c      ibmpc.c     termio.c    vt52.c
+    Removed AUTOCONF, as this is really Linux/Unix(?) only now. [estruct.h]
+    No longer set -DAUTOCONF in CFLAGS. [Makefile]
+    Remove IBMPC, VT52 and ANSI defines [globals.c, main.c, random.c,
+    estruct.h]
+    Move ansi.c, ibmpc.c, termio.c and vt52.c to removed/, as they are
+    all now unused. Removed their entries from Makefile.
+    Removed MEMMAP conditionals (they were for IBMPC). [display.c]
+
+exec.c
+    If parsing a buffer fails in dobuf(), unmark the buffer as a BTPROC
+    one, so that we don't try to execute it (and loop...)
+
+eval.c
+random.c
+    Remove the '%' to "%%" expansion in setvar() as it isn't needed
+    (similar code was removed from exec.c some time ago). [eval.c]
+    Add a comment to writemsg() pointing out that the first character
+    of any write-message string (even with "") is tested for being an
+    active character. [random.c]
+
+main.c
+etc/uemacs.rc
+    Modify directory-browsing key handling so that:
+    o H toggles the display of hidden files
+    o T switches to sort by time if not in time mode and toggles
+      newset/oldest first when in it
+    o A switches to ASCII sort (== by name) if not in name mode and toggles
+      A->z/z->A when in it.
+    o R refreshes the current view in the current style.
+    Going up/down in the directory tree keeps the same mode.
+
+../CHANGES
+../README
+version.h
+etc/uemacs.hlp
+    Update to version GGR4.153
+
 ==========

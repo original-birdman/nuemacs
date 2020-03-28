@@ -67,7 +67,8 @@ Other changes so far made are:
   o Removed the 1 million line input reading restriction.
   o Greatly extended Magic-mode regex capability for searching and
     enabled it to work with Unicode characters.
-
+  o Simple Space/Return and b/B for forward/backward page scrolling in
+    VIEW mode.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in
