@@ -1483,10 +1483,10 @@ int execute(int c, int f, int n) {
             if (test_char == 'v') curwp->w_bufp->b_mode |= MDVIEW;
             break;
            }
-        case 'a':           /* Refresh current view A->Z */
-        case 'z':           /* Refresh current view Z->A */
-        case 'r':           /* Refresh current view old->new */
-        case 't':           /* Refresh current view new->old */
+        case 'a':           /* Refresh/toggle current view in ASCII mode */
+        case 't':           /* Refresh/toggle current view in TIME mode */
+        case 'r':           /* Refresh current view in current mode */
+        case 'h':           /* Toggle hidden files in current mode */
             getfile(curbp->b_fname, FALSE, TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */

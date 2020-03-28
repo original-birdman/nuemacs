@@ -1,11 +1,11 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       GGR version
-;                       Last Update: 16 March 2020
+;                       Version - GGR4.153
+;                       Last Update: 28 March 2020
 ;
-set $discmd FALSE
 write-message "[Setting up....]"
+set $discmd FALSE
 ;
 2 ggr-style         ; Enable ggr-style
 ;
@@ -415,7 +415,11 @@ args-in-reexec ALL
 ; /bin/ls command (defined below) to get to the start of the entryname.
 ;
  set $showdir_tokskip 8
- set %showdir_last_lsopts "-lLAh "  ; Set the default...
+
+; For the following 3 we set the ls flag as the value
+ set %showdir_sort_type ""   ; Set the default...Ascii (not Time)
+ set %showdir_sort_drct ""   ; Set the default...Forwards (not Reverse)
+ set %showdir_sort_hide ""   ; Set the default...hide dot files
 
 ; NOW we define the user procedure to fill a buffer with ls lines
 ;
@@ -426,7 +430,10 @@ args-in-reexec ALL
 ; If the user calls this "manually" (Esc-x execute-procedure showdir)
 ; and gets prompted we will *still* expand it.
 ;
-; We have to set the flags just before an call - they are reset on use.
+; We must set $uproc_opts just before getting %udir as it is reset on fetch.
+; This sets UPROC_FIXUP - to expand any user reply to a full pathname
+; (If the userproc_arg arg was set internally it will have already been
+; expanded internally)
 ;
     set $uproc_opts 0x01
     set %udir &arg "Dir: "
@@ -459,24 +466,46 @@ args-in-reexec ALL
 ; Always remember the method used.
 ;
     set %lkey &upp &chr $lastkey
-    !if &gre &sin "TRAZ" %lkey 0
-        !if &seq %lkey R        ; Old -> New
-            set %lsopt "-lLAhtr "
+    !if &seq %lkey H            ; Toggle hide option
+        !if &seq %showdir_sort_hide "A" ; Set the ls flag directly
+            set %showdir_sort_hide ""
         !else
-        !if &seq %lkey T        ; New -> Old
-            set %lsopt "-lLAht "
-        !else
-        !if &seq %lkey Z        ; Z -> A
-            set %lsopt "-lLAhr "
-        !else                   ; A -> Z (default)
-            set %lsopt "-lLAh "
+            set %showdir_sort_hide "A"
         !endif
-        !endif
-        !endif
-    !else
-        set %lsopt %showdir_last_lsopts
     !endif
-    set %showdir_last_lsopts %lsopt     ; Remember last used...
+
+    !if &seq %lkey A            ; Set/toggle ASCII option
+        !if &seq %showdir_sort_type ""  ; In ASCII - toggle direction
+            !if &seq %showdir_sort_drct "r"
+                set %showdir_sort_drct ""
+            !else
+                set %showdir_sort_drct "r"
+            !endif
+        !else
+            set %showdir_sort_type ""   ; Switch to ASCII
+        !endif
+    !endif
+
+    !if &seq %lkey T            ; Set/toggle TIME option
+        !if &seq %showdir_sort_type "t" ; In TIME - toggle direction
+            !if &seq %showdir_sort_drct "r"
+                set %showdir_sort_drct ""
+            !else
+                set %showdir_sort_drct "r"
+            !endif
+        !else
+            set %showdir_sort_type "t"  ; Switch to TIME
+        !endif
+    !endif
+
+; All other keys (D U O R) re-use the current settings...
+
+; Now build up the ls options flags
+;
+    set %lsopt &cat "-lLh" %showdir_sort_hide
+    set %lsopt &cat %lsopt %showdir_sort_type
+    set %lsopt &cat %lsopt %showdir_sort_drct
+    set %lsopt &cat %lsopt " "
     set %ucmd &cat "QUOTING_STYLE=literal /bin/ls " &cat %lsopt &cat %escudir
 
 ; The initial list is sent to sort to move all dirs to the top.
@@ -493,7 +522,7 @@ args-in-reexec ALL
 ; Rename it to something else - make sure anything already there is
 ; removed first
 ; NOTE: that we know it isn't being displayed, as we've just set the
-;       pipecmd window (.ue_command - PIPEFILE in spawn.c) to be the
+;       pipecmd window (.ue_command - PIPEBUF in spawn.c) to be the
 ;       only displayed window.
 ;       This //directory name must agree with the name used in main.c
 ;       for its showdir handling.
@@ -503,6 +532,28 @@ args-in-reexec ALL
     change-file-name %udir
     add-mode view       ; Turn it back on...
     delete-mode wrap    ; Turn this off...
+
+    set %_sdmess "Sorted by"
+    !if &seq %showdir_sort_type "t"
+        set %_sdmess &cat %_sdmess " time"
+    !else
+        set %_sdmess &cat %_sdmess " name"
+    !endif
+    !if &seq %showdir_sort_drct "r"
+        set %_sdmess &cat %_sdmess " reversed, "
+    !else
+        set %_sdmess &cat %_sdmess ", "
+    !endif
+    !if &seq %showdir_sort_hide "A"
+        set %_sdmess &cat %_sdmess "with hidden files"
+    !else
+        set %_sdmess &cat %_sdmess "no hidden files"
+    !endif
+; Need to update the current screen before displaying the sort method.
+;
+    update-screen
+    write-message %_sdmess
+
  !endm
 !endif
 
