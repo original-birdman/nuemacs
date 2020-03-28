@@ -1138,19 +1138,6 @@ int dobuf(struct buffer *bp) {
             if (strlen(eline) > 80) strncat(outline, eline, 80);
             else                    strcat(outline, eline);
             strcat(outline, ">>>");
-#if 0
-/* Change all '%' to ':' so mlwrite won't expect arguments */
-            sp = outline;
-            while (*sp)
-                if (*sp++ == '%') {
-                    ep = --sp;          /* Advance to the end */
-                    while (*ep++);
-                    *(ep + 1) = 0;      /* Null terminate the string */
-                    while (ep-- > sp)   /* copy backwards */
-                        *(ep + 1) = *ep;
-                    sp += 2;            /* and advance sp past the new % */
-                }
-#endif
 
 /* Write out the debug line */
             mlforce(outline);
@@ -1394,10 +1381,17 @@ failexit:
     bp->b_exec_level--;
     pause_key_index_update = orig_pause_key_index_update;
 
+/* If this was (meant to be) a procedure buffer, we must switch that off
+ * so that we don't try to run it...
+ * Just set the bit off for all errors...
+ */
+    if (bstore) bstore->b_type |= ~BTPROC;  /* Forcibly unmark macro type */
+
 single_exit:
 
-/* Revert to original read-only status if it wasn't set */
-
+/* Revert to the original read-only status if it wasn't originally set
+ * i.e. restore any writeability!
+ */
     if (!orig_view_bit) bp->b_mode &= ~MDVIEW;
     return status;
 }
@@ -1539,43 +1533,11 @@ int cbuf(int f, int n, int bufnum) {
 #define NMAC(nmac) \
    int cbuf ## nmac(int f, int n) { return cbuf(f, n, nmac); }
 
-NMAC(1)
-NMAC(2)
-NMAC(3)
-NMAC(4)
-NMAC(5)
-NMAC(6)
-NMAC(7)
-NMAC(8)
-NMAC(9)
-NMAC(10)
-NMAC(11)
-NMAC(12)
-NMAC(13)
-NMAC(14)
-NMAC(15)
-NMAC(16)
-NMAC(17)
-NMAC(18)
-NMAC(19)
-NMAC(20)
-NMAC(21)
-NMAC(22)
-NMAC(23)
-NMAC(24)
-NMAC(25)
-NMAC(26)
-NMAC(27)
-NMAC(28)
-NMAC(29)
-NMAC(30)
-NMAC(31)
-NMAC(32)
-NMAC(33)
-NMAC(34)
-NMAC(35)
-NMAC(36)
-NMAC(37)
-NMAC(38)
-NMAC(39)
-NMAC(40)
+NMAC(1)     NMAC(2)     NMAC(3)     NMAC(4)     NMAC(5)
+NMAC(6)     NMAC(7)     NMAC(8)     NMAC(9)     NMAC(10)
+NMAC(11)    NMAC(12)    NMAC(13)    NMAC(14)    NMAC(15)
+NMAC(16)    NMAC(17)    NMAC(18)    NMAC(19)    NMAC(20)
+NMAC(21)    NMAC(22)    NMAC(23)    NMAC(24)    NMAC(25)
+NMAC(26)    NMAC(27)    NMAC(28)    NMAC(29)    NMAC(30)
+NMAC(31)    NMAC(32)    NMAC(33)    NMAC(34)    NMAC(35)
+NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
