@@ -831,10 +831,6 @@ static int svar(struct variable_description *var, char *value) {
  */
 int setvar(int f, int n) {
     int status;                     /* status return */
-#if DEBUGM
-    char *sp;                       /* temp string pointer */
-    char *ep;                       /* ptr to end of outline */
-#endif
     struct variable_description vd; /* variable num/type */
     char var[NVSIZE + 1];           /* name of variable to fetch */
     char value[NSTRING];            /* value to set variable to */
@@ -885,18 +881,6 @@ int setvar(int f, int n) {
 /* And lastly the value we tried to assign */
         strcat(outline, value);
         strcat(outline, ")))");
-
-/* Expand '%' to "%%" so mlwrite wont bitch */
-        sp = outline;
-        while (*sp) {
-            if (*sp++ == '%') {
-                ep = --sp;      /* start at that % */
-                while (*ep++);  /* advance to the end */
-                *(ep + 1) = 0;  /* null terminate the string one out */
-                while (ep-- > sp) *(ep + 1) = *ep;  /* copy backwards */
-                sp += 2;        /* and advance sp past the new % */
-            }
-        }
 
 /* Write out the debug line */
         mlforce(outline);

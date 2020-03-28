@@ -986,6 +986,11 @@ int clrmes(int f, int n) {
  * This function writes a string on the message line
  * mainly for macro usage
  *
+ * NOTE!!!! The string is checked (as one item) for variable expansion etc.
+ * (within the mlreply call, via nextarg() and getval()) so if the string
+ * starts with !, @, #, $, %, & or * you need to prepend a "~".
+ * This is true even for things like - write-message "%lopts"
+ *
  * IFF n comes in as 2, just print to stderr - for macro debugging ONLY.
  *
  */
