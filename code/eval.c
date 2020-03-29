@@ -21,6 +21,21 @@
 
 #define MAXVARS 255
 
+/* These showdir vars are only set/got in eval.c, so no need to make
+ * them visible anywhere else.
+ */
+
+#define MAX_SD_OPTS 5
+static char showdir_opts[MAX_SD_OPTS+1] = "";
+/* These are set to 2 NULs so that the first char can be set to NUL or
+ * the single char allowed and end up as a string either way.
+ */
+static char showdir_sort_type[2] = { '\0', '\0' };
+static char showdir_sort_drct[2] = { '\0', '\0' };
+static char showdir_sort_hide[2] = { '\0', '\0' };
+static char showdir_sort_dirf[2] = { '\0', '\0' };
+static char showdir_sort_mixd[2] = { '\0', '\0' };
+
 /* Return some of the contents of the kill buffer
  */
 static char *getkill(void) {
@@ -558,7 +573,14 @@ static char *gtenv(char *vname) {
             if (equiv_handler == utf8proc_NFKD) return "NFKD";
             else                                return "NFKC";
             break;
+    case EVSDOPTS:          return showdir_opts;
+    case EVSDTYPE:          return showdir_sort_type;
+    case EVSDDRCT:          return showdir_sort_drct;
+    case EVSDHIDE:          return showdir_sort_hide;
+    case EVSDDIRF:          return showdir_sort_dirf;
+    case EVSDMIXD:          return showdir_sort_mixd;
     }
+
     exit(-12);              /* again, we should never get here */
 }
 
@@ -815,6 +837,52 @@ static int svar(struct variable_description *var, char *value) {
             else if (!strcasecmp("NFD", value))  equiv_handler = utf8proc_NFD;
             else if (!strcasecmp("NFKD", value)) equiv_handler = utf8proc_NFKD;
             else                                 equiv_handler = utf8proc_NFKC;
+            break;
+
+/* There are only 5 (MAX_SD_OPTS) options, so any attempt to set more
+ * is an error.
+ */
+        case EVSDOPTS:
+            if (strlen(value) > MAX_SD_OPTS) status = FALSE;
+            else            strcpy(showdir_opts, value);
+            break;
+/* These next 5 (MAX_SD_OPTS) entries are just the single-character
+ * option flag to use. So only allow that or the empty string.
+ */
+        case EVSDTYPE:
+            if (value[0] == '\0' ||
+                ((value[1] == '\0') && (value[0] == 't'))) {
+                showdir_sort_type[0] = value[0];
+            }
+            else status = FALSE;
+            break;
+        case EVSDDRCT:
+            if (value[0] == '\0' ||
+                ((value[1] == '\0') && (value[0] == 'r'))) {
+                showdir_sort_drct[0] = value[0];
+            }
+            else status = FALSE;
+            break;
+        case EVSDHIDE:
+            if (value[0] == '\0' ||
+                ((value[1] == '\0') && (value[0] == 'A'))) {
+                showdir_sort_hide[0] = value[0];
+            }
+            else status = FALSE;
+            break;
+        case EVSDDIRF:
+            if (value[0] == '\0' ||
+                ((value[1] == '\0') && (value[0] == 'r'))) {
+                showdir_sort_dirf[0] = value[0];
+            }
+            else status = FALSE;
+            break;
+        case EVSDMIXD:          /* Not a flag - a testable char */
+            if (value[0] == '\0' ||
+                ((value[1] == '\0') && (value[0] == 'M'))) {
+                showdir_sort_mixd[0] = value[0];
+            }
+            else status = FALSE;
             break;
         }
         break;

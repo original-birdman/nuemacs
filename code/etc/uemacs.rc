@@ -417,9 +417,37 @@ args-in-reexec ALL
  set $showdir_tokskip 8
 
 ; For the following 3 we set the ls flag as the value
- set %showdir_sort_type ""   ; Set the default...Ascii (not Time)
- set %showdir_sort_drct ""   ; Set the default...Forwards (not Reverse)
- set %showdir_sort_hide ""   ; Set the default...hide dot files
+;
+; Base the setting on a user's $showdir_opts, if any...
+;
+ !if &seq $showdir_opts "ERROR" ; == not set
+    set $showdir_opts ""
+ !endif
+ !if &equ &sin &upp $showdir_opts "T" 0
+     set $showdir_sort_type ""  ; Set the default...Ascii (not Time)
+ !else
+     set $showdir_sort_type "t" ; Set Time
+ !endif
+ !if &equ &sin &upp $showdir_opts "R" 0
+     set $showdir_sort_drct ""  ; Set the default...forwards
+ !else
+     set $showdir_sort_drct "r" ; Set reverse
+ !endif
+ !if &equ &sin &upp $showdir_opts "H" 0
+     set $showdir_sort_hide ""  ; Set the default...ignore hidden
+ !else
+     set $showdir_sort_hide "A" ; Set show hidden
+ !endif
+ !if &equ &sin &upp $showdir_opts "F" 0
+     set $showdir_sort_dirf "r" ; Set the default...dirs before files
+ !else
+     set $showdir_sort_dirf ""  ; Set files before dirs
+ !endif
+ !if &equ &sin &upp $showdir_opts "M" 0
+     set $showdir_sort_mixd ""  ; Set the default...separate types
+ !else
+     set $showdir_sort_mixd "M" ; Set mixed-display mode (dirf ignored)
+ !endif
 
 ; NOW we define the user procedure to fill a buffer with ls lines
 ;
@@ -467,34 +495,50 @@ args-in-reexec ALL
 ;
     set %lkey &upp &chr $lastkey
     !if &seq %lkey H            ; Toggle hide option
-        !if &seq %showdir_sort_hide "A" ; Set the ls flag directly
-            set %showdir_sort_hide ""
+        !if &seq $showdir_sort_hide "A" ; Set the ls flag directly
+            set $showdir_sort_hide ""
         !else
-            set %showdir_sort_hide "A"
+            set $showdir_sort_hide "A"
+        !endif
+    !endif
+
+    !if &seq %lkey F            ; Toggle files/dirs order
+        !if &seq $showdir_sort_dirf "r" ; Set the sort flag directly
+            set $showdir_sort_dirf ""
+        !else
+            set $showdir_sort_dirf "r"
+        !endif
+    !endif
+
+    !if &seq %lkey M            ; Toggle mixed/type-separated
+        !if &seq $showdir_sort_mixd "M" ; Set a flag
+            set $showdir_sort_mixd ""
+        !else
+            set $showdir_sort_mixd "M"
         !endif
     !endif
 
     !if &seq %lkey A            ; Set/toggle ASCII option
-        !if &seq %showdir_sort_type ""  ; In ASCII - toggle direction
-            !if &seq %showdir_sort_drct "r"
-                set %showdir_sort_drct ""
+        !if &seq $showdir_sort_type ""  ; In ASCII - toggle direction
+            !if &seq $showdir_sort_drct "r"
+                set $showdir_sort_drct ""
             !else
-                set %showdir_sort_drct "r"
+                set $showdir_sort_drct "r"
             !endif
         !else
-            set %showdir_sort_type ""   ; Switch to ASCII
+            set $showdir_sort_type ""   ; Switch to ASCII
         !endif
     !endif
 
     !if &seq %lkey T            ; Set/toggle TIME option
-        !if &seq %showdir_sort_type "t" ; In TIME - toggle direction
-            !if &seq %showdir_sort_drct "r"
-                set %showdir_sort_drct ""
+        !if &seq $showdir_sort_type "t" ; In TIME - toggle direction
+            !if &seq $showdir_sort_drct "r"
+                set $showdir_sort_drct ""
             !else
-                set %showdir_sort_drct "r"
+                set $showdir_sort_drct "r"
             !endif
         !else
-            set %showdir_sort_type "t"  ; Switch to TIME
+            set $showdir_sort_type "t"  ; Switch to TIME
         !endif
     !endif
 
@@ -502,17 +546,24 @@ args-in-reexec ALL
 
 ; Now build up the ls options flags
 ;
-    set %lsopt &cat "-lLh" %showdir_sort_hide
-    set %lsopt &cat %lsopt %showdir_sort_type
-    set %lsopt &cat %lsopt %showdir_sort_drct
+    set %lsopt &cat "-lLh" $showdir_sort_hide
+    set %lsopt &cat %lsopt $showdir_sort_type
+    set %lsopt &cat %lsopt $showdir_sort_drct
     set %lsopt &cat %lsopt " "
-    set %ucmd &cat "QUOTING_STYLE=literal /bin/ls " &cat %lsopt &cat %escudir
+    set %ucmd &cat "QUOTING_STYLE=literal /bin/ls 2>/dev/null " &cat %lsopt &cat %escudir
 
 ; The initial list is sent to sort to move all dirs to the top.
 ; Actually we just do a stable sort on char1, so get blocks of:
 ;   blockdevs, chardevs, dirs, pipes, sockets, files.
+; The awk filters out the any total on line1, and also any
+; dangling links (which start l????????).
 ;
-    set %ucmd &cat %ucmd "| awk 'NR == 1 && $1 == ~"total~" {next;} {print;}' | sort -k 1.1,1.1r -s"
+    !if &seq $showdir_sort_mixd ""  ; We want type sorting
+        set %_sdsort &cat "| sort -s -k 1.1,1.1" $showdir_sort_dirf
+    !else
+        set %_sdsort ""
+    !endif
+    set %ucmd &cat %ucmd &cat "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ {next;} {print;}' " %_sdsort
     pipe-command %ucmd
 
 ; Make that window the only window
@@ -534,20 +585,29 @@ args-in-reexec ALL
     delete-mode wrap    ; Turn this off...
 
     set %_sdmess "Sorted by"
-    !if &seq %showdir_sort_type "t"
+    !if &seq $showdir_sort_type "t"
         set %_sdmess &cat %_sdmess " time"
     !else
         set %_sdmess &cat %_sdmess " name"
     !endif
-    !if &seq %showdir_sort_drct "r"
+    !if &seq $showdir_sort_drct "r"
         set %_sdmess &cat %_sdmess " reversed, "
     !else
         set %_sdmess &cat %_sdmess ", "
     !endif
-    !if &seq %showdir_sort_hide "A"
-        set %_sdmess &cat %_sdmess "with hidden files"
+    !if &seq $showdir_sort_hide "A"
+        set %_sdmess &cat %_sdmess "with hidden files, "
     !else
-        set %_sdmess &cat %_sdmess "no hidden files"
+        set %_sdmess &cat %_sdmess "no hidden files, "
+    !endif
+    !if &seq $showdir_sort_mixd ""
+        !if &seq $showdir_sort_dirf ""
+            set %_sdmess &cat %_sdmess "files before dirs"
+        !else
+            set %_sdmess &cat %_sdmess "dirs before files"
+        !endif
+    !else
+        set %_sdmess &cat %_sdmess "mixed types"
     !endif
 ; Need to update the current screen before displaying the sort method.
 ;

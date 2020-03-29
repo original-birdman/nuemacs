@@ -71,6 +71,13 @@ struct evlist evl[] = {
  { "uproc_opts",    EVUPROCOPTS },  /* Flags when processing &arg */
  { "force_status",  EVFORCESTAT },  /* Actual status when forced to OK */
  { "equiv_type",    EVEQUIVTYPE },  /* Function to use for Equiv mode */
+/* showdir vars */
+ { "showdir_opts", EVSDOPTS },      /* Start-up stat (for user to set) */
+ { "showdir_sort_type", EVSDTYPE }, /* Type of sort ("" or "t") */
+ { "showdir_sort_drct", EVSDDRCT }, /* Direction of sort ("" or "r") */
+ { "showdir_sort_hide", EVSDHIDE }, /* Hidden files? ("" or "h") */
+ { "showdir_sort_dirf", EVSDDIRF }, /* Type sort ("r" or "") */
+ { "showdir_sort_mixd", EVSDMIXD }, /* Separate types? ("" or "M") */
 };
 
 /* The tags for user functions - used in struct evlist */

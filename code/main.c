@@ -1487,6 +1487,8 @@ int execute(int c, int f, int n) {
         case 't':           /* Refresh/toggle current view in TIME mode */
         case 'r':           /* Refresh current view in current mode */
         case 'h':           /* Toggle hidden files in current mode */
+        case 'm':           /* Toggle mixed/type-sorted display */
+        case 'f':           /* Toggle dirs/files order in type-sorted mode */
             getfile(curbp->b_fname, FALSE, TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
