@@ -291,8 +291,8 @@ static int makelist(int iflag) {
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
         return s;
     strcpy(blistp->b_fname, "");
-    if (addline("ACT MODES          Size Buffer        File") == FALSE
-     || addline("--- -----          ---- ------        ----") == FALSE)
+    if (addline("ACT MODES  Type↴      Size Buffer        File") == FALSE
+     || addline("--- -----------.      ---- ------        ----") == FALSE)
         return FALSE;
     bp = bheadp;                        /* For all buffers      */
 
@@ -305,7 +305,7 @@ static int makelist(int iflag) {
 
     for (i = 0; i < NUMMODES; i++)
         *cp1++ = (gmode & (1 << i))? modecode[i]: '.';
-    strcpy(cp1, "           Global Modes");
+    strcpy(cp1, ".           Global Modes");
     if (addline(line) == FALSE) return FALSE;
 
 /* Output the list of buffers */
@@ -336,6 +336,11 @@ static int makelist(int iflag) {
         for (i = 0; i < NUMMODES; i++)
             *cp1++ = (bp->b_mode & (1 << i))?  modecode[i]: '.';
 
+/* Append p or x to denote whether it is set to BTPHON or BTPROC */
+        if (bp->b_type == BTPHON) *cp1++ = 'p';
+        else if (bp->b_type == BTPROC) *cp1++ = 'x';
+        else *cp1++ = '.';
+
         *cp1++ = ' ';                   /* Gap.                 */
         nbytes = 0L;                    /* Count bytes in buf.  */
         lp = lforw(bp->b_linep);
@@ -355,12 +360,12 @@ static int makelist(int iflag) {
 /*
  * We'll assume an 80-column width for determining whether the
  * filename will fit.
- * The column data so far is 3+1+9+1+9+1+14 == 38.
- * If the buffername has reached >37 or the filename is > 40 we'll print
+ * The column data so far is 3+1+12+1+9+1+14 == 38.
+ * If the buffername has reached >34 or the filename is > 37 we'll print
  * the filename on the next line...
  */
 
-            if (((cp1 - line) > 37) || (strlen(cp2) > 40)) {
+            if (((cp1 - line) > 34) || (strlen(cp2) > 37)) {
                 *cp1++ = ' ';
                 *cp1++ = 0xe2;      /* Carriage return symbol */
                 *cp1++ = 0x86;      /* U+2185                 */

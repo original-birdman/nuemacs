@@ -531,7 +531,7 @@ static int ptt_compile(struct buffer *bp) {
 
 /* GGR
  * Store a phonetic translation table.
- * This starts by storing a procedure, so we just use that code.
+ * This starts by storing (starting) a procedure, so we just use that code.
  */
 static int ptt_storing = 0;
 int storepttable(int f, int n) {
@@ -539,9 +539,12 @@ int storepttable(int f, int n) {
     int status = storeproc(0, 0);
     if (status != TRUE) return status;
 
-/* Mark that we need to compile the buffer */
+/* Mark this as a translation buffer (storeprocwill have set BTPROC) */
 
-    bstore->b_type = BTPHON;    /* Mark this as a translation buffer */
+    bstore->b_type = BTPHON;
+
+/* Mark that we need to compile the buffer when we get to !endm */
+
     ptt_storing = 1;
     return TRUE;
 }
@@ -773,10 +776,11 @@ int ptt_handler(int c) {
     return FALSE;
 }
 
-/*
- * storeproc:
- *      Set up a procedure buffer and flag to store all
- *      executed command lines there
+/* storeproc:
+ *  Set up a procedure buffer and flag to store all executed command
+ *  lines there.
+ *  NOTE that this only sets up a buffer (in bstore) to store the
+ *  commands. The reading into that biffer continues to be done by dobuf().
  *
  * int f;               default flag
  * int n;               macro number to use
