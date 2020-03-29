@@ -3053,7 +3053,13 @@ int boundry(struct line *curline, int curoff, int dir) {
              border = TRUE;
         }
         else {
-            border = (curoff == 0) && (lback(curline) == curbp->b_linep);
+/* A reverse slow scan has to be able to get to curoff == 0 on
+ * the first line...
+ */
+            if (slow_scan)
+                border = (curline == curbp->b_linep);
+            else
+                border = (curoff == 0) && (lback(curline) == curbp->b_linep);
 	}
     }
     return border;
