@@ -95,7 +95,8 @@ static int docmd(char *cline) {
     if (strcmp(tkn, "reexecute") == 0) {
         Xfree(this_line_seen);   /* Drop the "reexecute" */
         this_line_seen = strdup(prev_line_seen);
-        status = docmd(prev_line_seen);
+        status = TRUE;
+        while (n-- && status) status = docmd(prev_line_seen);
         goto remember_cmd;
     }
 
@@ -991,6 +992,7 @@ static void freewhile(struct while_block *wp) {
  * This routine sets the buffer to be read-only while running it,
  * so it is IMPORTANT to ensure that any exit goes via the code
  * to restore the original setting - by "goto single_exit" not "return".
+ * This now also resets inreex to its incoming value.
  *
  * struct buffer *bp;           buffer to execute
  */
@@ -1023,6 +1025,13 @@ int dobuf(struct buffer *bp) {
         mlwrite("%%Maximum recursion level, %d, exceeded!", MAX_RECURSE);
         return FALSE;
     }
+
+/* We may be reexecing the buffer, but we aren't reexecing individual
+ * commands within it!
+ * Remember its entry value (for restoring on exit) and unset it now.
+ */
+    int init_inreex = inreex;
+    inreex = FALSE;
 
 /* Mark an executing buffer as read-only while it is being executed */
     int orig_view_bit = bp->b_mode & MDVIEW;
@@ -1392,6 +1401,9 @@ failexit:
     if (bstore) bstore->b_type |= ~BTPROC;  /* Forcibly unmark macro type */
 
 single_exit:
+
+/* Restore the original inreex value before leaving */
+    inreex = init_inreex;
 
 /* Revert to the original read-only status if it wasn't originally set
  * i.e. restore any writeability!
