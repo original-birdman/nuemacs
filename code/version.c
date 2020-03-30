@@ -11,13 +11,23 @@
 
 void version(void) {
     printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);
-#if defined(__GNUC__)
+#ifdef __GNUC__
     printf(" Compiled on %s, by GCC %s, on %s at %s\n",
         xstr(BUILDER), __VERSION__, __DATE__, __TIME__);
 #else
     printf(" Compiled on %s\n", xstr(BUILDER));
 #endif
-    printf(" utf8proc version %s\n", utf8proc_version());
+
+    const char *utf8vp = utf8proc_version();
+    printf(" utf8proc version %s", utf8vp);
+    if (strcmp(utf8vp, "2.3") >= 0)
+        printf(", supports Unicode %s", utf8proc_unicode_version());
+    printf("\n");
+
+#ifdef NUTRACE
+    printf(" Stack dumping available\n");
+#endif
+
 
 /* Try to get the libc version...ripped from BOINC code. */
 
