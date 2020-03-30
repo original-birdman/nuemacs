@@ -378,9 +378,8 @@ int macro_helper(int f, int n) {
 static char* called_as;
 
 
-/* ===================== START OF SIGWINCH ONLY CODE ==================== */
-/* We need SIGWINCH to be able to handle buffer saving */
-#if defined(SIGWINCH) 
+/* ===================== START OF BUFFER SAVING CODE ==================== */
+
 #define Dumpdir_Name "uemacs-dumps"
 #define Dump_Index "INDEX"
 #define AutoClean_Buffer "//autoclean"
@@ -400,7 +399,7 @@ static int can_dump_files = 0;
 
 /* ===================== START OF NUTRACE ONLY CODE ===================== */
 /* We need NUTRACE to be able to handle stack dumps */
-#if defined(NUTRACE)
+#ifdef NUTRACE
 
 /* Implement a stack dump compile time option using libbacktrace. */
 
@@ -845,8 +844,7 @@ void exit_via_signal(int signr) {
     if (index_fp) fclose(index_fp);
     exit(signr);
 }
-#endif
-/* ===================== END OF SIGWINCH ONLY CODE ====================== */
+/* ===================== END OF BUFFER SAVING CODE ====================== */
 
 /* ====================================================================== */
 /* multiplier_check
