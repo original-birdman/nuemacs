@@ -59,6 +59,7 @@
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
+#include <stdarg.h>
 
 #include "estruct.h" /* Global structures and defines. */
 #include "edef.h"    /* Global definitions. */
@@ -376,7 +377,31 @@ int macro_helper(int f, int n) {
 /* ====================================================================== */
 static char* called_as;
 
-#if defined(SIGWINCH) && defined(NUTRACE)
+
+/* ===================== START OF SIGWINCH ONLY CODE ==================== */
+/* We need SIGWINCH to be able to handle buffer saving */
+#if defined(SIGWINCH) 
+#define Dumpdir_Name "uemacs-dumps"
+#define Dump_Index "INDEX"
+#define AutoClean_Buffer "//autoclean"
+
+/* ======================================================================
+ * Generate the time-tag string.
+ * We assume that we don't get multiple dumps in the same second.
+ */
+static int ts_len = 0;
+static char time_stamp[20]; /* There is only one time_stamp at a time... */
+static int set_time_stamp(int days_back) {
+    time_t t = time(NULL) - days_back*86400;;
+    return strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
+}
+static FILE *index_fp = NULL;  /* Avoid "may be used uninitialized" */
+static int can_dump_files = 0;
+
+/* ===================== START OF NUTRACE ONLY CODE ===================== */
+/* We need NUTRACE to be able to handle stack dumps */
+#if defined(NUTRACE)
+
 /* Implement a stack dump compile time option using libbacktrace. */
 
 #include "backtrace.h"
@@ -387,6 +412,25 @@ struct bt_ctx {
     int error;
 };
 
+FILE *stkdmp_fp = NULL;
+
+/* ======================================================================
+ * Print stack trace to stdout and the dump file, if open.
+ */
+void stk_printf(const char *fmt, ...) {
+    va_list ap;
+
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    if (stkdmp_fp) {
+        va_start(ap, fmt);
+        vfprintf(stkdmp_fp, fmt, ap);
+        va_end(ap);
+    }
+    return;
+}
+
 /* ======================================================================
  * A set of callback routines to provide the stack-trace.
  */
@@ -394,15 +438,15 @@ static void syminfo_callback (void *data, uintptr_t pc,
      const char *symname, uintptr_t symval, uintptr_t symsize) {
     UNUSED(data); UNUSED(symval); UNUSED(symsize);
     if (symname) {
-        printf("0x%lx %s ??:0\n", (unsigned long)pc, symname);
+        stk_printf("0x%lx %s ??:0\n", (unsigned long)pc, symname);
     }
     else {
-        printf("0x%lx ?? ??:0\n", (unsigned long)pc);
+        stk_printf("0x%lx ?? ??:0\n", (unsigned long)pc);
     }
 }
 static void error_callback(void *data, const char *msg, int errnum) {
     struct bt_ctx *ctx = data;
-    printf("ERROR: %s (%d)", msg, errnum);
+    stk_printf("ERROR: %s (%d)", msg, errnum);
     ctx->error = 1;
 }
 static int full_callback(void *data, uintptr_t pc, const char *filename,
@@ -410,7 +454,7 @@ static int full_callback(void *data, uintptr_t pc, const char *filename,
 
     struct bt_ctx *ctx = data;
     if (function) {
-        printf("0x%lx %s %s:%d\n", (unsigned long)pc, function,
+        stk_printf("0x%lx %s %s:%d\n", (unsigned long)pc, function,
              filename? filename: "??", lineno);
     }
     else {
@@ -430,10 +474,23 @@ static int simple_callback(void *data, uintptr_t pc) {
 
 /* ======================================================================
  * Print the trace back info.
+ * Tries to open a file in uemacs-dumps to contan it too and, if it does,
+ * puts an entry for it into INDEX so that it will get autocleaned.
  */
 static void do_stackdump(void) {
 
-    printf("Traceback:\n");
+    char stack_dump_name[40];
+    if (can_dump_files) {
+        strcpy(stack_dump_name, time_stamp);
+        strcat(stack_dump_name, "-StackDump");
+        stkdmp_fp = fopen(stack_dump_name, "w");
+        if (!stkdmp_fp) perror("Failed to open -StackDump");
+    }
+    if (index_fp) fprintf(index_fp, "%s <= //StackDump\n", stack_dump_name);
+
+/* Even if the INDEX isn't open we still try the stack dump */
+
+    stk_printf("Traceback:\n");
 
     struct backtrace_state *state =
         backtrace_create_state (called_as, BACKTRACE_SUPPORTS_THREADS,
@@ -443,23 +500,49 @@ static void do_stackdump(void) {
  * the signal handler that called us and the signal thrower code).
  */
     backtrace_simple(state, 2, simple_callback, error_callback, &ctx);
-    printf("\n");
+    stk_printf("\n");
 }
 #endif
+/* ===================== END OF NUTRACE ONLY CODE ======================= */
 
-/* ====================================================================== */
-#define Dumpdir_Name "uemacs-dumps"
-#define Dump_Index "INDEX"
-#define AutoClean_Buffer "//autoclean"
-
+static char cwd[1024];
 /* ======================================================================
- * Generate the time-tag string.
- * We assume that we don't get multiple dumps in the same second.
+ * get_to_dumpdir
+ * get to the Dump_Dir - the return value is whether it makes it
+ * Also open the INDEX file,if possible.
  */
-static char time_stamp[20]; /* There is only one time_stamp at a time... */
-static int set_time_stamp(int days_back) {
-    time_t t = time(NULL) - days_back*86400;;
-    return strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
+int get_to_dumpdir(void) {
+
+/* Get the current dir name - possibly needed for the index */
+
+    char *dnc = getcwd(cwd, 1024);
+    UNUSED(dnc);    /* To avoid "warn_unused_result" message */
+
+/* Get to the dump directory */
+
+    char *p;
+    if ((p = getenv("HOME")) == NULL) {
+        perror("Can't find HOME - no buffer saving:");
+        return 0;
+    }
+    int status = chdir(p);
+    if (status !=0) {
+        perror("Can't get to HOME - no buffer saving:");
+        return 0;
+    }
+    status = mkdir(Dumpdir_Name, 0700); /* Private by default */
+    if (status != 0 && errno != EEXIST) {
+        perror("Can't make HOME/" Dumpdir_Name " - no buffer saving: ");
+        return 0;
+    }
+    status = chdir(Dumpdir_Name);
+    if (status !=0) {
+        perror("Can't get to HOME/" Dumpdir_Name " - no buffer saving:");
+        return 0;
+    }
+    index_fp = fopen(Dump_Index, "a");
+    if (!index_fp) perror("No " Dump_Index " update");
+    return 1;   /* We *are* in DumpDir... */
 }
 
 /* ======================================================================
@@ -474,47 +557,18 @@ static void dump_modified_buffers(void) {
 
     printf("Trying to save modified buffers\n");
 
-/* Get the current dir name - possibly needed for the index */
-    char cwd[1024];
-    char *dnc = getcwd(cwd, 1024);
-    UNUSED(dnc);
-
-/* Get to the dump directory */
-
-    char *p;
-    if ((p = getenv("HOME")) == NULL) {
-        perror("Can't find HOME - no buffer saving:");
-        return;
-    }
-    status = chdir(p);
-    if (status !=0) {
-        perror("Can't get to HOME - no buffer saving:");
-
-    }
-    status = mkdir(Dumpdir_Name, 0700); /* Private by default */
-    if (status != 0 && errno != EEXIST) {
-        perror("Can't make HOME/" Dumpdir_Name " - no buffer saving: ");
-        return;
-    }
-    status = chdir(Dumpdir_Name);
-    if (status !=0) {
-        perror("Can't get to HOME/" Dumpdir_Name " - no buffer saving:");
-        return;
-    }
-
 /* Generate a time-tag for the dumped files.
  * We assume that we don't get multiple dumps in the same second to
  * the same user's HOME.
  */
     char tagged_name[NFILEN], orig_name[NFILEN];
-    int ts_len = set_time_stamp(0);     /* Set it for "now" */
 
 /* Scan the buffers */
 
     int index_open = 0;
     int do_index = 0;
     int add_cwd;
-    FILE *index_fp = NULL;  /* Avoid "may be used uninitialized" */
+
     for(struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if ((bp->b_flag & BFCHG) == 0     /* Not changed...*/
          || (bp->b_flag & BFINVS) != 0    /* ...not real... */
@@ -578,10 +632,11 @@ static void dump_modified_buffers(void) {
             index_open = 1;                 /* Don't try again */
             index_fp = fopen(Dump_Index, "a");
             if (index_fp == NULL) {
-                perror("No INDEX update");
+                perror("No " Dump_Index " update");
             }
-            else
+            else {
                 do_index = 1;
+            }
         }
         if (do_index) {
             char *dir, *sep;
@@ -674,7 +729,7 @@ void dumpdir_tidy(void) {
  */
     char *lp = NULL;
     size_t blen = 0;
-    int ts_len = set_time_stamp(autoclean);
+    ts_len = set_time_stamp(autoclean);
     long rewrite_from = 0;             /* Only if there is a deletion */
     while (getline(&lp, &blen, index_fp) >= 0) {
         if (strncmp(lp, time_stamp, ts_len - 1) < 0) { /* Too old... */
@@ -765,21 +820,38 @@ void exit_via_signal(int signr) {
     TTclose();
     fflush(stdout);
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("%s: signal %s seen.\n", called_as, strsignal(signr));
 
+/* Let's go through the steps order...various globals get set here... */
+
+    ts_len = set_time_stamp(0);             /* Set it for "now" */
+    can_dump_files = get_to_dumpdir();      /* Also opens INDEX */
+    
 /* Possibly a stack dump */
-#if defined(SIGWINCH) && defined(NUTRACE)
+#if defined(NUTRACE)
     do_stackdump();
 #endif
 
 /* Try to save any modified files. */
-    dump_modified_buffers();
+    if (can_dump_files) dump_modified_buffers();
 
+#if !defined(NUTRACE)
+#define stk_printf printf
+#endif
+    stk_printf("%s: signal %s seen.\n", called_as, strsignal(signr));
+
+#if defined(NUTRACE)
+    if (stkdmp_fp) fclose(stkdmp_fp);
+#endif
+    if (index_fp) fclose(index_fp);
     exit(signr);
 }
+#endif
+/* ===================== END OF SIGWINCH ONLY CODE ====================== */
 
 /* ====================================================================== */
-
+/* multiplier_check
+ * Handler for Esc-nnn sequences denoting command multiplier
+ */
 com_arg *multiplier_check(int c) {
 
     static com_arg ca;  /* Caller will copy out, so we only need one */
