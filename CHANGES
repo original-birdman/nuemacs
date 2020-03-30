@@ -4150,4 +4150,51 @@ version.h
 etc/uemacs.hlp
     Update to version GGR4.153
 
+========== GGR4.154
+
+eval.c
+main.c
+estruct.h
+evar.h
+etc/uemacs.rc
+    Add directory browsing bindings for M and F.
+    M   Toggle mixed/type-sorted display
+    T   Toggle dirs/files order in type-sorted mode
+    [main.c, etc/uemacs.rc]
+    Make the %showdir* variables used by the showdir userproc into
+    system variables ($showdir*) instead. [eval.c, estruct.h, evar.h,
+        etc/uemacs.rc]
+
+buffer.c
+exec.c
+    Update the buffer list display to cater for there now being 11 modes
+    and display p/x Type (for BTPROC/BTPHON) after Modes. [buffer.c]
+    Updates some comments relating to BTPROC and BTPHON, so that I'm not
+    tempted to fix things in the wrong place. [exec.c]
+
+search.c
+autotest/search-file-start.sh
+    Fix Magic reverse search to match at start-of-file. [search.c]
+    Added a test file for this case.
+
+exec.c
+autotest/search-reexec-macro.sh
+    Reexecuting a macro (user procedure) meant that all subcommands
+    thought they were reexecing. So unset the flag while dobuf() runs.
+    Also, docmd() needs to honour any numeric arg for reexecute.
+    [exec.c]
+    Add a test harness for reexec in macro.
+
+main.c
+    If stack dumps are enabled, write them to a file under
+    ~/uemacs_dumps, as well as to the screen, if possible.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Expand description of system variables and add a description of
+    reexecute and numeric commands to the help file. [etc/uemacs.hlp]
+
+    Update to version GGR4.154
+
 ==========

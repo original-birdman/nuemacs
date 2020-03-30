@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.153 Help Index     (28 March 2020)
+=>                   nuEmacs GGR4.154 Help Index     (30 March 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -111,6 +111,35 @@ Describe bindings ..... not bound
 Meta prefix ...........      Esc    ::  Although meta-prefix can be bound to
 Cntlx prefix ..........      ^X     ::  some other key, no other command can
 Execute named command . Meta  X     ::  be bound to Esc.
+
+You can specify a numeric argument to a command by
+    Meta nnn
+before the command, when nnn is a number (negative ones are allowed).
+For many comands this will beb taken as "run it nnn times". For a few it
+has a special meaning, e.g. for write-message, 2 means "write to stdout,
+not the message line (useful for debugging) and for goto-line it
+specifies which line to go to.
+
+You can repeat the previous command with ^C (reexecute).
+For a user procedure (macro) this will repeat the whole macro.
+This can take a numeric prefix and will repeat that number of times.
+If you repeat a command that itself had a numeric prefix that numeric
+prefix is used again.
+
+So:
+    Meta 2 Meta c will Capinitalize the next 2 words.
+    Meta 3 ^C would then Capinitalize the next 6 words (3x2).
+However:
+    Meta 20 Meta g would take you to line 20
+    Meta 3 ^C would then take you to line 20 3 times (not line 60)!
+
+reexecute leaves the "previous command" and any numeric argument 
+unchanged. So:
+    Meta 2 Meta c will Capinitalize the next 2 words.
+    Meta 3 ^C would then Capinitalize the next 6 words (3x2).
+    Meta 3 ^C would then Capinitalize the next 6 words (3x2) *NOT* the
+    next 18 (3x3x2)
+
 -------------------------------------------------------------------------------
 =>                      DELETING AND INSERTING
 Delete previous character    ^H         Delete next character .      ^D
@@ -338,13 +367,65 @@ Set encryption key .... Meta  E         Wrap word ............. not bound
 Count words ........... Meta ^C         Update screen ......... not bound
 -------------------------------------------------------------------------------
 =>                      SYSTEM VARIABLES
-Set ................... ^X ^A           Current buffer name ... $cbufname
-Tabulator (4, 8)....... $tab            Current file name ..... $cfname
-Screen resolution ..... $sres       ::  NORMAL, CGA, EGA, VGA
-Display commands ...... $discmd     ::  TRUE, FALSE
-Scrolling enabled ..... $scroll     ::  TRUE, FALSE, can only be reset
+Set ................... ^X A
+Scrolling enabled ..... $scroll     ::  TRUE, FALSE, can only be unset
 Scrolling movement .... $jump       ::  # lines, default 0, 0 = 1/2 page
 Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
+
+Others (ommtting system-use only ones)...
+
+    $pagelen .............. number of lines used by editor
+    $curcol ............... current column pos of cursor
+    $curline .............. current line in file
+    $flicker .............. flicker supression
+    $curwidth ............. current screen width
+    $cbufname ............. current buffer name
+    $cfname ............... current file name
+    $debug ................ macro debugging
+    $status ............... returns the status of the last command
+    $palette .............. current palette string
+    $asave ................ # of chars between auto-saves
+    $acount ............... # of chars until next auto-save
+    $lastkey .............. last keyboard char struck
+    $curchar .............. current character under the cursor
+    $discmd ............... display commands on command line
+    $version .............. current version number
+    $progname ............. returns current prog name - "MicroEMACS"
+    $seed ................. current random number seed
+    $disinp ............... display command line input characters
+    $wline ................ # of lines in current window
+    $cwline ............... current screen line in window
+    $target ............... target for line moves
+    $search ............... search pattern (read-only)
+    $replace .............. replacement pattern (read_only)
+    $match ................ last matched magic pattern
+    $kill ................. kill buffer (read only)
+    $cmode ................ mode of current buffer
+    $gmode ................ global modes
+    $tpause ............... length to pause for paren matching
+    $pending .............. type ahead pending flag
+    $lwidth ............... width of current line
+    $line ................. text of current line
+    $gflags ............... global internal emacs flags
+    $rval ................. child process return value
+    $tab .................. tab 4 or 8
+    $scroll ............... scroll enabled
+    $inmb ................. In mini-buffer (read only)
+    $fcol ................. first displayed column in curent window
+    $hjump ................ horizontal screen jump size
+    $hscroll .............. horizontal scrolling flag
+    $yankmode ............. mode for yank (old/gnu)
+    $autoclean ............ Age (days) at which dumped files are removed
+    $regionlist_text ...... makelist_region() indent
+    $regionlist_number .... numberlist_region() indent
+    $autodos .............. Check for DOS on read-in?
+    $showdir_tokskip ...... Tokens to skip in showdir
+    $force_status ......... Actual status when forced to OK
+    $equiv_type ........... Function to use for Equiv mode
+                             (NFC, NFD, NFKD or NFKC [default])
+    $showdir_opts ......... Start-up state (for user to set)
+                             (A subset of "TRHFM" - default is "")
+
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS
 &neg, &abs, &add, &sub, &tim, &div, &mod ... Arithmetic

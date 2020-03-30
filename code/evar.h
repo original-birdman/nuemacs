@@ -67,12 +67,12 @@ struct evlist evl[] = {
  { "regionlist_text", EVREGLTEXT },     /* makelist_region() indent */
  { "regionlist_number", EVREGLNUM },    /* numberlist_region() indent */
  { "autodos",   EVAUTODOS },    /* Check for DOS on read-in? */
- { "showdir_tokskip", EVSDTKSKIP },     /* Token to skip in showdir */
+ { "showdir_tokskip", EVSDTKSKIP }, /* Tokens to skip in showdir */
  { "uproc_opts",    EVUPROCOPTS },  /* Flags when processing &arg */
  { "force_status",  EVFORCESTAT },  /* Actual status when forced to OK */
  { "equiv_type",    EVEQUIVTYPE },  /* Function to use for Equiv mode */
 /* showdir vars */
- { "showdir_opts", EVSDOPTS },      /* Start-up stat (for user to set) */
+ { "showdir_opts", EVSDOPTS },      /* Start-up state (for user to set) */
  { "showdir_sort_type", EVSDTYPE }, /* Type of sort ("" or "t") */
  { "showdir_sort_drct", EVSDDRCT }, /* Direction of sort ("" or "r") */
  { "showdir_sort_hide", EVSDHIDE }, /* Hidden files? ("" or "h") */

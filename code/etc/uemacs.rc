@@ -333,6 +333,7 @@ bind-to-key previous-line               ^Z
 bind-to-key set-mark                    ^@
 buffer-to-key del-sp-right              ^\
 ;
+; Move detab from ^X^A to ^X^D
 unbind-key                              ^X^A
 bind-to-key detab-line                  ^X^D
 bind-to-key handle-tab                  ^X^I
