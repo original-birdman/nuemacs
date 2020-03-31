@@ -161,7 +161,13 @@ int killbuffer(int f, int n) {
         return s;
     if ((bp = bfind(bufn, FALSE, 0)) == NULL)   /* Easy if unknown. */
         return TRUE;
-    if (bp->b_flag & BFINVS)    /* Deal with special buffers */
+/* We're actually happy to allow deletion of "/xxx" procedure buffers (it
+ * allows you to set up "delete-after-use" ones), but still want to ignore
+ * special buffers starting "//".
+ */
+    if ((bp->b_flag & BFINVS) &&
+         (bufn[0] != '/') &&
+         (bufn[1] != '/'))      /* Deal with special buffers */
         return TRUE;            /* by doing nothing.    */
     return zotbuf(bp);
 }

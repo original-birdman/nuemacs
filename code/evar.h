@@ -89,15 +89,15 @@ enum uf_val {
     UFSLESS,    UFSGREAT,   UFIND,      UFAND,      UFOR,
     UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,   UFTRUTH,
     UFASCII,    UFCHR,      UFGTKEY,    UFRND,      UFABS,
-    UFSINDEX,   UFENV,      UFBIND,     UFEXIST,    UFFIND,
-    UFBAND,     UFBOR,      UFBXOR,     UFBNOT,     UFXLATE,
-    UFPROCARG,  UFGRPTEXT,
+    UFSINDEX,   UFENV,      UFBIND,     UFEXIST,    UFBXIST,
+    UFFIND,     UFBAND,     UFBOR,      UFBXOR,     UFBNOT,
+    UFXLATE,    UFPROCARG,  UFGRPTEXT,
 };
 
 enum function_type {
         NILNAMIC = 0,
         MONAMIC,
-        DYNAMIC,
+        DINAMIC,
         TRINAMIC,
 };
 
@@ -109,26 +109,26 @@ struct user_function {
 };
 
 static struct user_function funcs[] = {
- { "add", DYNAMIC,  UFADD },    /* add two numbers together */
- { "sub", DYNAMIC,  UFSUB },    /* subtraction */
- { "tim", DYNAMIC,  UFTIMES },  /* multiplication */
- { "div", DYNAMIC,  UFDIV },    /* division */
- { "mod", DYNAMIC,  UFMOD },    /* mod */
+ { "add", DINAMIC,  UFADD },    /* add two numbers together */
+ { "sub", DINAMIC,  UFSUB },    /* subtraction */
+ { "tim", DINAMIC,  UFTIMES },  /* multiplication */
+ { "div", DINAMIC,  UFDIV },    /* division */
+ { "mod", DINAMIC,  UFMOD },    /* mod */
  { "neg", MONAMIC,  UFNEG },    /* negate */
- { "cat", DYNAMIC,  UFCAT },    /* concatinate string */
- { "lef", DYNAMIC,  UFLEFT },   /* left string(string, len) */
- { "rig", DYNAMIC,  UFRIGHT },  /* right string(string, pos) */
+ { "cat", DINAMIC,  UFCAT },    /* concatinate string */
+ { "lef", DINAMIC,  UFLEFT },   /* left string(string, len) */
+ { "rig", DINAMIC,  UFRIGHT },  /* right string(string, pos) */
  { "mid", TRINAMIC, UFMID },    /* mid string(string, pos, len) */
  { "not", MONAMIC,  UFNOT },    /* logical not */
- { "equ", DYNAMIC,  UFEQUAL },  /* logical equality check */
- { "les", DYNAMIC,  UFLESS },   /* logical less than */
- { "gre", DYNAMIC,  UFGREATER },/* logical greater than */
- { "seq", DYNAMIC,  UFSEQUAL }, /* string logical equality check */
- { "sle", DYNAMIC,  UFSLESS },  /* string logical less than */
- { "sgr", DYNAMIC,  UFSGREAT }, /* string logical greater than */
+ { "equ", DINAMIC,  UFEQUAL },  /* logical equality check */
+ { "les", DINAMIC,  UFLESS },   /* logical less than */
+ { "gre", DINAMIC,  UFGREATER },/* logical greater than */
+ { "seq", DINAMIC,  UFSEQUAL }, /* string logical equality check */
+ { "sle", DINAMIC,  UFSLESS },  /* string logical less than */
+ { "sgr", DINAMIC,  UFSGREAT }, /* string logical greater than */
  { "ind", MONAMIC,  UFIND },    /* evaluate indirect value */
- { "and", DYNAMIC,  UFAND },    /* logical and */
- { "or",  DYNAMIC,  UFOR },     /* logical or */
+ { "and", DINAMIC,  UFAND },    /* logical and */
+ { "or",  DINAMIC,  UFOR },     /* logical or */
  { "len", MONAMIC,  UFLENGTH }, /* string length */
  { "upp", MONAMIC,  UFUPPER },  /* uppercase string */
  { "low", MONAMIC,  UFLOWER },  /* lower case string */
@@ -139,14 +139,15 @@ static struct user_function funcs[] = {
  { "gtk", NILNAMIC, UFGTKEY },  /* get 1 Unicode character */
  { "rnd", MONAMIC,  UFRND },    /* get a random number */
  { "abs", MONAMIC,  UFABS },    /* absolute value of a number */
- { "sin", DYNAMIC,  UFSINDEX }, /* find the index of one string in another */
+ { "sin", DINAMIC,  UFSINDEX }, /* find the index of one string in another */
  { "env", MONAMIC,  UFENV },    /* retrieve a system environment var */
  { "bin", MONAMIC,  UFBIND },   /* loopup what function name is bound to a key */
- { "exi", MONAMIC,  UFEXIST },  /* check if a file exists */
+ { "exi", MONAMIC,  UFEXIST },  /* check whether a file exists */
+ { "exb", MONAMIC,  UFBXIST },  /* check whether a buffer exists */
  { "fin", MONAMIC,  UFFIND },   /* look for a file on the path... */
- { "ban", DYNAMIC,  UFBAND },   /* bitwise and   9-10-87  jwm */
- { "bor", DYNAMIC,  UFBOR },    /* bitwise or    9-10-87  jwm */
- { "bxo", DYNAMIC,  UFBXOR },   /* bitwise xor   9-10-87  jwm */
+ { "ban", DINAMIC,  UFBAND },   /* bitwise and   9-10-87  jwm */
+ { "bor", DINAMIC,  UFBOR },    /* bitwise or    9-10-87  jwm */
+ { "bxo", DINAMIC,  UFBXOR },   /* bitwise xor   9-10-87  jwm */
  { "bno", MONAMIC,  UFBNOT },   /* bitwise not */
  { "xla", TRINAMIC, UFXLATE },  /* XLATE character string translation */
  { "arg", MONAMIC,  UFPROCARG}, /* Get user proc arg */

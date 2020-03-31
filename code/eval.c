@@ -29,12 +29,14 @@
 static char showdir_opts[MAX_SD_OPTS+1] = "";
 /* These are set to 2 NULs so that the first char can be set to NUL or
  * the single char allowed and end up as a string either way.
+ * The setting should match the default ("") settings in the
+ * showdir_opts_ user procedure in uemcs.rc.
  */
-static char showdir_sort_type[2] = { '\0', '\0' };
-static char showdir_sort_drct[2] = { '\0', '\0' };
-static char showdir_sort_hide[2] = { '\0', '\0' };
-static char showdir_sort_dirf[2] = { '\0', '\0' };
-static char showdir_sort_mixd[2] = { '\0', '\0' };
+static char showdir_sort_type[2] = { '\0', '\0' };  /* "" */
+static char showdir_sort_drct[2] = { '\0', '\0' };  /* "" */
+static char showdir_sort_hide[2] = { '\0', '\0' };  /* "" */
+static char showdir_sort_dirf[2] = { 'r',  '\0' };  /* "r" */
+static char showdir_sort_mixd[2] = { '\0', '\0' };  /* "" */
 
 /* Return some of the contents of the kill buffer
  */
@@ -295,7 +297,7 @@ static char *gtfun(char *fname) {
         if ((status = macarg(arg1)) != TRUE) return errorm;
 
 /* If needed, retrieve the second argument */
-        if (funcs[fnum].f_type >= DYNAMIC) {
+        if (funcs[fnum].f_type >= DINAMIC) {
             if ((status = macarg(arg2)) != TRUE) return errorm;
 
 /* If needed, retrieve the third argument */
@@ -428,6 +430,7 @@ static char *gtfun(char *fname) {
 #endif
     case UFBIND:        return transbind(arg1);
     case UFEXIST:       return ltos(fexist(arg1));
+    case UFBXIST:       return ltos(bfind(arg1, 0, 0) != NULL);
     case UFFIND:
         tsp = flook(arg1, TRUE, ONPATH);
         return tsp == NULL ? "" : tsp;
