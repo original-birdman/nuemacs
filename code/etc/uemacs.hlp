@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.154 Help Index     (30 March 2020)
+=>                   nuEmacs GGR4.155 Help Index     (31 March 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -127,17 +127,17 @@ If you repeat a command that itself had a numeric prefix that numeric
 prefix is used again.
 
 So:
-    Meta 2 Meta c will Capinitalize the next 2 words.
-    Meta 3 ^C would then Capinitalize the next 6 words (3x2).
+    Meta 2 Meta c will Capinitialize the next 2 words.
+    Meta 3 ^C would then Capinitialize the next 6 words (3x2).
 However:
     Meta 20 Meta g would take you to line 20
     Meta 3 ^C would then take you to line 20 3 times (not line 60)!
 
 reexecute leaves the "previous command" and any numeric argument 
 unchanged. So:
-    Meta 2 Meta c will Capinitalize the next 2 words.
-    Meta 3 ^C would then Capinitalize the next 6 words (3x2).
-    Meta 3 ^C would then Capinitalize the next 6 words (3x2) *NOT* the
+    Meta 2 Meta c will Capinitialize the next 2 words.
+    Meta 3 ^C would then Capinitialize the next 6 words (3x2).
+    Meta 3 ^C would then Capinitialize the next 6 words (3x2) *NOT* the
     next 18 (3x3x2)
 
 -------------------------------------------------------------------------------
@@ -435,7 +435,7 @@ Others (ommtting system-use only ones)...
 &cat, &len, &upp, &low, &asc, &chr, &esc ... Other string operations
 &seq, &sle, &sgr ........................... String comparisons
 &sin ....................................... String index
-&exi, &fin, ................................ File operations
+&exi, &fin, &exb  .......................... File & buffer operations
 &ban, &bor, &bxo, &bno ..................... Bit operations
 &ind, &tru, &gtk, &rnd, &env, &bin, &xla ... Miscellaneous
 &arg n, &grp n .............................    "   "
