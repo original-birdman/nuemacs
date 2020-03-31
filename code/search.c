@@ -883,7 +883,6 @@ static void rmcclear(void) {
  *      BUT!! we do need to ensure that the final type is EGRP(0) at all
  *      times to allow this!!
  */
-
 static int group_cntr;  /* Number of possible groups in search pattern */
 
 static int mcstr(void) {
@@ -1977,8 +1976,9 @@ try_next_choice:;
         switch(mcptr->mc.type) {
         case BOL:
         case EOL:
-            if (curoff == (mcptr->mc.type == BOL)? llength(curline): 0)
+            if (curoff == ((mcptr->mc.type == BOL)? 0: llength(curline))) {
                 goto next_entry;
+            }
             else
                 goto failed;
         }

@@ -120,6 +120,12 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
                 fprintf(stderr, "\n");
             }
             break;
+        case BOL:
+            fprintf(stderr, " Beginning of line\n");
+            break;
+        case EOL:
+            fprintf(stderr, " End of line\n");
+            break;
         case UCLITL:
             uclen = unicode_to_utf8(mp.mmp->val.uchar, ucbuf);
             ucbuf[uclen] = '\0';
