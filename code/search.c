@@ -620,7 +620,7 @@ handle_prev:
             }
             btext = brace_text(++patptr);
             if (!btext) {
-                parse_error(patptr, "\\%k/K{} not ended");
+                parse_error(patptr, "\\k/K{} not ended");
                 return FALSE;
             }
             struct grapheme kgc;
@@ -986,7 +986,7 @@ static int mcstr(void) {
         curr_group = cntl_grp_info[curr_group].parent_group;
 /* We close the highest open group... */
         int closed_ok = 0;
-        for (int gc = group_cntr; gc >= 0; gc--) {
+        for (int gc = group_cntr; gc > 0; gc--) {
             if (cntl_grp_info[gc].state == GPOPEN) {
                 cntl_grp_info[gc].state = GPCLOSED;
                 cntl_grp_info[gc].gpend = mcptr;
@@ -995,13 +995,13 @@ static int mcstr(void) {
             }
         }
         if (!closed_ok) {
-            parse_error(patptr, "no group to end");
+            parse_error(patptr+1, "no group to end");
             return FALSE;
         }
         break;
     case MC_BOL:
         if (mj != 0) {
-            parse_error(patptr, "must be first");
+            parse_error(patptr+1, "must be first");
             return FALSE;
         }
         mcptr->mc.type = BOL;
@@ -1009,7 +1009,7 @@ static int mcstr(void) {
         break;
     case MC_EOL:
         if (*(patptr + 1) != '\0') {
-            parse_error(patptr, "must be last");
+            parse_error(patptr+1, "must be last");
             return FALSE;
         }
         mcptr->mc.type = EOL;
@@ -1026,7 +1026,7 @@ static int mcstr(void) {
  * If not, that's an error...
  */
         if (!can_repeat) {
-            parse_error(patptr, "repeating a non-repeatable item");
+            parse_error(patptr+1, "repeating a non-repeatable item");
             return FALSE;
         }
         mj--;
@@ -1038,7 +1038,7 @@ static int mcstr(void) {
         break;
     case MC_RANGE:
         if (!can_repeat) {
-            parse_error(patptr, "repeating a non-repeatable item");
+            parse_error(patptr+1, "repeating a non-repeatable item");
             return FALSE;
         }
         mj--;
@@ -1054,7 +1054,7 @@ static int mcstr(void) {
         break;
     case MC_MINIMAL:
         if (mj == 0) {
-            parse_error(patptr, "nothing to minimally repeat");
+            parse_error(patptr+1, "nothing to minimally repeat");
             return FALSE;
         }
 /* Not at start, so if we can do repeat we set it up for 0/1
