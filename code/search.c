@@ -1068,7 +1068,7 @@ static int mcstr(void) {
             mcptr->mc.repeat = 1;
             mcptr->cl_lim.low = 0;
             mcptr->cl_lim.high = 1;
-            mcptr->mc.min_repeat = 1;
+            mcptr->mc.min_repeat = 0;   /* Greedy by default */
         }
         else {
             if (!(mcptr->mc.repeat)) {
@@ -1076,10 +1076,10 @@ static int mcstr(void) {
                 return FALSE;
             }
             if (mcptr->mc.min_repeat) {
-                parse_error(patptr, "already minimized item");
+                parse_error(patptr, "already minimized repeat");
                 return FALSE;
             }
-            mcptr->mc.min_repeat = 1;
+            mcptr->mc.min_repeat = 1;   /* Now non-greedy */
         }
         can_repeat = FALSE;
         break;
