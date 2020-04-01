@@ -885,7 +885,7 @@ utf8.c
 estruct.h
 utf8.h
    NOTE: globals.c was erroneously checked in as part of commit:
-    4cd83b90cab79e240492f882be91436b5d304db8
+    01f484596f198e02339ddf60d57f933ef5272239
    Add code to handle casing options in Phonetic Translation tables.
    These can now do case modification of the replacement text.
    The tables can contain these commands:
@@ -4196,5 +4196,66 @@ etc/uemacs.hlp
     reexecute and numeric commands to the help file. [etc/uemacs.hlp]
 
     Update to version GGR4.154
+
+========== GGR4.155
+
+main.c
+    Removed "#if defined(SIGWINCH)" around buffer dumping code, as it
+    only needs signals in general, not SIGWINCH in particular.
+
+version.c
+    Added display of the Unicode version supported by utf8proc, if
+    available.
+
+search.c
+autotest/dump_mc.debug
+autotest/search-line-endings.sh
+    Fix broken ^/$ test in Magic mode. [search.c]
+    Add missing BOL/EOL cases to dump_mc. [dump_mc.debug]
+    Add test-harness for ^/$ in Magic mode.
+
+buffer.c
+eval.c
+evar.h
+    Allow deleting procedure buffers (/xxxx) even though they are
+    invisible. [buffer.c]
+    Initialize showdir_sort_dirf to the correct default ("r" not "")
+    [eval.c]
+    Add a "buffer exist?" (&exb) function.  [eval.c, evar.h]
+    Rename DYNAMIC to DINAMIC, since it means "two". [eval.c, evar.h]
+
+etc/uemacs.hlp
+etc/uemacs.rc
+    Change $showdir_opts handling by creating a showdir_opts_ user
+    procedure to do it, running it if it exists and then deleting it.
+    This allows you to set $showdir_opts at start-up *after* uemacs.rc
+    has loaded.
+    Added it to the help file (along with a typo correction).
+
+autotest/search-char_classes.sh
+autotest/search-file-start.sh
+autotest/search-reexec-macro.sh
+    Corrected some incorrect (but irrelevant) line numbering.
+
+search.c
+autotest/dump_mc.debug
+autotest/search-groups.sh
+    Fix some regex searching.
+    Only the string match data needs to be reset on a group/choice
+    failure, not the control info, so split into two structures.
+    [search.c, autotest/dump_mc.debug]
+    In mgpheq() LITCHAR cannot match any non-ASCII character. [search.c]
+    Extended groups test-harness to include groups with choices (?) in.
+    [autotest/search-groups.sh]
+
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Expand description of system variables and add a description of
+    reexecute and numeric commands to the help file. [etc/uemacs.hlp]
+    (Actually added earlier in 1bc98a7522f2054b674bc20638c8dcd5abd599d7)
+
+    Update to version GGR4.155
 
 ==========
