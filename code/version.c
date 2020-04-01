@@ -20,8 +20,10 @@ void version(void) {
 
     const char *utf8vp = utf8proc_version();
     printf(" utf8proc version %s", utf8vp);
-    if (strcmp(utf8vp, "2.3") >= 0)
-        printf(", supports Unicode %s", utf8proc_unicode_version());
+#if (UTF8PROC_VERSION_MAJOR > 2) || \
+    (UTF8PROC_VERSION_MAJOR == 2) && (UTF8PROC_VERSION_MINOR >= 3)
+    printf(", supports Unicode %s", utf8proc_unicode_version());
+#endif
     printf("\n");
 
 #ifdef NUTRACE
