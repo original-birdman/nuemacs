@@ -38,8 +38,13 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
             fprintf(stderr, " any byte\n");
             break;
         case SGRP: {
-            fprintf(stderr, " start group %d (next CHOICE %p)\n",
-                 mp.mmp->mc.group_num, mp.mmp->x.next_or);
+            fprintf(stderr, " start group %d (end %p)\n",
+                 mp.mmp->mc.group_num, cntl_grp_info[mp.mmp->mc.group_num].gpend);
+            if (mp.mmp->x.next_or)
+                fprintf(stderr, " %32s [next CHOICE %p]\n",
+                      "", mp.mmp->x.next_or);
+            else
+                fprintf(stderr, " %32s [no CHOICEs]\n", "");
             depth++;
             break;
         }
@@ -52,8 +57,13 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
             depth--;
             break;
         case CHOICE:
-            fprintf(stderr, " CHOICE (link %p) for group %d\n",
-                 mp.mmp->x.next_or, mp.mmp->mc.group_num);
+            fprintf(stderr, " CHOICE for group %d (end %p)\n",
+                 mp.mmp->mc.group_num, cntl_grp_info[mp.mmp->mc.group_num].gpend);
+            if (mp.mmp->x.next_or)
+                fprintf(stderr, " %32s [next CHOICE %p]\n",
+                      "", mp.mmp->x.next_or);
+            else
+                fprintf(stderr, " %32s [no CHOICEs]\n", "");
             break;
         case CCL:
             fprintf(stderr, " Char Class []");
@@ -154,7 +164,7 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
         if (mp.mmp->mc.negate_test) fprintf(stderr, "    negated test\n");
         if (mp.mmp->mc.repeat) {
             fprintf(stderr, "    %s repeat (%d->%d)\n",
-                 (mp.mmp->mc.min_repeat)? ">> (minimum)": ">>", 
+                 (mp.mmp->mc.min_repeat)? ">> (minimum)": ">>",
                  mp.mmp->cl_lim.low, mp.mmp->cl_lim.high);
 	}
         if (type == MATCHER) mp.mmp++;

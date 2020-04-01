@@ -159,6 +159,7 @@ add-mode Magic
 set %test-report "  (Upper) followed by (lower)"
 execute-procedure report-status
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %mcount 0
 *again1
   !force search-forward "(\p{Lu}+)(\p{Ll}+)"
@@ -176,6 +177,7 @@ execute-procedure check-position
   set %expcount 11
 execute-procedure check-matchcount
 
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Reverse search and check match
   search-reverse "(\p{Lu}+)(\p{Ll}+)"
   set %curtest Search3-reversed
@@ -191,6 +193,50 @@ execute-procedure check-group
   set %grpno 2
   set %expmatch ome
 execute-procedure check-group
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+set %test-report "  Some CHOICEs-in-group checks"
+execute-procedure report-status
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+beginning-of-file
+  search-forward .(pp|s)\p{L}   ; \p{L} rather than . stops "as " match.
+  set %curtest SearchChoice
+  set %expline 3
+  set %expcol 24
+  set %expchar &asc r
+  set %expmatch "uppe"
+execute-procedure check-position
+  set %grpno 1
+  set %expmatch pp
+execute-procedure check-group
+
+  search-forward .(pp|s).
+  set %curtest SearchChoiceRpt
+  set %expline 3
+  set %expcol 30
+  set %expchar &asc " "
+  set %expmatch "ase"
+execute-procedure check-position
+  set %grpno 1
+  set %expmatch s
+execute-procedure check-group
+
+beginning-of-file
+  search-forward .(pp|s)\p{L}
+  reexecute             ; Should end up at same place a second search above
+  set %curtest SearchChoice+reexecute
+  set %expline 3
+  set %expcol 30
+  set %expchar &asc " "
+  set %expmatch "ase"
+execute-procedure check-position
+
+  set %grpno 1
+  set %expmatch s
+execute-procedure check-group
+
+
 
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-

@@ -199,24 +199,28 @@ struct magic_replacement {
  * struct magic array and some only used when processing it.
  */
 enum GP_state { GPOPEN, GPCLOSED };
-struct group_info {
+struct control_group_info {     /* Info that controls usage */
     struct magic *next_choice;  /* In mcstr(), where to put OR for this group
                                  * In amatch()/step_scanner(), where the next
                                  * OR is. */
     struct magic *gpend;        /* Where the group pattern ends */
+    int parent_group;           /* Group to fall into when this group ends */
+    enum GP_state state;        /* For group balancing check in mcstr() */
+};
+struct match_group_info {       /* String match info - reset of failures */
     struct line *mline;         /* Buffer location of match */
     int start;
     int len;
     int base;                   /* byte count of chars matched before *start*
                                  * of group.
                                  * ambytes is reset to this on CHOICE. */
-    int parent_group;           /* Group to fall into when this group ends */
-    enum GP_state state;        /* For group balancing check in mcstr() */
-};
-static struct group_info grp_info[NGRP];
-static const struct group_info null_grp_info =
-     { NULL, NULL, NULL, 0, 0, 0, 0, GPOPEN };
+    };
+static struct control_group_info cntl_grp_info[NGRP];
+static struct match_group_info match_grp_info[NGRP];
 static char *grp_text[NGRP];
+
+/* A value with which to reset */
+static const struct match_group_info null_match_grp_info = { NULL, 0, 0, 0 };
 
 /* State information variables. */
 
@@ -900,8 +904,8 @@ static int mcstr(void) {
  */
     if (slow_scan) mcclear();
     group_cntr = 0;
-    grp_info[0].state = GPOPEN;
-    grp_info[0].parent_group = -1;  /* None */
+    cntl_grp_info[0].state = GPOPEN;
+    cntl_grp_info[0].parent_group = -1; /* None */
     int curr_group = 0;
 
 /* Each group has to start with a group-holder, so that we
@@ -911,7 +915,7 @@ static int mcstr(void) {
     mcptr->mc.type = SGRP;
     mcptr->mc.group_num = group_cntr;
     mcptr->x.next_or = NULL;
-    grp_info[0].next_choice = mcptr;    /* Where to put the next CHOICE */
+    cntl_grp_info[0].next_choice = mcptr;   /* Where to put the next CHOICE */
     mcptr++;
 
     int using_magic = ((curwp->w_bufp->b_mode & MDMAGIC) != 0);
@@ -968,24 +972,24 @@ static int mcstr(void) {
 /* We allocate 1 more than the counter (so we can then index by group number)
  * Group0 is used for the overall match.
  */
-        grp_info[group_cntr].state = GPOPEN;
-        grp_info[group_cntr].parent_group = curr_group;
+        cntl_grp_info[group_cntr].state = GPOPEN;
+        cntl_grp_info[group_cntr].parent_group = curr_group;
         curr_group = group_cntr;
         mcptr->mc.type = SGRP;
-        mcptr->mc.group_num = group_cntr;           /* Set correct one */
-        mcptr->x.next_or = NULL;                    /* No OR yet... */
-        grp_info[group_cntr].next_choice = mcptr;   /* but it  would go here */
+        mcptr->mc.group_num = group_cntr;               /* Set correct one */
+        mcptr->x.next_or = NULL;                        /* No OR yet but... */
+        cntl_grp_info[group_cntr].next_choice = mcptr;  /* it would go here */
         can_repeat = TRUE;
         break;
     case MC_EGRP:
         mcptr->mc.type = EGRP;  /* Close group */
-        curr_group = grp_info[curr_group].parent_group;
+        curr_group = cntl_grp_info[curr_group].parent_group;
 /* We close the highest open group... */
         int closed_ok = 0;
         for (int gc = group_cntr; gc >= 0; gc--) {
-            if (grp_info[gc].state == GPOPEN) {
-                grp_info[gc].state = GPCLOSED;
-                grp_info[gc].gpend = mcptr;
+            if (cntl_grp_info[gc].state == GPOPEN) {
+                cntl_grp_info[gc].state = GPCLOSED;
+                cntl_grp_info[gc].gpend = mcptr;
                 closed_ok = 1;
                 break;
             }
@@ -1089,9 +1093,9 @@ static int mcstr(void) {
 /* Add this to the OR chain for this group and mark where next OR
  * has to be added
  */
-        mcptr->x.next_or = NULL;            /* No following OR yet */
-        grp_info[curr_group].next_choice->x.next_or = mcptr;    /* Chain */
-        grp_info[curr_group].next_choice = mcptr;   /* Where next link goes */
+        mcptr->x.next_or = NULL;                        /* No following OR yet */
+        cntl_grp_info[curr_group].next_choice->x.next_or = mcptr;   /* Chain */
+        cntl_grp_info[curr_group].next_choice = mcptr;  /* Where next link goes */
         can_repeat = FALSE;
         break;
 
@@ -1256,8 +1260,8 @@ pchr_done_noincr:
 /* We close the highest open group... */
     int closed_ok = 0;
     for (int gc = group_cntr; gc >= 0; gc--) {
-        if (grp_info[gc].state == GPOPEN) {
-            grp_info[gc].state = GPCLOSED;
+        if (cntl_grp_info[gc].state == GPOPEN) {
+            cntl_grp_info[gc].state = GPCLOSED;
             closed_ok = 1;
             break;
         }
@@ -1267,7 +1271,7 @@ pchr_done_noincr:
         return FALSE;
     }
 
-    if (grp_info[0].state != GPCLOSED) {    /* Must be closed at the end... */
+    if (cntl_grp_info[0].state != GPCLOSED) {   /* Closed at the end, or error */
         parse_error(patptr-1, "unterminated grouping");
         return FALSE;
     }
@@ -1418,8 +1422,9 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
     int res;
     switch(mt->mc.type) {
     case LITCHAR:
-        if (gc->cdm) res = FALSE;   /* Can't have combining bits */
-        else         res = eq(gc->uc, mt->val.lchar);
+        if (gc->cdm) res = FALSE;               /* Can't have combining bits */
+        else if (gc->uc > 0x7f) res = FALSE;    /* Can't match non-ASCII */
+        else res = eq(gc->uc, mt->val.lchar);
         break;
 
     case ANY:                   /* Any EXCEPT newline or UEM_NOCHAR */
@@ -1833,21 +1838,21 @@ try_next_choice:;
  * Otherwise a CHOICE *restarts* a group.
  */
             if ((mcptr->mc.type == CHOICE) && !first) {
-                mcptr = grp_info[mcptr->mc.group_num].gpend;
+                mcptr = cntl_grp_info[mcptr->mc.group_num].gpend;
                 continue;
             }
-            grp_info[mcptr->mc.group_num].mline = curline;
-            grp_info[mcptr->mc.group_num].start = curoff;
-            grp_info[mcptr->mc.group_num].len = 0;
+            match_grp_info[mcptr->mc.group_num].mline = curline;
+            match_grp_info[mcptr->mc.group_num].start = curoff;
+            match_grp_info[mcptr->mc.group_num].len = 0;
 /* Need to remember where the start if the match is */
-            grp_info[mcptr->mc.group_num].base = pre_match + ambytes;
-            grp_info[mcptr->mc.group_num].state = GPOPEN;
-            grp_info[mcptr->mc.group_num].next_choice = mcptr->x.next_or;
+            match_grp_info[mcptr->mc.group_num].base = pre_match + ambytes;
+            cntl_grp_info[mcptr->mc.group_num].state = GPOPEN;
+            cntl_grp_info[mcptr->mc.group_num].next_choice = mcptr->x.next_or;
             goto next_entry;
         case EGRP:
-            grp_info[mcptr->mc.group_num].len =
-                 (pre_match + ambytes) - grp_info[mcptr->mc.group_num].base;
-            grp_info[mcptr->mc.group_num].state = GPCLOSED;
+            match_grp_info[mcptr->mc.group_num].len =
+                 (pre_match + ambytes) - match_grp_info[mcptr->mc.group_num].base;
+            cntl_grp_info[mcptr->mc.group_num].state = GPCLOSED;
             if (mcptr->mc.group_num == 0) goto success;
             goto next_entry;
         }
@@ -2013,17 +2018,17 @@ failed:
  * And we need to do this for all failures.
  */
     for (int gi = mcptr->mc.group_num + 1; gi <= group_cntr; gi++) {
-        grp_info[gi] = null_grp_info;
+        match_grp_info[gi] = null_match_grp_info;
     }
-    if (grp_info[mcptr->mc.group_num].next_choice) {
-        mcptr = grp_info[mcptr->mc.group_num].next_choice;
-        curline = grp_info[mcptr->mc.group_num].mline;
-        curoff = grp_info[mcptr->mc.group_num].start;
-        ambytes = grp_info[mcptr->mc.group_num].base;
+    if (cntl_grp_info[mcptr->mc.group_num].next_choice) {
+        mcptr = cntl_grp_info[mcptr->mc.group_num].next_choice;
+        curline = match_grp_info[mcptr->mc.group_num].mline;
+        curoff = match_grp_info[mcptr->mc.group_num].start;
+        ambytes = match_grp_info[mcptr->mc.group_num].base;
         goto try_next_choice;
     }
 /* For a total failure, undo this group match info too */
-    grp_info[mcptr->mc.group_num] = null_grp_info;
+    match_grp_info[mcptr->mc.group_num] = null_match_grp_info;
     return AMFAIL;
 }
 
@@ -2060,7 +2065,7 @@ int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
     magic_search.start_point = curoff;
 
     for (int gi = 0; gi <= group_cntr; gi++) {
-        grp_info[gi] = null_grp_info;
+        match_grp_info[gi] = null_match_grp_info;
     }
 
 /* Scan each character until we hit the head link record. */
@@ -2073,10 +2078,10 @@ int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
         int amres = amatch(mcpatrn, &curline, &curoff, 0);
 
         if (amres >= 0) {       /* A SUCCESSFUL MATCH!!! */
-            grp_info[0].mline = matchline;
-            grp_info[0].start = matchoff;
-            grp_info[0].len = amres;
-            grp_info[0].state = GPCLOSED;
+            match_grp_info[0].mline = matchline;
+            match_grp_info[0].start = matchoff;
+            match_grp_info[0].len = amres;
+            cntl_grp_info[0].state = GPCLOSED;
 
 /* Reset the global "." pointers. */
             if (beg_or_end == PTEND) {        /* Go to end of string */
@@ -2291,15 +2296,15 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
         }
 /* Put the match info into group 0 */
         if (direct == FORWARD) {
-            grp_info[0].mline = matchline;
-            grp_info[0].start = matchoff;
+            match_grp_info[0].mline = matchline;
+            match_grp_info[0].start = matchoff;
         }
         else {
-            grp_info[0].mline = scanline;
-            grp_info[0].start = scanoff;
+            match_grp_info[0].mline = scanline;
+            match_grp_info[0].start = scanoff;
         }
         curwp->w_flag |= WFMOVE;        /* Flag that we have moved.*/
-        grp_info[0].len = srch_patlen;
+        match_grp_info[0].len = srch_patlen;
         return TRUE;
 fail:;                                  /* continue to search */
     }
@@ -2308,7 +2313,7 @@ fail:;                                  /* continue to search */
 
 /* Internal routine to initialize these at the start of any search
  */
-static void init_group_status(void) {
+static void init_dyn_group_status(void) {
 /* If we allocated any result strings, free them now... */
     for (int gi = 0; gi < NGRP; gi++) {
         if (grp_text[gi]) {
@@ -2316,9 +2321,9 @@ static void init_group_status(void) {
             grp_text[gi] = NULL;
         }
     }
-/* ...and also initialize group matching info */
+/* ...and also initialize dynamic group matching info */
     for (int gi = 0; gi <= group_cntr; gi++) {
-        grp_info[gi] = null_grp_info;
+        match_grp_info[gi] = null_match_grp_info;
     }
     return;
 }
@@ -2326,7 +2331,7 @@ static void init_group_status(void) {
 static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
     int status;
 
-    init_group_status();    /* Forget the past */
+    init_dyn_group_status();    /* Forget the past */
 
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which is just fine).
@@ -2414,7 +2419,7 @@ int forwsearch(int f, int n) {
 static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
     int status;
 
-    init_group_status();    /* Forget the past */
+    init_dyn_group_status();    /* Forget the past */
 
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which is just fine).
@@ -2690,7 +2695,7 @@ static int delins(char *repstr) {
 /* Save the matched string.
  * NOTE that we cannot save mline until the end, as it might change!
  */
-    needed = grp_info[0].len + 1;
+    needed = match_grp_info[0].len + 1;
     if (needed > last_match.m_alloc) {
         last_match.match = Xrealloc(last_match.match, needed);
         last_match.m_alloc = needed;
@@ -2698,12 +2703,12 @@ static int delins(char *repstr) {
     struct line *sline = curwp->w.dotp;
     int soff = curwp->w.doto;
     char *mptr = last_match.match;
-    for (int j = 0; j < grp_info[0].len; j++)
+    for (int j = 0; j < match_grp_info[0].len; j++)
         *mptr++ = nextch(&sline, &soff, FORWARD);
     *mptr = '\0';
     last_match.mline = NULL;    /* Set at the end */
     last_match.moff = curwp->w.doto;
-    last_match.mlen = grp_info[0].len;
+    last_match.mlen = match_grp_info[0].len;
 
 /* Remember where we are - carefully...
  * When we insert text the line may need to be reallocated, so we
@@ -2717,7 +2722,7 @@ static int delins(char *repstr) {
 /* Step over what we matched...and remember the match */
 
     int togo;
-    togo = grp_info[0].len;
+    togo = match_grp_info[0].len;
     while (togo > 0) togo -= forw_grapheme(1);
 
 
@@ -2741,7 +2746,7 @@ static int delins(char *repstr) {
  */
     curwp->w.dotp = lforw(pline);
     curwp->w.doto = doff;
-    status = ldelete(grp_info[0].len, FALSE);
+    status = ldelete(match_grp_info[0].len, FALSE);
     last_match.mline = curwp->w.dotp;   /* Now known */
 
 /* Finally we need to get to the end of what we've put in as
@@ -2815,7 +2820,7 @@ static int replaces(int query, int f, int n) {
         char *match_p, *repl_p;
 
 /* Search for the pattern. The true length of the matched string ends up
- * in grp_info[0].len
+ * in match_grp_info[0].len
  */
         if (slow_scan) {
             if (!step_scanner(mcpat, FORWARD, PTBEG)) break;
@@ -2949,7 +2954,7 @@ qprompt:
  * If we've matched a zero-length match (which could happen in Magic mode)
  * then we'd loop forever.
  */
-        if (grp_info[0].len == 0) {
+        if (match_grp_info[0].len == 0) {
             mlwrite_one("Replacing a zero-length match (loop). Aborting...");
             return FALSE;
         }
@@ -3073,22 +3078,26 @@ int boundry(struct line *curline, int curoff, int dir) {
  * Any allocated space is freed by the reset for a new search.
  */
 char *group_match(int grp) {
+
 /* Is there a match to return? */
     if ((grp < 0) || (grp > group_cntr)) return "";
-    if (!grp_info[grp].mline) return "";
+    if (!match_grp_info[grp].mline) return "";
+
 /* Have we already sorted out this match for this search? */
-    grp_text[grp] = Xmalloc(grp_info[grp].len + 1);
+    grp_text[grp] = Xmalloc(match_grp_info[grp].len + 1);
+
 /* So create this match text for this search... */
     char *dp = grp_text[grp];
-    int togo = grp_info[grp].len;
-    struct line *cline = grp_info[grp].mline;
-    int coff = grp_info[grp].start;
+    int togo = match_grp_info[grp].len;
+    struct line *cline = match_grp_info[grp].mline;
+    int coff = match_grp_info[grp].start;
     while(togo > 0) {
         int on_cline = llength(cline) - coff;
         if (on_cline > togo) on_cline = togo;
         memcpy(dp, (cline->l_text)+coff, on_cline);
         dp += on_cline;
         togo -= on_cline;
+
 /* Add in the newline, of needed, and switch to next line */
         if (togo > 0) {
             *dp++ = '\n';
