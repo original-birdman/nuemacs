@@ -211,3 +211,7 @@ extern char *force_status;
 
 /* The default Equiv function handler */
 extern utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *);
+
+/* The buffer used for the last search */
+
+extern struct buffer *group_match_buffer;

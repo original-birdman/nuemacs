@@ -314,7 +314,6 @@ int filter_buffer(int f, int n) {
     TTkopen();
     TTflush();
     sgarbf = TRUE;
-    s = TRUE;
 #endif
 #ifdef SIGWINCH
     check_for_resize();
@@ -326,8 +325,10 @@ int filter_buffer(int f, int n) {
  */
     bp->b_flag &= ~BFCHG;
 
-/* Report any failure, then continue to tidy up... */
-    if (s != TRUE || ((s = readin(fltout, FALSE)) == FALSE)) {
+/* If we are modfying the buffer that the match-group info points
+ * to we want to mark them as invalid - readin() will do that.
+ * Report any failure, then continue to tidy up... */
+    if ((s = readin(fltout, FALSE)) == FALSE) {
         mlwrite_one(MLbkt("Execution failed"));
     }
 

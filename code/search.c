@@ -2046,6 +2046,10 @@ int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
     struct line *curline;   /* current line during scan */
     int curoff;             /* position within current line */
 
+/* The group matches are invalid if we don't succeed */
+
+    group_match_buffer = NULL;
+
 /* We never actually test in reverse for step_scanner(), so there is no
  * need to toggle beg_or_end here.
  */
@@ -2094,6 +2098,7 @@ int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
             }
             curwp->w_flag |= WFMOVE;        /* flag that we've moved */
             magic_search.start_line = NULL;
+            group_match_buffer = curwp->w_bufp;
             return TRUE;
         }
 
@@ -2238,6 +2243,10 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
     int scanoff;                    /* position in scanned line */
     int jump;                       /* next offset */
 
+/* The group matches are invalid if we don't succeed */
+
+    group_match_buffer = NULL;
+
 /* If we are going in reverse, then the 'end' is actually the beginning
  * of the pattern.  Toggle it.
  */
@@ -2305,6 +2314,7 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
         }
         curwp->w_flag |= WFMOVE;        /* Flag that we have moved.*/
         match_grp_info[0].len = srch_patlen;
+        group_match_buffer = curwp->w_bufp;
         return TRUE;
 fail:;                                  /* continue to search */
     }
@@ -2768,9 +2778,11 @@ static int delins(char *repstr) {
  *
  * NOTE: that this ONLY EVER RUNS FORWARDS!!!
  *  so on a match we will be at the END of the string to replace.
+ * ALSO: since this modifies as it goes we must ensure that the
+ * group-match info is invalidated on ANY exit, so all exits
+ * must go via the common one which does this.
  */
 static int replaces(int query, int f, int n) {
-    int status;             /* success flag on pattern inputs */
     int numsub;             /* number of substitutions */
     int nummatch;           /* number of found matches */
     int nlflag;             /* last char of search string a <NL>? */
@@ -2781,23 +2793,34 @@ static int replaces(int query, int f, int n) {
     int origoff;            /* and offset (for . query option) */
     int undone = 0;         /* Set if we undo a replace */
 
-    if (curbp->b_mode & MDVIEW) /* don't allow this command if  */
-        return rdonly();        /* we are in read only mode     */
+    int status = TRUE;      /* Default assumption */
+
+/* Mark the group matches as invalid now */
+
+    group_match_buffer = NULL;
+
+    if (curbp->b_mode & MDVIEW) {   /* don't allow this command if  */
+        status =  rdonly();         /* we are in read only mode     */
+        goto end_replaces;
+    }
 
 /* Check for negative repetitions. */
 
-    if (f && n < 0) return FALSE;
+    if (f && n < 0) {
+        status = FALSE;
+        goto end_replaces;
+    }
 
 /* Ask the user for the text of a pattern. */
 
     if ((status = readpattern((query? "Query replace": "Replace"),
          pat, TRUE)) != TRUE)
-        return status;
+        goto end_replaces;
 
 /* Ask for the replacement string. */
 
     if ((status = readpattern("with", rpat, FALSE)) == ABORT)
-        return status;
+        goto end_replaces;
 
 /* Set up flags so we can make sure not to do a recursive replace on
  * the last line because we're replacing the final newline...
@@ -2805,7 +2828,7 @@ static int replaces(int query, int f, int n) {
     nlflag = (pat[srch_patlen - 1] == '\n');
     nlrepl = FALSE;
 
-/* Save original . position, init the number of matches and substitutions,
+/* Save original dot position, init the number of matches and substitutions,
  * and scan through the file.
  */
     origline = curwp->w.dotp;
@@ -2937,7 +2960,8 @@ qprompt:
 
             case BELL:      /* abort! and stay */
                 mlwrite_one("Aborted!");
-                return FALSE;
+                status = FALSE;
+                goto end_replaces;
 
             default:        /* bitch and beep */
                 TTbeep();
@@ -2956,19 +2980,25 @@ qprompt:
  */
         if (match_grp_info[0].len == 0) {
             mlwrite_one("Replacing a zero-length match (loop). Aborting...");
-            return FALSE;
+            status = FALSE;
+            goto end_replaces;
         }
 
 /* Delete the sucker, and insert its replacement. */
 
         status = delins(repl_p);
-        if (status != TRUE) return status;
+        if (status != TRUE) goto end_replaces;
 
         numsub++;       /* increment # of substitutions */
     }
 
 /* And report the results. */
     mlwrite("%d substitutions", numsub);
+
+/* The group matches are invalid when we leave */
+
+end_replaces:
+    group_match_buffer = NULL;
     return TRUE;
 }
 
@@ -3079,14 +3109,21 @@ int boundry(struct line *curline, int curoff, int dir) {
  */
 char *group_match(int grp) {
 
+/* Is the group-match data valid?? */
+
+    if (!group_match_buffer) return "";
+
 /* Is there a match to return? */
+
     if ((grp < 0) || (grp > group_cntr)) return "";
     if (!match_grp_info[grp].mline) return "";
 
 /* Have we already sorted out this match for this search? */
+
     grp_text[grp] = Xmalloc(match_grp_info[grp].len + 1);
 
 /* So create this match text for this search... */
+
     char *dp = grp_text[grp];
     int togo = match_grp_info[grp].len;
     struct line *cline = match_grp_info[grp].mline;
@@ -3099,6 +3136,7 @@ char *group_match(int grp) {
         togo -= on_cline;
 
 /* Add in the newline, of needed, and switch to next line */
+
         if (togo > 0) {
             *dp++ = '\n';
             togo--;

@@ -85,6 +85,11 @@ static int ifile(char *fname) {
     bp->b_flag |= BFCHG;    /* we have changed      */
     bp->b_flag &= ~BFINVS;  /* and are not temporary */
 
+/* If we are modfying the buffer that the match-group info points
+ * to we have to mark them as invalid.
+ */
+    if (bp == group_match_buffer) group_match_buffer = NULL;
+
 /* If this is a translation table, remove any compiled data */
 
     if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
@@ -380,6 +385,11 @@ int readin(char *fname, int lockfl) {
     bp = curbp;                             /* Cheap.        */
     if ((s = bclear(bp)) != TRUE) return s; /* Might be old. */
     bp->b_flag &= ~(BFINVS | BFCHG);
+
+/* If we are modfying the buffer that the match-group info points
+ * to we have to mark them as invalid.
+ */
+    if (bp == group_match_buffer) group_match_buffer = NULL;
 
 /* If this is a translation table, remove any compiled data */
 

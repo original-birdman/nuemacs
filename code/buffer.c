@@ -552,6 +552,11 @@ int bclear(struct buffer *bp) {
             return s;
     bp->b_flag &= ~BFCHG;               /* Not changed          */
 
+/* If we are modfying the buffer that the match-group info points
+ * to we have to mark them as invalid.
+ */
+    if (bp == group_match_buffer) group_match_buffer = NULL;
+
 /* If the buffer is narrowed we must widen it first to ensure we free
  * all lines - not just those from the narrowed region.
  */

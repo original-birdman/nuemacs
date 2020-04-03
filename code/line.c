@@ -101,6 +101,11 @@ void lchange(int flag) {
         flag |= WFMODE;             /* update mode lines.   */
         curbp->b_flag |= BFCHG;
     }
+/* If we are modfying the buffer that the match-group info points
+ * to we have to mark them as invalid.
+ */
+    if (curbp == group_match_buffer) group_match_buffer = NULL;
+
     wp = wheadp;
     while (wp != NULL) {
         if (wp->w_bufp == curbp) wp->w_flag |= flag;
