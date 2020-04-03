@@ -908,7 +908,7 @@ static int adjustmode(int kind, int global) {
         if (strcasecmp(cbuf, mode2name[i]) == 0) {
 /* Finding a match, we process it */
             if (kind == TRUE) {
-                if (!ptt && !strcasecmp(mode2name[i], "PHON")) {
+                if (!ptt && (modecode[i] == 'P')) {
                     mlforce("No phonetic translation tables are yet defined!");
                     return FALSE;
                 }
