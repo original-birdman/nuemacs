@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.155 Help Index     (31 March 2020)
+=>                   nuEmacs GGR4.156 Help Index     (03 April 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -266,6 +266,13 @@ MAGIC mode details.
     There is a &grp function, so you can get the text of a matched group
     after a search in a script.  It takes a numeric arg for the group
     number you want.
+    Group information is invalidated if the buffer the matches are in
+    is modified. If you wish to use them in macros it is best to save
+    them to user variables (%xxx) immediately after the search, then use
+    those.
+    NOTE that replace-string and query-replace-string will never leave
+    any valid group information after they have run as they themselves
+    modify the current buffer themselves.
 
 Repeats
     You can use *, ?, + and {m,n} for repeats of the preceding entity

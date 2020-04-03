@@ -4258,4 +4258,48 @@ etc/uemacs.hlp
 
     Update to version GGR4.155
 
+========== GGR4.156
+
+version.c
+    The run-time test for utf8proc version needs to be a compile-time one.
+
+search.c
+    Do not let ")" close group zero (so the error message is correct).
+    Change the offset sent in to parse_error() on a few calls to improve
+    the resultant error message.
+
+search.c
+    Make "?" greedy and allow "??" to mean a non-greedy 0/1 match.
+
+window.c
+    Fix a bug introduced in GGR4.148 with an erroneous edit.
+    When getting rid of the current window in delwind(), update the
+    current window's buffer locations, not the (arbitrary) wp ones.
+
+buffer.c
+file.c
+globals.c
+line.c
+search.c
+spawn.c
+edef.h
+    Invalidate the group-match info if we modify the buffer that the
+    matches refer to. (For search-replace this means they are never
+    valid after the function completes).
+    If the data is marked invalid, return "" for any match-group
+    request. [search.c]
+
+random.c
+    In adjustmode() check for PHON mode with a 1-char code check, rather
+    than comparing a string with strcmp().
+
+search.c
+    When closing the highest open group at the end of mcstr we must set
+    gpend as well. This is needed for CHOICEs in group 0.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+   Update to version GGR4.156
+
 ==========
