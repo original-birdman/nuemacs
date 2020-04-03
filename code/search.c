@@ -888,7 +888,6 @@ static void rmcclear(void) {
  *      times to allow this!!
  */
 static int group_cntr;  /* Number of possible groups in search pattern */
-
 static int mcstr(void) {
     struct magic *mcptr = mcpat;
     char *patptr = pat;
@@ -1093,9 +1092,9 @@ static int mcstr(void) {
 /* Add this to the OR chain for this group and mark where next OR
  * has to be added
  */
-        mcptr->x.next_or = NULL;                        /* No following OR yet */
+        mcptr->x.next_or = NULL;            /* No following OR from here yet */
         cntl_grp_info[curr_group].next_choice->x.next_or = mcptr;   /* Chain */
-        cntl_grp_info[curr_group].next_choice = mcptr;  /* Where next link goes */
+        cntl_grp_info[curr_group].next_choice = mcptr;  /* next link is here */
         can_repeat = FALSE;
         break;
 
@@ -1262,6 +1261,7 @@ pchr_done_noincr:
     for (int gc = group_cntr; gc >= 0; gc--) {
         if (cntl_grp_info[gc].state == GPOPEN) {
             cntl_grp_info[gc].state = GPCLOSED;
+            cntl_grp_info[gc].gpend = mcptr;
             closed_ok = 1;
             break;
         }
