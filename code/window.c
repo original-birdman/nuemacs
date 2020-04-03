@@ -244,7 +244,7 @@ int delwind(int f, int n) {
     }
 
 /* Get rid of the current window */
-    if (--curwp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
+    if (--curwp->w_bufp->b_nwnd == 0) curwp->w_bufp->b = curwp->w;
     if (lwp == NULL) wheadp = curwp->w_wndp;
     else             lwp->w_wndp = curwp->w_wndp;
     Xfree((char *) curwp);
