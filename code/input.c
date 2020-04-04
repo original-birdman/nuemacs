@@ -549,7 +549,10 @@ struct name_bind *getname(char *prompt) {
 
 /* First get the name... */
     if (clexec == FALSE) {
-        if (mlreply(prompt, buf, NSTRING, CMPLT_NAME) != TRUE) return NULL;
+        no_macrobuf_record = 1;
+        int status = mlreply(prompt, buf, NSTRING, CMPLT_NAME);
+        no_macrobuf_record = 0;
+        if (status != TRUE) return NULL;
     }
     else {      /* macro line argument - grab token and skip it */
         execstr = token(execstr, buf, NSTRING - 1);
@@ -821,6 +824,8 @@ void sigwinch_handler(int signr) {
 }
 #endif
 
+/* The actual getstring() starts now... */
+
 int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     struct buffer *bp;
     struct buffer *cb;
@@ -874,12 +879,6 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
         mb_winp->w_flag = WFMODE | WFHARD;    /* Full.                */
     }
 
-/* GGR NOTE!!
- * We want to ensure that we don't return with garbage in buf, but we
- * can't initialize it to empty here, as some callers use it as a
- * temporary buffer for the prompt!
- */
-
 /* Expansion commands leave junk in mb */
 
     mlerase();
@@ -890,8 +889,18 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 
     update(FALSE);
 
+/* Set-up the (incoming) prompt string and clear any prompt update flag,
+ * as it should only get set during loop.
+ * This means we can *now* initialize an empty return buffer
+ * GGR NOTE!!
+ * some callers use the return buffer as a temporary buffer for the prompt!
+ */
+    strcpy(procopy, prompt);
+    prolen = strlen(procopy);
+    prmpt_buf.update = 0;
+    *buf = '\0';            /* Ensure we never return garbage */
+
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
-        buf = "";               /* Ensure we never return garbage */
 #ifdef SIGWINCH
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 #endif
@@ -902,9 +911,8 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 
     sav = f_arg;
 
-/* Remember the original buffer name if at level 1 */
-
-/* Get the PHON state from the current buffer, so we can carry it to
+/* Remember the original buffer info if at level 1
+ * Get the PHON state from the current buffer, so we can carry it to
  * the next minibuffer.
  * We *don't* carry back any change on return!
  */
@@ -924,13 +932,6 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 /* Switch to the minibuffer window */
     curwp = mb_winp;
     wheadp = curwp;
-
-/* Set-up the (incoming) prompt string and clear any prompt update flag,
- * as it should only get set during loop:
- */
-    strcpy(procopy, prompt);
-    prolen = strlen(procopy);
-    prmpt_buf.update = 0;
 
     if (mpresf) mlerase();
     mberase();
@@ -1098,7 +1099,6 @@ loop:
         goto submit;
     case CONTROL|'G':           /* General */
         status = ABORT;
-        buf = "";               /* Don't return garbage */
         goto abort;
     }
 
@@ -1157,7 +1157,8 @@ submit:     /* Tidy up */
  * at first level of the minibuffer (i.e. the "true" result),
  * and only if we have some text.
  */
-    if ((*buf != '\0') && (kbdmode == RECORD) && (mb_info.mbdepth == 1))
+    if ((*buf != '\0') && (kbdmode == RECORD) &&
+        (mb_info.mbdepth == 1) && !no_macrobuf_record)
          addto_kbdmacro(buf, 0, 1);
 
 abort:

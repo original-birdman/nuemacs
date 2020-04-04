@@ -215,3 +215,8 @@ extern utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *);
 /* The buffer used for the last search */
 
 extern struct buffer *group_match_buffer;
+
+/* Set over a mlreply() call if we don't want getstring to record
+ * it's result into the keyboard macro buffer (//kbd_macro).
+ */
+extern int no_macrobuf_record;

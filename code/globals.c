@@ -199,3 +199,5 @@ char *force_status = "UNSET";
 utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *) = utf8proc_NFKC;
 
 struct buffer *group_match_buffer = NULL;
+
+int no_macrobuf_record = 0;
