@@ -1274,7 +1274,7 @@ loop:
     else {
         update(FALSE);
         if (display_readin_msg ||   /* First one gets removed by update() */
-              mbuf_mess) {          /* Specifc user message */
+              mbuf_mess) {          /* Specific user message */
             int scol = curcol;
             int srow = currow;
             mlwrite_one(mbuf_mess? mbuf_mess: readin_mesg);
@@ -1286,7 +1286,8 @@ loop:
         c = getcmd();
     }
 /* If there is something on the command line, clear it */
-    if (mpresf != FALSE) {
+
+    if (!mline_persist && (mpresf != FALSE)) {
         mlerase();
         update(FALSE);
 #if CLRMSG
@@ -1299,7 +1300,7 @@ loop:
     com_arg *carg = multiplier_check(c);
 
 /* And execute the command */
-    if (carg->n) mlerase();   /* Remove any numeric arg */
+    if (carg->f) mlerase();   /* Remove any numeric arg */
     execute(carg->c, carg->f, carg->n);
     goto loop;
 }
@@ -1797,6 +1798,12 @@ int ctlxrp(int f, int n) {
             return reexecute(f_arg.ca.f, f_arg.ca.n);
         }
         inreex = FALSE;
+/* If an mlforce() message has been written we want it to remain there
+ * for the next pass, but then go.
+ * This means we need to skip the mpresf test near the start of loop for
+ * one (more) pass.
+ */
+        mline_persist = FALSE;
     }
     return TRUE;
 }

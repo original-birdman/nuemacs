@@ -1004,7 +1004,10 @@ int writemsg(int f, int n) {
 
 /* Write the message out */
     if (f && n == 2) fprintf(stderr, "%s\n", buf);
-    else             mlforce_one(buf);
+    else {
+        mlforce_one(buf);
+        if (kbdmode == PLAY) mline_persist = TRUE;
+    }
     return TRUE;
 }
 

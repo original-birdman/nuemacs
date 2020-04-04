@@ -220,3 +220,7 @@ extern struct buffer *group_match_buffer;
  * it's result into the keyboard macro buffer (//kbd_macro).
  */
 extern int no_macrobuf_record;
+
+/* So mlforce() messages in key macro re-runs (ctxle) remain visible */
+
+extern int mline_persist;
