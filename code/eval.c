@@ -268,6 +268,77 @@ static char *xlat(char *source, char *lookup, char *trans) {
     return result;
 }
 
+/* ue_printf
+ *
+ * printf-like handling for multiple args together...
+ * Since all values are strings, and trying to start a template with %
+ * produces an error (it's taken to be the start of a user variable).
+ * The place-holder is %ws with the w being a stated width (may be omitted).
+ *
+ * NOTE!!!!
+ * This *might* require the use of a buffer-per-call, but
+ *    write-message &cat &ptf "fc: %s " $fillcol &ptf "et: %s" $equiv_type
+ * works, so perhaps not...
+ */
+
+/* The returned value - overflow NOT checked.... */
+static char ue_buf[NSTRING];
+
+#define PHCHAR '%'
+#define TMCHAR 's'
+static char *ue_printf(char *fmt) {
+    unicode_t c;
+    char nexttok[NSTRING];
+
+    char *op = ue_buf;      /* Output pointer */
+/* GGR - loop through the bytes getting any utf8 sequence as unicode */
+    int bytes_togo = strlen(fmt);
+    if (bytes_togo == 0) goto finalize; /* Nothing else...clear line only */
+
+    while (bytes_togo > 0) {
+        int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
+        bytes_togo -= used;
+        if (c != PHCHAR) {      /* So copy in the *bytes*! */
+            memcpy(op, fmt, used);
+            op += used;
+            fmt += used;
+            continue;
+        }
+        fmt += used;
+
+/* We have a PHCHAR, so get the next char */
+
+        if (*(fmt) == PHCHAR) { /* [[ is a literal '[' */
+            *op++ = PHCHAR;
+            fmt++;
+            continue;
+        }
+        int min_width = 0;
+        while ((*fmt >= '0') && (*fmt <= '9')) {
+            min_width *= 10;
+            min_width += (*fmt - '0');
+            fmt++;
+            bytes_togo--;
+        }
+/* The next char MUST be a TMCHAR - anything else is an error! */
+        if (*fmt != TMCHAR) {
+            strcpy(op, errorm);
+            goto finalize;
+        }
+        fmt++;                  /* Skip the TMCHAR */
+        bytes_togo--;
+        if (macarg(nexttok) != TRUE) break;
+        int slen = sprintf(op, "%*s", min_width, nexttok);
+        op +=slen;
+    }
+
+/* Finalize the result with a NUL char */
+
+finalize:
+    *op = '\0';
+    return ue_buf;
+}
+
 /* Evaluate a function.
  *
  * @fname: name of function to evaluate.
@@ -451,6 +522,8 @@ static char *gtfun(char *fname) {
         return result;
     case UFGRPTEXT:
         return group_match(atoi(arg1));
+    case UFPRINTF:
+        return ue_printf(arg1);
     }
 
     exit(-11);              /* never should get here */

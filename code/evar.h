@@ -91,7 +91,7 @@ enum uf_val {
     UFASCII,    UFCHR,      UFGTKEY,    UFRND,      UFABS,
     UFSINDEX,   UFENV,      UFBIND,     UFEXIST,    UFBXIST,
     UFFIND,     UFBAND,     UFBOR,      UFBXOR,     UFBNOT,
-    UFXLATE,    UFPROCARG,  UFGRPTEXT,
+    UFXLATE,    UFPROCARG,  UFGRPTEXT,  UFPRINTF,
 };
 
 enum function_type {
@@ -152,6 +152,7 @@ static struct user_function funcs[] = {
  { "xla", TRINAMIC, UFXLATE },  /* XLATE character string translation */
  { "arg", MONAMIC,  UFPROCARG}, /* Get user proc arg */
  { "grp", MONAMIC,  UFGRPTEXT}, /* Text in group for last match */
+ { "ptf", MONAMIC,  UFPRINTF},  /* printf-style string creator */
 };
 
 #endif  /* EVAR_H_ */
