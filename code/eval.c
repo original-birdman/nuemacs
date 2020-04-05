@@ -539,7 +539,13 @@ static char *gtusr(char *vname) {
 /* Scan the list looking for the user var name */
     for (vnum = 0; vnum < MAXVARS; vnum++) {
         if (uv[vnum].u_name[0] == 0) return errorm;
-        if (strcmp(vname, uv[vnum].u_name) == 0) return uv[vnum].u_value;
+/* If a user var is being used in the same statement as it is being set
+ *      set %test &add %test 1
+ * then we can up with the name existing, but no value set...
+ * We must check for this to avoid a crash!
+ */
+        if (strcmp(vname, uv[vnum].u_name) == 0)
+             return uv[vnum].u_value? uv[vnum].u_value: errorm;
     }
 
 /* Return errorm if we run off the end */
