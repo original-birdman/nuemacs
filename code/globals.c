@@ -203,3 +203,5 @@ struct buffer *group_match_buffer = NULL;
 int no_macrobuf_record = 0;
 
 int mline_persist = FALSE;
+
+struct buffer *execbp = NULL;

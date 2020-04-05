@@ -510,6 +510,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
 /* And set up the other buffer fields */
         bp->b_topline = NULL;   /* GGR - for widen and  */
         bp->b_botline = NULL;   /* GGR - shrink windows */
+        bp->bv = NULL;          /* No vars */
         bp->b_active = TRUE;
         bp->b.dotp = lp;
         bp->b.doto = 0;
@@ -573,6 +574,14 @@ int bclear(struct buffer *bp) {
     bp->b.markp = NULL;                 /* Invalidate "mark"    */
     bp->b.marko = 0;
     bp->b.fcol = 0;
+
+/* If we are clearing a buffer that had variables defined then we
+ * need to free those.
+ */
+    if (bp->bv) {
+        Xfree(bp->bv);
+        bp->bv = NULL;
+    }
     return TRUE;
 }
 

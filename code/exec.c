@@ -836,7 +836,11 @@ int storeproc(int f, int n) {
         if (!strcmp(optstr, "not_mb"))        bp->btp_opt.not_mb = 1;
     }
 
-/* And make sure it is empty */
+/* And make sure it is empty
+ * If we are redefining a procedure then we need to remove any variables
+ * that the previous version had defined.
+ * This is done by bclear().
+ */
     bclear(bp);
 
 /* And set the macro store pointers to it */
@@ -1046,6 +1050,8 @@ int dobuf(struct buffer *bp) {
  */
     int init_inreex = inreex;
     inreex = FALSE;
+    struct buffer *init_execbp = execbp;
+    execbp = bp;
 
 /* Mark an executing buffer as read-only while it is being executed */
     int orig_view_bit = bp->b_mode & MDVIEW;
@@ -1418,6 +1424,7 @@ single_exit:
 
 /* Restore the original inreex value before leaving */
     inreex = init_inreex;
+    execbp = init_execbp;
 
 /* Revert to the original read-only status if it wasn't originally set
  * i.e. restore any writeability!

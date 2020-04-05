@@ -552,6 +552,24 @@ static char *gtusr(char *vname) {
     return errorm;
 }
 
+/* Look up a buffer var's value
+ *
+ * char *vname;                 name of user variable to fetch
+ */
+static char *gtbvr(char *vname) {
+    int vnum;       /* Ordinal number of user var */
+
+    if (!execbp || !execbp->bv) return errorm;
+/* Scan the list looking for the user var name */
+    struct buffer_variable *tp = execbp->bv;
+    for (vnum = 0; vnum < BVALLOC; vnum++, tp++) {
+        if (!strcmp(vname, tp->name)) return tp->value? tp->value: errorm;
+    }
+
+/* Return errorm if we run off the end */
+    return errorm;
+}
+
 /*
  * gtenv()
  *
@@ -704,6 +722,35 @@ fvar:
             }
         break;
 
+    case '.':               /* A buffer variable - only for execbp! */
+        if (!execbp) break;
+        if (!execbp->bv) {  /* Need to create a set... */
+            execbp->bv = Xmalloc(BVALLOC*sizeof(struct buffer_variable));
+            struct buffer_variable *tp = execbp->bv;
+            int count = BVALLOC;
+            while(count--) {
+                tp->name[0] = '\0';
+                tp->value = NULL;
+                tp++;
+            }
+        }
+        else {              /* ...or check whether it is there */
+            for (vnum = 0; vnum < BVALLOC; vnum++) {
+                if (!strcmp(var+1, execbp->bv[vnum].name)) {
+                    vtype = TKBVR;
+                    break;
+                }
+            }
+            if (vnum < BVALLOC) break;
+        }
+        for (vnum = 0; vnum < BVALLOC; vnum++)  /* Create a new one??? */
+            if (execbp->bv[vnum].name[0] == '\0') {
+                vtype = TKBVR;
+                strcpy(execbp->bv[vnum].name, var+1);
+                break;
+            }
+        break;
+
     case '&':               /* Indirect operator? */
         var[4] = 0;
         if (strcmp(var+1, "ind") == 0) {  /* Grab token, and eval it */
@@ -740,6 +787,12 @@ static int svar(struct variable_description *var, char *value) {
     case TKVAR:             /* set a user variable */
         uv[vnum].u_value = Xrealloc(uv[vnum].u_value, strlen(value) + 1);
         strcpy(uv[vnum].u_value, value);
+        break;
+
+    case TKBVR:             /* set a buffer variable - findvar check BTPROC */
+        execbp->bv[vnum].value =
+             Xrealloc(execbp->bv[vnum].value, strlen(value) + 1);
+        strcpy(execbp->bv[vnum].value, value);
         break;
 
     case TKENV:             /* set an environment variable */
@@ -1114,6 +1167,7 @@ int gettyp(char *token) {
     case '%':   return TKVAR;
     case '&':   return TKFUN;
     case '*':   return TKLBL;
+    case '.':   return TKBVR;
     default:    return TKCMD;
     }
 }
@@ -1192,6 +1246,8 @@ char *getval(char *token) {
 
     case TKVAR:
         return gtusr(token + 1);
+    case TKBVR:
+        return gtbvr(token + 1);
     case TKENV:
         return gtenv(token + 1);
     case TKFUN:

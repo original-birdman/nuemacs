@@ -224,3 +224,7 @@ extern int no_macrobuf_record;
 /* So mlforce() messages in key macro re-runs (ctxle) remain visible */
 
 extern int mline_persist;
+
+/* The buffer pointer to any current buffer running through dobuf() */
+
+extern struct buffer *execbp;

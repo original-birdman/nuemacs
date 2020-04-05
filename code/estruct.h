@@ -221,6 +221,7 @@ enum cmplt_type {
 #define TKLIT   8               /* numeric literal              */
 #define TKSTR   9               /* quoted string literal        */
 #define TKCMD   10              /* command name                 */
+#define TKBVR   11              /* A buffer variable            */
 
 /*      Internal defined functions                                      */
 
@@ -339,10 +340,22 @@ struct ptt_ent {
     char display_code[32];      /* Only 2 graphemes, though */
 };
 
+/* Max #chars in a var name (user or buffer) */
+#define NVSIZE  32
+
+#define BVALLOC 32
+/* Structure to hold buffer variables and their definitions.
+ * 32 are allocated to each BTPROC buffer.
+ */
+struct buffer_variable {
+    char *value;            /* value (string) */
+    char name[NVSIZE + 1];  /* name of buffer variable */
+};
+
 /* Structure for function/buffer-proc options */
 struct func_opts {
-     unsigned int skip_in_macro :1;
-     unsigned int not_mb :1;
+    unsigned int skip_in_macro :1;
+    unsigned int not_mb :1;
 };
 
 struct buffer {
@@ -351,6 +364,7 @@ struct buffer {
     struct line *b_topline; /* Link to narrowed top text    */
     struct line *b_botline; /* Link to narrowed bottom text */
     struct ptt_ent *ptt_headp;
+    struct buffer_variable *bv; /* Only for b_type = BTPROC */
     struct locs b;
     struct func_opts btp_opt;   /* Only for b_type = BTPROC */
     int b_type;             /* Type of buffer */
@@ -551,9 +565,6 @@ struct rx_mask {
     char *entry;
     int mask;
 };
-
-/* Max #chars in a var name. */
-#define NVSIZE  32
 
 /* The tags for environment variable - used in struct evlist so needed
  * here.
