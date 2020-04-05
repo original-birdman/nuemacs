@@ -145,13 +145,27 @@ final_exit:
  */
 char *token(char *src, char *tok, int size) {
     int quotef;     /* is the current string quoted? */
-    char c; /* temporary character */
+    char c;         /* temporary character */
 
 /* First scan past any whitespace in the source string */
     while (*src == ' ' || *src == '\t') ++src;
 
-/* Scan through the source string */
-    quotef = FALSE;
+/* Scan through the source string.
+ * DO record a " IFF the first character
+ * Then getval() knows it is a string (TKSTR) and returns
+ * the rest of the buffer as the string value.
+ * So "$fillcol" -> "$fillcol, and getval() will treat it (without the
+ *  leading ") as a TKSTR
+ * But %"My Var" -> %My Var and getval() will treat it as a user variable
+ * with a space in its name.
+ * The terminating " is NOT added...neither are any "s along the way.
+ */
+    if (*src == '"') {
+        quotef = TRUE;
+        src++;
+        if (--size > 0) *tok++ = '"';
+    }
+    else quotef = FALSE;
     while (*src) {      /* process special characters */
         if (*src == '~') {
             ++src;
@@ -190,8 +204,7 @@ char *token(char *src, char *tok, int size) {
 /* Set quote mode if quote found */
             if (*src == '"') {
                 quotef = TRUE;
-                src++;
-                continue;   /* Don't record it... */
+                continue;   /* Don't record it...only in pos1 is it kept */
             }
 
 /* Record the character */
@@ -812,9 +825,10 @@ int storeproc(int f, int n) {
     }
 
 /* Add any options */
-    char optstr[NBUFN+1];
+
     bp->btp_opt.skip_in_macro = 0;
     bp->btp_opt.not_mb = 0;
+    char optstr[NBUFN+1];
     while (1) {
         mlreply("opts: ", optstr, NBUFN, CMPLT_BUF);
         if (optstr[0] == '\0') break;
