@@ -29,23 +29,23 @@ set $overlap 2          ; What it used to be
 ; Procedure run when a new file is opened
 ;
 store-procedure file-hooks
-    set %rctmp &sin $cfname "."
-    !if &equ %rctmp 0
+    set .rctmp &sin $cfname "."
+    !if &equ .rctmp 0
         !return
     !endif
-    set %rctmp &mid $cfname &add %rctmp 1 5
-    set %rctmp &lower %rctmp
-    !if &or &seq %rctmp "c" &or &seq %rctmp "cc" &or &seq %rctmp "h" &or &seq %rctmp "pl"
+    set .rctmp &mid $cfname &add .rctmp 1 5
+    set .rctmp &lower .rctmp
+    !if &or &seq .rctmp "c" &or &seq .rctmp "cc" &or &seq .rctmp "h" &or &seq .rctmp "pl"
         add-mode "cmode"
         delete-mode "wrap"
     !else
-        !if &or &seq %rctmp "ftn" &or &seq %rctmp "f77" &or &seq %rctmp "for" &or &seq %rctmp "cpl" &or &seq %rctmp "spl" &or &seq %rctmp "rc" &or &seq %rctmp "cmd" &seq %rctmp "fex"
+        !if &or &seq .rctmp "ftn" &or &seq .rctmp "f77" &or &seq .rctmp "for" &or &seq .rctmp "cpl" &or &seq .rctmp "spl" &or &seq .rctmp "rc" &or &seq .rctmp "cmd" &seq .rctmp "fex"
             delete-mode "wrap"
         !else
-                !if &seq %rctmp "asave"
+                !if &seq .rctmp "asave"
                     add-mode "asave"
                 !else
-                    !if &seq %rctmp "com"
+                    !if &seq .rctmp "com"
                         delete-mode "wrap"
                     !endif
                 !endif
@@ -56,17 +56,17 @@ store-procedure file-hooks
 ; Centre the current text within $fillcol columns
 ;
 store-procedure centre-line
+    beginning-of-line
+    !force white-delete
+    end-of-line
+    set .rctmp $curcol
+    beginning-of-line
+    !if &greater $fillcol .rctmp
+        &div &sub $fillcol .rctmp 2 insert-space
         beginning-of-line
-        !force white-delete
-        end-of-line
-        set %rctmp $curcol
-        beginning-of-line
-        !if &greater $fillcol %rctmp
-                &div &sub $fillcol %rctmp 2 insert-space
-                beginning-of-line
-        !else
-                write-message "[Line too long to centre]"
-        !endif
+    !else
+        write-message "[Line too long to centre]"
+    !endif
 !endm
 ;
 ; Unset the Default replace string (which is otherwise remembered
@@ -80,73 +80,72 @@ store-procedure rm-dflt-repl
 ; Run the buffer through an external spell checker
 ;
 store-procedure spell-check not_mb
-    set %extras @"<return> or any special SPELL options: "
-    !if &seq %extras "ERROR"
+    set .extras @"<return> or any special SPELL options: "
+    !if &seq .extras "ERROR"
         write-message "[Aborted]"
         !return
     !endif
     write-message "[Pushing buffer out to SPELL..]~n~r"
-    set %savefile $cfname
+    set .savefile $cfname
     write-file "Temp.spell"
     write-message "~n[Starting spelling checker..]  ~n~r"
-    !force execute-program &cat "culspell Temp.spell " %extras
+    !force execute-program &cat "culspell Temp.spell " .extras
     !if &seq $status TRUE
-      write-message "[Pulling (corrected) buffer back in..]~n~r"
-      read-file "Temp.spell"
-      write-message "~n[Tidying up temporary files..]"
-;      set %crunch FALSE
-;    !else
-;      set %crunch TRUE
+        write-message "[Pulling (corrected) buffer back in..]~n~r"
+        read-file "Temp.spell"
+        write-message "~n[Tidying up temporary files..]"
     !endif
     set $discmd FALSE
     2 shell-command "rm Temp.spell"
     set $discmd TRUE
-    set $cfname %savefile
+    set $cfname .savefile
 ;   must force buffer to be modified
     insert-raw-string "."
     delete-previous-character
 !endm
 ;
+
+; We remember these across calls...
+;
 set %lindef 0
 set %rindef 0
-; set %spc "                                                                  "
 
 ;
 ; left-and-right-justify text within a $fillcol width
 ;
 store-procedure lr-justify not_mb   ; Left and right justify paragraph
-  set %oldfill $fillcol
-  set %left @&cat &cat "Left indent [" %lindef "]: "
-  !if &seq %left "ERROR"
+  set .oldfill $fillcol
+  set .left @&ptf "Left indent [%s]: " %lindef
+  !if &seq .left "ERROR"
     write-message "[Aborted]"
     !return
   !endif
-  !if &sequ %left ""      ; If <null>.....
-    set %left %lindef     ; ....accept default
+  !if &sequ .left ""      ; If <null>.....
+    set .left %lindef     ; ....accept default
   !else
-    !if &and &not &seq %left "0" &not &greater %left 0        ; is it a number?
+    !if &and &not &seq .left "0" &not &greater .left 0        ; is it a number?
         write-message "[Not a valid indent!]"
         !return
     !endif
-    set %lindef %left     ; Else set default to new value.
+    set %lindef .left     ; Else set default to new value.
   !endif
-  set %right @&cat &cat "Right indent [" %rindef "]: "
-  !if &seq %right "ERROR"
+  set .right @&ptf "Right indent [%s]: " %rindef
+  !if &seq .right "ERROR"
     write-message "[Aborted]"
     !return
   !endif
-  !if &sequ %right ""
-    set %right %rindef
+  !if &sequ .right ""
+    set .right %rindef
   !else
-    !if &and &not &seq %right "0" &not &greater %right 0 ; is it a number?
+    !if &and &not &seq .right "0" &not &greater .right 0 ; is it a number?
         write-message "[Not a valid indent!]"
         !return
     !endif
-    set %rindef %right
+    set %rindef .right
   !endif
   write-message "[Filling..]"
-  set %indent &add %left %right         ; Add together the L&R indent values
-  set $fillcol &sub %oldfill %indent    ; ...and set $fillcol to this value.
+  set %indent &add .left .right         ; Add together the L&R indent values
+  set $fillcol &sub .oldfill %indent    ; ...and set $fillcol to this value.
   end-of-line           ; make sure point is not at the beginning of paragraph
   previous-paragraph    ; .....and go to beginning of paragraph
   beginning-of-line     ; .....column 0
@@ -155,13 +154,13 @@ store-procedure lr-justify not_mb   ; Left and right justify paragraph
     !force white-delete                     ; If so, delete it.
   !endif
   -1 fill-paragraph                     ; L&R justify paragraph
-  set $fillcol %oldfill                 ; Re-set $fillcol
-  set %endlin &add $curline
+  set $fillcol .oldfill                 ; Re-set $fillcol
+  set .endlin &add $curline
   previous-paragraph
 ;
   beginning-of-line
-  !while &less $curline %endlin         ; front-pad filled lines
-    %left insert-space
+  !while &less $curline .endlin         ; front-pad filled lines
+    .left insert-space
     next-line
   !endwhile
   next-word                             ; onto next para
@@ -173,106 +172,109 @@ store-procedure lr-justify not_mb   ; Left and right justify paragraph
 ;
 ; Toggle local/global modes
 ;
+; This uses %test-mode, %type-mode, %add-func and %del-func
+; values set in toggle-lmode or toggle-gmode
+;
 store-procedure _mytoggle-mode
-    write-message &cat &cat "Toggle " %type-mode " mode (FHWCPEVOMYAQD): "
-    set %report " "
-    set %modesel &upper &gtkey
-    !if &or &seq %modesel "" &seq %modesel "~n"
+    write-message &ptf "Toggle %s mode (FHWCPEVOMYAQD): " %type-mode
+    set .report " "
+    set .modesel &upper &gtkey
+    !if &or &seq .modesel "" &seq .modesel "~n"
         write-message "[Aborted]"
         !finish
     !endif
 ; F and H are special...and only global
-    !if &seq %modesel "F"
+    !if &seq .modesel "F"
         !if $autodos
-            set %how off
+            set .how off
         !else
-            set %how on
+            set .how on
         !endif
-        set %report "(GLOBAL) auto-DOS detect toggled "
+        set .report "(GLOBAL) auto-DOS detect toggled "
         set $autodos &not $autodos
         !goto report
     !endif
-    !if &seq %modesel "H"
+    !if &seq .modesel "H"
         !if $hscroll
-            set %how off
+            set .how off
         !else
-            set %how on
+            set .how on
         !endif
-        set %report "(GLOBAL) horizontal scrolling toggled "
+        set .report "(GLOBAL) horizontal scrolling toggled "
         set $hscroll &not $hscroll
         !goto report
-    !endif
 ;
-    !if &seq %modesel "W"
-        set %bit 1
-        set %what "WRAP"
+    !endif
+    !if &seq .modesel "W"
+        set .bit 1
+        set .what "WRAP"
         !goto doit
     !endif
-    !if &seq %modesel "C"
-        set %bit 2
-        set %what "CMODE"
+    !if &seq .modesel "C"
+        set .bit 2
+        set .what "CMODE"
         !goto doit
     !endif
-    !if &seq %modesel "P"
-        set %bit 4
-        set %what "PHON"
+    !if &seq .modesel "P"
+        set .bit 4
+        set .what "PHON"
         !goto doit
     !endif
-    !if &seq %modesel "E"
-        set %bit 8
-        set %what "EXACT"
+    !if &seq .modesel "E"
+        set .bit 8
+        set .what "EXACT"
         !goto doit
     !endif
-    !if &seq %modesel "V"
-        set %bit 16
-        set %what "VIEW"
+    !if &seq .modesel "V"
+        set .bit 16
+        set .what "VIEW"
         !goto doit
     !endif
-    !if &seq %modesel "O"
-        set %bit 32
-        set %what "OVER"
+    !if &seq .modesel "O"
+        set .bit 32
+        set .what "OVER"
         !goto doit
     !endif
-    !if &seq %modesel "M"
-        set %bit 64
-        set %what "MAGIC"
+    !if &seq .modesel "M"
+        set .bit 64
+        set .what "MAGIC"
         !goto doit
     !endif
-    !if &seq %modesel "Y"
-        set %bit 128
-        set %what "CRYPT"
+    !if &seq .modesel "Y"
+        set .bit 128
+        set .what "CRYPT"
         !goto doit
     !endif
-    !if &seq %modesel "A"
-        set %bit 256
-        set %what "ASAVE"
+    !if &seq .modesel "A"
+        set .bit 256
+        set .what "ASAVE"
         !goto doit
     !endif
-    !if &seq %modesel "Q"
-        set %bit 512
-        set %what "EQUIV"
+    !if &seq .modesel "Q"
+        set .bit 512
+        set .what "EQUIV"
         !goto doit
     !endif
-    !if &seq %modesel "D"
-        set %bit 1024
-        set %what "DOS"
+    !if &seq .modesel "D"
+        set .bit 1024
+        set .what "DOS"
         !goto doit
     !endif
     write-message "Unknown mode"
     !finish
 ;
 *doit
-    set %report &cat %type-mode &cat " " &cat %what " mode toggled "
-    !if &band %test-mode %bit
-        set %mfunc %del-func
-        set %how off
+    set .report &ptf "%s %s mode toggled " %type-mode .what
+    !if &band %test-mode .bit
+        set .mfunc %del-func
+        set .how off
     !else
-        set %mfunc %add-func
-        set %how on
+        set .mfunc %add-func
+        set .how on
     !endif
-    %mfunc %what
+    .mfunc .what
 *report
-    write-message &cat %report %how
+    write-message &cat .report .how
     !finish
 !endm
 
@@ -461,6 +463,8 @@ args-in-reexec ALL
 
 ; NOW we define the user procedure to fill a buffer with ls lines
 ;
+set %_awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ {next;} {print;}'"
+
  store-procedure showdir
 
 ; Get the full pathname...expected to be supplied internally by C-code
@@ -468,19 +472,19 @@ args-in-reexec ALL
 ; If the user calls this "manually" (Esc-x execute-procedure showdir)
 ; and gets prompted we will *still* expand it.
 ;
-; We must set $uproc_opts just before getting %udir as it is reset on fetch.
+; We must set $uproc_opts just before getting .udir as it is reset on fetch.
 ; This sets UPROC_FIXUP - to expand any user reply to a full pathname
 ; (If the userproc_arg arg was set internally it will have already been
 ; expanded internally)
 ;
     set $uproc_opts 0x01
-    set %udir &arg "Dir: "
+    set .udir &arg "Dir: "
 
 ; We *expect* to be given a full pathname, so check that first
 ; This should not fail!
 ;
-    !if &not &seq "/" &lef %udir 1
-        write-message &cat "Not an absolute path: " %udir
+    !if &not &seq "/" &lef .udir 1
+        write-message &cat "Not an absolute path: " .udir
         !return
     !endif
 
@@ -493,7 +497,7 @@ args-in-reexec ALL
 
 ; shell-escape this so we can interpolate it into a command line
 ;
-    set %escudir &escape %udir
+    set .escudir &escape .udir
 
 ; List the directory in a buffer (.ue_command - PIPEFILE in spawn.c)
 ; Build up the ls command, and post-handling with awk/sort/etc...
@@ -504,38 +508,38 @@ args-in-reexec ALL
 ; (they end up in the "other" window and show up on exit).
 ;
 ; Which order we use depends on the key used to get us here.
-; NOTE!! The %lsopt requires the trailing space!!
+; NOTE!! The .lsopt requires the trailing space!!
 ;
 ; First - did we get a specific sort request? If so, use it.
 ; Otherwise, use the previous sort used.
 ; Always remember the method used.
 ;
-    set %lkey &upp &chr $lastkey
-    !if &seq %lkey H            ; Toggle hide option
+    set .lkey &upp &chr $lastkey
+    !if &seq .lkey H            ; Toggle hide option
         !if &seq $showdir_sort_hide "A" ; Set the ls flag directly
             set $showdir_sort_hide ""
         !else
             set $showdir_sort_hide "A"
         !endif
+;
     !endif
-
-    !if &seq %lkey F            ; Toggle files/dirs order
+    !if &seq .lkey F            ; Toggle files/dirs order
         !if &seq $showdir_sort_dirf "r" ; Set the sort flag directly
             set $showdir_sort_dirf ""
         !else
             set $showdir_sort_dirf "r"
         !endif
+;
     !endif
-
-    !if &seq %lkey M            ; Toggle mixed/type-separated
+    !if &seq .lkey M            ; Toggle mixed/type-separated
         !if &seq $showdir_sort_mixd "M" ; Set a flag
             set $showdir_sort_mixd ""
         !else
             set $showdir_sort_mixd "M"
         !endif
+;
     !endif
-
-    !if &seq %lkey A            ; Set/toggle ASCII option
+    !if &seq .lkey A            ; Set/toggle ASCII option
         !if &seq $showdir_sort_type ""  ; In ASCII - toggle direction
             !if &seq $showdir_sort_drct "r"
                 set $showdir_sort_drct ""
@@ -545,9 +549,9 @@ args-in-reexec ALL
         !else
             set $showdir_sort_type ""   ; Switch to ASCII
         !endif
+;
     !endif
-
-    !if &seq %lkey T            ; Set/toggle TIME option
+    !if &seq .lkey T            ; Set/toggle TIME option
         !if &seq $showdir_sort_type "t" ; In TIME - toggle direction
             !if &seq $showdir_sort_drct "r"
                 set $showdir_sort_drct ""
@@ -563,11 +567,8 @@ args-in-reexec ALL
 
 ; Now build up the ls options flags
 ;
-    set %lsopt &cat "-lLh" $showdir_sort_hide
-    set %lsopt &cat %lsopt $showdir_sort_type
-    set %lsopt &cat %lsopt $showdir_sort_drct
-    set %lsopt &cat %lsopt " "
-    set %ucmd &cat "QUOTING_STYLE=literal /bin/ls 2>/dev/null " &cat %lsopt &cat %escudir
+    set .lsopt &ptf "-lLh%s%s%s " $showdir_sort_hide $showdir_sort_type $showdir_sort_drct
+    set .ucmd &cat "QUOTING_STYLE=literal /bin/ls 2>/dev/null " &cat .lsopt &cat .escudir
 
 ; The initial list is sent to sort to move all dirs to the top.
 ; Actually we just do a stable sort on char1, so get blocks of:
@@ -576,12 +577,12 @@ args-in-reexec ALL
 ; dangling links (which start l????????).
 ;
     !if &seq $showdir_sort_mixd ""  ; We want type sorting
-        set %_sdsort &cat "| sort -s -k 1.1,1.1" $showdir_sort_dirf
+        set .sdsort &cat "| sort -s -k 1.1,1.1" $showdir_sort_dirf
     !else
-        set %_sdsort ""
+        set .sdsort ""
     !endif
-    set %ucmd &cat %ucmd &cat "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ {next;} {print;}' " %_sdsort
-    pipe-command %ucmd
+    set .ucmd &ptf "%s %s %s" .ucmd %_awk_cmd .sdsort
+    pipe-command .ucmd
 
 ; Make that window the only window
 ;
@@ -597,39 +598,40 @@ args-in-reexec ALL
 ;
     delete-buffer //directory
     name-buffer //directory
-    change-file-name %udir
+    change-file-name .udir
     add-mode view       ; Turn it back on...
     delete-mode wrap    ; Turn this off...
 
-    set %_sdmess "Sorted by"
     !if &seq $showdir_sort_type "t"
-        set %_sdmess &cat %_sdmess " time"
+        set .tmess "time"
     !else
-        set %_sdmess &cat %_sdmess " name"
+        set .tmess "name"
     !endif
     !if &seq $showdir_sort_drct "r"
-        set %_sdmess &cat %_sdmess " reversed, "
+        set .rmess " reversed"
     !else
-        set %_sdmess &cat %_sdmess ", "
+        set .rmess ""
     !endif
     !if &seq $showdir_sort_hide "A"
-        set %_sdmess &cat %_sdmess "with hidden files, "
+        set .hmess "with hidden files,"
     !else
-        set %_sdmess &cat %_sdmess "no hidden files, "
+        set .hmess "no hidden files,"
     !endif
     !if &seq $showdir_sort_mixd ""
         !if &seq $showdir_sort_dirf ""
-            set %_sdmess &cat %_sdmess "files before dirs"
+            set .xmess "files before dirs"
         !else
-            set %_sdmess &cat %_sdmess "dirs before files"
+            set .xmess "dirs before files"
         !endif
     !else
-        set %_sdmess &cat %_sdmess "mixed types"
+        set .xmess "mixed types"
     !endif
+
+
 ; Need to update the current screen before displaying the sort method.
 ;
     update-screen
-    write-message %_sdmess
+    write-message &ptf "Sorted by %s%s, %s %s" .tmess .rmess .hmess .xmess
 
  !endm
 !endif

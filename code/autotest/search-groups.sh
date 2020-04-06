@@ -200,7 +200,7 @@ execute-procedure report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 beginning-of-file
-  search-forward .(pp|s)\p{L}   ; \p{L} rather than . stops "as " match.
+  search-forward ".(pp|s)\p{L}" ; \p{L} rather than . stops "as " match.
   set %curtest SearchChoice
   set %expline 3
   set %expcol 24
@@ -211,7 +211,7 @@ execute-procedure check-position
   set %expmatch pp
 execute-procedure check-group
 
-  search-forward .(pp|s).
+  search-forward ".(pp|s)."
   set %curtest SearchChoiceRpt
   set %expline 3
   set %expcol 30
@@ -223,7 +223,7 @@ execute-procedure check-position
 execute-procedure check-group
 
 beginning-of-file
-  search-forward .(pp|s)\p{L}
+  search-forward ".(pp|s)\p{L}"
   reexecute             ; Should end up at same place a second search above
   set %curtest SearchChoice+reexecute
   set %expline 3
@@ -235,9 +235,6 @@ execute-procedure check-position
   set %grpno 1
   set %expmatch s
 execute-procedure check-group
-
-
-
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports
