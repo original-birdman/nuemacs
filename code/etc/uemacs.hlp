@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.156 Help Index     (03 April 2020)
+=>                   nuEmacs GGR4.157 Help Index     (06 April 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -17,7 +17,7 @@
 .. System variables
 .. Functions
 .. Name completion
-.. MACRO functions and user variables
+.. MACRO functions and environment variables
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
 Notations: ^X means <Ctrl> and X. The <Meta> key is <Esc> on most systems.
@@ -133,7 +133,7 @@ However:
     Meta 20 Meta g would take you to line 20
     Meta 3 ^C would then take you to line 20 3 times (not line 60)!
 
-reexecute leaves the "previous command" and any numeric argument 
+reexecute leaves the "previous command" and any numeric argument
 unchanged. So:
     Meta 2 Meta c will Capinitialize the next 2 words.
     Meta 3 ^C would then Capinitialize the next 6 words (3x2).
@@ -266,10 +266,10 @@ MAGIC mode details.
     There is a &grp function, so you can get the text of a matched group
     after a search in a script.  It takes a numeric arg for the group
     number you want.
-    Group information is invalidated if the buffer the matches are in
-    is modified. If you wish to use them in macros it is best to save
-    them to user variables (%xxx) immediately after the search, then use
-    those.
+    Group information is invalidated if the buffer the matches are in is
+    modified.  If you wish to use them in macros it is best to save them
+    to user or buffer variables (%xxx, .xxx) immediately after the
+    search, then use those.
     NOTE that replace-string and query-replace-string will never leave
     any valid group information after they have run as they themselves
     modify the current buffer themselves.
@@ -363,6 +363,30 @@ Execute procedure ..... Meta ^E
 Store pttable ......... not bound
 Set pttable ........... not bound
 Toggle ptmode ......... not bound
+
+You may set variables within macros.
+
+User variables begin with a % (e.g. %var1) and can be accessed by all
+buffers (including the minibuffer prompting line).
+You can have up to 64 User variabels at a time.
+
+Buffer variables begin with a .(dot) (e.g. .var1) and can only be
+accessed by an executing buffer and are local to each buffer. So .var1
+in one buffer is a different variable to .var1 in another buffer.
+Buffer variables persist between successive uses of a buffer, but are
+cleared if the buffer is deleted, or a user-procedure is over-written.
+You can have up to 32 buffer variables per buffer.
+
+You can delete user and buffer variables using:
+   delete-var <<varname>>
+
+Accessing undefined variables will return the string ERROR.
+Since the way strings are turned into integers treats this as 0 this
+code:
+
+    set .calls &add %.calls 1
+
+will set .calls to 1 on its first use if .calls isn't set elsewhere.
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS
 Universal argument ....      ^U         Set mark .............. Meta Space
@@ -445,7 +469,7 @@ Others (ommtting system-use only ones)...
 &exi, &fin, &exb  .......................... File & buffer operations
 &ban, &bor, &bxo, &bno ..................... Bit operations
 &ind, &tru, &gtk, &rnd, &env, &bin, &xla ... Miscellaneous
-&arg n, &grp n .............................    "   "
+&arg n, &grp n &ptf templ a1, a2.... .......    "   "
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
 
@@ -453,6 +477,7 @@ Name completion can be used in the prompts for various context-aware
 commands. It is invoked by a <Tab>.
 Matches are done against files, buffer names, user procedures, phonetic
 translation tables, function names and uemacs environment/user variables.
+(You cannot usefully be prompted for buffer variables).
 
 If more than one possible completion exists they are displayed
 in the minibuffer and the longest common part is retained for you to add
@@ -461,7 +486,7 @@ to. The minibuffer is an editable buffer line.
 For file completion, shell expansion is handled and leading ".." dirs
 are taken relative to the $PWD environment variable.
 -------------------------------------------------------------------------------
-=>                MACRO functions and user variables
+=>                MACRO functions and environment variables
 eos-chars <string of characters>
     This defines which characters to treat as end of sentence ones so
     that they have an extra space appended when justifying paragraphs.
@@ -533,7 +558,7 @@ toggle-ptmode
 set-pttable <ptt-name>
     Make <ptt-name> the currently-active pttable.
 
-regionlist_text and regionlist_number
+$regionlist_text and $regionlist_number
     These are uemacs environment variables that are used by the
     makelist-region and numberlist-region functions respectively to
     determine that label used on the first line of a paragraph or list
@@ -542,3 +567,28 @@ regionlist_text and regionlist_number
     printf format string that may contain AT MOST one numeric field
     descriptor.
     The default settings are " o " and " %2d. ".
+
+$autodos
+    Whether to check for DOS line ending when reading in a file.
+
+$showdir_tokskip
+    The number of tokens to skip in ls output to get a file-name
+    when in directory-browsing mode.
+    Set to 8 in teh standard uemacs.rc file and is unlikely to need
+    any other value.
+
+$showdir_opts
+    This sets the options used for the first directory display.
+    After the first display the last-used setting is remembered.
+    This can be a string of any combination of T, R, H, F and M.
+    The meaning of each if present is:
+
+    o T - sort by Time
+    o R - sort in Reverse order
+    o H - show hidden files
+    o F - show files before diretories
+    o M - intermix directories and files (ignore the F setting).
+
+    The default seeting is "", which produces:
+    Sorted by name, no hidden files, dirs before files
+-------------------------------------------------------------------------------

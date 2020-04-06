@@ -4302,4 +4302,93 @@ version.h
 etc/uemacs.hlp
    Update to version GGR4.156
 
+========== GGR4.157
+
+globals.c
+input.c
+edef.h
+    Set a flag around the mlreply() call in getname() so that
+    getstring() doesn't add the name to the keyboard macro buffer.
+    getname() adds the result anyway.
+    Tidy up the setting of the buf reply to an empty string so that
+    we never return with garbage in it. [input.c]
+
+globals.c
+main.c
+random.c
+edef.h
+    Add a flag in writemsg() so that any write-message output from a
+    keyboard macro will still be displayed after it ends.
+    (Executing the /kbd_macro buffer already does this).
+    Fix the check for "Remove any numeric arg" to test the f, not n,
+    flag as n is set to 1 by default. [main.c]
+
+exec.c
+    Correct token() to flag a quoted string as such by including the
+    leading " (which was lost in a85a4d3bb5d491855701ae5730d5e83f5e7aa919
+    for version GGR4.115).
+
+eval.c
+evar.h
+    Added a printf-like function, &ptf.
+    The place-holder is %ws, where the width w is optional.
+
+eval.c
+    When returning a user variable we need to check that the value is
+    not NULL. Otherwise "set %test &add %test 1" will crash uemacs if
+    %test doesn't have a previous value.
+    This is an ancient error (it affected version3!).
+
+buffer.c
+globals.c
+eval.c
+exec.c
+edef.h
+estruct.h
+    Add per-buffer variable (.varname).
+    Free any vars when clearing a buffer [buffer.c]
+    Remember the currently-executing buffer for var access [globals.c,
+    exec.c, edef.h]
+
+exec.c
+    Add back a src++ missing from the recent change to fix quoted string
+    handling. (This made some strings appear to be empty...)
+
+etc/accents.cmd
+    Change all " to ~" as it needs to be escaped for token handling to
+    not treat it as the start of a string.
+
+etc/uemacs.rc
+autotest/search-groups.sh
+    Use buffer variables instead of user ones where appropriate.
+    [uemacs.rc]
+    Update to quote strings starting with ".", which would otherwise now
+    be mistaken for buffer variables.  [search-groups.sh]
+
+eval.c
+names.c
+efunc.h
+    Added a delete-var (delvar) function to delete user and buffer
+    variables.
+    Change (always the same) 3rd arg to findvar() to be a "create"
+    option. [eval.c]
+    In view of buffer variables existing, and user and buffer variables
+    now being deletable, lowered the number of user variables (MAXVARS)
+    from 255 to 64. [eval.c]
+
+eval.c
+estruct.h
+evar.h
+etc/uemacs.rc
+    Change showdir to use buffer variables for the showdir_sort_*
+    variables. [uemacs.rc]
+    Remove the now obsolete $showdir_sort_* environment variables.
+    [eval.c, estruct.h, evar.h]
+
+../CHANGES
+../README
+etc/uemacs.hlp
+version.h
+    Update to GGR4.157
+
 ==========

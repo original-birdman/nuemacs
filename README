@@ -20,17 +20,18 @@ result this uemacs is now DEPENDENT ON that library!
 See the PREREQUISITE file.
 
 Other changes so far made are:
-  o make some things user-configurable in start-up files such as
+  o Make some things user-configurable in start-up files such as
     * the definition of "end of sentence" characters,
     * how twiddle and forward word work (ggr-mode)
-  o fix the display of "binary files" (where ^X and \yy are used),
-  o handle utf8 character strings in the message/minibuffer line and the
+  o Fix the display of "binary files" (where ^X and \yy are used),
+  o Handle utf8 character strings in the message/minibuffer line and the
     modeline.
-  o better handling of utf8 strings (zero-width character handling).
+  o Better handling of utf8 strings (zero/double-width character
+    handling).
   o Add all options to the usage() output, and handle command-line
     options better.
-  o enable ctl-Q and ctl-S as command (rather than XON/XOFF).
-  o allow user-created procedures to be bound directly to keys (without
+  o Enable ctl-Q and ctl-S as command (rather than XON/XOFF).
+  o Allow user-created procedures to be bound directly to keys (without
     needing to use one of the 40 numbered macros), and make the
     key-table dynamically assigned, so that it is no longer a limited
     size.
@@ -39,28 +40,31 @@ Other changes so far made are:
     ASCII ones.
   o Input and output now buffered into an 8kB block, significantly
     speeding up file processing,
-  o keyboard macros are also collected as commands in a buffer rather
-    than just as keystrokes.
-  o run any file-hooks (and file-hooks-<<sfx>>) user macros when a file
+  o Keyboard macros are also collected as commands in a buffer rather
+    than just as keystrokes. This can be modified and saved to file.
+    Its execution is bound to ^XV in the standard uemacs.rc file.
+  o Run any file-hooks (and file-hooks-<<sfx>>) user macros when a file
     is read in
-  o added a "Phon" mode, to allow input of non-ASCII characters with an
+  o Added a "Phon" mode, to allow input of non-ASCII characters with an
     ASCII keyboard using a lookup table mapping.
     Czech and Russian tables are provided.
   o Added a set of ring buffers for each of search and replace string.
     You can move back and forward through the last 10 by using
     previous-window/next-window when searching.
-    You can insert the currently-selected default into the search buffer
-    with list-buffers. (These functions were otherwise disabled in the
-    minibuffer).
+    You can insert the currently-selected default into the search buffer.
   o Added a set of kill-buffers for the last deletes.
     If you yank (^Y) you can then do yank_prev_killbuf (Esc-Y) to change
     that yanked text with the previous deletes in turn. Only works if
     you do nothing else after the yank.
     Also works after yank-minibuffer.
     Note that yanking rotates the kill-ring list.
+  o Context-sensitive name completion when prompting for files, buffers,
+    procedures, phonetic translation tables, commands and variable
+    names.
   o Opening a directory will list the files in the directory and let you
     select one to open.
-    Requires a user procedure (defined in the standard uemacs.rc) to run.
+    Requires a user procedure (defined in the standard uemacs.rc) to
+    run. This has various sorting options.
   o Extended name-completion in prompts to work with file names, buffer
     names, user procedures, phonetic translation tables, function names
     and uemacs environment/user variables.
@@ -69,6 +73,7 @@ Other changes so far made are:
     enabled it to work with Unicode characters.
   o Simple Space/Return and b/B for forward/backward page scrolling in
     VIEW mode.
+  o Added per-buffer variables for executing bufers and user procedures.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in
