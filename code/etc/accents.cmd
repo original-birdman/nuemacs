@@ -7,6 +7,7 @@
 ; The mappings are to a single Unicode point, not char+combining accent.
 ; So you may need Equiv mode for searching.
 ;
+; NOTE that we need ~" to escape the " chars.
 store-pttable accents
 ;
     caseset-on
@@ -15,7 +16,7 @@ store-pttable accents
     a'  á
     a^  â
     a~  ã
-    a"  ä
+    a~" ä
     a0  å
 ; C (either case)
     c+  ç
@@ -23,29 +24,29 @@ store-pttable accents
     e`  è
     e'  é
     e^  ê
-    e"  ë
+    e~" ë
 ; I's (either case)
     i`  ì
     i'  í
     i^  î
-    i"  ï
+    i~" ï
 ; O's (either case)
     o`  ò
     o'  ó
     o^  ô
     o~  õ
-    o"  ö
+    o~" ö
     o/  ø
 ; U's (either case)
     u`  ù
     u'  ú
     u^  û
-    u"  ü
+    u~" ü
 ; y (either case)
     y'  ý
 ; y (lowercase only)
     caseset off
-    y"  ÿ
+    y~" ÿ
 ; n (either case)
     caseset on
     n~  ñ
