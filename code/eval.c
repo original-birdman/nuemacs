@@ -19,7 +19,7 @@
 #include <stddef.h>
 #include "idxsorter.h"
 
-#define MAXVARS 255
+#define MAXVARS 64
 
 /* These showdir vars are only set/got in eval.c, so no need to make
  * them visible anywhere else.
@@ -56,7 +56,6 @@ static char *getkill(void) {
     return value;       /* Return the constructed value */
 }
 
-
 /* User variables. External as used by completion code in input.c */
 
 struct user_variable uv[MAXVARS + 1];
@@ -69,7 +68,6 @@ void varinit(void) {
         uv[i].u_value = NULL;
     }
 }
-
 
 /* SORT ROUTINES
  * Some parts are external for use by completion code in input.c
@@ -688,9 +686,10 @@ static char *gtenv(char *vname) {
  *
  * @var: name of variable to get.
  * @vd: structure to hold type and pointer.
- * @size: size of variable array.
+ * @create: only add new entry for user and buffer vars if this is set
+ *   (use to be @size: size of variable array., but that was always NVSIZE+1)
  */
-static void findvar(char *var, struct variable_description *vd, int size) {
+static void findvar(char *var, struct variable_description *vd, int vcreate) {
     unsigned int vnum;  /* subscript in variable arrays */
     int vtype;          /* type to return */
 
@@ -713,7 +712,7 @@ fvar:
                 vtype = TKVAR;
                 break;
             }
-        if (vnum < MAXVARS) break;
+        if (vnum < MAXVARS || !vcreate) break;
         for (vnum = 0; vnum < MAXVARS; vnum++)  /* Create a new one??? */
             if (uv[vnum].u_name[0] == 0) {
                 vtype = TKVAR;
@@ -743,6 +742,7 @@ fvar:
             }
             if (vnum < BVALLOC) break;
         }
+        if (!vcreate) break;
         for (vnum = 0; vnum < BVALLOC; vnum++)  /* Create a new one??? */
             if (execbp->bv[vnum].name[0] == '\0') {
                 vtype = TKBVR;
@@ -754,7 +754,7 @@ fvar:
     case '&':               /* Indirect operator? */
         var[4] = 0;
         if (strcmp(var+1, "ind") == 0) {  /* Grab token, and eval it */
-            execstr = token(execstr, var, size);
+            execstr = token(execstr, var, NVSIZE+1);
             strcpy(var, getval(var));
             goto fvar;
         }
@@ -1048,7 +1048,7 @@ int setvar(int f, int n) {
    }
 
 /* Check the legality and find the var */
-    findvar(var, &vd, NVSIZE + 1);
+    findvar(var, &vd, TRUE);
 
 /* If its not legal....bitch */
     if (vd.v_type == -1) {
@@ -1099,6 +1099,90 @@ int setvar(int f, int n) {
 
 /* And return it */
     return status;
+}
+
+/* Delete a user var.
+ * delvar has already successfully run findvar for us
+ */
+static void delusr(struct variable_description *vd) {
+
+/* We know where it is, so just move the rest of the array down 1.
+ * Since there are never gaps, we can stop as soon as we get to an
+ * empty variable name.
+ */
+    struct user_variable *op = uv+(vd->v_num);
+    struct user_variable *np = op+1;
+    Xfree(op->u_value);
+    for (int vnum = vd->v_num; vnum < BVALLOC; vnum++, op++, np++) {
+        strcpy(op->u_name, np->u_name);
+        op->u_value = np->u_value;
+        if (op->u_name[0] == '\0') break;     /* All done */
+    }
+    np->u_name[0] = '\0';
+    np->u_value = NULL;
+}
+
+/* Delete a buffer var.
+ * delvar has already successfully run findvar for us
+ */
+static void delbvr(struct variable_description *vd) {
+
+/* We know where it is, so just move the rest of the array down 1.
+ * Since there are never gaps, we can stop as soon as we get to an
+ * empty variable name.
+ */
+    struct buffer_variable *op = (execbp+vd->v_num)->bv;
+    struct buffer_variable *np = op+1;
+    Xfree(op->value);
+    for (int vnum = vd->v_num; vnum < BVALLOC; vnum++, op++, np++) {
+        strcpy(op->name, np->name);
+        op->value = np->value;
+        if (op->name[0] == '\0') break;     /* All done */
+    }
+    np->name[0] = '\0';
+    np->value = NULL;
+}
+
+/* Delete a variable
+ * Can only delete user and buffer variables.
+ *
+ * int f;               default flag
+ * int n;               numeric arg (can override prompted value)
+ */
+int delvar(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int status;                     /* status return */
+    struct variable_description vd; /* variable num/type */
+    char var[NVSIZE + 1];           /* name of variable to fetch */
+
+/* First get the variable to delete.. */
+    if (clexec == FALSE) {
+        status = mlreply("Variable to delete: ", var, NVSIZE, CMPLT_VAR);
+        if (status != TRUE) return status;
+    }
+    else {      /* macro line argument - grab token and skip it */
+        execstr = token(execstr, var, NVSIZE + 1);
+   }
+
+/* Check the legality and find the var */
+    findvar(var, &vd, FALSE);
+
+/* Delete by type, or complain about the type */
+    switch(vd.v_type) {
+    case TKVAR:
+        delusr(&vd);
+        return TRUE;
+    case TKBVR:
+        delbvr(&vd);
+        return TRUE;
+    case -1:
+        mlwrite("No such variable as '%s'", var);
+        break;
+    default:
+        mlwrite("Cannot delete '%s' (not a user or buffer variable)", var);
+        break;
+    }
+    return FALSE;
 }
 
 /*

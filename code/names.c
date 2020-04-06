@@ -46,6 +46,7 @@ struct name_bind names[] = {
     {"delete-other-windows", onlywind, {0, 1}},
     {"delete-previous-character", backdel, {0, 0}},
     {"delete-previous-word", delbword, {0, 0}},
+    {"delete-var", delvar, {0, 0}},
     {"delete-window", delwind, {0, 1}},
     {"describe-bindings", desbind, {0, 1}},
     {"describe-key", deskey, {0, 0}},

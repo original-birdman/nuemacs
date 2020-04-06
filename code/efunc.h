@@ -359,6 +359,7 @@ extern void sort_user_var(void);
 extern int nxti_usrvar(int);
 extern int stol(char *);
 extern int setvar(int, int);
+extern int delvar(int, int);
 extern char *ue_itoa(int);
 extern int gettyp(char *);
 extern char *getval(char *);
