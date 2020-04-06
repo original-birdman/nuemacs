@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.155
-;                       Last Update: 31 March 2020
+;                       Version - GGR4.157
+;                       Last Update: 06 April 2020
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -419,52 +419,6 @@ args-in-reexec ALL
 ;
  set $showdir_tokskip 8
 
-; Define a procedure to turn $showdir_opts into $showdir_sort_* settings
-; on the first call to showdir
-;
- store-procedure showdir_opts_
-
-; The setting of the $showdir_sort_* vars in eval.c should match
-; what gets set for the non-matches in the code below
-;
-
-; For the following 3 we set the ls flag as the value
-;
-  !if &equ &sin &upp $showdir_opts "T" 0
-     set $showdir_sort_type ""  ; Set the default...Ascii (not Time)
-  !else
-     set $showdir_sort_type "t" ; Set Time
-  !endif
-  !if &equ &sin &upp $showdir_opts "R" 0
-     set $showdir_sort_drct ""  ; Set the default...forwards
-  !else
-     set $showdir_sort_drct "r" ; Set reverse
-  !endif
-  !if &equ &sin &upp $showdir_opts "H" 0
-     set $showdir_sort_hide ""  ; Set the default...ignore hidden
-  !else
-     set $showdir_sort_hide "A" ; Set show hidden
-  !endif
-; This sets a sort flag
-;
-  !if &equ &sin &upp $showdir_opts "F" 0
-     set $showdir_sort_dirf "r" ; Set the default...dirs before files
-  !else
-     set $showdir_sort_dirf ""  ; Set files before dirs
-  !endif
-; This just sets a testable value
-;
-  !if &equ &sin &upp $showdir_opts "M" 0
-     set $showdir_sort_mixd ""  ; Set the default...separate types
-  !else
-     set $showdir_sort_mixd "M" ; Set mixed-display mode (dirf ignored)
-  !endif
-!endm
-
-; NOW we define the user procedure to fill a buffer with ls lines
-;
-set %_awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ {next;} {print;}'"
-
  store-procedure showdir
 
 ; Get the full pathname...expected to be supplied internally by C-code
@@ -488,12 +442,53 @@ set %_awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ 
         !return
     !endif
 
-; If the showdir_opts_ proc buffer still exists, run it and delete it.
+; If this is the first call, set things up...
 ;
-    !if &exb /showdir_opts_
-        execute-procedure showdir_opts_
-        delete-buffer /showdir_opts_
-    !endif
+    set .calls &add .calls 1
+    !if &equ .calls 1           ; First call...
+
+; The setting of the $showdir_sort_* vars in eval.c should match
+; what gets set for the non-matches in the code below
+;
+
+; For the following 3 we set the ls flag as the value
+;
+        !if &equ &sin &upp $showdir_opts "T" 0
+             set .showdir_sort_type ""  ; Set the default...Ascii (not Time)
+        !else
+             set .showdir_sort_type "t" ; Set Time
+        !endif
+        !if &equ &sin &upp $showdir_opts "R" 0
+             set .showdir_sort_drct ""  ; Set the default...forwards
+        !else
+             set .showdir_sort_drct "r" ; Set reverse
+        !endif
+        !if &equ &sin &upp $showdir_opts "H" 0
+             set .showdir_sort_hide ""  ; Set the default...ignore hidden
+        !else
+             set .showdir_sort_hide "A" ; Set show hidden
+        !endif
+; This sets a sort flag
+;
+        !if &equ &sin &upp $showdir_opts "F" 0
+             set .showdir_sort_dirf "r" ; Set the default...dirs before files
+        !else
+             set .showdir_sort_dirf ""  ; Set files before dirs
+        !endif
+; This just sets a testable value
+;
+        !if &equ &sin &upp $showdir_opts "M" 0
+             set .showdir_sort_mixd ""  ; Set the default...separate types
+        !else
+             set .showdir_sort_mixd "M" ; Set mixed-display mode (dirf ignored)
+        !endif
+
+; NOW we define the user procedure to fill a buffer with ls lines
+;
+
+        set .awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ {next;} {print;}'"
+
+    !endif      ; End of first call set-up.
 
 ; shell-escape this so we can interpolate it into a command line
 ;
@@ -516,50 +511,50 @@ set %_awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ 
 ;
     set .lkey &upp &chr $lastkey
     !if &seq .lkey H            ; Toggle hide option
-        !if &seq $showdir_sort_hide "A" ; Set the ls flag directly
-            set $showdir_sort_hide ""
+        !if &seq .showdir_sort_hide "A" ; Set the ls flag directly
+            set .showdir_sort_hide ""
         !else
-            set $showdir_sort_hide "A"
+            set .showdir_sort_hide "A"
         !endif
 ;
     !endif
     !if &seq .lkey F            ; Toggle files/dirs order
-        !if &seq $showdir_sort_dirf "r" ; Set the sort flag directly
-            set $showdir_sort_dirf ""
+        !if &seq .showdir_sort_dirf "r" ; Set the sort flag directly
+            set .showdir_sort_dirf ""
         !else
-            set $showdir_sort_dirf "r"
+            set .showdir_sort_dirf "r"
         !endif
 ;
     !endif
     !if &seq .lkey M            ; Toggle mixed/type-separated
-        !if &seq $showdir_sort_mixd "M" ; Set a flag
-            set $showdir_sort_mixd ""
+        !if &seq .showdir_sort_mixd "M" ; Set a flag
+            set .showdir_sort_mixd ""
         !else
-            set $showdir_sort_mixd "M"
+            set .showdir_sort_mixd "M"
         !endif
 ;
     !endif
     !if &seq .lkey A            ; Set/toggle ASCII option
-        !if &seq $showdir_sort_type ""  ; In ASCII - toggle direction
-            !if &seq $showdir_sort_drct "r"
-                set $showdir_sort_drct ""
+        !if &seq .showdir_sort_type ""  ; In ASCII - toggle direction
+            !if &seq .showdir_sort_drct "r"
+                set .showdir_sort_drct ""
             !else
-                set $showdir_sort_drct "r"
+                set .showdir_sort_drct "r"
             !endif
         !else
-            set $showdir_sort_type ""   ; Switch to ASCII
+            set .showdir_sort_type ""   ; Switch to ASCII
         !endif
 ;
     !endif
     !if &seq .lkey T            ; Set/toggle TIME option
-        !if &seq $showdir_sort_type "t" ; In TIME - toggle direction
-            !if &seq $showdir_sort_drct "r"
-                set $showdir_sort_drct ""
+        !if &seq .showdir_sort_type "t" ; In TIME - toggle direction
+            !if &seq .showdir_sort_drct "r"
+                set .showdir_sort_drct ""
             !else
-                set $showdir_sort_drct "r"
+                set .showdir_sort_drct "r"
             !endif
         !else
-            set $showdir_sort_type "t"  ; Switch to TIME
+            set .showdir_sort_type "t"  ; Switch to TIME
         !endif
     !endif
 
@@ -567,7 +562,7 @@ set %_awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ 
 
 ; Now build up the ls options flags
 ;
-    set .lsopt &ptf "-lLh%s%s%s " $showdir_sort_hide $showdir_sort_type $showdir_sort_drct
+    set .lsopt &ptf "-lLh%s%s%s " .showdir_sort_hide .showdir_sort_type .showdir_sort_drct
     set .ucmd &cat "QUOTING_STYLE=literal /bin/ls 2>/dev/null " &cat .lsopt &cat .escudir
 
 ; The initial list is sent to sort to move all dirs to the top.
@@ -576,12 +571,12 @@ set %_awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ 
 ; The awk filters out the any total on line1, and also any
 ; dangling links (which start l????????).
 ;
-    !if &seq $showdir_sort_mixd ""  ; We want type sorting
-        set .sdsort &cat "| sort -s -k 1.1,1.1" $showdir_sort_dirf
+    !if &seq .showdir_sort_mixd ""  ; We want type sorting
+        set .sdsort &cat "| sort -s -k 1.1,1.1" .showdir_sort_dirf
     !else
         set .sdsort ""
     !endif
-    set .ucmd &ptf "%s %s %s" .ucmd %_awk_cmd .sdsort
+    set .ucmd &ptf "%s %s %s" .ucmd .awk_cmd .sdsort
     pipe-command .ucmd
 
 ; Make that window the only window
@@ -602,23 +597,23 @@ set %_awk_cmd "| awk 'NR == 1 && $1 == ~"total~" {next;} /^l\?\?\?\?\?\?\?\?\?/ 
     add-mode view       ; Turn it back on...
     delete-mode wrap    ; Turn this off...
 
-    !if &seq $showdir_sort_type "t"
+    !if &seq .showdir_sort_type "t"
         set .tmess "time"
     !else
         set .tmess "name"
     !endif
-    !if &seq $showdir_sort_drct "r"
+    !if &seq .showdir_sort_drct "r"
         set .rmess " reversed"
     !else
         set .rmess ""
     !endif
-    !if &seq $showdir_sort_hide "A"
+    !if &seq .showdir_sort_hide "A"
         set .hmess "with hidden files,"
     !else
         set .hmess "no hidden files,"
     !endif
-    !if &seq $showdir_sort_mixd ""
-        !if &seq $showdir_sort_dirf ""
+    !if &seq .showdir_sort_mixd ""
+        !if &seq .showdir_sort_dirf ""
             set .xmess "files before dirs"
         !else
             set .xmess "dirs before files"

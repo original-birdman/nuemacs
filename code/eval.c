@@ -19,25 +19,6 @@
 #include <stddef.h>
 #include "idxsorter.h"
 
-#define MAXVARS 64
-
-/* These showdir vars are only set/got in eval.c, so no need to make
- * them visible anywhere else.
- */
-
-#define MAX_SD_OPTS 5
-static char showdir_opts[MAX_SD_OPTS+1] = "";
-/* These are set to 2 NULs so that the first char can be set to NUL or
- * the single char allowed and end up as a string either way.
- * The setting should match the default ("") settings in the
- * showdir_opts_ user procedure in uemcs.rc.
- */
-static char showdir_sort_type[2] = { '\0', '\0' };  /* "" */
-static char showdir_sort_drct[2] = { '\0', '\0' };  /* "" */
-static char showdir_sort_hide[2] = { '\0', '\0' };  /* "" */
-static char showdir_sort_dirf[2] = { 'r',  '\0' };  /* "r" */
-static char showdir_sort_mixd[2] = { '\0', '\0' };  /* "" */
-
 /* Return some of the contents of the kill buffer
  */
 static char *getkill(void) {
@@ -56,7 +37,16 @@ static char *getkill(void) {
     return value;       /* Return the constructed value */
 }
 
+/* A user-settaable environment variable allowign the user to defined
+ * the initial sorting for a directory display.
+ * The user may give up to 5 settings, 1-char for each.
+ */
+#define MAX_SD_OPTS 5
+static char showdir_opts[MAX_SD_OPTS+1] = "";
+
 /* User variables. External as used by completion code in input.c */
+
+#define MAXVARS 64
 
 struct user_variable uv[MAXVARS + 1];
 
@@ -672,11 +662,6 @@ static char *gtenv(char *vname) {
             else                                return "NFKC";
             break;
     case EVSDOPTS:          return showdir_opts;
-    case EVSDTYPE:          return showdir_sort_type;
-    case EVSDDRCT:          return showdir_sort_drct;
-    case EVSDHIDE:          return showdir_sort_hide;
-    case EVSDDIRF:          return showdir_sort_dirf;
-    case EVSDMIXD:          return showdir_sort_mixd;
     }
 
     exit(-12);              /* again, we should never get here */
@@ -980,44 +965,6 @@ static int svar(struct variable_description *var, char *value) {
         case EVSDOPTS:
             if (strlen(value) > MAX_SD_OPTS) status = FALSE;
             else            strcpy(showdir_opts, value);
-            break;
-/* These next 5 (MAX_SD_OPTS) entries are just the single-character
- * option flag to use. So only allow that or the empty string.
- */
-        case EVSDTYPE:
-            if (value[0] == '\0' ||
-                ((value[1] == '\0') && (value[0] == 't'))) {
-                showdir_sort_type[0] = value[0];
-            }
-            else status = FALSE;
-            break;
-        case EVSDDRCT:
-            if (value[0] == '\0' ||
-                ((value[1] == '\0') && (value[0] == 'r'))) {
-                showdir_sort_drct[0] = value[0];
-            }
-            else status = FALSE;
-            break;
-        case EVSDHIDE:
-            if (value[0] == '\0' ||
-                ((value[1] == '\0') && (value[0] == 'A'))) {
-                showdir_sort_hide[0] = value[0];
-            }
-            else status = FALSE;
-            break;
-        case EVSDDIRF:
-            if (value[0] == '\0' ||
-                ((value[1] == '\0') && (value[0] == 'r'))) {
-                showdir_sort_dirf[0] = value[0];
-            }
-            else status = FALSE;
-            break;
-        case EVSDMIXD:          /* Not a flag - a testable char */
-            if (value[0] == '\0' ||
-                ((value[1] == '\0') && (value[0] == 'M'))) {
-                showdir_sort_mixd[0] = value[0];
-            }
-            else status = FALSE;
             break;
         }
         break;
