@@ -168,7 +168,7 @@ char *token(char *src, char *tok, int size) {
     else quotef = FALSE;
     while (*src) {      /* process special characters */
         if (*src == '~') {
-            ++src;
+            src++;
             if (*src == 0) break;
             switch (*src++) {
             case 'r':
@@ -203,6 +203,7 @@ char *token(char *src, char *tok, int size) {
 
 /* Set quote mode if quote found */
             if (*src == '"') {
+                src++;
                 quotef = TRUE;
                 continue;   /* Don't record it...only in pos1 is it kept */
             }
