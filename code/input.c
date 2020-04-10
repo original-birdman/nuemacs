@@ -69,15 +69,50 @@ static short allfiles;
 static char fullname[NFILEN];
 
 static void close_dir(void) {
-    if (dirptr != NULL) closedir(dirptr);
+    if (dirptr != NULL) {
+        closedir(dirptr);
+        dirptr = NULL;
+    }
+}
+
+/* We need to remember these across successive calls to getnfile */
+static char exp_id[NFILEN];
+static char id_to_find[40];
+static int id_to_find_len;
+static int run_id_finder = 0;
+
+static char *id_finder(void) {
+/* Handle ~xxx by looking up all matching login ids.
+ * If we come here we know we have an id to handle...
+ */
+    struct passwd *pwe;
+    errno = 0;
+    while ((pwe = getpwent())) {
+        if (!strncmp(pwe->pw_name, id_to_find, id_to_find_len)) {
+            snprintf(exp_id, NFILEN, "~%s", pwe->pw_name);
+            return exp_id;
+        }
+    }
+    if (errno) mlwrite("passwd lookup: %s", strerror(errno));
+    endpwent();
+    return NULL;
 }
 
 /* What to show in the minibuffer if completion doesn't find anything */
 
 #define NOMATCH "No match"
 
+/* Get the next matching file name
+ */
 static char *getnfile(void) {
     unsigned short type;        /* file type */
+
+/* Handle ~xxx by looking up all matching login ids.
+ * NOTE that ~xxx/ has specified a full id, and so is handled by
+ * fixup_fname() when we drop into the filename code.
+ */
+    if (run_id_finder) return id_finder();
+
 #if USG
     struct dirent *dp;
 #else
@@ -111,10 +146,35 @@ static char *getnfile(void) {
     return getnfile();
 }
 
+/* Get the first matching filename.
+ * Actually just sets things up so that getnfile() or id_finder()
+ * can get it...
+ */
 static char *getffile(char *fspec) {
     char *p;                        /* handy pointers */
 
     dirptr = NULL;                  /* Initialise things */
+
+/* Handle ~xxx by looking up all matching login ids.
+ * NOTE that ~xxx/ has specified a full id, and that is handled by
+ * fixup_fname().
+ */
+    if ((*fspec == '~') && (!strchr(fspec, '/'))) {
+        directory[0] = '\0';        /* Forget any previous one */
+        strncpy(id_to_find, fspec+1, 39);
+        id_to_find[39] = '\0';      /* Ensure NUL terminated */
+        id_to_find_len = strlen(id_to_find);
+        run_id_finder = 1;
+        setpwent();                 /* Start it off */
+        char *res = id_finder();
+/* If we don't find anything in pwd, drop into the file code
+ * so we can find a file of that name, if one is there...
+ * Since there is no matching id, fixup_fname() will leave it unchanged.
+ */
+        if (res) return res;
+    }
+    if (run_id_finder) endpwent();  /* In case it was opened earlier */
+    run_id_finder = 0;
 
 /* fixup_fname will strip any trailing '/'
  * This leads to a "loop", as the rest of this code would just add it back
@@ -123,17 +183,16 @@ static char *getffile(char *fspec) {
  * NOTE: that we check for the end offset being > 0, as that means "/" isn't
  * treated as a trailing slash.
  */
-    int had_trailing_hash;
     int fspec_eoff = strlen(fspec) - 1;
-    if (fspec_eoff) had_trailing_hash = (fspec[fspec_eoff] == '/');
-    else            had_trailing_hash = 0;
+    if (fspec_eoff && (fspec[fspec_eoff] == '/'))
+        fspec[fspec_eoff] = '\0';
+    else
+        fspec_eoff = 0;         /* Just forget it... */
     fixup_fname(fspec);
-    if (had_trailing_hash) {
-        char *ep = fspec+fspec_eoff;
-        *ep++ = '/';
-        *ep = '\0';
-    }
-
+/* fspec may have been expanded in situ by fixup_fname, so we can't just
+ * use fspec_eoff as the place to put put back a '/'!
+ */
+    if (fspec_eoff) strcat(fspec, "/");
     strcpy(directory, fspec);
 
     if ((p = strrchr(directory, '/'))) {
@@ -364,6 +423,7 @@ static int matcher(char *name, int namelen, char *choices,
             (*p && *q && (*p == *q)); p++, q++)
             match_length++;
         so_far[match_length] = 0;
+
         l = strlen(next);
         if (max == 0) {
             if (match_length == 0)
@@ -407,6 +467,7 @@ static int comp_file(char *name, char *choices) {
     strcpy(supplied, name);
     unique = matcher(name, 0, choices, CMPLT_FILE);
     close_dir();
+
     if (directory[0]) {
         strcpy(name, directory);
         strcat(name, so_far);
@@ -415,8 +476,18 @@ static int comp_file(char *name, char *choices) {
         strcpy(name, so_far);
     }
 
-    if (unique && strcmp(name, supplied))
-        *choices = 0;
+/* If we found a single entry that begins with '~' and contains no '/'
+ * pass it to fixup_fname() so that it can expand any login id to its
+ * HOME dir. This mean that ~id gets expanded to $HOME, rather than just
+ * looping with ~id in the buffer.
+ * If this does happen (the leading ~ goes away) we append a '/'.
+ */
+    if (unique) {
+        if ((name[0] == '~') && (!strchr(name, '/'))) {
+            fixup_fname(name);
+            if (name[0] != '~') strcat(name, "/");
+        }
+    }
     return TRUE;
 }
 
@@ -430,7 +501,6 @@ static int comp_file(char *name, char *choices) {
 static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
     char supplied[NFILEN];  /* Maximal match so far */
     char *p;                /* Handy pointer */
-    int unique;
     int namelen;
 
     *choices = 0;
@@ -457,10 +527,8 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
     }
     strcpy(so_far, p);
     strcpy(supplied, name);
-    unique = matcher(name, namelen, choices, mtype);
+    (void)matcher(name, namelen, choices, mtype);
     strcpy(name, so_far);
-
-    if (unique && strcmp(name, supplied)) *choices = 0;
 
     return TRUE;
 }
