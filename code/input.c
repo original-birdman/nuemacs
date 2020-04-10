@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -85,7 +87,7 @@ static char *getnfile(void) {
     int namelen;
 
 /* Get the next directory entry, if no more, we finish */
-    if ((dp = readdir(dirptr)) == NULL) return(NULL);
+    if ((dp = readdir(dirptr)) == NULL) return NULL;
 
     if ((allfiles ||
          (((namelen = strlen(dp->d_name)) >= piclen) &&
@@ -103,10 +105,10 @@ static char *getnfile(void) {
              || (type == S_IFDIR)) {
             strcpy(suggestion, dp->d_name);
             if (type == S_IFDIR) strcat(suggestion, "/");
-            return(suggestion);
+            return suggestion;
         }
     }
-    return(getnfile());
+    return getnfile();
 }
 
 static char *getffile(char *fspec) {
@@ -131,6 +133,7 @@ static char *getffile(char *fspec) {
         *ep++ = '/';
         *ep = '\0';
     }
+
     strcpy(directory, fspec);
 
     if ((p = strrchr(directory, '/'))) {
@@ -149,14 +152,13 @@ static char *getffile(char *fspec) {
 
     if (!directory[0]) dirptr = opendir(".");
     else               dirptr = opendir(directory);
-
-    if (dirptr == NULL) return(NULL);
+    if (dirptr == NULL) return NULL;
 
     piclen = strlen(picture);
     allfiles = (piclen == 0);
 
 /* And return the first match (we return ONLY matches, for speed) */
-    return(getnfile());
+    return getnfile();
 }
 
 /* getnbuffer() and getfbuffer()
@@ -172,21 +174,15 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
 
     if (expandbp) {
 /* We NEVER return minibuffer buffers (//minibnnnn), and we return internal
- * [xx] buffers only if the user asked for them by specifying a picture
- * starting with [.
+ * /xx buffers only if the user asked for them by specifying a picture
+ * starting with /.
  * For a type of CMPLT_PROC we only consider buffer-names starting with '/'
  * with a b_type of BTPROC. We return the name *without* the leading '/'.
  */
-
         int offset;
             if ((mtype == CMPLT_PROC) ||
                 (mtype == CMPLT_PHON)) offset = 1;
             else                       offset = 0;
-
-/* We don't return a buffer if it doesn't match, or if it's a minibuffer
- * buffername (CC$) or if it's an internal buffer [xx], unless the user
- * *asked* for these.
- */
         if ((mtype == CMPLT_PROC &&
               (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/')) ||
             (mtype == CMPLT_PHON &&
@@ -196,47 +192,46 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
             ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
 
             expandbp = expandbp->b_bufp;
-            return(getnbuffer(bpic, bpiclen, mtype));
+            return getnbuffer(bpic, bpiclen, mtype);
         }
         else {
             retptr = expandbp->b_bname + offset;
             expandbp = expandbp->b_bufp;
-            return(retptr);
+            return retptr;
         }
     }
     else
-        return(NULL);
+        return NULL;
 }
 
 static char *getfbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
     expandbp = bheadp;
-    return(getnbuffer(bpic, bpiclen, mtype));
+    return getnbuffer(bpic, bpiclen, mtype);
 }
 
 /* getnname() and getfname()
  * Handle internal command name completions.
  *
  * Just uses the sorted index to step through the names in order.
+ * So for getfname() we just set things up then call getnname(), and
+ * that keeps going until it finds the first match, if there.
+ * On successive getnname() calls we return NULL as soon as we have no
+ * match.
  */
-
 static int n_nidx;
-static char *getfname(char *name, int namelen) {
-    n_nidx = -1;
-    while ((n_nidx = nxti_name_info(n_nidx)) >= 0) {    /* -1 at end of list */
-        if (strncmp(name, names[n_nidx].n_name, namelen) == 0)
-            return names[n_nidx].n_name;
-    }
-    return NULL;
-}
-
 static char *getnname(char *name, int namelen) {
+    int noname_on_nomatch = (n_nidx != -1);
     while ((n_nidx = nxti_name_info(n_nidx)) >= 0) {
         if (strncmp(name, names[n_nidx].n_name, namelen) == 0)
             return names[n_nidx].n_name;
-        else
-            return NULL;
+        if (noname_on_nomatch) break;
     }
     return NULL;
+}
+static char *getfname(char *name, int namelen) {
+    n_nidx = -1;                    /* First call has to find first match */
+    char *res = getnname(name, namelen);
+    return res;
 }
 
 /* getnvar() and getfvar()
@@ -362,6 +357,9 @@ static int matcher(char *name, int namelen, char *choices,
         if (next == NULL) break;
 
         unique = FALSE;
+/* This loop updates the maximum common prefix "so far" by comparing
+ * it with this latest match.
+ */
         for (p = so_far, q = next, match_length = 0;
             (*p && *q && (*p == *q)); p++, q++)
             match_length++;
@@ -401,7 +399,7 @@ static int comp_file(char *name, char *choices) {
         close_dir();
         mlwrite(NOMATCH);
         sleep(1);
-        return(FALSE);
+        return FALSE;
     }
     else
         strcpy(so_far, p);
@@ -419,7 +417,7 @@ static int comp_file(char *name, char *choices) {
 
     if (unique && strcmp(name, supplied))
         *choices = 0;
-    return(TRUE);
+    return TRUE;
 }
 
 /* Generic entry point for completions where the getf* function selects
@@ -455,7 +453,7 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
     if (p == NULL) {
         mlwrite(NOMATCH);
         sleep(1);
-        return(FALSE);
+        return FALSE;
     }
     strcpy(so_far, p);
     strcpy(supplied, name);
@@ -464,7 +462,7 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
 
     if (unique && strcmp(name, supplied)) *choices = 0;
 
-    return(TRUE);
+    return TRUE;
 }
 
 /* Entry point for buffer name completion. And userprocs.
@@ -904,7 +902,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 #ifdef SIGWINCH
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 #endif
-        return(FALSE);
+        return FALSE;
     }
 
 /* Save real reexecution history */
@@ -1206,5 +1204,5 @@ abort:
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 #endif
 
-    return(status);
+    return status;
 }
