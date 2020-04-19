@@ -298,7 +298,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
     else {
         int qreq = 0;
         for (char *tp = text; *tp; tp++) {
-            if (*tp == ' ') {
+            if ((*tp == ' ') || (*tp == '"')) {
                 qreq = 1;
                 break;
             }
@@ -313,7 +313,9 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
             case 10:  xc = 'n'; break;
             case 12:  xc = 'f'; break;
             case 13:  xc = 'r'; break;
-            case '~': xc = '~'; break;      /* It *does* handle this */
+            case '"':                   /* It *does* handle these two! */
+            case '~': xc = cc; break;
+
             }
             if (xc != 0) {
                 linsert_byte(1, '~');
