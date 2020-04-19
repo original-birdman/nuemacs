@@ -239,10 +239,16 @@ int namedcmd(int f, int n) {
  * is where we are...
  */
         if (inmb) {
-            if (nm_info && nm_info->opt.not_mb) {
+            if (nm_info->opt.not_mb) {
                 not_in_mb.funcname = nm_info->n_name;
                 not_in_mb.keystroke = -1;   /* No keystroke... */
                 kfunc = not_in_mb_error;    /* Change what we call... */
+            }
+        }
+        if (!clexec) {
+            if (nm_info->opt.not_interactive) {
+                not_interactive_fname = nm_info->n_name;
+                kfunc = not_interactive;    /* Change what we call... */
             }
         }
     }
@@ -800,6 +806,7 @@ int ptt_handler(int c) {
  * int f;               default flag
  * int n;               macro number to use
  */
+struct func_opts null_func_opts = { 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
@@ -827,14 +834,17 @@ int storeproc(int f, int n) {
 
 /* Add any options */
 
-    bp->btp_opt.skip_in_macro = 0;
-    bp->btp_opt.not_mb = 0;
+    bp->btp_opt = null_func_opts;
     char optstr[NBUFN+1];
     while (1) {
         mlreply("opts: ", optstr, NBUFN, CMPLT_BUF);
         if (optstr[0] == '\0') break;
-        if (!strcmp(optstr, "skip_in_macro")) bp->btp_opt.skip_in_macro = 1;
-        if (!strcmp(optstr, "not_mb"))        bp->btp_opt.not_mb = 1;
+        if (!strcmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
+        if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
+        if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
+/* Difficult to see how this can be true, but it's here for completeness */
+        if (!strcmp(optstr, "caller_handles_macro"))
+             bp->btp_opt.caller_handles_macro = 1;
     }
 
 /* And make sure it is empty

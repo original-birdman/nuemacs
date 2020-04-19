@@ -149,6 +149,7 @@ int run_filehooks = 0;
 mb_info_st mb_info = { NULL, NULL, NULL, 0 };
 
 not_in_mb_st not_in_mb = { NULL, 0 };
+char *not_interactive_fname = NULL;
 
 int pause_key_index_update = 0;
 

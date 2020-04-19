@@ -406,6 +406,14 @@ int bindtokey(int f, int n) {
         if (!clexec) mlwrite_one(MLbkt("No such function"));
         return FALSE;
     }
+
+/* You can't bind functions that can't be run interactively */
+
+    if (nm_info->opt.not_interactive) {
+        mlwrite("%s is non-interactive so may not be bound", nm_info->n_name);
+        return FALSE;
+    }
+
     kfunc = nm_info->n_func;
     if (!clexec) mlputs(" ");
 

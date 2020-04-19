@@ -315,7 +315,6 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
             case 13:  xc = 'r'; break;
             case '"':                   /* It *does* handle these two! */
             case '~': xc = cc; break;
-
             }
             if (xc != 0) {
                 linsert_byte(1, '~');
@@ -826,7 +825,7 @@ void exit_via_signal(int signr) {
 
     ts_len = set_time_stamp(0);             /* Set it for "now" */
     can_dump_files = get_to_dumpdir();      /* Also opens INDEX */
-    
+
 /* Possibly a stack dump */
 #if defined(NUTRACE)
     do_stackdump();
@@ -1365,6 +1364,17 @@ int not_in_mb_error(int f, int n) {
 }
 
 /* ======================================================================
+ * What gets called if we try to run something interactively which
+ * we shouldn't.
+ * Requires not_interactive_fname to have been set.
+ */
+int not_interactive(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    mlwrite("%s may not be run interactively!!", not_interactive_fname);
+    return(TRUE);
+}
+
+/* ======================================================================
  * This is the general command execution routine. It handles the fake binding
  * of all the keys to "self-insert". It also clears out the "thisflag" word,
  * and arranges to move it to the "lastflag", so that the next command can
@@ -1413,25 +1423,58 @@ int execute(int c, int f, int n) {
         fn_t execfunc = ktp->hndlr.k_fp;
         if (execfunc == nullproc) return(TRUE);
         int run_not_in_mb = 0;
+        int run_not_interactive = 0;
+        struct buffer *proc_bp = NULL;
         if (inmb) {
-            if (ktp->k_type == FUNC_KMAP && ktp->fi->opt.not_mb) {
-                run_not_in_mb = 1;
-                not_in_mb.funcname = ktp->fi->n_name;
+            if (ktp->k_type == FUNC_KMAP) {
+                if (ktp->fi->opt.not_mb) {
+                    run_not_in_mb = 1;
+                    not_in_mb.funcname = ktp->fi->n_name;
+                }
             }
             else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
-                 struct buffer *proc_bp;
-                 char pbuf[NBUFN+1];
-                 pbuf[0] = '/';
-                 strcpy(pbuf+1, ktp->hndlr.pbp);
-                 if ((proc_bp = bfind(pbuf, FALSE, 0)) != NULL) {
-                    if (proc_bp->btp_opt.not_mb) run_not_in_mb = 1;
-                    not_in_mb.funcname = ktp->hndlr.pbp;
-                 }
+                char pbuf[NBUFN+1];
+                pbuf[0] = '/';
+                strcpy(pbuf+1, ktp->hndlr.pbp);
+                if ((proc_bp = bfind(pbuf, FALSE, 0)) != NULL) {
+                    if (proc_bp->btp_opt.not_mb) {
+                        run_not_in_mb = 1;
+                        not_in_mb.funcname = ktp->hndlr.pbp;
+                    }
+                }
             }
         }
+
+        if (!clexec) {
+            if (ktp->k_type == FUNC_KMAP) {
+                if (!clexec && ktp->fi->opt.not_interactive) {
+                    run_not_interactive = 1;
+                    not_interactive_fname = ktp->fi->n_name;
+                }
+            }
+            else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
+                if (!proc_bp) {     /* We might have just done this above */
+                    char pbuf[NBUFN+1];
+                    pbuf[0] = '/';
+                    strcpy(pbuf+1, ktp->hndlr.pbp);
+                    proc_bp = bfind(pbuf, FALSE, 0);
+                }
+                if (proc_bp != NULL) {
+                    if (!clexec && proc_bp->btp_opt.not_interactive) {
+                        run_not_interactive = 1;
+                        not_interactive_fname = ktp->hndlr.pbp;
+                    }
+                }
+            }
+        }
+
+
         if (run_not_in_mb) {
             not_in_mb.keystroke = c;
             execfunc = not_in_mb_error;
+        }
+        if (run_not_interactive) {
+            execfunc = not_interactive;
         }
         thisflag = 0;
 /* GGR - implement re-execute */
@@ -1444,7 +1487,7 @@ int execute(int c, int f, int n) {
         }
 
 /* If we are recording a macro and:
- *  o we are not in the minibuffer (whci is collected elswehere
+ *  o we are not in the minibuffer (which is collected elsewhere)
  *  o we are not re-executing (if we are we've already recorded the reexecute)
  */
         if (!inmb && !inreex && kbdmode == RECORD) {

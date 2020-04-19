@@ -133,6 +133,7 @@ extern int ctrlg(int f, int n);
 extern int rdonly(void);
 extern int resterr(void);
 extern int not_in_mb_error(int, int);
+extern int not_interactive(int, int);
 extern int nullproc(int f, int n);
 extern int metafn(int f, int n);
 extern int cex(int f, int n);

@@ -159,6 +159,7 @@ typedef struct {
     int keystroke;              /* Keystroke(s) use to reach it */
 }  not_in_mb_st;
 extern not_in_mb_st not_in_mb;
+extern char *not_interactive_fname;
 
 extern int pause_key_index_update;  /* If set, don't update keytab index */
 
