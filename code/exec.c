@@ -806,7 +806,7 @@ int ptt_handler(int c) {
  * int f;               default flag
  * int n;               macro number to use
  */
-struct func_opts null_func_opts = { 0, 0, 0, 0 };
+struct func_opts null_func_opts = { 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
@@ -842,9 +842,6 @@ int storeproc(int f, int n) {
         if (!strcmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
         if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
         if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
-/* Difficult to see how this can be true, but it's here for completeness */
-        if (!strcmp(optstr, "caller_handles_macro"))
-             bp->btp_opt.caller_handles_macro = 1;
     }
 
 /* And make sure it is empty

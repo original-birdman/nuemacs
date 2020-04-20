@@ -357,7 +357,6 @@ struct func_opts {
     unsigned int skip_in_macro :1;
     unsigned int not_mb :1;
     unsigned int not_interactive :1;
-    unsigned int caller_handles_macro :1;
 };
 
 struct buffer {
