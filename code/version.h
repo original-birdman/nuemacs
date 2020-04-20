@@ -3,7 +3,12 @@
 
 #define PROGRAM_NAME "uemacs"
 #ifdef ANDROID
-#define PROGRAM_NAME_LONG "nuEmacs-android"
+
+/* Stringify macros... */
+#define xstr(s) str(s)
+#define str(s) #s
+
+#define PROGRAM_NAME_LONG "nuEmacs-" xstr(ANDROID)
 #else
 #define PROGRAM_NAME_LONG "nuEmacs"
 #endif

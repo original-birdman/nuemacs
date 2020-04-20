@@ -215,7 +215,17 @@ endif
 
 # Are we building an ARM version for an Android 'phone?
 #
-ifeq ($(strip $(ANDROID)),1)
+ifeq ($(strip $(ANDROID)),moto8g)
+    uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+    ifneq ($(uname_M),aarch64)
+        .DEFAULT_GOAL := notarm64_error
+    else
+        STATIC=-static
+        STATIC_XLIBS=-ltinfo
+        STATIC_XDEFS=-DANDROID=moto8g
+        PROGRAM=uemacs-moto8g
+    endif
+else ifeq ($(strip $(ANDROID)),moto4g)
     uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
     ifneq ($(uname_M),armv7l)
         .DEFAULT_GOAL := notarm_error
@@ -223,8 +233,8 @@ ifeq ($(strip $(ANDROID)),1)
         STATIC=-static
         STATIC_ARM=-L/usr/lib/arm-linux-gnueabihf
         STATIC_XLIBS=-ltinfo
-        STATIC_XDEFS=-DANDROID
-        PROGRAM=uemacs-android
+        STATIC_XDEFS=-DANDROID=moto4g
+        PROGRAM=uemacs-moto4g
     endif
 endif
 
@@ -317,7 +327,10 @@ utf8_error:
 	@echo "  See https://julialang.org/utf8proc"
 
 notarm_error:
-	@echo "ERROR: You may only use the ANDROID option on an ARM (armv7l) system"
+	@echo "ERROR: You may only use the ANDROID=moto4g option on an ARM (armv7l) system"
+
+notarm64_error:
+	@echo "ERROR: You may only use the ANDROID=moto8g option on an ARM64 (aarch64) system"
 
 # DO NOT DELETE THIS LINE -- make depend uses it
 
