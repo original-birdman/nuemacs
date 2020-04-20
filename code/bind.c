@@ -401,7 +401,7 @@ int bindtokey(int f, int n) {
 
 /* Get the function name to bind it to */
 
-    struct name_bind *nm_info = getname(": bind-to-key ");
+    struct name_bind *nm_info = getname("bind-to-key - function: ", FALSE);
     if (nm_info == NULL) {
         if (!clexec) mlwrite_one(MLbkt("No such function"));
         return FALSE;
@@ -415,7 +415,11 @@ int bindtokey(int f, int n) {
     }
 
     kfunc = nm_info->n_func;
-    if (!clexec) mlputs(" ");
+    if (!clexec) {
+        char pbuf[NSTRING];
+        sprintf(pbuf, "key for %s: ", nm_info->n_name);
+        mlwrite(pbuf);
+    }
 
 /* Get the command sequence to bind */
     mflag = ((kfunc == metafn) || (kfunc == cex) ||
@@ -425,8 +429,9 @@ int bindtokey(int f, int n) {
 /* Change it to something we can print as well */
     cmdstr(c, outseq);
 
-/* And dump it out */
+/* And dump it out for the user to see - and record if collecting macro */
     if (!clexec) mlputs(outseq);
+    if (kbdmode == RECORD) addto_kbdmacro(outseq, 0, 0);
 
 /* If the function is a prefix key */
     if (mflag) {

@@ -610,7 +610,7 @@ int ectoc(int c) {
  * that pressing a <TAB> will attempt to complete an unfinished command
  * name if it is unique.
  */
-struct name_bind *getname(char *prompt) {
+struct name_bind *getname(char *prompt, int new_command) {
     char buf[NSTRING];      /* buffer to hold tentative command name */
 
 /* First get the name... */
@@ -628,7 +628,7 @@ struct name_bind *getname(char *prompt) {
 
     struct name_bind *nbp = name_info(buf);
     if (nbp) {
-        if (kbdmode == RECORD) addto_kbdmacro(buf, 1, 0);
+        if (kbdmode == RECORD) addto_kbdmacro(buf, new_command, 0);
         return nbp;
     }
     mlwrite("No such function: %s", buf);

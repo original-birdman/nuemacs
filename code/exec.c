@@ -231,7 +231,7 @@ int namedcmd(int f, int n) {
     if (inreex && last_ncfunc && RXARG(namedcmd))
         kfunc = last_ncfunc;
     else {          /* Prompt the user to get the function name to execute */
-        struct name_bind *nm_info = getname("name: ");
+        struct name_bind *nm_info = getname("name: ", TRUE);
         if (nm_info == NULL) return FALSE;
         kfunc = nm_info->n_func;
 
