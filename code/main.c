@@ -297,11 +297,27 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
     if (!do_quote) linstr(text);
     else {
         int qreq = 0;
-        for (char *tp = text; *tp; tp++) {
+/* We need to quote if the first char is an "active" character
+ * or if the text contain any spaces or "s.
+ */
+        char *tp = text;
+        switch(*tp) {
+        case '"':
+        case '!':
+        case '@':
+        case '#':
+        case '$':
+        case '&':
+        case '*':
+        case '.':
+            qreq = 1;
+        }
+        if (!qreq) while (*tp) {
             if ((*tp == ' ') || (*tp == '"')) {
                 qreq = 1;
                 break;
             }
+            tp++;
         }
         if (qreq) linsert_byte(1, '"');
         for (char *tp = text; *tp; tp++) {
