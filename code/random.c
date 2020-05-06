@@ -1214,7 +1214,7 @@ int string_getter(int f, int n, enum istr_type call_type) {
     return status;
 }
 
-/* Ask for and insert a string into the current buffer at current point
+/* Insert text into the current buffer at current point
  * GGR
  * Treats response as a set of tokens, allowing unicode (U+xxxx) and utf8
  * (0x..) characters to be entered.
@@ -1222,16 +1222,15 @@ int string_getter(int f, int n, enum istr_type call_type) {
  *
  * int f, n;            ignored arguments
  */
-int istring(int f, int n) {
+int itokens(int f, int n) {
     return string_getter(f, n, COOKED_STR);
 }
 
 /*
- * Ask for a raw string and insert into current buffer at current point
+ * Insert a string into current buffer at current point
  * Intended for use by macros.
- * It's istring, but uses mlreplyall() to get the text.
  */
-int rawstring(int f, int n) {
+int istring(int f, int n) {
     return string_getter(f, n, RAW_STR);
 }
 

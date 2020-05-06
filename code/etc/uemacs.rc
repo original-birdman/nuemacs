@@ -100,7 +100,7 @@ store-procedure spell-check not_mb
     set $discmd TRUE
     set $cfname .savefile
 ;   must force buffer to be modified
-    insert-raw-string "."
+    insert-string "."
     delete-previous-character
 !endm
 ;
@@ -321,7 +321,7 @@ store-procedure expand-envvar
 ; Need to get the text we've found - which is the name of the envvar
 ; Remove the $varname text, then look-up that (minus the $) as an envvar
     kill-region
-    insert-raw-string &env &mid $kill 2 &len $kill
+    insert-string &env &mid $kill 2 &len $kill
 !endm
 
 ;
