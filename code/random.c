@@ -1179,24 +1179,26 @@ int string_getter(int f, int n, enum istr_type call_type) {
  */
     if (call_type == COOKED_STR) {
         char *rp = tstring;
+        char *vp;
         char nstring[NLINE] = "";
         int nlen = 0;
         char tok[NLINE];
         while(*rp != '\0') {
             rp = token(rp, tok, NLINE);
             if (tok[0] == '\0') break;
-            if (!strncmp(tok, "0x", 2)) {
-                long add = strtol(tok+2, NULL, 16);
+            vp = getval(tok);   /* Must evaluate tokens */
+            if (!strncmp(vp, "0x", 2)) {
+                long add = strtol(vp+2, NULL, 16);
                 nstring[nlen++] = add;
             }
-            else if (tok[0] == 'U' && tok[1] == '+') {
-                int val = strtol(tok+2, NULL, 16);
+            else if (*vp == 'U' && *(vp+1) == '+') {
+                int val = strtol(vp+2, NULL, 16);
                 int incr = unicode_to_utf8(val, nstring+nlen);
                 nlen += incr;
             }
             else {
-                strcat(nstring, tok);
-                nlen += strlen(tok);
+                strcat(nstring, vp);
+                nlen += strlen(vp);
             }
             nstring[nlen] = '\0';
         }
