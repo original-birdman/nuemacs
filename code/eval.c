@@ -296,7 +296,7 @@ static char *ue_printf(char *fmt) {
 
 /* We have a PHCHAR, so get the next char */
 
-        if (*(fmt) == PHCHAR) { /* [[ is a literal '[' */
+        if (*(fmt) == PHCHAR) { /* %% is a literal '%' */
             *op++ = PHCHAR;
             fmt++;
             continue;
@@ -498,16 +498,6 @@ static char *gtfun(char *fname) {
     case UFBXOR:        return ue_itoa(atoi(arg1) ^ atoi(arg2));
     case UFBNOT:        return ue_itoa(~atoi(arg1));
     case UFXLATE:       return xlat(arg1, arg2, arg3);
-    case UFPROCARG:
-        if (userproc_arg) return userproc_arg;
-        int distmp = discmd;    /* echo it always! */
-        discmd = TRUE;
-        int status = getstring(arg1, result, NSTRING, CMPLT_NONE);
-        discmd = distmp;
-        if (status == ABORT) return errorm;
-        if (uproc_opts & UPROC_FIXUP) fixup_full(result);
-        uproc_opts = 0;     /* Always reset flags after use */
-        return result;
     case UFGRPTEXT:
         return group_match(atoi(arg1));
     case UFPRINTF:
@@ -1209,10 +1199,8 @@ int gettyp(char *token) {
  * char *token;         token to evaluate
  */
 char *getval(char *token) {
-    int status;                 /* error return */
     struct buffer *bp;          /* temp buffer pointer */
     int blen;                   /* length of buffer argument */
-    int distmp;                 /* temporary discmd flag */
     static char buf[NSTRING];   /* string buffer for some returns */
     char tbuf[NSTRING];         /* string buffer for some workings */
 
@@ -1220,29 +1208,37 @@ char *getval(char *token) {
     case TKNUL:
         return "";
 
-    case TKARG:                 /* interactive argument */
-/* GGR - There is the possibility of an illegal overlap of args here.
- *       So it must be done via a temporary buffer.
+    case TKARG: {               /* interactive argument */
+/* We allow internal uemacs code to set the response of the next TKARG
+ * (this was set-up so that the showdir user-proc could be given a
+ * "pre-loaded" response).
+ */
+        int do_fixup = (uproc_opts & UPROC_FIXUP);
+        uproc_opts = 0;         /* Always reset flags after use */
+        if (userproc_arg) goto TKARG_done;
+
+/* GGR - There is the possibility (actually, certainty) of an illegal
+ * overlap of args here. So it must be done to a temporary buffer.
  *              strcpy(token, getval(token+1));
  */
         strcpy(tbuf, getval(token+1));
-        strcpy(token, tbuf);
-        distmp = discmd;    /* echo it always! */
+        int distmp = discmd;    /* Remember initial state */
         discmd = TRUE;
-        status = getstring(token, buf, NSTRING, CMPLT_NONE);
+        int status = getstring(tbuf, buf, NSTRING, CMPLT_NONE);
         discmd = distmp;
         if (status == ABORT) return errorm;
+TKARG_done:
+        if (do_fixup) fixup_full(buf);
         return buf;
-
-    case TKBUF:             /* buffer contents fetch */
+    }
+    case TKBUF:                 /* buffer contents fetch */
 /* Grab the right buffer
  * GGR - There is the possibility of an illegal overlap of args here.
  *       So it must be done via a temporary buffer.
  *              strcpy(token, getval(token+1));
  */
         strcpy(tbuf, getval(token+1));
-        strcpy(token, tbuf);
-        bp = bfind(token, FALSE, 0);
+        bp = bfind(tbuf, FALSE, 0);
         if (bp == NULL) return errorm;
 
 /* If the buffer is displayed, get the window vars instead of the buffer vars */

@@ -437,7 +437,8 @@ args-in-reexec ALL
  store-procedure showdir
 
 ; Get the full pathname...expected to be supplied internally by C-code
-; (&arg) and that will have been expanded to a full-pathname.
+; (via userproc_arg in @"...) and that will have been expanded to a
+; full-pathname.
 ; If the user calls this "manually" (Esc-x execute-procedure showdir)
 ; and gets prompted we will *still* expand it.
 ;
@@ -447,7 +448,7 @@ args-in-reexec ALL
 ; expanded internally)
 ;
     set $uproc_opts 0x01
-    set .udir &arg "Dir: "
+    set .udir @"Dir: "
 
 ; We *expect* to be given a full pathname, so check that first
 ; This should not fail!
