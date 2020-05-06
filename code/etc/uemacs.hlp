@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.157 Help Index     (06 April 2020)
+=>                   nuEmacs GGR4.158 Help Index     (06 May 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -18,6 +18,7 @@
 .. Functions
 .. Name completion
 .. MACRO functions and environment variables
+.. Interactive prompts vs. macro-file commands
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
 Notations: ^X means <Ctrl> and X. The <Meta> key is <Esc> on most systems.
@@ -469,7 +470,7 @@ Others (ommtting system-use only ones)...
 &exi, &fin, &exb  .......................... File & buffer operations
 &ban, &bor, &bxo, &bno ..................... Bit operations
 &ind, &tru, &gtk, &rnd, &env, &bin, &xla ... Miscellaneous
-&arg n, &grp n &ptf templ a1, a2.... .......    "   "
+&grp n, &ptf templ a1, a2... ............... "   "
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
 
@@ -586,9 +587,24 @@ $showdir_opts
     o T - sort by Time
     o R - sort in Reverse order
     o H - show hidden files
-    o F - show files before diretories
+    o F - show files before directories
     o M - intermix directories and files (ignore the F setting).
 
-    The default seeting is "", which produces:
+    The default setting is "", which produces:
     Sorted by name, no hidden files, dirs before files
 -------------------------------------------------------------------------------
+=> Interactive prompts vs. macro-file commands
+
+Commands in macro files only take one argument (which may be a function
+that itself takes one or more arguments). So if you want to use text
+containing spaces you need to quote it.
+
+Minibuffer prompts are taken as-is, and hence are effectively quoted
+strings (and are added to any macro buffer as such).
+However, you may wish to enter a nuemacs command as a response,
+particularly when gathering a macro at the keyboard.
+To cater for this CTLX-<CR> will *not* quote the response before
+recording it, but will then evaluate it before returning that value.
+
+Some commands (e.g. insert-tokens) may take the result to be a series of
+tokens, but that is a separate issue.

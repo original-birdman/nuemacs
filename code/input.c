@@ -903,6 +903,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     char tstring[NSTRING];
     char choices[1000];     /* MUST be > max likely window width */
     int status;
+    int do_evaluate = FALSE;
     func_arg sav;
 
     short savdoto;
@@ -1133,7 +1134,10 @@ loop:
                 curwp->w.doto = 0;
                 ldelete((long) lp->l_used, FALSE);
                 linstr(tstring);
-                if (choices[0]) {
+/* Don't bother with this when playing a macro - that just results
+ * in an unnecessary pause from the sleep().
+ */
+                if (choices[0] && (kbdmode != PLAY)) {
                     mlwrite_one(choices);
                     size = (strlen(choices) < 42) ? 1 : 2;
                     sleep(size);
@@ -1153,6 +1157,7 @@ loop:
 
 /* Some further "hard-wired" key-bindings - aka minibuffer specials. */
 
+    do_evaluate = FALSE;
     switch(carg->c) {           /* The default is to do nothing here */
     case META|CONTROL|'I':      /* Only act for CMPLT_SRCH */
         if (ctype == CMPLT_SRCH) rotate_sstr(-(carg->n));
@@ -1160,6 +1165,9 @@ loop:
     case CTLX|CONTROL|'I':      /* Only act for CMPLT_SRCH */
         if (ctype == CMPLT_SRCH) select_sstr();
         goto loop;
+    case CTLX|CONTROL|'M':      /* Evaluate before return */
+        do_evaluate = TRUE;
+        goto submit;
     case CONTROL|'M':           /* General */
     case CTLX|CONTROL|'C':
         goto submit;
@@ -1225,8 +1233,24 @@ submit:     /* Tidy up */
  */
     if ((*buf != '\0') && (kbdmode == RECORD) &&
         (mb_info.mbdepth == 1) && !no_macrobuf_record)
-         addto_kbdmacro(buf, 0, 1);
+         addto_kbdmacro(buf, 0, !do_evaluate);
 
+/* If we have to evaluate, do it now.
+ * Note that this is *AFTER* we've any logging to the macro.
+ * We have to fudge buf into execstr for function evaluating to work.
+ */
+    if (do_evaluate) {
+        char *orig_execstr = execstr;   /* Just in case... */
+        char tok1[NLINE], tres[NLINE];
+        execstr = buf;
+        execstr = token(execstr, tok1, NLINE);
+/* GGR - There is the possibility of an illegal overlap of args here.
+ *       So it must be done via a temporary buffer.
+ */
+           strcpy(tres, getval(tok1));
+           strcpy(buf, tres);
+           execstr = orig_execstr;
+    }
 abort:
 
 #ifdef SIGWINCH
