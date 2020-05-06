@@ -65,7 +65,7 @@ static int docmd(char *cline) {
     }
 
 /* Process leading argument */
-    if (gettyp(tkn) != TKCMD) {
+    if (gettyp(tkn) == TKLIT) {
         f = TRUE;
 /* GGR - There is the possibility of an illegal overlap of args here.
  *       So it must be done via a temporary buffer.
