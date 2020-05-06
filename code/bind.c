@@ -426,6 +426,16 @@ int bindtokey(int f, int n) {
              (kfunc == unarg)  || (kfunc == ctrlg));
     c = getckey(mflag);
 
+/* Only allow ASCII keys (and modifiers...).
+ * Other unicode characters might be typeable on a keyboard, but these
+ * won't be shown on keys, so might mislead...
+ */
+    unicode_t bc = (c & ~(CONTROL|META|CTLX|SPEC));
+    if (bc > 0x7f) {
+        mlwrite("U+%x is not an ASCII byte", bc);
+        return FALSE;
+    }
+
 /* Change it to something we can print as well */
     cmdstr(c, outseq);
 
@@ -544,6 +554,28 @@ int unbindkey(int f, int n) {
     return TRUE;
 }
 
+/* Function used to show the binding of a key */
+static int show_key_binding(unicode_t key) {
+    char outseq[80];
+    int cpos;
+    struct key_tab *ktp;
+    if ((ktp = getbind(key))) {
+        cmdstr(key, outseq);
+        cpos = strlen(outseq);
+/* Pad out some spaces */
+        while (cpos < 12) outseq[cpos++] = ' ';
+        strcpy(outseq+cpos, ktp->fi->n_name);
+/* Is this execute-procedure? If so, say which procedure... */
+        if (ktp->fi->n_func == execproc) {
+            strcat(outseq, " ");
+            strcat(outseq, ktp->hndlr.pbp);
+        }
+        strcat(outseq, "\n");
+        if (linstr(outseq) != TRUE) return FALSE;
+    }
+    return TRUE;
+}
+
 /*
  * build a binding list (limited or full)
  *
@@ -655,6 +687,30 @@ static int buildlist(int type, char *mstring) {
 /* Add the line into the buffer */
         if (linstr(outseq) != TRUE) return FALSE;
         cpos = 0;       /* and clear the line */
+    }
+
+/* Now, if this is not apropos, list everything in key-binding order. */
+
+    if (type) {
+        if (linstr("\n\nKey bindings\n") != TRUE) return FALSE;
+        unicode_t key;
+/* All control keys are uppercased... */
+        for (key = (CONTROL|'@'); key < (CONTROL|0x7f); key++) {
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+/* Control-X keys are only cased for alphas...and allow control chars */
+        for (key = (CTLX|0); key < (CTLX|0x7f); key++) {
+            if ((key >= 'a') && (key <= 'z')) continue;
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+/* Escape keys are only cased for alphas...and allow control chars */
+        for (key = (META|0); key < (META|0x7f); key++) {
+            if ((key >= 'a') && (key <= 'z')) continue;
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
     }
 
     curwp->w_bufp->b_mode |= MDVIEW;    /* put this buffer view mode */
@@ -965,7 +1021,17 @@ int buffertokey(int f, int n) {
 
 /* get the command sequence to bind */
 
-    c = getckey(0);
+    c = getckey(FALSE);
+
+/* Only allow ASCII keys (and modifiers...).
+ * Other unicode characters might be typeable on a keyboard, but these
+ * won't be shown on keys, so might mislead...
+ */
+    unicode_t bc = (c & ~(CONTROL|META|CTLX|SPEC));
+    if (bc > 0x7f) {
+        mlwrite("U+%x is not an ASCII byte", bc);
+        return FALSE;
+    }
 
 /* Change it to something we can print as well and dump it out */
 
