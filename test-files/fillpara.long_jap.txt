@@ -3,4 +3,4 @@ x ああああああああああああああああああああああああああ
 x aaaaああaaaaああaaaaああaaaaああaaaaああaaaaああaaaaああaaaaああaaaaあ
 x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaああああああ
 x あああああああああああああああああaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaああああああand this one should end it, string with "aaa...".
+aaaああああああand this one should end it, starting with "aaa...".

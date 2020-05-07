@@ -1215,19 +1215,21 @@ char *getval(char *token) {
  */
         int do_fixup = (uproc_opts & UPROC_FIXUP);
         uproc_opts = 0;         /* Always reset flags after use */
-        if (userproc_arg) goto TKARG_done;
-
+        if (userproc_arg) {
+            strcpy(buf, userproc_arg);
+        }
+        else {
 /* GGR - There is the possibility (actually, certainty) of an illegal
  * overlap of args here. So it must be done to a temporary buffer.
  *              strcpy(token, getval(token+1));
  */
-        strcpy(tbuf, getval(token+1));
-        int distmp = discmd;    /* Remember initial state */
-        discmd = TRUE;
-        int status = getstring(tbuf, buf, NSTRING, CMPLT_NONE);
-        discmd = distmp;
-        if (status == ABORT) return errorm;
-TKARG_done:
+            strcpy(tbuf, getval(token+1));
+            int distmp = discmd;    /* Remember initial state */
+            discmd = TRUE;
+            int status = getstring(tbuf, buf, NSTRING, CMPLT_NONE);
+            discmd = distmp;
+            if (status == ABORT) return errorm;
+        }
         if (do_fixup) fixup_full(buf);
         return buf;
     }

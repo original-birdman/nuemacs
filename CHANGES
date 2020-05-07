@@ -4362,8 +4362,8 @@ etc/uemacs.rc
 autotest/search-groups.sh
     Use buffer variables instead of user ones where appropriate.
     [uemacs.rc]
-    Update to quote strings starting with ".", which would otherwise now
-    be mistaken for buffer variables.  [search-groups.sh]
+    Update to test file to quote strings starting with ".", which would
+    otherwise now be mistaken for buffer variables.  [search-groups.sh]
 
 eval.c
 names.c
@@ -4390,5 +4390,111 @@ etc/uemacs.rc
 etc/uemacs.hlp
 version.h
     Update to GGR4.157
+
+========== GGR4.158
+
+input.c
+    Just make getfname() a simple frontend to getnname().
+    Added/tidied comments and return statements.
+
+input.c
+    Add login id lookup expansion for ~ at start of filename.
+    Removed (rather than corrected the inverted logic) the clearing of
+    choices on a unique match, as it wasn't doing anything. Leaving the
+    one choice in place gives a useful visual hint that this is the case.
+
+main.c
+    Fix quoting in addto_kbdmacro.
+
+bind.c
+exec.c
+globals.c
+main.c
+names.c
+edef.h
+efunc.h
+estruct.h
+    Added not_interactive and caller_handles_macro flags to func_opts.
+    [names.c, estruct.h]
+    Disallow key binding for a not_interactive function. [bind.c]
+    Disallow not_interactive command via namedcmd() when we are
+    not-interactive. [exec.c] and check for not_interactive in execute()
+    when we are not interactive. [main.c] [efunc.h]
+    Add not_interactive and caller_handles_macro options to
+    storeproc handling. [exec.c]
+    Added not_interactive_fname global. [globals.c, edef.h]
+
+
+Makefile
+version.h
+etc/uemacs.rc
+    Updates to allow a build for a Motorola G8 Power Android phone, done
+    statically on a Debian aarch64 system.
+    The directory browsing code works for this, so updated the showdir
+    code to handle it (as far as it can - the -s option doesn't seem
+    to work in sort on the phone, even though it is documented...).
+
+bind.c
+exec.c
+input.c
+efunc.h
+    Fixed bind-to-key macro-recording, and improved prompting.
+
+estruct.h
+exec.c
+names.c
+    Removed caller_handles_macro flag from func_opts, as it isn't
+    going to be able to replace the no_macrobuf_record global.
+
+main.c
+    addto_kbdmacro() needs to quote text that starts with an "active"
+    character.
+
+eval.c
+evar.h
+etc/uemacs.rc
+    Removed the &arg function (UFPROCARG) and moved the userproc_arg and
+    uproc_opts handling into the TKARG (@"text...") handler, as it does
+    exactly the same thing. [eval.c, evar.h]
+    Removed an unneeded copy-back of a buffer in the TKBUF branch of
+    getval(). [eval.c]
+    Updated showdir to replace &arg with @. [uemacs.rc]
+
+exec.c
+    Check for TKLIT rather than !TKCMD when looking for a numeric arg in
+    docmd().
+
+names.c
+random.c
+efunc.h
+etc/uemacs.rc
+    Rename insert-string (istring()) to insert-tokens (itokens()) and
+    insert-raw-string (rawstring()) to insert-string (istring()) to
+    better reflect what they actually do.
+
+random.c
+    Get the value of a token in string_getter, so that we handle
+    quoted strings correctly.
+
+input.c
+etc/uemacs.hlp
+    Add (hard-wired) CTLX-return to evaluate the result before returning
+    (it will still be added literally to any macro).
+    Don't pause to display multiple choices on a keyboard macro rePLAY.
+
+bind.c
+    Limit keybindings to the ASCII key range.
+    Add a list of key-bindings in key order in describe-bindings.
+
+../CHANGES
+../TODO
+eval.c
+version.h
+etc/uemacs.rc
+test-files/fillpara.long_jap.txt
+    Add the copying of userproc_arg to buf in getval, that was (somehow)
+    forgotten in the recent UFPROCARG change. [eval.c]
+    Minor (typo) fixes. [fillpara.long_jap.txt]
+    Update to GGR4.158
 
 ==========
