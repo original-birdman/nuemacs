@@ -167,7 +167,7 @@ int ffclose(void) {
  *     => We do not want to add a newline.
  *  3. We have an arbitrary binary file. (Let's leave aside why you would be
  *     editing this in uemacs.)
- *     > We want to add a newline.
+ *     => We do not want to add a newline if there wasn't one originally.
  *
  * We can detect 2. by checking for cryptflag && curbp->b_EOLmissing.
  * We also need to code make a heuristic check between a text and binary file.
@@ -315,6 +315,11 @@ static int add_to_fline(int len) {
 
     int newlen = -1;
     if (fline == NULL) {
+/* Ensure we don't fall through to memcpy() with fline==NULL.
+ * Reported by -fanalyzer option to gcc-10.
+ * (len should never be -ve anyway).
+ */
+        if (len < 0) return FALSE;
         newlen = len;
     }
     else if (len >= (fline->l_size - fline->l_used)) {
