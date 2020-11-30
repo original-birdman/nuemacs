@@ -55,7 +55,7 @@ cat >uetest.rc <<'EOD'
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure report-status
   select-buffer test-reports
-  insert-raw-string %test-report
+  insert-string %test-report
   newline
   1 select-buffer     ; Back to buffer from whence we came
 !endm
@@ -205,7 +205,7 @@ execute-procedure check-position
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports
 newline
-insert-raw-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
+insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
 EOD
