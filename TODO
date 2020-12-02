@@ -20,8 +20,3 @@ Normal search
      Is this worth doing? Is it happening anyway?
 
 ====================
-Ideally get all character (char) and unicode character (int) variable
-usage to specify that they are unsigned, Not doing this has led to
-oddities in the past (see ch_as_uc define), but just using
--funsigned-char for compilation is insufficient, as it doesn't cover the
-unicode char usage (which is an int).

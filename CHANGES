@@ -4491,10 +4491,44 @@ bind.c
 eval.c
 version.h
 etc/uemacs.rc
+etc/uemacs.hlp
 test-files/fillpara.long_jap.txt
     Add the copying of userproc_arg to buf in getval, that was (somehow)
     forgotten in the recent UFPROCARG change. [eval.c]
     Minor (typo) fixes. [fillpara.long_jap.txt]
     Update to GGR4.158
+
+========== GGR4.159
+
+fileio.c
+    Add a test to stop a warning from -fanalyzer in gcc 10.
+
+autotest/search-char_classes.sh
+autotest/search-classes_in_closures.sh
+autotest/search-file-start.sh
+autotest/search-groups.sh
+autotest/search-line-endings.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-props2.sh
+autotest/search-reexec-macro.sh
+autotest/search-repeats.sh
+autotest/search-u_hex.sh
+    Changed to use insert-string not insert-raw-string to fit in with
+    function name change at GGR4.158.
+
+estruct.h
+    w_force in struct window needs to be int (not char) for windows of
+    >127 lines.
+
+../CHANGES
+../TODO
+version.h
+etc/uemacs.hlp
+evar.h
+exec.c
+    Remove wish to use unsigned-char from TODO.
+    Typo-fixes to evar.h, exec.c, uemacs.hlp.
+    Update to GGR4.159
 
 ==========

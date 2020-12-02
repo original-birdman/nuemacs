@@ -58,7 +58,7 @@ struct evlist evl[] = {
  { "jump",      EVSCROLLJUMP }, /* Number of lines jump on scroll */
  { "scroll",    EVSCROLL },     /* scroll enabled */
  { "inmb",      EVINMB },       /* In mini-buffer (read only) */
- { "fcol",      EVFCOL },       /* first displayed column in curent window */
+ { "fcol",      EVFCOL },       /* first displayed column in current window */
  { "hjump",     EVHJUMP },      /* horizontal screen jump size */
  { "hscroll",   EVHSCROLL },    /* horizontal scrolling flag */
 /* GGR */

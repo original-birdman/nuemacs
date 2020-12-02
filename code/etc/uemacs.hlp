@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.158 Help Index     (06 May 2020)
+=>                   nuEmacs GGR4.159 Help Index     (02 Dec 2020)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -160,7 +160,7 @@ Copy region ........... Meta  W     ::  the mark and the current position.
     old:
         ctl-Y (yank) inserts the last-killed string.
         Esc<n> ctl-Y inserts <n> copies.
-        Esc-Y (yank_replace):
+        Esc-Y (yank-replace):
             if the last command was a yank this replaces that region
             with the previous kill-ring buffer entry, otherwise it
             just inserts the last-killed string (== ctl-Y).
@@ -171,7 +171,7 @@ Copy region ........... Meta  W     ::  the mark and the current position.
         ctl-Y (yank) inserts the last-killed string.
         Esc<n> ctl-Y rotates the kill-ring buffers by <n> then inserts
         the current "top" kill-ring string.
-        Esc-Y (yank_replace):
+        Esc-Y (yank-replace):
             if the last command was not a yank it complains and does
             nothing
             otherwise it replaces that region with the previous

@@ -1356,7 +1356,7 @@ int dobuf(struct buffer *bp) {
 
             case DFORCE:    /* FORCE directive */
                 force = TRUE;
-                break;  /* GGR: Must drop down!! */
+                break;      /* GGR: Must not drop down!! */
 
             case DFINISH:   /* FINISH directive */
                 if (execlevel == 0) {
