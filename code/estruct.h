@@ -291,7 +291,7 @@ struct window {
     struct locs w;
     int w_toprow;           /* Origin 0 top row of window   */
     int w_ntrows;           /* # of rows of text in window  */
-    char w_force;           /* If NZ, forcing row.          */
+    int w_force;            /* If NZ, forcing row.          */
     char w_flag;            /* Flags.                       */
 #if COLOR
     char w_fcolor;          /* current forground color      */
