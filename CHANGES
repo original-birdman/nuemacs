@@ -4532,3 +4532,27 @@ exec.c
     Update to GGR4.159
 
 ==========
+
+estruct.h
+line.c
+region.c
+word.c
+    Changed incorrect usage of r_size in getregion(). It is bytes, but
+    was being used as graphemes. [region.c]
+    Renamed r_size to r_bytes to clarify [all]
+    Added r_endp field to struct region so that narrow() knows exactly
+    where to go without having to skip through the buffer on a
+    per-character basis. [region.c]
+
+region.c
+    Avoid "may be used uninitialized" in gcc4.4.7 by assigning creg to
+    itself.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to GGR4.160
+
+==========
+
+
