@@ -533,7 +533,7 @@ int wordcount(int f, int n) {
     lp = region.r_linep;
     offset = region.r_offset;
     orig_offset = offset;
-    size = region.r_size;
+    size = region.r_bytes;
 /* Count up things */
     lastword = FALSE;
     nchars = 0L;
@@ -672,7 +672,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 
 /* The region must not be empty. This also caters for an empty buffer. */
 
-    if (f_region.r_size <= 0) return FALSE;
+    if (f_region.r_bytes <= 0) return FALSE;
 
 /* Go to the start of the region */
 
@@ -698,7 +698,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
     space_ind = f_ctl->justify? Xmalloc(sizeof(int)*(wbuf_ents+1)/2): NULL;
     nspaces = 0;
 
-    long togo = f_region.r_size + 1;    /* Need final end-of-line */
+    long togo = f_region.r_bytes + 1;   /* Need final end-of-line */
     while (togo > 0) {
 
 /* Get the next character.
@@ -944,7 +944,7 @@ static int region_listmaker(const char *lbl_fmt, int n) {
 
 /* The region must not be empty. This also caters for an empty buffer. */
 
-    if (f_region.r_size <= 0) return FALSE;
+    if (f_region.r_bytes <= 0) return FALSE;
 
 /* We have to figure out where to stop.
  * The buffer lines may be re-allocated during the reformat, so we
@@ -954,7 +954,7 @@ static int region_listmaker(const char *lbl_fmt, int n) {
  * the region.
  */
     struct line *flp = f_region.r_linep;
-    long togo = f_region.r_size + f_region.r_offset;
+    long togo = f_region.r_bytes + f_region.r_offset;
     while (1) {
         long left = togo - (llength(flp) + 1);   /* Incl newline */
         if (left < 0) break;

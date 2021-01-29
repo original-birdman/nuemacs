@@ -413,9 +413,10 @@ struct buffer {
  * characters, is kept in a region structure.  Used by the region commands.
  */
 struct region {
-    struct line *r_linep;   /* Origin struct line address.         */
-    int r_offset;           /* Origin struct line offset.          */
-    long r_size;            /* Length in characters.        */
+    struct line *r_linep;       /* Origin struct line address.  */
+    int r_offset;               /* Origin struct line offset.   */
+    long r_bytes;               /* Length in bytes.             */
+    struct line *r_endp;        /* line address at end.         */
 };
 
 /* The editor communicates with the display using a high level interface. A

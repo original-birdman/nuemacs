@@ -39,7 +39,7 @@ int killregion(int f, int n) {
     thisflag |= CFKILL;     /* kill buffer stuff.   */
     curwp->w.dotp = region.r_linep;
     curwp->w.doto = region.r_offset;
-    return ldelete(region.r_size, save_to_kill_ring);
+    return ldelete(region.r_bytes, save_to_kill_ring);
 }
 
 /* Copy all of the characters in the region to the kill buffer.
@@ -61,7 +61,8 @@ int copyregion(int f, int n) {
     thisflag |= CFKILL;
     linep = region.r_linep;         /* Current line.        */
     loffs = region.r_offset;        /* Current offset.      */
-    while (region.r_size--) {
+/* This copies bytes - doesn't need to know about graphemes. */
+    while (region.r_bytes--) {
         if (loffs == llength(linep)) {  /* End of line. */
             if ((s = kinsert('\n')) != TRUE) return s;
             linep = lforw(linep);
@@ -127,8 +128,9 @@ static int casechange_region(int newcase) { /* The handling function */
  */
     struct line *linep = region.r_linep;
     struct mstr mstr;
-    for (int b_offs = region.r_offset; region.r_size > 0; linep = lforw(linep)) {
-        int b_end = region.r_size + b_offs;
+    for (int b_offs = region.r_offset; region.r_bytes > 0;
+             linep = lforw(linep)) {
+        int b_end = region.r_bytes + b_offs;
         if (b_end > llength(linep)) b_end = llength(linep);
         int this_blen = b_end - b_offs;
         utf8_recase(newcase, linep->l_text+b_offs, this_blen, &mstr);
@@ -179,7 +181,7 @@ static int casechange_region(int newcase) { /* The handling function */
             }
             MarkDotFixup(b_more);
         }
-        region.r_size -= this_blen + 1;
+        region.r_bytes -= this_blen + 1;
         b_offs = 0;
     }
     return TRUE;
@@ -206,8 +208,6 @@ int lowerregion(int f, int n) {
  * Because the dot and mark are usually very close together we scan
  * outwards from dot looking for mark. This should save time.
  * Return a standard code.
- * Callers of this routine should be prepared to get an "ABORT" status;
- * we might make this have the conform thing later.
  */
 int getregion(struct region *rp) {
     struct line *flp;
@@ -223,11 +223,11 @@ int getregion(struct region *rp) {
         rp->r_linep = curwp->w.dotp;
         if (curwp->w.doto < curwp->w.marko) {
             rp->r_offset = curwp->w.doto;
-            rp->r_size = (long) (curwp->w.marko - curwp->w.doto);
+            rp->r_bytes = (long) (curwp->w.marko - curwp->w.doto);
         }
         else {
             rp->r_offset = curwp->w.marko;
-            rp->r_size = (long) (curwp->w.doto - curwp->w.marko);
+            rp->r_bytes = (long) (curwp->w.doto - curwp->w.marko);
         }
         return TRUE;
     }
@@ -235,24 +235,27 @@ int getregion(struct region *rp) {
     bsize = (long) curwp->w.doto;
     flp = curwp->w.dotp;
     fsize = (long) (llength(flp) - curwp->w.doto + 1);
+/* We start at dot and look for the mark, spreading out... */
     while (flp != curbp->b_linep || lback(blp) != curbp->b_linep) {
         if (flp != curbp->b_linep) {
-            flp = lforw(flp);
+            flp = lforw(flp);   /* Look for mark after dot */
             if (flp == curwp->w.markp) {
                 rp->r_linep = curwp->w.dotp;
                 rp->r_offset = curwp->w.doto;
-                rp->r_size = fsize + curwp->w.marko;
+                rp->r_bytes = fsize + curwp->w.marko;
+                rp->r_endp = curwp->w.markp;
                 return TRUE;
              }
              fsize += llength(flp) + 1;
          }
          if (lback(blp) != curbp->b_linep) {
-            blp = lback(blp);
+            blp = lback(blp);   /* Look for mark before dot */
             bsize += llength(blp) + 1;
             if (blp == curwp->w.markp) {
                 rp->r_linep = blp;
                 rp->r_offset = curwp->w.marko;
-                rp->r_size = bsize - curwp->w.marko;
+                rp->r_bytes = bsize - curwp->w.marko;
+                rp->r_endp = curwp->w.dotp;
                 return TRUE;
             }
         }
@@ -318,13 +321,14 @@ int narrow(int f, int n) {
     }
     curwp->w.dotp = creg.r_linep;   /* only by full lines please! */
     curwp->w.doto = 0;
-    creg.r_size += (long)creg.r_offset;
+    creg.r_bytes += (long)creg.r_offset; /* Add in what we've added */
 
 /* Might no longer be possible for this to happen because we now move
  * to the start of next line after the later of mark/doto.
- * But leave it here just in case...
+ * Actually it is possible.
+ * Just set a mark at the beginning of a line then narrow.
  */
-    if (creg.r_size <= (long)curwp->w.dotp->l_used) {
+    if (creg.r_bytes <= (long)curwp->w.dotp->l_used) {
         mlwrite_one("Must narrow at least 1 full line");
         *curwp = orig_wp;       /* restore original struct */
         return(FALSE);
@@ -338,12 +342,10 @@ int narrow(int f, int n) {
         creg.r_linep->l_bp = bp->b_linep;
     }
 
-/* Move forward to the end of this region (a long number of bytes perhaps) */
-    while (creg.r_size > (long)32000) {
-        forw_grapheme(32000);
-        creg.r_size -= (long)32000;
-    }
-    forw_grapheme((int)creg.r_size);
+/* A region know knows its last line, so just set the curwp to this
+ * with a 0 offset.
+ */
+    curwp->w.dotp = creg.r_endp;
     curwp->w.doto = 0;              /* only full lines! */
 
 /* Archive the bottom fragment */

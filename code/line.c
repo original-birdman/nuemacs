@@ -25,10 +25,10 @@
 static int force_newline = 0;   /* lnewline may need to be told this */
 
 /*
- * This routine allocates a block of memory large enough to hold a struct line
- * containing "used" characters. The block is always rounded up a bit. Return
- * a pointer to the new block, or NULL if there isn't any memory left. Print a
- * message in the message line if no space.
+ * This routine allocates a block of memory large enough to hold a struct
+ * line containing "used" characters. The block is always rounded up a bit.
+ * Return a pointer to the new block, or NULL if there isn't any memory left.
+ * Print a message in the message line if no space.
  */
 struct line *lalloc(int used) {
     struct line *lp;
@@ -45,9 +45,9 @@ struct line *lalloc(int used) {
 
 /*
  * Delete line "lp". Fix all of the links that might point at it (they are
- * moved to offset 0 of the next line. Unlink the line from whatever buffer it
- * might be in. Release the memory. The buffers are updated too; the magic
- * conditions described in the above comments don't hold here.
+ * moved to offset 0 of the next line. Unlink the line from whatever buffer
+ * it might be in. Release the memory. The buffers are updated too; the
+ * magic conditions described in the above comments don't hold here.
  */
 void lfree(struct line *lp) {
     struct buffer *bp;
@@ -86,11 +86,11 @@ void lfree(struct line *lp) {
 }
 
 /*
- * This routine gets called when a character is changed in place in the current
- * buffer. It updates all of the required flags in the buffer and window
- * system. The flag used is passed as an argument; if the buffer is being
- * displayed in more than 1 window we change EDIT to HARD. Set MODE if the
- * mode line needs to be updated (the "*" has to be set).
+ * This routine gets called when a character is changed in place in the
+ * current buffer. It updates all of the required flags in the buffer and
+ * window system. The flag used is passed as an argument; if the buffer is
+ * being displayed in more than 1 window we change EDIT to HARD. Set MODE
+ * if the mode line needs to be updated (the "*" has to be set).
  */
 void lchange(int flag) {
     struct window *wp;
@@ -978,7 +978,7 @@ int yank_replace(int f, int n) {
         curwp->w.dotp = region.r_linep;
         curwp->w.doto = region.r_offset;
 /* Don't put killed text onto kill ring */
-        if ((s = ldelete(region.r_size, FALSE)) != TRUE) return s;
+        if ((s = ldelete(region.r_bytes, FALSE)) != TRUE) return s;
     }
 
 /* yank()/yankmb()  already do what we want, so just use them.
