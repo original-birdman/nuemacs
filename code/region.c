@@ -274,7 +274,8 @@ int narrow(int f, int n) {
     int status;             /* return status */
     struct buffer *bp;      /* buffer being narrowed */
     struct window *wp;      /* windows to fix up pointers in as well */
-    struct region creg;     /* region boundry structure */
+/* Avoid "may be used uninitialized" in gcc4.4.7 */
+    struct region creg = creg;  /* region boundry structure */
 
 /* Find the proper buffer and make sure we aren't already narrow */
     bp = curwp->w_bufp;     /* find the right buffer */
