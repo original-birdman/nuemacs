@@ -309,7 +309,6 @@ int quote(int f, int n) {
 /* GGR version of tab */
 int typetab(int f, int n) {
     UNUSED(f);
-    int nextstop;
 
     if (n < 0) return (FALSE);
     if (n == 0 || n > 1) {
@@ -319,16 +318,19 @@ int typetab(int f, int n) {
 
     if (! tabsize) return(linsert_byte(1, '\t'));
 
-    nextstop = curwp->w.doto += tabsize - (getccol(FALSE) % tabsize);
-    if (nextstop <= llength(curwp->w.dotp)) {
-        curwp->w.doto = nextstop;
-        return(TRUE);
-    }
+/* We have to work with columns, not byte-counts */
 
-/* Otherwise tabstop past end, so move to end then insert */
+    int ccol = getccol(FALSE);
+    int newcol = ccol + tabsize - (getccol(FALSE) % tabsize);
 
-    curwp->w.doto = llength(curwp->w.dotp);
-    return(linsert_byte(tabsize - (getccol(FALSE) % tabsize), ' '));
+/* Try to get to the target column and check for success */
+
+    if (setccol(newcol)) return TRUE;
+
+/* We fail if the line is too short, so then we pad with spaces */
+
+    ccol = getccol(FALSE);
+    return linsert_byte((newcol - ccol), ' ');
 }
 
 /*
