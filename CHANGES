@@ -4531,7 +4531,7 @@ exec.c
     Typo-fixes to evar.h, exec.c, uemacs.hlp.
     Update to GGR4.159
 
-==========
+========== GGR4.160
 
 estruct.h
 line.c
@@ -4552,6 +4552,17 @@ region.c
 version.h
 etc/uemacs.hlp
     Update to GGR4.160
+
+========== GGR4.161
+
+random.c
+    Make typetab() work with columns, not byte counts, so that typing a
+    tab in a line with tabs doesn't shoot past where you expect.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to GGR4.161
 
 ==========
 
