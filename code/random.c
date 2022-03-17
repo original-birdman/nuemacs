@@ -1334,6 +1334,9 @@ int ggr_style(int f, int n) {
     return TRUE;
 }
 
+/* Allow us to set whether to re-use a previously prompted-for
+ * buffer/function/search name/tring on a reexecute.
+ */
 int re_args_exec(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
