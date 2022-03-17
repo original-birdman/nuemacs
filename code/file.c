@@ -546,15 +546,14 @@ void unqname(char *name) {
 
     int namelen = strlen(name);
     strcpy(testname, name);
-    for (int numlen = 1; namelen + numlen < NBUFN; numlen++) {
-        int maxnum = power10(numlen);
-        for (int unum = 0; unum < maxnum; unum++) {
-            sprintf(testname + namelen, "%0*d", numlen, unum);
+    int numlen = NBUFN - namelen - 1;
+    int maxnum = power10(numlen);
+    for (int unum = 0; unum < maxnum; unum++) {
+        snprintf(testname + namelen, NBUFN, "%d", unum);
 /* Check to see if *this* one in the buffer list */
-            if (bfind(testname, 0, FALSE) == NULL) {    /* This is unique */
-                strcpy(name, testname);
-                return;
-            }
+        if (bfind(testname, 0, FALSE) == NULL) {    /* This is unique */
+            strcpy(name, testname);
+            return;
         }
     }
     mlforce("Unable to generate a unique buffer name - exiting");
