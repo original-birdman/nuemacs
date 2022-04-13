@@ -19,9 +19,10 @@ store-pttable czech
   s'     U+0161
   t'     U+0165
   z'     U+017e
+; char+caron set
   c~~    U+010d
   d~~    U+010f
-  e~~    U+0115
+  e~~    U+011b
   n~~    U+0148
   r~~    U+0159
   s~~    U+0161
