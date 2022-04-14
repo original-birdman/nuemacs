@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.158
-;                       Last Update: 06 May 2020
+;                       Version - GGR4.162
+;                       Last Update: 14 Apr 2022
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -205,63 +205,57 @@ store-procedure _mytoggle-mode
         !goto report
 ;
     !endif
-    !if &seq .modesel "W"
-        set .bit 1
-        set .what "WRAP"
-        !goto doit
+
+; Handle the rest...
+    !if &eq 0 &sin "WCPEVOMYAQD" .modesel
+        write-message "Unknown mode"
+        !finish
     !endif
-    !if &seq .modesel "C"
-        set .bit 2
-        set .what "CMODE"
-        !goto doit
-    !endif
-    !if &seq .modesel "P"
-        set .bit 4
-        set .what "PHON"
-        !goto doit
-    !endif
-    !if &seq .modesel "E"
-        set .bit 8
-        set .what "EXACT"
-        !goto doit
-    !endif
-    !if &seq .modesel "V"
-        set .bit 16
-        set .what "VIEW"
-        !goto doit
-    !endif
-    !if &seq .modesel "O"
-        set .bit 32
-        set .what "OVER"
-        !goto doit
-    !endif
-    !if &seq .modesel "M"
-        set .bit 64
-        set .what "MAGIC"
-        !goto doit
-    !endif
-    !if &seq .modesel "Y"
-        set .bit 128
-        set .what "CRYPT"
-        !goto doit
-    !endif
-    !if &seq .modesel "A"
-        set .bit 256
-        set .what "ASAVE"
-        !goto doit
-    !endif
-    !if &seq .modesel "Q"
-        set .bit 512
-        set .what "EQUIV"
-        !goto doit
-    !endif
-    !if &seq .modesel "D"
-        set .bit 1024
-        set .what "DOS"
-        !goto doit
-    !endif
-    write-message "Unknown mode"
-    !finish
+    !goto &cat "togl" .modesel
+*toglW
+    set .bit 1
+    set .what "WRAP"
+    !goto doit
+*toglC
+    set .bit 2
+    set .what "CMODE"
+    !goto doit
+*toglP
+    set .bit 4
+    set .what "PHON"
+    !goto doit
+*toglE
+    set .bit 8
+    set .what "EXACT"
+    !goto doit
+*toglV
+    set .bit 16
+    set .what "VIEW"
+    !goto doit
+*toglO
+    set .bit 32
+    set .what "OVER"
+    !goto doit
+*toglM
+    set .bit 64
+    set .what "MAGIC"
+    !goto doit
+*toglY
+    set .bit 128
+    set .what "CRYPT"
+    !goto doit
+*toglA
+    set .bit 256
+    set .what "ASAVE"
+    !goto doit
+*toglQ
+    set .bit 512
+    set .what "EQUIV"
+    !goto doit
+*toglD
+    set .bit 1024
+    set .what "DOS"
+    !goto doit
 ;
 *doit
     set .report &ptf "%s %s mode toggled " %type-mode .what

@@ -871,7 +871,7 @@ int run_user_proc(char *procname, int rpts) {
 
 /* Find the pointer to that buffer */
     if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite_one("No such procedure");
+        mlwrite("No such procedure: %s", bufn);
         return FALSE;
     }
 
@@ -968,7 +968,7 @@ int execbuf(int f, int n) {
 
 /* Find the pointer to that buffer */
     if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite_one("No such buffer");
+        mlwrite("No such buffer: %s", bufn);
         return FALSE;
     }
 
@@ -1309,8 +1309,9 @@ int dobuf(struct buffer *bp) {
             case DGOTO:     /* GOTO directive */
 /* .....only if we are currently executing */
                 if (execlevel == 0) {
-/* Grab label to jump to */
+/* Grab label to jump to.  Allow it to be evaulated. */
                     eline = token(eline, golabel, NPAT);
+                    strcpy(golabel, getval(golabel));
                     linlen = strlen(golabel);
                     glp = hlp->l_fp;
                     while (glp != hlp) {
@@ -1321,7 +1322,7 @@ int dobuf(struct buffer *bp) {
                         }
                         glp = glp->l_fp;
                     }
-                    mlwrite_one("%No such label");
+                    mlwrite("No such label: %s", golabel);
                     goto failexit2;
                 }
                 goto onward;
