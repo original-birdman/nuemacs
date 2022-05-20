@@ -1794,7 +1794,13 @@ static int check_next(struct line **cline, int *coff, struct magic *mcptr) {
 
     int used;
     struct grapheme *gc = nextgph(cline, coff, &used, FORWARD);
-    if (!mgpheq(gc, mcptr)) used = -1;  /* Show we failed... */
+/* Check that there *is* a next character! */
+    if (gc->uc == UEM_NOCHAR) {
+        used = -1;      /* Failed (to get a next character) */
+    }
+    else if (!mgpheq(gc, mcptr)) {
+        used = -1;      /* Failed (to match the next character) */
+    }
 /* mgpheq() will have freed any malloc()ed gc->ex parts */
     return used;
 }
