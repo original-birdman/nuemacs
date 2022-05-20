@@ -1493,7 +1493,8 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
                         testgc.uc = xp->xval.uchar;
                         testgc.cdm = 0;
                         testgc.ex = NULL;
-                        return same_grapheme(gc, &testgc, USE_WPBMODE);
+                        res = same_grapheme(gc, &testgc, USE_WPBMODE);
+                        break;
                     }
                     if (gc->cdm) {
                         res = FALSE;
@@ -1538,7 +1539,8 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
             testgc.uc = mt->val.uchar;
             testgc.cdm = 0;
             testgc.ex = NULL;
-            return same_grapheme(gc, &testgc, USE_WPBMODE);
+            res =same_grapheme(gc, &testgc, USE_WPBMODE);
+            break;
         }
         if (gc->cdm) {
             res = FALSE;
