@@ -116,6 +116,8 @@ struct name_bind names[] = {
     {"grow-window", enlargewind, {0, 1, 0}},
     {"handle-tab", insert_tab, {0, 0, 0}},
     {"help", help, {0, 1, 0}},
+    {"hunt-forward", forwhunt, {0, 1, 1}},
+    {"hunt-backward", backhunt, {0, 1, 1}},
     {"i-shell", spawncli, {0, 1, 0}},
     {"incremental-search", fisearch, {0, 1, 0}},
     {"insert-file", insfile, {0, 0, 0}},

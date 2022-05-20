@@ -2397,13 +2397,18 @@ int forwhunt(int f, int n) {
         if (!mcstr()) return FALSE;
     }
 
-/* If this is a reexecute and the previously found match was of zero
- * length then step forward one char before trying again.
+/* If the previously found match was of zero length then assume that we
+ * haven't moved since then (this is forwhunt, so either we've been
+ * called for inreex from forwsearch() or we're in macro code that
+ * "knows what it's doing"(?!).
+ * (This allows hunt-forward in a macro to work as reexecing a search,
+ *  while allowing a debug write statement in between...)
+ * So step forward one char before trying again to prevent another
+ * zero-length rematch where we are.
  * NOTE that this means we need to step back one on failure...
  */
     int back1_on_fail = 0;
-    if (inreex &&
-        ((curwp->w_bufp->b_mode & MDMAGIC) != 0) &&
+    if (((curwp->w_bufp->b_mode & MDMAGIC) != 0) &&
         (strlen(group_match(0)) == 0)) {
             back1_on_fail = forwchar(0, 1);
     }
