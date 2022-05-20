@@ -67,7 +67,7 @@
  *
  * 2018+
  * Various bits of the above no longer apply, but it's left for posterity.
- * The FATS search code is now hard-wired, as is a "magic" (regex) search.
+ * The FAST search code is now hard-wired, as is a "magic" (regex) search.
  * There is also a navigable set of search and replace string buffers.
  *
  * scanner() is now fast_scanner() and mcscanner() is now step_scanner().
@@ -691,10 +691,10 @@ handle_prev:
  * So set up some UCLITL tests instead.
  */
             xp = add2_xt_cclmap(mcptr, UCLITL);
-            xp->xc.negate_test = negate_it;
+            xp->xc.negate_test = negate_it;     /* We have a new xp */
             xp->xval.uchar = ch_as_uc('_');
             xp = add2_xt_cclmap(mcptr, CCL);
-            xp->xc.negate_test = negate_it;
+            xp->xc.negate_test = negate_it;     /* We have a new xp */
             xp->xval.cl_lim.low = ch_as_uc('0');
             xp->xval.cl_lim.high = ch_as_uc('9');
             goto invalidate_current;
@@ -1808,6 +1808,7 @@ static int check_next(struct line **cline, int *coff, struct magic *mcptr) {
  *  Used by step_scanner
  */
 #define AMFAIL -1
+
 static int amatch(struct magic *mcptr, struct line **pcwline, int *pcwoff,
      int pre_match) {
     struct line *curline;           /* current line during scan */
@@ -1859,6 +1860,7 @@ try_next_choice:;
         int used;
 
         TEST_BLOCK(mcptr->mc.repeat)
+
 /* Try to get as many matches as possible against the current meta-character.
  * We now allow a lower limit to this match...
  * We might also now want the shortest match...
@@ -2035,7 +2037,7 @@ failed:
 /* step_scanner -- Search for a meta-pattern in either direction.
  *  If found, reset the "." to be at the start or just after the match
  *  string, and (perhaps) repaint the display.
- * NOTE: that for a REVERSE search will step towards the start of the file
+ * NOTE: that for a REVERSE search we step towards the start of the file
  * but always check against the pattern-match in a "forwards" direction.
  *
  * struct magic *mcpatrn;                       pointer into pattern
@@ -2386,12 +2388,26 @@ int forwhunt(int f, int n) {
     if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc.type == EGRP) {
         if (!mcstr()) return FALSE;
     }
+
+/* If this is a reexecute and the previously found match was of zero
+ * length then step forward one char before trying again.
+ * NOTE that this means we need to step back one on failure...
+ */
+    int back1_on_fail = 0;
+    if (inreex &&
+        ((curwp->w_bufp->b_mode & MDMAGIC) != 0) &&
+        (strlen(group_match(0)) == 0)) {
+            back1_on_fail = forwchar(0, 1);
+    }
+
     status = forwscanner(n);
 
 /* Complain if not there - we already have the saved match... */
 
-    if (status != TRUE) mlwrite_one("Not found");
-
+    if (status != TRUE) {
+        mlwrite_one("Not found");
+        if (back1_on_fail) backchar(0, 1);
+    }
     return status;
 }
 
@@ -2465,15 +2481,16 @@ int backhunt(int f, int n) {
         if (!mcstr()) return FALSE;
     }
 
-/* Go search for it for as long as n is positive (n == 0 will go through
- * once, which  is just fine).
+/* Because of the way backwards searching works we don't need to check
+ * for zero-length matches on repeats (see step_scanner()),
+ * So, just go search for it for as long as n is positive (n == 0 will go
+ * through once, which  is just fine).
  */
     status = backscanner(n);
 
 /* Complain if not there - we already have the saved match... */
 
     if (status != TRUE) mlwrite_one("Not found");
-
     return status;
 }
 
