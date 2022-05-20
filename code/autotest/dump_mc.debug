@@ -18,17 +18,17 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
     int uclen;
     if (!header) header = "anon";
     fprintf(stderr, "%s (at line %d)\n", header, line);
-    int i = 0;
+    int ix = 0;
 
 /* We can dump struct magic_replacement data too - just need to ensure
- * that both structures have thexs same named things in teh same place
+ * that both structures have the same named things in the same place
  * where they are used in both.
  * Which means that both have to start with struct mg_info then union val.
  */
 //    struct magic_replacement *rmp = (struct magic_replacement *)mp;
-    while(i < 30) {     /* Put a limit on it...*/
+    while(ix < 30) {    /* Put a limit on it...*/
         fprintf(stderr, "(gp %d) ", mp.mmp->mc.group_num);
-        fprintf(stderr, "%*d (%p): ", (2*depth+1), ++i, mp.mmp);
+        fprintf(stderr, "%*d (%p): ", (2*depth+1), ++ix, mp.mmp);
         switch(mp.mmp->mc.type) {
         case LITCHAR:
             fprintf(stderr, " literal %c(%02x)\n", mp.mmp->val.lchar,
@@ -70,10 +70,10 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
             if (mp.mmp->x.xt_cclmap) {
                 fprintf(stderr, " - Extended:\n");
                 struct xccl *xp = mp.mmp->x.xt_cclmap;
-                int j = 0;
-                while(j < 30) {         /* Put a limit on it */
+                int jx = 0;
+                while(jx < 30) {         /* Put a limit on it */
                     fprintf(stderr, "%*c + %2d (%p): ",
-                         (2*depth+1), ' ', ++j, xp);
+                         (2*depth+1), ' ', ++jx, xp);
                     switch(xp->xc.type) {
                     case CCL:
                         fprintf(stderr, " Closure range %d->%d\n",
@@ -114,7 +114,7 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
  */
                 unsigned char *pc = (unsigned char *)mp.mmp->val.cclmap;
                 fprintf(stderr, " >");
-                for (i = 0; i < HIBYTE; i++) {
+                for (int i = 0; i < HIBYTE; i++) {
                     if (!(i%4)) fprintf(stderr, " ");
                     unsigned char orig_byte = *pc++;
                     unsigned char orig_mask = 0x01;
