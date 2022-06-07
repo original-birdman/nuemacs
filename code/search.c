@@ -562,7 +562,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
 
 /* For the first char/grapheme there is no more to do - except to handle
  * the loop transition.
- * We must not go to switch_current_to_prev, as that check for the end
+ * We must not go to switch_current_to_prev, as that checks for the end
  * of the class if current char is MC_ECCL. And on the first pass
  * MC_ECCL is *NOT* the end of the class, but a literal.
  */
@@ -726,6 +726,23 @@ handle_prev:
             }
             goto invalidate_current;
         }
+
+/* For consistency (and particularly as a way to add a newline to the
+ * negative-match case) allow these...
+ */
+        case 'n':
+            setbit('\n', bmap);
+            goto invalidate_current;
+        case 'r':
+            setbit('\r', bmap);
+            goto invalidate_current;
+        case 'f':
+            setbit('\f', bmap);
+            goto invalidate_current;
+        case 't':
+            setbit('\t', bmap);
+            goto invalidate_current;
+/* NOTE: that this means \\ is taken to mean \ in a class */
         default:                /* Set bit for current char */
             setbit(gc.uc, bmap);
             goto invalidate_current;
