@@ -206,3 +206,5 @@ int no_macrobuf_record = 0;
 int mline_persist = FALSE;
 
 struct buffer *execbp = NULL;
+
+int srch_can_hunt = 0;

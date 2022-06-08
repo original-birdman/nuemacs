@@ -251,6 +251,7 @@ int namedcmd(int f, int n) {
                 kfunc = not_interactive;    /* Change what we call... */
             }
         }
+        if (!nm_info->opt.search_ok) srch_can_hunt = 0;
     }
 
 /* ...and then execute the command */
@@ -806,7 +807,7 @@ int ptt_handler(int c) {
  * int f;               default flag
  * int n;               macro number to use
  */
-struct func_opts null_func_opts = { 0, 0, 0 };
+struct func_opts null_func_opts = { 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
@@ -842,6 +843,10 @@ int storeproc(int f, int n) {
         if (!strcmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
         if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
         if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
+/* Individual commands in the procedure will determine the "search_ok"
+ * status, so set it to true here.
+ */
+        bp->btp_opt.search_ok = 1;
     }
 
 /* And make sure it is empty

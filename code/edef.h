@@ -229,3 +229,8 @@ extern int mline_persist;
 /* The buffer pointer to any current buffer running through dobuf() */
 
 extern struct buffer *execbp;
+
+/* Set to -1, 0, 1 according to whether a search string is OK for
+ * back search, not ok, forward search
+ */
+extern int srch_can_hunt;

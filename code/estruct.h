@@ -357,6 +357,7 @@ struct func_opts {
     unsigned int skip_in_macro :1;
     unsigned int not_mb :1;
     unsigned int not_interactive :1;
+    unsigned int search_ok :1;      /* *hunt() can run */
 };
 
 struct buffer {

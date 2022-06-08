@@ -2410,6 +2410,10 @@ int forwhunt(int f, int n) {
         mlwrite_one("No pattern set");
         return FALSE;
     }
+    if (srch_can_hunt != 1) {
+        mlwrite_one("Search invalid for repeat");
+        return FALSE;
+    }
     if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc.type == EGRP) {
         if (!mcstr()) return FALSE;
     }
@@ -2467,7 +2471,13 @@ int forwsearch(int f, int n) {
 
 /* Complain if not there. */
 
-        if (status != TRUE) mlwrite_one("Not found");
+        if (status == TRUE) {
+            srch_can_hunt = 1;
+        }
+        else {
+            srch_can_hunt = 0;
+            mlwrite_one("Not found");
+        }
     }
     return status;
 }
@@ -2491,7 +2501,7 @@ static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
  * backhunt -- Reverse search for a previously acquired search string,
  *      starting at "." and proceeding toward the front of the buffer.
  *      If found "." is left pointing at the first character of the pattern
- *      (the last character that was matched).
+ *      (i.e. "looking at" the match)
  *
  * int f, n;            default flag / numeric argument
  */
@@ -2505,6 +2515,10 @@ int backhunt(int f, int n) {
  */
     if (tap[0] == '\0') {
         mlwrite_one("No pattern set");
+        return FALSE;
+    }
+    if (srch_can_hunt != -1) {
+        mlwrite_one("Search invalid for repeat");
         return FALSE;
     }
     if ((curwp->w_bufp->b_mode & MDMAGIC) != 0 && mcpat[0].mc.type == EGRP) {
@@ -2551,7 +2565,13 @@ int backsearch(int f, int n) {
 
 /* Complain if not there. */
 
-        if (status != TRUE) mlwrite_one("Not found");
+        if (status == TRUE) {
+            srch_can_hunt = -1;
+        }
+        else {
+            srch_can_hunt = 0;
+            mlwrite_one("Not found");
+        }
     }
     return status;
 }

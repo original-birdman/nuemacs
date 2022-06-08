@@ -1124,6 +1124,7 @@ int main(int argc, char **argv) {
                 rvstrcpy(tap, pat);
                 srch_patlen = strlen(pat);
                 setpattern(pat, tap);
+                srch_can_hunt = 1;
                 break;
             case 'v':       /* -v for View File */
             case 'V':
@@ -1529,6 +1530,7 @@ int execute(int c, int f, int n) {
 
         running_function = 1;   /* Rather than keyboard input */
         status = execfunc(f, n);
+        if (!ktp->fi->opt.search_ok) srch_can_hunt = 0;
         running_function = 0;
         input_waiting = NULL;
         if (execfunc != showcpos) lastflag = thisflag;
