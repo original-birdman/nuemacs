@@ -111,6 +111,8 @@ add-mode Exact
 add-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Should get a zero-length match at the start of line 1
+;
 set %test-report "  ^[^#]* - search 1"
 execute-procedure report-status
 
@@ -123,6 +125,8 @@ search-forward ^[^#]*
 execute-procedure check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Should get a 2-line + newline at the start of line 2
+;
 set %test-report "  ^[^#]* - re-search 2"
 execute-procedure report-status
 
@@ -135,6 +139,8 @@ hunt-forward
 execute-procedure check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Should get a 1-line + newline at the start of line 3
+;
 set %test-report "  ^[^#]* - re-search 3"
 execute-procedure report-status
 
@@ -143,15 +149,31 @@ hunt-forward
   set %expline 4
   set %expcol 0
   set %expchar &asc "#"
-  set %expmatchlen 0
+  set %expmatchlen 13
 execute-procedure check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Should get a zero-length match at the start of line 4
+;
 set %test-report "  ^[^#]* - re-search 4"
 execute-procedure report-status
 
 hunt-forward
   set %curtest Search4
+  set %expline 4
+  set %expcol 0
+  set %expchar &asc "#"
+  set %expmatchlen 0
+execute-procedure check-position
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Should get a 1-line + newline match at the start of line 5
+;
+set %test-report "  ^[^#]* - re-search 5"
+execute-procedure report-status
+
+hunt-forward
+  set %curtest Search5
   set %expline 6
   set %expcol 0
   set %expchar 10

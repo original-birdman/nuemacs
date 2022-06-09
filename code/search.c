@@ -2418,29 +2418,23 @@ int forwhunt(int f, int n) {
         if (!mcstr()) return FALSE;
     }
 
-/* If the previously found match was of zero length then assume that we
- * haven't moved since then (this is forwhunt, so either we've been
- * called for inreex from forwsearch() or we're in macro code that
- * "knows what it's doing"(?!).
- * (This allows hunt-forward in a macro to work as reexecing a search,
- *  while allowing a debug write statement in between...)
- * So step forward one char before trying again to prevent another
- * zero-length rematch where we are.
- * NOTE that this means we need to step back one on failure...
+/* We are at the end of a match.
+ * So on a re-execute go back to the start of the match and advance 1 
+ * character before searching,
+ * NOTE that this means we need to reset to the original position on failure...
  */
-    int back1_on_fail = 0;
-    if (((curwp->w_bufp->b_mode & MDMAGIC) != 0) &&
-        (strlen(group_match(0)) == 0)) {
-            back1_on_fail = forwchar(0, 1);
-    }
-
+    struct line *olp = curwp->w.dotp;
+    int obyte_offset = curwp->w.doto;
+    
+    back_grapheme(strlen(group_match(0)) - 1);
     status = forwscanner(n);
 
 /* Complain if not there - we already have the saved match... */
 
     if (status != TRUE) {
         mlwrite_one("Not found");
-        if (back1_on_fail) backchar(0, 1);
+        curwp->w.dotp = olp;
+        curwp->w.doto = obyte_offset;
     }
     return status;
 }
@@ -2525,16 +2519,24 @@ int backhunt(int f, int n) {
         if (!mcstr()) return FALSE;
     }
 
-/* Because of the way backwards searching works we don't need to check
- * for zero-length matches on repeats (see step_scanner()),
- * So, just go search for it for as long as n is positive (n == 0 will go
- * through once, which  is just fine).
+/* We are at the start of a match (we're going backwards).
+ * So on a re-execute go back to the other end of the match and move
+ * one character back before re-searching,
+ * NOTE that this means we need to reset to the original position on failure...
  */
+    struct line *olp = curwp->w.dotp;
+    int obyte_offset = curwp->w.doto;
+
+    forw_grapheme(strlen(group_match(0)) - 1);
     status = backscanner(n);
 
 /* Complain if not there - we already have the saved match... */
 
-    if (status != TRUE) mlwrite_one("Not found");
+    if (status != TRUE) {
+        mlwrite_one("Not found");
+        curwp->w.dotp = olp;
+        curwp->w.doto = obyte_offset;
+    }
     return status;
 }
 
