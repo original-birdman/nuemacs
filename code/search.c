@@ -2365,29 +2365,28 @@ static void init_dyn_group_status(void) {
     return;
 }
 
-static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
-    int status;
+/* Whether we should run the back_grapheme code on the first
+ * loop pass in forwhunt.
+ * We only what to do this if we have a previous match of the same
+ * search string, so do NOT want it when we arrive via forw/backsearch
+ * or at startup.
+ * It will always be set to 0 on a call to forwsearch() and to 1 after
+ * any use by forwhunt().
+ */
+static int do_preskip = 0;
+
+static int forwscanner(void) {
 
     init_dyn_group_status();    /* Forget the past */
-
-/* Search for the pattern for as long as n is positive (n == 0 will go
- * through once, which is just fine).
- */
-    do {
 
 /* We are going forwards so check for eob as otherwise the rest
  * of this code (magical and ordinary) loops us round to the start
  * and searches from there.
  * Simpler to fudge the fix here....
  */
-        if (curwp->w.dotp == curbp->b_linep) {
-            status = FALSE;
-            break;
-        }
-        if (slow_scan)  status = step_scanner(mcpat, FORWARD, PTEND);
-        else            status = fast_scanner(pat, FORWARD, PTEND);
-    } while ((--n > 0) && status);
-    return status;
+    if (curwp->w.dotp == curbp->b_linep) return FALSE;
+    if (slow_scan)  return step_scanner(mcpat, FORWARD, PTEND);
+    else            return fast_scanner(pat, FORWARD, PTEND);
 }
 
 /*
@@ -2400,8 +2399,7 @@ static int forwscanner(int n) { /* Common to forwsearch()/forwhunt() */
 int forwhunt(int f, int n) {
     int status = TRUE;
 
-    if (n < 0)              /* search backwards */
-        return backhunt(f, -n);
+    if (n < 0) return backhunt(f, -n);  /* search backwards */
 
 /* Make sure a pattern exists, or that we didn't switch into MAGIC mode
  * until after we entered the pattern.
@@ -2418,18 +2416,25 @@ int forwhunt(int f, int n) {
         if (!mcstr()) return FALSE;
     }
 
-/* We are at the end of a match.
- * So on a re-execute go back to the start of the match and advance 1 
- * character before searching,
- * NOTE that this means we need to reset to the original position on failure...
+/* We are at the end of any previous match.
+ * So on a re-execute we need to go back to the start of the match
+ * and advance 1 character before searching again.
+ * NOTE that this means we need to reset to the starting position after
+ * a failed search by remembering where we are on each pass.
+ * And forwscanner() can only do one scan at a time. (it clears groups).
  */
-    struct line *olp = curwp->w.dotp;
-    int obyte_offset = curwp->w.doto;
-    
-    back_grapheme(strlen(group_match(0)) - 1);
-    status = forwscanner(n);
+    struct line *olp;
+    int obyte_offset;
 
-/* Complain if not there - we already have the saved match... */
+    do {
+        olp = curwp->w.dotp;
+        obyte_offset = curwp->w.doto;
+        if (do_preskip) back_grapheme(uclen_utf8(group_match(0)) - 1);
+        status = forwscanner();
+        do_preskip = 1;     /* We now have a valid group_match, or failed */
+    } while ((--n > 0) && status);
+
+/* Complain and restore if not there - we already have the saved match... */
 
     if (status != TRUE) {
         mlwrite_one("Not found");
@@ -2441,39 +2446,34 @@ int forwhunt(int f, int n) {
 
 /*
  * forwsearch -- Search forward.  Get a search string from the user, and
- *      search for the string.  If found, reset the "." to be just after
- *      the match string, and (perhaps) repaint the display.
+ *      then use forwhunt to do the work...
  *
  * int f, n;                    default flag / numeric argument
  */
 int forwsearch(int f, int n) {
-    int status = TRUE;
-
-    if (inreex && RXARG(forwsearch)) return forwhunt(f, n);
+    int status;
 
 /* If n is negative, search backwards.
  * Otherwise proceed by asking for the search string.
  */
     if (n < 0) return backsearch(f, -n);
 
+    if (inreex && RXARG(forwsearch)) {
+        ;       /* Already have a pattern from last time */
+    }
+    else {
 /* Ask the user for the text of a pattern.  If the response is TRUE
- * (responses other than FALSE are possible), search for the pattern for as
- * long as  n is positive (n == 0 will go through once, which is just fine).
+ * (responses other than FALSE are possible) we will have a pattern to use.
  */
-    if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
-        status = forwscanner(n);
-
-/* Complain if not there. */
-
-        if (status == TRUE) {
+        if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
             srch_can_hunt = 1;
         }
         else {
-            srch_can_hunt = 0;
-            mlwrite_one("Not found");
+            return status;
         }
     }
-    return status;
+    do_preskip = 0;     /* No current match to skip */
+    return forwhunt(f, n);
 }
 
 static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
@@ -2500,9 +2500,9 @@ static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
  * int f, n;            default flag / numeric argument
  */
 int backhunt(int f, int n) {
-    int status = TRUE;
+    int status;
 
-    if (n < 0) return forwhunt(f, -n);
+    if (n < 0) return forwhunt(f, -n);  /* Search forwards */
 
 /* Make sure a pattern exists, or that we didn't switch into MAGIC mode
  * until after we entered the pattern.
@@ -2520,62 +2520,50 @@ int backhunt(int f, int n) {
     }
 
 /* We are at the start of a match (we're going backwards).
- * So on a re-execute go back to the other end of the match and move
- * one character back before re-searching,
- * NOTE that this means we need to reset to the original position on failure...
+ * Since matching is always doen forwards we don't need to adjust
+ * our position before searching again.
+ * So we can let backscnner do the looping.
  */
-    struct line *olp = curwp->w.dotp;
-    int obyte_offset = curwp->w.doto;
-
-    forw_grapheme(strlen(group_match(0)) - 1);
     status = backscanner(n);
 
-/* Complain if not there - we already have the saved match... */
+/* Complain and restore if not there - we already have the saved match... */
 
     if (status != TRUE) {
         mlwrite_one("Not found");
-        curwp->w.dotp = olp;
-        curwp->w.doto = obyte_offset;
     }
     return status;
 }
 
 /*
  * backsearch -- Reverse search.  Get a search string from the user, and
- *      search, starting at "." and proceeding toward the front of the buffer.
- *      If found "." is left pointing at the first character of the pattern
- *      (the last character that was matched).
+ *      then use backhunt to do the work...
  *
  * int f, n;            default flag / numeric argument
  */
 int backsearch(int f, int n) {
     int status = TRUE;
 
-    if (inreex && RXARG(backsearch)) return backhunt(f, n);
-
 /* If n is negative, search forwards. Otherwise proceed by asking for the
  * search string.
  */
     if (n < 0) return forwsearch(f, -n);
 
+    if (inreex && RXARG(backsearch)) {
+        ;       /* Already have a pattern from last time */
+    }
+    else {
 /* Ask the user for the text of a pattern.  If the response is TRUE
- * (responses other than FALSE are possible), search for the pattern for
- * as long as n is positive (n == 0 will go through once, which is just fine).
+ * (responses other than FALSE are possible), we will have a pattern to use.
  */
-    if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
-        status = backscanner(n);
-
-/* Complain if not there. */
-
-        if (status == TRUE) {
+        if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
             srch_can_hunt = -1;
         }
         else {
-            srch_can_hunt = 0;
-            mlwrite_one("Not found");
+            return status;
         }
     }
-    return status;
+    do_preskip = 0;     /* No current match to skip */
+    return backhunt(f, n);
 }
 
 /* Entry point for isearch.
