@@ -102,6 +102,7 @@ store-procedure check-position
     set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
     set %fail &add %fail 1
   !endif
+  execute-procedure report-status
 
   !if &seq $match %expmatch
     set %test-report &cat %curtest &cat " - matched OK: " %expmatch
