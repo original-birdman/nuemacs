@@ -780,9 +780,11 @@ static int svar(struct variable_description *var, char *value) {
             status = newsize(TRUE, atoi(value));
             break;
         case EVCURCOL:
+            srch_can_hunt = 0;
             status = setccol(atoi(value));
             break;
         case EVCURLINE:
+            srch_can_hunt = 0;
             status = gotoline(TRUE, atoi(value));
             break;
         case EVFLICKER:
@@ -818,6 +820,7 @@ static int svar(struct variable_description *var, char *value) {
             lastkey = atoi(value);
             break;
         case EVCURCHAR:
+            srch_can_hunt = 0;
             ldelgrapheme(1, FALSE);     /* delete 1 char-place */
             c = atoi(value);
             if (c == '\n') lnewline();
@@ -841,6 +844,7 @@ static int svar(struct variable_description *var, char *value) {
             status = resize(TRUE, atoi(value));
             break;
         case EVCWLINE:
+            srch_can_hunt = 0;
             status = forwline(TRUE, atoi(value) - getwpos());
             break;
         case EVTARGET:
@@ -856,6 +860,7 @@ static int svar(struct variable_description *var, char *value) {
         case EVKILL:
             break;
         case EVCMODE:
+            srch_can_hunt = 0;
             curbp->b_mode = atoi(value);
             curwp->w_flag |= WFMODE;
             break;
@@ -870,6 +875,7 @@ static int svar(struct variable_description *var, char *value) {
         case EVLWIDTH:
             break;
         case EVLINE:
+            srch_can_hunt = 0;
             putctext(value);
             break;
         case EVGFLAGS:

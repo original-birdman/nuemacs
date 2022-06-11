@@ -42,7 +42,7 @@ struct evlist evl[] = {
  { "cwline",    EVCWLINE },     /* current screen line in window */
  { "target",    EVTARGET },     /* target for line moves */
  { "search",    EVSEARCH },     /* search pattern (read-only) */
- { "replace",   EVREPLACE },    /* replacement pattern (read_only) */
+ { "replace",   EVREPLACE },    /* replacement pattern */
  { "match",     EVMATCH },      /* last matched magic pattern */
  { "kill",      EVKILL },       /* kill buffer (read only) */
  { "cmode",     EVCMODE },      /* mode of current buffer */
