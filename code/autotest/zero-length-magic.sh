@@ -130,6 +130,7 @@ execute-procedure check-position
 set %test-report "  ^[^#]* - re-search 2"
 execute-procedure report-status
 
+set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search2
   set %expline 4
@@ -144,6 +145,7 @@ execute-procedure check-position
 set %test-report "  ^[^#]* - re-search 3"
 execute-procedure report-status
 
+set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search3
   set %expline 4
@@ -158,6 +160,7 @@ execute-procedure check-position
 set %test-report "  ^[^#]* - re-search 4"
 execute-procedure report-status
 
+set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search4
   set %expline 4
@@ -172,6 +175,7 @@ execute-procedure check-position
 set %test-report "  ^[^#]* - re-search 5"
 execute-procedure report-status
 
+set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search5
   set %expline 6
@@ -185,6 +189,7 @@ set %test-report "  ^[^#]* - re-search 5"
 execute-procedure report-status
 
 ; This should not pass!!!
+set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 !force hunt-forward
 !if &seq $force_status PASSED
     set %fail &add %fail 1
