@@ -212,7 +212,7 @@ set %mcount 0
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
-  set %expcount 9
+  set %expcount 10      ; 10 since GGR4.162 - with 1 overlapping
 execute-procedure check-matchcount
 
 ; Reverse search (x2) and check match
