@@ -130,6 +130,9 @@ search-forward [\p{Nd}\p{Po}]*\X\n
 execute-procedure check-position
 ; ====
 search-forward [\p{Nd}\p{Po}]+\X\n      ; Don't test this one...
+; Wipe out memory of this search so we don't find the overlapping ones
+forward-character  
+backward-character
 search-forward [\p{Nd}\p{Po}]+\X\n
   set %curtest [\p{Nd}\p{Po}]+\X\n
   set %expline 6
