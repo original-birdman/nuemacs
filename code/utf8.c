@@ -396,17 +396,30 @@ unicode_t display_for(unicode_t uc) {
     return uc;
 }
 
-/* Get the number of unicode chars in a NUL-terminated utf8 string.
- */
-unsigned int uclen_utf8(char *str) {
-
+/* Common code for the two "length" functions. */
+static unsigned int utf8_to_uclen(char *str, int omit_combining) {
     unsigned int len = 0;
     int offs = 0;
+    int maxlen = strlen(str);
     while (*(str+offs)) {       /* Until we reach the NUL */
         len++;
-        offs = next_utf8_offset(str, offs, offs+10, FALSE);
+        offs = next_utf8_offset(str, offs, maxlen, omit_combining);
     }
     return len;
+}
+
+/* Get the number of unicode chars in a NUL-terminated utf8 string.
+ * This is NOT the character/glyph count!!!
+ */
+unsigned int uclen_utf8(char *str) {
+    return utf8_to_uclen(str, FALSE);
+}
+/* Get the number of characters/glyphs corresponding to a
+ * NUL-terminated utf8 string.
+ * This ignores combining unicode characters.
+ */
+unsigned int glyphcount_utf8(char *str) {
+    return utf8_to_uclen(str, TRUE);
 }
 
 /* Compare two utf8 buffers case-insensitively.

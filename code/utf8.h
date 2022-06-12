@@ -43,6 +43,7 @@ int char_replace(int, int);
 unicode_t display_for(unicode_t);
 
 unsigned int uclen_utf8(char *);
+unsigned int glyphcount_utf8(char *);
 int nocasecmp_utf8(char *, int, int, char *, int, int);
 int unicode_back_utf8(int, char *, int);
 int utf8char_width(unicode_t c);
