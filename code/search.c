@@ -3214,32 +3214,36 @@ char *group_match(int grp) {
     if ((grp < 0) || (grp > group_cntr)) return "";
     if (!match_grp_info[grp].mline) return "";
 
-/* Have we already sorted out this match for this search? */
+/* Have we already sorted out this match for this search?
+ * If not, set one up.
+ */
+    if (!grp_text[grp]) {
 
-    grp_text[grp] = Xmalloc(match_grp_info[grp].len + 1);
+        grp_text[grp] = Xmalloc(match_grp_info[grp].len + 1);
 
-/* So create this match text for this search... */
+/* Create the match text for this group... */
 
-    char *dp = grp_text[grp];
-    int togo = match_grp_info[grp].len;
-    struct line *cline = match_grp_info[grp].mline;
-    int coff = match_grp_info[grp].start;
-    while(togo > 0) {
-        int on_cline = llength(cline) - coff;
-        if (on_cline > togo) on_cline = togo;
-        memcpy(dp, (cline->l_text)+coff, on_cline);
-        dp += on_cline;
-        togo -= on_cline;
+        char *dp = grp_text[grp];
+        int togo = match_grp_info[grp].len;
+        struct line *cline = match_grp_info[grp].mline;
+        int coff = match_grp_info[grp].start;
+        while(togo > 0) {
+            int on_cline = llength(cline) - coff;
+            if (on_cline > togo) on_cline = togo;
+            memcpy(dp, (cline->l_text)+coff, on_cline);
+            dp += on_cline;
+            togo -= on_cline;
 
-/* Add in the newline, of needed, and switch to next line */
+/* Add in the newline, if needed, and switch to next line */
 
-        if (togo > 0) {
-            *dp++ = '\n';
-            togo--;
-            cline = lforw(cline);
-            coff = 0;
+            if (togo > 0) {
+                *dp++ = '\n';
+                togo--;
+                cline = lforw(cline);
+                coff = 0;
+            }
         }
+        *dp = '\0';     /* Terminate the text */
     }
-    *dp = '\0';
     return grp_text[grp];
 }
