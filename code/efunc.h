@@ -343,7 +343,7 @@ extern int eq(unsigned char bc, unsigned char pc);
 extern void rvstrcpy(char *rvstr, char *str);
 extern int sreplace(int f, int n);
 extern int qreplace(int f, int n);
-extern int expandp(char *srcstr, char *deststr, int maxlength);
+extern int expandp(const char *srcstr, char *deststr, int maxlength);
 extern int boundry(struct line *curline, int curoff, int dir);
 extern char *group_match(int);
 

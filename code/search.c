@@ -2212,7 +2212,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
     return FALSE;
 }
 
-/* nextch -- retrieve the next/previous byte (character) in the buffer,
+/* nextbyte -- retrieve the next/previous byte (character) in the buffer,
  *      and advance/retreat the point.
  *      The order in which this is done is significant, and depends
  *      upon the direction of the search.  Forward searches look at
@@ -2220,7 +2220,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
  *      look at the character.
  *  Used by fast_scanner
  */
-static int nextch(struct line **pcurline, int *pcuroff, int dir) {
+static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
     struct line *curline;
     int curoff;
     int c;
@@ -2262,7 +2262,7 @@ static int nextch(struct line **pcurline, int *pcuroff, int dir) {
  * It stores match information in the entry for group 0.
  */
 int fast_scanner(const char *patrn, int direct, int beg_or_end) {
-    int c;                          /* character at current position */
+    char c;                         /* character at current position */
     const char *patptr;             /* pointer into pattern */
     struct line *curline;           /* current line during scan */
     int curoff;                     /* position within current line */
@@ -2286,11 +2286,10 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 
 /* Scan each character until we hit the head link record.
  * Get the character resolving newlines, offset by the pattern length,
- * i.e. the last character of the  potential match.
+ * i.e. the last character of the potential match.
  */
 
     jump = patlenadd;
-
     while (!fbound(jump, &curline, &curoff, direct)) {
 
 /* Save the current position in case we match the search string at
@@ -2305,15 +2304,19 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 
 /* Scan through the pattern for a match. */
         while (*patptr != '\0') {
-            c = nextch(&scanline, &scanoff, direct);
+            c = nextbyte(&scanline, &scanoff, direct);
 /*
  * Debugging info, show the character and the remains of the string
  * it is being compared with.
  *
- *      strcpy(tpat, "matching ");
- *      expandp(&c, &tpat[strlen(tpat)], NPAT/2);
- *      expandp(patptr, &tpat[strlen(tpat)], NPAT/2);
- *      mlwrite_one(tpat);
+ *          char tpat[1024];
+ *          char src[2];
+ *          strcpy(tpat, "matching ");
+ *          src[0] = c; src[1] = '\0';
+ *          expandp(src, &tpat[strlen(tpat)], NPAT/2);
+ *          expandp(" : ", &tpat[strlen(tpat)], NPAT/2);
+ *          expandp(patptr, &tpat[strlen(tpat)], NPAT/2);
+ *          fprintf(stderr, "3 %s\n", tpat);
  */
             if (!eq(c, *patptr++)) {
                 jump = (direct == FORWARD)? lastchfjump: lastchbjump;
@@ -2375,20 +2378,6 @@ static void init_dyn_group_status(void) {
  */
 static int do_preskip = 0;
 
-static int forwscanner(void) {
-
-    init_dyn_group_status();    /* Forget the past */
-
-/* We are going forwards so check for eob as otherwise the rest
- * of this code (magical and ordinary) loops us round to the start
- * and searches from there.
- * Simpler to fudge the fix here....
- */
-    if (curwp->w.dotp == curbp->b_linep) return FALSE;
-    if (slow_scan)  return step_scanner(mcpat, FORWARD, PTEND);
-    else            return fast_scanner(pat, FORWARD, PTEND);
-}
-
 /*
  * forwhunt -- Search forward for a previously acquired search string.
  *      If found, reset the "." to be just after the match string,
@@ -2429,8 +2418,21 @@ int forwhunt(int f, int n) {
     do {
         olp = curwp->w.dotp;
         obyte_offset = curwp->w.doto;
-        if (do_preskip) back_grapheme(uclen_utf8(group_match(0)) - 1);
-        status = forwscanner();
+        if (do_preskip) back_grapheme(glyphcount_utf8(group_match(0)) - 1);
+
+        init_dyn_group_status();    /* Forget the past */
+
+/* We are going forwards so check for eob as otherwise the rest
+ * of this code (magical and ordinary) loops us round to the start
+ * and searches from there.
+ * Simpler to fudge the fix here....
+ */
+        if (curwp->w.dotp == curbp->b_linep) {
+            status = FALSE;
+            break;
+        }
+        status = (slow_scan)? step_scanner(mcpat, FORWARD, PTEND)
+                            : fast_scanner(pat, FORWARD, PTEND);
         do_preskip = 1;     /* We now have a valid group_match, or failed */
     } while ((--n > 0) && status);
 
@@ -2465,30 +2467,20 @@ int forwsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible) we will have a pattern to use.
  */
+        char opat[NPAT];
+        int could_hunt = srch_can_hunt;
+        strcpy(opat, pat);
         if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
             srch_can_hunt = 1;
+/* A search with the same string should be the same as a reexec */
+            if (strcmp(opat, pat) || !could_hunt) do_preskip = 0;
+            else                                  do_preskip = 1;
         }
         else {
             return status;
         }
     }
-    do_preskip = 0;     /* No current match to skip */
     return forwhunt(f, n);
-}
-
-static int backscanner(int n) { /* Common to backsearch()/backwhunt() */
-    int status;
-
-    init_dyn_group_status();    /* Forget the past */
-
-/* Search for the pattern for as long as n is positive (n == 0 will go
- * through once, which is just fine).
- */
-    do {
-        if (slow_scan)  status = step_scanner(mcpat, REVERSE, PTBEG);
-        else            status = fast_scanner(tap, REVERSE, PTBEG);
-    } while ((--n > 0) && status);
-    return status;
 }
 
 /*
@@ -2520,16 +2512,37 @@ int backhunt(int f, int n) {
     }
 
 /* We are at the start of a match (we're going backwards).
- * Since matching is always doen forwards we don't need to adjust
- * our position before searching again.
- * So we can let backscnner do the looping.
+ * Since matching is always done forwards in slow_scan mode we don't need
+ * to adjust our position before searching again thre, but we might need
+ * to in fast mode.
  */
-    status = backscanner(n);
+
+    struct line *olp;
+    int obyte_offset;
+
+    do {
+        olp = curwp->w.dotp;
+        obyte_offset = curwp->w.doto;
+        if (!slow_scan) {
+            if (do_preskip) forw_grapheme(glyphcount_utf8(group_match(0)) - 1);
+        }
+
+        init_dyn_group_status();    /* Forget the past */
+
+/* Search for the pattern for as long as n is positive (n == 0 will go
+ * through once, which is just fine).
+ */
+        status = (slow_scan)? step_scanner(mcpat, REVERSE, PTBEG)
+                            : fast_scanner(tap, REVERSE, PTBEG);
+        do_preskip = 1;     /* We now have a valid group_match, or failed */
+    } while ((--n > 0) && status);
 
 /* Complain and restore if not there - we already have the saved match... */
 
     if (status != TRUE) {
         mlwrite_one("Not found");
+        curwp->w.dotp = olp;
+        curwp->w.doto = obyte_offset;
     }
     return status;
 }
@@ -2555,14 +2568,19 @@ int backsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible), we will have a pattern to use.
  */
-        if ((status = readpattern("Reverse search", pat, TRUE)) == TRUE) {
+        char opat[NPAT];
+        int could_hunt = srch_can_hunt;
+        strcpy(opat, pat);
+        if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
             srch_can_hunt = -1;
+/* A search with the same string should be the same as a reexec */
+            if (strcmp(opat, pat) || !could_hunt) do_preskip = 0;
+            else                                  do_preskip = 1;
         }
         else {
             return status;
         }
     }
-    do_preskip = 0;     /* No current match to skip */
     return backhunt(f, n);
 }
 
@@ -2771,7 +2789,7 @@ static int delins(char *repstr) {
     int soff = curwp->w.doto;
     char *mptr = last_match.match;
     for (int j = 0; j < match_grp_info[0].len; j++)
-        *mptr++ = nextch(&sline, &soff, FORWARD);
+        *mptr++ = nextbyte(&sline, &soff, FORWARD);
     *mptr = '\0';
     last_match.mline = NULL;    /* Set at the end */
     last_match.moff = curwp->w.doto;
@@ -3086,7 +3104,7 @@ int qreplace(int f, int n) {
  * char *deststr;               destination of expanded string
  * int maxlength;               maximum chars in destination
  */
-int expandp(char *srcstr, char *deststr, int maxlength) {
+int expandp(const char *srcstr, char *deststr, int maxlength) {
     unsigned char c;        /* current char to translate */
 
 /* Scan through the string. */
