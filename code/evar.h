@@ -71,6 +71,8 @@ struct evlist evl[] = {
  { "uproc_opts",    EVUPROCOPTS },  /* Flags when processing &arg */
  { "force_status",  EVFORCESTAT },  /* Actual status when forced to OK */
  { "equiv_type",    EVEQUIVTYPE },  /* Function to use for Equiv mode */
+ { "srch_can_hunt", EVSRCHCANHUNT },/* To allow forw/backhunt to work
+                                       in test macros */
 /* showdir vars */
  { "showdir_opts", EVSDOPTS },      /* Start-up state (for user to set) */
 };

@@ -651,6 +651,7 @@ static char *gtenv(char *vname) {
             if (equiv_handler == utf8proc_NFKD) return "NFKD";
             else                                return "NFKC";
             break;
+    case EVSRCHCANHUNT:     return ue_itoa(srch_can_hunt);
     case EVSDOPTS:          return showdir_opts;
     }
 
@@ -953,6 +954,9 @@ static int svar(struct variable_description *var, char *value) {
             else if (!strcasecmp("NFD", value))  equiv_handler = utf8proc_NFD;
             else if (!strcasecmp("NFKD", value)) equiv_handler = utf8proc_NFKD;
             else                                 equiv_handler = utf8proc_NFKC;
+            break;
+        case EVSRCHCANHUNT:
+            srch_can_hunt = 1;
             break;
 
 /* There are only 5 (MAX_SD_OPTS) options, so any attempt to set more
