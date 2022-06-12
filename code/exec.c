@@ -113,6 +113,7 @@ static int docmd(char *cline) {
     clexec = TRUE;          /* in cline execution */
     current_command = nbp->n_name;
     status = (nbp->n_func)(f, n); /* call the function */
+    if (!nbp->opt.search_ok) srch_can_hunt = 0;
     cmdstatus = status;     /* save the status */
     clexec = oldcle;        /* restore clexec flag */
 
@@ -224,6 +225,7 @@ char *token(char *src, char *tok, int size) {
  * Execute a named command even if it is not bound.
  */
 static fn_t last_ncfunc = NULL;
+static int this_can_hunt = 0;
 int namedcmd(int f, int n) {
     fn_t kfunc;     /* ptr to the requested function to bind to */
 
@@ -234,6 +236,7 @@ int namedcmd(int f, int n) {
         struct name_bind *nm_info = getname("name: ", TRUE);
         if (nm_info == NULL) return FALSE;
         kfunc = nm_info->n_func;
+        this_can_hunt = nm_info->opt.search_ok;
 
 /* Check whether the given command is allowed in the minibuffer, if that
  * is where we are...
@@ -256,6 +259,7 @@ int namedcmd(int f, int n) {
 
 /* ...and then execute the command */
     int status = kfunc(f, n);
+    if (!this_can_hunt) srch_can_hunt = 0;
     last_ncfunc = kfunc;        /* Now we remember this... */
     return status;
 }
@@ -802,7 +806,7 @@ int ptt_handler(int c) {
  *  Set up a procedure buffer and flag to store all executed command
  *  lines there.
  *  NOTE that this only sets up a buffer (in bstore) to store the
- *  commands. The reading into that biffer continues to be done by dobuf().
+ *  commands. The reading into that buffer continues to be done by dobuf().
  *
  * int f;               default flag
  * int n;               macro number to use
