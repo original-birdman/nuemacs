@@ -2378,6 +2378,19 @@ static void init_dyn_group_status(void) {
  */
 static int do_preskip = 0;
 
+static void report_match(void) {
+    char *fullm = group_match(0);
+    char *rpt_text;
+    if (strchr(fullm, '\n') == NULL) {
+        rpt_text = fullm;
+    }
+    else {
+        rpt_text = "<<multiline>>";
+    }
+    mlwrite("match: len: %d, %s", glyphcount_utf8(fullm), rpt_text);
+    return;
+}
+
 /*
  * forwhunt -- Search forward for a previously acquired search string.
  *      If found, reset the "." to be just after the match string,
@@ -2438,7 +2451,11 @@ int forwhunt(int f, int n) {
 
 /* Complain and restore if not there - we already have the saved match... */
 
-    if (status != TRUE) {
+    if (status) {
+        if ((curbp->b_mode & (MDMAGIC|MDRPTMG)) == (MDMAGIC|MDRPTMG))
+            report_match();
+    }
+    else {
         mlwrite_one("Not found");
         curwp->w.dotp = olp;
         curwp->w.doto = obyte_offset;
@@ -2539,7 +2556,11 @@ int backhunt(int f, int n) {
 
 /* Complain and restore if not there - we already have the saved match... */
 
-    if (status != TRUE) {
+    if (status) {
+        if ((curbp->b_mode & (MDMAGIC|MDRPTMG)) == (MDMAGIC|MDRPTMG))
+            report_match();
+    }
+    else {
         mlwrite_one("Not found");
         curwp->w.dotp = olp;
         curwp->w.doto = obyte_offset;

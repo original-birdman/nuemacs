@@ -1177,13 +1177,15 @@ static void modeline(struct window *wp) {
             if (mbp->b_mode & mode_mask) {
                 switch(mode_mask) {
                 case MDEQUIV:           /* Never displayed alone */
+                case MDRPTMG:
                     break;
                 case MDPHON:
                     using_phon = 1;
                     break;
                 case MDMAGIC:
                     vtputc('M');
-/* Append "q" if Equiv mode is on. */
+/* Append "r" if reporting mode is on and "q" if Equiv. */
+                    if (mbp->b_mode & MDRPTMG) vtputc('r');
                     if (mbp->b_mode & MDEQUIV) vtputc('q');
                     break;
                 default:
@@ -1251,23 +1253,32 @@ static void modeline(struct window *wp) {
     else      mwp = wp;
     int mode_mask = 1;
     for (i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
-        if (mode_mask != MDEQUIV) {     /* MDEQUIV never displayed alone */
-            if (mwp->w_bufp->b_mode & mode_mask) {
-                if (!firstm) strcat(tline, " ");
-                firstm = FALSE;
-                switch(mode_mask) {
-                case MDPHON:
-                    strcat(tline, ptt->ptt_headp->display_code);
-                    break;
-                case MDMAGIC:
+/* MDEQUIV and MDRPTMG are never displayed alone */
+        if (mode_mask == MDEQUIV || mode_mask == MDRPTMG) continue;
+        if (mwp->w_bufp->b_mode & mode_mask) {
+            if (!firstm) strcat(tline, " ");
+            firstm = FALSE;
+            switch(mode_mask) {
+            case MDPHON:
+                strcat(tline, ptt->ptt_headp->display_code);
+                break;
+            case MDMAGIC:
 /* How we display Magic depends on whether Equiv mode is on. */
-                    if (mwp->w_bufp->b_mode & MDEQUIV) {
-                        strcat(tline, "MgEqv");
-                        break;
-                    }   /* Fall through */
-                default:
-                    strcat(tline, mode2name[i]);
+                if ((mwp->w_bufp->b_mode & (MDEQUIV|MDRPTMG))
+                       == (MDEQUIV|MDRPTMG)) {
+                    strcat(tline, "RMgEqv");
+                    break;
                 }
+                if (mwp->w_bufp->b_mode & MDRPTMG) {
+                    strcat(tline, "RMagic");
+                    break;
+                }
+                if (mwp->w_bufp->b_mode & MDEQUIV) {
+                    strcat(tline, "MgEqv");
+                    break;
+                }   /* Fall through */
+            default:
+                strcat(tline, mode2name[i]);
             }
         }
         mode_mask <<= 1;

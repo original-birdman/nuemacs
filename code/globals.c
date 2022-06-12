@@ -15,10 +15,10 @@ int revexist = FALSE;           /* does reverse video exist?    */
 int flickcode = FALSE;          /* do flicker supression?       */
 char *mode2name[] = {           /* Display name of modes        */
                                 /* Also text when checking them */
-        "Wrap",  "Cmode", "Phon",  "Exact", "View",
-        "Over",  "Magic", "Crypt", "Asave", "eQuiv", "Dos",
+        "Wrap",  "Cmode", "Phon",  "Exact", "View", "Over",
+        "Magic", "Crypt", "Asave", "eQuiv", "Dos", "Report"
 };
-char modecode[] = "WCPEVOMYAqD";/* letters to represent modes   */
+char modecode[] = "WCPEVOMYAqDR";   /* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int gflags = GFREAD;            /* global control flag          */
 int gfcolor = 7;                /* global forgrnd color (white) */

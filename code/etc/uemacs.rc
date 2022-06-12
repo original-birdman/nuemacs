@@ -176,7 +176,7 @@ store-procedure lr-justify not_mb   ; Left and right justify paragraph
 ; values set in toggle-lmode or toggle-gmode
 ;
 store-procedure _mytoggle-mode
-    write-message &ptf "Toggle %s mode (FHWCPEVOMYAQD): " %type-mode
+    write-message &ptf "Toggle %s mode (FHWCPEVOMYAQDR): " %type-mode
     set .report " "
     set .modesel &upper &gtkey
     !if &or &seq .modesel "" &seq .modesel "~n"
@@ -207,7 +207,7 @@ store-procedure _mytoggle-mode
     !endif
 
 ; Handle the rest...
-    !if &eq 0 &sin "WCPEVOMYAQD" .modesel
+    !if &eq 0 &sin "WCPEVOMYAQDR" .modesel
         write-message "Unknown mode"
         !finish
     !endif
@@ -255,6 +255,10 @@ store-procedure _mytoggle-mode
 *toglD
     set .bit 1024
     set .what "DOS"
+    !goto doit
+*toglR
+    set .bit 2048
+    set .what "REPORT"
     !goto doit
 ;
 *doit

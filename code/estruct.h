@@ -405,10 +405,11 @@ struct buffer {
 #define MDASAVE 0x0100          /* auto-save mode               */
 #define MDEQUIV 0x0200          /* Equivalent unicode searching */
 #define MDDOSLE 0x0400          /* DOS line endings             */
+#define MDRPTMG 0x0800          /* Report match in Magic mode   */ 
 /* Equiv mode only applies in Magic mode, so this is useful */
 #define MD_MAGEQV (MDMAGIC | MDEQUIV)
 
-#define NUMMODES    11          /* # of defined modes           */
+#define NUMMODES    12          /* # of defined modes           */
 
 /* The starting position of a region, and the size of the region in
  * characters, is kept in a region structure.  Used by the region commands.
