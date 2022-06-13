@@ -208,3 +208,5 @@ int mline_persist = FALSE;
 struct buffer *execbp = NULL;
 
 int srch_can_hunt = 0;
+
+int srch_overlap = 1;

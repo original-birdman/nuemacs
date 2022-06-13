@@ -71,6 +71,47 @@
  * There is also a navigable set of search and replace string buffers.
  *
  * scanner() is now fast_scanner() and mcscanner() is now step_scanner().
+ *
+ * June 2022 - an explanation of the arrival of srch_can_hunt,
+ * do_preskip and srch_overlap.
+ *
+ * This is all to do with repeating a search.
+ * Take the example of (forward) searching "mississippi".
+ * A search for "iss" would find two matches
+ * A search for "issi" would find only one UNLESS it was a reverse search
+ * in Magic mode, when it would find two again.
+ * This is a result of how matches are (now) done.
+ * The non-Magic code uses jump tables (in either direction) and hence only
+ * finds matches beyond any previous match in the direction of the search.
+ * The Magic code *always* matches in a forward direction - just that for
+ * a reverse search it moves backwards from the current location to test
+ * start positions. (There may be a bug here, as "issi" isn't a magic string
+ * and that should be noted, but the same would apply to "is.i".)
+ * As a result this will find an "overlapping" match.
+ * These new variables allow for consistent results (although it has to 
+ * handle the reverse-magic search in the "opposite" way to the handling
+ * of the other three ways).
+ *
+ *  do_preskip
+ * if set, this skips back to the "other end" of the previous match
+ * (less one) before searching again, hence finding overlapping matches.
+ * This is just an internal variable.
+ *
+ *  srch_overlap
+ * This is a system variable that determines whether to look for
+ * overlapping matches. By default it is on, but it can be unset. e.g. with:
+ *      set $srch_overlap 0
+ * in your uemacs.rc file.
+ *
+ *  srch_can_hunt
+ * determines whether a search for a previously set string is valid.
+ * It is not if the position has changed or the buffer may have been
+ * modified since the previous search for the same string.
+ * This setting can determine whether a preskip is needed and also enables
+ * macro repeat search testing to work whilst reporting match information
+ * along the way (this uses the system variable settibng, but this should
+ * not normally be set by a user).
+ * 
  */
 #include <stdio.h>
 #include <ctype.h>
@@ -1696,8 +1737,8 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * If that is not the case then we call mcstr/rmcstr, getting *them* to
  * determine whether there is any "magic" and setting slow_scan accordingly.
  * NOTE that for the NOT Magic/NOT Exact case then the presence of any
- * non-ASCII byte in the search string means we use the meta-pattern code,
- * to cater for Unicode case-mapping.
+ * non-ASCII byte in the search string means we use the meta-pattern code
+ * (step_scan) to allow for handling Unicode case-mapping.
  * We only ever build the replacement magic when in MAGIC mode.
  * The mcstr() and rmcstr() procedure structure data is only freed
  * the next time each is called.
@@ -1723,6 +1764,14 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * It is the CALLERs responsibility to deal with any alloc's on gc.ex!!
  *  Used by step_scanner.
  */
+
+/* For non-overlapping, reverse slow searches we need to set-up an
+ * artifical barrier beyond which we don't retrieve characers.
+ */
+static struct line *barrier_endline;
+static int barrier_offset;
+static int barrier_active = 0;
+
 #define POS_ONLY 0x10000000
 static struct grapheme gc;
 static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
@@ -1761,8 +1810,8 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
  * Note that going FORWARD we are at EOB when "on" the marker, while when
  * in reverse it is if we are about to go onto it.
  */
-        if ((dir == FORWARD && curline == curbp->b_linep) ||
-            (dir == REVERSE && nextline == curbp->b_linep))
+        if (((dir == FORWARD) && (curline == curbp->b_linep)) ||
+            ((dir == REVERSE) && (nextline == curbp->b_linep)))
             gc.uc = UEM_NOCHAR;
         else
             gc.uc = '\n';
@@ -1777,6 +1826,16 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
 
         }
         else {          /* Get the grapheme from the current line */
+
+/* For back searching in slow-scan mode we may have an artificial barrier
+ * Note that the direction willactually be FORWARD for this!!!
+ */
+            if (barrier_active &&
+                   (curline == barrier_endline) &&
+                   (curoff >= barrier_offset)) {
+                gc.uc = UEM_NOCHAR;
+                return &gc;
+            }
             typedef int (*fn_gcall)(char *, int, int, struct grapheme *);
             fn_gcall get_graph;
             if (dir == FORWARD) get_graph = build_next_grapheme;
@@ -2431,6 +2490,7 @@ int forwhunt(int f, int n) {
     do {
         olp = curwp->w.dotp;
         obyte_offset = curwp->w.doto;
+/* This must precede group clean-out */
         if (do_preskip) back_grapheme(glyphcount_utf8(group_match(0)) - 1);
 
         init_dyn_group_status();    /* Forget the past */
@@ -2446,7 +2506,8 @@ int forwhunt(int f, int n) {
         }
         status = (slow_scan)? step_scanner(mcpat, FORWARD, PTEND)
                             : fast_scanner(pat, FORWARD, PTEND);
-        do_preskip = 1;     /* We now have a valid group_match, or failed */
+/* We now have a valid group_match, or have failed */
+        if (srch_overlap) do_preskip = 1;
     } while ((--n > 0) && status);
 
 /* Complain and restore if not there - we already have the saved match... */
@@ -2490,8 +2551,9 @@ int forwsearch(int f, int n) {
         if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
             srch_can_hunt = 1;
 /* A search with the same string should be the same as a reexec */
-            if (strcmp(opat, pat) || !could_hunt) do_preskip = 0;
-            else                                  do_preskip = 1;
+            if (!srch_overlap || !could_hunt ||
+                 strcmp(opat, pat))     do_preskip = 0;
+            else                        do_preskip = 1;
         }
         else {
             return status;
@@ -2540,7 +2602,7 @@ int backhunt(int f, int n) {
     do {
         olp = curwp->w.dotp;
         obyte_offset = curwp->w.doto;
-        if (!slow_scan) {
+        if (!slow_scan) {           /* Must precede group clean-out */
             if (do_preskip) forw_grapheme(glyphcount_utf8(group_match(0)) - 1);
         }
 
@@ -2548,10 +2610,23 @@ int backhunt(int f, int n) {
 
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which is just fine).
+ * For the slow scan in reverse mode we might need to set an artifical
+ * barrier to prevent overlapping matches.
  */
-        status = (slow_scan)? step_scanner(mcpat, REVERSE, PTBEG)
-                            : fast_scanner(tap, REVERSE, PTBEG);
-        do_preskip = 1;     /* We now have a valid group_match, or failed */
+        if (slow_scan) {
+            if (!srch_overlap) {
+                barrier_endline = curwp->w.dotp;
+                barrier_offset = curwp->w.doto;
+                barrier_active = 1;
+            }
+            status = step_scanner(mcpat, REVERSE, PTBEG);
+            barrier_active = 0;
+        }
+        else {
+            status = fast_scanner(tap, REVERSE, PTBEG);
+        }
+/* We now have a valid group_match, or have failed */
+        if (srch_overlap) do_preskip = 1;
     } while ((--n > 0) && status);
 
 /* Complain and restore if not there - we already have the saved match... */
@@ -2595,8 +2670,9 @@ int backsearch(int f, int n) {
         if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
             srch_can_hunt = -1;
 /* A search with the same string should be the same as a reexec */
-            if (strcmp(opat, pat) || !could_hunt) do_preskip = 0;
-            else                                  do_preskip = 1;
+            if (!srch_overlap || !could_hunt ||
+                 strcmp(opat, pat))     do_preskip = 0;
+            else                        do_preskip = 1;
         }
         else {
             return status;

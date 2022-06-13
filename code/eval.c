@@ -652,6 +652,7 @@ static char *gtenv(char *vname) {
             else                                return "NFKC";
             break;
     case EVSRCHCANHUNT:     return ue_itoa(srch_can_hunt);
+    case EVSRCHOLAP:        return ue_itoa(srch_overlap);
     case EVSDOPTS:          return showdir_opts;
     }
 
@@ -956,7 +957,10 @@ static int svar(struct variable_description *var, char *value) {
             else                                 equiv_handler = utf8proc_NFKC;
             break;
         case EVSRCHCANHUNT:
-            srch_can_hunt = 1;
+            srch_can_hunt = atoi(value);
+            break;
+        case EVSRCHOLAP:
+            srch_overlap = atoi(value);
             break;
 
 /* There are only 5 (MAX_SD_OPTS) options, so any attempt to set more

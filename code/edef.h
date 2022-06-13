@@ -234,3 +234,8 @@ extern struct buffer *execbp;
  * back search, not ok, forward search
  */
 extern int srch_can_hunt;
+
+/* Set to 0 or 1(default) to determine whether successive searches for
+ * the same string may find overlapping resutls
+ */
+extern int srch_overlap;

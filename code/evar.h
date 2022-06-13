@@ -73,6 +73,7 @@ struct evlist evl[] = {
  { "equiv_type",    EVEQUIVTYPE },  /* Function to use for Equiv mode */
  { "srch_can_hunt", EVSRCHCANHUNT },/* To allow forw/backhunt to work
                                        in test macros */
+ { "srch_overlap",  EVSRCHOLAP },   /* Can successive matches overlap */ 
 /* showdir vars */
  { "showdir_opts", EVSDOPTS },      /* Start-up state (for user to set) */
 };
