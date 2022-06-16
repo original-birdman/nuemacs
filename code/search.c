@@ -88,7 +88,7 @@
  * start positions. (There may be a bug here, as "issi" isn't a magic string
  * and that should be noted, but the same would apply to "is.i".)
  * As a result this will find an "overlapping" match.
- * These new variables allow for consistent results (although it has to 
+ * These new variables allow for consistent results (although it has to
  * handle the reverse-magic search in the "opposite" way to the handling
  * of the other three ways).
  *
@@ -111,7 +111,7 @@
  * macro repeat search testing to work whilst reporting match information
  * along the way (this uses the system variable settibng, but this should
  * not normally be set by a user).
- * 
+ *
  */
 #include <stdio.h>
 #include <ctype.h>
@@ -154,8 +154,8 @@
 #define MC_ECCL         ']'     /* End of character class. */
 #define MC_SGRP         '('     /* Start a grouping */
 #define MC_EGRP         ')'     /* End a grouping */
-#define MC_BOL          '^'     /* Beginning of line. */
-#define MC_EOL          '$'     /* End of line. */
+#define MC_BOL          '^'     /* Beginning of line at strat of match. */
+#define MC_EOL          '$'     /* End of line at end of match. */
 #define MC_REPEAT       '*'     /* == Closure. */
 #define MC_ONEPLUS      '+'     /* non-zero Closure. */
 #define MC_RANGE        '{'     /* Ranged Closure. */
@@ -278,11 +278,9 @@ static struct {
     int start_point;
 } magic_search = { NULL, 0};
 
-/* The variables magical and rmagical determine whether there
- * were actual metacharacters in the search and replace strings -
- * if not, then we don't have to use the slower MAGIC mode
- * search functions.
- * slow_scan will be set if we need the step_scanner().
+/* The rmagical variable determines whether there were actual metacharacters
+ * in replace string - if not, then we can directly replace.
+ * slow_scan will be set if we need the step_scanner() for searching.
  */
 static int rmagical = FALSE;
 static struct magic mcpat[NPAT]; /* The magic pattern. */
@@ -946,6 +944,7 @@ static void rmcclear(void) {
  *      times to allow this!!
  */
 static int group_cntr;  /* Number of possible groups in search pattern */
+static int mc_alloc = FALSE;    /* Initial state */
 static int mcstr(void) {
     struct magic *mcptr = mcpat;
     char *patptr = pat;
@@ -955,11 +954,10 @@ static int mcstr(void) {
     int can_repeat = FALSE;
     char *btext;
 
-/* If we had metacharacters in the struct magic array previously,
- * free up any bitmaps that may have been allocated (before we
- * reset slow_scan).
+/* If we allocated anything in the previous mcpat, free it now.
  */
-    if (slow_scan) mcclear();
+    if (mc_alloc) mcclear();
+    mc_alloc = FALSE;
     group_cntr = 0;
     cntl_grp_info[0].state = GPOPEN;
     cntl_grp_info[0].parent_group = -1; /* None */
@@ -975,11 +973,11 @@ static int mcstr(void) {
     cntl_grp_info[0].next_choice = mcptr;   /* Where to put the next CHOICE */
     mcptr++;
 
-    int using_magic = ((curwp->w_bufp->b_mode & MDMAGIC) != 0);
-    slow_scan = using_magic;    /* The default case */
+    slow_scan = FALSE;      /* Assume not, until something needs it */
     mj = 0;
 
     WHILE_BLOCK((pchr = *patptr) && status)
+    int possible_slow_scan = FALSE;     /* Not yet */
     mcptr->mc = null_mg;        /* Initialize fields */
     mcptr->mc.group_num = curr_group;
 /* Is the next character non-ASCII? */
@@ -988,7 +986,8 @@ static int mcstr(void) {
     if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
 
 /* We won't have called mcstr() for Exact + non-Magic, so if we
- * find a non-ASCII code we need to use the step_scanner().
+ * find a non-ASCII code we need to use the step_scanner(), as
+ * non-ASCII case folding doesn't work with the fast_scanner.
  */
         slow_scan = TRUE;   /* The only case that sets this for non-MAGIC */
         can_repeat = TRUE;
@@ -1004,6 +1003,7 @@ static int mcstr(void) {
  * do here. Any freeing will be done in mcclear().
  */
             mcptr->val.gc = gc;
+            mc_alloc = TRUE;
         }
         goto pchr_done_noincr;
     }
@@ -1013,16 +1013,25 @@ static int mcstr(void) {
  * And since we know we have a bare ASCII char (any other would be trapped
  * in the preceding test) we just set a LITCHAR test here.
  */
-    if (!using_magic) {     /* Non-magic mode ASCII */
+    if (!(curwp->w_bufp->b_mode & MDMAGIC)) {   /* Non-magic mode ASCII */
         mcptr->mc.type = LITCHAR;
         mcptr->val.lchar = pchr;
         goto pchr_done;
     }
+
+/* From now on anything we do, EXCEPT the default LITCHAR case, involves
+ * producing a slow_scan control structure that is not the same as the
+ * literal characters in apat meaning we can't use the literal input,
+ * so must use the slow scan (even a simple \n -> '\n' change requires this!).
+ */
+    possible_slow_scan = TRUE;
+
 /* We have an unescaped char to look at... */
     switch (pchr) {
     case MC_CCL:
         status = cclmake(&patptr, mcptr);
         can_repeat = TRUE;
+        mc_alloc = TRUE;
         break;
     case MC_SGRP:
         group_cntr++;
@@ -1282,26 +1291,39 @@ static int mcstr(void) {
                 can_repeat = TRUE;
                 goto pchr_done;
             }
-            case 'n':
-                pchr = '\n';
-                break;
+
+            case 'n':   /* All 4 handled similarily */
             case 'r':
-                pchr = '\r';
-                break;
             case 'f':
-                pchr = '\f';
-                break;
             case 't':
-                pchr = '\t';
-                break;
+                switch(pchr) {  /* Need to map to actual character */
+                case 'n':
+                    pchr = '\n';
+                    break;
+                case 'r':
+                    pchr = '\r';
+                    break;
+                case 'f':
+                    pchr = '\f';
+                    break;
+                case 't':
+                    pchr = '\t';
+                    break;
+                }
+                mcptr->mc.type = LITCHAR;
+                mcptr->val.lchar = pchr;
+                can_repeat = TRUE;
+                goto pchr_done;     /* To skip possible_slow_scan reset */
             default:
                 pchr = *patptr;
+                can_repeat = TRUE;
             }
         } /* Falls through */
     default:
         mcptr->mc.type = LITCHAR;
         mcptr->val.lchar = pchr;
-        can_repeat = 1;
+        can_repeat = TRUE;
+        possible_slow_scan = FALSE;     /* Not from this one, at least */
         break;
     }               /* End of switch on original pchr */
 pchr_done:
@@ -1309,6 +1331,7 @@ pchr_done:
 pchr_done_noincr:
     mcptr++;
     mj++;
+    if (possible_slow_scan) slow_scan = TRUE;
     END_WHILE(pchr = *patptr....)       /* End of while. */
 
 /* Close off the meta-string. */
@@ -1723,7 +1746,6 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * the length for substitution purposes.
  */
         if (srch) {
-            slow_scan = FALSE;      /* May change in mcstr() */
             rvstrcpy(tap, apat);
             srch_patlen = strlen(apat);
             setpattern(apat, tap);
