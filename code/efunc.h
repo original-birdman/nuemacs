@@ -154,6 +154,7 @@ extern void upddex(void);
 extern int updupd(int force);
 extern void upmode(void);
 extern void movecursor(int row, int col);
+extern void force_movecursor(int row, int col);
 extern void mlerase(void);
 extern void mlwrite(const char *fmt, ...);
 extern void mlforce(const char *fmt, ...);

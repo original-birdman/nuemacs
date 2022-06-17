@@ -141,7 +141,7 @@ static inline int TTputgrapheme(struct grapheme *gp) {
 /* Output a single character. mlwrite, mlput* may send Combining ones */
 static inline int TTput_1uc(unicode_t uc) {
     int status = TTputc(display_for(uc));
-    if (!combining_type(uc)) ttcol++;
+    if (!combining_type(uc)) ttcol += utf8char_width(uc);
     return status;
 }
 
@@ -1373,6 +1373,10 @@ void movecursor(int row, int col) {
         TTmove(row, col);
     }
 }
+void force_movecursor(int row, int col) {
+    ttrow = -100;       /* Force the optimizing test to fail */
+    movecursor(row, col);
+}
 
 /*
  * Erase the message line. This is a special routine because the message line
@@ -1417,7 +1421,7 @@ void mlerase(void) {
 
 /* Some gccs are happy to test va_list against NULL.
  * Others are not. Even with similar gcc version and the same stdarg.h
- * So, define a union - which sems to keep everyone happy.
+ * So, define a union - which seems to keep everyone happy.
  */
 typedef union {
     char *p;
@@ -1566,9 +1570,8 @@ void mlforce_one(const char *fmt) {
 }
 
 /*
- * Write out a string. Update the physical cursor position. This assumes that
- * the characters in the string all have width "1"; if this is not the case
- * things will get screwed up a little.
+ * Write out a string. Update the physical cursor position. This no
+ * longer assumes that the characters in the string all have width "1".
  *
  * GGR - modified to handle utf8 strings.
  */
