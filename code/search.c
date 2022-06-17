@@ -248,10 +248,10 @@ struct control_group_info {     /* Info that controls usage */
     int parent_group;           /* Group to fall into when this group ends */
     enum GP_state state;        /* For group balancing check in mcstr() */
 };
-struct match_group_info {       /* String match info - reset of failures */
+struct match_group_info {       /* String match info - reset on failures */
     struct line *mline;         /* Buffer location of match */
-    int start;
-    int len;
+    int start;                  /* Byte offset of start within mline */
+    int len;                    /* Length, in bytes */
     int base;                   /* byte count of chars matched before *start*
                                  * of group.
                                  * ambytes is reset to this on CHOICE. */
@@ -2888,6 +2888,8 @@ static struct {
 static int delins(char *repstr) {
     int status;
 
+/* Remember what the replacement was */
+
     last_match.rlen = strlen(repstr);
     int needed = last_match.rlen + 1;
     if (needed > last_match.r_alloc) {
@@ -2896,21 +2898,24 @@ static int delins(char *repstr) {
     }
     strcpy(last_match.replace, repstr);
 
-/* Save the matched string.
- * NOTE that we cannot save mline until the end, as it might change!
+/* Save the matched string in last_match (only allow 1 level of undo).
+ * NOTE1: The match may be over multiple lines so we need a byte-by-byte
+ * copy.
+ * NOTE2: We cannot save mline until the end, as it might change!
  */
     needed = match_grp_info[0].len + 1;
     if (needed > last_match.m_alloc) {
         last_match.match = Xrealloc(last_match.match, needed);
         last_match.m_alloc = needed;
     }
+/* This does NOT change the current dotp and doto! */
     struct line *sline = curwp->w.dotp;
     int soff = curwp->w.doto;
     char *mptr = last_match.match;
     for (int j = 0; j < match_grp_info[0].len; j++)
         *mptr++ = nextbyte(&sline, &soff, FORWARD);
     *mptr = '\0';
-    last_match.mline = NULL;    /* Set at the end */
+
     last_match.moff = curwp->w.doto;
     last_match.mlen = match_grp_info[0].len;
 
@@ -2918,46 +2923,35 @@ static int delins(char *repstr) {
  * When we insert text the line may need to be reallocated, so we
  * can't save its current value and expect that to persist.
  * But we can save the previous line, and later use that one's next.
- * Saving the offset is OK.
  */
     struct line *pline = lback(curwp->w.dotp);
-    int doff = curwp->w.doto;
 
-/* Step over what we matched...and remember the match */
-
-    int togo;
-    togo = match_grp_info[0].len;
-    while (togo > 0) togo -= forw_grapheme(1);
-
-
-/* Add what we need to add */
-
-    int added;
-    if (!rmagical) {
-        added = strlen(rpat);
-        status = linstr(rpat);
-    }
-    else {
-        char *repl_text = getrepl();
-        added = strlen(repl_text);
-        status = linstr(repl_text);
-    }
-    last_match.rlen = added;
-
-/* Go back to where we were and delete what we have to replace.
- * ldelete() only deletes forwards, so we go to the start of the
- * matched text (which we know!) first.
+/* We end up positioned at the *start* of a match, so we can just delete
+ * what we found (by byte count) then insert the new text.
  */
-    curwp->w.dotp = lforw(pline);
-    curwp->w.doto = doff;
     status = ldelete(match_grp_info[0].len, FALSE);
-    last_match.mline = curwp->w.dotp;   /* Now known */
 
-/* Finally we need to get to the end of what we've put in as
- * a replacement, so need to know how long it is...
+/* Add what we need to add. We will end up at the end of it, which
+ * is where we wish to be.
  */
-    togo = added;
-    while (togo > 0) togo -= forw_grapheme(1);
+    if (status) {
+        int added;
+        if (!rmagical) {
+            added = strlen(rpat);
+            status = linstr(rpat);
+        }
+        else {
+            char *repl_text = getrepl();
+            added = strlen(repl_text);
+            status = linstr(repl_text);
+        }
+        last_match.rlen = added;
+    }
+
+/* Now work out which line is the start of the match we replaced by
+ * by going forward from the original previous line.
+ */
+    last_match.mline = lforw(pline);    /* Now known */
 
     return status;
 }
