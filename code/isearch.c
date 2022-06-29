@@ -44,8 +44,6 @@
 #define IS_QUIT         0x1B    /* Exit the search */
 #define IS_RUBOUT       0x7F    /* Delete previous character */
 
-static int echo_char(int c, int col);
-
 /* A couple of "own" variables for re-eat */
 
 static int (*saved_get_char) (void);    /* Get character routine */
@@ -56,35 +54,6 @@ static int eaten_char = -1;             /* Re-eaten char */
 static int cmd_buff[CMDBUFLEN]; /* Save the command args here */
 static int cmd_offset;                  /* Current offset into command buff */
 static int cmd_reexecute = -1;          /* > 0 if re-executing command */
-
-/* Incremental search entry - forward direction
- */
-int fisearch(int f, int n) {
-    struct line *curline;           /* Current line on entry    */
-    int curoff;                     /* Current offset on entry  */
-
-/* Remember the initial . on entry: */
-
-    curline = curwp->w.dotp;        /* Save the current line pointer */
-    curoff = curwp->w.doto;         /* Save the current offset       */
-/* Do the search */
-
-    if (!(isearch(f, n))) {         /* Call ISearch forwards  */
-                                    /* If error in search:    */
-        curwp->w.dotp = curline;    /* Reset line pointer and */
-        curwp->w.doto = curoff;     /* offset to orig value   */
-        curwp->w_flag |= WFMOVE;    /* Say we've moved        */
-        update(FALSE);              /* And force an update    */
-        mlwrite_one(MLbkt("search failed"));   /* Say we died */
-    } else
-        mlerase();      /* If happy, just erase the cmd line  */
-    srch_patlen = strlen(pat);
-    return TRUE;
-}
-/* Reverse direction uses same code, just reverses direction */
-int risearch(int f, int n) {        /* Same as fisearch in reverse */
-    return fisearch(f, -n);
-}
 
 /* Routine to prompt for I-Search string.
  */
@@ -110,6 +79,51 @@ static int promptpattern(char *prompt) {
         glen++;
     }
     return glen;
+}
+
+/* routine to echo i-search characters
+ * GGR - This is *NOT* a mini-buffer, and tracks its own column.
+ *
+ * int c;               character to be echoed
+ * int col;             column to be echoed in
+ */
+static int echo_char(int c, int col) {
+    movecursor(term.t_nrow, col);   /* Position the cursor         */
+    if ((c < ' ') || (c == 0x7F)) { /* Control character?          */
+        switch (c) {                /* Yes, dispatch special cases */
+        case '\n':                  /* Newline                     */
+            TTputc('<');
+            TTputc('N');
+            TTputc('L');
+            TTputc('>');
+            col += 3;
+            break;
+
+        case '\t':                  /* Tab                        */
+            TTputc('<');
+            TTputc('T');
+            TTputc('A');
+            TTputc('B');
+            TTputc('>');
+            col += 4;
+            break;
+
+        case 0x7F:                  /* Rubout:                    */
+            TTputc('^');            /* Output a funny looking     */
+            TTputc('?');            /*  indication of Rubout      */
+            col++;                  /* Count the extra char       */
+            break;
+
+        default:                    /* Vanilla control char       */
+            TTputc('^');            /* Yes, output prefix         */
+            TTputc(c + 0x40);       /* Make it "^X"               */
+            col++;                  /* Count this char            */
+        }
+    } else
+        TTputc(c);                  /* Otherwise, output raw char */
+    TTflush();                      /* Flush the output           */
+    int cw = utf8char_width(c);
+    return col + cw;                /* return the new column no   */
 }
 
 /* Routine to get the next character from the input stream.  If we're reading
@@ -162,6 +176,97 @@ void reeat(int c) {
     term.t_getchar = uneat;             /* Replace it with ours          */
 }
 
+/* Functions to check and set-up incremental debug mode.
+ * This is only intended to be used for runnign functional tests
+ * I can see no other use for it....
+ */
+#define IDB_BFR "//incremental-debug"
+static struct buffer *idbg_buf;
+static struct line *idbg_line, *idbg_head;
+static int (*prev_idbg_func) (void);    /* Get character routine */
+static char next_cmd[NLINE];
+static int call_time;                   /* 0 = delayed, 1 = instant */
+
+/* Function to run the command, which we may wish to do either
+ * as we get the char to return (query-replace), or when we get the
+ * next one (incremental-search).
+ */
+static void activate_cmd(void) {
+    if (next_cmd[0] == '\0') return;
+    char *prev_execstr = execstr;   /* In case we are already running */
+    execstr = next_cmd;
+    int prev_inreex = inreex;
+    inreex = FALSE;
+    execproc(0, 0);                 /* It must be a user proc */
+    execstr = prev_execstr;
+    inreex = prev_inreex;
+}
+
+/* Get the "next character" from the debug buffer.
+ * This is the first characer on the line.
+ * The line from col3 onwards is a command to be excuted *before* the
+ * next character is returned.
+ */
+static int idbg_nextchar(void) {
+    if (call_time == 0) activate_cmd();
+
+/* Now process the next buffer line....
+ * NOTE: that we need to get the next Unicode character NOT a grapheme!
+ */
+    int retchar;
+    if (idbg_line == idbg_head) return '\0';
+    int used = utf8_to_unicode(idbg_line->l_text, 0, llength(idbg_line),
+         (unicode_t*)&retchar);
+    int cmdlen = llength(idbg_line); /* lines not NUL-terminated */
+    cmdlen -= used + 1;
+    if (cmdlen > 0) {
+        strncpy(next_cmd, idbg_line->l_text + used +1, cmdlen);
+        next_cmd[cmdlen] = '\0';
+    }
+    else {
+        next_cmd[0] = '\0';
+    }
+    if (call_time == 1) activate_cmd();
+    idbg_line = lforw(idbg_line);
+    return retchar;
+}
+
+int incremental_debug_check(int type) {
+    if (!(idbg_buf = bfind(IDB_BFR, FALSE, 0))) return FALSE;
+    idbg_buf->b_flag &= ~BFCHG;         /* No prompt when deleting */
+
+/* Ensure we start at the beginning of the buffer.
+ * NOTE that we never actually swicvth to the buffer - we just get
+ * the lines from it.
+ */
+
+    idbg_head = idbg_buf->b_linep;
+    idbg_line = lforw(idbg_head);
+
+/* Now set-up the function that gets the "next character" from it. */
+
+    prev_idbg_func = term.t_getchar;
+    term.t_getchar = idbg_nextchar;
+    next_cmd[0] = '\0';
+    call_time = type;
+
+    return TRUE;
+}
+
+/* NOTE that cleanup DELETES THE BUFFER!!!!
+ * This is to save the macro-caller having to do it, as it is
+ * active if present.
+ * Also, you can't "//..." buffers using delete-buffer.
+ */
+
+void incremental_debug_cleanup(void) {
+
+    if (!idbg_buf) return;
+    term.t_getchar = prev_idbg_func;
+    zotbuf(idbg_buf);
+    return;
+}
+
 /* Redisplay the given character at the given column, in reverse video.
  * The col gets set back to where it was, so no need to return anything.
  */
@@ -200,7 +305,7 @@ static void hilite(int c, int col) {
  * exists (or until the search is aborted).
  * Leave via a common exit so that group info can be invalidated.
  */
-int isearch(int f, int n) {
+static int isearch(int f, int n) {
     UNUSED(f);
     int status;             /* Search status */
     int col;                /* prompt column */
@@ -222,6 +327,10 @@ int isearch(int f, int n) {
     curline = curwp->w.dotp; /* Save the current line pointer     */
     curoff = curwp->w.doto; /* Save the current offset            */
     init_direction = n;     /* Save the initial search direction  */
+
+/* Check for in "incremental-debug" mode? */
+
+    int using_incremental_debug = incremental_debug_check(0);
 
 /* This is a good place to start a re-execution: */
 
@@ -365,50 +474,35 @@ start_over:
     }                               /* for {;;} */
 end_isearch:
     (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
+    if (using_incremental_debug) incremental_debug_cleanup();
     return status;
 }
 
-/* routine to echo i-search characters
- * GGR - This is *NOT* a mini-buffer, and tracks its own column.
- *
- * int c;               character to be echoed
- * int col;             column to be echoed in
+/* Incremental search entry - forward direction
  */
-static int echo_char(int c, int col) {
-    movecursor(term.t_nrow, col);   /* Position the cursor         */
-    if ((c < ' ') || (c == 0x7F)) { /* Control character?          */
-        switch (c) {                /* Yes, dispatch special cases */
-        case '\n':                  /* Newline                     */
-            TTputc('<');
-            TTputc('N');
-            TTputc('L');
-            TTputc('>');
-            col += 3;
-            break;
+int fisearch(int f, int n) {
+    struct line *curline;           /* Current line on entry    */
+    int curoff;                     /* Current offset on entry  */
 
-        case '\t':                  /* Tab                        */
-            TTputc('<');
-            TTputc('T');
-            TTputc('A');
-            TTputc('B');
-            TTputc('>');
-            col += 4;
-            break;
+/* Remember the initial . on entry: */
 
-        case 0x7F:                  /* Rubout:                    */
-            TTputc('^');            /* Output a funny looking     */
-            TTputc('?');            /*  indication of Rubout      */
-            col++;                  /* Count the extra char       */
-            break;
+    curline = curwp->w.dotp;        /* Save the current line pointer */
+    curoff = curwp->w.doto;         /* Save the current offset       */
+/* Do the search */
 
-        default:                    /* Vanilla control char       */
-            TTputc('^');            /* Yes, output prefix         */
-            TTputc(c + 0x40);       /* Make it "^X"               */
-            col++;                  /* Count this char            */
-        }
+    if (!(isearch(f, n))) {         /* Call ISearch forwards  */
+                                    /* If error in search:    */
+        curwp->w.dotp = curline;    /* Reset line pointer and */
+        curwp->w.doto = curoff;     /* offset to orig value   */
+        curwp->w_flag |= WFMOVE;    /* Say we've moved        */
+        update(FALSE);              /* And force an update    */
+        mlwrite_one(MLbkt("search failed"));   /* Say we died */
     } else
-        TTputc(c);                  /* Otherwise, output raw char */
-    TTflush();                      /* Flush the output           */
-    int cw = utf8char_width(c);
-    return col + cw;                /* return the new column no   */
+        mlerase();      /* If happy, just erase the cmd line  */
+    srch_patlen = strlen(pat);
+    return TRUE;
+}
+/* Reverse direction uses same code, just reverses direction */
+int risearch(int f, int n) {        /* Same as fisearch in reverse */
+    return fisearch(f, -n);
 }

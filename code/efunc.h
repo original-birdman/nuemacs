@@ -349,9 +349,10 @@ extern int boundry(struct line *curline, int curoff, int dir);
 extern char *group_match(int);
 
 /* isearch.c */
+extern int incremental_debug_check(int);
+extern void incremental_debug_cleanup(void);
 extern int risearch(int f, int n);
 extern int fisearch(int f, int n);
-extern int isearch(int f, int n);
 
 /* eval.c */
 extern void varinit(void);

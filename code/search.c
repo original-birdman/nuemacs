@@ -3029,10 +3029,16 @@ static int replaces(int query, int f, int n) {
 
     int status = TRUE;      /* Default assumption */
 
+    int using_incremental_debug = FALSE;
+
     if (curbp->b_mode & MDVIEW) {   /* don't allow this command if  */
         status =  rdonly();         /* we are in read only mode     */
         goto end_replaces;
     }
+
+/* Now the real check for in "incremental-debug" mode? */
+
+    using_incremental_debug = incremental_debug_check(1);
 
 /* Check for negative repetitions. */
 
@@ -3229,6 +3235,7 @@ qprompt:
 
 end_replaces:
     init_dyn_group_status();
+    if (using_incremental_debug) incremental_debug_cleanup();
     return TRUE;
 }
 
