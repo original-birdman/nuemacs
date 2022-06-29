@@ -300,8 +300,8 @@ static int makelist(int iflag) {
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
         return s;
     strcpy(blistp->b_fname, "");
-    if (addline("ACT MODES  Type↴      Size Buffer        File") == FALSE
-     || addline("--- -----------.      ---- ------        ----") == FALSE)
+    if (addline("ACT MODES   Type↴      Size Buffer        File") == FALSE
+     || addline("--- ------------.      ---- ------        ----") == FALSE)
         return FALSE;
     bp = bheadp;                        /* For all buffers      */
 
@@ -369,12 +369,12 @@ static int makelist(int iflag) {
 /*
  * We'll assume an 80-column width for determining whether the
  * filename will fit.
- * The column data so far is 3+1+12+1+9+1+14 == 38.
- * If the buffername has reached >34 or the filename is > 37 we'll print
+ * The column data so far is 3+1+13+1+9+1+14 == 39.
+ * If the buffername has reached >33 or the filename is > 36 we'll print
  * the filename on the next line...
  */
 
-            if (((cp1 - line) > 34) || (strlen(cp2) > 37)) {
+            if (((cp1 - line) > 33) || (strlen(cp2) > 36)) {
                 *cp1++ = ' ';
                 *cp1++ = 0xe2;      /* Carriage return symbol */
                 *cp1++ = 0x86;      /* U+2185                 */
