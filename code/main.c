@@ -691,7 +691,7 @@ void dumpdir_tidy(void) {
     }
     if (!swbuffer(auto_bp, 0)) {
         mlwrite("Failed to get to %s!\n", AutoClean_Buffer);
-        return;
+        goto revert_buffer;
     }
 /* A -ve days_allowed means "never". */
     if (autoclean < 0) {
@@ -814,6 +814,7 @@ close_start_fd:
     close(start_fd);
 revert_buffer:
     swbuffer(saved_bp, 0);  /* Assume it succeeds... */
+    zotbuf(auto_bp);
     return;
 }
 
@@ -1333,7 +1334,7 @@ void edinit(char *bname) {
     struct window *wp;
 
     bp = bfind(bname, TRUE, 0);             /* First buffer         */
-    blistp = bfind("/List", TRUE, BFINVS);  /* Buffer list buffer   */
+    blistp = bfind("//List", TRUE, BFINVS); /* Buffer list buffer   */
     if (bp == NULL || blistp == NULL) exit(1);
     wp = (struct window *)Xmalloc(sizeof(struct window));   /* First window */
     curbp = bp;             /* Make this current    */
