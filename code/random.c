@@ -132,8 +132,8 @@ int showcpos(int f, int n) {
     char gl_descr[DLEN] = "";   /* Longer than actually needed... */
     if (bytes_used > 1)
           snprintf(gl_descr, DLEN, " %db/%duc", bytes_used, uc_used);
-    mlwrite( "Line %d/%d Col %d/%d Byte %D/%D (%d%%) %s%s",
-          predlines+1, numlines+1, col, ecol,
+    mlwrite( "Line %d/%d Col %d/%d(%d) Byte %D/%D (%d%%) %s%s",
+          predlines+1, numlines+1, col, ecol, savepos,
           predchars, numchars, ratio, descr, gl_descr);
     return TRUE;
 }
@@ -1335,7 +1335,7 @@ int ggr_style(int f, int n) {
 }
 
 /* Allow us to set whether to re-use a previously prompted-for
- * buffer/function/search name/tring on a reexecute.
+ * buffer/function/search name/string on a reexecute.
  */
 int re_args_exec(int f, int n) {
     UNUSED(f); UNUSED(n);
