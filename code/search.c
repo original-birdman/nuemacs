@@ -2140,6 +2140,26 @@ failed:
     return AMFAIL;
 }
 
+/* Called by step_/fast_scanner at the start of any search to
+ * initialize group info (and clear out any old allocated bits).
+ * Also at the end of replaces() to foget any matches there.
+ */
+static void init_dyn_group_status(void) {
+/* If we allocated any result strings, free them now... */
+    for (int gi = 0; gi < NGRP; gi++) {
+        if (grp_text[gi]) {
+            Xfree(grp_text[gi]);
+            grp_text[gi] = NULL;
+        }
+    }
+/* ...and also initialize dynamic group matching info */
+    for (int gi = 0; gi <= group_cntr; gi++) {
+        match_grp_info[gi] = null_match_grp_info;
+    }
+    group_match_buffer = NULL;
+    return;
+}
+
 /* step_scanner -- Search for a meta-pattern in either direction.
  *  If found, reset the "." to be at the start or just after the match
  *  string, and (perhaps) repaint the display.
@@ -2150,13 +2170,13 @@ failed:
  * int direct;                  which way to go.
  * int beg_or_end;              put point at beginning or end of pattern.
  */
-int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
+static int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
     struct line *curline;   /* current line during scan */
     int curoff;             /* position within current line */
 
-/* The group matches are invalid if we don't succeed */
+/* Remove any old group info */
 
-    group_match_buffer = NULL;
+    init_dyn_group_status();    /* Forget the past */
 
 /* We never actually test in reverse for step_scanner(), so there is no
  * need to toggle beg_or_end here.
@@ -2169,9 +2189,12 @@ int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
 
 /* If we are searching backwards we need to go back one column
  * before looking, otherwise we might match without moving!
+ * But scanmore wants to be able stay where we are for an extended match...
  */
     if (direct == REVERSE)
-         (void)nextgph(&curline, &curoff, NULL, POS_ONLY|REVERSE);
+        (void)nextgph(&curline, &curoff, NULL, POS_ONLY|REVERSE);
+    else if (direct == REVERSE_NOSKIP)
+        direct = REVERSE;
 
     magic_search.start_line = curline;
     magic_search.start_point = curoff;
@@ -2342,7 +2365,7 @@ static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
  * table for each direction.
  * It stores match information in the entry for group 0.
  */
-int fast_scanner(const char *patrn, int direct, int beg_or_end) {
+static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
     char c;                         /* character at current position */
     const char *patptr;             /* pointer into pattern */
     struct line *curline;           /* current line during scan */
@@ -2351,9 +2374,9 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
     int scanoff;                    /* position in scanned line */
     int jump;                       /* next offset */
 
-/* The group matches are invalid if we don't succeed */
+/* Remove any old group info */
 
-    group_match_buffer = NULL;
+    init_dyn_group_status();    /* Forget the past */
 
 /* If we are going in reverse, then the 'end' is actually the beginning
  * of the pattern.  Toggle it.
@@ -2369,7 +2392,6 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
  * Get the character resolving newlines, offset by the pattern length,
  * i.e. the last character of the potential match.
  */
-
     jump = patlenadd;
     while (!fbound(jump, &curline, &curoff, direct)) {
 
@@ -2430,23 +2452,6 @@ int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 fail:;                                  /* continue to search */
     }
     return FALSE;                       /* We could not find a match */
-}
-
-/* Internal routine to initialize these at the start of any search
- */
-static void init_dyn_group_status(void) {
-/* If we allocated any result strings, free them now... */
-    for (int gi = 0; gi < NGRP; gi++) {
-        if (grp_text[gi]) {
-            Xfree(grp_text[gi]);
-            grp_text[gi] = NULL;
-        }
-    }
-/* ...and also initialize dynamic group matching info */
-    for (int gi = 0; gi <= group_cntr; gi++) {
-        match_grp_info[gi] = null_match_grp_info;
-    }
-    return;
 }
 
 /* Whether we should run the back_grapheme code on the first
@@ -2514,8 +2519,6 @@ int forwhunt(int f, int n) {
         obyte_offset = curwp->w.doto;
 /* This must precede group clean-out */
         if (do_preskip) back_grapheme(glyphcount_utf8(group_match(0)) - 1);
-
-        init_dyn_group_status();    /* Forget the past */
 
 /* We are going forwards so check for eob as otherwise the rest
  * of this code (magical and ordinary) loops us round to the start
@@ -2628,8 +2631,6 @@ int backhunt(int f, int n) {
             if (do_preskip) forw_grapheme(glyphcount_utf8(group_match(0)) - 1);
         }
 
-        init_dyn_group_status();    /* Forget the past */
-
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which is just fine).
  * For the slow scan in reverse mode we might need to set an artifical
@@ -2706,37 +2707,82 @@ int backsearch(int f, int n) {
 /* Entry point for isearch.
  * This needs to set-up the patterns for the search to work.
  */
-int scanmore(char *patrn, int dir) {
+static struct line *sm_line = NULL;
+static int sm_off = 0;
+int scanmore(char *patrn, int dir, int next_match, int extend_match) {
     int sts;                /* search status              */
 
-/* Run mcstr to determine which scanner to use.
- * There is no MAGIC mode here, so force it off while we check.
+/* If called with a NULL pattern, just remove group info. */
+    if (!patrn) {
+        init_dyn_group_status();
+        return TRUE;
+    }
+
+/* In terms of matches we are only interested in the length.
+ */
+    int prev_match_len;
+    if (!next_match || !extend_match)
+        prev_match_len = glyphcount_utf8(group_match(0));
+    else
+        prev_match_len = 0;
+
+/* If we aren't in Exact mode we need to run mcstr to determine
+ * which scanner to use.
+ * There is no MAGIC mode here, so force it off whilast we run.
  */
     int real_mode = curwp->w_bufp->b_mode;
     curwp->w_bufp->b_mode &= ~MDMAGIC;
-    mcstr();
-    curwp->w_bufp->b_mode = real_mode;
+    if (curwp->w_bufp->b_mode & MDEXACT) slow_scan = FALSE;
+    else mcstr();   /* Let this decide */
 
+    if (next_match) {   /* get to the other end of the current match */
+/* If this then fails, we have to restore where we were... */
+        sm_line = curwp->w.dotp;    /* Save the current line pointer */
+        sm_off = curwp->w.doto;     /* Save the current offset       */
+        int count = prev_match_len - 1;
+        (dir < 0)? back_grapheme(count): forw_grapheme(count);
+    }
+
+/* If we've been asked to extend the previous match we step
+ * back(forward) to the *start* of the previous match before running.
+ * This is so that t t e finds a match in ...ttte... rather than missing
+ * it by having matched the first "tt" and only trying from the end of
+ * that when the e comes along.
+ */
     if (slow_scan) {
-        if (dir < 0)            /* reverse search?            */
-            sts = step_scanner(mcpat, REVERSE, PTBEG);
-        else                    /* Nope. Go forward           */
+        if (dir < 0) {      /* reverse search? (no preskip needed AT ALL!) */
+            sts = step_scanner(mcpat, REVERSE_NOSKIP, PTBEG);
+        }
+        else {              /* Nope. Go forward (with possible preskip) */
+            if (extend_match) back_grapheme(prev_match_len);
             sts = step_scanner(mcpat, FORWARD, PTEND);
+        }
     }
     else {
         rvstrcpy(tap, patrn);   /* Put reversed string in tap */
         srch_patlen = strlen(patrn);
         setpattern(patrn, tap);
-
-        if (dir < 0)            /* reverse search?            */
+        if (dir < 0) {      /* reverse search? (with possible preskip) */
+/* The +1 is to allow the new character to be found since in fast mode
+ * the scan *is* done in reverse from "here".
+ */
+            if (extend_match) forw_grapheme(prev_match_len + 1);
             sts = fast_scanner(tap, REVERSE, PTBEG);
-        else                    /* Nope. Go forward           */
+        }
+        else {              /* Nope. Go forward (with possible preskip) */
+            if (extend_match) back_grapheme(prev_match_len);
             sts = fast_scanner(patrn, FORWARD, PTEND);
+        }
     }
+    curwp->w_bufp->b_mode = real_mode;
 
     if (!sts) {
         TTputc(BELL);   /* Feep if search fails       */
         TTflush();      /* see that the feep feeps    */
+        if (next_match) {
+            curwp->w.dotp = sm_line;
+            curwp->w.doto = sm_off;
+        }
     }
     return sts;             /* else, don't even try       */
 }
@@ -2983,10 +3029,6 @@ static int replaces(int query, int f, int n) {
 
     int status = TRUE;      /* Default assumption */
 
-/* Mark the group matches as invalid now */
-
-    group_match_buffer = NULL;
-
     if (curbp->b_mode & MDVIEW) {   /* don't allow this command if  */
         status =  rdonly();         /* we are in read only mode     */
         goto end_replaces;
@@ -3183,10 +3225,10 @@ qprompt:
 /* And report the results. */
     mlwrite("%d substitutions", numsub);
 
-/* The group matches are invalid when we leave */
+/* Invalidate the group matches when we leave */
 
 end_replaces:
-    group_match_buffer = NULL;
+    init_dyn_group_status();
     return TRUE;
 }
 

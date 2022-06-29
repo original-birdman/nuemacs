@@ -337,7 +337,7 @@ extern int forwsearch(int f, int n);
 extern int forwhunt(int f, int n);
 extern int backsearch(int f, int n);
 extern int backhunt(int f, int n);
-extern int scanmore(char *, int);
+extern int scanmore(char *, int, int, int);
 extern void setpattern(const char[], const char[]);
 extern int unicode_eq(unsigned int, unsigned int);
 extern int eq(unsigned char bc, unsigned char pc);

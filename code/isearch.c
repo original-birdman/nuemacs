@@ -41,8 +41,6 @@
 #define IS_QUOTE        0x11    /* Quote next character */
 #define IS_REVERSE      0x12    /* Search backward */
 #define IS_FORWARD      0x13    /* Search forward */
-#define IS_VMSQUOTE     0x16    /* VMS quote character */
-#define IS_VMSFORW      0x18    /* Search forward for VMS */
 #define IS_QUIT         0x1B    /* Exit the search */
 #define IS_RUBOUT       0x7F    /* Delete previous character */
 
@@ -59,37 +57,7 @@ static int cmd_buff[CMDBUFLEN]; /* Save the command args here */
 static int cmd_offset;                  /* Current offset into command buff */
 static int cmd_reexecute = -1;          /* > 0 if re-executing command */
 
-
-/* Subroutine to do incremental reverse search.  It actually uses the
- * same code as the normal incremental search, as both can go both ways.
- */
-int risearch(int f, int n) {
-    struct line *curline;       /* Current line on entry        */
-    int curoff;                 /* Current offset on entry      */
-
-/* Remember the initial . on entry: */
-
-    curline = curwp->w.dotp;    /* Save the current line pointer  */
-    curoff = curwp->w.doto;     /* Save the current offset        */
-
-/* Make sure the search doesn't match where we already are:   */
-
-    back_grapheme(1);           /* Back up a character            */
-
-    if (!(isearch(f, -n))) {        /* Call ISearch backwards */
-                                    /* If error in search:    */
-        curwp->w.dotp = curline;    /* Reset line pointer and */
-        curwp->w.doto = curoff;     /* offset to orig value   */
-        curwp->w_flag |= WFMOVE;    /* Say we've moved        */
-        update(FALSE);              /* And force an update    */
-        mlwrite_one(MLbkt("search failed")); /* Say we died */
-    } else
-        mlerase();      /* If happy, just erase the cmd line  */
-    srch_patlen = strlen(pat);
-    return TRUE;
-}
-
-/* Again, but for the forward direction
+/* Incremental search entry - forward direction
  */
 int fisearch(int f, int n) {
     struct line *curline;           /* Current line on entry    */
@@ -99,7 +67,6 @@ int fisearch(int f, int n) {
 
     curline = curwp->w.dotp;        /* Save the current line pointer */
     curoff = curwp->w.doto;         /* Save the current offset       */
-
 /* Do the search */
 
     if (!(isearch(f, n))) {         /* Call ISearch forwards  */
@@ -114,103 +81,9 @@ int fisearch(int f, int n) {
     srch_patlen = strlen(pat);
     return TRUE;
 }
-
-/* The following is a worker subroutine used by the reverse search.  It
- * compares the pattern string with the characters at "." for equality. If
- * any characters mismatch, it will return FALSE.
- *
- * This isn't used for forward searches, because forward searches leave "."
- * at the end of the search string (instead of in front), so all that needs to
- * be done is match the last char input.
- *
- * char *patrn;                 String to match to buffer
- */
-static int match_pat(char *patrn) {
-/* See if the pattern string matches string at "."   */
-    int buffchar;           /* character at current position      */
-    struct line *curline;   /* current line during scan           */
-    int curoff;             /* position within current line       */
-
-/* Setup the local scan pointer to current "." */
-
-    curline = curwp->w.dotp;    /* Get the current line structure  */
-    curoff = curwp->w.doto;     /* Get the offset within that line */
-
-/* Top of per character compare loop: */
-
-/* Loop for all characters in patrn   */
-    for (unsigned int i = 0; i < strlen(patrn); i++) {
-        if (curoff == llength(curline)) {   /* If at end of line */
-            curline = lforw(curline);       /* Skip to the next line */
-            curoff = 0;         /* Start at the beginning of the line */
-            if (curline == curbp->b_linep)
-                return FALSE;   /* Abort if at end of buffer */
-            buffchar = '\n';    /* And say the next char is NL */
-        } else
-            buffchar = lgetc(curline, curoff++);    /* Get next char */
-        if (!eq(buffchar, patrn[i]))    /* Is it what we're looking for? */
-            return FALSE;               /* Nope, just punt it then       */
-    }
-    return TRUE;            /* Everything matched? Let's celebrate */
-}
-
-/* Trivial routine to insure that the next character in the search string is
- * still true to whatever we're pointing to in the buffer.  This routine will
- * not attempt to move the "point" if the match fails, although it will
- * implicitly move the "point" if we're forward searching, and find a match,
- * since that's the way forward isearch works.
- *
- * If the compare fails, we return FALSE and assume the caller will call
- * scanmore or something.
- *
- * int chr;             Next unicode char to look for
- * char *patrn;         The entire search string (incl chr)
- * int dir;             Search direction
- */
-static int checknext(int chr, char *patrn, int dir) {
-/* Check next character in search string */
-    struct line *curline;   /* current line during scan           */
-    int curoff;             /* position within current line       */
-    unicode_t buffchar;     /* character at current position      */
-    int status;             /* how well things go                 */
-    int nb;
-
-/* Setup the local scan pointer to current "." */
-
-    curline = curwp->w.dotp;    /* Get the current line structure     */
-    curoff = curwp->w.doto;     /* Get the offset within that line    */
-
-    if (dir > 0) {              /* If searching forward               */
-        if (curoff == llength(curline)) {   /* If at end of line  */
-            curline = lforw(curline);       /* Skip to the next line */
-            if (curline == curbp->b_linep)
-                return FALSE;           /* Abort if end of buffer */
-            curoff = 0; /* Start at the beginning of the line  */
-            buffchar = '\n';            /* And say the next char is NL */
-            nb = 1;
-        }
-        else {                  /* Allow for Unicode */
-            nb = utf8_to_unicode(curline->l_text, curoff, curline->l_used,
-                 &buffchar);
-            curoff += nb;
-        }
-/* Is it what we're looking for?
- * If yes, set the buffer's point to the matched character and say
- * that we've moved
- */
-        if (nb == 1)
-            status = eq(buffchar, chr);
-        else
-            status = unicode_eq(buffchar, chr);
-        if (status != 0) {
-            curwp->w.dotp = curline;
-            curwp->w.doto = curoff;
-            curwp->w_flag |= WFMOVE;
-        }
-        return status;              /* And return the status       */
-    }
-    else                            /* Else, if reverse search:    */
-        return match_pat(patrn);    /* See if we're in right place */
+/* Reverse direction uses same code, just reverses direction */
+int risearch(int f, int n) {        /* Same as fisearch in reverse */
+    return fisearch(f, -n);
 }
 
 /* Routine to prompt for I-Search string.
@@ -219,9 +92,8 @@ static int promptpattern(char *prompt) {
     char tpat[NPAT + 20];
 
     strcpy(tpat, prompt);       /* copy prompt to output string */
-    strcat(tpat, " " MLpre);    /* build new prompt string */
-    expandp(pat, &tpat[strlen(tpat)], NPAT / 2);    /* add old pattern */
-    strcat(tpat, MLpost "<Meta>: ");
+    strcat(tpat, MLbkt("<Meta>"));
+    strcat(tpat, " ");
 
 /* check to see if we are executing a command line */
     if (!clexec) mlwrite_one(tpat);
@@ -290,15 +162,28 @@ void reeat(int c) {
     term.t_getchar = uneat;             /* Replace it with ours          */
 }
 
+/* Redisplay the given character at the given column, in reverse video.
+ * The col gets set back to where it was, so no need to return anything.
+ */
+static void hilite(int c, int col) {
+    col -= utf8char_width(c);   /* Set it back the correct amount */
+/* Need force_movecursor as movecursor thinks we haven't moved */
+    force_movecursor(term.t_nrow, col);
+    TTrev(1);
+    (void)echo_char(c, col);    /* Character in REV video   */
+    TTrev(0);
+    return;
+}
+
 /* Subroutine to do an incremental search.  In general, this works similarly
  * to the older micro-emacs search function, except that the search happens
  * as each character is typed, with the screen and cursor updated with each
  * new search character.
  *
  * While searching forward, each successive character will leave the cursor
- * at the end of the entire matched string.  Typing a Control-S or Control-X
- * will cause the next occurrence of the string to be searched for (where the
- * next occurrence does NOT overlap the current occurrence).  A Control-R will
+ * at the end of the entire matched string.  Typing a Control-S  will cause
+ * the next occurrence of the string to be searched for (where the next
+ * occurrence does NOT overlap the current occurrence).  A Control-R will
  * change to a backwards search, META will terminate the search and Control-G
  * will abort the search.  Rubout will back up to the previous match of the
  * string, or if the starting point is reached first, it will delete the
@@ -306,15 +191,15 @@ void reeat(int c) {
  *
  * While searching backward, each successive character will leave the cursor
  * at the beginning of the matched string.  Typing a Control-R will search
- * backward for the next occurrence of the string.  Control-S or Control-X
- * will revert the search to the forward direction.  In general, the reverse
+ * backward for the next occurrence of the string.  Control-S will revert
+ * the search to the forward direction.  In general, the reverse
  * incremental search is just like the forward incremental search inverted.
  *
  * In all cases, if the search fails, the user will be feeped, and the search
  * will stall until the pattern string is edited back into something that
  * exists (or until the search is aborted).
+ * Leave via a common exit so that group info can be invalidated.
  */
-
 int isearch(int f, int n) {
     UNUSED(f);
     int status;             /* Search status */
@@ -333,14 +218,14 @@ int isearch(int f, int n) {
     cmd_reexecute = -1;     /* We're not re-executing (yet?)      */
     cmd_offset = 0;         /* Start at the beginning of the buff */
     cmd_buff[0] = '\0';     /* Init the command buffer            */
-    strncpy(pat_save, pat, NPAT);   /* Save the old pattern string   */
-    curline = curwp->w.dotp;        /* Save the current line pointer */
+    strcpy(pat_save, pat);  /* Save the old pattern string        */
+    curline = curwp->w.dotp; /* Save the current line pointer     */
     curoff = curwp->w.doto; /* Save the current offset            */
     init_direction = n;     /* Save the initial search direction  */
 
 /* This is a good place to start a re-execution: */
 
-    start_over:
+start_over:
 
 /* Ask the user for the text of a pattern */
     col = promptpattern("ISearch:");    /* Prompt, remember the col */
@@ -358,20 +243,25 @@ int isearch(int f, int n) {
 /* Yup, find the grapheme length and re-echo the string    */
         cpos = 0;
         int plen = strlen(pat);
+        int final_char = '!';
         while (pat[cpos] != 0) {
             unicode_t uc;
             cpos += utf8_to_unicode(pat, cpos, plen, &uc);
             col = echo_char(uc, col);
+            final_char = uc;
 	}
 
         if (c == IS_REVERSE) {      /* forward search?        */
-            n = -1;             /* No, search in reverse  */
-            back_grapheme(1);   /* Be defensive about EOB */
+            n = -1;                 /* No, search in reverse  */
+            if (curwp->w.dotp == curbp->b_linep ) {
+                back_grapheme(1);   /* Be defensive about EOB */
+            }
         }
         else
-            n = 1;              /* Yes, search forward    */
-        status = scanmore(pat, n);      /* Do the search         */
-        c = ectoc(expc = get_char());   /* Get another character */
+            n = 1;                  /* Yes, search forward    */
+        status = scanmore(pat, n, FALSE, FALSE);    /* Do the search */
+        if (!status) hilite(final_char, col);
+        c = ectoc(expc = get_char()); /* Get another character */
     }
 
 /* Top of the per character loop */
@@ -380,12 +270,14 @@ int isearch(int f, int n) {
                         /* Check for special characters first: */
                         /* Most cases here change the search */
 
-        if (expc == metac)  /* Want to quit searching?    */
-            return TRUE;    /* Quit searching now         */
-
-        switch (c) {        /* dispatch on the input char */
-        case IS_ABORT:      /* If abort search request    */
-            return FALSE;   /* Quit searching again       */
+        if (expc == metac) {    /* Want to quit searching?    */
+            status = TRUE;
+            goto end_isearch;   /* Quit searching now         */
+        }
+        switch (c) {            /* dispatch on the input char */
+        case IS_ABORT:          /* If abort search request    */
+            status = FALSE;
+            goto end_isearch;   /* Quit searching again       */
 
         case IS_REVERSE:    /* If backward search         */
         case IS_FORWARD:    /* If forward search          */
@@ -393,7 +285,11 @@ int isearch(int f, int n) {
                 n = -1;             /* Set the reverse direction  */
             else                    /* Otherwise,         */
                 n = 1;             /*  go forward         */
-            status = scanmore(pat, n);      /* Start again   */
+/* This calls asks for the *next* match, not a continuation of the
+ * current one.
+ */
+            status = scanmore(pat, n, TRUE, FALSE); /* Start again   */
+            if (!status) hilite('!', col+1);  /* No further match */
             c = ectoc(expc = get_char());   /* Get next char */
             continue;       /* Go continue with the search */
 
@@ -410,8 +306,10 @@ int isearch(int f, int n) {
 
         case IS_BACKSP:     /* If a backspace:      */
         case IS_RUBOUT:     /*  or if a Rubout:     */
-            if (cmd_offset <= 1)    /* Anything to delete?  */
-                return TRUE;        /* No, just exit        */
+            if (cmd_offset <= 1) {  /* Anything to delete?  */
+                status = TRUE;      /* No, just exit        */
+                goto end_isearch;
+            }
             --cmd_offset;           /* Back up over Rubout  */
             cmd_buff[--cmd_offset] = '\0';  /* Yes, delete last char */
             curwp->w.dotp = curline;        /* Reset the line pointer */
@@ -426,7 +324,8 @@ int isearch(int f, int n) {
         default:                /* All other chars        */
             if (c < ' ') {      /* Is it printable? Nope. */
                 reeat(c);       /* Re-eat the char        */
-                return TRUE;    /* And return the last status */
+                status = TRUE;  /* Return the previous status */
+                goto end_isearch;
             }
         }               /* Switch */
 
@@ -449,7 +348,8 @@ int isearch(int f, int n) {
             if (cpos >= NPAT) {     /* too many chars in string?  */
                                     /* Yup.  Complain about it    */
                 mlwrite_one("? Search string too long");
-                return TRUE;        /* Return an error            */
+                status = TRUE;       /* Return an error            */
+                goto end_isearch;
             }
         }
         pat[cpos] = 0;              /* null terminate the buffer  */
@@ -459,10 +359,13 @@ int isearch(int f, int n) {
             TTflush();              /* see that the feep feeps    */
         }
         else                        /* Otherwise, we must have won */
-            if (!(status = checknext(c, pat, n)))   /* See if match  */
-             status = scanmore(pat, n); /* or find the next match */
+             status = scanmore(pat, n, FALSE, TRUE);    /* find next match */
+        if (!status) hilite(c, col);
         c = ectoc(expc = get_char());   /* Get the next char        */
     }                               /* for {;;} */
+end_isearch:
+    (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
+    return status;
 }
 
 /* routine to echo i-search characters

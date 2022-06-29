@@ -185,6 +185,7 @@ enum cmplt_type {
 #define PTEND   1               /* Leave the point at the end on search         */
 #define FORWARD 0               /* forward direction            */
 #define REVERSE 1               /* backwards direction          */
+#define REVERSE_NOSKIP 2        /* Special for scanmore -> step_scanner */
 
 #define FIOSUC  0               /* File I/O, success.           */
 #define FIOFNF  1               /* File I/O, file not found.    */
