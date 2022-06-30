@@ -1892,7 +1892,13 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
  */
 static int check_next(struct line **cline, int *coff, struct magic *mcptr) {
 
-    int used;
+/* Avoid a possible "may be used initialized" for used.
+ * Since we aren't using -Winit-self we can initialize it to itself
+ * and the optimizer will optimize it away (!?!).
+ * From Flexo's answer at:
+ *   https://stackoverflow.com/questions/5080848/disable-gcc-may-be-used-uninitialized-on-a-particular-variable
+ */
+    int used = used;
     struct grapheme *gc = nextgph(cline, coff, &used, FORWARD);
 /* Check that there *is* a next character! */
     if (gc->uc == UEM_NOCHAR) {
