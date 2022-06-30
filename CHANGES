@@ -3150,7 +3150,7 @@ estruct.h
     By default all "extended" reexecutes are on.
     They can be manipulated by:
         args-in-reexec arg1 arg2 arg3 ....
-        Args are process in the order found.
+        Args are processed in the order found.
         None (case-insensitive) turns all off
         All (case-insensitive) turns all on
         + means turn it on any succeeding commands
@@ -4564,6 +4564,257 @@ version.h
 etc/uemacs.hlp
     Update to GGR4.161
 
+========== GGR4.162
+
+random.c
+    Add a comment as to what re_args_exec does.
+
+file.c
+    Change the unqname() code to remove a "may be truncated" compilation
+    warning.
+
+etc/czech.cmd
+    Change (correct) e~~ -> U+0115 (breve) to be e~~ -> U+011b (caron).
+
+exec.c
+etc/uemacs.rc
+    Display the name of what was not found for absent procedure, buffer
+    and label searches. [exec.c]
+    Allow labels to be the result of function evaluations. [exec.c]
+    Rework _mytoggle-mode to use an evaluated !goto rather than
+    successive tests. [etc/uemacs.rc]
+
+search.c
+    If we are in reexecute mode for a forward magic search and the
+    previous match was zero-length, step-forward 1 place first, so we
+    don't get stuck in the same place. And step back on no match.
+
+search.c
+    In check_next() check that there *is* a next character to check, so
+    we don't loop round at the end of a buffer on wildcard magic buffer
+    matches.
+
+search.c
+    In mgpheq() don't return mid-function. Set res and break so that the
+    negate and free code at the end can run.
+
+autotest/dump_mc.debug
+    Change i, j loop variables to avoid namespace clashes.
+
+names.c
+search.c
+    Re-add hunt-forward and hunt-backward to the name binding list, but
+    mark them as not-interactive (so can't be bound to keys) [names.c]
+    Remove check for inreex in forwhunt() in zero-length match handling.
+    [search.c]
+    This allows hunt-forward (hunt-backward) in a macro to work as
+    reexecing a search, while allowing a debug write statement in between.
+
+search.c
+    Cater for \n, \r, \f and \t within character classes as well as
+    outside of them.
+    This allows you to put \n in a negative class match to limit it to
+    matching on one line.
+
+
+exec.c
+globals.c
+main.c
+names.c
+search.c
+edef.h
+estruct.h
+    Added srch_can_hunt flag to ensure that a repeated search
+    string is valid. [edef.h, globals.c]
+    Added search_ok option to functions which do not affect dot
+    [estruct.h, names.c]
+    Force search_ok on for stored procedures, as individual commands
+    will "do the right thing". [exec.c]
+    Set srch_can_hunt to valid direction after a successful search
+    [search.c]
+    Unset srch_can_hunt if executed command is not a search_ok one.
+    [main.c]
+
+autotest/zero-length-magic.sh
+    New test file for testing zero-length re-matches in Magic mode.
+
+search.c
+autotest/zero-length-magic.sh
+    Changed forwhunt/backhunt to move to "other end +1" of the
+    previously found search before searching again.
+    This allows for overlapping matches to be found (e.g. "issi" twice
+    in "mississippi").
+    This handles the zero-length match handling repeats as well.
+    Update the zero-length-magic test script to reflect the additional
+    match from allowing overlaps.
+
+autotest/search-groups.sh
+autotest/search-props.sh
+autotest/search-u_hex.sh
+    Added a missing "execute-procedure report-status" line to each.
+    The tests were being done and counted, but not reported.
+
+search.c
+    Removed the move to "other end" in backhunt as it isn't required
+    (we're already at the right end).
+    Removed the move to "other end" in forwhunt on first call via
+    forwsearch, as there is nothing to skip then.
+    It now passes all of its tests again.
+
+eval.c
+    Unset srch_can_hunt when variables that affect the state of text are
+    modified.
+    curcol, curline, curchar, cwline, cmode and line.
+
+utf8.c
+utf8.h
+    Add glyphcount_utf8(), which gets the "glyph-count" for a utf8
+    string (uclen_utf8 gets the unicode character count).
+
+exec.c
+    In docmd() and namedcmd(), unset the srch_can_hunt flag if the
+    called function doesn't allow it
+
+efunc.h
+search.c
+    Changed nextch() to nextbyte(), for clarity.
+    Make search, search (with same string) behave in the same way as
+    Esc2 search. i.e. it allows overlapping matches.
+    Since forw/backscanner() no longer loops, moved the remaining code
+    into forw/backhunt() (which now loops).
+    Fixed the pre-skipping code to cater for slow/fast scan differences
+    (fast always needs it, slow doesn't for back searching).
+
+eval.c
+estruct.h
+evar.h
+    Add $srch_can_hunt system variable, to allow setting the flag in test
+    macros. Also globals.c
+
+autotest/search-classes_in_closures.sh
+    Wipe out memory of a search, now we detect overlapping ones.
+
+autotest/search-props.sh
+    Up the match count from 9 to 10, as an additional overlapping one is
+    now found.
+
+autotest/zero-length-magic.sh
+    Set $srch_can_hunt  to 1 before all hunt-forward calls, as we switch
+    buffers when reporting, which wipes out the flag (but we know it is
+    OK to run it).
+
+display.c
+globals.c
+input.c
+search.c
+estruct.h
+etc/uemacs.rc
+    Add R(eport) mode. When on and in Magic mode, report the matchlen
+    and match (<<multiline>> if match contains \n) in the minibuffer.
+
+search.c
+    Fix group_match to just return any allocated match, not make a new
+    one on each call(!) (a memory leak).
+
+eval.c
+globals.c
+search.c
+edef.h
+estruct.h
+evar.h
+    Add $srch_overlap system variable, to determine whether we want
+    successive searches to find overlapping matches. Defaults to true.
+    Use it in search.c to affect the actual search.
+    Modified group_match fix.
+    Correct setting of srch_can_hunt (set it to given value, not 1)
+    [eval.c]
+
+search.c
+    Corrected slow_scan setting. Only turn it on in mcstr if the
+    original search string cannot be used literally.
+    Added can_repeat to \n, \r, etc. mapping in mcstr() and mark them
+    for slow_scan.
+    Added mc_alloc to indicate whether mcpat has allocated strings to
+    be freed.
+
+search.c
+    Simplified the delete/replace logic in delins() for replaces().
+    NOTE that the replaces() code does NOT use any srch_overlap setting,
+    as that might mean it finds a match involving the text it has just
+    added as a replacement. Which could be confusing and is highly
+    unlikely to be intended or useful.
+
+display.c
+efunc.h
+    Fix TTput_1uc() to handle character widths > 1.
+    Added backcol_cursor().
+
+isearch.c
+search.c
+efunc.h
+estruct.h
+    Fixed up scanmore() to handle preskips for incremental searching
+    and ensure that Magic mode is off when i-searching. [search.c]
+    Make risearch() just call fisearch() with a reversed direction.
+    Remove match_pat() and checknext() functions - just let scanmore()
+    handle everything.
+    Don't add previous search string to the prompt, as it is never used.
+    [isearch.c]
+    On a failure reverse-highlight the last character (which caused the
+    failure). [isearch.c]
+    Added two parameters to scanmore() to indicate when we want the next
+    match and to extend the current match. [efunc.h, isearch.c,
+    search.c]
+    Enable scanmore(0 to tell step_scanner() not to preskip 1 for a
+    reverse search. [search.c, estruct.h]
+    Mark step_scanner() and fast_scanner() static functions. [search.c]
+    Make fast_/slow_scanner() call init_dyn_group_status() at their
+    start. Also call this at the end of replaces(). [search.c]
+    Make isearch() remove group match info as it returns. [isearch.c]
+
+buffer.c
+main.c
+    Correct incorrect logic in killbuffer() when deleting invisible
+    buffers. [buffer.c]
+    Remove the AutoClean_Buffer after start-up. Rename /List to //List
+    (so it is ignored on invisible buffer deletion) [main.c]
+
+random.c
+    Add the byte offset to the information line (after the column info)
+
+
+buffer.c
+globals.c
+    Tidied up list-buffer output alignment after adding the Report mode.
+
+isearch.c
+search.c
+efunc.h
+    Add handling of //incremental-debug buffer so that test scripts can
+    be written for incremental searching and query replace.
+    This handles the 1-char replies expected alomng with defining a
+    user-procedure to run the relevant test(s).
+    Re-ordered some  isearch.c code.
+
+autotest/incremental-search.sh
+autotest/query-replace.sh
+    Added two simple scripts to test incremental searching and query
+    replace. 
+
+search.c
+    Avoid a report of "may be used uninitialized" for used.
+
+===== READY FOR THIS???
+
+../CHANGES
+../PREREQUISITES
+version.h
+etc/uemacs.hlp
+    Updated Magic mode help to mention \n, \r, \f and \t now allowed in
+    classes and added comments about a negative class possibly matching
+    newline unexpectedly and a repeat search starting "one in" from the
+    other end of the previous match.
+    Updated info on building libbacktrace.
+    Update to GGR4.162
+
 ==========
-
-

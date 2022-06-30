@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.161 Help Index     (12 May 2021)
+=>                   nuEmacs GGR4.162 Help Index     (30 June 2022)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -116,7 +116,7 @@ Execute named command . Meta  X     ::  be bound to Esc.
 You can specify a numeric argument to a command by
     Meta nnn
 before the command, when nnn is a number (negative ones are allowed).
-For many comands this will beb taken as "run it nnn times". For a few it
+For many commands this will be taken as "run it nnn times". For a few it
 has a special meaning, e.g. for write-message, 2 means "write to stdout,
 not the message line (useful for debugging) and for goto-line it
 specifies which line to go to.
@@ -238,11 +238,20 @@ EQUIV   Has an effect in Magic mode only. Compare characters that are
         This uses the NFKC method by default, but can be switched to
         NFC, NFD or NFKD by setting $equiv_type.
 
+There is a system variable $srch_overlap which determines whether
+overlapping matches should be found on repeat searches.  When on (the
+default) this means that a search for "issi" in "mississippi" will find
+the second occurrence as well as the first.
+
+There is also a REPORT mode which, when on, will note in the minibuffer
+what the actual match was when in MAGIC mode (any multi-line match will
+just be reported as such).
+
 MAGIC mode details.
     This enables the following regular expression features when
     searching. It works for search-forward (Meta S), search-reverse
     (Meta R), replace-string (^R) and query-replace-string (Meta %).
-    It does not work in incremental-search (Meta ^I).
+    It DOES NOT work in incremental-search (Meta ^I).
 
 ^ and $
     These match the start and end of a line respectively.
@@ -261,7 +270,7 @@ MAGIC mode details.
     ${n} for the contents that matched the corresponding group.
     Groups are counted from 1 based on their opening "(".
     Groups may be nested.
-    The entire match is found in ${0}.
+    The ENTIRE match is found in ${0}.
     The value of ${n} for any group that didn't take place in the final
     match is "", the empty string.
     There is a &grp function, so you can get the text of a matched group
@@ -273,7 +282,7 @@ MAGIC mode details.
     search, then use those.
     NOTE that replace-string and query-replace-string will never leave
     any valid group information after they have run as they themselves
-    modify the current buffer themselves.
+    modify the current buffer.
 
 Repeats
     You can use *, ?, + and {m,n} for repeats of the preceding entity
@@ -293,19 +302,26 @@ Repeats
     Denotes a character class.
     A character class is matched against a single grapheme and contains
     a list of possible options. If any option matches the class matches.
-    It may contain characters, properties, \d, \s, \S, \w, \W and \k{}
-    entries.
+    It may contain characters, properties, \n, \r, \f, \t, \d, \s, \S,
+    \w, \W and \k{} entries.
     You can specify a range of characters with, e.g., "a-e", which would
     match a, b, c, d, or e. There is no case-folding on ranges, as
     non-ASCII case-mapping doesn't fit well with ranges. If "-" is the
     first or last character in the [...] it is taken literally.
     If the first character after the opening [ is ] then it is taken
-    literally. So you cannot have an empty class.
+    literally. (So you cannot have an empty class.)
     If the first character after the opening [ is ^ then the result is
     negated.
+    IMPORTANT NOTE!!!!
+    A Magic search can match text that crosses a newline. As a result a
+    negative character class will match a newline unless you add it (or
+    mention a property of it) to the negated list.
+
+.
+    Match any grapheme (EXCEPT newline)
 
 \X
-    Match any grapheme (including newline)
+    Match any grapheme (INCLUDING newline)
 
 \d
     Match any numeric digit. (Actually a short-cut for \p{Nd}).
@@ -342,6 +358,31 @@ Repeats
     So \\ is a literal "\" and hence things like \\X become the literal
     string "\X".
 
+NOTE
+When re-execing a search the start point for the search is one character
+in from the "other end" of the current match (if $srch_overlap is set).
+This means that if you get a zero-length match, which is possible in
+magic mode, then a repeat will not stay stuck at the current location.
+You can achieve the same within a macro by calling search-forward,
+writing some information out (but NOT moving point) then calling
+hunt-forward, repeatedly (and the same with search-reverse,
+hunt-backward.)
+
+"Normal" searching can go in either direction and $srch_overlap
+determines whether overlapping matches will be reported.  You will be
+positioned at the "end" of each match (in the direction of the search).
+
+(Query)-Replace searching only goes in the forward direction with no
+overlapping matches (and any replacement string is not part of the next
+search).  After each match you will be at the start of what would be
+replaced.
+
+Incremental search does not use Magic mode, even if it is on for the
+buffer.  After each match you will be at the left of what has so far
+matched.  If the next incremental character does not match it will be
+highlighted (reverse video) in the prompt.  One level of back-tracking
+allowed.
+
 -------------------------------------------------------------------------------
 =>                      ACCESSING THE OPERATING SYSTEM
 Quick exit ............ Meta  Z     ::  Write out all changed buffers and exit.
@@ -369,7 +410,7 @@ You may set variables within macros.
 
 User variables begin with a % (e.g. %var1) and can be accessed by all
 buffers (including the minibuffer prompting line).
-You can have up to 64 User variabels at a time.
+You can have up to 64 User variables at a time.
 
 Buffer variables begin with a .(dot) (e.g. .var1) and can only be
 accessed by an executing buffer and are local to each buffer. So .var1
@@ -404,12 +445,12 @@ Scrolling enabled ..... $scroll     ::  TRUE, FALSE, can only be unset
 Scrolling movement .... $jump       ::  # lines, default 0, 0 = 1/2 page
 Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
 
-Others (ommtting system-use only ones)...
+Others (omitting system-use only ones)...
 
     $pagelen .............. number of lines used by editor
     $curcol ............... current column pos of cursor
     $curline .............. current line in file
-    $flicker .............. flicker supression
+    $flicker .............. flicker suppression
     $curwidth ............. current screen width
     $cbufname ............. current buffer name
     $cfname ............... current file name
@@ -443,7 +484,7 @@ Others (ommtting system-use only ones)...
     $tab .................. tab 4 or 8
     $scroll ............... scroll enabled
     $inmb ................. In mini-buffer (read only)
-    $fcol ................. first displayed column in curent window
+    $fcol ................. first displayed column in current window
     $hjump ................ horizontal screen jump size
     $hscroll .............. horizontal scrolling flag
     $yankmode ............. mode for yank (old/gnu)
@@ -575,7 +616,7 @@ $autodos
 $showdir_tokskip
     The number of tokens to skip in ls output to get a file-name
     when in directory-browsing mode.
-    Set to 8 in teh standard uemacs.rc file and is unlikely to need
+    Set to 8 in the standard uemacs.rc file and is unlikely to need
     any other value.
 
 $showdir_opts

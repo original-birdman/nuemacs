@@ -12,7 +12,7 @@
 #else
 #define PROGRAM_NAME_LONG "nuEmacs"
 #endif
-#define VERSION "GGR4.161"
+#define VERSION "GGR4.162"
 
 /* Print the version string. */
 void version(void);

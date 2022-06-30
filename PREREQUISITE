@@ -25,6 +25,9 @@ The library is available at
     https://github.com/ianlancetaylor/libbacktrace
 
 Download the zip file, unpack, run ./configure and make.
+You have to enable shared libraries if you want them by adding
+--enabled-shared=yes.
+
 You may then either:
 
  o Install this to the system (by default /usr/local/lib).  The build
