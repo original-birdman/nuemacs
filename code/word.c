@@ -36,7 +36,7 @@ int wrapword(int f, int n)
 {
     UNUSED(f); UNUSED(n);
     int cnt;        /* size of word wrapped to next line */
-    int c;          /* charector temporary */
+    int c;          /* character temporary */
 
 /* Backup from the <NL> 1 char */
     if (back_grapheme(1) <= 0) return FALSE;
@@ -444,6 +444,7 @@ int inword(void) {
             }
         }
     }
+    if (zw_break) return FALSE;
 
 /* We only look at the base character to determine whether this is a
  * word character.
