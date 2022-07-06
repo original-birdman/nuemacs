@@ -68,13 +68,6 @@
 
 #define UNIX    (BSD | USG)
 
-#define VT220   UNIX
-#define VT100   0
-
-#define ANSI    0
-#define VT52    0
-#define TERMCAP UNIX
-
 /*      Configuration options   */
 
 #define CLRMSG  0  /* space clears the message line with no insert */

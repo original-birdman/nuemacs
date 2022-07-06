@@ -19,7 +19,6 @@
 #include "edef.h"
 #include "efunc.h"
 
-#if TERMCAP
 #if !defined(__MSYS__)
 #include <curses.h>
 #include <term.h>
@@ -313,4 +312,3 @@ static void tcapbeep(void) {
 static void putpad(char *str) {
         tputs(str, 1, ttputc);
 }
-#endif /* TERMCAP */

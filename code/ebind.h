@@ -153,7 +153,6 @@ struct key_tab_init init_keytab[] = {
     {META|'Z',          quickexit       },
     {META|0x7F,         delbword        },
 
-#if VT220
     {SPEC|'1',          fisearch        }, /* VT220 keys   */
     {SPEC|'2',          yank            },
     {SPEC|'3',          killregion      },
@@ -164,15 +163,12 @@ struct key_tab_init init_keytab[] = {
     {SPEC|'B',          forwline        },
     {SPEC|'C',          forwchar        },
     {SPEC|'D',          backchar        },
-    {SPEC|'c',          metafn          },
     {SPEC|'d',          backchar        },
     {SPEC|'e',          forwline        },
     {SPEC|'f',          gotobob         },
     {SPEC|'h',          help            },
-    {SPEC|'i',          cex             },
-#endif
 
-    {0x7F,              backdel         },
+    {0x7F,              backdel         },  /* Delete Key */
 
 /* Special internal bindings */
     {SPEC|META|'W',     wrapword        }, /* called on word wrap */
