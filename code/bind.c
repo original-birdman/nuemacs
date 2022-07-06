@@ -160,7 +160,6 @@ static unsigned int stock(char *keyname) {
  * int mflag;           going for a meta sequence?
  */
 static unsigned int getckey(int mflag) {
-    unsigned int c;         /* character fetched */
     char tok[NSTRING];      /* command incoming */
 
 /* Check to see if we are executing a command line */
@@ -169,10 +168,9 @@ static unsigned int getckey(int mflag) {
         return stock(tok);
     }
 
-/* Or the normal way */
-    if (mflag) c = get1key();
-    else       c = getcmd();
-    return c;
+/* Or from user input */
+
+    return (mflag)? get1key(): getcmd();
 }
 
 int deskey(int f, int n) {      /* describe the command for a certain key */
@@ -187,7 +185,12 @@ int deskey(int f, int n) {      /* describe the command for a certain key */
 /* Get the command sequence to describe.
  * Change it to something we can print as well and dump it out.
  */
-    cmdstr(c = getckey(FALSE), outseq);
+    c = getckey(FALSE);
+    if (c == 0) {
+        mlwrite_one("Can't parse key string!");
+        return FALSE;
+    }
+    cmdstr(c, outseq);
     mlputs(outseq);
     mlputs(" ");
 
@@ -448,6 +451,10 @@ int bindtokey(int f, int n) {
     mflag = ((kfunc == metafn) || (kfunc == cex) ||
              (kfunc == unarg)  || (kfunc == ctrlg));
     c = getckey(mflag);
+    if (c == 0) {
+        mlwrite("Can't parse key for: %s: ", nm_info->n_name);
+        return FALSE;
+    }
 
 /* Only allow ASCII keys (and modifiers...).
  * Other unicode characters might be typeable on a keyboard, but these
@@ -557,6 +564,10 @@ int unbindkey(int f, int n) {
 
 /* Get the command sequence to unbind */
     c = getckey(FALSE);     /* get a command sequence */
+    if (c == 0) {
+        mlwrite_one("Can't parse key string!");
+        return FALSE;
+    }
 
 /* Change it to something we can print as well */
     cmdstr(c, outseq);
@@ -1118,6 +1129,10 @@ int buffertokey(int f, int n) {
 /* get the command sequence to bind */
 
     c = getckey(FALSE);
+    if (c == 0) {
+        mlwrite("Can't parse key for: %s: ", bname);
+        return FALSE;
+    }
 
 /* Only allow ASCII keys (and modifiers...).
  * Other unicode characters might be typeable on a keyboard, but these
