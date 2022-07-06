@@ -728,100 +728,144 @@ static int ensure_uppercase(int c) {
  *         Process all applicable prefix keys
  */
 
+#define CSI 0x9b
+
 int getcmd(void) {
     int c;                  /* fetched keystroke */
-#if VT220
-    int d;                  /* second character P.K. */
-    int cmask = 0;
-#endif
-    c = get1key();          /* get initial character */
+    int ctlx = FALSE;
+    int meta = FALSE;
 
-#if VT220
-proc_metac:
-    if (c == 128+27)        /* CSI - ~equiv to Esc[ */
-        goto handle_CSI;
-#endif
+/* Keep going until we return something */
 
-    if (c == (CONTROL | '[')) {     /* Process META prefix */
-        c = get1key();
-#if VT220
-        if (c == '[' || c == 'O') { /* CSI P.K. */
-handle_CSI:
-            c = get1key();
-            if (c >= 'A' && c <= 'D') return SPEC | c | cmask;
-            if (c >= 'E' && c <= 'z' && c != 'i' && c != 'c')
-                return SPEC | c | cmask;
-            d = get1key();
-            if (d == '~')   /* ESC [ n ~   P.K. */
-                return SPEC | c | cmask;
-            switch (c) {    /* ESC [ n n ~ P.K. */
-            case '1':
-                c = d + 32;
-                break;
-            case '2':
-                c = d + 48;
-                break;
-            case '3':
-                c = d + 64;
-                break;
-            default:
-                c = '?';
-                break;
+    while ((c = get1key())) {       /* Extra ()s for gcc warniing */
+/* Esc-O is really SS3, but cursor keys often send Esc-O A|B|C|D so it
+ * helps to add to in here and treat it as CSI.
+ * This does mean that if you bind a function to Esc-O you have to use
+ * o (lower-case) to invoke it.
+ */
+        if (meta && ((c == '[') | (c == 'O'))) {
+            meta = FALSE;
+            goto process_CSI;
+        }
+        if (c == CSI) goto process_CSI;
+        if (c == (CONTROL|'X')) {
+/* Trap Esc-^x and ^x-^x */
+            if (meta) return META|CONTROL|'X';
+            if (ctlx) return CTLX|CONTROL|'X';
+            ctlx = TRUE;
+            continue;
+        }
+        if (c == (CONTROL|'[')) {
+/* Trap Esc-Esc. Add in Ctlx prefix, if set */
+            if (meta) {
+                if (ctlx) return CTLX|META|CONTROL|'[';
+                else      return META|CONTROL|'[';
             }
-            if (d != '~')   /* eat tilde P.K. */
-                get1key();
-            if (c == 'i') { /* DO key    P.K. */
-                c = ctlxc;
-                goto proc_ctlxc;
-            }
-            else if (c == 'c')    /* ESC key   P.K. */
-                    c = get1key();
-                else
-                    return SPEC | c | cmask;
+            meta = TRUE;
+            continue;
         }
-        if (c == (CONTROL | '[')) {
-            cmask = META;
-            goto proc_metac;
-        }
-#endif
-        c = ensure_uppercase(c);
-        if (c >= 0x00 && c <= 0x1F)     /* control key */
-            c = CONTROL | (c + '@');
-        return META | c;
-    }
-    else if (c == metac) {
-        c = get1key();
-#if VT220
-        if (c == (CONTROL | '[')) {
-            cmask = META;
-            goto proc_metac;
-        }
-#endif
-        c = ensure_uppercase(c);
-        if (c >= 0x00 && c <= 0x1F)     /* control key */
-            c = CONTROL | (c + '@');
-        return META | c;
-    }
+        int cmask = 0;
+        if (meta) cmask |= META;
+        if (ctlx) cmask |= CTLX;
+        if (cmask || (c&(CONTROL|META|CTLX))) c = ensure_uppercase(c);
+        return c | cmask;
 
-#if VT220
-proc_ctlxc:
-#endif
-    if (c == ctlxc) {                   /* process CTLX prefix */
+/* Process the Vt220 Control Sequence Introducer.
+ * Once we get here the control make is already known, so
+ * set it now.
+ */
+process_CSI:
+        cmask = SPEC;
+        if (meta) cmask |= META;
+        if (ctlx) cmask |= CTLX;
         c = get1key();
-#if VT220
-        if (c == (CONTROL | '[')) {
-            cmask = CTLX;
-            goto proc_metac;
+/* uEmacs/PK 4.0 (4.015) from Petri H. Kutvonen, University of Helsinki,
+ * which was an "enhanced version of MicroEMACS 3.9e" contained special
+ * handling for 'i' and 'c' in this block.
+ * However, the code always resulted in returning SPEC | '?' | cmask
+ * because c had been over-ridden by the time it was checked again.
+ * From looking at ebind.h (FNc and FNi are bound to metafn and cex
+ * respectively, both null functions) it is clear that the intention
+ * was that they should be treated as Meta and Ctlx prefixes, while
+ * just restarting the key input.
+ * But since I can't see it being of use (it prevented you binding
+ * them to anything else).
+ * I'll just leave it here as a reference and remove the keybindings
+ * from ebind.h.
+ */
+#if IN_CASE_YOU_CAN_SEE_A_VALUE_IN_IT
+/* NOTE that this inactive code is the only part which could go back
+ * around the loop once we get here. (The statement before the process_CSI
+ * label is a return).
+ * Just in case you wonder why it is written this way....
+ */
+        if (c == 'i') {         /* DO key    P.K. */
+            ctlx = TRUE;
+            meta = FALSE;
+            continue;
+        }
+        else if (c == 'c') {    /* ESC key   P.K. */
+            meta = TRUE;
+            ctlx = FALSE;
+            continue;
         }
 #endif
-        c = ensure_uppercase(c);
-        if (c >= 0x00 && c <= 0x1F)     /* control key */
-            c = CONTROL | (c + '@');
-        return CTLX | c;
-    }
+        if (c >= 'A' && c <= 'z') {
+            return cmask | c;
+        }
 
-/* Otherwise, just return it */
-    return c;
+        int d = get1key();
+        if (d == '~') {         /* ESC [ n ~   P.K. */
+            return cmask | c;
+        }
+
+/* We should have a tilde to finish. So get to it - with a limit... */
+
+        for (int sc = 4; sc >0; sc--) {
+            if (get1key() == '~') break;
+        }
+
+/* Might as well return SPEC 1-f (hex) (==FN1 to FNf0 for function keys.
+ * The VT220 function keys behaved thus:
+ * F1 to F5 - local keys, sent nothing (we can map to FN1..5).
+ * F6 sent (CSI)17~, F7 (CSI)18~ etc.
+ * There were gaps after 10 (F11 sent (CSI)22~), 14 and 16.
+ *
+ *  https://vt100.net/docs/vt220-rm/chapter3.html
+ *  https://www.xfree86.org/current/ctlseqs.html
+ *
+ * This is how xterm and KDE konsole maps function keys to the
+ * string to send.
+ *
+ * So map 11 -> 1  ... 15 -> 5
+ *        17 -> 6  ... 21 -> 10
+ *        23 -> 11 ... 26 -> 14
+ *        28 -> 15
+ */
+        int num = (c-'0')*10 + (d-'0');
+        switch (num) {          /* ESC [ n n ~ P.K. */
+        case 11: c = '1'; break;
+        case 12: c = '2'; break;
+        case 13: c = '3'; break;
+        case 14: c = '4'; break;
+        case 15: c = '5'; break;
+        case 17: c = '6'; break;
+        case 18: c = '7'; break;
+        case 19: c = '8'; break;
+        case 20: c = '9'; break;
+        case 21: c = 'a'; break;
+        case 23: c = 'b'; break;
+        case 24: c = 'c'; break;
+        case 25: c = 'd'; break;
+        case 26: c = 'e'; break;
+        case 28: c = 'f'; break;
+        default:
+            c = '?';
+            break;
+        }
+        return cmask | c;
+    }
+    return 0;       /* Although it never gets here */
 }
 
 /* GGR

@@ -70,64 +70,87 @@ int help(int f, int n) {    /* give me some help!!!!
 static unsigned int stock(char *keyname) {
     unsigned int c; /* key sequence to return */
 
-/* GGR - allow different bindings for 1char UPPER and lower */
+/* GGR - allow different bindings for 1char UPPER and lower.
+ * If anyone wants to bind them...
+ */
     int kn_len = strlen(keyname);
     int noupper = (kn_len == 1);
     char *kn_end = keyname + kn_len;
+    int special = 0;
 
 /* Parse it up */
     c = 0;
 
-/* First, the META prefix */
-    if (*keyname == 'M' && *(keyname + 1) == '-') {
-        c = META;
-        keyname += 2;
-    }
-/* Next the function prefix */
-    if (*keyname == 'F' && *(keyname + 1) == 'N') {
-        c |= SPEC;
-        keyname += 2;
-    }
-/* Control-x as well... (but not with FN *OR* META!!) */
-    if (*keyname == '^' && *(keyname + 1) == 'X'
-          && !(c & SPEC) && !(c & META)) {
+/* First, the CtlX prefix */
+    if (*keyname == '^' && *(keyname + 1) == 'X') {
         c |= CTLX;
         keyname += 2;
     }
+/* Then the META prefix */
+    if (*keyname == 'M' && *(keyname + 1) == '-') {
+        c |= META;
+        keyname += 2;
+    }
+/* Next the function prefix, but not if we have a META */
+    if (!(c & META) && *keyname == 'F' && *(keyname + 1) == 'N') {
+        c |= SPEC;
+        noupper = TRUE;
+        keyname += 2;
+    }
 
-/* A control char? */
+/* What is left? A control char?
+ * Allow ^ on its own.
+ * Don't allow trying to set a Control < @.
+ */
     if (*keyname == '^' && *(keyname + 1) != 0) {
         if (*(keyname + 1) == '?')  /* Special case ^? for Delete */
-            c = 0x7f;
-        else
+            special = 0x7f;         /* Don't add the Control */
+        else {  /* Check it is valid to be a Control */
+            if (*(keyname + 1) < '@' || *(keyname + 1) > 'z') return 0;
             c |= CONTROL;
-        ++keyname;
+        }
+        ++keyname;                  /* Point to controlled char... */
     }
-    if (ch_as_uc(*keyname) < 32) {
-        c |= CONTROL;
-        *keyname += 'A';
-    }
+
+/* If we have nothing more, return nothing - we should be at a bind char... */
+
+    if (!*keyname) return 0;
+
 /* GGR - allow SP for space by putting it there... */
     if (*keyname == 'S' && *(keyname + 1) == 'P') {
         ++keyname;
-        *keyname = ' ';
+        special = ' ';
     }
 
-/* Make sure we are not lower case (not with function keys) */
-    if (ch_as_uc(*keyname) >= 'a' && ch_as_uc(*keyname) <= 'z' && !(c & SPEC)
-          && !(noupper))            /* GGR */
+/* Make sure we are not lower case with only Control or Meta */
+    if (ch_as_uc(*keyname) >= 'a' && ch_as_uc(*keyname) <= 'z' &&
+         !(noupper))            /* GGR */
         *keyname -= 32;
 
-    if (ch_as_uc(*keyname) >= 0xc0) {   /* We have a utf-8 string... */
+/* NOTE that any char beyond the ASCII range is always uppercased. */
+    if (ch_as_uc(*keyname) >= 0x80) {   /* We have a utf-8 string... */
         unsigned int uc;
         int kn_left = kn_end - keyname;
-        utf8_to_unicode(keyname, 0, kn_left, &uc);
+        keyname += utf8_to_unicode(keyname, 0, kn_left, &uc);
         uc = utf8proc_toupper(uc);      /* Unchanged if not lower/title case */
         c |= uc;        /* The final tagged char... */
     }
-    else
-        c |= *keyname;  /* The final sequence... */
+    else {              /* The final sequence... */
+        if (special) c |= special;
+        else c |= *keyname;
+        keyname++;
+    }
 
+/* If we aren't at end-of string, or a white-space, something is wrong */
+    switch(*keyname) {
+        case '\0':
+        case ' ':
+        case '\t':
+        case '\n':
+            break;
+        default:
+            return 0;
+    }
     return c;
 }
 
@@ -694,7 +717,7 @@ static int buildlist(int type, char *mstring) {
         if (linstr("\n\nKey bindings\n") != TRUE) return FALSE;
         unicode_t key;
 /* All control keys are uppercased...and only run from '@' to '_' */
-        linstr("Start CONTROL\n");
+        linstr("Start Control (^? is the Delete key)\n");
         for (key = (CONTROL|'@'); key <= (CONTROL|'_'); key++) {
             status = show_key_binding(key);
             if (!status) return status;
@@ -702,7 +725,7 @@ static int buildlist(int type, char *mstring) {
         status = show_key_binding(0x7f);    /* Delete Key */
         if (!status) return status;
 
-        linstr("Start CTLX|CONTROL\n");
+        linstr("Start Ctlx+Control\n");
 /* All control keys are uppercased...and only run from '@' to '_' */
         if (!status) return status;
         for (key = (CTLX|CONTROL|'@'); key <= (CTLX|CONTROL|'_'); key++) {
@@ -711,7 +734,7 @@ static int buildlist(int type, char *mstring) {
         }
         status = show_key_binding(CTLX|0x7f);   /* Delete Key */
 
-        linstr("Start CTLX\n");
+        linstr("Start Ctlx\n");
 /* Ctlx keys are uppercased for alphas... */
         for (key = (CTLX|' '); key <= (CTLX|0x7f); key++) {
             if ((key >= (CTLX|'a')) && (key <= (CTLX|'z'))) continue;
@@ -721,7 +744,7 @@ static int buildlist(int type, char *mstring) {
 /* Meta+Control listing
  * All control keys are uppercased...and only run from '@' to '_'
  */
-        linstr("Start META|CONTROL\n");
+        linstr("Start Meta+Control\n");
         for (key = (META|CONTROL|'@'); key <= (META|CONTROL|'_'); key++) {
             int status = show_key_binding(key);
             if (!status) return status;
@@ -729,7 +752,7 @@ static int buildlist(int type, char *mstring) {
         status = show_key_binding(META|0x7f);   /* Delete Key */
 
 /* Escape keys are uppercased for alphas...Delete key already done  */
-        linstr("Start META\n");
+        linstr("Start Meta\n");
         for (key = (META|' '); key < (META|0x7f); key++) {
             if ((key >= (META|'a')) && (key <= (META|'z'))) continue;
             int status = show_key_binding(key);
@@ -737,16 +760,47 @@ static int buildlist(int type, char *mstring) {
         }
 
 /* Spec+Control listing */
-        linstr("Start SPEC|CONTROL\n");
+        linstr("Start SPEC+Control\n");
         for (key = (SPEC|CONTROL|'@'); key <= (SPEC|CONTROL|'_'); key++) {
             int status = show_key_binding(key);
             if (!status) return status;
         }
         status = show_key_binding(SPEC|0x7f);   /* Delete Key */
 
-/* Spec keys are not cased even for alphas. */
+
+/* SPEC keys are not cased even for alphas. */
         linstr("Start SPEC\n");
         for (key = (SPEC|' '); key <= (SPEC|0x7f); key++) {
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+
+/* Ctlx+Meta+Control */
+        linstr("Start Ctlx+Meta+Control\n");
+        for (key = (CTLX|META|CONTROL|'@');
+                 key <= (CTLX|META|CONTROL|'_'); key++) {
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+        status = show_key_binding(CTLX|META|0x7f);   /* Delete Key */
+
+/* Escape keys are uppercased for alphas...Delete key already done  */
+        linstr("Start Ctlx+Meta\n");
+        for (key = (CTLX|META|' '); key < (CTLX|META|0x7f); key++) {
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+
+/* CtlX+SPEC - SPEC keys are not cased even for alphas. */
+        linstr("Start Ctlx+SPEC\n");
+        for (key = (CTLX|SPEC|' '); key <= (CTLX|SPEC|0x7f); key++) {
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+
+/* Meta+SPEC - Internal usage only. Only A to Z. */
+        linstr("Start Meta+SPEC (internal bindings)\n");
+        for (key = (META|SPEC|'A'); key <= (META|SPEC|'Z'); key++) {
             int status = show_key_binding(key);
             if (!status) return status;
         }
@@ -966,13 +1020,13 @@ void cmdstr(int c, char *seq) {
 
     ptr = seq;
 
-    if (c & META) {     /* apply meta sequence if needed */
-        *ptr++ = 'M';
-        *ptr++ = '-';
-    }
     if (c & CTLX) {     /* apply ^X sequence if needed */
         *ptr++ = '^';
         *ptr++ = 'X';
+    }
+    if (c & META) {     /* apply meta sequence if needed */
+        *ptr++ = 'M';
+        *ptr++ = '-';
     }
     if (c & SPEC) {     /* apply SPEC sequence if needed */
         *ptr++ = 'F';
@@ -982,10 +1036,10 @@ void cmdstr(int c, char *seq) {
         *ptr++ = '^';
     }
 
-/* And output the final sequence */
+/* Strip the prefixes and output the final sequence */
 
     c &= 0x0fffffff;
-    if (c == ' ') { /* Handle the "SP" for space which we allow */
+    if (c  == ' ') {        /* Handle the "SP" for space which we allow */
         *ptr++ = 'S';
         *ptr++ = 'P';
     }
