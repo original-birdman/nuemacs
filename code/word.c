@@ -38,8 +38,12 @@ int wrapword(int f, int n)
     int cnt;        /* size of word wrapped to next line */
     int c;          /* character temporary */
 
-/* Backup from the <NL> 1 char */
-    if (back_grapheme(1) <= 0) return FALSE;
+/* Backup from the <NL> 1 char, if that is where we are. */
+
+    if (llength(curwp->w.dotp) == 0) return FALSE;  /* Empty line */
+    if (curwp->w.doto == llength(curwp->w.dotp)) {
+        if (back_grapheme(1) <= 0) return FALSE;
+    }
 
 /* Back up until we aren't in a word, make sure there's a break in the line */
     cnt = 0;
