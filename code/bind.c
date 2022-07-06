@@ -209,10 +209,10 @@ static void index_bindings(void) {
 /* The allocated keytab contains markers at the end, which we do not
  * want to index...
  * The last one will be a ENDS_KMAP, and we skip over any preceding
- * ENDL_KMAP entries.
+ * ENDL_KMAP entries. Also allow for 0-based indexing, so -3.
  */
 
-    int ki = key_index_allocated - 2;
+    int ki = key_index_allocated - 3;
     while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
     kt_ents = ki + 1;
     idxsort_fields((unsigned char *)keytab, key_index,
@@ -486,7 +486,6 @@ int bindtokey(int f, int n) {
             while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
         }
         ktp = &keytab[ki+1];
-        ktp->k_code = c;    /* set keycode */
         destp = ktp;
 
 /* The next entry will alway be an End-of-List.
@@ -499,11 +498,10 @@ int bindtokey(int f, int n) {
         if (ktp->k_type == ENDS_KMAP) {
             ktp->k_type = ENDL_KMAP;        /* Change to end-of-list */
             int destp_offs = destp - keytab;
-            int ktp_offs = ktp - keytab;
             extend_keytab(0);
             destp = keytab + destp_offs;
-            ktp = keytab + ktp_offs;
         }
+        destp->k_code = c;              /* set keycode */
     }
     destp->k_type = FUNC_KMAP;      /* Set the type */
     destp->hndlr.k_fp = kfunc;      /* and the function pointer */
@@ -565,8 +563,8 @@ static int show_key_binding(unicode_t key) {
 /* Pad out some spaces */
         while (cpos < 12) outseq[cpos++] = ' ';
         strcpy(outseq+cpos, ktp->fi->n_name);
-/* Is this execute-procedure? If so, say which procedure... */
-        if (ktp->fi->n_func == execproc) {
+/* Is this an execute-procedure? If so, say which procedure... */
+        if (ktp->k_type == PROC_KMAP) {
             strcat(outseq, " ");
             strcat(outseq, ktp->hndlr.pbp);
         }
@@ -692,22 +690,63 @@ static int buildlist(int type, char *mstring) {
 /* Now, if this is not apropos, list everything in key-binding order. */
 
     if (type) {
+        int status;
         if (linstr("\n\nKey bindings\n") != TRUE) return FALSE;
         unicode_t key;
-/* All control keys are uppercased... */
-        for (key = (CONTROL|'@'); key < (CONTROL|0x7f); key++) {
+/* All control keys are uppercased...and only run from '@' to '_' */
+        linstr("Start CONTROL\n");
+        for (key = (CONTROL|'@'); key <= (CONTROL|'_'); key++) {
+            status = show_key_binding(key);
+            if (!status) return status;
+        }
+        status = show_key_binding(0x7f);    /* Delete Key */
+        if (!status) return status;
+
+        linstr("Start CTLX|CONTROL\n");
+/* All control keys are uppercased...and only run from '@' to '_' */
+        if (!status) return status;
+        for (key = (CTLX|CONTROL|'@'); key <= (CTLX|CONTROL|'_'); key++) {
             int status = show_key_binding(key);
             if (!status) return status;
         }
-/* Control-X keys are only cased for alphas...and allow control chars */
-        for (key = (CTLX|0); key < (CTLX|0x7f); key++) {
-            if ((key >= 'a') && (key <= 'z')) continue;
+        status = show_key_binding(CTLX|0x7f);   /* Delete Key */
+
+        linstr("Start CTLX\n");
+/* Ctlx keys are uppercased for alphas... */
+        for (key = (CTLX|' '); key <= (CTLX|0x7f); key++) {
+            if ((key >= (CTLX|'a')) && (key <= (CTLX|'z'))) continue;
             int status = show_key_binding(key);
             if (!status) return status;
         }
-/* Escape keys are only cased for alphas...and allow control chars */
-        for (key = (META|0); key < (META|0x7f); key++) {
-            if ((key >= 'a') && (key <= 'z')) continue;
+/* Meta+Control listing
+ * All control keys are uppercased...and only run from '@' to '_'
+ */
+        linstr("Start META|CONTROL\n");
+        for (key = (META|CONTROL|'@'); key <= (META|CONTROL|'_'); key++) {
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+        status = show_key_binding(META|0x7f);   /* Delete Key */
+
+/* Escape keys are uppercased for alphas...Delete key already done  */
+        linstr("Start META\n");
+        for (key = (META|' '); key < (META|0x7f); key++) {
+            if ((key >= (META|'a')) && (key <= (META|'z'))) continue;
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+
+/* Spec+Control listing */
+        linstr("Start SPEC|CONTROL\n");
+        for (key = (SPEC|CONTROL|'@'); key <= (SPEC|CONTROL|'_'); key++) {
+            int status = show_key_binding(key);
+            if (!status) return status;
+        }
+        status = show_key_binding(SPEC|0x7f);   /* Delete Key */
+
+/* Spec keys are not cased even for alphas. */
+        linstr("Start SPEC\n");
+        for (key = (SPEC|' '); key <= (SPEC|0x7f); key++) {
             int status = show_key_binding(key);
             if (!status) return status;
         }
@@ -945,7 +984,8 @@ void cmdstr(int c, char *seq) {
 
 /* And output the final sequence */
 
-    if ((c & 255) == ' ') { /* Handle the "SP" for space which we allow */
+    c &= 0x0fffffff;
+    if (c == ' ') { /* Handle the "SP" for space which we allow */
         *ptr++ = 'S';
         *ptr++ = 'P';
     }
@@ -953,9 +993,11 @@ void cmdstr(int c, char *seq) {
         *ptr++ = '^';
         *ptr++ = '?';
     }
-    else
-        *ptr++ = c & 255;   /* strip the prefixes */
-
+    else {
+/* If we have a non-ASCII char we need to convert it to utf8.... */
+        if (c < 0x80)  *ptr++ = c & 255;
+        else            ptr += unicode_to_utf8(c, ptr);
+    }
     *ptr = 0;               /* terminate the string */
 }
 
