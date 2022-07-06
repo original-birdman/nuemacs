@@ -19,6 +19,8 @@
 
 #include "utf8proc.h"
 
+#define HELP_BUF "//Help"
+
 int help(int f, int n) {    /* give me some help!!!!
                                bring up a fake buffer and read the help file
                                into it with view mode                 */
@@ -28,25 +30,31 @@ int help(int f, int n) {    /* give me some help!!!!
     char *fname = NULL;     /* ptr to file returned by flook() */
 
 /* First check if we are already here */
-    bp = bfind(init_files.help, FALSE, BFINVS); /* GGR - epath.h setting */
+    bp = bfind(HELP_BUF, FALSE, BFINVS); /* GGR - epath.h setting */
 
     if (bp == NULL) {
         fname = flook(init_files.help, FALSE, INTABLE);
         if (fname == NULL) {
             mlwrite_one(MLbkt("Help file is not online"));
             return FALSE;
-            }
+        }
     }
 
-/* Split the current window to make room for the help stuff */
+/* Split the current window to make room for the help stuff,
+ * before reading in/switching buffer.
+ */
     if (splitwind(FALSE, 1) == FALSE) return FALSE;
 
-    if (bp == NULL) {   /* and read the stuff in */
+    if (bp == NULL) {
+        bp = bfind(HELP_BUF, TRUE, BFINVS);
+        if (!swbuffer(bp, 0)) return FALSE;
         pathexpand = FALSE; /* GGR - unset pathexpand around call */
-        int res = getfile(fname, FALSE, FALSE);
+        int res = readin(fname, FALSE);
         pathexpand = TRUE;
         if (res == FALSE) return(FALSE);
-    } else
+        bp->b_fname[0] = '\0';  /* remove filename */
+    }
+    else
         if (!swbuffer(bp, 0)) return FALSE;
 
 /* Make this window in VIEW mode, update all mode lines */
@@ -94,22 +102,22 @@ static unsigned int stock(char *keyname) {
 /* Next the function prefix, but not if we have a META */
     if (!(c & META) && *keyname == 'F' && *(keyname + 1) == 'N') {
         c |= SPEC;
-        noupper = TRUE;
+        noupper = TRUE;             /* Don't uppercase final char */
         keyname += 2;
     }
 
 /* What is left? A control char?
- * Allow ^ on its own.
+ * Allow ^ on its own (by not marking CONTROL or stepping over it).
  * Don't allow trying to set a Control < @.
  */
     if (*keyname == '^' && *(keyname + 1) != 0) {
-        if (*(keyname + 1) == '?')  /* Special case ^? for Delete */
+        ++keyname;                  /* Step to the controlled char... */
+        if (*(keyname) == '?')      /* Special case ^? for Delete */
             special = 0x7f;         /* Don't add the Control */
-        else {  /* Check it is valid to be a Control */
-            if (*(keyname + 1) < '@' || *(keyname + 1) > 'z') return 0;
+        else {                      /* Check it is valid to be a Control */
+            if (*(keyname) < '@' || *(keyname) > 'z') return 0;
             c |= CONTROL;
         }
-        ++keyname;                  /* Point to controlled char... */
     }
 
 /* If we have nothing more, return nothing - we should be at a bind char... */
@@ -118,7 +126,7 @@ static unsigned int stock(char *keyname) {
 
 /* GGR - allow SP for space by putting it there... */
     if (*keyname == 'S' && *(keyname + 1) == 'P') {
-        ++keyname;
+        ++keyname;                  /* Advance to P for e-o-string tests */
         special = ' ';
     }
 

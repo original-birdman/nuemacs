@@ -256,7 +256,7 @@ int incremental_debug_check(int type) {
 /* NOTE that cleanup DELETES THE BUFFER!!!!
  * This is to save the macro-caller having to do it, as it is
  * active if present.
- * Also, you can't "//..." buffers using delete-buffer.
+ * Also, you can't remove "//..." buffers using delete-buffer.
  */
 
 void incremental_debug_cleanup(void) {

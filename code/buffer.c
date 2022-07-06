@@ -105,6 +105,9 @@ static void make_active(struct buffer *nbp) {
 int swbuffer(struct buffer *bp, int macro_OK) {
     struct window *wp;
 
+/* Check for NULL bp... */
+    if (bp == NULL) return FALSE;
+
 /* We must not switch to the keyboard macro buffer when collecting a
  * macro, as that would allow the user to move around in the buffer...
  */
@@ -367,14 +370,9 @@ static int makelist(int iflag) {
         cp2 = &bp->b_fname[0];          /* File name            */
         if (*cp2 != 0) {
 /*
- * We'll assume an 80-column width for determining whether the
- * filename will fit.
- * The column data so far is 3+1+13+1+9+1+14 == 39.
- * If the buffername has reached >33 or the filename is > 36 we'll print
- * the filename on the next line...
+ * We know the current screen width, so use it...
  */
-
-            if (((cp1 - line) > 33) || (strlen(cp2) > 36)) {
+            if (((cp1 - line) + strlen(cp2)) > (unsigned)term.t_ncol) {
                 *cp1++ = ' ';
                 *cp1++ = 0xe2;      /* Carriage return symbol */
                 *cp1++ = 0x86;      /* U+2185                 */
@@ -385,7 +383,8 @@ static int makelist(int iflag) {
                 for (i = 0; i < 5; i++) *cp1++ = ' ';
             }
             else {
-                while (cp1 < line+38) *cp1++ = ' ';
+/* The header line is 3+1+13+1+9+1+13+1 to get to File */
+                while (cp1 < line+42) *cp1++ = ' ';
             }
             while ((c = *cp2++) != 0) {
                 if (cp1 < &line[MAXLINE - 1]) *cp1++ = c;
