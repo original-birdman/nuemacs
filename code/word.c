@@ -58,6 +58,7 @@ int inword(struct inwbuf *inwp) {
                 break;
             }
         }
+        Xfree(gc.ex);               /* We're done with it */
     }
     if (zw_break) return FALSE;
 
