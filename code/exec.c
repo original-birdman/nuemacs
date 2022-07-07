@@ -777,11 +777,11 @@ int ptt_handler(int c) {
             else if ((ptr->caseset == CASESET_CAPI_ALL) ||
                      (ptr->caseset == CASESET_LOWI_ALL)) { /* Do per-word */
 /* Like capword(), but with known char count */
-                int was_inword = inword();
+                int was_inword = inword(NULL);
                 while (--count) {       /* First already done */
                     if (forw_grapheme(1) <= 0)      /* !?! */
                         break;
-                    int now_in_word = inword();
+                    int now_in_word = inword(NULL);
                     if (now_in_word && !was_inword) {
                         ensure_case(set_case);
                     }

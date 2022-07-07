@@ -17,10 +17,60 @@
 #include "utf8proc.h"
 #include "utf8.h"
 
-/* This is set by inword() when a call tests a grapheme with a
+/* This is set by inword when a call tests a grapheme with a
  * zero-width work-break attached.
  */
 static int zw_break = 0;
+
+/* Return TRUE if the character at dot is a character that is considered to be
+ * part of a word. The word character list is hard coded. Should be setable.
+ * GGR - the grapheme-based version.
+ * If the buffer info ptr (inwp) is non NULL, use that instead of the
+ * current buffer position and update its offset.
+ */
+int inword(struct inwbuf *inwp) {
+    struct grapheme gc;
+    struct line *mylp;
+    int myoffs;
+
+/* If not sent an lbuf, use current position */
+    if (inwp) {
+        mylp = inwp->lp;
+        myoffs = inwp->offs;
+    }
+    else {
+        mylp = curwp->w.dotp;
+        myoffs = curwp->w.doto;
+    }
+
+    if (myoffs == llength(mylp)) return FALSE;
+    myoffs = build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc);
+    if (inwp) inwp->offs = myoffs;
+
+    zw_break = 0;
+    if (gc.cdm == 0x200B) {
+        zw_break = 1;
+    }
+    else if (gc.ex) {
+        for (unicode_t *exc = gc.ex; *exc != UEM_NOCHAR; exc++) {
+            if (*exc == 0x200B) {
+                zw_break = 1;
+                break;
+            }
+        }
+    }
+    if (zw_break) return FALSE;
+
+/* We only look at the base character to determine whether this is a
+ * word character.
+ */
+    const char *uc_class =
+         utf8proc_category_string((utf8proc_int32_t)gc.uc);
+
+    if (uc_class[0] == 'L') return TRUE;    /* Letter */
+    if (uc_class[0] == 'N') return TRUE;    /* Number */
+    return FALSE;
+}
 
 /* Word wrap on n-spaces. Back-over whatever precedes the point on the current
  * line and stop on the first word-break or the beginning of the line. If we
@@ -86,10 +136,10 @@ int backword(int f, int n) {
     if (n < 0) return forwword(f, -n);
     if (back_grapheme(1) <= 0) return FALSE;
     while (n--) {
-        while (inword() == FALSE) {
+        while (inword(NULL) == FALSE) {
             if (back_grapheme(1) <= 0) return FALSE;
         }
-        while ((inword() != FALSE) || zw_break) {
+        while ((inword(NULL) != FALSE) || zw_break) {
             if (back_grapheme(1) <= 0) return FALSE;
         }
     }
@@ -110,12 +160,12 @@ int forwword(int f, int n) {
  */
         int state1 = using_ggr_style? FALSE: TRUE;
         int prev_zw_break = 0;
-        while ((inword() == state1) || (!state1 && prev_zw_break)) {
+        while ((inword(NULL) == state1) || (!state1 && prev_zw_break)) {
             if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
         prev_zw_break = zw_break;
-        while ((inword() == !state1) || (!state1 && zw_break)) {
+        while ((inword(NULL) == !state1) || (!state1 && zw_break)) {
             if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
         }
@@ -201,11 +251,11 @@ int upperword(int f, int n) {
         return rdonly();            /* we are in read only mode     */
     if (n < 0) return FALSE;
     while (n--) {
-        while (inword() == FALSE) {
+        while (inword(NULL) == FALSE) {
             if (forw_grapheme(1) <= 0) return FALSE;
         }
         int prev_zw_break = zw_break;
-        while ((inword() != FALSE) || prev_zw_break) {
+        while ((inword(NULL) != FALSE) || prev_zw_break) {
             ensure_case(UTF8_UPPER);
             if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
@@ -225,11 +275,11 @@ int lowerword(int f, int n) {
         return rdonly();            /* we are in read only mode     */
     if (n < 0) return FALSE;
     while (n--) {
-        while (inword() == FALSE) {
+        while (inword(NULL) == FALSE) {
             if (forw_grapheme(1) <= 0) return FALSE;
         }
         int prev_zw_break = zw_break;
-        while ((inword() != FALSE)  || prev_zw_break) {
+        while ((inword(NULL) != FALSE)  || prev_zw_break) {
             ensure_case(UTF8_LOWER);
             if (forw_grapheme(1) <= 0) return FALSE;
             prev_zw_break = zw_break;
@@ -250,14 +300,14 @@ int capword(int f, int n) {
         return rdonly();        /* we are in read only mode     */
     if (n < 0) return FALSE;
     while (n--) {
-        while (inword() == FALSE) {
+        while (inword(NULL) == FALSE) {
             if (forw_grapheme(1) <= 0) return FALSE;
         }
         int prev_zw_break = zw_break;
-        if (inword() != FALSE) {
+        if (inword(NULL) != FALSE) {
             ensure_case(UTF8_UPPER);
             if (forw_grapheme(1) <= 0) return FALSE;
-            while ((inword() != FALSE) || prev_zw_break) {
+            while ((inword(NULL) != FALSE) || prev_zw_break) {
                 ensure_case(UTF8_LOWER);
                 if (forw_grapheme(1) <= 0) return FALSE;
             }
@@ -298,7 +348,7 @@ int delfword(int f, int n) {
     int moved = 0;
 
 /* Get us into a word.... */
-    while (inword() == FALSE) {
+    while (inword(NULL) == FALSE) {
         moved = forw_grapheme(1);
         if (moved <= 0) return FALSE;
         size += moved;
@@ -306,7 +356,7 @@ int delfword(int f, int n) {
 
     if (n == 0) {       /* skip one word, no whitespace! */
         int prev_zw_break = 0;
-        while ((inword() == TRUE) || prev_zw_break) {
+        while ((inword(NULL) == TRUE) || prev_zw_break) {
             moved = forw_grapheme(1);
             if (moved <= 0) return FALSE;
             size += moved;
@@ -324,7 +374,7 @@ int delfword(int f, int n) {
 
 /* Move forward till we are at the end of the word */
             int prev_zw_break = 0;
-            while ((inword() == TRUE) || prev_zw_break) {
+            while ((inword(NULL) == TRUE) || prev_zw_break) {
                 moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 size += moved;
@@ -332,7 +382,7 @@ int delfword(int f, int n) {
             }
 
 /* If there are more words, skip the interword stuff */
-            if (n != 0) while (inword() == FALSE) {
+            if (n != 0) while (inword(NULL) == FALSE) {
                 moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 size += moved;
@@ -376,12 +426,12 @@ int delbword(int f, int n) {
     if (moved <= 0) return FALSE;
     size = moved;
     while (n--) {
-        while (inword() == FALSE) {
+        while (inword(NULL) == FALSE) {
             moved = back_grapheme(1);
             if (moved <= 0) return FALSE;
             size += moved;
         }
-        while ((inword() != FALSE) || zw_break) {
+        while ((inword(NULL) != FALSE) || zw_break) {
             moved = back_grapheme(1);
             if (moved <= 0) goto bckdel;
             size += moved;
@@ -422,43 +472,6 @@ bckdel:
         Xfree(op);          /* kinsert() Xmallocs, so we free */
     }
     return(status);
-}
-
-/*
- * Return TRUE if the character at dot is a character that is considered to be
- * part of a word. The word character list is hard coded. Should be setable.
- * GGR - the grapheme-based version.
- */
-int inword(void) {
-    struct grapheme gc;
-
-    if (curwp->w.doto == llength(curwp->w.dotp))
-        return FALSE;
-    (void)lgetgrapheme(&gc, FALSE);
-
-    zw_break = 0;
-    if (gc.cdm == 0x200B) {
-        zw_break = 1;
-    }
-    else if (gc.ex) {
-        for (unicode_t *exc = gc.ex; *exc != UEM_NOCHAR; exc++) {
-            if (*exc == 0x200B) {
-                zw_break = 1;
-                break;
-            }
-        }
-    }
-    if (zw_break) return FALSE;
-
-/* We only look at the base character to determine whether this is a
- * word character.
- */
-    const char *uc_class =
-         utf8proc_category_string((utf8proc_int32_t)gc.uc);
-
-    if (uc_class[0] == 'L') return TRUE;    /* Letter */
-    if (uc_class[0] == 'N') return TRUE;    /* Number */
-    return FALSE;
 }
 
 /* a GGR one.. */
@@ -519,11 +532,8 @@ int killpara(int f, int n) {
  */
 int wordcount(int f, int n) {
     UNUSED(f); UNUSED(n);
-    struct line *lp;        /* current line to scan */
-    int offset;             /* current char to scan */
     int orig_offset;        /* offset in line at start */
     long size;              /* size of region left to count */
-    int ch;                 /* current character to scan */
     int wordflag;           /* are we in a word now? */
     int lastword;           /* were we just in a word? */
     long nwords;            /* total # of words */
@@ -532,12 +542,13 @@ int wordcount(int f, int n) {
     int avgch;              /* average number of chars/word */
     int status;             /* status return code */
     struct region region;   /* region to look at */
+    struct inwbuf mywb;     /* Tracking info for inword() */
 
 /* Make sure we have a region to count */
     if ((status = getregion(&region)) != TRUE) return status;
-    lp = region.r_linep;
-    offset = region.r_offset;
-    orig_offset = offset;
+    mywb.lp = region.r_linep;
+    orig_offset = region.r_offset;
+    mywb.offs = region.r_offset;
     size = region.r_bytes;
 /* Count up things */
     lastword = FALSE;
@@ -545,27 +556,26 @@ int wordcount(int f, int n) {
     nwords = 0L;
     nlines = 0;
     while (size--) {
-/* Get the current character... */
-        if (offset == llength(lp)) {    /* end of line */
-            ch = '\n';
-            lp = lforw(lp);
-            offset = 0;
+/* Check for end of line */
+        if (mywb.offs == llength(mywb.lp)) {
+            mywb.lp = lforw(mywb.lp);
+            mywb.offs = 0;
             ++nlines;
+            wordflag = FALSE;
         }
         else {
-            ch = lgetc(lp, offset);
-            ++offset;
+            int start_offs = mywb.offs;
+            wordflag = inword(&mywb);
+            size -= (mywb.offs - start_offs) - 1; /* "Extra" bytes used */
         }
-/* ...and tabulate it */
-        wordflag = ((isletter(ch)) || (ch >= '0' && ch <= '9'));
-        if (wordflag == TRUE && lastword == FALSE) ++nwords;
-        lastword = wordflag;
+        if (wordflag & !lastword) ++nwords;
         ++nchars;
+        lastword = wordflag;
     }
 /* GGR - Increment line count if offset is now more than at the start
  * So line1 col3 -> line2 col55 is 2 lines,. not 1
  */
-    if (offset > orig_offset) ++nlines;
+    if (mywb.offs > orig_offset) ++nlines;
 /* And report on the info */
     if (nwords > 0L) avgch = (int) ((100L * nchars) / nwords);
     else             avgch = 0;

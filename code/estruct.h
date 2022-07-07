@@ -237,14 +237,9 @@ enum cmplt_type {
 
 #define DIFCASE         0x20
 
-#define LASTUL 'Z'
-#define LASTLL 'z'
-
-#define isletter(c)     isxletter((0xFF & (c)))
 #define islower(c)      isxlower((0xFF & (c)))
 #define isupper(c)      isxupper((0xFF & (c)))
 
-#define isxletter(c)    (('a' <= c && LASTLL >= c) || ('A' <= c && LASTUL >= c) || (192<=c && c<=255))
 #define isxlower(c)     (('a' <= c && LASTLL >= c) || (224 <= c && 252 >= c))
 #define isxupper(c)     (('A' <= c && LASTUL >= c) || (192 <= c && 220 >= c))
 
@@ -413,6 +408,13 @@ struct region {
     int r_offset;               /* Origin struct line offset.   */
     long r_bytes;               /* Length in bytes.             */
     struct line *r_endp;        /* line address at end.         */
+};
+
+/* Used by inword() to override current point usage. */
+
+struct inwbuf {
+    struct line *lp;            /* Line pointer */
+    int offs;                   /* offset within line */
 };
 
 /* The editor communicates with the display using a high level interface. A

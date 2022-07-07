@@ -167,12 +167,19 @@
 #define BIT(n)          (1 << (n))      /* An integer with one bit set. */
 #define CHCASE(c)       ((c) ^ DIFCASE) /* Toggle the case of a letter. */
 
-/* HICHAR - 1 is the largest character we will deal with.
- * HIBYTE represents the number of bytes in the bitmap.
+/* MAXASCII is the largest character we will deal with "simply" in CCLs.
+ * BMBYTES represents the number of bytes in the bitmap.
  */
-#define HICHAR          256
-#define HIBYTE          HICHAR >> 3
 #define MAXASCII        0x7f
+#define BMBYTES          (MAXASCII + 1) >> 3
+
+/* HICHAR is for the fast scan bitmap */
+#define HICHAR          256
+
+#define LASTUL 'Z'
+#define LASTLL 'z'
+
+#define isASCletter(c) (('a' <= c && LASTLL>= c) || ('A' <= c && LASTUL >= c))
 
 /* Typedefs that define the meta-character structure for MAGIC mode searching
  * (struct magic), and replacement (struct magic_replacement).
@@ -422,8 +429,8 @@ static char *clearbits(void) {
     char *cclmap;
     int i;
 
-    cclmap = cclstart = (char *)Xmalloc(HIBYTE);
-    for (i = 0; i < HIBYTE; i++) *cclmap++ = 0;
+    cclmap = cclstart = (char *)Xmalloc(BMBYTES);
+    for (i = 0; i < BMBYTES; i++) *cclmap++ = 0;
 
     return cclstart;
 }
@@ -1533,10 +1540,12 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  */
     case CCL:                   /* Now have to allow for extended CCL too */
         if (gc->uc & 0x80) {
-            res = FALSE;        /* So we drop into xt_cclmap tests */
+            res = FALSE;        /* So that we drop into xt_cclmap tests */
         }
         else if (!(res = biteq(gc->uc, mt->val.cclmap))) {
-            if ((curwp->w_bufp->b_mode & MDEXACT) == 0 && (isletter(gc->uc))) {
+/* Must be ASCII to ever get here...perhaps it's just a case difference? */
+            if ((curwp->w_bufp->b_mode & MDEXACT) == 0 &&
+                 (isASCletter(gc->uc))) {
                 res = biteq(CHCASE(gc->uc), mt->val.cclmap);
             }
         }

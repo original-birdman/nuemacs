@@ -14,19 +14,19 @@
 /* External function declarations. */
 
 /* word.c */
-extern int wrapword(int f, int n);
-extern int backword(int f, int n);
-extern int forwword(int f, int n);
-extern int upperword(int f, int n);
-extern int lowerword(int f, int n);
-extern int capword(int f, int n);
-extern int delfword(int f, int n);
-extern int delbword(int f, int n);
-extern int inword(void);
-extern int fillpara(int f, int n);
-extern int justpara(int f, int n);
-extern int killpara(int f, int n);
-extern int wordcount(int f, int n);
+extern int wrapword(int, int);
+extern int backword(int, int);
+extern int forwword(int, int);
+extern int upperword(int, int);
+extern int lowerword(int, int);
+extern int capword(int, int);
+extern int delfword(int, int);
+extern int delbword(int, int);
+extern int inword(struct inwbuf *);
+extern int fillpara(int, int);
+extern int justpara(int, int);
+extern int killpara(int, int);
+extern int wordcount(int, int);
 extern int makelist_region(int, int);
 extern int numberlist_region(int, int);
 
