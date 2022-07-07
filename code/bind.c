@@ -938,7 +938,7 @@ void set_pathname(char *cl_string) {
             add_sep = 1;
         }
     }
-    pathname[0] = strdup(cl_string);
+    pathname[0] = Xstrdup(cl_string);
     if (add_sep) {
         pathname[0] = Xrealloc(pathname[0], slen+2); /* incl. NULL! */
         pathname[0][slen] = path_sep;
