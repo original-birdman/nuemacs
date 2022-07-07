@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "usage.h"
 
@@ -18,3 +19,10 @@ void Xfree(void *ptr) {
     free(ptr);
     return;
 }
+
+char *Xstrdup (const char *ostr) {
+    char *nstr = strdup(ostr);
+    if (!nstr) die("realloc: Out of memory");
+    return nstr;
+}
+    

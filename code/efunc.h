@@ -388,8 +388,12 @@ extern int nxti_name_info(int);
 
 /* wrapper.c */
 
-extern void *Xmalloc(size_t);
-extern void *Xrealloc(void *, size_t);
 extern void *Xfree(void *);
+extern void *Xmalloc(size_t)
+   __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull));
+extern void *Xrealloc(void *, size_t)
+   __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull));
+extern char *Xstrdup (const char *)
+  __attribute__((malloc (Xfree), returns_nonnull));
 
 #endif
