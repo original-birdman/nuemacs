@@ -52,7 +52,7 @@ static int docmd(char *cline) {
  * This means we need a single point of exit, to ensure that
  * this gets freed correctly.
  */
-    char *this_line_seen = strdup(cline);
+    char *this_line_seen = Xstrdup(cline);
 
 /* First set up the default command values */
     f = FALSE;
@@ -94,7 +94,7 @@ static int docmd(char *cline) {
  */
     if (strcmp(tkn, "reexecute") == 0) {
         Xfree(this_line_seen);   /* Drop the "reexecute" */
-        this_line_seen = strdup(prev_line_seen);
+        this_line_seen = Xstrdup(prev_line_seen);
         status = TRUE;
         while (n-- && status) status = docmd(prev_line_seen);
         goto remember_cmd;
@@ -120,6 +120,9 @@ static int docmd(char *cline) {
 /* "Remember command" exit.
  * {} needed because we start with a declaration, not statement.
  *
+ * NOTE that we drop into the remember_cmd: block from the "normal"
+ * code above.
+ *
  * this_line_seen is now the command that any reexecute should reexecute
  * in this function, so set that....
  * Swap these two so that the one we want is saved and the other is freed.
@@ -130,6 +133,13 @@ remember_cmd:
       this_line_seen = ts;
     }
 /* "Just tidy up..." exit */
+/* The gcc 11.2.0 analyzer thinks there is a leak here:
+ *    (12) ‘this_line_seen’ leaks here; was allocated at (2)
+ * (2) is the strdup() near the start.
+ * I can't see it.
+ * And adding a fprintf() statement before the return makes it go away.
+ * So I suspect this is an analyzer bug.
+ */
 final_exit:
     Xfree(this_line_seen);
     execstr = oldestr;
