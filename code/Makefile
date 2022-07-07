@@ -40,6 +40,13 @@ else
     DBG_OPTS = -O0 -g
 endif
 
+# Use the gcc analyzer?
+#
+ANALYZE =
+ifneq ($(strip $(ANALYZE)),)
+    DBG_OPTS += -fanalyzer
+endif
+
 # A function to echo a filename if it exists
 #
 filex = $(shell test -f $(1) && echo $(1))
