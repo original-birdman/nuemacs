@@ -202,13 +202,13 @@ static int sindex(char *source, char *pattern) {
     char *csp;              /* ptr to source string during comparison */
     char *cp;               /* ptr to place to check for equality */
 
-/* Scanning through the source string */
+/* Scanning through the source string. Assumes ASCII.... */
     sp = source;
     while (*sp) {           /* Scan through the pattern */
         cp = pattern;
         csp = sp;
         while (*cp) {
-            if (!eq(*cp, *csp)) break;
+            if (!asceq(*cp, *csp)) break;
             ++cp;
             ++csp;
         }

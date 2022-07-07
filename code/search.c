@@ -1491,11 +1491,14 @@ int unicode_eq(unsigned int bc, unsigned int pc) {
     return (utf8proc_toupper(bc) == utf8proc_toupper(pc));
 }
 
-/* eq -- Compare two characters.  The "bc" comes from the buffer, "pc"
+/* asceq -- Compare two bytes.  The "bc" comes from the buffer, "pc"
  *      from the pattern.  If we are not in EXACT mode, fold out the case.
- *  Used by fast_scanner.
+ * Used by fast_scanner, which will NOT be used for non-EXACT mode if
+ * there are bytes >0x7f, so the simple case-change code is OK.
  */
-int eq(unsigned char bc, unsigned char pc) {
+#define isASClower(c)  (('a' <= c) && (LASTLL >= c))
+
+int asceq(unsigned char bc, unsigned char pc) {
     if ((curwp->w_bufp->b_mode & MDEXACT) == 0) {
         if (islower(bc)) bc ^= DIFCASE;
         if (islower(pc)) pc ^= DIFCASE;
@@ -1512,7 +1515,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
     case LITCHAR:
         if (gc->cdm) res = FALSE;               /* Can't have combining bits */
         else if (gc->uc > 0x7f) res = FALSE;    /* Can't match non-ASCII */
-        else res = eq(gc->uc, mt->val.lchar);
+        else res = asceq(gc->uc, mt->val.lchar);
         break;
 
     case ANY:                   /* Any EXCEPT newline or UEM_NOCHAR */
@@ -2436,7 +2439,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
  *          expandp(patptr, &tpat[strlen(tpat)], NPAT/2);
  *          fprintf(stderr, "3 %s\n", tpat);
  */
-            if (!eq(c, *patptr++)) {
+            if (!asceq(c, *patptr++)) {
                 jump = (direct == FORWARD)? lastchfjump: lastchbjump;
                 goto fail;
             }

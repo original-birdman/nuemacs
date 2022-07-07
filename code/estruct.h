@@ -226,22 +226,7 @@ enum cmplt_type {
    fortunate, since the relative positions of upper to lower
    case letters is the opposite of ascii in ebcdic.
 */
-
-#ifdef  islower
-#undef  islower
-#endif
-
-#ifdef  isupper
-#undef  isupper
-#endif
-
 #define DIFCASE         0x20
-
-#define islower(c)      isxlower((0xFF & (c)))
-#define isupper(c)      isxupper((0xFF & (c)))
-
-#define isxlower(c)     (('a' <= c && LASTLL >= c) || (224 <= c && 252 >= c))
-#define isxupper(c)     (('A' <= c && LASTUL >= c) || (192 <= c && 220 >= c))
 
 /*      De-allocate memory always on exit (if the operating system or
  *      main program can not

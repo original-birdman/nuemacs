@@ -333,19 +333,19 @@ extern void new_prompt(char *);
 extern void rotate_sstr(int);
 extern void select_sstr(void);
 
-extern int forwsearch(int f, int n);
-extern int forwhunt(int f, int n);
-extern int backsearch(int f, int n);
-extern int backhunt(int f, int n);
+extern int forwsearch(int, int);
+extern int forwhunt(int, int);
+extern int backsearch(int, int);
+extern int backhunt(int, int);
 extern int scanmore(char *, int, int, int);
 extern void setpattern(const char[], const char[]);
-extern int unicode_eq(unsigned int, unsigned int);
-extern int eq(unsigned char bc, unsigned char pc);
-extern void rvstrcpy(char *rvstr, char *str);
-extern int sreplace(int f, int n);
-extern int qreplace(int f, int n);
-extern int expandp(const char *srcstr, char *deststr, int maxlength);
-extern int boundry(struct line *curline, int curoff, int dir);
+extern int unicode_eq(unsigned int, unsigned);
+extern int asceq(unsigned char, unsigned char);
+extern void rvstrcpy(char *, char *);
+extern int sreplace(int, int);
+extern int qreplace(int, int);
+extern int expandp(const char *, char *, int);
+extern int boundry(struct line *, int, int);
 extern char *group_match(int);
 
 /* isearch.c */
