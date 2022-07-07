@@ -135,7 +135,11 @@ static unsigned int stock(char *keyname) {
          !(noupper))            /* GGR */
         *keyname -= 32;
 
-/* NOTE that any char beyond the ASCII range is always uppercased. */
+/* NOTE that any char beyond the ASCII range is disallowed by bindtokey()
+ * and buffertokey().
+ * We'll process it anyway, otherwise we're left with a generic
+ * "cannot parse" error message.
+ */
     if (ch_as_uc(*keyname) >= 0x80) {   /* We have a utf-8 string... */
         unsigned int uc;
         int kn_left = kn_end - keyname;
@@ -467,6 +471,7 @@ int bindtokey(int f, int n) {
 /* Only allow ASCII keys (and modifiers...).
  * Other unicode characters might be typeable on a keyboard, but these
  * won't be shown on keys, so might mislead...
+ * It also limits the range when dumping key bindings.
  */
     unicode_t bc = (c & ~(CONTROL|META|CTLX|SPEC));
     if (bc > 0x7f) {

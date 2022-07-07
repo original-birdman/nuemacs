@@ -584,6 +584,11 @@ int bclear(struct buffer *bp) {
         Xfree(bp->bv);
         bp->bv = NULL;
     }
+
+/* If it's a Phonetic Translation table, remove that too. */
+
+    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
+
     return TRUE;
 }
 

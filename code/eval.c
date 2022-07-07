@@ -700,7 +700,7 @@ fvar:
 
     case '.':               /* A buffer variable - only for execbp! */
         if (!execbp) break;
-        if (!execbp->bv) {  /* Need to create a set... */
+        if (!execbp->bv) {  /* Need to create a set...free()d in bclear() */
             execbp->bv = Xmalloc(BVALLOC*sizeof(struct buffer_variable));
             struct buffer_variable *tp = execbp->bv;
             int count = BVALLOC;

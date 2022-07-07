@@ -282,18 +282,12 @@ struct window {
 #define WFKILLS 0x40            /* something was deleted        */
 #define WFINS   0x80            /* something was inserted       */
 
-
-/* Text is kept in buffers. A buffer header, described below, exists for every
- * buffer in the system. The buffers are kept in a big list, so that commands
- * that search for a buffer by name can find the buffer header. There is a
- * safe store for the dot and mark in the header, but this is only valid if
- * the buffer is not being displayed (that is, if "b_nwnd" is 0). The text for
- * the buffer is kept in a circularly linked list of lines, with a pointer to
- * the header line in "b_linep".
- *      Buffers may be "Inactive" which means the files associated with them
- * have not been read in yet. These get read in at "use buffer" time.
+/* Phonetic Translation tables.
+ * Allocated in ptt_compile().
+ * Freed (ptt_free) on buffer changes/removal:
+ *  bclear(), ptt_compile() ifile(), readin(), lchange(), filter_buffer()
+ *
  */
-
 #define CASESET_LOWI_ALL -4
 #define CASESET_LOWI_ONE -3
 #define CASESET_CAPI_ALL -2
@@ -313,6 +307,18 @@ struct ptt_ent {
     int caseset;                /* Casing for replacement */
     char display_code[32];      /* Only 2 graphemes, though */
 };
+
+
+/* Text is kept in buffers. A buffer header, described below, exists for every
+ * buffer in the system. The buffers are kept in a big list, so that commands
+ * that search for a buffer by name can find the buffer header. There is a
+ * safe store for the dot and mark in the header, but this is only valid if
+ * the buffer is not being displayed (that is, if "b_nwnd" is 0). The text for
+ * the buffer is kept in a circularly linked list of lines, with a pointer to
+ * the header line in "b_linep".
+ *      Buffers may be "Inactive" which means the files associated with them
+ * have not been read in yet. These get read in at "use buffer" time.
+ */
 
 /* Max #chars in a var name (user or buffer) */
 #define NVSIZE  32
@@ -334,6 +340,7 @@ struct func_opts {
     unsigned int search_ok :1;      /* *hunt() can run */
 };
 
+/* These are allocated in bfind()  and freed in zotbuf() */
 struct buffer {
     struct buffer *b_bufp;  /* Link to next struct buffer   */
     struct line *b_linep;   /* Link to the header struct line */
@@ -379,7 +386,7 @@ struct buffer {
 #define MDASAVE 0x0100          /* auto-save mode               */
 #define MDEQUIV 0x0200          /* Equivalent unicode searching */
 #define MDDOSLE 0x0400          /* DOS line endings             */
-#define MDRPTMG 0x0800          /* Report match in Magic mode   */ 
+#define MDRPTMG 0x0800          /* Report match in Magic mode   */
 /* Equiv mode only applies in Magic mode, so this is useful */
 #define MD_MAGEQV (MDMAGIC | MDEQUIV)
 
@@ -459,7 +466,10 @@ struct terminal {
 #define TTbacg      (*term.t_setback)
 #endif
 
-/* Structure for the table of initial key bindings. */
+/* Structure for the table of initial key bindings.
+ * NOTE: pbp buffer names are allocated in buffertokey()
+ * and freed in unbindkey() and, possibly, bindtokey().
+ */
 #define ENDS_KMAP -1
 #define ENDL_KMAP 0
 #define FUNC_KMAP 1

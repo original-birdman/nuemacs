@@ -399,6 +399,7 @@ void ptt_free(struct buffer *bp) {
         ptr = fwdptr;
     }
     bp->ptt_headp = NULL;
+    if (ptt == bp) ptt = NULL;      /* Clear if was in use */
     return;
 }
 
