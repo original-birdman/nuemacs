@@ -666,6 +666,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 
     int gap;                /* number of spaces to pad with */
     int rtol;               /* Pass direction */
+    int status;             /* How we fared */
     struct region f_region; /* Formatting region */
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
@@ -704,7 +705,12 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * wbuf needs to be sufficiently long to contain all of the longest
  * line (plus 1, for luck...) in case there is no word-break in it.
  * So we allocate it dynamically.
+ * And hence we MUST remember to always free it, regardless of
+ * where in the code we return.
+ * The same applies to space_ind.
+ * So have a single final exit from here on....
  */
+    status = TRUE;                  /* Assume all is OK */
     wbuf_ents = llength(curwp->w.dotp) + 1;
     wbuf = Xmalloc(MFACTOR*wbuf_ents);
     wordlen = wi = 0;
@@ -725,7 +731,8 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
         int bytes = lgetgrapheme(&gi, 0);
         if (bytes <= 0) {           /* We are in trouble... */
             mlforce("ERROR: cannot continue filling.");
-            return FALSE;
+            status = FALSE;
+            goto final_exit;
         }
         if (gi.uc == '\n') {
             gi.uc = ' ';
@@ -857,8 +864,6 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
  * end of last paragraph, in which case just got to last line */
     if (lforw(curwp->w.dotp) != curbp->b_linep) lnewline();
     else gotoeob(FALSE, 1);
-    Xfree(wbuf);    /* Mustn't forget these... */
-    if (space_ind) Xfree(space_ind);
 
 /* Make sure the display is not horizontally scrolled */
     if (curwp->w.fcol != 0) {
@@ -866,7 +871,10 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
         curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
     }
 
-    return TRUE;
+final_exit:
+    Xfree(wbuf);    /* Mustn't forget to free-up these... */
+    if (space_ind) Xfree(space_ind);
+    return status;
 }
 
 /*
