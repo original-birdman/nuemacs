@@ -517,7 +517,14 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
     int rec_incr = len + 1; /* Allocate in steps of len+1...trailing NUL */
 
     int used;
-    for (int offset = 0; offset < len; offset += used) {
+    int offset = 0;
+/* Was a for loop.
+ * Now a do loop so the gcc analyzer knows we go through it at least
+ * once (and so mstr allocates str in add_to_res().
+ * It seems to think that len (which we know must be 1+) can start
+ * at less than offset (which starts at 0).
+ */
+    do {
         unicode_t uc;
         used = utf8_to_unicode(in, offset, len, &uc);
         mstr->uc++;
@@ -547,7 +554,7 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
         char tbuf[4];   /* Maxlen utf8 mapping */
         int newlen = unicode_to_utf8(nuc, tbuf);
         add_to_res(mstr, tbuf, newlen, rec_incr);
-    }
+    } while ((offset += used) < len);
     *(mstr->str+mstr->utf8c) = '\0';    /* NUL terminate it */
     return;     /* Success */
 }

@@ -526,7 +526,7 @@ static int ptt_compile(struct buffer *bp) {
         if (caseset != CASESET_OFF) {
             struct mstr ex_mstr;
             utf8_recase(UTF8_LOWER, from_string, new->from_len, &ex_mstr);
-            new->from = ex_mstr.str;
+            new->from = ex_mstr.str;        /* malloc()ed, so OK */
             new->from_len = ex_mstr.utf8c;
             new->from_len_uc = ex_mstr.uc;
         }

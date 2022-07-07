@@ -136,17 +136,15 @@ static int casechange_region(int newcase) { /* The handling function */
         utf8_recase(newcase, linep->l_text+b_offs, this_blen, &mstr);
         int replen = mstr.utf8c;            /* Less code when copied.. */
         char *repstr = mstr.str;            /* ...to simple local vars */
-        if (replen == this_blen) {          /* Easy - just overwrite */
+        if (replen <= this_blen) {          /* Guaranteed the space */
             memcpy(linep->l_text+b_offs, repstr, replen);
             Xfree(repstr);
-        }
-        else if (replen < this_blen) {      /* So guaranteed the space */
-            memcpy(linep->l_text+b_offs, repstr, replen);
-            Xfree(repstr);
-            ccr_Tail_Copy;
-            int b_less = this_blen - replen;
-            llength(linep) -= b_less;       /* Fix-up length */
-            MarkDotFixup(-b_less);
+            if (replen < this_blen) {       /* Fix up the shortening */
+                ccr_Tail_Copy;
+                int b_less = this_blen - replen;
+                llength(linep) -= b_less;   /* Fix-up length */
+                MarkDotFixup(-b_less);
+            }
         }
         else {              /* replen > this_blen  Potentially trickier */
             int b_more = replen - this_blen;
