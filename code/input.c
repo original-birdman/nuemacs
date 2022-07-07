@@ -779,6 +779,12 @@ process_CSI:
         if (meta) cmask |= META;
         if (ctlx) cmask |= CTLX;
         c = get1key();
+/* If the next key is '[', just get the next key (k) and return
+ * FNk.  (i.e. Esc[[x (== CSI[x) is treated as Esc[x.
+ * The Linux console sends Esc[[A for F1, etc...
+ */
+        if (c == '[') return (cmask | get1key());
+
 /* uEmacs/PK 4.0 (4.015) from Petri H. Kutvonen, University of Helsinki,
  * which was an "enhanced version of MicroEMACS 3.9e" contained special
  * handling for 'i' and 'c' in this block.
@@ -825,7 +831,7 @@ process_CSI:
             if (get1key() == '~') break;
         }
 
-/* Might as well return SPEC 1-f (hex) (==FN1 to FNf0 for function keys.
+/* Might as well return SPEC 1-f (hex) (==FN1 to FNf) for function keys.
  * The VT220 function keys behaved thus:
  * F1 to F5 - local keys, sent nothing (we can map to FN1..5).
  * F6 sent (CSI)17~, F7 (CSI)18~ etc.
@@ -836,6 +842,9 @@ process_CSI:
  *
  * This is how xterm and KDE konsole maps function keys to the
  * string to send.
+ * The Linux Konsole and macOS settings send EscOP/Q/R/S for F1/2/3/4
+ * which will map to FNP/Q/R/S.
+ * Users coud set up different key-map fiels for each situation...
  *
  * So map 11 -> 1  ... 15 -> 5
  *        17 -> 6  ... 21 -> 10
