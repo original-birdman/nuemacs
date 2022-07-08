@@ -952,6 +952,17 @@ com_arg *multiplier_check(int c) {
     return &ca;             /* Give back the result */
 }
 
+static char *rcfile = NULL;     /* GGR non-default rc file */
+int set_rcfile(char *fname) {
+    if (rcfile) {
+        fprintf(stderr, "You cannot have two startup files (-c/@)!\n");
+        return FALSE;
+    }
+    rcfile = Xmalloc(NFILEN);
+    strcpy(rcfile, fname);
+    return TRUE;
+}
+
 int main(int argc, char **argv) {
     int c = -1;             /* command character */
     struct buffer *bp;      /* temp buffer pointer */
@@ -968,7 +979,6 @@ int main(int argc, char **argv) {
     char ekey[NPAT];        /* startup encryption key */
     int newc;
     int verflag = 0;        /* GGR Flags -v/-V presence on command line */
-    char *rcfile = NULL;    /* GGR non-default rc file */
     char *rcextra[10];      /* GGR additional rc files */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
 
@@ -1075,8 +1085,7 @@ int main(int argc, char **argv) {
 /* ffropen() will expand any relative/~ pathname *IN PLACE* so
  * we need a copy of the command line option!
  */
-                rcfile = Xmalloc(NFILEN);
-                strcpy(rcfile, opt);
+                if (!set_rcfile(opt)) exit(1);
                 break;
             case 'd':
             case 'D':       /* GGR -d for config/help directory */
@@ -1147,7 +1156,9 @@ int main(int argc, char **argv) {
             }
 
         }
-        else if (**argv == '@') rcfile = *argv + 1;
+        else if (**argv == '@') {   /* Same as -c. But not as as well as... */
+            if (!set_rcfile(*argv + 1)) exit(1);
+        }
         else break;
     }
     if ((verflag && argc == 0) || verflag > 1) {
