@@ -523,11 +523,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
 
 /* We always set up the bitmap structure */
 
-    if ((bmap = clearbits()) == NULL) {
-        mlwrite_one("Out of memory");
-        return FALSE;
-    }
-    mcptr->val.cclmap = bmap;
+    mcptr->val.cclmap = bmap = clearbits();
     patptr = *ppatptr;
 
 /* Test the initial character(s) in ccl for the special cases of negate ccl.
