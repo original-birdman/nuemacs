@@ -659,10 +659,10 @@ int putctext(char *iline) {
     return status;
 }
 
-/*
- * Delete all of the text saved in the kill buffer. Called by commands when a
- * new kill context is being created. The kill buffer array is released, just
- * in case the buffer has grown to immense size. No errors.
+/* Free up the first kill buffer ring entry for nex text by pushing all
+ * of the others down by 1.
+ * If the ring was already all in use then free the last entry (which will
+ * be pushed off the list) first.
  */
 void kdelete(void) {
 

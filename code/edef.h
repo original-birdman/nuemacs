@@ -58,7 +58,7 @@ extern struct kill *kbufp;      /* current kill buffer chunk pointer */
 #define KRING_SIZE 10
 extern struct kill *kbufh[KRING_SIZE];
                                 /* kill buffer header pointers  */
-extern int kused[KRING_SIZE];   /* # of bytes used in KB        */
+extern int kused[KRING_SIZE];   /* # of bytes used in this kill buffer */
 extern struct window *swindow;  /* saved window pointer         */
 extern int cryptflag;           /* currently encrypting?        */
 extern int *kbdptr;             /* current position in keyboard buf */
