@@ -20,6 +20,10 @@ static int numlocks;                    /* # of current locks active */
  * lockchk:
  *      check a file for locking and add it to the list
  *
+ * NOTE!
+ *  There is currently no mechanism to remove a file from this list
+ *  if a buffer is closed!
+ *
  * char *fname;                 file to check for a lock
  */
 int lockchk(char *fname) {
@@ -28,6 +32,7 @@ int lockchk(char *fname) {
 /* GGR
  * Need a copy of the filename, to allow possible tilde and shell
  * expansion on the passed-in name.
+ * Remember to free it in errors!
  */
     char *tmpname = (char *)Xmalloc(NFILEN);
     strcpy(tmpname, fname);
@@ -35,33 +40,28 @@ int lockchk(char *fname) {
 
 /* Check to see whether that file is already locked here */
 
-    if (numlocks > 0)
-        for (i = 0; i < numlocks; ++i)
-            if (strcmp(tmpname, lname[i]) == 0) return TRUE;
+    for (i = 0; i < numlocks; ++i)
+        if (strcmp(tmpname, lname[i]) == 0) return TRUE;
 
 /* If we have a full locking table, bitch and leave */
 
     if (numlocks == NLOCKS) {
         mlwrite_one("LOCK ERROR: Lock table full");
-        return ABORT;
+        status = ABORT;
     }
-
-/* Next, try to lock it */
-
-    status = lock(tmpname);
-    if (status == ABORT)    /* file is locked, no override */
-        return ABORT;
-    if (status == FALSE)    /* locked, overriden, dont add to table */
-        return TRUE;
-
-/* We have now locked it, add it to our table */
-
-    lname[++numlocks - 1] = (char *)Xmalloc(strlen(tmpname) + 1);
-
+    else {          /* Next, try to lock it */
+        status = lock(tmpname);
+        if (status) {
 /* Everything is cool, add it to the table */
 
-    lname[++numlocks - 1] = tmpname;
-    return TRUE;
+            lname[++numlocks - 1] = tmpname;
+            return TRUE;
+        }
+        if (status == FALSE)    /* locked, overriden, dont add to table */
+            status = TRUE;
+    }
+    Xfree(tmpname);             /* Didn't add to table, so free it */
+    return status;
 }
 
 /*
