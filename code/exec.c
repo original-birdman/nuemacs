@@ -576,7 +576,7 @@ int storepttable(int f, int n) {
     int status = storeproc(0, 0);
     if (status != TRUE) return status;
 
-/* Mark this as a translation buffer (storeprocwill have set BTPROC) */
+/* Mark this as a translation buffer (storeproc will have set BTPROC) */
 
     bstore->b_type = BTPHON;
 
@@ -822,7 +822,7 @@ int ptt_handler(int c) {
  * int f;               default flag
  * int n;               macro number to use
  */
-struct func_opts null_func_opts = { 0, 0, 0, 0 };
+struct func_opts null_func_opts = { 0, 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
@@ -858,6 +858,7 @@ int storeproc(int f, int n) {
         if (!strcmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
         if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
         if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
+        if (!strcmp(optstr, "one_pass"))        bp->btp_opt.one_pass = 1;
 /* Individual commands in the procedure will determine the "search_ok"
  * status, so set it to true here.
  */
@@ -903,12 +904,32 @@ int run_user_proc(char *procname, int rpts) {
         return TRUE;    /* Don't abort start-up file */
     }
 
-/* and now execute it as asked */
+/* and now execute it as asked.
+ * Let the a user-proc know which pass it is on (starting at one)
+ * out of the total expected.
+ * Pass on the requested repeats (in uproc_lptotal0 even for a one_pass
+ * function, in case it wishes to handle it during its one_pass.
+ */
     if (rpts <= 0) rpts = 1;
-    while (rpts-- > 0)
-        if ((status = dobuf(bp)) != TRUE) return status;
-
-    return TRUE;
+    int this_total = rpts;
+    if (bp->btp_opt.one_pass) rpts = 1;
+    int this_count = 0;
+    status = TRUE;
+    while (rpts-- > 0) {
+/* Sice one user-proc can call another we have to remember the current
+ * setting, install our current ones, then restore the originals
+ * after we're done.
+ */
+        int save_count = uproc_lpcount;
+        int save_total = uproc_lptotal;
+        uproc_lpcount = ++this_count;
+        uproc_lptotal = this_total;
+        status = dobuf(bp);
+        uproc_lpcount = save_count;
+        uproc_lptotal = save_total;
+        if (!status) break;
+    }
+    return status;
 }
 
 /* Buffer name for reexecute - shared by all buffer-callers */
@@ -1379,9 +1400,11 @@ int dobuf(struct buffer *bp) {
                 force = TRUE;
                 break;      /* GGR: Must not drop down!! */
 
-            case DFINISH:   /* FINISH directive */
+            case DFINISH:   /* FINISH directive. Abort with exit FALSE. */
                 if (execlevel == 0) {
                     return_stat = FALSE;
+                    if (macarg(tkn))
+                        return_stat = (strcasecmp(tkn, "True") == 0);
                     goto eexec;
                 }
                 goto onward;

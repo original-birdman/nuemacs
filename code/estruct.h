@@ -338,6 +338,7 @@ struct func_opts {
     unsigned int not_mb :1;
     unsigned int not_interactive :1;
     unsigned int search_ok :1;      /* *hunt() can run */
+    unsigned int one_pass :1;       /* ignore any repeat arg */
 };
 
 /* These are allocated in bfind()  and freed in zotbuf() */
@@ -577,7 +578,7 @@ enum ev_val {
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
     EVSDTKSKIP, EVUPROCOPTS, EVFORCESTAT, EVEQUIVTYPE, EVSRCHCANHUNT,
-    EVSRCHOLAP,
+    EVSRCHOLAP, EVUPLCOUNT, EVUPLTOTAL,
     EVSDOPTS,
 };
 

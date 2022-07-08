@@ -653,6 +653,8 @@ static char *gtenv(char *vname) {
             break;
     case EVSRCHCANHUNT:     return ue_itoa(srch_can_hunt);
     case EVSRCHOLAP:        return ue_itoa(srch_overlap);
+    case EVUPLCOUNT:        return ue_itoa(uproc_lpcount);
+    case EVUPLTOTAL:        return ue_itoa(uproc_lptotal);
     case EVSDOPTS:          return showdir_opts;
     }
 
@@ -961,6 +963,10 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVSRCHOLAP:
             srch_overlap = atoi(value);
+            break;
+        case EVUPLCOUNT:        /* Both read-only */
+        case EVUPLTOTAL:
+            status = FALSE;
             break;
 
 /* There are only 5 (MAX_SD_OPTS) options, so any attempt to set more

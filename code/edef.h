@@ -239,3 +239,7 @@ extern int srch_can_hunt;
  * the same string may find overlapping resutls
  */
 extern int srch_overlap;
+
+/* Counters (current, total) for repeating a user-procedure */
+
+extern int uproc_lpcount, uproc_lptotal;

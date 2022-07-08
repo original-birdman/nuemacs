@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.162
-;                       Last Update: 14 Apr 2022
+;                       Version - GGR4.163 (requires GGR4.163+)
+;                       Last Update: 09 July 2022
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -55,7 +55,7 @@ store-procedure file-hooks
 ;
 ; Centre the current text within $fillcol columns
 ;
-store-procedure centre-line
+store-procedure centre-line one_pass
     beginning-of-line
     !force white-delete
     end-of-line
@@ -72,14 +72,14 @@ store-procedure centre-line
 ; Unset the Default replace string (which is otherwise remembered
 ; between replacements).
 ;
-store-procedure rm-dflt-repl
+store-procedure rm-dflt-repl one_pass
     set $replace ""
     write-message "[Default replace string set null]"
 !endm
 ;
 ; Run the buffer through an external spell checker
 ;
-store-procedure spell-check not_mb
+store-procedure spell-check not_mb one_pass
     set .extras @"<return> or any special SPELL options: "
     !if &seq .extras "ERROR"
         write-message "[Aborted]"
@@ -112,38 +112,42 @@ set %rindef 0
 
 ;
 ; left-and-right-justify text within a $fillcol width
+; Not one_pass as a numeric arg repeats for n paras.
+; We only prompt for .left and .right on pass1.
 ;
 store-procedure lr-justify not_mb   ; Left and right justify paragraph
   set .oldfill $fillcol
-  set .left @&ptf "Left indent [%s]: " %lindef
-  !if &seq .left "ERROR"
-    write-message "[Aborted]"
-    !return
-  !endif
-  !if &sequ .left ""      ; If <null>.....
-    set .left %lindef     ; ....accept default
-  !else
-    !if &and &not &seq .left "0" &not &greater .left 0        ; is it a number?
-        write-message "[Not a valid indent!]"
-        !return
+  !if &equ $uproc_lpcount 1
+    set .left @&ptf "Left indent [%s]: " %lindef
+    !if &seq .left "ERROR"
+      write-message "[Aborted]"
+      !return
     !endif
-    set %lindef .left     ; Else set default to new value.
-  !endif
-  set .right @&ptf "Right indent [%s]: " %rindef
-  !if &seq .right "ERROR"
-    write-message "[Aborted]"
-    !return
-  !endif
-  !if &sequ .right ""
-    set .right %rindef
-  !else
-    !if &and &not &seq .right "0" &not &greater .right 0 ; is it a number?
-        write-message "[Not a valid indent!]"
-        !return
+    !if &sequ .left ""      ; If <null>.....
+      set .left %lindef     ; ....accept default
+    !else
+      !if &and &not &seq .left "0" &not &greater .left 0        ; is it a number?
+          write-message "[Not a valid indent!]"
+          !return
+      !endif
+      set %lindef .left     ; Else set default to new value.
     !endif
-    set %rindef .right
+    set .right @&ptf "Right indent [%s]: " %rindef
+    !if &seq .right "ERROR"
+      write-message "[Aborted]"
+      !return
+    !endif
+    !if &sequ .right ""
+      set .right %rindef
+    !else
+      !if &and &not &seq .right "0" &not &greater .right 0 ; is it a number?
+          write-message "[Not a valid indent!]"
+          !return
+      !endif
+      set %rindef .right
+    !endif
+    write-message "[Filling..]"
   !endif
-  write-message "[Filling..]"
   set %indent &add .left .right         ; Add together the L&R indent values
   set $fillcol &sub .oldfill %indent    ; ...and set $fillcol to this value.
   end-of-line           ; make sure point is not at the beginning of paragraph
@@ -272,11 +276,14 @@ store-procedure _mytoggle-mode
     !endif
     .mfunc .what
 *report
+    delete-var %test-mode
+    delete-var %type-mode
+    delete-var %add-func
+    delete-var %del-func
     write-message &cat .report .how
-    !finish
 !endm
 
-store-procedure toggle-lmode            ; toggle local mode
+store-procedure toggle-lmode one_pass   ; toggle local mode
     set %test-mode $cmode
     set %type-mode local
     set %add-func add-mode
@@ -284,7 +291,7 @@ store-procedure toggle-lmode            ; toggle local mode
     execute-procedure _mytoggle-mode
 !endm
 
-store-procedure toggle-gmode            ; toggle global mode
+store-procedure toggle-gmode one_pass   ; toggle global mode
     set %test-mode $gmode
     set %type-mode global
     set %add-func add-global-mode
@@ -294,7 +301,7 @@ store-procedure toggle-gmode            ; toggle global mode
 ;
 ; delete spaces right until next non-space char
 ;
-store-procedure del-sp-right
+store-procedure del-sp-right one_pass
     !while &or &equal $curchar 32 &equal $curchar 9
         delete-next-character
     !endwhile

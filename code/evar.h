@@ -74,6 +74,8 @@ struct evlist evl[] = {
  { "srch_can_hunt", EVSRCHCANHUNT },/* To allow forw/backhunt to work
                                        in test macros */
  { "srch_overlap",  EVSRCHOLAP },   /* Can successive matches overlap */ 
+ { "uproc_lpcount", EVUPLCOUNT },   /* Current loop for Esc<n>func */
+ { "uproc_lptotal", EVUPLTOTAL },   /* <n> for Esc<n>func */
 /* showdir vars */
  { "showdir_opts", EVSDOPTS },      /* Start-up state (for user to set) */
 };

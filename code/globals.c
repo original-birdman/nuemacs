@@ -210,3 +210,6 @@ struct buffer *execbp = NULL;
 int srch_can_hunt = 0;
 
 int srch_overlap = 1;
+
+int uproc_lpcount = 0;
+int uproc_lptotal = 0;
