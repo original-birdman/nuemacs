@@ -191,7 +191,6 @@ extern int typahead(void);
 /* input.c */
 extern int mlyesno(char *);
 extern int mlreply(char *, char *, int, enum cmplt_type);
-extern int ectoc(int);
 extern struct name_bind *getname(char *, int);
 extern int tgetc(void);
 extern int get1key(void);

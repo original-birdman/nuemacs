@@ -563,17 +563,26 @@ int mlyesno(char *prompt) {
     int c;                  /* input character - tgetc() returns unicode */
     char buf[NPAT];         /* prompt to user */
 
+    strcpy(buf, prompt);    /* build the prompt once */
+    strcat(buf, " " MLbkt("y/n") "? ");
     int res = -1;           /* NOT ABORT, TRUE or FALSE */
     while(res == -1) {
-        strcpy(buf, prompt);    /* build and prompt the user */
-        strcat(buf, " " MLbkt("y/n") "? ");
         mlwrite_one(buf);
 
-        c = tgetc();        /* get the response */
-
-        if (c == ectoc(abortc)) res = ABORT;
-        else if (c == 'y' || c == 'Y') res = TRUE;
-        else if (c == 'n' || c == 'N') res = FALSE;
+        c = get1key();        /* get the response */
+        switch(c) {
+        case 'y':
+        case 'Y':
+            res = TRUE;
+            break;
+        case 'n':
+        case 'N':
+            res = FALSE;
+            break;
+        default:
+            if (c == abortc) res = ABORT;   /* as abortc is a var */
+            break;
+        }
     }
     mlerase();
     return res;
@@ -593,17 +602,6 @@ int mlyesno(char *prompt) {
 
 int mlreply(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     return nextarg(prompt, buf, nbuf, ctype);
-}
-
-/*
- * ectoc:
- *      expanded character to character
- *      collapse the CONTROL and SPEC flags back into an ascii code
- */
-int ectoc(int c) {
-    if (c & CONTROL) c = c & ~(CONTROL | 0x40);
-    if (c & SPEC)    c = c & 255;
-    return c;
 }
 
 /* get a command name from the command line. Command completion means

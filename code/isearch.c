@@ -34,15 +34,15 @@
  */
 #define CMDBUFLEN       256     /* Length of our command buffer */
 
-#define IS_ABORT        0x07    /* Abort the isearch */
-#define IS_BACKSP       0x08    /* Delete previous char */
-#define IS_TAB          0x09    /* Tab character (allowed search char) */
-#define IS_NEWLINE      0x0D    /* New line from keyboard (Carriage return) */
-#define IS_QUOTE        0x11    /* Quote next character */
-#define IS_REVERSE      0x12    /* Search backward */
-#define IS_FORWARD      0x13    /* Search forward */
-#define IS_QUIT         0x1B    /* Exit the search */
-#define IS_RUBOUT       0x7F    /* Delete previous character */
+#define IS_ABORT        (CONTROL|'G')   /* Abort the isearch */
+#define IS_BACKSP       (CONTROL|'H')   /* Delete previous char */
+#define IS_TAB          (CONTROL|'I')   /* Tab character (allowed search char) */
+#define IS_NEWLINE      (CONTROL|'M')   /* New line from keyboard (Carriage return) */
+#define IS_QUOTE        (CONTROL|'Q')   /* Quote next character */
+#define IS_REVERSE      (CONTROL|'R')   /* Search backward */
+#define IS_FORWARD      (CONTROL|'S')   /* Search forward */
+#define IS_QUIT         (CONTROL|'[')   /* Exit the search */
+#define IS_RUBOUT       (0x7F)          /* Delete previous character */
 
 /* A couple of "own" variables for re-eat */
 
@@ -311,7 +311,7 @@ static int isearch(int f, int n) {
     int col;                /* prompt column */
     int cpos;       /* character number in search string  */
     int c;          /* current input character */
-    int expc;       /* function expanded input char       */
+
 /* GGR - Allow for a trailing NUL */
     char pat_save[NPAT+1];  /* Saved copy of the old pattern str  */
     struct line *curline;   /* Current line on entry              */
@@ -346,7 +346,7 @@ start_over:
  * Control-S or Control-R, re-use the old search string and find
  * the first occurrence
  */
-    c = ectoc(expc = get_char());   /* Get the first character    */
+    c = get_char();         /* Get the first character    */
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
 /* Reuse old search string?   */
 /* Yup, find the grapheme length and re-echo the string    */
@@ -370,7 +370,7 @@ start_over:
             n = 1;                  /* Yes, search forward    */
         status = scanmore(pat, n, FALSE, FALSE);    /* Do the search */
         if (!status) hilite(final_char, col);
-        c = ectoc(expc = get_char()); /* Get another character */
+        c = get_char();             /* Get another character */
     }
 
 /* Top of the per character loop */
@@ -379,7 +379,7 @@ start_over:
                         /* Check for special characters first: */
                         /* Most cases here change the search */
 
-        if (expc == metac) {    /* Want to quit searching?    */
+        if (c == IS_QUIT) {     /* Want to quit searching?    */
             status = TRUE;
             goto end_isearch;   /* Quit searching now         */
         }
@@ -393,13 +393,13 @@ start_over:
             if (c == IS_REVERSE)    /* If reverse search  */
                 n = -1;             /* Set the reverse direction  */
             else                    /* Otherwise,         */
-                n = 1;             /*  go forward         */
+                n = 1;              /*  go forward         */
 /* This calls asks for the *next* match, not a continuation of the
  * current one.
  */
             status = scanmore(pat, n, TRUE, FALSE); /* Start again   */
             if (!status) hilite('!', col+1);  /* No further match */
-            c = ectoc(expc = get_char());   /* Get next char */
+            c = get_char(); /* Get next char */
             continue;       /* Go continue with the search */
 
         case IS_NEWLINE:    /* Carriage return            */
@@ -407,7 +407,7 @@ start_over:
             break;          /* Make sure we use it        */
 
         case IS_QUOTE:      /* Quote character            */
-            c = ectoc(expc = get_char());   /* Get the next char */
+            c = get_char(); /* Get the next char */
 
         case IS_TAB:        /* Generically allowed        */
         case '\n':          /*  controlled characters     */
@@ -470,7 +470,7 @@ start_over:
         else                        /* Otherwise, we must have won */
              status = scanmore(pat, n, FALSE, TRUE);    /* find next match */
         if (!status) hilite(c, col);
-        c = ectoc(expc = get_char());   /* Get the next char        */
+        c = get_char();             /* Get the next char        */
     }                               /* for {;;} */
 end_isearch:
     (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
