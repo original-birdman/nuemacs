@@ -235,7 +235,7 @@ void addchar_kbdmacro(char addch) {
  */
     static void flush_kbd_text(void) {
     lnewline();
-    linstr("insert-raw-string ");
+    linstr("insert-string ");
     if (must_quote) linsert_byte(1, '"');
     kbd_text[kbd_idx] = '\0';
 /* This loop may look odd, but if we have NUL bytes to insert it means
@@ -251,7 +251,7 @@ void addchar_kbdmacro(char addch) {
         lnewline();
         linstr("macro-helper 0");
         lnewline();
-        linstr("insert-raw-string ");
+        linstr("insert-string ");
         added++;
         if (must_quote) linsert_byte(1, '"');
     }
