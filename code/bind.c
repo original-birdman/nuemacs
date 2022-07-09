@@ -422,6 +422,219 @@ static int unbindchar(int c) {
     return TRUE;
 }
 
+/* ************************************************************
+ * Actually add/update the key handler.
+ * Used by buffertokey() and switch_internal()
+ * We expect to be given a bname *including* teh leading '/'.
+ */
+static void update_keybind(int c, fn_t kfunc, char *bname) {
+    struct key_tab *ktp;    /* pointer into the command table */
+    struct key_tab *destp;  /* Where to copy the name and type */
+
+/* Search the table to see whether it exists */
+
+    ktp = getbind(c);
+    if (ktp) {              /* If it exists, change it... (k_code is OK) */
+        if (bname) {        /* user-proc install */
+            if (ktp->k_type == FUNC_KMAP) /* Need to allocate space for name */
+                ktp->hndlr.pbp = Xmalloc(NBUFN);
+        }
+        else {              /* function install */
+            if (ktp->k_type == PROC_KMAP) { /* Need to free the name */
+                Xfree(ktp->hndlr.pbp);      /* Free the name */
+                ktp->hndlr.pbp = NULL;
+            }
+        }
+        destp = ktp;
+    }
+    else {  /* ...else add a new one at the end */
+        int ki;
+        if (key_index_valid) {  /* We know the valid entry count */
+            ki = kt_ents - 1;   /* The last used entry */
+        }
+        else {                  /* re-indexing is paused ... */
+/* We have to search - quicker to search backwards from end */
+            ki = keytab_alloc_ents - 2;   /* Skip ENDS_KMAP */
+            while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
+        }
+        ktp = &keytab[ki+1];    /* Step forward to an ENDL_KMAP to use... */
+        destp = ktp;
+
+/* If the list is not exhausted the next one will also be an End-of-List.
+ * If it is an End-of-Structure we need to extend, and if we do that we
+ * need to handle destp, in case the Xrealloc() moves things.
+ * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
+ */
+        ktp += 2;
+        if (ktp->k_type == ENDS_KMAP) {
+            ktp->k_type = ENDL_KMAP;        /* Change to end-of-list */
+            int destp_offs = destp - keytab;
+            extend_keytab(0);
+            destp = keytab + destp_offs;
+        }
+        destp->k_code = c;          /* set keycode */
+        if (bname)                  /* user-proc install */
+            destp->hndlr.pbp = Xmalloc(NBUFN);
+    }
+    if (bname) {
+        destp->k_type = PROC_KMAP;
+        destp->fi = func_info(execproc);
+        strcpy(destp->hndlr.pbp, bname+1);  /* Skip the leading '/' */
+    }
+    else {
+        destp->k_type = FUNC_KMAP;      /* Set the type */
+        destp->hndlr.k_fp = kfunc;      /* and the function pointer */
+        destp->fi = func_info(kfunc);
+    }
+    mpresf = TRUE;                      /* GGR */
+    TTflush();
+
+    key_index_valid = 0;    /* Rebuild index before using it. */
+}
+
+/* Check for a procedure buffer and complain if not */
+static int check_procbuf(struct buffer *cbp, char *bufn) {
+    if (cbp->b_type != BTPROC) {
+        mlforce("Buffer %s is not a procedure buffer.", bufn);
+        sleep(1);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/* GGR added
+ * buffertokey:
+ *      Add a new key to the key binding table to invoke a buffer.
+ *      Much copied from bindtokey B()and execproc()
+ *
+ * int f, n;            command arguments [IGNORED]
+ */
+int buffertokey(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    unsigned int c;         /* command key to bind */
+    char bname[NBUFN+1];    /* buffer name */
+    char outseq[80];        /* output buffer for keystroke sequence */
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+
+/* Prompt the user to type in a key to bind */
+
+    if (!clexec) {
+        mlwrite_one(": buffer-to-key ");
+        mpresf = TRUE;          /* GGR */
+    }
+
+/* Fudge in the tag, then get the name of the buffer to invoke.
+ * The maximum length is 16 chars *including* the NUL.
+ * mlreply (via either token or getstring) includes the NUL in the size
+ * and we are actually writing this in from offset 1, so we allow NBUFN
+ * chars for that and complain if the reply fills the buffer (as that will
+ * make the name too long, and we don't want unexpected truncation meaning
+ * we have two different names ending up the same.
+ * Note that we DO NOT SEND the leading '/', which means that lookups 
+ * (the CMPLT_BUF) currently fail. This is so that command macro files
+ * can use the same names as on the store-procedure line.
+ */
+    bname[0] = '/';
+    if ((status = mlreply("macro buffer: ", bname+1, NBUFN, CMPLT_BUF)) != TRUE)
+        return status;
+    if (strlen(bname) >= NBUFN) {
+         mlforce("Procedure name too long: %s. Ignored.", bname);
+         sleep(1);
+         return TRUE;       /* Don't abort start-up file */
+    }
+
+/* Check that this buffer exists */
+    if ((bp = bfind(bname, FALSE, 0)) == NULL) {
+        mlwrite("No such exec procedure %s", bname);
+        return FALSE;
+    }
+    if (check_procbuf(bp, bname) != TRUE) return FALSE;
+
+    if (!clexec) mlwrite_one("key sequence: ");
+
+/* get the command sequence to bind */
+
+    c = getckey(FALSE);
+    if (c == 0) {
+        mlwrite("Can't parse key for: %s: ", bname);
+        return FALSE;
+    }
+
+/* Only allow ASCII keys (and modifiers...).
+ * Other unicode characters might be typeable on a keyboard, but these
+ * won't be shown on keys, so might mislead...
+ */
+    unicode_t bc = (c & ~(CONTROL|META|CTLX|SPEC));
+    if (bc > 0x7f) {
+        mlwrite("U+%x is not an ASCII byte", bc);
+        return FALSE;
+    }
+
+/* Change it to something we can print as well and dump it out */
+
+    cmdstr(c, outseq);
+    if (!clexec) mlputs(outseq);
+    if (kbdmode == RECORD) addto_kbdmacro(outseq, 0, 0);
+
+    update_keybind(c, NULL, bname);
+    return TRUE;
+}
+
+/* GGR addition to allow swapping in a user-procedure for one of the 4
+ * "internal" ones. (META|SPEC|'x' for x = W, C, R or X.
+ */
+int switch_internal(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    char bind_char[2];
+    char uproc[NBUFN+1];
+    int s;
+    int bind_key;
+    fn_t rpl_func;
+
+/* Get char to change */
+
+    if ((s = mlreply("Char to change [WCRX]: ", bind_char, 2, 0)) != TRUE) {
+        return s;
+    }
+    if (bind_char[0] == '\0') return FALSE;
+    char set_char = bind_char[0] & ~DIFCASE;    /* Quick ASCII upcase */
+    switch(set_char) {
+    case 'C':       /* Start of each "loop" in getstring()/main() */
+    case 'R':       /* Before reading a file into a buffer (readin()) */
+    case 'W':       /* When we need a word-wrap (main()/insert_newline()). */
+    case 'X':       /* From cknewwindow(). Called when window switches. */
+        break;
+    default:
+        mlwrite("Invalid choice: %c", set_char);
+        return FALSE;
+    };
+    bind_key = META|SPEC|set_char;
+
+/* Get user-proc to install */
+
+    uproc[0] = '/';
+    if ((s = mlreply("user-proc (dflt for reset): ",
+             uproc+1, NBUFN, CMPLT_BUF)) != TRUE) {
+        return s;
+    }
+    if (strcmp(uproc+1, "dflt") == 0) {     /* Reset */
+        if (set_char == 'W') rpl_func = wrapword;
+        else                 rpl_func = nullproc;
+        update_keybind(bind_key, rpl_func, NULL);
+    }
+    else {
+        struct buffer *upb = bfind(uproc, FALSE, 0);
+        if (!upb) {
+            mlwrite("No such user procedure: %s", uproc+1);
+            return FALSE;
+        }
+        if (check_procbuf(upb, uproc) != TRUE) return FALSE;
+        update_keybind(bind_key, NULL, uproc);
+    }
+    return TRUE;
+}
+
 /*
  * bindtokey:
  *      add a new key to the key binding table
@@ -434,7 +647,6 @@ int bindtokey(int f, int n) {
     fn_t kfunc;             /* ptr to the requested function to bind to */
     struct key_tab *ktp;    /* pointer into the command table */
     char outseq[80];        /* output buffer for keystroke sequence */
-    struct key_tab *destp;  /* Where to copy the name and type */
     int mflag;              /* Are we handling a prefix key? */
 
 /* Get the function name to bind it to */
@@ -508,53 +720,7 @@ int bindtokey(int f, int n) {
         else                    abortc = c;    /* Only other option */
     }
 
-/* Search the table to see whether it exists */
-
-    ktp = getbind(c);
-    if (ktp) {              /* If it exists, change it... */
-        if (ktp->k_type == PROC_KMAP) { /* Need to free the name */
-            Xfree(ktp->hndlr.pbp);       /* Free the name */
-            ktp->hndlr.pbp = NULL;
-        }
-        destp = ktp;
-    }
-    else {  /* ...else add a new one at the end */
-        int ki;
-        if (key_index_valid) {  /* We know the valid entry count */
-            ki = kt_ents - 1;   /* The last used entry */
-        }
-        else {                  /* re-indexing is paused ... */
-/* We have to search - quicker to search backwards from end */
-            ki = keytab_alloc_ents - 2;   /* Skip ENDS_KMAP */
-            while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
-        }
-        ktp = &keytab[ki+1];
-        destp = ktp;
-
-/* The next entry will alway be an End-of-List.
- * If the list is not exhausted the one after will also be an End-of-List.
- * If it is an End-of-Structure we need to extend, and if we do that we
- * need to handle destp, in case the Xrealloc() moves things.
- * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
- */
-        ktp += 2;
-        if (ktp->k_type == ENDS_KMAP) {
-            ktp->k_type = ENDL_KMAP;        /* Change to end-of-list */
-            int destp_offs = destp - keytab;
-            extend_keytab(0);
-            destp = keytab + destp_offs;
-        }
-        destp->k_code = c;              /* set keycode */
-    }
-    destp->k_type = FUNC_KMAP;      /* Set the type */
-    destp->hndlr.k_fp = kfunc;      /* and the function pointer */
-    destp->fi = nm_info;
-
-    mpresf = TRUE;                  /* GGR */
-    TTflush();
-
-    key_index_valid = 0;            /* Rebuild index before using it. */
-
+    update_keybind(c, kfunc, NULL);
     return TRUE;
 }
 
@@ -1088,126 +1254,4 @@ char *transbind(char *skey) {
     struct key_tab *ktp = getbind(stock(skey));
     if (!ktp) return "ERROR";
     return ktp->fi->n_name;
-}
-
-/* GGR added
- * buffertokey:
- *      Add a new key to the key binding table to invoke a buffer.
- *      Much copied from bindtokey B()and execproc()
- *
- * int f, n;            command arguments [IGNORED]
- */
-int buffertokey(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    unsigned int c;         /* command key to bind */
-    struct key_tab *ktp;    /* pointer into the command table */
-    char bname[NBUFN+1];    /* buffer name */
-    char outseq[80];        /* output buffer for keystroke sequence */
-    struct buffer *bp;      /* ptr to buffer to execute */
-    int status;             /* status return */
-    struct key_tab *destp;  /* Where to copy the name and type */
-
-/* Prompt the user to type in a key to bind */
-
-    if (!clexec) {
-        mlwrite_one(": buffer-to-key ");
-        mpresf = TRUE;          /* GGR */
-    }
-
-/* Fudge in the tag, then get the name of the buffer to invoke.
- * The maximum length is 16 chars *including* the NUL.
- * mlreply (via either token or getstring) includes the NUL in the size
- * and we are actually writing this in from offset 1, so we allow NBUFN
- * chars for that and complain if the reply fills the buffer (as that will
- * make the name too long, and we don't want unexpected truncation meaning
- * we have two different names ending up the same.
- */
-    bname[0] = '/';
-    if ((status = mlreply("macro buffer: ", bname+1, NBUFN, CMPLT_BUF)) != TRUE)
-        return status;
-    if (strlen(bname) >= NBUFN) {
-         mlforce("Procedure name too long: %s. Ignored.", bname);
-         sleep(1);
-         return TRUE;       /* Don't abort start-up file */
-    }
-
-/* Check that this buffer exists */
-    if ((bp = bfind(bname, FALSE, 0)) == NULL) {
-        mlwrite("No such exec procedure %s", bname);
-        return FALSE;
-    }
-
-    if (!clexec) mlputs("key sequence: ");
-
-/* get the command sequence to bind */
-
-    c = getckey(FALSE);
-    if (c == 0) {
-        mlwrite("Can't parse key for: %s: ", bname);
-        return FALSE;
-    }
-
-/* Only allow ASCII keys (and modifiers...).
- * Other unicode characters might be typeable on a keyboard, but these
- * won't be shown on keys, so might mislead...
- */
-    unicode_t bc = (c & ~(CONTROL|META|CTLX|SPEC));
-    if (bc > 0x7f) {
-        mlwrite("U+%x is not an ASCII byte", bc);
-        return FALSE;
-    }
-
-/* Change it to something we can print as well and dump it out */
-
-    cmdstr(c, outseq);
-    if (!clexec) mlputs(outseq);
-
-/* Search the table to see whether it exists */
-
-    ktp = getbind(c);
-    if (ktp) {              /* If it exists, change it... */
-        if (ktp->k_type == FUNC_KMAP) /* Need to allocate space for name */
-            ktp->hndlr.pbp = Xmalloc(NBUFN);
-        destp = ktp;
-    }
-    else {  /* ...else add a new one at the end */
-        int ki;
-        if (key_index_valid) {  /* We know the valid entry count */
-            ki = kt_ents - 1;   /* The last used entry */
-        }
-        else {                  /* re-indexing is paused ... */
-/* We have to search - quicker to search backwards from end */
-            ki = keytab_alloc_ents - 2;   /* Skip ENDS_KMAP */
-            while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
-        }
-        ktp = &keytab[ki+1];    /* Step forward to an ENDL_KMAP to use... */
-        ktp->k_code = c;        /* set keycode */
-        ktp->hndlr.pbp = Xmalloc(NBUFN);
-        destp = ktp;
-
-/* If the list is not exhausted the next one will also be an End-of-List.
- * If it is an End-of-Structure we need to extend, and if we do that we
- * need to handle destp, in case the Xrealloc() moves things.
- * extend_keytab() fills in ENDL_KMAP and ENDS_KMAP entries.
- */
-        ktp += 2;
-        if (ktp->k_type == ENDS_KMAP) {
-            ktp->k_type = ENDL_KMAP;        /* Change to end-of-list */
-            int destp_offs = destp - keytab;
-            int ktp_offs = ktp - keytab;
-            extend_keytab(0);
-            destp = keytab + destp_offs;
-            ktp = keytab + ktp_offs;
-        }
-    }
-    destp->k_type = PROC_KMAP;
-    destp->fi = func_info(execproc);
-    strcpy(destp->hndlr.pbp, bname+1); /* ...and copy in name */
-
-    mpresf = TRUE;                  /* GGR */
-    TTflush();
-
-    key_index_valid = 0;    /* Rebuild index before using it. */
-
-    return TRUE;
 }

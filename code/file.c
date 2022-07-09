@@ -409,7 +409,16 @@ int readin(char *fname, int lockfl) {
     if (s != TRUE) return s;
 
 /* let a user macro get hold of things...if he wants */
-    execute(META | SPEC | 'R', FALSE, 1);
+    saveflag = lastflag;        /* preserve lastflag through this */
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ */
+    if (!meta_spec_active.R) {
+        meta_spec_active.R = 1;
+        execute(META|SPEC|'R', FALSE, 1);
+        meta_spec_active.R = 0;
+    }
+    lastflag = saveflag;
 
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
     if (s == FIOFNF) {                              /* File not found. */

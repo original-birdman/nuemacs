@@ -595,8 +595,16 @@ int insert_newline(int f, int n) {
  */
     if ((curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
         getccol(FALSE) > fillcol &&
-        (curwp->w_bufp->b_mode & MDVIEW) == FALSE)
-          execute(META | SPEC | 'W', FALSE, 1);
+        (curwp->w_bufp->b_mode & MDVIEW) == FALSE) {
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ */
+        if (!meta_spec_active.W) {
+            meta_spec_active.W = 1;
+            execute(META|SPEC|'W', FALSE, 1);
+            meta_spec_active.W = 0;
+        }
+    }
 
 /* insert some lines */
     while (n--) {

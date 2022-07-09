@@ -243,3 +243,13 @@ extern int srch_overlap;
 /* Counters (current, total) for repeating a user-procedure */
 
 extern int uproc_lpcount, uproc_lptotal;
+
+/* Markers for META|SPEC handler being active. */
+
+typedef struct {
+    int C;
+    int R;
+    int W;
+    int X;
+} meta_spec_flags_t;
+extern meta_spec_flags_t meta_spec_active;

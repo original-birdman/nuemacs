@@ -1282,7 +1282,14 @@ int main(int argc, char **argv) {
 loop:
 /* Execute the "command" macro...normally null. */
     saveflag = lastflag;  /* Preserve lastflag through this. */
-    execute(META | SPEC | 'C', FALSE, 1);
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ */
+    if (!meta_spec_active.C) {
+        meta_spec_active.C = 1;
+        execute(META|SPEC|'C', FALSE, 1);
+        meta_spec_active.C = 0;
+    }
     lastflag = saveflag;
 
     if (typahead()) {
@@ -1660,8 +1667,16 @@ int execute(int c, int f, int n) {
  */
     if (c == ' ' && (curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
           n >= 0 && getccol(FALSE) > fillcol &&
-         (curwp->w_bufp->b_mode & MDVIEW) == FALSE)
-                execute(META | SPEC | 'W', FALSE, 1);
+         (curwp->w_bufp->b_mode & MDVIEW) == FALSE) {
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ */
+        if (!meta_spec_active.W) {
+            meta_spec_active.W = 1;
+            execute(META|SPEC|'W', FALSE, 1);
+            meta_spec_active.W = 0;
+        }
+    }
 
     if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
 #if     BSD || USG       /* 8BIT P.K. */

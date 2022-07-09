@@ -624,5 +624,16 @@ int getwpos(void) {
 }
 
 void cknewwindow(void) {
-    execute(META | SPEC | 'X', FALSE, 1);
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ * Also, don't do this if a macro is being generated (as it switches
+ * to/from the keyboard macro buffer to log commands and may complain
+ * about getting there from any user-proc buffer used here).
+ * It's OK if the macro is being executed.
+ */
+    if (!meta_spec_active.X && !(kbdmode == RECORD)) {
+        meta_spec_active.X = 1;
+        execute(META|SPEC|'X', FALSE, 1);
+        meta_spec_active.X = 0;
+    }
 }

@@ -213,3 +213,7 @@ int srch_overlap = 1;
 
 int uproc_lpcount = 0;
 int uproc_lptotal = 0;
+
+/* Markers for META|SPEC handler being active. */
+
+meta_spec_flags_t meta_spec_active = { 0, 0, 0, 0 };

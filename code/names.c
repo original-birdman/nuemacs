@@ -192,6 +192,7 @@ struct name_bind names[] = {
 #if BSD | __hpux | SVR4
     {"suspend-emacs", bktoshell, {0, 0, 0, 1, 0}},
 #endif
+    {"switch-internal", switch_internal,  {0, 0, 0, 0, 0}},/* GGR */
     {"toggle-ptmode", toggle_ptmode, {0, 0, 0, 1, 0}},     /* GGR */
     {"transpose-characters", twiddle, {0, 0, 0, 0, 0}},
     {"trim-line", trim, {0, 0, 0, 0, 0}},

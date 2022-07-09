@@ -1084,7 +1084,14 @@ loop:
 
 /* Execute the "command" macro...normally null */
     saveflag = lastflag;        /* preserve lastflag through this */
-    execute(META|SPEC|'C', FALSE, 1);
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ */
+    if (!meta_spec_active.C) {
+        meta_spec_active.C = 1;
+        execute(META|SPEC|'C', FALSE, 1);
+        meta_spec_active.C = 0;
+    }
     lastflag = saveflag;
 
 /* Have we been asked to update the prompt? */
