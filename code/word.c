@@ -199,8 +199,8 @@ void ensure_case(int want_case) {
     }
 
     int saved_doto = curwp->w.doto;     /* Save position */
-    struct grapheme gc;
-    int orig_utf8_len = lgetgrapheme(&gc, FALSE);     /* Doesn't move doto */
+    struct grapheme gc;                 /* Have to free any gc.ex we get! */
+    int orig_utf8_len = lgetgrapheme(&gc, FALSE);   /* Doesn't move doto */
 /* We only look at the base character for casing.
  * If it's not changed by the caser(), leave now...
  * Although we will (try to) handle the perverse case of a German sharp.
@@ -220,7 +220,7 @@ void ensure_case(int want_case) {
     }
     else {
         unicode_t nuc = caser(gc.uc);   /* Get the case-translated uc */
-        if (nuc == gc.uc) return;       /* No change */
+        if (nuc == gc.uc) goto ensure_ex_free;  /* No change */
         int start = curwp->w.doto;
         gc.uc = nuc;
         lputgrapheme(&gc);              /* Insert the whole thing */
@@ -238,6 +238,8 @@ void ensure_case(int want_case) {
     ldelete(orig_utf8_len, FALSE);
     curwp->w.doto = saved_doto + doto_adj;          /* Restore position */
     lchange(WFHARD);
+ensure_ex_free:
+    if (gc.ex) Xfree(gc.ex);
     return;
 }
 

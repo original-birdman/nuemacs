@@ -624,7 +624,8 @@ void set_grapheme(struct grapheme *gp, unicode_t uc, int no_free) {
  * May recase the base character
  * Returns the currently allocated size.
  */
-int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen, int nocase) {
+static int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen,
+     int nocase) {
     char ub[6];
     int ulen;
     int reslen;

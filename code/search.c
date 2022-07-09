@@ -564,7 +564,8 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
 
 /* We can also have a range based on Unicode chars.
  * So, what do we have next...let's look.
- * We overwrite gc here, but we know it was MC_RCCL.
+ * We overwrite gc here, but we know it was MC_RCCL, so can not have
+ * alloc()ed any ex part.
  */
     patptr += build_next_grapheme(patptr, 0, -1, &gc);
     if (gc.uc == MC_ECCL && gc.cdm == 0) {  /* - was at end -> literal */
@@ -598,7 +599,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
         xp->xval.cl_lim.low = low;
         xp->xval.cl_lim.high = high;
     }
-/* We've used the current character, so remove it... */
+/* We've used the current character, so remove it...(gc.ex cannot be set) */
     goto invalidate_current;
     END_TEST(!first....)           /* End of range handling */
 
@@ -636,6 +637,12 @@ handle_prev:
 
     switch (prev_gc.uc) {
     case MC_ESC:
+        if ((gc.uc > MAXASCII) || (gc.cdm)) {
+            parse_error(patptr, "Attempt to quote non-ASCII");
+            if (gc.ex) Xfree(gc.ex);
+            return FALSE;
+        }
+/* So from here on we know there is no gc.ex to free */
         switch (gc.uc) {     /* All MUST finish with goto!! */
         case 'u': {
             if (*patptr != '{') {       /* balancer: } */
@@ -799,6 +806,7 @@ handle_prev:
 
 /* We are sent here if the loop has already dealt with the current
  * character, in order to fetch another one...
+ * For it to have done so, gc.ex cannot be set.
  */
 invalidate_current:
     patptr += build_next_grapheme(patptr, 0, -1, &gc);
@@ -1403,7 +1411,7 @@ static int rmcstr(void) {
                 rmcptr->mc.type = UCGRAPH;
 /* We copy all of the data into our saved one. This means that any
  * malloc'ed ex parts get their pointers copied, and there is no more to
- * do here. Any freeing will be done in mcclear()/
+ * do here. Any freeing will be done in mcclear().
  */
                 rmcptr->val.gc = gc;
             }
@@ -1504,6 +1512,9 @@ int asceq(unsigned char bc, unsigned char pc) {
 
 /* mgpheq -- meta-character equality with a grapheme.
  *  Used by step_scanner.
+ * NOTE that the free()s any ex part of the incoming gc!
+ * (because all callers are done with it after this call, so it
+ * puts the free() in one location).
  */
 static int mgpheq(struct grapheme *gc, struct magic *mt) {
     int res;
@@ -1840,11 +1851,13 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
  * Note that going FORWARD we are at EOB when "on" the marker, while when
  * in reverse it is if we are about to go onto it.
  */
-        if (((dir == FORWARD) && (curline == curbp->b_linep)) ||
-            ((dir == REVERSE) && (nextline == curbp->b_linep)))
-            gc.uc = UEM_NOCHAR;
-        else
-            gc.uc = '\n';
+        if (!pos_only) {
+            if (((dir == FORWARD) && (curline == curbp->b_linep)) ||
+                ((dir == REVERSE) && (nextline == curbp->b_linep)))
+                gc.uc = UEM_NOCHAR;
+            else
+                gc.uc = '\n';
+        }
     }
     else {
         if (pos_only) { /* Just get the position in the current line */
