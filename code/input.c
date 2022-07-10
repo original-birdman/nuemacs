@@ -778,10 +778,11 @@ process_CSI:
         if (ctlx) cmask |= CTLX;
         c = get1key();
 /* If the next key is '[', just get the next key (k) and return
- * FNk.  (i.e. Esc[[x (== CSI[x) is treated as Esc[x.
- * The Linux console sends Esc[[A for F1, etc...
+ * FNa for A, etc....
+ * "Linux console" for KDE sends Esc[[A... for F1-F5. Only known instance.
+ * Use a quick lowercase...
  */
-        if (c == '[') return (cmask | get1key());
+        if (c == '[') return (cmask | DIFCASE | get1key());
 
 /* uEmacs/PK 4.0 (4.015) from Petri H. Kutvonen, University of Helsinki,
  * which was an "enhanced version of MicroEMACS 3.9e" contained special
@@ -829,7 +830,9 @@ process_CSI:
             if (get1key() == '~') break;
         }
 
-/* Might as well return SPEC 1-f (hex) (==FN1 to FNf) for function keys.
+/* Might as well return SPEC a-t for what the function keys send.
+ * (The Linux Console sends up to 34~ (Shift-F8))
+ *
  * The VT220 function keys behaved thus:
  * F1 to F5 - local keys, sent nothing (we can map to FN1..5).
  * F6 sent (CSI)17~, F7 (CSI)18~ etc.
@@ -838,34 +841,39 @@ process_CSI:
  *  https://vt100.net/docs/vt220-rm/chapter3.html
  *  https://www.xfree86.org/current/ctlseqs.html
  *
- * This is how xterm and KDE konsole maps function keys to the
- * string to send.
- * The Linux Konsole and macOS settings send EscOP/Q/R/S for F1/2/3/4
- * which will map to FNP/Q/R/S.
- * Users coud set up different key-map fiels for each situation...
+ * By mapping them to FNx (x == lowercase) we avoid clashes with the
+ * cursor keys (EscO or Esc[ A/B/C/D) and Insert/Home/PgUp (Esc[n~ n == 1-6).
  *
- * So map 11 -> 1  ... 15 -> 5
- *        17 -> 6  ... 21 -> 10
- *        23 -> 11 ... 26 -> 14
- *        28 -> 15
+ * KDE Konsole with Xfree4 and macOS settings send EscOP/Q/R/S for F1/2/3/4
+ * which will map to FNP/Q/R/S. gnome-terminal does the same.
  */
         int num = (c-'0')*10 + (d-'0');
         switch (num) {          /* ESC [ n n ~ P.K. */
-        case 11: c = '1'; break;
-        case 12: c = '2'; break;
-        case 13: c = '3'; break;
-        case 14: c = '4'; break;
-        case 15: c = '5'; break;
-        case 17: c = '6'; break;
-        case 18: c = '7'; break;
-        case 19: c = '8'; break;
-        case 20: c = '9'; break;
-        case 21: c = 'a'; break;
-        case 23: c = 'b'; break;
-        case 24: c = 'c'; break;
-        case 25: c = 'd'; break;
-        case 26: c = 'e'; break;
-        case 28: c = 'f'; break;
+/* It is possible to set up case statements with fall through adjusting
+ * an offset from num as you go.
+ * But it is somewhat confusing, and gains little, if anything.
+ * Ignore it.
+ */
+        case 11: c = 'a'; break;
+        case 12: c = 'b'; break;
+        case 13: c = 'c'; break;
+        case 14: c = 'd'; break;
+        case 15: c = 'e'; break;
+        case 17: c = 'f'; break;        /* Skip 16 */
+        case 18: c = 'g'; break;
+        case 19: c = 'h'; break;
+        case 20: c = 'i'; break;
+        case 21: c = 'j'; break;
+        case 23: c = 'k'; break;        /* Skip 22 */
+        case 24: c = 'l'; break;
+        case 25: c = 'm'; break;
+        case 26: c = 'n'; break;
+        case 28: c = 'o'; break;        /* Skip 27 */
+        case 29: c = 'p'; break;
+        case 31: c = 'q'; break;        /* Skip 30 */
+        case 32: c = 'r'; break;
+        case 33: c = 's'; break;
+        case 34: c = 't'; break;
         default:
             c = '?';
             break;
