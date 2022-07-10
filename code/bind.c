@@ -234,6 +234,12 @@ static int kt_ents;     /* Actual populated entries */
 
 static int keystr_index_valid = 0;
 
+/* Note that we sort the keys as UNSIGNED!
+ * This is so that we can step through them in order when dumping them
+ * in desbind() and have the SPEC entries at the end.
+ * It does also mean that when we do a lookup (in getbind()) we need
+ * that to do an unsigned comparison during the binary chop.
+ */
 static void index_bindings(void) {
     if (key_index_allocated < keytab_alloc_ents) {
         key_index = Xrealloc(key_index, keytab_alloc_ents*sizeof(int));
@@ -241,7 +247,7 @@ static void index_bindings(void) {
     }
     struct fields fdef;
     fdef.offset = offsetof(struct key_tab, k_code);
-    fdef.type = 'I';
+    fdef.type = 'U';
     fdef.len = sizeof(int);
 
 /* The allocated keytab contains markers at the end, which we do not
@@ -340,6 +346,8 @@ struct key_tab *getbyfnc(fn_t func) {
  * and returns the key_tab entry address.
  * This now returns the key_tab entry address, and callers have
  * been adjusted to work with this.
+ * Note that we sort the keys as UNSIGNED (in index_bindings)
+ * so we must do an unsigned comparison during the binary chop.
  *
  * int c;               key to find what is bound to it
  */
@@ -368,13 +376,14 @@ struct key_tab *getbind(int c) {
  */
     int first = 0;
     int last = kt_ents - 1;
-    int middle = (first + last)/2;
+    int middle;
 
     while (first <= last) {
-        if (keytab[key_index[middle]].k_code < c) first = middle + 1;
+        middle = (first + last)/2;
+        if ((unsigned)keytab[key_index[middle]].k_code < (unsigned)c)
+             first = middle + 1;
         else if (keytab[key_index[middle]].k_code == c) break;
         else last = middle - 1;
-        middle = (first + last)/2;
     }
     if (first > last) {
         return NULL;        /* No such binding */
@@ -531,7 +540,7 @@ int buffertokey(int f, int n) {
  * chars for that and complain if the reply fills the buffer (as that will
  * make the name too long, and we don't want unexpected truncation meaning
  * we have two different names ending up the same.
- * Note that we DO NOT SEND the leading '/', which means that lookups 
+ * Note that we DO NOT SEND the leading '/', which means that lookups
  * (the CMPLT_BUF) currently fail. This is so that command macro files
  * can use the same names as on the store-procedure line.
  */
@@ -900,97 +909,31 @@ static int buildlist(int type, char *mstring) {
         cpos = 0;       /* and clear the line */
     }
 
-/* Now, if this is not apropos, list everything in key-binding order. */
+/* Now, if this is not apropos, list everything in key-binding order,
+ * with a heading for each "prefix-type".
+ */
 
     if (type) {
-        int status;
-        if (linstr("\n\nKey bindings\n") != TRUE) return FALSE;
-        unicode_t key;
-/* All control keys are uppercased...and only run from '@' to '_' */
-        linstr("Start Control (^? is the Delete key)\n");
-        for (key = (CONTROL|'@'); key <= (CONTROL|'_'); key++) {
-            status = show_key_binding(key);
-            if (!status) return status;
-        }
-        status = show_key_binding(0x7f);    /* Delete Key */
-        if (!status) return status;
+        if (linstr("\n\nAll key bindings:\n") != TRUE) return FALSE;
 
-        linstr("Start Ctlx+Control\n");
-/* All control keys are uppercased...and only run from '@' to '_' */
-        if (!status) return status;
-        for (key = (CTLX|CONTROL|'@'); key <= (CTLX|CONTROL|'_'); key++) {
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-        status = show_key_binding(CTLX|0x7f);   /* Delete Key */
+static char* hdr[] = {
+    "Bare char", "Control",        "Meta",           "Meta+Ctrl",
+    "CtlX",      "Ctlx+Ctrl",      "Ctlx+Meta",      "Ctlx+Meta+Ctrl",
+    "SPEC",      "SPEC+Ctrl",      "Meta+SPEC",      "Meta+SPEC+Ctrl",
+    "CtlX+SPEC", "Ctlx+SPEC+Ctrl", "Ctlx+SPEC+Meta", "Ctlx+Meta+SPEC+Control",
+};
 
-        linstr("Start Ctlx\n");
-/* Ctlx keys are uppercased for alphas... */
-        for (key = (CTLX|' '); key <= (CTLX|0x7f); key++) {
-            if ((key >= (CTLX|'a')) && (key <= (CTLX|'z'))) continue;
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-/* Meta+Control listing
- * All control keys are uppercased...and only run from '@' to '_'
- */
-        linstr("Start Meta+Control\n");
-        for (key = (META|CONTROL|'@'); key <= (META|CONTROL|'_'); key++) {
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-        status = show_key_binding(META|0x7f);   /* Delete Key */
-
-/* Escape keys are uppercased for alphas...Delete key already done  */
-        linstr("Start Meta\n");
-        for (key = (META|' '); key < (META|0x7f); key++) {
-            if ((key >= (META|'a')) && (key <= (META|'z'))) continue;
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-
-/* Spec+Control listing */
-        linstr("Start SPEC+Control\n");
-        for (key = (SPEC|CONTROL|'@'); key <= (SPEC|CONTROL|'_'); key++) {
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-        status = show_key_binding(SPEC|0x7f);   /* Delete Key */
-
-
-/* SPEC keys are not cased even for alphas. */
-        linstr("Start SPEC\n");
-        for (key = (SPEC|' '); key <= (SPEC|0x7f); key++) {
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-
-/* Ctlx+Meta+Control */
-        linstr("Start Ctlx+Meta+Control\n");
-        for (key = (CTLX|META|CONTROL|'@');
-                 key <= (CTLX|META|CONTROL|'_'); key++) {
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-        status = show_key_binding(CTLX|META|0x7f);   /* Delete Key */
-
-/* Escape keys are uppercased for alphas...Delete key already done  */
-        linstr("Start Ctlx+Meta\n");
-        for (key = (CTLX|META|' '); key < (CTLX|META|0x7f); key++) {
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-
-/* CtlX+SPEC - SPEC keys are not cased even for alphas. */
-        linstr("Start Ctlx+SPEC\n");
-        for (key = (CTLX|SPEC|' '); key <= (CTLX|SPEC|0x7f); key++) {
-            int status = show_key_binding(key);
-            if (!status) return status;
-        }
-
-/* Meta+SPEC - Internal usage only. Only A to Z. */
-        linstr("Start Meta+SPEC (internal bindings)\n");
-        for (key = (META|SPEC|'A'); key <= (META|SPEC|'Z'); key++) {
+        unsigned int prev_cmask = -1;
+        for (int i = 0; i < kt_ents; i++) {
+            unicode_t key = keytab[key_index[i]].k_code;
+            unsigned int cmask = 0xf0000000 & key;
+            if (cmask != prev_cmask) {
+                int hdri = cmask >> 28;
+                linstr("   ");
+                linstr(hdr[hdri]);
+                lnewline();
+                prev_cmask = cmask;
+            }
             int status = show_key_binding(key);
             if (!status) return status;
         }
