@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       Version - GGR4.163 (requires GGR4.163+)
-;                       Last Update: 09 July 2022
+;                       Last Update: 10 July 2022
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -376,15 +376,56 @@ bind-to-key search-reverse              M-R
 buffer-to-key toggle-gmode              M-T
 bind-to-key fill-paragraph              M-Q
 bind-to-key white-delete                M-\
+
+; KeyPad and AppPad keys
 ;
-bind-to-key previous-line               FNA
-bind-to-key next-line                   FNB
-bind-to-key forward-character           FNC
-bind-to-key backward-character          FND
-bind-to-key kill-to-end-of-line         FNQ
-bind-to-key previous-word               FNP
-bind-to-key next-word                   FNR
-bind-to-key set-mark                    FNH
+bind-to-key previous-line               FNA     ; Up Arrow
+bind-to-key next-line                   FNB     ; Down Arrow
+bind-to-key forward-character           FNC     ; Right Arrow
+bind-to-key backward-character          FND     ; Left Arrow
+bind-to-key previous-page               FN5     ; Page Up
+bind-to-key next-page                   FN6     ; Page Down
+bind-to-key yank                        FN2     ; Insert
+bind-to-key kill-region                 FN3     ; Del/Delete
+;
+
+; Function key binding - a choice of ways for some.
+; So we set both ways as the " not needed" key won't
+; be sent by any other key.
+;
+; KDE Linux console (or Solaris)
+;
+bind-to-key beginning-of-file           FN1     ; Home
+bind-to-key end-of-file                 FN4     ; End
+;
+bind-to-key help                        FNa     ; F1
+bind-to-key describe-bindings           FNb     ; F2
+bind-to-key scroll-next-up              FNc     ; F3
+bind-to-key scroll-next-down            FNd     ; F4
+
+;
+; Xfree4/gnome
+;
+bind-to-key beginning-of-file           FNH     ; Home
+bind-to-key end-of-file                 FNF     ; End
+;
+bind-to-key help                        FNP     ; F1
+bind-to-key describe-bindings           FNQ     ; F2
+bind-to-key scroll-next-up              FNR     ; F3
+bind-to-key scroll-next-down            FNS     ; F4
+;
+; Common function keys...
+;
+bind-to-key describe-key                FNe     ; F5
+bind-to-key kill-paragraph              FNf     ; F6
+bind-to-key yank-replace                FNg     ; F7
+bind-to-key yank-minibuffer             FNh     ; F8
+bind-to-key makelist-region             FNi     ; F9
+bind-to-key numberlist-region           FNj     : F10
+bind-to-key count-words                 FNl     ; F12
+
+;
+; End key mappings
 ;
 
 4 handle-tab

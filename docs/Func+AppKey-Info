@@ -1,0 +1,64 @@
+                            Keyboard Results
+
+Keyboard mapping results I found with the GGR4.163 CSI mapping code.
+
+                KDE Konsole                         XTerm
+                                            with Application Keypad
+            XFree4                                          Old
+            +       Linux   Solaris    |    VT220   Tcap    Fkeys
+            macOS   Console Console
+
+F1          FNP     FNa     FNa        |    FNP     FNP     FNa
+F2          FNQ     FNb     FNb        |    FNQ     FNQ     FNb
+F3          FNR     FNc     FNc        |    FNR     FNR     FNc
+F4          FNS     FNd     FNd        |    FNS     FNS     FNd
+F5          FNe     FNe     FNe        |    FNe     FNe     FNe
+F6          FNf     FNf     FNf        |    FNf     FNf     FNf
+F7          FNg     FNg     FNg        |    FNg     FNg     FNg
+F8          FNh     FNh     FNh        |    FNh     FNh     FNh
+F9          FNi     FNi     FNi        |    FNi     FNi     FNi
+F10         FNj     FNj     FNj        |    FNj     FNj     FNj     
+F11 !!!        (full-screen)           |    FNk     FNk     FNk
+F12         FNl     FNl     FNl        |    FNl     FNl     FNl
+
+Insert      FN2     FN2     FN2        |    FN2     FN2     FN2
+Delete (*)  FN3     FN3     FN3        |    FN3     FN3     FN3
+Home        FNH     FN1     FN1        |    FN1     FN1     FN1
+End         FNF     FN4     FN4        |    FN4     FN4     FN4
+PgUp        FN5     FN5     FN5        |    FN5     FN5     FN5
+PgDn        FN6     FN6     FN6        |    FN6     FN6     FN6
+
+UpArrow     FNA     FNA     FNA        |    FNA     FNA     FNA
+DnArrow     FNB     FNB     FNB        |    FNB     FNB     FNB
+RtArrow     FNC     FNC     FNC        |    FNC     FNC     FNC
+LtArrow     FND     FND     FND        |    FND     FND     FND
+
+0/Ins       FN2     FN2     FN2        |    FNp     FN2     FN2
+./Del       FN3     FN3     FN3        |    FNn     FN3     FN3
+1/End       FNF     FN4     FN4        |    FNq     FNF     FNF
+2/DnAw      FNB     FNB     FNB        |    FNr     FNB     FNB
+3/PgDn      FN6     FN6     FN6        |    FNs     FN6     FN6
+4/LtAw      FND     FND     FND        |    FNt     FND     FND
+5           FNE     <dead>  <dead>     |    FNu     FNE     FNE
+6/RtAw      FNC     FNC     FNC        |    FNv     FNC     FNC
+7/Home      FNH     FN1     FN1        |    FNw     FNH     FNH
+8/UpAw      FNA     FNA     FNA        |    FNx     FNA     FNA
+9/PgUp      FN5     FN5     FN5        |    FNy     FN5     FN5 
+Enter                                  |    FNM     FNM     FNM
++                                      |    FNl     FNk     FNk
+-                                      |    FNm     FNm     FNm
+*                                      |    FNj     FNj     FNj
+/                                      |    FNo     FNo     FNo
+
+Unique      22      21      21              36      28      28
+
+gnome-terminal is the same as XFree4/macOS.
+The (real) Linux terminal is the same as the KDE Linux Console, except
+    NumkeyPad5 sends FNG.
+xterm+"Sun function keys" does not work.
+
+* if "Delete is DEL" is not set in xterm.
+
+Since the standard uemacs.rc now maps "both" sets of keys (FNH and FN1,
+FNP and FNa, etc.) keys should have the same effect everywhere (excepy
+using VT220 keys on xterm - so don't).

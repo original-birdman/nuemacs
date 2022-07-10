@@ -1039,7 +1039,7 @@ static void freewhile(struct while_block *wp) {
  *      execute the contents of the buffer pointed to
  *      by the passed BP
  *
- *      Directives start with a "!" and include:
+ *      Directives start with a "!" and are:
  *
  *      !endm           End a macro
  *      !if (cond)      conditional execution
@@ -1049,7 +1049,9 @@ static void freewhile(struct while_block *wp) {
  *      !goto <label>   Jump to a label in the current macro
  *      !force          Force macro to continue...even if command fails
  *      !while (cond)   Execute a loop if the condition is true
+ *      !break
  *      !endwhile
+ *      !finish [True]  End execution. Return False (unless True given).
  *
  *      Line Labels begin with a "*" as the first nonblank char, like:
  *
