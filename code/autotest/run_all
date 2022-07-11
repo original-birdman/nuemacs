@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+if [ ! -d autotest ]; then
+    echo >&2 "This expects to be run from the autotest parent"
+    if [ -d ../autotest ]; then
+        echo >&2 "...switching up..."
+        cd .. 
+    else
+        exit 1
+    fi
+fi
+
+for f in autotest/*.sh; do
+    $f
+done
