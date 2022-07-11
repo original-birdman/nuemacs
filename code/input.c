@@ -732,6 +732,7 @@ int getcmd(void) {
     int c;                  /* fetched keystroke */
     int ctlx = FALSE;
     int meta = FALSE;
+    int cmask = 0;
 
 /* Keep going until we return something */
 
@@ -743,9 +744,9 @@ int getcmd(void) {
  */
         if (meta && ((c == '[') | (c == 'O'))) {
             meta = FALSE;
-            goto process_CSI;
+            break;              /* Drop out to CSI handling */
         }
-        if (c == CSI) goto process_CSI;
+        if (c == CSI) break;    /* Drop out to CSI handling */
         if (c == (CONTROL|'X')) {
 /* Trap Esc-^x and ^x-^x */
             if (meta) return META|CONTROL|'X';
@@ -762,27 +763,27 @@ int getcmd(void) {
             meta = TRUE;
             continue;
         }
-        int cmask = 0;
         if (meta) cmask |= META;
         if (ctlx) cmask |= CTLX;
         if (cmask || (c&(CONTROL|META|CTLX))) c = ensure_uppercase(c);
         return c | cmask;
+    }
 
-/* Process the Vt220 Control Sequence Introducer.
- * Once we get here the control make is already known, so
+/* Process the Vt220 Control Sequence Introducer (CSI) from here on.
+ * Once we get here the control mask is already known, so
  * set it now.
  */
-process_CSI:
-        cmask = SPEC;
-        if (meta) cmask |= META;
-        if (ctlx) cmask |= CTLX;
-        c = get1key();
-/* If the next key is '[', just get the next key (k) and return
+    cmask = SPEC;
+    if (meta) cmask |= META;
+    if (ctlx) cmask |= CTLX;
+    c = get1key();
+
+/* If the next key is '[', just get the next key and return
  * FNa for A, etc....
  * "Linux console" for KDE sends Esc[[A... for F1-F5. Only known instance.
  * Use a quick lowercase...
  */
-        if (c == '[') return (cmask | DIFCASE | get1key());
+    if (c == '[') return (cmask | DIFCASE | get1key());
 
 /* uEmacs/PK 4.0 (4.015) from Petri H. Kutvonen, University of Helsinki,
  * which was an "enhanced version of MicroEMACS 3.9e" contained special
@@ -794,44 +795,41 @@ process_CSI:
  * was that they should be treated as Meta and Ctlx prefixes, while
  * just restarting the key input.
  * But since I can't see it being of use (it prevented you binding
- * them to anything else).
- * I'll just leave it here as a reference and remove the keybindings
- * from ebind.h.
+ * them to anything else) I've removed it.
+ * As a result this code had been moved to follow the loop, since it no
+ * longer needs to be within it.
  */
-#if IN_CASE_YOU_CAN_SEE_A_VALUE_IN_IT
-/* NOTE that this inactive code is the only part which could go back
- * around the loop once we get here. (The statement before the process_CSI
- * label is a return).
- * Just in case you wonder why it is written this way....
+
+/* If this char is from A to z, just return it */
+
+    if (c >= 'A' && c <= 'z') return cmask | c;
+
+/* Get the next char. If it is ~, return that prev char */
+
+    int d = get1key();          /* ESC [ n ~   P.K. */
+    if (d == '~') return cmask | c;
+
+/* If we have 2 digits, all is OK(-ish). If the second is not a digit, but K,
+ * return FNk.
+ * This handles Shift F2 in Konsole Xfree mode sending CSI2Q,etc..
  */
-        if (c == 'i') {         /* DO key    P.K. */
-            ctlx = TRUE;
-            meta = FALSE;
-            continue;
-        }
-        else if (c == 'c') {    /* ESC key   P.K. */
-            meta = TRUE;
-            ctlx = FALSE;
-            continue;
-        }
-#endif
-        if (c >= 'A' && c <= 'z') {
-            return cmask | c;
-        }
+    if ((d < '0') || (d > '9')) return cmask | d;
 
-        int d = get1key();
-        if (d == '~') {         /* ESC [ n ~   P.K. */
-            return cmask | c;
-        }
-
-/* We should have a tilde to finish. So get to it - with a limit... */
-
-        for (int sc = 4; sc >0; sc--) {
-            if (get1key() == '~') break;
-        }
+/* We should now have a tilde to finish after this second. So get to it
+ * - with a limit...
+ * The KDE Konsole Xfree keyboard sends CSI15;*~ for F5+Modifier, (CSI15~
+ * for bare F5) etc. so we'll just skip the modifier part.
+ *
+ * It would also be possible to handle the CSI224z, CSI225z, etc sent by
+ * F1, F2, ... in xterm's Sun Function-Keys mode.  But there are limits as
+ * to what is useful.
+ */
+    for (int sc = 4; sc > 0; sc--) {
+        if (get1key() == '~') break;
+    }
 
 /* Might as well return SPEC a-t for what the function keys send.
- * (The Linux Console sends up to 34~ (Shift-F8))
+ * (The Linux Console Fx keys send from 11~ up to 34~ (Shift-F8))
  *
  * The VT220 function keys behaved thus:
  * F1 to F5 - local keys, sent nothing (we can map to FN1..5).
@@ -847,40 +845,36 @@ process_CSI:
  * KDE Konsole with Xfree4 and macOS settings send EscOP/Q/R/S for F1/2/3/4
  * which will map to FNP/Q/R/S. gnome-terminal does the same.
  */
-        int num = (c-'0')*10 + (d-'0');
-        switch (num) {          /* ESC [ n n ~ P.K. */
+    int num = (c-'0')*10 + (d-'0');
+    switch (num) {          /* ESC [ n n ~ P.K. */
 /* It is possible to set up case statements with fall through adjusting
  * an offset from num as you go.
  * But it is somewhat confusing, and gains little, if anything.
  * Ignore it.
  */
-        case 11: c = 'a'; break;
-        case 12: c = 'b'; break;
-        case 13: c = 'c'; break;
-        case 14: c = 'd'; break;
-        case 15: c = 'e'; break;
-        case 17: c = 'f'; break;        /* Skip 16 */
-        case 18: c = 'g'; break;
-        case 19: c = 'h'; break;
-        case 20: c = 'i'; break;
-        case 21: c = 'j'; break;
-        case 23: c = 'k'; break;        /* Skip 22 */
-        case 24: c = 'l'; break;
-        case 25: c = 'm'; break;
-        case 26: c = 'n'; break;
-        case 28: c = 'o'; break;        /* Skip 27 */
-        case 29: c = 'p'; break;
-        case 31: c = 'q'; break;        /* Skip 30 */
-        case 32: c = 'r'; break;
-        case 33: c = 's'; break;
-        case 34: c = 't'; break;
-        default:
-            c = '?';
-            break;
-        }
-        return cmask | c;
+    case 11: c = 'a'; break;
+    case 12: c = 'b'; break;
+    case 13: c = 'c'; break;
+    case 14: c = 'd'; break;
+    case 15: c = 'e'; break;
+    case 17: c = 'f'; break;        /* Skip 16 */
+    case 18: c = 'g'; break;
+    case 19: c = 'h'; break;
+    case 20: c = 'i'; break;
+    case 21: c = 'j'; break;
+    case 23: c = 'k'; break;        /* Skip 22 */
+    case 24: c = 'l'; break;
+    case 25: c = 'm'; break;
+    case 26: c = 'n'; break;
+    case 28: c = 'o'; break;        /* Skip 27 */
+    case 29: c = 'p'; break;
+    case 31: c = 'q'; break;        /* Skip 30 */
+    case 32: c = 'r'; break;
+    case 33: c = 's'; break;
+    case 34: c = 't'; break;
+    default: c = '?'; break;
     }
-    return 0;       /* Although it never gets here */
+    return cmask | c;
 }
 
 /* GGR
