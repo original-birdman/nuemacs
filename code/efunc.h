@@ -389,11 +389,26 @@ extern int nxti_name_info(int);
 /* wrapper.c */
 
 extern void *Xfree(void *);
+
 extern void *Xmalloc(size_t)
+#if __GCC__ >= 11
    __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull));
+#else
+   __attribute__ ((malloc, returns_nonnull));
+#endif
+
 extern void *Xrealloc(void *, size_t)
+#if __GCC__ >= 11
    __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull));
+#else
+   __attribute__ ((malloc, returns_nonnull));
+#endif
+
 extern char *Xstrdup (const char *)
+#if __GCC__ >= 11
   __attribute__((malloc (Xfree), returns_nonnull));
+#else
+  __attribute__((malloc, returns_nonnull));
+#endif
 
 #endif
