@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.162 Help Index     (30 June 2022)
+=>                   nuEmacs GGR4.163 Help Index     (11 July 2022)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -19,6 +19,10 @@
 .. Name completion
 .. MACRO functions and environment variables
 .. Interactive prompts vs. macro-file commands
+..  Key bindings
+.. Internal Key bindings
+.. Function, Application and KeyPad keys
+.. Start-up file
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
 Notations: ^X means <Ctrl> and X. The <Meta> key is <Esc> on most systems.
@@ -40,7 +44,7 @@ Beginning of file ..... Meta  <         End of file ........... Meta  >
 -------------------------------------------------------------------------------
 =>                      FILE COMMANDS
 Find file .............   ^X ^F         Quick exit ............ Meta  Z
-View file .............   ^X ^V         Exit emacs ............   ^X ^C
+View file .............   ^X ^V         Exit uemacs ...........   ^X ^C
 Insert file ...........   ^X ^I
 Change file name ......   ^X  N         Filter buffer .........   ^X  #
 Save file .............   ^X ^S (^X S)
@@ -112,6 +116,7 @@ Describe bindings ..... not bound
 Meta prefix ...........      Esc    ::  Although meta-prefix can be bound to
 Cntlx prefix ..........      ^X     ::  some other key, no other command can
 Execute named command . Meta  X     ::  be bound to Esc.
+Universal argument ....      ^U
 
 You can specify a numeric argument to a command by
     Meta nnn
@@ -140,6 +145,12 @@ unchanged. So:
     Meta 3 ^C would then Capinitialize the next 6 words (3x2).
     Meta 3 ^C would then Capinitialize the next 6 words (3x2) *NOT* the
     next 18 (3x3x2)
+
+^U (universal-argument) is another way to repeat commands.
+On its own it multiplies by 4, but if you type a (possibly negative)
+number after it, that becomes the multiplier instead.
+If you type another ^U it multiplies the current value by 4.
+So, ^U77^U becomes a 308 multiplier and ^U77^U1 a 3081 multiplier.
 
 -------------------------------------------------------------------------------
 =>                      DELETING AND INSERTING
@@ -313,9 +324,9 @@ Repeats
     If the first character after the opening [ is ^ then the result is
     negated.
     IMPORTANT NOTE!!!!
-    A Magic search can match text that crosses a newline. As a result a
-    negative character class will match a newline unless you add it (or
-    mention a property of it) to the negated list.
+    A Magic search can match text that crosses a newline.  As a result,
+    a negative character class will match a newline unless you add it
+    (or mention a property of it) to the negated list.
 
 .
     Match any grapheme (EXCEPT newline)
@@ -431,9 +442,8 @@ code:
 will set .calls to 1 on its first use if .calls isn't set elsewhere.
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS
-Universal argument ....      ^U         Set mark .............. Meta Space
-Clear and redraw ......      ^L         Exchange point and mark   ^X ^X
-Redraw display ........ Meta ^L
+Clear and redraw ......      ^L         Set mark .............. Meta Space
+Redraw display ........ Meta ^L         Exchange point and mark   ^X ^X
 Execute named command . Meta  X         Insert string ......... not bound
 Execute command line .. not bound       Overwrite string ...... not bound
 Set encryption key .... Meta  E         Wrap word ............. not bound
@@ -496,6 +506,10 @@ Others (omitting system-use only ones)...
     $force_status ......... Actual status when forced to OK
     $equiv_type ........... Function to use for Equiv mode
                              (NFC, NFD, NFKD or NFKC [default])
+    $srch_can_hunt          To allow forw/backhunt to work in test macros
+    $srch_overlap           Can successive matches overlap?
+    $uproc_lpcount          Current loop for Esc<n>user-proc
+    $uproc_lptotal          Requested <n> for Esc<n>user-proc
     $showdir_opts ......... Start-up state (for user to set)
                              (A subset of "TRHFM" - default is "")
 
@@ -545,9 +559,31 @@ char-replace
     char-replace "U+xxxx | U+xxxx-U+xxxx"
         sets the given character (range) to be replaced
 
-store-procedure <proc-name>
+store-procedure <proc-name> [flags]
+    cmd1
+    cmd2
+!endm
     Store a user-defined set of macro commands with the given name
     (which can be a maximum of 14 characters in length).
+    You may then call this proc-name within a macro in the same way as
+    you call any builtin function.
+    The optional flag may be:
+        skip_in_macro       do not log this when macro-recording
+        not_mb              not allowed in the minibuffer
+        not_interactive     disable via a user prompt for function name
+        one_pass            only run once even of Esc<n>/^U was given.
+
+$uproc_lpcount
+$uproc_lptotal
+    These can be access within a stored procedure to get the value of
+    the total user-requested repeats (escn, or ^U) and the current loop
+    count. For example, the lr-justify code in the standard uemacs.rc
+    uses this to only prompt for the left/right margins on the first
+    pass even if it has been asked to run over multiple paragraphs.
+    $uproc_lptotal is set to the requested number even if the one_pass
+    flag is set on the procedure, enabling the procedure to run once,
+    but to do something internally the requested number of times, or
+    behave differently if there is/is not a numeric argument.
 
 buffer-to-key <proc-name> <key-spec>
     Bind the user-defined procedure <proc-name> to the given key.
@@ -614,7 +650,7 @@ $autodos
     Whether to check for DOS line ending when reading in a file.
 
 $showdir_tokskip
-    The number of tokens to skip in ls output to get a file-name
+    The number of tokens to skip in ls output to get to the file-name
     when in directory-browsing mode.
     Set to 8 in the standard uemacs.rc file and is unlikely to need
     any other value.
@@ -641,11 +677,124 @@ that itself takes one or more arguments). So if you want to use text
 containing spaces you need to quote it.
 
 Minibuffer prompts are taken as-is, and hence are effectively quoted
-strings (and are added to any macro buffer as such).
-However, you may wish to enter a nuemacs command as a response,
-particularly when gathering a macro at the keyboard.
-To cater for this CTLX-<CR> will *not* quote the response before
-recording it, but will then evaluate it before returning that value.
+strings (and are added to any macro buffer as such).  However, you may
+wish to enter a nuemacs macro-file command as a response, particularly
+when gathering a keyboard macro.  To cater for this CTLX-<CR> will *not*
+quote the response before recording it (if it is recording), but *will*
+then evaluate it before returning that value.
+So, to display the current value of a variable you can use:
+
+    Esc-X write-message $var Ctlx-<CR>
+
+and if $var has the value 1, you would see 1.
+(with just a <CR> at the end you would see $var as the output).
 
 Some commands (e.g. insert-tokens) may take the result to be a series of
 tokens, but that is a separate issue.
+
+-------------------------------------------------------------------------------
+=> Key bindings
+
+Commands can be bound to keys using
+
+    bind-to-key     function-name  key-specifier
+    buffer-to-key   userproc-name  key-specifier
+
+The former is used for internal functions while the latter is used for
+user functions defined using store-procedure.
+
+The key-specifier when writing a binding in a macro buffer is made up of:
+    ^XM-FNk
+where ^X is Control-X
+      M- is Escape
+      FN is a Function Key
+      k is the "actual" character.
+The final k can be a single character (unicode is allowed), ^c (Control-c)
+or one of two special tokens, SP (space) or ^? (Delete).
+Not all of ^X, M- or FN has to be present, but you would expect at least
+one of them to be there if k is not a control character.
+This sequence is that which will be show by the describe-bindings function.
+
+When running these commands in a minibuffer you need to type the actual
+key-sequence you wish to use.
+
+-------------------------------------------------------------------------------
+=> Internal Key bindings
+
+Four keybindings are used internally to run the command bound to them
+when particular events occur.
+
+    META|SPEC|'C'   Just before the next command is obtained.
+    META|SPEC|'R'   Just before reading in a file.
+    META|SPEC|'W'   When word-wrapping should occur.
+    META|SPEC|'X'   After switching to a new window, a new buffer or
+                    after reading in a file (even if already in).
+
+By default the W entry is bound to wrapword, while the other three are
+bound to nullproc.
+
+You can set these to refer to an existing user procedure instead by:
+
+    switch-internal C|R|W|X dflt|user-proc
+
+The dflt option is to reset that key to the system default.
+
+These functions will not be re-called when they are already active (to
+prevent potential loops).
+
+-------------------------------------------------------------------------------
+=> Function, Application and KeyPad keys
+
+Terminals usually have function keys (F1, F2...), Application Keys
+(Home, End, Pgup), Cursor keys (←↑→↓) and a numeric KeyPad.
+These will send Escape sequences (which may be configurable, either
+individually or by setting a particular keyboard type).
+
+nuemacs interprets these by mapping them to FNx keys, which can be used
+in key binding (q.v.).
+
+There are a variety of sequences which can be sent but the following can
+be expected to work for bindings.
+Where two are given, bind both of them and your set-up will most likely
+use one or the other.
+
+    Key`        Use
+    F1          FNa FNP                     Arrow Up    FNA
+    F2          FNb FNQ                     Arrow Down  FNB
+    F3          FNc FNR                     Arrow Right FNC
+    F4          FNd FNS                     Arrow Left  FND
+    F5          FNe                     ---
+    ...         ...                         0/Ins       FN2
+    etc.        etc.                        ./Del       FN3
+    ...         ...                         1/End       FN4 FNF
+    F12         FNl                         2/DnAw      FNB
+---                                         3/PgDn      FN6
+    Insert      FN2                         4/LtAw      FND
+    Delete      FN3                         5           FNE
+    Home        FN1 FHH                     6/RtAw      FNC
+    End         FN4 FNF                     7/Home      FN1 FNH
+    PgUp        FN5                         8/UpAw      FNA
+    PgDown      FN6                         9/PgUp      FN5
+
+-------------------------------------------------------------------------------
+=> Start-up file.
+
+uemacs has its own, system start-up file (usually /usr/local/bin/uemacs.rc).
+This is used to define some user-procedures and add to the internally
+defined standard key bindings.
+
+If you place a uemacs.rc in your own HOME directory then this will be
+used in place of the standard system one.
+This allows you to add you own customizations.
+
+NOTE: that such a file overrides the system start-up one, so if you wish
+to include the standard additions too then your own file should include:
+
+    ; Now load the system start-up file
+    ;
+    execute-file uemacs.rc
+
+(This will find the system file, not re-run your own file).
+
+You can add commands after this inclusion to remove/override anything in
+the system file.

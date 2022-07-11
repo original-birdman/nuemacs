@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       Version - GGR4.163 (requires GGR4.163+)
-;                       Last Update: 10 July 2022
+;                       Last Update: 11 July 2022
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -117,6 +117,7 @@ set %rindef 0
 ;
 store-procedure lr-justify not_mb   ; Left and right justify paragraph
   set .oldfill $fillcol
+; Only ask for the margins on the first pass on multiple loops
   !if &equ $uproc_lpcount 1
     set .left @&ptf "Left indent [%s]: " %lindef
     !if &seq .left "ERROR"
@@ -148,6 +149,7 @@ store-procedure lr-justify not_mb   ; Left and right justify paragraph
     !endif
     write-message "[Filling..]"
   !endif
+;
   set %indent &add .left .right         ; Add together the L&R indent values
   set $fillcol &sub .oldfill %indent    ; ...and set $fillcol to this value.
   end-of-line           ; make sure point is not at the beginning of paragraph

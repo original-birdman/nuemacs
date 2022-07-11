@@ -2828,7 +2828,7 @@ edef.h
     the macro text buffer. [search.c]
     If in reexecute mode, put mapped search function names into the
     macro text buffer, not the originals. [main.c]
-    Save last c/f/n when in PLAY kbdmode, so reexecute works, but don;t
+    Save last c/f/n when in PLAY kbdmode, so reexecute works, but don't
     save them for ctlxrp. [main.c]
     Modify ctlxe() and ctlxrp() so that things like Esc2^Xe Esc3^C work
     as expected (keyboard macro runs 6 times). [main.c]
@@ -4799,12 +4799,10 @@ efunc.h
 autotest/incremental-search.sh
 autotest/query-replace.sh
     Added two simple scripts to test incremental searching and query
-    replace. 
+    replace.
 
 search.c
     Avoid a report of "may be used uninitialized" for used.
-
-===== READY FOR THIS???
 
 ../CHANGES
 ../PREREQUISITES
@@ -4816,5 +4814,289 @@ etc/uemacs.hlp
     other end of the previous match.
     Updated info on building libbacktrace.
     Update to GGR4.162
+
+========== GGR4.163
+
+word.c
+    In inword(), having looked for a zero-width break, return FALSE if
+    we find it!
+
+bind.c
+    Tidy up index_bindings()/bindtokey() keycode setting.
+    In show_key_binding() check for (k_type == PROC_KMAP), not
+    (n_func == execproc) as execproc may not have a handler.
+    In buildlist() dump all key combinations (several were missing).
+    In cmdstr() handle unicode (and Delete).
+
+word.c
+    In wrapword(), check for an empty line (==error) and whether we are
+    at EOL before backing up a char.  Makes more sense for a bindable
+    function.
+
+tcap.c
+ebind.h
+estruct.h
+    Removed the SPEC|'c' (metafn) and SPEC|'i' (cex) bindings [ebind.h]
+    Removed VT220 #define and made conditional usage true.
+    Removed unused VT100, ANSI and VT52 #defines
+    [ebind.h, estruct.h]
+    Removed TERMCAP #define and made conditional usage true. [tcap.c,
+    estruct.h]
+
+bind.c
+input.c
+    Change stock():
+        o to look for Ctlx first (enables extra Ctlx bindings)
+        o to return 0 on mal-formed strings
+        o better handling of SP for space and ^? for Delete
+        o disallow literal Control-char input
+    Added the new Ctlx+Meta+Control, Ctlx+Meta and Ctlx+SPEC bindings to
+    buildlist, and also the (internal) Meta+SPEC ones. [bind.c]
+    Changed getcmd() to hard-wire CSI handling, and changed what the
+    CSInn~ key mappings returned.  F1 now maps to FN1, F2 to FN2. etc.
+    Added Ctlx prefix handling for ControlX+Meta+Control, ControlX+Meta
+    and ControlX+SPEC bindings to work. [input.c]
+    You can now bind a function to Esc-Esc.
+
+bind.c
+    Abort various functions on a zero character return from getckey()
+    as stock() can now do this.
+
+bind.c
+buffer.c
+isearch.c
+    Ensure all internal/control buffers start with "//" not just "/".
+    Change help buffer name to //Help and remove filename from it. [bind.c]
+    Check for NULL buffer pointer before switching to it in swbuffer().
+    Fix buffer's filename printing in makelist. Also make it use the
+    current screen with. [buffer.c]
+    Comments updated. [isearch.c]
+
+exec.c
+search.c
+word.c
+efunc.h
+estruct.h
+    Removed isletter (which was from pre-Unicode days).
+    Extended inword() to take an optional line buffer parameter (and
+    moved it to be ahead of its users in the file). [exec.c, word.c,
+    efunc.h, estruct.h]
+    Reworked wordcount() to use new inword(), not isletter() [word.c]
+    Changed isletter() to isASCletter() and correct CCL bitmaps to only
+    be sized for the ASCII char set. [search.c]
+    Moved some #defines from estruct.h to search.c (only user).
+
+eval.c
+search.c
+efunc.h
+estruct.h
+    Removed islower and isupper (unused) - both from pre-Unicode days.
+    Renamed eq() to asceq() [eval.c, search.c, efunc.h]
+    Added simple isASClower() define. [search.c]
+    Removed is(x)lower and is(x)upper defines. [estruct.h]
+
+input.c
+    Treat Esc[[x abd Esc[x to handle console keys in Linux.
+
+Various tidying up(?) whilst looking for missing free()s.
+
+bind.c
+eval.c
+estruct.h
+    Updated some comments.
+buffer.c
+    Free any Phonetic Translation table info in bclear().
+exec.c
+    Clear global ptt in ptt_free if we are freeing it.
+-----
+Makefile
+    Add ANALYZE option.
+-----
+exec.c
+    Updated comment.
+region.c
+    Consolidate some duplicated code in casechange_region().
+utf8.c
+    Change a for{} loop to a do{} one in utf8_recase(), to satisfy
+    the gcc analyzer.
+-----
+wrapper.c
+efunc.h
+    Added attributes to Xmalloc() and Xrealloc() and added Xstrdup() to
+    aid in missing free checks.
+-----
+exec.c
+    Switched strdup() to Xstrdup().
+    The gcc 11.2.0 analyzer reports a leak, but adding a printf("")
+    statement before the return makes it go away.
+    Added a comment and ignored it.
+-----
+bind.c
+line.c
+    Switched strdup() to Xstrdup().
+-----
+word.c
+    Fixed a leak of wbuf and space_ind on a filler() failure.
+-----
+word.c
+    Free any extended grapheme data we get in inword().
+-----
+main.c
+    Only allow one of -c or (deprecated) @ setting of the main start-up
+    file.
+    Ensure that a copy of the command line text is taken for any @ option.
+-----
+search.c
+    Remove test in cclmake() for clearbits() returning NULL, as it can't.
+-----
+line.c
+edef.h
+    Update some kill ring comments.
+-----
+lock.c
+    Rework lockchk so that the malloc()ed tmpname is freed if not used.
+    (This code is only used if FILOCK is set at compile time).
+-----
+
+autotest/decrypt-file.sh
+autotest/encrypt-file.sh
+    Added two tests to check that encrypted mode continues to produce
+    the same results.
+
+eval.c
+exec.c
+globals.c
+names.c
+edef.h
+estruct.h
+evar.h
+etc/uemacs.rc
+    Fixes for the toggle-lmode user-proc aborting any macro collection.
+    Caused by it ending with !finish (which sets a FALSE exit status).
+    The !finish was put there to stop a useless (and very annoying) loop
+    (the FALSE exit does this) on a given arg count.
+    Often hit by accident if:
+        Esc 2000 ^X^T     (trim the next 2000 lines)
+    was mis-typed as:
+        Esc 2000 ^XT      (prompt me 2000 times for mode to toggle)
+    -----
+    Added $uproc_lpcount and $uproc_lptotal system variables.
+    [eval.c, globals.c, edef.h, estruct.h, evar.h]
+    Add a "one_pass" option for user-procs. [exec.c, names.c, estruct.h]
+    Set the $uproc_lpcount (current loop no.) and $uproc_lptotal (total
+    loops requestd) variables as a user-proc is executed.
+    Handle the "one_pass" option for user-procs (but still set
+    $uproc_lptotal to the total requestd).
+    Allow and optional True arg to !finish (to set a TRUE exit status -
+    by default it sets it to FALSE - so more of an abort..).  [exec.c]
+    Various macros (centre-line, rm-dflt-repl, spell-check,
+    toggle-lmode, toggle-gmode, del-sp-right) marked as one_pass.
+    lr-justify set to use $uproc_lpcount to only prompt for indents on
+    the first run of a loop. [etc/uemacs.rc]
+
+main.c
+    Fix addchar_kbdmacro() to use insert-string not the old
+    insert-raw-string.
+
+bind.c
+file.c
+globals.c
+input.c
+main.c
+names.c
+random.c
+window.c
+edef.h
+efunc.h
+estruct.h
+    Add a new function, switch-internal, to allow swapping in a user
+    procedure for the 4 "internal" ones (META|SPEC|'x', X = W/C/R/X)
+    Usage is:
+        switch-internal X my-user-proc  # install window change handler
+        switch-internal X dflt          # to reset to the system handler
+    In the process added an internal update_keybind() function for the
+    common code used by buffertokey(), switch_internal() and bindtokey().
+    [bind.c, names.c, efunc.h]
+    Check that the meta-spec handler is not already running before
+    activating in (to prevent looping). [file.c, globals.c, input.c,
+    main.c, random.c,  edef.h]
+    Don't allow the meta-spec-X (new buffer) handler to run if
+    collecting a macro [window.c].
+    (Comment extended [estruct.h])
+
+input.c
+isearch.c
+efunc.h
+    Removed ectoc() function.
+    Just use get1key() and check against CONTROL|'x' directly.
+
+More tidying up(?) whilst looking for missing free()s.
+
+region.c
+    Change one Xfree() call in each of three branches to one at the end.
+-----
+search.c
+    Check that the character after a '\' is ASCII.
+    Add some comments about gc.ex being known to be NULL.
+-----
+utf8.c
+    Declare grapheme_to_bytes() as static.
+-----
+word.c
+    Make sure we free any gc.ex in ensure_case().
+
+
+bind.c
+    Do an unsigned sort for the key bindings (and lookup!).
+    desbind() can now dump all keys in order without the SPEC ones
+    showing up first. Simplified desbind to do so.
+
+input.c
+    Extended the F-key (CSI nn~) mapping sequences and change the result
+    to start at FNa, not FN1, to avoid clashes with Application key
+    sequences (CSI n ~, where n = 1, 2, ....).
+    Changed Esc[[A mapping from FNA to FNA, as it's sent by F1.
+    This results in more unique keys being seen, and more commonality.
+
+exec.c
+ebind.h
+etc/uemacs.rc
+docs/Func+AppKey-Info
+    Update comment in freewhile() about available macro commands.
+    [exec.c]
+    Remove SPEC bindings from the initial keytab [ebind.h]
+    Add them in to the start-up file and change the bindings.
+    Add some to two different keys, so they will be bound for
+    whichever terminal is in use. [etc/uemacs.rc]
+    Added Func+AppKey-Info file with results of test key mappings.
+
+input.c
+    Removed some old commented out code in getcmd(), slightly
+    restructuring the real code knowing it will never go back in.
+    Handle CSI2Q, etc.. for Konsole Xfree mode Shift-F2/3/4.
+
+bind.c
+    Now that desbind() can dump the entire binding table in order,
+    regardless of character ranges, allow non-ASCII keybindings.
+    Check for, and disallow, setting any of the four internal bindings
+    via bind-to-key or buffer-to-key - it must go via switch-internal.
+
+efunc.h
+    Modify __attribute__ statements on X* functions to remove gcc 11+
+    options when not using gcc 11+.
+
+autotest/run_all
+    Add a script to run all autotest files.
+
+../CHANGES
+exec.c
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+`   Comment tidy-ups [exec.c, etc/uemacs.rc]
+    Add Key bindings, Internal Key bindings and Function, Application
+    and KeyPad keys sections to help.
+    Added a Universal argument description. [etc/uemacs.hlp]
+    Update to GGR4.163
 
 ==========

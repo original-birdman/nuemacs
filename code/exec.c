@@ -907,7 +907,7 @@ int run_user_proc(char *procname, int rpts) {
 /* and now execute it as asked.
  * Let the a user-proc know which pass it is on (starting at one)
  * out of the total expected.
- * Pass on the requested repeats (in uproc_lptotal0 even for a one_pass
+ * Pass on the requested repeats (in uproc_lptotal) even for a one_pass
  * function, in case it wishes to handle it during its one_pass.
  */
     if (rpts <= 0) rpts = 1;
@@ -916,7 +916,7 @@ int run_user_proc(char *procname, int rpts) {
     int this_count = 0;
     status = TRUE;
     while (rpts-- > 0) {
-/* Sice one user-proc can call another we have to remember the current
+/* Since one user-proc can call another we have to remember the current
  * setting, install our current ones, then restore the originals
  * after we're done.
  */
