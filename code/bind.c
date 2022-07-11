@@ -135,10 +135,9 @@ static unsigned int stock(char *keyname) {
          !(noupper))            /* GGR */
         *keyname -= 32;
 
-/* NOTE that any char beyond the ASCII range is disallowed by bindtokey()
- * and buffertokey().
- * We'll process it anyway, otherwise we're left with a generic
- * "cannot parse" error message.
+/* NOTE that any char beyond the ASCII range is NO LONGER disallowed
+ * by bindtokey() and buffertokey().
+ * If the user can type it they may well wish to use it.
  */
     if (ch_as_uc(*keyname) >= 0x80) {   /* We have a utf-8 string... */
         unsigned int uc;
@@ -436,9 +435,35 @@ static int unbindchar(int c) {
  * Used by buffertokey() and switch_internal()
  * We expect to be given a bname *including* teh leading '/'.
  */
-static void update_keybind(int c, fn_t kfunc, char *bname) {
+static int update_keybind(int c, int internal_OK, fn_t kfunc, char *bname) {
     struct key_tab *ktp;    /* pointer into the command table */
     struct key_tab *destp;  /* Where to copy the name and type */
+
+/* switch_internal sets internal_OK on (and will have sent a valid
+ * character).
+ * So if this is off check that no-on is trying to bind and internal
+ * key "inadvertently".
+ * Also, the non-internal calls may need to log something.
+ */
+    if (!internal_OK) {
+/* Change it to something we can print as well and dump it out.
+ * NOTE: that since desbind can now dump the entire binding table in
+ * order, regardless of character ranges, we now allow non-ASCII
+ * characters to be bound.
+ */
+        char outseq[80];
+        cmdstr(c, outseq);
+        switch(c) {
+        case META|SPEC|'C':
+        case META|SPEC|'R':
+        case META|SPEC|'W':
+        case META|SPEC|'X':
+            mlwrite("%s is an internal binding. Use switch_internal.", outseq);
+            return FALSE;
+        }
+        if (!clexec) mlputs(outseq);
+        if (kbdmode == RECORD) addto_kbdmacro(outseq, 0, 0);
+    }
 
 /* Search the table to see whether it exists */
 
@@ -499,6 +524,7 @@ static void update_keybind(int c, fn_t kfunc, char *bname) {
     TTflush();
 
     key_index_valid = 0;    /* Rebuild index before using it. */
+    return TRUE;
 }
 
 /* Check for a procedure buffer and complain if not */
@@ -514,7 +540,7 @@ static int check_procbuf(struct buffer *cbp, char *bufn) {
 /* GGR added
  * buffertokey:
  *      Add a new key to the key binding table to invoke a buffer.
- *      Much copied from bindtokey B()and execproc()
+ *      Much copied from bindtokey()and execproc()
  *
  * int f, n;            command arguments [IGNORED]
  */
@@ -522,7 +548,6 @@ int buffertokey(int f, int n) {
     UNUSED(f); UNUSED(n);
     unsigned int c;         /* command key to bind */
     char bname[NBUFN+1];    /* buffer name */
-    char outseq[80];        /* output buffer for keystroke sequence */
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
 
@@ -570,24 +595,7 @@ int buffertokey(int f, int n) {
         return FALSE;
     }
 
-/* Only allow ASCII keys (and modifiers...).
- * Other unicode characters might be typeable on a keyboard, but these
- * won't be shown on keys, so might mislead...
- */
-    unicode_t bc = (c & ~(CONTROL|META|CTLX|SPEC));
-    if (bc > 0x7f) {
-        mlwrite("U+%x is not an ASCII byte", bc);
-        return FALSE;
-    }
-
-/* Change it to something we can print as well and dump it out */
-
-    cmdstr(c, outseq);
-    if (!clexec) mlputs(outseq);
-    if (kbdmode == RECORD) addto_kbdmacro(outseq, 0, 0);
-
-    update_keybind(c, NULL, bname);
-    return TRUE;
+    return update_keybind(c, FALSE, NULL, bname);
 }
 
 /* GGR addition to allow swapping in a user-procedure for one of the 4
@@ -630,7 +638,7 @@ int switch_internal(int f, int n) {
     if (strcmp(uproc+1, "dflt") == 0) {     /* Reset */
         if (set_char == 'W') rpl_func = wrapword;
         else                 rpl_func = nullproc;
-        update_keybind(bind_key, rpl_func, NULL);
+        s = update_keybind(bind_key, TRUE, rpl_func, NULL);
     }
     else {
         struct buffer *upb = bfind(uproc, FALSE, 0);
@@ -639,9 +647,9 @@ int switch_internal(int f, int n) {
             return FALSE;
         }
         if (check_procbuf(upb, uproc) != TRUE) return FALSE;
-        update_keybind(bind_key, NULL, uproc);
+        s = update_keybind(bind_key, TRUE, NULL, uproc);
     }
-    return TRUE;
+    return s;
 }
 
 /*
@@ -655,7 +663,6 @@ int bindtokey(int f, int n) {
     unsigned int c;         /* command key to bind */
     fn_t kfunc;             /* ptr to the requested function to bind to */
     struct key_tab *ktp;    /* pointer into the command table */
-    char outseq[80];        /* output buffer for keystroke sequence */
     int mflag;              /* Are we handling a prefix key? */
 
 /* Get the function name to bind it to */
@@ -689,24 +696,6 @@ int bindtokey(int f, int n) {
         return FALSE;
     }
 
-/* Only allow ASCII keys (and modifiers...).
- * Other unicode characters might be typeable on a keyboard, but these
- * won't be shown on keys, so might mislead...
- * It also limits the range when dumping key bindings.
- */
-    unicode_t bc = (c & ~(CONTROL|META|CTLX|SPEC));
-    if (bc > 0x7f) {
-        mlwrite("U+%x is not an ASCII byte", bc);
-        return FALSE;
-    }
-
-/* Change it to something we can print as well */
-    cmdstr(c, outseq);
-
-/* And dump it out for the user to see - and record if collecting macro */
-    if (!clexec) mlputs(outseq);
-    if (kbdmode == RECORD) addto_kbdmacro(outseq, 0, 0);
-
 /* If the function is a prefix key */
     if (mflag) {
 
@@ -729,8 +718,7 @@ int bindtokey(int f, int n) {
         else                    abortc = c;    /* Only other option */
     }
 
-    update_keybind(c, kfunc, NULL);
-    return TRUE;
+    return update_keybind(c, FALSE, kfunc, NULL);
 }
 
 /*
