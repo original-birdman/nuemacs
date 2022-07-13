@@ -188,7 +188,7 @@ int forwword(int f, int n) {
  * In non-GGR style we skip over any word chars, then over non-word chars
  * and so end at the start of the next word.
  */
-        int state1 = using_ggr_style? FALSE: TRUE;
+        int state1 = (ggr_opts|GGR_FORWWORD)? FALSE: TRUE;
         while (inword(NULL) == state1)
             if (forw_grapheme(1) <= 0) return FALSE;
         do {    /* Can't be in state1 to get here, so move then check */

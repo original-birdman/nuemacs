@@ -244,7 +244,7 @@ int twiddle(int f, int n) {
  * But once we know where the right-hand character is the left-hand one
  * is always the one preceding it.
  */
-    if (using_ggr_style || doto == maxlen) {
+    if ((ggr_opts|GGR_TWIDDLE) || doto == maxlen) {
         rch_st = prev_utf8_offset(l_buf, doto, TRUE);
         if (rch_st < 0) return (FALSE);
         rch_nb = doto - rch_st;
@@ -1333,12 +1333,14 @@ int quotedcount(int f, int n) {
 }
 
 /*
- * Set GGR mode global var if given non-default argument (n > 1).
- * Otherwise, switch it off,
+ * Set GGR option flags all on if given non-default argument (n > 1).
+ * Otherwise, switch all off.
+ * Historic single flag setting for what is now a bit-map.
  */
 int ggr_style(int f, int n) {
     UNUSED(f);
-    using_ggr_style = (n > 1);
+    if (n > 1)  ggr_opts = 0xfffff;   /* All on */
+    else        ggr_opts = 0;         /* All off */
     return TRUE;
 }
 

@@ -106,6 +106,13 @@
 
 #define GFREAD  1
 
+/* GGR global option flag bits for ggr_opts */
+
+/* Always swap 2 preceding chars */
+#define GGR_TWIDDLE     0x0001
+/* On next-word, go to end of next word, not start of next */
+#define GGR_FORWWORD    0x0002
+
 /* Internal constants. */
 
 /* GGR - Increase
