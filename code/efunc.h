@@ -14,6 +14,11 @@
 /* External function declarations. */
 
 /* word.c */
+#define inword_classes "LN"
+#define at_wspace_classes "ZC"
+#define inword(wp) class_check(wp, inword_classes, FALSE)
+#define at_wspace(wp) class_check(wp, at_wspace_classes, TRUE)
+
 extern int wrapword(int, int);
 extern int backword(int, int);
 extern int forwword(int, int);
@@ -22,7 +27,7 @@ extern int lowerword(int, int);
 extern int capword(int, int);
 extern int delfword(int, int);
 extern int delbword(int, int);
-extern int inword(struct inwbuf *);
+extern int class_check(struct inwbuf *, char *, int);
 extern int fillpara(int, int);
 extern int justpara(int, int);
 extern int killpara(int, int);

@@ -22,13 +22,25 @@
  */
 static int zw_break = 0;
 
-/* Return TRUE if the character at dot is a character that is considered to be
- * part of a word. The word character list is hard coded. Should be setable.
- * GGR - the grapheme-based version.
- * If the buffer info ptr (inwp) is non NULL, use that instead of the
- * current buffer position and update its offset.
+/* Utility routine to determine whether the current char is part of
+ * some given classes, and what to return on a zero-width break.
+ * called via defines (in efunc.h)
+ *
+ * inword -> (wp, "LN", FALSE)
+ *      so is looking for Letters and Numbers
+ * at_wspace -> (wp, "ZC", TRUE)
+ *      so is looking for Separators and Others.
+ *
+ * The full set of Class characters (1st char only) are:
+ *  C   Others
+ *  L   Letters
+ *  M   Marks
+ *  N   Numbers
+ *  P   Punctuation
+ *  S   Symbols
+ *  Z   Separators
  */
-int inword(struct inwbuf *inwp) {
+int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
     struct grapheme gc;
     struct line *mylp;
     int myoffs;
@@ -43,53 +55,68 @@ int inword(struct inwbuf *inwp) {
         myoffs = curwp->w.doto;
     }
 
-    if (myoffs == llength(mylp)) return FALSE;
-    myoffs = build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc);
-    if (inwp) inwp->offs = myoffs;
-    if (gc.ex) Xfree(gc.ex);                /* Not interested */
-    if (gc.uc == 0x200B) {                  /* NOT a combining char */
-        zw_break = 1;
-        return FALSE;
-    }
     zw_break = 0;
+    if (myoffs == llength(mylp)) {  /* Handle end of line */
+        gc.uc = '\n';
+        if (inwp) {                 /* Switch caller to next one */
+            inwp->offs = 0;
+            inwp->lp = lforw(mylp);
+        }
+    }
+    else {
+        myoffs = build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc);
+        if (inwp) inwp->offs = myoffs;
+        if (gc.ex) Xfree(gc.ex);                /* Not interested */
+        if (gc.uc == 0x200B) {                  /* NOT a combining char */
+            zw_break = 1;
+            return res_on_zwb;
+        }
+    }
 
 /* We only look at the base character to determine whether this is a
  * word character.
  */
     const char *uc_class =
          utf8proc_category_string((utf8proc_int32_t)gc.uc);
-
-    if (uc_class[0] == 'L') return TRUE;    /* Letter */
-    if (uc_class[0] == 'N') return TRUE;    /* Number */
+    for (char *mp = classes; *mp; mp++)
+        if (uc_class[0] == *mp) return TRUE;
     return FALSE;
 }
 
-/* Word wrap on n-spaces. Back-over whatever precedes the point on the current
- * line and stop on the first word-break or the beginning of the line. If we
- * reach the beginning of the line, jump back to the end of the word and start
+/* Word wrap on n-spaces.
+ * Back-over whatever precedes the point on the current line and stop on
+ * the first word-break or the beginning of the line. If we reach the
+ * beginning of the line, jump back to the end of the word and start
  * a new line.  Otherwise, break the line at the word-break, eat it, and jump
  * back to the end of the word.
+ *
+ * If FullWrap mode is on (n > 1) the entire line preceding point is
+ * wrapped (not just the final word) and whitespace is "eaten" on each wrap.
+ *
  * Returns TRUE on success, FALSE on errors.
  *
  * @f: default flag.
  * @n: numeric argument.
  *
- *
  * We start with the code that does the actual wrapping.
+ * The callable routine follws.
  */
 static int do_actual_wrap(void) {
-    int cnt;        /* size of word wrapped to next line */
+    int cnt;            /* size of word wrapped to next line */
 
 /* Backup from the <NL> 1 char, if that is where we are. */
 
     if (llength(curwp->w.dotp) == 0) return FALSE;  /* Empty line */
-    if (curwp->w.doto == llength(curwp->w.dotp)) {
-        if (back_grapheme(1) <= 0) return FALSE;
-    }
+
+/* First step back over any white-space - in case we arrived here
+ * with multiple spaces after fillcol.
+ */
+    if (at_wspace(NULL)) cnt = 0;
+    else                 cnt = -1;  /* We'll wrap the word that *follows* */
+    while (at_wspace(NULL)) if (back_grapheme(1) <= 0) return FALSE;
 
 /* Back up until we aren't in a word, make sure there's a break in the line */
-    cnt = 0;
-    while (inword(NULL)) {
+    while (!at_wspace(NULL)) {
         cnt++;
         if (back_grapheme(1) <= 0) return FALSE;
 /* If we make it to the beginning, start a new line */
@@ -114,7 +141,6 @@ static int do_actual_wrap(void) {
     while (cnt-- > 0) {
         if (forw_grapheme(1) <= 0) return FALSE;
     }
-
     return TRUE;
 }
 
@@ -132,21 +158,42 @@ int wrapword(int f, int n)
         if (!do_actual_wrap()) return FALSE;
     }
     else {
-        while(getccol() > fillcol) {    /* Yes. Go on until done */
-            setccol(fillcol);
-/* Get to end of any word we are in */
-            while (inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
-            if (!do_actual_wrap()) {
-/* If we failed to wrap there must be no break before fillcol, so step
- * over the next word up to the next break and try again.
- * This should work, as we're at the second break in the line.
+/* Set where we are.
+ * Ideally we'd have a separate "system mark" for such things
  */
-                while (!inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
-                while (inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
-                if (!do_actual_wrap()) return FALSE;
+        curwp->w.markp = curwp->w.dotp;
+        curwp->w.marko = curwp->w.doto;
+
+        if (getccol() <= fillcol) return FALSE; /* Shouldn't be here! */
+        while(1) {                  /* Go on until done */
+            setccol(fillcol);
+/* If we are now at whitespace wrapping is easy */
+            if (at_wspace(NULL)) {
+                whitedelete(0, 0);
+                if (!lnewline()) return FALSE;
             }
-            curwp->w.doto = llength(curwp->w.dotp); /* End of line */
+/* Get to end of any word we are in */
+            else {
+                while (!at_wspace(NULL))
+                     if (forw_grapheme(1) <= 0) return FALSE;
+                if (!do_actual_wrap()) return FALSE;
+/* Now delete all whitespace for where we are now and if that is not at
+ * end-of-line or start-of-line, put one space in.
+ * This handles "mid-line" wraps and inability to wrap
+ */
+                whitedelete(0, 0);
+                if ((curwp->w.doto != llength(curwp->w.dotp)) &&
+                    (curwp->w.doto != 0)) linsert_byte(1, ' ');
+            }
+/* Back to where we were (which will have moved) */
+            curwp->w.dotp = curwp->w.markp;
+            curwp->w.doto = curwp->w.marko;
+            if (getccol() <= fillcol) break;    /* Done */
         }
+/* Now remove all whitespace at our final destination.
+ * The space we typed to get here will be added later.
+ */
+        whitedelete(0, 0);
     }
 /* Make sure the display is not horizontally scrolled */
     if (curwp->w.fcol != 0) {
@@ -608,18 +655,17 @@ int wordcount(int f, int n) {
     lastword = FALSE;
     nchars = 0L;
     nwords = 0L;
-    nlines = 0;
+    nlines = 1;
     while (size--) {
-/* Check for end of line */
-        if (mywb.offs == llength(mywb.lp)) {
-            mywb.lp = lforw(mywb.lp);
-            mywb.offs = 0;
+        int start_offs = mywb.offs;
+        wordflag = inword(&mywb);
+/* Check for starting a newline.
+ * inword() is advancing our position, including moving to the next line.
+ */
+        if (mywb.offs == 0) {
             ++nlines;
-            wordflag = FALSE;
         }
         else {
-            int start_offs = mywb.offs;
-            wordflag = inword(&mywb);
             size -= (mywb.offs - start_offs) - 1; /* "Extra" bytes used */
         }
         if (wordflag & !lastword) ++nwords;
