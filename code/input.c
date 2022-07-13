@@ -743,7 +743,6 @@ int getcmd(void) {
  * o (lower-case) to invoke it.
  */
         if (meta && ((c == '[') | (c == 'O'))) {
-            meta = FALSE;
             break;              /* Drop out to CSI handling */
         }
         if (c == CSI) break;    /* Drop out to CSI handling */
@@ -772,9 +771,14 @@ int getcmd(void) {
 /* Process the Vt220 Control Sequence Introducer (CSI) from here on.
  * Once we get here the control mask is already known, so
  * set it now.
+ * NOTE that we IGNORE META beyond here.
+ * This is because a lot of CSI will start with Esc[ (unless it sends
+ * the 8-bit 0x9b) and we trap Esc-Esc.
+ * stock() ALSO prevents it.
+ * Thus META|SPEC can never be set by the user, and the internal handlers
+ * are safe from being overwritten by a key binding.
  */
     cmask = SPEC;
-    if (meta) cmask |= META;
     if (ctlx) cmask |= CTLX;
     c = get1key();
 

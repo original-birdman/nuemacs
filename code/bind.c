@@ -99,7 +99,11 @@ static unsigned int stock(char *keyname) {
         c |= META;
         keyname += 2;
     }
-/* Next the function prefix, but not if we have a META */
+/* Next the function prefix, but not if we have a META.
+ * getcmd() also disallows this.
+ * Thus META|SPEC can never be set by the user, and the internal handlers
+ * are safe from being overwritten by a key binding.
+ */
     if (!(c & META) && *keyname == 'F' && *(keyname + 1) == 'N') {
         c |= SPEC;
         noupper = TRUE;             /* Don't uppercase final char */
@@ -600,6 +604,9 @@ int buffertokey(int f, int n) {
 
 /* GGR addition to allow swapping in a user-procedure for one of the 4
  * "internal" ones. (META|SPEC|'x' for x = W, C, R or X.
+ * This mechanism (execute a bound key) is probably simpler than trying
+ * to remember a function and its option flags, for something that will
+ * have infrequent usage at most.
  */
 int switch_internal(int f, int n) {
     UNUSED(f); UNUSED(n);
@@ -626,6 +633,10 @@ int switch_internal(int f, int n) {
         mlwrite("Invalid choice: %c", set_char);
         return FALSE;
     };
+
+/* Both getcmd() and stock() prevent META|SPEC being, so these are safe
+ * from being overwritten by a key binding.
+ */
     bind_key = META|SPEC|set_char;
 
 /* Get user-proc to install */
@@ -904,11 +915,15 @@ static int buildlist(int type, char *mstring) {
     if (type) {
         if (linstr("\n\nAll key bindings:\n") != TRUE) return FALSE;
 
+/* Note that getcmd() and stock() both prevent SPEC|META being set,
+ * so matk any such as (internal)
+ */
 static char* hdr[] = {
     "Bare char", "Control",        "Meta",           "Meta+Ctrl",
     "CtlX",      "Ctlx+Ctrl",      "Ctlx+Meta",      "Ctlx+Meta+Ctrl",
-    "SPEC",      "SPEC+Ctrl",      "Meta+SPEC",      "Meta+SPEC+Ctrl",
-    "CtlX+SPEC", "Ctlx+SPEC+Ctrl", "Ctlx+SPEC+Meta", "Ctlx+Meta+SPEC+Control",
+    "SPEC",      "SPEC+Ctrl",      "Meta+SPEC(int)", "Meta+SPEC+Ctrl(int)",
+    "CtlX+SPEC", "Ctlx+SPEC+Ctrl", "Ctlx+SPEC+Meta",
+    "Ctlx+Meta+SPEC+Control(int)",
 };
 
         unsigned int prev_cmask = -1;
@@ -917,7 +932,7 @@ static char* hdr[] = {
             unsigned int cmask = 0xf0000000 & key;
             if (cmask != prev_cmask) {
                 int hdri = cmask >> 28;
-                linstr("   ");
+                linstr(" > ");
                 linstr(hdr[hdri]);
                 lnewline();
                 prev_cmask = cmask;
