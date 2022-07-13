@@ -219,51 +219,51 @@ store-procedure _mytoggle-mode
     !endif
     !goto &cat "togl" .modesel
 *toglW
-    set .bit 1
+    set .bit 0x01
     set .what "WRAP"
     !goto doit
 *toglC
-    set .bit 2
+    set .bit 0x02
     set .what "CMODE"
     !goto doit
 *toglP
-    set .bit 4
+    set .bit 0x04
     set .what "PHON"
     !goto doit
 *toglE
-    set .bit 8
+    set .bit 0x08
     set .what "EXACT"
     !goto doit
 *toglV
-    set .bit 16
+    set .bit 0x10
     set .what "VIEW"
     !goto doit
 *toglO
-    set .bit 32
+    set .bit 0x20
     set .what "OVER"
     !goto doit
 *toglM
-    set .bit 64
+    set .bit 0x40
     set .what "MAGIC"
     !goto doit
 *toglY
-    set .bit 128
+    set .bit 0x80
     set .what "CRYPT"
     !goto doit
 *toglA
-    set .bit 256
+    set .bit 0x100
     set .what "ASAVE"
     !goto doit
 *toglQ
-    set .bit 512
+    set .bit 0x200
     set .what "EQUIV"
     !goto doit
 *toglD
-    set .bit 1024
+    set .bit 0x400
     set .what "DOS"
     !goto doit
 *toglR
-    set .bit 2048
+    set .bit 0x800
     set .what "REPORT"
     !goto doit
 ;
@@ -331,6 +331,45 @@ store-procedure expand-envvar
     insert-string &env &mid $kill 2 &len $kill
 !endm
 
+; Toggle ggr_opts settings
+;
+store-procedure toggle-ggr-opts
+    write-message &ptf "Toggle ggr-opt (Twiddle, Forwword, fullWrap):"
+    set .report " "
+    set .optsel &upper &gtkey
+    !if &or &seq .optsel "^G" &seq .optsel "~n"
+        write-message "[Aborted]^G"
+        !finish
+    !endif
+    !if &eq 0 &sin "WCPEVOMYAQDR" .optsel
+        write-message "Unknown mode^G"
+        !finish
+    !endif
+    !goto &cat "togl" .optsel
+*toglT
+    set .bit 0x01
+    set .what "Twiddle"
+    !goto doit
+*toglF
+    set .bit 0x02
+    set .what "Forwword"
+    !goto doit
+*toglW
+    set .bit 0x04
+    set .what "FullWrap"
+    !goto doit
+*doit
+    set .report &ptf "GGR %s mode toggled " .what
+    !if &band $ggr_opts .bit
+        set .how off
+    !else
+        set .how on
+    !endif
+    set $ggr_opts &bxor $ggr_opts .bit
+*report
+    write-message &cat .report .how
+!endm
+
 ;
 ; Overwrite some standard bindings - for historic GGR feel.
 ; Binding names are from name_bind in names.c
@@ -352,6 +391,7 @@ bind-to-key numberlist-region           ^X/
 bind-to-key narrow-to-region            ^X<
 bind-to-key widen-from-region           ^X>
 bind-to-key help                        ^X?
+buffer-to-key toggle-ggr-opts           ^XG
 bind-to-key insert-file                 ^XI
 buffer-to-key centre-line               ^XL
 bind-to-key save-file                   ^XS
