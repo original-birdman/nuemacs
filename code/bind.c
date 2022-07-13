@@ -212,7 +212,16 @@ int deskey(int f, int n) {      /* describe the command for a certain key */
 /* Find the right function */
     struct key_tab *ktp = getbind(c);
     if (!ktp) ptr = "Not Bound";
-    else      ptr = ktp->fi->n_name;
+    else {
+        ptr = ktp->fi->n_name;
+/* Display a possible multiplier */
+        if (ktp->bk_multiplier != 1) {
+            char tbuf[16];
+            sprintf(tbuf, "{%d}", ktp->bk_multiplier);
+            mlputs(tbuf);
+        }
+    }
+
 /* Output the function name */
     mlputs(ptr);
 
@@ -439,7 +448,8 @@ static int unbindchar(int c) {
  * Used by buffertokey() and switch_internal()
  * We expect to be given a bname *including* teh leading '/'.
  */
-static int update_keybind(int c, int internal_OK, fn_t kfunc, char *bname) {
+static int update_keybind(int c, int ntimes, int internal_OK,
+     fn_t kfunc, char *bname) {
     struct key_tab *ktp;    /* pointer into the command table */
     struct key_tab *destp;  /* Where to copy the name and type */
 
@@ -514,6 +524,7 @@ static int update_keybind(int c, int internal_OK, fn_t kfunc, char *bname) {
         if (bname)                  /* user-proc install */
             destp->hndlr.pbp = Xmalloc(NBUFN);
     }
+    destp->bk_multiplier = ntimes;
     if (bname) {
         destp->k_type = PROC_KMAP;
         destp->fi = func_info(execproc);
@@ -599,7 +610,7 @@ int buffertokey(int f, int n) {
         return FALSE;
     }
 
-    return update_keybind(c, FALSE, NULL, bname);
+    return update_keybind(c, n, FALSE, NULL, bname);
 }
 
 /* GGR addition to allow swapping in a user-procedure for one of the 4
@@ -649,7 +660,7 @@ int switch_internal(int f, int n) {
     if (strcmp(uproc+1, "dflt") == 0) {     /* Reset */
         if (set_char == 'W') rpl_func = wrapword;
         else                 rpl_func = nullproc;
-        s = update_keybind(bind_key, TRUE, rpl_func, NULL);
+        s = update_keybind(bind_key, n, TRUE, rpl_func, NULL);
     }
     else {
         struct buffer *upb = bfind(uproc, FALSE, 0);
@@ -658,7 +669,7 @@ int switch_internal(int f, int n) {
             return FALSE;
         }
         if (check_procbuf(upb, uproc) != TRUE) return FALSE;
-        s = update_keybind(bind_key, TRUE, NULL, uproc);
+        s = update_keybind(bind_key, n, TRUE, NULL, uproc);
     }
     return s;
 }
@@ -729,7 +740,7 @@ int bindtokey(int f, int n) {
         else                    abortc = c;    /* Only other option */
     }
 
-    return update_keybind(c, FALSE, kfunc, NULL);
+    return update_keybind(c, n, FALSE, kfunc, NULL);
 }
 
 /*
@@ -783,6 +794,12 @@ static int show_key_binding(unicode_t key) {
         cpos = strlen(outseq);
 /* Pad out some spaces */
         while (cpos < 12) outseq[cpos++] = ' ';
+        if (ktp->bk_multiplier != 1) {  /* Mention a non-default multiplier */
+            char tbuf[16];
+            sprintf(tbuf, "{%d}", ktp->bk_multiplier);
+            strcpy(outseq+cpos, tbuf);
+            cpos += strlen(tbuf);
+        }
         strcpy(outseq+cpos, ktp->fi->n_name);
 /* Is this an execute-procedure? If so, say which procedure... */
         if (ktp->k_type == PROC_KMAP) {

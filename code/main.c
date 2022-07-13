@@ -867,6 +867,9 @@ void exit_via_signal(int signr) {
 /* ====================================================================== */
 /* multiplier_check
  * Handler for Esc-nnn sequences denoting command multiplier
+ * After this has run:
+ *  If the user did not gave any numeric arg, f will be FALSE and n = 1
+ *  If the user gave a numeric arg, f will be TRUE and n = result.
  */
 com_arg *multiplier_check(int c) {
 
@@ -1504,7 +1507,12 @@ int execute(int c, int f, int n) {
             }
         }
 
+/* Factor in any keybinding specified multiplier */
 
+        if (ktp->bk_multiplier != 1) {
+            n *= ktp->bk_multiplier;
+            f = TRUE;
+        }
         if (run_not_in_mb) {
             not_in_mb.keystroke = c;
             execfunc = not_in_mb_error;
@@ -2022,8 +2030,8 @@ int reexecute(int f, int n) {
  * If input arg is non-zero use that, otherwise extend by the
  * defined increment and update keytab_alloc_ents.
  */
-static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}, NULL};
-static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}, NULL};
+static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}, NULL, 0};
+static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}, NULL, 0;
 
 void extend_keytab(int n_ents) {
 
@@ -2045,6 +2053,7 @@ void extend_keytab(int n_ents) {
             ktp->k_code = init_keytab[n].k_code;
             ktp->hndlr.k_fp = init_keytab[n].k_fp;
             ktp->fi = func_info(ktp->hndlr.k_fp);
+            ktp->bk_multiplier = 1;
         }
         init_from = n_init_keys;    /* Only need to add tags from here */
     }

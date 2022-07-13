@@ -467,7 +467,7 @@ struct terminal {
 #define TTbacg      (*term.t_setback)
 #endif
 
-/* Structure for the table of initial key bindings.
+/* Structures for the table of initial key bindings.
  * NOTE: pbp buffer names are allocated in buffertokey()
  * and freed in unbindkey() and, possibly, bindtokey().
  */
@@ -484,6 +484,7 @@ struct key_tab {
         char *pbp;          /* ...procedure buffer name */
     } hndlr;
     struct name_bind *fi;   /* Function info */
+    int bk_multiplier;      /* Binding multiplier */
 };
 struct key_tab_init {       /* Initializing data */
     int k_code;             /* Key code */
