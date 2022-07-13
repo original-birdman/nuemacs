@@ -46,21 +46,12 @@ int inword(struct inwbuf *inwp) {
     if (myoffs == llength(mylp)) return FALSE;
     myoffs = build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc);
     if (inwp) inwp->offs = myoffs;
-
-    zw_break = 0;
-    if (gc.cdm == 0x200B) {
+    if (gc.ex) Xfree(gc.ex);                /* Not interested */
+    if (gc.uc == 0x200B) {                  /* NOT a combining char */
         zw_break = 1;
+        return FALSE;
     }
-    else if (gc.ex) {
-        for (unicode_t *exc = gc.ex; *exc != UEM_NOCHAR; exc++) {
-            if (*exc == 0x200B) {
-                zw_break = 1;
-                break;
-            }
-        }
-        Xfree(gc.ex);               /* We're done with it */
-    }
-    if (zw_break) return FALSE;
+    zw_break = 0;
 
 /* We only look at the base character to determine whether this is a
  * word character.
@@ -87,7 +78,6 @@ int wrapword(int f, int n)
 {
     UNUSED(f); UNUSED(n);
     int cnt;        /* size of word wrapped to next line */
-    int c;          /* character temporary */
 
 /* Backup from the <NL> 1 char, if that is where we are. */
 
@@ -98,8 +88,7 @@ int wrapword(int f, int n)
 
 /* Back up until we aren't in a word, make sure there's a break in the line */
     cnt = 0;
-    while (((c = lgetc(curwp->w.dotp, curwp->w.doto)) != ' ')
-         && (c != '\t')) {
+    while (inword(NULL)) {
         cnt++;
         if (back_grapheme(1) <= 0) return FALSE;
 /* If we make it to the beginning, start a new line */
@@ -109,8 +98,13 @@ int wrapword(int f, int n)
         }
     }
 
-/* Delete the forward white space */
-    if (!forwdel(0, 1)) return FALSE;
+/* Delete the forward white space, unless it was a zero-width break */
+    if (zw_break) {
+        cnt++;      /* Keep the zwb, and count it! */
+    }
+    else {
+        if (!forwdel(0, 1)) return FALSE;
+    }
 
 /* Put in a end of line */
     if (!lnewline()) return FALSE;
@@ -132,17 +126,17 @@ int wrapword(int f, int n)
  * Move the cursor backward by "n" words. All of the details of motion are
  * performed by the "back_grapheme" routine.
  * Error if you try to move beyond the start of the buffer.
+ * This always ends up at the previous start of a word.
  */
 int backword(int f, int n) {
     if (n < 0) return forwword(f, -n);
     if (back_grapheme(1) <= 0) return FALSE;
     while (n--) {
-        while (inword(NULL) == FALSE) {
+        while (inword(NULL) == FALSE)   /* Get to a word if on whitespace */
             if (back_grapheme(1) <= 0) return FALSE;
-        }
-        while ((inword(NULL) != FALSE) || zw_break) {
+        do {    /* Must be inword to get here, so move then check */
             if (back_grapheme(1) <= 0) return FALSE;
-        }
+        } while (inword(NULL));
     }
     return (forw_grapheme(1) > 0);  /* Success count => T/F */
 }
@@ -158,18 +152,18 @@ int forwword(int f, int n) {
 /* GGR - reverse loop order according to ggr-style state
  * Determines whether you end up at the end of the current word (ggr-style)
  * or the start of next.
+ * In GGR style we skip over any non-word chars, then over word chars
+ * and so end at the end of the next word.
+ * In non-GGR style we skip over any word chars, then over non-word chars
+ * and so end at the start of the next word.
  */
         int state1 = using_ggr_style? FALSE: TRUE;
-        int prev_zw_break = 0;
-        while ((inword(NULL) == state1) || (!state1 && prev_zw_break)) {
+        while (inword(NULL) == state1)
             if (forw_grapheme(1) <= 0) return FALSE;
-            prev_zw_break = zw_break;
-        }
-        prev_zw_break = zw_break;
-        while ((inword(NULL) == !state1) || (!state1 && zw_break)) {
+        do {    /* Can't be in state1 to get here, so move then check */
             if (forw_grapheme(1) <= 0) return FALSE;
-            prev_zw_break = zw_break;
         }
+        while (inword(NULL) != state1);
     }
     return TRUE;
 }

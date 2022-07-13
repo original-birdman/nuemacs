@@ -1672,6 +1672,7 @@ int execute(int c, int f, int n) {
  * If a space was typed, fill column is defined, the argument is non-
  * negative, wrap mode is enabled, and we are now past fill column,
  * and we are not read-only, perform word wrap.
+ * NOTE that we then continue on to self-insert the space!
  */
     if (c == ' ' && (curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
           n >= 0 && getccol(FALSE) > fillcol &&
