@@ -81,7 +81,7 @@ extern int swapmark(int, int);
 extern int setfillcol(int, int);
 extern int showcpos(int, int);
 extern int getcline(void);
-extern int getccol(int bflg);
+extern int getccol(void);
 extern int setccol(int pos);
 extern int twiddle(int, int);
 extern int quote(int, int);

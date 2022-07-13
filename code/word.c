@@ -717,7 +717,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
 
 /* Initialize various info */
 
-    clength = getccol(FALSE);   /* Less than r_offset if multibyte char */
+    clength = getccol();   /* Less than r_offset if multibyte char */
     eosflag = 0;
     pending_space = 0;
 
@@ -941,7 +941,7 @@ int justpara(int f, int n) {
     if (n == 0) n = 1;
 
 /* Have to cater for tabs and multibyte chars...can't use w.doto */
-    int leftmarg = getccol(FALSE);
+    int leftmarg = getccol();
     if (leftmarg + 10 > fillcol) {
         mlwrite_one("Column too narrow");
         return FALSE;

@@ -1675,7 +1675,7 @@ int execute(int c, int f, int n) {
  * NOTE that we then continue on to self-insert the space!
  */
     if (c == ' ' && (curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
-          n >= 0 && getccol(FALSE) > fillcol &&
+          n >= 0 && getccol() > fillcol &&
          (curwp->w_bufp->b_mode & MDVIEW) == FALSE) {
 /* Don't start the handler when it is already running as that might
  * just get into a loop...

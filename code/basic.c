@@ -235,7 +235,7 @@ int forwline(int f, int n) {
 
 /* If the last command was not a line move, reset the goal column */
 
-    if ((lastflag & CFCPCN) == 0) curgoal = getccol(FALSE);
+    if ((lastflag & CFCPCN) == 0) curgoal = getccol();
 
 /* Flag this command as a line move */
 
@@ -270,7 +270,7 @@ int backline(int f, int n) {
 
 /* If the last command was not a line move, reset the goal column */
 
-    if ((lastflag & CFCPCN) == 0) curgoal = getccol(FALSE);
+    if ((lastflag & CFCPCN) == 0) curgoal = getccol();
 
 /* Flag this command as a line move */
 

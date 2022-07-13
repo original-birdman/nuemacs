@@ -93,10 +93,10 @@ int showcpos(int f, int n) {
     }
 
 /* Get real column and end-of-line column. */
-    col = getccol(FALSE);
+    col = getccol();
     savepos = curwp->w.doto;
     curwp->w.doto = llength(curwp->w.dotp);
-    ecol = getccol(FALSE);
+    ecol = getccol();
     curwp->w.doto = savepos;
 
 /* If we are in DOS mode we need to add an extra char for the \r
@@ -160,11 +160,12 @@ int getcline(void) {
 }
 
 /*
- * Return current column.  Stop at first non-blank given TRUE argument.
+ * Return current column.
  * Column counting needs to take into account zero-widths, and also the
- * 2/3-column displays for control characters done by vtputc().
+ * 2/3-column displays for control characters done by vtputc() so uses
+ * utf8_to_unicode()+update_screenpos_for_char rather than next_utf8_offset().
  */
-int getccol(int bflg) {
+int getccol(void) {
     int i, col;
     struct line *dlp = curwp->w.dotp;
     int byte_offset = curwp->w.doto;
@@ -174,8 +175,6 @@ int getccol(int bflg) {
     while (i < byte_offset) {
         unicode_t c;
         i += utf8_to_unicode(dlp->l_text, i, len, &c);
-/* Check non-space first, if we are looking for it */
-        if (c != ' ' && c != '\t' && bflg) break;
         update_screenpos_for_char(col, c);
     }
     return col;
@@ -320,8 +319,8 @@ int typetab(int f, int n) {
 
 /* We have to work with columns, not byte-counts */
 
-    int ccol = getccol(FALSE);
-    int newcol = ccol + tabsize - (getccol(FALSE) % tabsize);
+    int ccol = getccol();
+    int newcol = ccol + tabsize - (getccol() % tabsize);
 
 /* Try to get to the target column and check for success */
 
@@ -329,7 +328,7 @@ int typetab(int f, int n) {
 
 /* We fail if the line is too short, so then we pad with spaces */
 
-    ccol = getccol(FALSE);
+    ccol = getccol();
     return linsert_byte((newcol - ccol), ' ');
 }
 
@@ -348,7 +347,7 @@ int insert_tab(int f, int n) {
         return TRUE;
     }
     if (!tabsize) return linsert_byte(1, '\t');
-    return linsert_byte(tabsize - (getccol(FALSE) % tabsize), ' ');
+    return linsert_byte(tabsize - (getccol() % tabsize), ' ');
 }
 
 /*
@@ -594,7 +593,7 @@ int insert_newline(int f, int n) {
  * and we are not read-only, perform word wrap.
  */
     if ((curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
-        getccol(FALSE) > fillcol &&
+        getccol() > fillcol &&
         (curwp->w_bufp->b_mode & MDVIEW) == FALSE) {
 /* Don't start the handler when it is already running as that might
  * just get into a loop...
@@ -683,15 +682,15 @@ int insbrace(int n, int c) {
         forw_grapheme(1);
 
 /* Delete back first */
-    target = getccol(FALSE);    /* c'est l'indent que l'on doit avoir */
+    target = getccol();    /* c'est l'indent que l'on doit avoir */
     curwp->w.dotp = oldlp;
     curwp->w.doto = oldoff;
 
-    while (target != getccol(FALSE)) {
-        if (target < getccol(FALSE)) /* on doit detruire des caracteres */
-            while (getccol(FALSE) > target) backdel(FALSE, 1);
+    while (target != getccol()) {
+        if (target < getccol()) /* on doit detruire des caracteres */
+            while (getccol() > target) backdel(FALSE, 1);
         else {          /* on doit en inserer */
-            linsert_byte(target - getccol(FALSE), ' '); /* spaces, not tabs */
+            linsert_byte(target - getccol(), ' '); /* spaces, not tabs */
         }
     }
 /* And insert the required brace(s) */
@@ -713,7 +712,7 @@ int inspound(void) {
     }
 
 /* Delete back first */
-    while (getccol(FALSE) >= 1) backdel(FALSE, 1);
+    while (getccol() >= 1) backdel(FALSE, 1);
 
 /* And insert the required pound */
     return linsert_byte(1, '#');
