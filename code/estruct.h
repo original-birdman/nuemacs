@@ -112,6 +112,8 @@
 #define GGR_TWIDDLE     0x0001
 /* On next-word, go to end of next word, not start of next */
 #define GGR_FORWWORD    0x0002
+/* Do complete line wrapping in fill mode, not just the last word */
+#define GGR_FULLWRAP    0x0004
 
 /* Internal constants. */
 

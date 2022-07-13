@@ -80,6 +80,13 @@ int inword(struct inwbuf *inwp) {
 static int do_actual_wrap(void) {
     int cnt;        /* size of word wrapped to next line */
 
+/* Backup from the <NL> 1 char, if that is where we are. */
+
+    if (llength(curwp->w.dotp) == 0) return FALSE;  /* Empty line */
+    if (curwp->w.doto == llength(curwp->w.dotp)) {
+        if (back_grapheme(1) <= 0) return FALSE;
+    }
+
 /* Back up until we aren't in a word, make sure there's a break in the line */
     cnt = 0;
     while (inword(NULL)) {
@@ -108,11 +115,6 @@ static int do_actual_wrap(void) {
         if (forw_grapheme(1) <= 0) return FALSE;
     }
 
-/* Make sure the display is not horizontally scrolled */
-    if (curwp->w.fcol != 0) {
-        curwp->w.fcol = 0;
-        curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
-    }
     return TRUE;
 }
 
@@ -124,31 +126,32 @@ int wrapword(int f, int n)
 {
     UNUSED(f);
 
-/* Backup from the <NL> 1 char, if that is where we are. */
-
-    if (llength(curwp->w.dotp) == 0) return FALSE;  /* Empty line */
-    if (curwp->w.doto == llength(curwp->w.dotp)) {
-        if (back_grapheme(1) <= 0) return FALSE;
-    }
-
 /* Have we been asked to do a full wrap? */
 
-    if (n < 1) return do_actual_wrap();       /* No */
-
-    while(getccol() > fillcol) {    /* Yes. Go on until done */
-        setccol(fillcol);
+    if (n <= 1) {                   /* No. Just wrap final word */
+        if (!do_actual_wrap()) return FALSE;
+    }
+    else {
+        while(getccol() > fillcol) {    /* Yes. Go on until done */
+            setccol(fillcol);
 /* Get to end of any word we are in */
-        while (inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
-        if (!do_actual_wrap()) {
+            while (inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
+            if (!do_actual_wrap()) {
 /* If we failed to wrap there must be no break before fillcol, so step
  * over the next word up to the next break and try again.
  * This should work, as we're at the second break in the line.
  */
-            while (!inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
-            while (inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
-            if (!do_actual_wrap()) return FALSE;
+                while (!inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
+                while (inword(NULL)) if (forw_grapheme(1) <= 0) return FALSE;
+                if (!do_actual_wrap()) return FALSE;
+            }
+            curwp->w.doto = llength(curwp->w.dotp); /* End of line */
         }
-        curwp->w.doto = llength(curwp->w.dotp); /* End of line */
+    }
+/* Make sure the display is not horizontally scrolled */
+    if (curwp->w.fcol != 0) {
+        curwp->w.fcol = 0;
+        curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
     }
     return TRUE;
 }

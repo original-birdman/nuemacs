@@ -600,7 +600,7 @@ int insert_newline(int f, int n) {
  */
         if (!meta_spec_active.W) {
             meta_spec_active.W = 1;
-            execute(META|SPEC|'W', FALSE, 1);
+            execute(META|SPEC|'W', FALSE, (ggr_opts&GGR_FULLWRAP)? 2: 1);
             meta_spec_active.W = 0;
         }
     }
@@ -1339,8 +1339,8 @@ int quotedcount(int f, int n) {
  */
 int ggr_style(int f, int n) {
     UNUSED(f);
-    if (n > 1)  ggr_opts = 0xfffff;   /* All on */
-    else        ggr_opts = 0;         /* All off */
+    if (n > 1)  ggr_opts = 0xffffffff;  /* All on */
+    else        ggr_opts = 0;           /* All off */
     return TRUE;
 }
 

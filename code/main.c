@@ -1682,7 +1682,7 @@ int execute(int c, int f, int n) {
  */
         if (!meta_spec_active.W) {
             meta_spec_active.W = 1;
-            execute(META|SPEC|'W', FALSE, 1);
+            execute(META|SPEC|'W', FALSE, (ggr_opts&GGR_FULLWRAP)? 2: 1);
             meta_spec_active.W = 0;
         }
     }
