@@ -390,25 +390,32 @@ extern int nxti_name_info(int);
 
 extern void *Xfree(void *);
 
-extern void *Xmalloc(size_t)
 #if __GCC__ >= 11
-   __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull));
+#define MALLOC_ATTR __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull))
+#elif __GCC__ >= 4
+#define MALLOC_ATTR __attribute__ ((malloc, returns_nonnull))
 #else
-   __attribute__ ((malloc, returns_nonnull));
+#define MALLOC_ATTR __attribute__ ((malloc))
 #endif
+extern void *Xmalloc(size_t) MALLOC_ATTR;
+#undef MALLOC_ATTR
 
-extern void *Xrealloc(void *, size_t)
-#if __GCC__ >= 11
-   __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull));
+#if __GCC__ > 4
+#define REALLOC_ATTR __attribute__ (returns_nonnull))
 #else
-   __attribute__ ((malloc, returns_nonnull));
+#define REALLOC_ATTR
 #endif
+extern void *Xrealloc(void *, size_t) REALLOC_ATTR;
+#undef REALLOC_ATTR
 
-extern char *Xstrdup (const char *)
 #if __GCC__ >= 11
-  __attribute__((malloc (Xfree), returns_nonnull));
+#define STRDUP_ATTR __attribute__((malloc (Xfree), returns_nonnull))
+#elif __GCC__ > 4
+#define STRDUP_ATTR __attribute__((malloc, returns_nonnull))
 #else
-  __attribute__((malloc, returns_nonnull));
+#define STRDUP_ATTR __attribute__((malloc))
 #endif
+extern char *Xstrdup (const char *) STRDUP_ATTR;
+#undef STRDUP_ATTR
 
 #endif
