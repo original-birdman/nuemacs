@@ -1005,6 +1005,7 @@ int clrmes(int f, int n) {
  *
  */
 int writemsg(int f, int n) {
+    UNUSED(f);
     int status;
     char buf[NSTRING];          /* buffer to receive message into */
 
@@ -1013,7 +1014,7 @@ int writemsg(int f, int n) {
         return status;
 
 /* Write the message out */
-    if (f && n == 2) fprintf(stderr, "%s\n", buf);
+    if (n == 2) fprintf(stderr, "%s\n", buf);
     else {
         mlforce_one(buf);
         if (kbdmode == PLAY) mline_persist = TRUE;

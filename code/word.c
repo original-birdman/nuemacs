@@ -534,7 +534,7 @@ int killpara(int f, int n) {
  * int f, n;            ignored numeric arguments
  */
 int wordcount(int f, int n) {
-    UNUSED(f); UNUSED(n);
+    UNUSED(f);
     int orig_offset;        /* offset in line at start */
     long size;              /* size of region left to count */
     int wordflag;           /* are we in a word now? */
@@ -551,7 +551,7 @@ int wordcount(int f, int n) {
 /* Make sure we have a region to count.
  * Although, if we've been given a +ve numeric arg, use the whole file.
  */
-    if (f && (n>1)) {
+    if (n > 1) {
 /* Save the current position and mark */
         saved.dotp = curwp->w.dotp;
         saved.markp = curwp->w.markp;
@@ -565,7 +565,7 @@ int wordcount(int f, int n) {
     }
     status = getregion(&region);
 /* Restore the real position and mark before checking the result */
-    if (f && (n>1)) {
+    if (n > 1) {
         curwp->w.dotp = saved.dotp;
         curwp->w.markp = saved.markp;
         curwp->w.doto = saved.doto;

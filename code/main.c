@@ -2008,8 +2008,8 @@ int reexecute(int f, int n) {
  */
     if (f_arg.func == ctlxe) {
         if (ctlxe_togo == 0) {  /* First call */
-            if (f && (n > 1)) ctlxe_togo = n;
-            else              ctlxe_togo = 1;
+            if (n > 1)  ctlxe_togo = n;
+            else        ctlxe_togo = 1;
         }
         ctlxe(f_arg.ca.f, f_arg.ca.n);
         ctlxe_togo--;
@@ -2031,7 +2031,7 @@ int reexecute(int f, int n) {
  * defined increment and update keytab_alloc_ents.
  */
 static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}, NULL, 0};
-static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}, NULL, 0;
+static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}, NULL, 0};
 
 void extend_keytab(int n_ents) {
 

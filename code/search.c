@@ -3069,7 +3069,7 @@ static int replaces(int query, int f, int n) {
 
 /* Check for negative repetitions. */
 
-    if (f && n < 0) {
+    if (n < 0) {
         status = FALSE;
         goto end_replaces;
     }
