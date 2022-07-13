@@ -585,7 +585,8 @@ int buffertokey(int f, int n) {
  * can use the same names as on the store-procedure line.
  */
     bname[0] = '/';
-    if ((status = mlreply("macro buffer: ", bname+1, NBUFN, CMPLT_BUF)) != TRUE)
+    if ((status =
+         mlreply("user-proc name: ", bname+1, NBUFN, CMPLT_PROC)) != TRUE)
         return status;
     if (strlen(bname) >= NBUFN) {
          mlforce("Procedure name too long: %s. Ignored.", bname);

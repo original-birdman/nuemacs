@@ -243,7 +243,8 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
                 (mtype == CMPLT_PHON)) offset = 1;
             else                       offset = 0;
         if ((mtype == CMPLT_PROC &&
-              (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/')) ||
+              (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/' ||
+               expandbp->b_bname[1] == '/')) ||     /* Catch //kbd_macro */
             (mtype == CMPLT_PHON &&
               (expandbp->b_type != BTPHON || expandbp->b_bname[0] != '/')) ||
             (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||

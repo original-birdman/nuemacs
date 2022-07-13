@@ -149,9 +149,15 @@
 
 /* Types of buffer expanding in getstring() */
 
-enum cmplt_type {
-    CMPLT_NONE, CMPLT_FILE, CMPLT_BUF, CMPLT_PROC, CMPLT_PHON, CMPLT_NAME,
-    CMPLT_VAR,  CMPLT_SRCH,
+enum cmplt_type {   /* What is looked up and complete */
+    CMPLT_NONE,     /* Nothing. Just take input */
+    CMPLT_FILE,     /* File names */
+    CMPLT_BUF,      /* Buffer names */
+    CMPLT_PROC,     /* BTROC (user-procedure) buffer names */
+    CMPLT_PHON,     /* BTPHON (translation table) buffer names */
+    CMPLT_NAME,     /* Function names */
+    CMPLT_VAR,      /* Variables (system $, user %, buffer .) */
+    CMPLT_SRCH,     /* Nothing. Instead rotates search ring on <tab> */
 };
 
 /*      Directive definitions   */
