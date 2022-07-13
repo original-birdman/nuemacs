@@ -546,9 +546,32 @@ int wordcount(int f, int n) {
     int status;             /* status return code */
     struct region region;   /* region to look at */
     struct inwbuf mywb;     /* Tracking info for inword() */
+    struct locs saved;
 
-/* Make sure we have a region to count */
-    if ((status = getregion(&region)) != TRUE) return status;
+/* Make sure we have a region to count.
+ * Although, if we've been given a +ve numeric arg, use the whole file.
+ */
+    if (f && (n>1)) {
+/* Save the current position and mark */
+        saved.dotp = curwp->w.dotp;
+        saved.markp = curwp->w.markp;
+        saved.doto = curwp->w.doto;
+        saved.marko = curwp->w.marko;
+/* Set the current position to BOF and mark to EOF */
+        curwp->w.markp = curwp->w_bufp->b_linep;
+        curwp->w.marko = llength(curwp->w.markp);
+        curwp->w.dotp = lforw(curwp->w_bufp->b_linep);
+        curwp->w.doto = 0;
+    }
+    status = getregion(&region);
+/* Restore the real position and mark before checking the result */
+    if (f && (n>1)) {
+        curwp->w.dotp = saved.dotp;
+        curwp->w.markp = saved.markp;
+        curwp->w.doto = saved.doto;
+        curwp->w.marko = saved.marko;
+    }
+    if (!status) return status;
     mywb.lp = region.r_linep;
     orig_offset = region.r_offset;
     mywb.offs = region.r_offset;
