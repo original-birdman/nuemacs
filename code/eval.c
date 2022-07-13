@@ -37,7 +37,7 @@ static char *getkill(void) {
     return value;       /* Return the constructed value */
 }
 
-/* A user-settaable environment variable allowign the user to defined
+/* A user-settaable environment variable allowing the user to define
  * the initial sorting for a directory display.
  * The user may give up to 5 settings, 1-char for each.
  */
@@ -325,6 +325,14 @@ static char *ue_printf(char *fmt) {
 finalize:
     *op = '\0';
     return ue_buf;
+}
+
+/* ue_atoi
+ * This allows the integer to be expressed in hex ("0x"), octal (0..)
+ * or decimal.
+ */
+static int ue_atoi(char *ustr) {
+    return (int)strtol(ustr, NULL, 0);
 }
 
 /* Evaluate a function.
@@ -656,6 +664,7 @@ static char *gtenv(char *vname) {
     case EVUPLCOUNT:        return ue_itoa(uproc_lpcount);
     case EVUPLTOTAL:        return ue_itoa(uproc_lptotal);
     case EVSDOPTS:          return showdir_opts;
+    case EVGGROPTS:         return ue_itoa(ggr_opts);
     }
 
     exit(-12);              /* again, we should never get here */
@@ -826,7 +835,7 @@ static int svar(struct variable_description *var, char *value) {
         case EVCURCHAR:
             srch_can_hunt = 0;
             ldelgrapheme(1, FALSE);     /* delete 1 char-place */
-            c = atoi(value);
+            c = ue_atoi(value);
             if (c == '\n') lnewline();
             else           linsert_uc(1, c);
             back_grapheme(1);
@@ -865,11 +874,11 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVCMODE:
             srch_can_hunt = 0;
-            curbp->b_mode = atoi(value);
+            curbp->b_mode = ue_atoi(value);
             curwp->w_flag |= WFMODE;
             break;
         case EVGMODE:
-            gmode = atoi(value);
+            gmode = ue_atoi(value);
             break;
         case EVTPAUSE:
             term.t_pause = atoi(value);
@@ -883,7 +892,7 @@ static int svar(struct variable_description *var, char *value) {
             putctext(value);
             break;
         case EVGFLAGS:
-            gflags = atoi(value);
+            gflags = ue_atoi(value);
             break;
         case EVRVAL:
             break;
@@ -975,6 +984,9 @@ static int svar(struct variable_description *var, char *value) {
         case EVSDOPTS:
             if (strlen(value) > MAX_SD_OPTS) status = FALSE;
             else            strcpy(showdir_opts, value);
+            break;
+        case EVGGROPTS:
+            ggr_opts = ue_atoi(value);
             break;
         }
         break;

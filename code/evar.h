@@ -76,8 +76,9 @@ struct evlist evl[] = {
  { "srch_overlap",  EVSRCHOLAP },   /* Can successive matches overlap */ 
  { "uproc_lpcount", EVUPLCOUNT },   /* Current loop for Esc<n>func */
  { "uproc_lptotal", EVUPLTOTAL },   /* <n> for Esc<n>func */
-/* showdir vars */
- { "showdir_opts", EVSDOPTS },      /* Start-up state (for user to set) */
+ { "showdir_opts", EVSDOPTS },  /* Start-up state (for user to set) */
+ { "ggr_opts",  EVGGROPTS },    /* Optional-style difference */
+
 };
 
 /* The tags for user functions - used in struct evlist */

@@ -253,3 +253,6 @@ typedef struct {
     int X;
 } meta_spec_flags_t;
 extern meta_spec_flags_t meta_spec_active;
+
+/* GGR option flag bits */
+extern int ggr_opts;

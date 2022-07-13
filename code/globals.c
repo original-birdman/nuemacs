@@ -217,3 +217,5 @@ int uproc_lptotal = 0;
 /* Markers for META|SPEC handler being active. */
 
 meta_spec_flags_t meta_spec_active = { 0, 0, 0, 0 };
+
+int ggr_opts = 0;
