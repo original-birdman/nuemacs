@@ -57,6 +57,7 @@ store-procedure check-position
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - WRONG line, got: " $curline
+    set %test-report &cat %test-report &cat " - expected: " %expline
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
@@ -66,6 +67,7 @@ store-procedure check-position
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - WRONG column, got: " $curcol
+    set %test-report &cat %test-report &cat " - expected: " %expcol
     set %fail &add %fail 1
   !endif
   execute-procedure report-status

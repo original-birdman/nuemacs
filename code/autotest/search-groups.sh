@@ -76,6 +76,7 @@ store-procedure check-position
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - WRONG line, got: " $curline
+    set %test-report &cat %test-report &cat " - expected: " %expline
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
@@ -85,6 +86,7 @@ store-procedure check-position
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - WRONG column, got: " $curcol
+    set %test-report &cat %test-report &cat " - expected: " %expcol
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
@@ -96,10 +98,10 @@ store-procedure check-position
   !endif
   !if &equ $curchar %expchar
     set %test-report &cat %curtest &cat " - at OK: " %pchar
-    set %test-report &cat %test-report &cat " expected: " %expchar
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
+    set %test-report &cat %test-report &cat " expected: " %expchar
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
@@ -123,7 +125,8 @@ store-procedure check-matchcount
     set %test-report &cat %curtest &cat " match count OK: " %mcount
     set %ok &add %ok 1
   !else
-    set %test-report &cat %curtest &cat " match count WRONG, got: " &cat %mcount &cat " expected: " %expcount
+    set %test-report &cat %curtest &cat " match count WRONG, got: " %mcount
+    set %test-report &cat %test-report &cat " - expected: " %expcount
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
@@ -138,7 +141,8 @@ store-procedure check-group
     set %test-report &cat %curtest &cat " group " &cat %grpno " OK"
     set %ok &add %ok 1
   !else
-    set %test-report &cat %curtest &cat " group " &cat %grpno " WRONG! got: " &cat &grp %grpno &cat " expected: " %expmatch
+    set %test-report &cat %curtest &cat " group " &cat %grpno " WRONG! got: " &grp %grpno
+    set %test-report &cat %test-report &cat " - expected: " %expmatch
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
