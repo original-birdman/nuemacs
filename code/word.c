@@ -67,7 +67,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
         myoffs = build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc);
         if (inwp) inwp->offs = myoffs;
         if (gc.ex) Xfree(gc.ex);                /* Not interested */
-        if (gc.uc == 0x200B) {                  /* NOT a combining char */
+        if (gc.uc == 0x200B && gc.cdm == 0) {   /* NOT a combining char */
             zw_break = 1;
             return res_on_zwb;
         }
@@ -158,8 +158,9 @@ int wrapword(int f, int n)
         if (!do_actual_wrap()) return FALSE;
     }
     else {
-/* Set where we are.
- * Ideally we'd have a separate "system mark" for such things
+/* Set where we are. We need to get back here using a method that gets
+ * updated on text updates.
+ * So mark is lost on word wrap in GGR_FULLWRAP mode.
  */
         curwp->w.markp = curwp->w.dotp;
         curwp->w.marko = curwp->w.doto;
@@ -185,7 +186,7 @@ int wrapword(int f, int n)
                 if ((curwp->w.doto != llength(curwp->w.dotp)) &&
                     (curwp->w.doto != 0)) linsert_byte(1, ' ');
             }
-/* Back to where we were (which will have moved) */
+/* Back to where we were (which will have moved and been updated) */
             curwp->w.dotp = curwp->w.markp;
             curwp->w.doto = curwp->w.marko;
             if (getccol() <= fillcol) break;    /* Done */
