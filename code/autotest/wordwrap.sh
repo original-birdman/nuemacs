@@ -310,7 +310,7 @@ beginning-of-line
   set %expline 13
   set %expcol 0
 ; Convenient way to get a hex value in!
-  set %expchar &band 0x200b 0xffff
+  set %expchar &blit 0x200b
 execute-procedure check-position
 
 ;
@@ -333,7 +333,7 @@ beginning-of-line
   set %curtest Line12-Origwrap-bol
   set %expline 13
   set %expcol 0
-  set %expchar &band 0x200b 0xffff
+  set %expchar &blit 0x200b
 execute-procedure check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -362,7 +362,7 @@ beginning-of-line
   set %expline 13
   set %expcol 0
 ; Convenient way to get a hex value in!
-  set %expchar &band 0x200b 0xffff
+  set %expchar &blit 0x200b
 execute-procedure check-position
 
 ;

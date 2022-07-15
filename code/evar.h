@@ -92,7 +92,7 @@ enum uf_val {
     UFASCII,    UFCHR,      UFGTKEY,    UFRND,      UFABS,
     UFSINDEX,   UFENV,      UFBIND,     UFEXIST,    UFBXIST,
     UFFIND,     UFBAND,     UFBOR,      UFBXOR,     UFBNOT,
-    UFXLATE,    UFGRPTEXT,  UFPRINTF,
+    UFBLIT,     UFXLATE,    UFGRPTEXT,  UFPRINTF,
 };
 
 enum function_type {
@@ -150,6 +150,7 @@ static struct user_function funcs[] = {
  { "bor", DINAMIC,  UFBOR },    /* bitwise or    9-10-87  jwm */
  { "bxo", DINAMIC,  UFBXOR },   /* bitwise xor   9-10-87  jwm */
  { "bno", MONAMIC,  UFBNOT },   /* bitwise not */
+ { "bli", MONAMIC,  UFBLIT },   /* bit literal (for hex, dec, oct input) */
  { "xla", TRINAMIC, UFXLATE },  /* XLATE character string translation */
  { "grp", MONAMIC,  UFGRPTEXT}, /* Text in group for last match */
  { "ptf", MONAMIC,  UFPRINTF},  /* printf-style string creator */

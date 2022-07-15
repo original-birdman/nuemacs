@@ -505,6 +505,7 @@ static char *gtfun(char *fname) {
     case UFBOR:         return ue_itoa(ue_atoi(arg1) | ue_atoi(arg2));
     case UFBXOR:        return ue_itoa(ue_atoi(arg1) ^ ue_atoi(arg2));
     case UFBNOT:        return ue_itoa(~ue_atoi(arg1));
+    case UFBLIT:        return ue_itoa(ue_atoi(arg1));
     case UFXLATE:       return xlat(arg1, arg2, arg3);
     case UFGRPTEXT:
         return group_match(atoi(arg1));
