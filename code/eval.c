@@ -48,14 +48,15 @@ static char showdir_opts[MAX_SD_OPTS+1] = "";
 
 #define MAXVARS 64
 
-struct user_variable uv[MAXVARS + 1];
+/* This bit is internal. We keep a separate list of the names (uvnames) */
+static struct simple_variable uv[MAXVARS];
 
 /* Initialize the user variable list. */
 void varinit(void) {
     int i;
     for (i = 0; i < MAXVARS; i++) {
-        uv[i].u_name[0] = 0;
-        uv[i].u_value = NULL;
+        uv[i].value = NULL;
+        uv[i].name[0] = 0;
     }
 }
 
@@ -105,25 +106,22 @@ int nxti_envvar(int ci) {
  * We don't actually need the values for getf/nvar() in input.c
  */
 
-char *uvnames[MAXVARS + 1];
+char *uvnames[MAXVARS];
 static int n_uvn;
 
 void sort_user_var(void) {
     n_uvn = 0;
     for (int i = 0; i < MAXVARS; i++) {
 
-/* There is currently no mechanism for removing a user variable
- * once it has been created, so as soon as we reach an empty entry
- * we've found all active ones.
- * If a "del_user_var" functionality ever existed the break below would
- * (probably) need to be a continue.
+/* When user vars are deleted (del_simple_var) the remaining ones are
+ * moved to fill in the gap. So a null name is always the end of the list.
  */
-        if (uv[i].u_name[0] == '\0') break;
+        if (uv[i].name[0] == '\0') break;
 
 /* Need to add this one into uvnames in alphabetic order and push any
  * followers down.
  */
-        char *toadd = uv[i].u_name;
+        char *toadd = uv[i].name;
         for (int j = 0; j < n_uvn; j++) {
             if (strcmp(toadd, uvnames[j]) >= 0) continue;
             char *xp = uvnames[j];
@@ -525,14 +523,14 @@ static char *gtusr(char *vname) {
 
 /* Scan the list looking for the user var name */
     for (vnum = 0; vnum < MAXVARS; vnum++) {
-        if (uv[vnum].u_name[0] == 0) return errorm;
+        if (uv[vnum].name[0] == 0) return errorm;
 /* If a user var is being used in the same statement as it is being set
  *      set %test &add %test 1
  * then we can up with the name existing, but no value set...
  * We must check for this to avoid a crash!
  */
-        if (strcmp(vname, uv[vnum].u_name) == 0)
-             return uv[vnum].u_value? uv[vnum].u_value: errorm;
+        if (strcmp(vname, uv[vnum].name) == 0)
+             return uv[vnum].value? uv[vnum].value: errorm;
     }
 
 /* Return errorm if we run off the end */
@@ -548,7 +546,7 @@ static char *gtbvr(char *vname) {
 
     if (!execbp || !execbp->bv) return errorm;
 /* Scan the list looking for the user var name */
-    struct buffer_variable *tp = execbp->bv;
+    struct simple_variable *tp = execbp->bv;
     for (vnum = 0; vnum < BVALLOC; vnum++, tp++) {
         if (!strcmp(vname, tp->name)) return tp->value? tp->value: errorm;
     }
@@ -697,15 +695,15 @@ fvar:
 
     case '%':               /* Check for existing legal user variable */
         for (vnum = 0; vnum < MAXVARS; vnum++)
-            if (strcmp(var+1, uv[vnum].u_name) == 0) {
+            if (strcmp(var+1, uv[vnum].name) == 0) {
                 vtype = TKVAR;
                 break;
             }
         if (vnum < MAXVARS || !vcreate) break;
         for (vnum = 0; vnum < MAXVARS; vnum++)  /* Create a new one??? */
-            if (uv[vnum].u_name[0] == 0) {
+            if (uv[vnum].name[0] == 0) {
                 vtype = TKVAR;
-                strcpy(uv[vnum].u_name, var+1);
+                strcpy(uv[vnum].name, var+1);
                 break;
             }
         break;
@@ -713,8 +711,8 @@ fvar:
     case '.':               /* A buffer variable - only for execbp! */
         if (!execbp) break;
         if (!execbp->bv) {  /* Need to create a set...free()d in bclear() */
-            execbp->bv = Xmalloc(BVALLOC*sizeof(struct buffer_variable));
-            struct buffer_variable *tp = execbp->bv;
+            execbp->bv = Xmalloc(BVALLOC*sizeof(struct simple_variable));
+            struct simple_variable *tp = execbp->bv;
             int count = BVALLOC;
             while(count--) {
                 tp->name[0] = '\0';
@@ -774,8 +772,8 @@ static int svar(struct variable_description *var, char *value) {
     status = TRUE;
     switch (vtype) {
     case TKVAR:             /* set a user variable */
-        uv[vnum].u_value = Xrealloc(uv[vnum].u_value, strlen(value) + 1);
-        strcpy(uv[vnum].u_value, value);
+        uv[vnum].value = Xrealloc(uv[vnum].value, strlen(value) + 1);
+        strcpy(uv[vnum].value, value);
         break;
 
     case TKBVR:             /* set a buffer variable - findvar check BTPROC */
@@ -1071,40 +1069,22 @@ int setvar(int f, int n) {
     return status;
 }
 
-/* Delete a user var.
+/* Delete a a user or buffer var.
+ * These have the same structure - so we just need to know the pointer
+ * of the one to delete. we just need to know how many is in the list sent
+ *
  * delvar has already successfully run findvar for us
  */
-static void delusr(struct variable_description *vd) {
+static void del_simple_var(struct variable_description *vd,
+     struct simple_variable *op, int listlen) {
 
 /* We know where it is, so just move the rest of the array down 1.
  * Since there are never gaps, we can stop as soon as we get to an
  * empty variable name.
  */
-    struct user_variable *op = uv+(vd->v_num);
-    struct user_variable *np = op+1;
-    Xfree(op->u_value);
-    for (int vnum = vd->v_num; vnum < BVALLOC; vnum++, op++, np++) {
-        strcpy(op->u_name, np->u_name);
-        op->u_value = np->u_value;
-        if (op->u_name[0] == '\0') break;     /* All done */
-    }
-    np->u_name[0] = '\0';
-    np->u_value = NULL;
-}
-
-/* Delete a buffer var.
- * delvar has already successfully run findvar for us
- */
-static void delbvr(struct variable_description *vd) {
-
-/* We know where it is, so just move the rest of the array down 1.
- * Since there are never gaps, we can stop as soon as we get to an
- * empty variable name.
- */
-    struct buffer_variable *op = (execbp+vd->v_num)->bv;
-    struct buffer_variable *np = op+1;
+    struct simple_variable *np = op+1;
     Xfree(op->value);
-    for (int vnum = vd->v_num; vnum < BVALLOC; vnum++, op++, np++) {
+    for (int vnum = vd->v_num; vnum < listlen; vnum++, op++, np++) {
         strcpy(op->name, np->name);
         op->value = np->value;
         if (op->name[0] == '\0') break;     /* All done */
@@ -1140,10 +1120,10 @@ int delvar(int f, int n) {
 /* Delete by type, or complain about the type */
     switch(vd.v_type) {
     case TKVAR:
-        delusr(&vd);
+        del_simple_var(&vd, uv+(vd.v_num), MAXVARS);
         return TRUE;
     case TKBVR:
-        delbvr(&vd);
+        del_simple_var(&vd, (execbp+vd.v_num)->bv, BVALLOC);
         return TRUE;
     case -1:
         mlwrite("No such variable as '%s'", var);

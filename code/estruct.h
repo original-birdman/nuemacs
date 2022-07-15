@@ -338,11 +338,12 @@ struct ptt_ent {
 /* Max #chars in a var name (user or buffer) */
 #define NVSIZE  32
 
-#define BVALLOC 32
-/* Structure to hold buffer variables and their definitions.
- * 32 are allocated to each BTPROC buffer.
+/* Structure to hold user and buffer variables and their definitions.
+ * MAXVARS(64) user vars are defined globally
+ * BVALLOC(32) are allocated to each BTPROC buffer.
  */
-struct buffer_variable {
+#define BVALLOC 32
+struct simple_variable {
     char *value;            /* value (string) */
     char name[NVSIZE + 1];  /* name of buffer variable */
 };
@@ -363,7 +364,7 @@ struct buffer {
     struct line *b_topline; /* Link to narrowed top text    */
     struct line *b_botline; /* Link to narrowed bottom text */
     struct ptt_ent *ptt_headp;
-    struct buffer_variable *bv; /* Only for b_type = BTPROC */
+    struct simple_variable *bv; /* Only for b_type = BTPROC */
     struct locs b;
     struct func_opts btp_opt;   /* Only for b_type = BTPROC */
     int b_type;             /* Type of buffer */

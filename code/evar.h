@@ -8,12 +8,6 @@
 #ifndef EVAR_H_
 #define EVAR_H_
 
-/* Structure to hold user variables and their definitions. */
-struct user_variable {
-        char u_name[NVSIZE + 1]; /* name of user variable */
-        char *u_value;           /* value (string) */
-};
-
 /* List of recognized environment variables. */
 
 struct evlist evl[] = {
