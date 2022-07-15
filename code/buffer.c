@@ -384,6 +384,7 @@ static int makelist(int iflag) {
             }
             else {
 /* The header line is 3+1+13+1+9+1+13+1 to get to File */
+                if (cp1 >= line+42) *cp1++ = ' '; /* Ensure at least 1 space */
                 while (cp1 < line+42) *cp1++ = ' ';
             }
             while ((c = *cp2++) != 0) {
