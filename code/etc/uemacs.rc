@@ -464,7 +464,7 @@ bind-to-key yank-replace                FNg     ; F7
 bind-to-key yank-minibuffer             FNh     ; F8
 bind-to-key makelist-region             FNi     ; F9
 bind-to-key numberlist-region           FNj     : F10
-bind-to-key count-words                 FNl     ; F12
+2 bind-to-key count-words               FNl     ; F12
 
 ;
 ; End key mappings
