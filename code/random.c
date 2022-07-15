@@ -225,18 +225,19 @@ int twiddle(int f, int n) {
           return rdonly();          /* we are in read only mode    */
 
     dotp = curwp->w.dotp;
-    doto = curwp->w.doto;
-
-    int reset_col = 0;
     int maxlen = llength(dotp);
     char *l_buf = dotp->l_text;
 
+    while (n-- > 0) {
+        int reset_col = 0;
+        doto = curwp->w.doto;
 /* GGR
  * twiddle here (and, e.g.,  bash) seems to act on the chars before and
  * after point -  except when you are at the end of a line....
  * This inconsistency seems odd. Prime emacs always acted on the two chars
  * preceding point, which was great for fixing typos as you made them.
- * If ggr-style is set then twiddle will act on the two preceding chars.
+ * If the ggr_opts GGR_TWIDDLE is set then twiddle will act on the
+ * two preceding chars.
  *
  * So where the right-hand character is depends on the mode and if you're
  * not in GGR style then it depends on whether you are at the end-of-line
@@ -244,31 +245,32 @@ int twiddle(int f, int n) {
  * But once we know where the right-hand character is the left-hand one
  * is always the one preceding it.
  */
-    if ((ggr_opts|GGR_TWIDDLE) || doto == maxlen) {
-        rch_st = prev_utf8_offset(l_buf, doto, TRUE);
-        if (rch_st < 0) return (FALSE);
-        rch_nb = doto - rch_st;
-    }
-    else {  /* Need to get back to where we are in this mode...*/
-        reset_col = 1;
-        rch_st = doto;
-        rch_nb = next_utf8_offset(l_buf, rch_st, maxlen, TRUE) - rch_st;
-    }
-    lch_st = prev_utf8_offset(l_buf, rch_st, TRUE);
-    if (lch_st < 0) return (FALSE);
-    lch_nb = rch_st - lch_st;
+        if ((ggr_opts&GGR_TWIDDLE) || doto == maxlen) {
+            rch_st = prev_utf8_offset(l_buf, doto, TRUE);
+            if (rch_st < 0) return (FALSE);
+            rch_nb = doto - rch_st;
+        }
+        else {  /* Need to get back to where we are in this mode...*/
+            reset_col = 1;
+            rch_st = doto;
+            rch_nb = next_utf8_offset(l_buf, rch_st, maxlen, TRUE) - rch_st;
+        }
+        lch_st = prev_utf8_offset(l_buf, rch_st, TRUE);
+        if (lch_st < 0) return (FALSE);
+        lch_nb = rch_st - lch_st;
 
 /* We know where the two characters start, and how many bytes each has.
  * So we take a copy of each and put them back in the reverse order.
- * If we are twiddling *around* point we might now be in the "middle" of
- * a character, so we have to reset to the original column.
- * This is the start of the now R/h character (i.e what was L/h).
+ * If we are twiddling *around* point (i.e. not GGR_TWIDDLE mode and not
+ * at eol) we might now be in the "middle" of a character, so we move to
+ * the end of the pair (meaning we advance as we twiddle).
  */
-    memcpy(rch_buf, l_buf + rch_st, rch_nb);
-    memcpy(lch_buf, l_buf + lch_st, lch_nb);
-    memcpy(l_buf+lch_st, rch_buf, rch_nb);
-    memcpy(l_buf+lch_st+rch_nb, lch_buf, lch_nb);
-    if (reset_col) curwp->w.doto = lch_st + rch_nb;
+        memcpy(rch_buf, l_buf + rch_st, rch_nb);
+        memcpy(lch_buf, l_buf + lch_st, lch_nb);
+        memcpy(l_buf+lch_st, rch_buf, rch_nb);
+        memcpy(l_buf+lch_st+rch_nb, lch_buf, lch_nb);
+        if (reset_col) curwp->w.doto = lch_st + lch_nb + rch_nb;
+    }
     lchange(WFEDIT);
     return TRUE;
 }
