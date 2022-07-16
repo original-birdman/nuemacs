@@ -17,7 +17,8 @@
 #define inword_classes "LN"
 #define at_wspace_classes "ZC"
 #define inword(wp) class_check(wp, inword_classes, FALSE)
-#define at_wspace(wp) class_check(wp, at_wspace_classes, TRUE)
+#define at_abreak(wp) class_check(wp, at_wspace_classes, TRUE)
+#define at_wspace(wp) class_check(wp, at_wspace_classes, FALSE)
 
 extern int wrapword(int, int);
 extern int backword(int, int);
