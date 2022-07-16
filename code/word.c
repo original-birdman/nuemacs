@@ -160,10 +160,10 @@ int wrapword(int f, int n)
     else {
 /* Set where we are. We need to get back here using a method that gets
  * updated on text updates.
- * So mark is lost on word wrap in GGR_FULLWRAP mode.
+ * Use the system mark, to preserve the user one.
  */
-        curwp->w.markp = curwp->w.dotp;
-        curwp->w.marko = curwp->w.doto;
+        sysmark.p = curwp->w.dotp;
+        sysmark.o = curwp->w.doto;
 
         if (getccol() <= fillcol) return FALSE; /* Shouldn't be here! */
         while(1) {                  /* Go on until done */
@@ -187,14 +187,15 @@ int wrapword(int f, int n)
                     (curwp->w.doto != 0)) linsert_byte(1, ' ');
             }
 /* Back to where we were (which will have moved and been updated) */
-            curwp->w.dotp = curwp->w.markp;
-            curwp->w.doto = curwp->w.marko;
+            curwp->w.dotp = sysmark.p;
+            curwp->w.doto = sysmark.o;
             if (getccol() <= fillcol) break;    /* Done */
         }
 /* Now remove all whitespace at our final destination.
  * The space we typed to get here will be added later.
  */
         whitedelete(0, 0);
+        sysmark.p = NULL;   /* RESET! No longer valid */
     }
 /* Make sure the display is not horizontally scrolled */
     if (curwp->w.fcol != 0) {
@@ -302,13 +303,18 @@ void ensure_case(int want_case) {
         lputgrapheme(&gc);              /* Insert the whole thing */
         int new_utf8_len = curwp->w.doto - start;   /* Bytes added */
 
-/* If mark is on this line we may have to update it to reflect any change
- * in byte count
+/* If either mark is on this line we may have to update it to reflect
+ * any change in byte count
  */
-        if ((new_utf8_len != orig_utf8_len) &&      /* Byte count changed */
-            (curwp->w.markp == curwp->w.dotp) &&    /* Same line... */
-            (curwp->w.marko > curwp->w.doto)) {     /* and beyond dot? */
-            curwp->w.markp += (new_utf8_len - orig_utf8_len);
+        if (new_utf8_len != orig_utf8_len) {        /* Byte count changed */
+            if ((curwp->w.markp == curwp->w.dotp) &&    /* Same line... */
+                (curwp->w.marko > curwp->w.doto)) {     /* and beyond dot? */
+                 curwp->w.markp += (new_utf8_len - orig_utf8_len);
+            }
+            if ((sysmark.p == curwp->w.dotp) &&     /* Same line... */
+                (sysmark.o > curwp->w.doto)) {      /* and beyond dot? */
+                 sysmark.p += (new_utf8_len - orig_utf8_len);
+            }
         }
     }
     ldelete(orig_utf8_len, FALSE);
@@ -579,6 +585,10 @@ int killpara(int f, int n) {
     UNUSED(f);
     int status;     /* returned status of functions */
 
+/* Remember the current mark for later restore */
+    sysmark.p = curwp->w.markp;
+    sysmark.o = curwp->w.marko;
+
     while (n--) {           /* for each paragraph to delete */
 
 /* Mark out the end and beginning of the para to delete */
@@ -598,6 +608,11 @@ int killpara(int f, int n) {
 /* and clean up the 2 extra lines */
         ldelete(2L, TRUE);
     }
+
+/* Restore the original mark */
+    curwp->w.markp = sysmark.p;
+    curwp->w.marko = sysmark.o;
+    sysmark.p = NULL;       /* RESET! No longer valid */
     return TRUE;
 }
 
@@ -780,7 +795,9 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
     rtol = 1;           /* Direction of first padding pass */
 
 /* Since mark might be within the current paragraph its status after
- * this is undefined, so we cn play with it.
+ * this is undefined, so we can play with it.
+ * NOTE: Since this takes a copy of text and inserts taht copy, we
+ *       can't use the system mark here!
  */
     curwp->w.markp = curwp->w.dotp;
     curwp->w.marko = curwp->w.doto;
@@ -802,8 +819,7 @@ int filler(int indent, int width, struct filler_control *f_ctl) {
     eosflag = 0;
     pending_space = 0;
 
-/*
- * wbuf needs to be sufficiently long to contain all of the longest
+/* wbuf needs to be sufficiently long to contain all of the longest
  * line (plus 1, for luck...) in case there is no word-break in it.
  * So we allocate it dynamically.
  * And hence we MUST remember to always free it, regardless of

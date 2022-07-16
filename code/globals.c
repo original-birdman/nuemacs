@@ -218,3 +218,8 @@ int uproc_lptotal = 0;
 meta_spec_flags_t meta_spec_active = { 0, 0, 0, 0 };
 
 int ggr_opts = 0;
+
+/* A system-wide mark for temporarily saving the current locaiton.
+ * p MUST be reset to NULL after every restore!!!
+ */
+sysmark_t sysmark = { NULL, 0 };

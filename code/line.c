@@ -64,6 +64,10 @@ void lfree(struct line *lp) {
             wp->w.markp = lp->l_fp;
             wp->w.marko = 0;
         }
+        if (sysmark.p == lp) {
+            sysmark.p = lp->l_fp;
+            sysmark.o = 0;
+        }
         wp = wp->w_wndp;
     }
     bp = bheadp;
@@ -76,6 +80,10 @@ void lfree(struct line *lp) {
             if (bp->b.markp == lp) {
                 bp->b.markp = lp->l_fp;
                 bp->b.marko = 0;
+            }
+            if (sysmark.p == lp) {
+                sysmark.p = lp->l_fp;
+                sysmark.o = 0;
             }
         }
         bp = bp->b_bufp;
@@ -203,6 +211,10 @@ int linsert_byte(int n, unsigned char c) {
         if (wp->w.markp == lp1) {
             wp->w.markp = lp2;
             if (wp->w.marko > doto) wp->w.marko += n;
+        }
+        if (sysmark.p == lp1) {
+            sysmark.p = lp2;
+            if (sysmark.o > doto) sysmark.o += n;
         }
         wp = wp->w_wndp;
     }
@@ -387,6 +399,10 @@ int lnewline(void) {
             if (wp->w.marko <= doto) wp->w.markp = lp2;
             else                     wp->w.marko -= doto;
         }
+        if (sysmark.p == lp1) {
+            if (sysmark.o <= doto) sysmark.p = lp2;
+            else                   sysmark.o -= doto;
+        }
         wp = wp->w_wndp;
     }
     return TRUE;
@@ -496,6 +512,10 @@ static int ldelnewline(void) {
                 wp->w.markp = lp1;
                 wp->w.marko += lp1->l_used;
             }
+            if (sysmark.p == lp2) {
+                sysmark.p = lp1;
+                sysmark.o += lp1->l_used;
+            }
             wp = wp->w_wndp;
         }
         lp1->l_used += lp2->l_used;
@@ -528,6 +548,12 @@ static int ldelnewline(void) {
         else if (wp->w.markp == lp2) {
             wp->w.markp = lp3;
             wp->w.marko += lp1->l_used;
+        }
+        if (sysmark.p == lp1)
+            sysmark.p = lp3;
+        else if (sysmark.p == lp2) {
+            sysmark.p = lp3;
+            sysmark.o += lp1->l_used;
         }
         wp = wp->w_wndp;
     }
@@ -607,6 +633,10 @@ int ldelete(long n, int kflag) {
             if (wp->w.markp == dotp && wp->w.marko >= doto) {
                 wp->w.marko -= chunk;
                 if (wp->w.marko < doto) wp->w.marko = doto;
+            }
+            if (sysmark.p == dotp && sysmark.o >= doto) {
+                sysmark.o -= chunk;
+                if (sysmark.o < doto) sysmark.o = doto;
             }
             wp = wp->w_wndp;
         }

@@ -105,6 +105,9 @@ int copyregion(int f, int n) {
  * than a function...
  */
 #define MarkDotFixup(amount) \
+    if ((sysmark.p == linep) && \
+        (sysmark.o == (b_offs + this_blen))) \
+          sysmark.o += amount; \
     if ((curwp->w.markp == linep) && \
         (curwp->w.marko == (b_offs + this_blen))) \
           curwp->w.marko += amount; \
@@ -166,9 +169,10 @@ static int casechange_region(int newcase) { /* The handling function */
                 lback(lforw(linep)) = newl;
                 lforw(newl) = lforw(linep);
                 lback(newl) = lback(linep);
-/* If mark or dot were on this old line then we need to move them to
- * the new one
+/* If either mark or dot were on this old line then we need to move
+ * them to the new one
  */
+                if (sysmark.p == linep) sysmark.p = newl;
                 if (curwp->w.markp == linep) curwp->w.markp = newl;
                 if (curwp->w.dotp == linep)  curwp->w.dotp = newl;
                 Xfree(linep);

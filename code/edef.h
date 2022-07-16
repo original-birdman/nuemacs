@@ -255,3 +255,10 @@ extern meta_spec_flags_t meta_spec_active;
 
 /* GGR option flag bits */
 extern int ggr_opts;
+
+/* A system-wide mark for temporarily saving the current locaiton. */
+typedef struct {
+    struct line *p;
+    int o;
+} sysmark_t;
+extern sysmark_t sysmark;
