@@ -208,8 +208,11 @@ int wrapword(int f, int n)
 /*
  * Move the cursor backward by "n" words. All of the details of motion are
  * performed by the "back_grapheme" routine.
- * Error if you try to move beyond the start of the buffer.
  * This always ends up at the previous start of a word.
+ * Error if you try to move beyond the start of the buffer...BUT, since
+ * the mechanism involves going 1 char too far (to get "out" of the word
+ * then stepping forward one, we must handle *arriving* at BOF while
+ * looking for the "before word" char correctly.
  */
 int backword(int f, int n) {
 /* Have to go back one at the start it case we are looking at the
@@ -221,7 +224,15 @@ int backword(int f, int n) {
         while (inword(NULL) == FALSE)   /* Get to a word if on whitespace */
             if (back_grapheme(1) <= 0) return FALSE;
         do {    /* Must be inword to get here, so move then check */
-            if (back_grapheme(1) <= 0) return FALSE;
+            if (back_grapheme(1) <= 0) {
+/* If this is because we are at b-of-file then we are at the the first
+ * word and have got there successfully.
+ */
+                if ((curwp->w.doto == 0) &&
+                    (lback(curwp->w.dotp) == curwp->w_bufp->b_linep))
+                    return TRUE;
+                else return FALSE;
+            }
         } while (inword(NULL));
     }
     return (forw_grapheme(1) > 0);  /* Success count => T/F */
@@ -780,7 +791,16 @@ static int filler_bword(void) {
     while (at_wspace(NULL) == TRUE)
         if (back_grapheme(1) <= 0) return FALSE;
     do {
-        if (back_grapheme(1) <= 0) return FALSE;
+        if (back_grapheme(1) <= 0) {
+/* If this is because we are at b-of-file then we are at the the first
+ * word and have got there successfully.
+ * Probably can't happen here, but...
+ */
+            if ((curwp->w.doto == 0) &&
+                (lback(curwp->w.dotp) == curwp->w_bufp->b_linep))
+                return TRUE;
+            else return FALSE;
+        }
     } while (at_wspace(NULL) != TRUE);
 /* We've gone back beyind the start, so adjust now */
     return (forw_grapheme(1) > 0);  /* Success count => T/F */
@@ -844,7 +864,7 @@ int filler(int indent, int width, int justify) {
                 if (!all_done)                  /* No space at e-o-p */
                     if (!linsert_byte(1, ' '))  /* Interword space */
                         return FALSE;
-                filler_bword();                 /* Back to where we can wrap */
+                if (!filler_bword()) return FALSE;  /* To where we can wrap */
                 whitedelete(0, 0);  /* Remove space there */
 /* Do any justify before the move to next line.
  * Needs at least 2 words - see above...
@@ -860,11 +880,11 @@ int filler(int indent, int width, int justify) {
                         else      curwp->w.doto = end_pad_at;
                         while(needed) {
                             if (ltor) { /* Check for beyond right margin */
-                                filler_fword();
+                                if (!filler_fword()) return FALSE;
                                 if (curwp->w.doto >= end_pad_at) break;
                             }
                             else {      /* Check for beyond left margin? */
-                                filler_bword();
+                                if (!filler_bword()) return FALSE;
                                 if (curwp->w.doto <= start_offs) break;
                             }
                             if (!linsert_byte(1, ' ')) return FALSE;
