@@ -1,13 +1,13 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.163 (requires GGR4.163+)
-;                       Last Update: 11 July 2022
+;                       Version - GGR4.164 (requires GGR4.164+)
+;                       Last Update: 18 July 2022
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
 ;
-2 ggr-style         ; Enable ggr-style
+2 ggr-style             ; Enable ggr-style
 ;
 ; There are some system variables of use (see eval.c and evar.h).
 ;

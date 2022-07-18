@@ -4794,7 +4794,7 @@ efunc.h
     be written for incremental searching and query replace.
     This handles the 1-char replies expected alomng with defining a
     user-procedure to run the relevant test(s).
-    Re-ordered some  isearch.c code.
+    Re-ordered some isearch.c code.
 
 autotest/incremental-search.sh
 autotest/query-replace.sh
@@ -5045,7 +5045,6 @@ utf8.c
 word.c
     Make sure we free any gc.ex in ensure_case().
 
-
 bind.c
     Do an unsigned sort for the key bindings (and lookup!).
     desbind() can now dump all keys in order without the SPEC ones
@@ -5098,5 +5097,225 @@ etc/uemacs.rc
     and KeyPad keys sections to help.
     Added a Universal argument description. [etc/uemacs.hlp]
     Update to GGR4.163
+
+========== GGR4.164
+
+word.c
+    If wordcount() is given a +ve numeric arg, count the whole file.
+
+efunc.h
+    Modified malloc attributes to cater for ggc4.
+
+bind.c
+input.c
+    In getcmd(), ignore meta once we get to the CSI (SPEC) handling.
+    [input.c]
+    Add comments that getcmd() and stock() both prevent SPEC|META being
+    set. So the internal_handlers are "safe". [bind.c, input.c]
+
+bind.c
+main.c
+estruct.h
+    Allow a key-binding to have a defined multiplier for its function,
+    by carrying over any numeric arg to bind-/buffer-to-key.
+    Displayed as {n}func when displaying.
+
+main.c
+random.c
+search.c
+word.c
+    Fix UNUSED() usage in wordcount() now that we do use n. [word.c]
+    For tests of n being different to 1, *don't* test f as well. For n to
+    be != 1, f must be TRUE (see multiplier_check in main.c)
+    reexecute() [main.c], writemsg() [random.c], replaces() [search.c],
+    wordcount() [word.c]
+
+bind.c
+input.c
+estruct.h
+    Set completion type to CMPLT_PROC (not CMPLT_BUF) when prompting for a
+    user-procedure name. Changed the prompt text. [bind.c]
+    Check for leading '//' on BTPROC expansion to skip //kbd_macro
+    [input.c]
+    Expand completion-type comments [estruct.h]
+
+main.c
+word.c
+    Fix inword() to check for a Zero-width break correctly (it is not a
+    combining character!).
+    Modify wrapword() to use inword().
+    Simplified backword() and forwword() and extended comments.
+    Added comment in main.c that the space is added *after* wrapword() runs.
+
+basic.c
+eval.c
+main.c
+random.c
+word.c
+efunc.h
+    Removed the bflg option to getccol(), after noticing that no call
+    used it. [random.c, efunc.h]
+    Callers:
+        forwline [basic.c]
+        $curcol [eval.c]
+        execute [main.c]
+        showcpos, typetab, insert_tab, insert_newline, insbrace,
+        inspound [random.c]
+        filler, justpara [word.c]
+
+word.c
+    Modify wordcount() to wrap the entire line (not just the last word)
+    when passed an arg > 1.
+
+eval.c
+globals.c
+edef.h
+estruct.h
+evar.h
+    Added ggr_opts as a bit-mask for ggr options. [all]
+    Added ue_atoi to allow some variables to be set using hex (or
+    octal) ($curchar $cmode $gmode $gflags $ggr_opts) [eval.c]
+
+globals.c
+random.c
+word.c
+edef.h
+estruct.h
+    Replaced single using_ggr_style variable with ggr_opts bit map.
+    ggr-style function now turns all bit on/off (used in etc/uemacs.rc).
+    [globals.c, random.c, word.c, edef.h, estruct.h]
+
+eval.c
+    Switch to ue_atoi() as input for the bit function.
+
+main.c
+random.c
+word.c
+estruct.h
+    Added GGR_FULLWRAP bit for ggr_opts.
+    Used it to set the numeric arg for the META|SPEC|'W' word-wrap call.
+    [main.c, random.c, estruct.h]
+    Corrections to wordwrap() [word.c]
+    Set *all* bits on in ggr_style() [random.c]
+
+etc/uemacs.rc
+    Added toggle-ggr-opts procedure, to toggle $ggr_opts settings. Bound
+    it to ^XG.
+    Changed the bit settings in _mytoggle-mode to be in hex.
+
+random.c
+    Add the code for (documented) -ve args to killtext.
+
+word.c
+efunc.h
+    Fix do_actual_wrap() so word wrapping still occurs when there are
+    multiple spaces at the end of the line.
+    Cater for "mid-line" space inserting in FullWrap mode.
+    Add at_wspace() (since inword() is incorrect for wrapping) with
+    at_wspace and inword using class_check().
+    class_check() now handles and advances correctly at a newline.
+    wordcount() corrected using the modified inword().
+
+autotest/wordwrap.sh
+    A script for testing word wrapping in different modes.
+
+autotest/wordwrap.sh
+    A script for testing forw/back-word in different modes.
+
+word.c
+    Correct test for GGR_FORWWORD being set in forwword().
+
+random.c
+    Correct test for GGR_TWIDDLE being set in twiddle() and honour any
+    numeric arg.
+
+autotest/incremental-search.sh
+autotest/query-replace.sh
+autotest/search-char_classes.sh
+autotest/search-classes_in_closures.sh
+autotest/search-file-start.sh
+autotest/search-groups.sh
+autotest/search-line-endings.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-props2.sh
+autotest/search-reexec-macro.sh
+autotest/search-repeats.sh
+autotest/search-u_hex.sh
+autotest/zero-length-magic.sh
+    Print the expected value in all cases when the test fails.
+
+buffer.c
+    Ensure there is always a space between the buffer name and file name
+    when listing buffers.
+
+word.c
+    Check that a zero-width break has no combining char(!) in class_check.
+
+etc/uemacs.rc
+    Change count-words FNl binding to have a 2 prefix, so that it works
+    on the entire file. (Can override back to region with Esc0).
+
+eval.c
+evar.h
+autotest/wordwrap.sh
+    Added &blit function (for generic hex, dec, oct input) and switched
+    to using it in autotest/wordwrap.sh.
+
+eval.c
+estruct.h
+evar.h
+    Combined the delete code for user and buffer variables (they have
+    the same structure) and corrected a comment that user vars couldn't
+    be deleted.
+
+input.c
+    In getcmd() return 0 if we reach the CSI code with meta set.
+    Unset meta before intentionally going to CSI code.
+
+globals.c
+line.c
+region.c
+word.c
+edef.h
+    Add a global system mark (updated in the same way as the buffer
+    mark) [globals.c, line.c, region.c, edef.h, word.c]
+    Use it, so that word wrap and kill paragraph don't lose any user
+    mark. [region.c, word.]
+
+word.c
+efunc.h
+    Renamed at_wspace() to be at_break() and added a new at_wspace()
+    that does only check for whitespace.
+    Complete rewrite of filler(), the generic filling routine called
+    by various front-ends, to much simpler code.
+    It now reformats as it goes (rather than building up a dynamic new
+    line of text and adding that).  As a result it no longer wipes out
+    the mark.
+
+word.c
+    Fix a long-standing (original?) bug in backword() that would cause
+    it to return FALSE when stepping back over the first word in a file
+    if it started in column 1.  Added same fix to filler_bword().
+
+autotest/parawrap.sh
+autotest/wordwrap.sh
+    Added a test script for paragraph wrapping.
+    Modified the word-wrap test to check for entire line contents, not
+    just a character in one position.
+
+../CHANGES
+../README
+version.c
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Added some generic change comments to README.
+    Add sections on Opening a directory, Keyboard macros and GGR style
+    to the help file.
+    Update to GGR4.164
+
+NOTE: The code now compiles cleanly in ANALYZE mode. The leak reported
+for exec.c (q.v.) has gone.
 
 ==========

@@ -1,18 +1,16 @@
-This is an extension to the uEmacs/pK 4.0.
-That was obtained by:
- git clone git://git.kernel.org/pub/scm/editors/uemacs/uemacs.git uemacs
-in early Feb 2017.
-I wasn't working in git at the time, so didn't fork it. In the end I put
-all of that code into my own local git and started from there. So the
-original 4.015 branch is just that. Then I uploaded it to github, but
-didn't want to go back to a fork and have to start again.
+This is an extension to the uEmacs/pK 4.0.  That was  obtained  by:  git
+clone  git://git.kernel.org/pub/scm/editors/uemacs/uemacs.git  uemacs in
+early Feb 2017.  I wasn't working in git at the time, so didn't fork it.
+In the end I put all of that code into my own local git and started from
+there.  So the original 4.015 branch is just that.  Then I  uploaded  it
+to github, but didn't want to go back to a fork and have to start again.
 
-The main extension as to add code which had been put into 3.9e many
+The main extension as to add code which had  been  put  into  3.9e  many
 years ago to make the bottom line (modeline) into a minibuffer - you can
-use many uemacs commands to move around, delete, yank etc. You can set
-modes (including Phon mode) in it.
-It handles filename expansion (ctlI/tab), albeit in a different manner
-to 4.015.  That code also handles environment variable expansion.
+use  many uemacs commands to move around, delete, yank etc.  You can set
+modes (including Phon  mode)  in  it.   It  handles  filename  expansion
+(ctlI/tab),  albeit  in  a  different  manner  to 4.015.  That code also
+handles environment variable expansion.
 
 It also now has improved utf8 character class/property support, which
 has been done by making use of the Julia Lang utf8proc library.  As a
@@ -73,7 +71,19 @@ Other changes so far made are:
     enabled it to work with Unicode characters.
   o Simple Space/Return and b/B for forward/backward page scrolling in
     VIEW mode.
-  o Added per-buffer variables for executing bufers and user procedures.
+  o Added per-buffer variables for executing buffers and user procedures.
+  o More paragraph justifying option, including making numeric or
+    definition lists.
+  o Allow key-bindings for function to have a default numeric argument
+    "attached".
+  o Improved handling of function/keypad escape sequences.
+  o Add the ability to mark function as "one pass", so they will only be
+    called once. User procedures can determine what numeric arg was
+    given, and which current execution loop they are on.
+  o Allow a user procedure to be installed as one of the four
+    "internal" keybindings.
+  o Allow looking for overlapping matches while searching.
+  o Added a suite of macros for regression testing.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in

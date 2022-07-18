@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.163 Help Index     (11 July 2022)
+=>                   nuEmacs GGR4.164 Help Index     (18 July 2022)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -17,11 +17,14 @@
 .. System variables
 .. Functions
 .. Name completion
+.. Opening a directory
 .. MACRO functions and environment variables
 .. Interactive prompts vs. macro-file commands
-..  Key bindings
+.. Keyboard macros
+.. Key bindings
 .. Internal Key bindings
 .. Function, Application and KeyPad keys
+.. GGR style
 .. Start-up file
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
@@ -415,7 +418,7 @@ Store procedure ....... not bound
 Execute procedure ..... Meta ^E
 Store pttable ......... not bound
 Set pttable ........... not bound
-Toggle ptmode ......... not bound
+Toggle ptmode  ........ not bound       (but can be toggled via ^XT)
 
 You may set variables within macros.
 
@@ -523,7 +526,7 @@ Others (omitting system-use only ones)...
 &seq, &sle, &sgr ........................... String comparisons
 &sin ....................................... String index
 &exi, &fin, &exb  .......................... File & buffer operations
-&ban, &bor, &bxo, &bno ..................... Bit operations
+&ban, &bor, &bxo, &bno, &bli ............... Bit operations
 &ind, &tru, &gtk, &rnd, &env, &bin, &xla ... Miscellaneous
 &grp n, &ptf templ a1, a2... ............... "   "
 -------------------------------------------------------------------------------
@@ -541,12 +544,40 @@ to. The minibuffer is an editable buffer line.
 
 For file completion, shell expansion is handled and leading ".." dirs
 are taken relative to the $PWD environment variable.
+You may also use ~ (or ~id) at the start of a pathname for login id
+expansion.
+-------------------------------------------------------------------------------
+=> Opening a directory
+
+If you open a directory (rather than a file) you will be show a listing
+of its contents.
+
+You can move to the entry you are interested in and press:
+
+d,o,<cr>    dive into it or open it. May be a file or another directory
+v           same as d/o, but if it is a file open it in View mode
+u           Up to parent.
+a           Refresh/toggle current view in ASCII mode
+t           Refresh/toggle current view in TIME mode
+r           Refresh current view in current mode
+h           Toggle hidden files display in current mode
+m           Toggle mixed/type-sorted display
+f           Toggle dirs/files order in type-sorted mode
+
+By default the listing starts as sorted by name, no hidden files, dirs
+before files. (This can be changed by setting the $showdir_opts
+variable).
+The ASCII/TIME toggle options switch you into that mode if you are in
+the other and reverse the sort order if you are already in it.
+
 -------------------------------------------------------------------------------
 =>                MACRO functions and environment variables
+
 eos-chars <string of characters>
-    This defines which characters to treat as end of sentence ones so
+    This defines which characters to treat as an end of sentence so
     that they have an extra space appended when justifying paragraphs.
-    The default is none, but the default uemacs.rc sets it to ".!?"
+    The internal default is none, but the default uemacs.rc sets it
+    to ".!?"
 
 char-replace
     Allows you to define the on-screen representation of characters -
@@ -576,14 +607,14 @@ store-procedure <proc-name> [flags]
 $uproc_lpcount
 $uproc_lptotal
     These can be access within a stored procedure to get the value of
-    the total user-requested repeats (escn, or ^U) and the current loop
-    count. For example, the lr-justify code in the standard uemacs.rc
-    uses this to only prompt for the left/right margins on the first
-    pass even if it has been asked to run over multiple paragraphs.
-    $uproc_lptotal is set to the requested number even if the one_pass
-    flag is set on the procedure, enabling the procedure to run once,
-    but to do something internally the requested number of times, or
-    behave differently if there is/is not a numeric argument.
+    the total user-requested repeats (Esc<n>, or ^U) and the current
+    loop count.  For example, the lr-justify code in the standard
+    uemacs.rc uses this to only prompt for the left/right margins on the
+    first pass even if it has been asked to run over multiple
+    paragraphs.  $uproc_lptotal is set to the requested number even if
+    the one_pass flag is set on the procedure, enabling the procedure to
+    run once, but to do something internally the requested number of
+    times, or behave differently if there is/is not a numeric argument.
 
 buffer-to-key <proc-name> <key-spec>
     Bind the user-defined procedure <proc-name> to the given key.
@@ -669,6 +700,11 @@ $showdir_opts
 
     The default setting is "", which produces:
     Sorted by name, no hidden files, dirs before files
+
+$ggr_opts
+    This controls some "operational" differences in the way some
+    command can work. See the GGR style section.
+
 -------------------------------------------------------------------------------
 => Interactive prompts vs. macro-file commands
 
@@ -693,6 +729,28 @@ Some commands (e.g. insert-tokens) may take the result to be a series of
 tokens, but that is a separate issue.
 
 -------------------------------------------------------------------------------
+=> Keyboard macros
+
+You can collect a series of commands and replay them all using a single
+key. This is called a keyboard macro.
+
+You start collecting with ^X( and end with ^X).
+
+There are two ways to re-run the commands.
+^XE will replay the key-strokes
+^XV will replay the commands.
+
+These should produce the same results, but it is possible that, in some
+circumstances, they will not.
+
+The commands for ^XV are help in the //kbd_macro buffer. You may edit
+this buffer to make modifications to what ^XV will do (useful to make a
+small change to, say, a search string). This will not affect what ^XE
+will do.
+If you think this may be a common useful procedure for you, you may save
+the buffer and turn it into a user procedure.
+
+-------------------------------------------------------------------------------
 => Key bindings
 
 Commands can be bound to keys using
@@ -712,11 +770,15 @@ where ^X is Control-X
 The final k can be a single character (unicode is allowed), ^c (Control-c)
 or one of two special tokens, SP (space) or ^? (Delete).
 Not all of ^X, M- or FN has to be present, but you would expect at least
-one of them to be there if k is not a control character.
+one of them to be there if k is not a control character (and you cannot
+use just M-FN).
 This sequence is that which will be show by the describe-bindings function.
 
 When running these commands in a minibuffer you need to type the actual
 key-sequence you wish to use.
+
+You can display the current keybindings with the describe-bindings
+function (bound to F2 in the standard bindings).
 
 -------------------------------------------------------------------------------
 => Internal Key bindings
@@ -732,6 +794,8 @@ when particular events occur.
 
 By default the W entry is bound to wrapword, while the other three are
 bound to nullproc.
+The W entry is sent a numeric argument of 2 if bit 0x04 is set in
+$ggr_opts.
 
 You can set these to refer to an existing user procedure instead by:
 
@@ -775,6 +839,29 @@ use one or the other.
     End         FN4 FNF                     7/Home      FN1 FNH
     PgUp        FN5                         8/UpAw      FNA
     PgDown      FN6                         9/PgUp      FN5
+
+-------------------------------------------------------------------------------
+=> GGR style
+There are some "operational" differences in the way some command can
+work according to the setting of $ggr_opts flags.
+
+These used to be set by the ggr-style command, an arg of 2 or more turned
+them on, otherwise they were turned off. They may now be switched on
+and off individually (but ggr-style still turns them all on or off).
+
+Flag    Controls    How
+0x01    twiddle     When ON, twiddles the two preceding chars
+                    When OFF, twiddles the preceding and current chars
+                    and advances one char.
+0x02    next-word   When ON, move to the next end of word
+                    When OFF. move to the start of the next word
+0x04    wrap mode   When ON a space typed beyond fillcol will wrap all
+                    of the preceding text in the line (and trim lines)
+                    When OFF it will only wrap the preceding line and
+                    leave any spaces alone.
+
+The toggle-ggr-opts user procedure defined in the standard start-up file
+allows you to change the setting of each.
 
 -------------------------------------------------------------------------------
 => Start-up file.
