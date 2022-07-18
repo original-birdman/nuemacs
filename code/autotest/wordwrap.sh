@@ -105,6 +105,26 @@ store-procedure check-position
 !endm
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+store-procedure check-full-line
+;   Expects these to have been set, since this tests them all.
+; %expltext     the expected text of the line
+;
+  !if &seq $line %expltext
+    set %test-report &cat %curtest &cat " OK text for: line " $curline
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " WRONG text for: line " $curline
+    set %test-report &cat %test-report " expected: \n"
+    set %test-report &cat %test-report %expltext
+    set %test-report &cat %test-report " got: \n"
+    set %test-report &cat %test-report $line
+    set %fail &add %fail 1
+  !endif
+  execute-procedure report-status
+
+!endm
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
 ;
 find-file autotest.tfile
@@ -151,12 +171,8 @@ insert-string " "
   set %expchar 10
 execute-procedure check-position
 
-beginning-of-line
-  set %curtest Line7-Fullwrap-bol
-  set %expline 8
-  set %expcol 0
-  set %expchar &asc c
-execute-procedure check-position
+  set %expltext "column. "
+execute-procedure check-full-line
 
 ; Re-read file...
 unmark-buffer
@@ -172,13 +188,8 @@ insert-string " "
   set %expchar 10
 execute-procedure check-position
 
-beginning-of-line
-  set %curtest Line7-OrigWrap-bol
-  set %expline 8
-  set %expcol 0
-  set %expchar &asc c
-execute-procedure check-position
-unmark-buffer
+  set %expltext "column. "
+execute-procedure check-full-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Insert space at end of line 8
@@ -198,14 +209,9 @@ insert-string " "
 execute-procedure check-position
 
 previous-line
-end-of-line
-backward-character
-; Expect to be at end of fill - spaces removed
-  set %curtest Line8-Fullwrap-endprev
-  set %expline 8
-  set %expcol 56
-  set %expchar &asc l
-execute-procedure check-position
+; Expect line to have spaces removed
+  set %expltext "And another, where spaces follow the text beyond the fill"
+execute-procedure check-full-line
 
 ; Re-read file...
 unmark-buffer
@@ -221,16 +227,11 @@ insert-string " "
   set %expchar 10
 execute-procedure check-position
 
-; Expect to be beyond fill - in the kept spaces
 previous-line
-end-of-line
-backward-character
-  set %curtest Line8-OrigWrap-endprev
-  set %expline 8
-  set %expcol 59
-  set %expchar &asc " "
-execute-procedure check-position
-unmark-buffer
+; Expect line to end with 3 spaces
+  set %expltext "And another, where spaces follow the text beyond the fill   "
+execute-procedure check-full-line
+
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Insert space in the space-gap on line 8
@@ -254,13 +255,10 @@ insert-string " "
 execute-procedure check-position
 
 next-line
-beginning-of-line
-; Expect to be at start of the wrapped "column."
-  set %curtest Line8-Fullwrap-MSnextstart
-  set %expline 9
-  set %expcol 0
-  set %expchar &asc c
-execute-procedure check-position
+; We expect this line to be the wrapped "column."
+  set %curtest Line8-Fullwrap-MSnextline
+  set %expltext "column."
+execute-procedure check-full-line
 
 ; Re-read file...
 unmark-buffer
@@ -271,21 +269,16 @@ beginning-of-line
 61 forward-character
 wrap-word
 insert-string " "
+; We expect this to have wrapped
   set %curtest Line8-OrigWrap-MidSpace
   set %expline 9
   set %expcol 1
   set %expchar &asc c
 execute-procedure check-position
 
-previous-line
-end-of-line
-backward-character
-; Expect to be at the end of the spaces
-  set %curtest Line8-Origwrap-MSprevend
-  set %expline 8
-  set %expcol 59
-  set %expchar &asc " "
-execute-procedure check-position
+; Expect to line to be column. with a leading space.
+  set %expltext " column."
+execute-procedure check-full-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Wrap on a zero-width break
@@ -298,20 +291,16 @@ read-file autotest.tfile
 end-of-line
 2 wrap-word
 insert-string " "
+; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-FullWrap-zwb
   set %expline 13
   set %expcol 8
   set %expchar 10
 execute-procedure check-position
 
-beginning-of-line
-; Expect to be at start of the wrapped text - looking at the zwb.
-  set %curtest Line12-Fullwrap-bol
-  set %expline 13
-  set %expcol 0
-; Convenient way to get a hex value in!
-  set %expchar &blit 0x200b
-execute-procedure check-position
+; The line is expected to contain the zw break! (Make it obvious)
+  set %expltext &cat &chr &blit 0x200b "oulder. "
+execute-procedure check-full-line
 
 ;
 ; Re-read file...
@@ -320,21 +309,20 @@ read-file autotest.tfile
 
 12 goto-line
 end-of-line
+; Same results as 2 wrap-word expected
 wrap-word
 insert-string " "
+; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-OrigWrap-zwb
   set %expline 13
   set %expcol 8
   set %expchar 10
 execute-procedure check-position
 
-beginning-of-line
-; Expect to be at start of the wrapped text - looking at the zwb.
+; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-Origwrap-bol
-  set %expline 13
-  set %expcol 0
-  set %expchar &blit 0x200b
-execute-procedure check-position
+  set %expltext &cat &chr &blit 0x200b "oulder. "
+execute-procedure check-full-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Repeat with extra txt at the end.
@@ -350,20 +338,13 @@ end-of-line
 insert-string " xyzzy"
 2 wrap-word
 insert-string " "
-  set %curtest Line12+-FullWrap
+  set %curtest Line12+-FullWrap+xyzzy
   set %expline 13
   set %expcol 14
   set %expchar 10
 execute-procedure check-position
-
-beginning-of-line
-; Expect to be at start of the wrapped text - looking at the zwb.
-  set %curtest Line12+-Fullwrap-bol
-  set %expline 13
-  set %expcol 0
-; Convenient way to get a hex value in!
-  set %expchar &blit 0x200b
-execute-procedure check-position
+  set %expltext &cat &chr &blit 0x200b "oulder. xyzzy "
+execute-procedure check-full-line
 
 ;
 ; Re-read file...
@@ -375,19 +356,14 @@ end-of-line
 insert-string " xyzzy"
 wrap-word
 insert-string " "
-  set %curtest Line12-OrigWrap-zwb
+  set %curtest Line12-OrigWrap+xyzzy
   set %expline 13
   set %expcol 6
   set %expchar 10
 execute-procedure check-position
+  set %expltext "xyzzy "
+execute-procedure check-full-line
 
-beginning-of-line
-; Expect to be at start of the wrapped xyzzy
-  set %curtest Line12-Origwrap-bol
-  set %expline 13
-  set %expcol 0
-  set %expchar &asc x
-execute-procedure check-position
 
 unmark-buffer
 
