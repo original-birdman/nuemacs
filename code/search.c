@@ -1756,9 +1756,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
     }
     if (status == TRUE) {
         strcpy(apat, tpat);
-
 /* Save this latest string in the search buffer ring? */
-
         if (do_update_ring) update_ring(tpat);
 
 /* If we are doing the search string, reverse string copy, and remember
@@ -1789,6 +1787,8 @@ static int readpattern(char *prompt, char *apat, int srch) {
             (!(curwp->w_bufp->b_mode & MDEXACT) && srch)) {
             status = srch ? mcstr() : rmcstr();
         }
+        else
+            slow_scan = 0;
     }
     strcpy(current_base, saved_base);   /* Revert any change */
 
