@@ -1684,6 +1684,11 @@ int execute(int c, int f, int n) {
             meta_spec_active.W = 1;
             execute(META|SPEC|'W', FALSE, (ggr_opts&GGR_FULLWRAP)? 2: 1);
             meta_spec_active.W = 0;
+/* If the result of the wrap is that we are at the start of a line then
+ * we don't want to add a space.
+ * This has to match the handling in insert_newline() in random.c.
+ */
+            if (curwp->w.doto == 0) return TRUE;
         }
     }
 
