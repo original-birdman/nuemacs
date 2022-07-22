@@ -5318,4 +5318,54 @@ etc/uemacs.rc
 NOTE: The code now compiles cleanly in ANALYZE mode. The leak reported
 for exec.c (q.v.) has gone.
 
+========== GGR4.165
+
+search.c
+    Reset slow_scan for the EXACT and not MAGIC setting. Otherwise we
+    end up searching for the previous string via its pattern.
+    (Broken in GGR4.162)
+
+main.c
+random.c
+    If we are in column 1 after running the word-wrapping on a space, do
+    not insert the space.
+
+exec.c
+    Allow commands to start with an variable or function to set
+    a numeric arg for execution.
+
+word.c
+efunc.h
+    Fixed a loop in wrapword() when trying to wrap an over-long line.
+    Simplified do_actual_wrap().
+    Re-order functions and marked filler() as static.
+    Handle zero-width breaks in paragraph filling.
+
+autotest/parafill.sh
+    Renamed from autotest/parawrap.sh.
+    Added zero-width break and modified test results to allow for it.
+
+autotest/wordwrap.sh
+    Updated tests.
+
+autotest/search-magic-on_off.sh
+    Added a test for a Magic non-exact search followed by a non-Magic
+    exact one (for recent search.c bug and fix).
+
+search.c
+    Only reset slow_scan for the EXACT and not MAGIC setting if we are
+    looking at the srch pattern.
+
+search.c
+    For a forward fast-scan check that the next character is not a
+    combining diacritical as, if it is, we haven't actually matched.
+
+../CHANGES
+../KNOWN_ISSUES
+../TODO
+version.h
+etc/uemacs.hlp
+    Update KNOWN_ISSUES and TODO to reflect changes.
+    Update to GGR4.165
+
 ==========
