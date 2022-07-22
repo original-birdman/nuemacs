@@ -83,128 +83,6 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
     return FALSE;
 }
 
-/* Word wrap on n-spaces.
- * Back-over whatever precedes the point on the current line and stop on
- * the first word-break or the beginning of the line. If we reach the
- * beginning of the line, jump back to the end of the word and start
- * a new line.  Otherwise, break the line at the word-break, eat it, and jump
- * back to the end of the word.
- *
- * If FullWrap mode is on (n > 1) the entire line preceding point is
- * wrapped (not just the final word) and whitespace is "eaten" on each wrap.
- *
- * Returns TRUE on success, FALSE on errors.
- *
- * @f: default flag.
- * @n: numeric argument.
- *
- * We start with the code that does the actual wrapping.
- * The callable routine follws.
- */
-static int do_actual_wrap(void) {
-    int cnt;            /* size of word wrapped to next line */
-
-/* Backup from the <NL> 1 char, if that is where we are. */
-
-    if (llength(curwp->w.dotp) == 0) return FALSE;  /* Empty line */
-
-/* First step back over any white-space - in case we arrived here
- * with multiple spaces after fillcol.
- */
-    if (at_abreak(NULL)) cnt = 0;
-    else                 cnt = -1;  /* We'll wrap the word that *follows* */
-    while (at_abreak(NULL)) if (back_grapheme(1) <= 0) return FALSE;
-
-/* Back up until we aren't in a word, make sure there's a break in the line */
-    while (!at_abreak(NULL)) {
-        cnt++;
-        if (back_grapheme(1) <= 0) return FALSE;
-/* If we make it to the beginning, start a new line */
-        if (curwp->w.doto == 0) {
-            gotoeol(FALSE, 0);
-            return lnewline();
-        }
-    }
-
-/* Delete the forward white space, unless it was a zero-width break */
-    if (zw_break) {
-        cnt++;      /* Keep the zwb, and count it! */
-    }
-    else {
-        if (!forwdel(0, 1)) return FALSE;
-    }
-
-/* Put in a end of line */
-    if (!lnewline()) return FALSE;
-
-/* And past the first word */
-    while (cnt-- > 0) {
-        if (forw_grapheme(1) <= 0) return FALSE;
-    }
-    return TRUE;
-}
-
-/* Now the callable function.
- * This is usually called via the internal META|SPEC|'W' binding in
- * execute()[main.c] and insert_newline()[random.c]
- */
-int wrapword(int f, int n)
-{
-    UNUSED(f);
-
-/* Have we been asked to do a full wrap? */
-
-    if (n <= 1) {                   /* No. Just wrap final word */
-        if (!do_actual_wrap()) return FALSE;
-    }
-    else {
-/* Set where we are. We need to get back here using a method that gets
- * updated on text updates.
- * Use the system mark, to preserve the user one.
- */
-        sysmark.p = curwp->w.dotp;
-        sysmark.o = curwp->w.doto;
-
-        if (getccol() <= fillcol) return FALSE; /* Shouldn't be here! */
-        while(1) {                  /* Go on until done */
-            setccol(fillcol);
-/* If we are now at whitespace wrapping is easy */
-            if (at_abreak(NULL)) {
-                whitedelete(0, 0);
-                if (!lnewline()) return FALSE;
-            }
-/* Get to end of any word we are in */
-            else {
-                while (!at_abreak(NULL))
-                     if (forw_grapheme(1) <= 0) return FALSE;
-                if (!do_actual_wrap()) return FALSE;
-/* Now delete all whitespace for where we are now and if that is not at
- * end-of-line or start-of-line, put one space in.
- * This handles "mid-line" wraps and inability to wrap
- */
-                whitedelete(0, 0);
-                if ((curwp->w.doto != llength(curwp->w.dotp)) &&
-                    (curwp->w.doto != 0)) linsert_byte(1, ' ');
-            }
-/* Back to where we were (which will have moved and been updated) */
-            curwp->w.dotp = sysmark.p;
-            curwp->w.doto = sysmark.o;
-            if (getccol() <= fillcol) break;    /* Done */
-        }
-/* Now remove all whitespace at our final destination.
- * The space we typed to get here will be added later.
- */
-        whitedelete(0, 0);
-        sysmark.p = NULL;   /* RESET! No longer valid */
-    }
-/* Make sure the display is not horizontally scrolled */
-    if (curwp->w.fcol != 0) {
-        curwp->w.fcol = 0;
-        curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
-    }
-    return TRUE;
-}
-
 /*
  * Move the cursor backward by "n" words. All of the details of motion are
  * performed by the "back_grapheme" routine.
@@ -573,22 +451,6 @@ bckdel:
     return(status);
 }
 
-/* a GGR one.. */
-int fillwhole(int f, int n) {
-    int savline, thisline;
-    int status = FALSE;
-
-    gotobob(TRUE, 1);
-    savline = 0;
-    mlwrite_one(MLbkt("Filling all paragraphs in buffer.."));
-    while ((thisline = getcline()) > savline) {
-        status = fillpara(f, n);
-        savline = thisline;
-    }
-    mlwrite_one("");
-    return(status);
-}
-
 /*
  * delete n paragraphs starting with the current one
  *
@@ -630,13 +492,12 @@ int killpara(int f, int n) {
     return TRUE;
 }
 
-
-/*
- *      wordcount:      count the # of words in the marked region,
+/*      wordcount:      count the # of words in the marked region,
+ *                      (or whole file - GGR)
  *                      along with average word sizes, # of chars, etc,
  *                      and report on them.
  *
- * int f, n;            ignored numeric arguments
+ * int f, n;            force flag and numeric arguments
  */
 int wordcount(int f, int n) {
     UNUSED(f);
@@ -657,7 +518,10 @@ int wordcount(int f, int n) {
  * Although, if we've been given a +ve numeric arg, use the whole file.
  */
     if (n > 1) {
-/* Save the current position and mark */
+/* Save the current position and mark
+ * This is OK as we're not going to insert/delete any text before
+ * restoring them.
+ */
         saved.dotp = curwp->w.dotp;
         saved.markp = curwp->w.markp;
         saved.doto = curwp->w.doto;
@@ -716,12 +580,158 @@ int wordcount(int f, int n) {
     return TRUE;
 }
 
-/*
- * Set the GGR-added end-of-sentence list for use by fillpara and
+/* "Filling" (as in word wrap and fill/just para)  needs its own
+ * version of "forw/backword" as it actually wants to split on
+ * whitespace/zw_break *only*.
+ */
+static int filler_fword(void) {
+    while (at_abreak(NULL) == TRUE)
+        if (forw_grapheme(1) <= 0) return FALSE;
+    do {
+        if (forw_grapheme(1) <= 0) return FALSE;
+    } while (at_abreak(NULL) != TRUE);
+    return TRUE;
+}
+static int filler_bword(void) {
+/* Have to go back one at the start it case we are looking at the
+ * first char of a word.
+ */
+    if (back_grapheme(1) <= 0) return FALSE;
+    while (at_abreak(NULL) == TRUE)
+        if (back_grapheme(1) <= 0) return FALSE;
+    do {
+        if (back_grapheme(1) <= 0) {
+/* If this is because we are at b-of-file then we are at the first
+ * word and have got there successfully.
+ * Probably can't happen here, but...
+ */
+            if ((curwp->w.doto == 0) &&
+                (lback(curwp->w.dotp) == curwp->w_bufp->b_linep))
+                return TRUE;
+            else return FALSE;
+        }
+    } while (at_abreak(NULL) != TRUE);
+/* We've gone back beyond the start, so adjust now */
+    return (forw_grapheme(1) > 0);  /* Success count => T/F */
+}
+
+/* Word wrap on breaks.
+ * Back-over whatever precedes the point on the current line and stop on
+ * the first word-break or the beginning of the line.
+ * If we reach the beginning of the line, jump back to where we started
+ * (as there is no break) and insert a new line.
+ * Otherwise, (optionally) remove all whitespace at the break, add a
+ * newline and jump back to where we started.
+ *
+ * We start with the code that does the actual wrapping.
+ * The callable routine follows.
+ */
+static int do_actual_wrap(int wdel) {
+    if (llength(curwp->w.dotp) == 0) return FALSE;  /* Empty line */
+
+/* Remember where we are and get to the start of the current/previous word.
+ * If we are not at whitespace, go forw 1 first, just in case we are at
+ * the start of a word.
+ */
+    int orig_offs = curwp->w.doto;
+    if (!at_abreak(NULL)) forwchar(0, 1);
+    if (!filler_bword()) return FALSE;
+    if (curwp->w.doto == 0) {       /* No break */
+        curwp->w.doto = orig_offs;
+        if (!lnewline()) return FALSE;
+        return TRUE;
+    }
+
+/* We have found a place to break...so do it.
+ * Remove all whitespace here before wrapping.
+ */
+    int reset_cnt = orig_offs - curwp->w.doto;
+    if (wdel) whitedelete(0, 0);
+    if (!lnewline()) return FALSE;
+    curwp->w.doto = reset_cnt;
+
+    return TRUE;
+}
+
+/* Now the callable function.
+ * If FullWrap mode is on (n > 1) the entire line preceding point is
+ * wrapped (not just the final word) and whitespace is "eaten" on each wrap.
+ *
+ * Whitespace is not eaten in Original wrap mode, as that is how it worked.
+ *
+ * Returns TRUE on success, FALSE on errors.
+ *
+ * @f: default flag.
+ * @n: numeric argument.
+ *
+ * This is usually (always?) called via the internal META|SPEC|'W' binding
+ * in execute()[main.c] and insert_newline()[random.c]
+ */
+int wrapword(int f, int n) {
+    UNUSED(f);
+
+/* Have we been asked to do a full wrap? */
+
+    if (n <= 1) {                   /* No. Just wrap final word */
+        if (!do_actual_wrap(FALSE)) return FALSE;
+    }
+    else {
+/* Set where we are. We need to get back here using a method that gets
+ * updated on text updates.
+ * Use the system mark, to preserve the user one.
+ */
+        sysmark.p = curwp->w.dotp;
+        sysmark.o = curwp->w.doto;
+
+        if (getccol() <= fillcol) return FALSE; /* Shouldn't be here! */
+        while(1) {                  /* Go on until done */
+            setccol(fillcol);
+/* If we are now at whitespace wrapping is easy */
+            if (at_abreak(NULL)) {
+                whitedelete(0, 0);
+                if (!lnewline()) return FALSE;
+            }
+/* Get to end of any word we are in */
+            else {
+                while (!at_abreak(NULL))
+                     if (forw_grapheme(1) <= 0) return FALSE;
+                if (!do_actual_wrap(TRUE)) return FALSE;
+/* Now delete all whitespace for where we are now and if that is not at
+ * end-of-line or start-of-line, put one space in.
+ * This handles "mid-line" wraps and inability to wrap
+ */
+                whitedelete(0, 0);
+                if ((curwp->w.doto != llength(curwp->w.dotp)) &&
+                    (curwp->w.doto != 0)) linsert_byte(1, ' ');
+            }
+/* Back to where we were (which will have moved and been updated).
+ * For a "normal" wrap the system mark will be on the current line, but
+ * for an "over-long" wrap where we started at the end of the "over-long"
+ * word the mark will now be on the line before us, and we must be done.
+ */
+            if (curwp->w.dotp != sysmark.p) break;
+            curwp->w.doto = sysmark.o;
+            if (getccol() <= fillcol) break;    /* Done */
+        }
+/* Now remove all whitespace at our final destination.
+ * The space we typed to get here will be added later.
+ */
+        whitedelete(0, 0);
+        sysmark.p = NULL;   /* RESET! No longer valid */
+    }
+/* Make sure the display is not horizontally scrolled */
+    if (curwp->w.fcol != 0) {
+        curwp->w.fcol = 0;
+        curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
+    }
+    return TRUE;
+}
+
+/* Set the GGR-added end-of-sentence list for use by fillpara and
  * justpara.
  * Allows utf8 punctuation, but does NOT cater for any zero-width
  * character usage (so no combining diacritical marks here...).
- * Mainly for macro usage
+ * Mainly for macro usage setting.
  *
  * int f, n;            arguments ignored
  */
@@ -766,49 +776,14 @@ int eos_chars(int f, int n) {
 }
 
 /* Generic filling routine to be called by various front-ends.
+ * The real worker function.
  * Fills the text between point and end of paragraph.
  * given parameters.
  *  indent      l/h indent to use (NOT on first line!!)
  *  width       column at which to wrap
  *  justify     do we add spaces to pad-out right margin.
  */
-/* This needs its own version of "forw/backword" as it actually wants
- * to split on whitespace only.
- */
-static int filler_fword(void) {
-    while (at_wspace(NULL) == TRUE)
-        if (forw_grapheme(1) <= 0) return FALSE;
-    do {
-        if (forw_grapheme(1) <= 0) return FALSE;
-    } while (at_wspace(NULL) != TRUE);
-    return TRUE;
-}
-static int filler_bword(void) {
-/* Have to go back one at the start it case we are looking at the
- * first char of a word.
- */
-    if (back_grapheme(1) <= 0) return FALSE;
-    while (at_wspace(NULL) == TRUE)
-        if (back_grapheme(1) <= 0) return FALSE;
-    do {
-        if (back_grapheme(1) <= 0) {
-/* If this is because we are at b-of-file then we are at the the first
- * word and have got there successfully.
- * Probably can't happen here, but...
- */
-            if ((curwp->w.doto == 0) &&
-                (lback(curwp->w.dotp) == curwp->w_bufp->b_linep))
-                return TRUE;
-            else return FALSE;
-        }
-    } while (at_wspace(NULL) != TRUE);
-/* We've gone back beyind the start, so adjust now */
-    return (forw_grapheme(1) > 0);  /* Success count => T/F */
-}
-
-/* The real worker function.
- */
-int filler(int indent, int width, int justify) {
+static int filler(int indent, int width, int justify) {
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
             return rdonly();        /* we are in read only mode     */
@@ -838,7 +813,7 @@ int filler(int indent, int width, int justify) {
     int words_to_wrap = 0;
     while(1) {
 /* We skip over the next word, and wipe out all spaces (== known state)
- * I we've reached the end of the paragraph we note this, otherwise we
+ * If we've reached the end of the paragraph we note this, otherwise we
  * delete the newline and remove all spaces again.
  */
         if (!filler_fword()) return FALSE;          /* Next word */
@@ -861,13 +836,13 @@ int filler(int indent, int width, int justify) {
                 ;                           /* Put newline "here" */
             }
             else {
-                if (!all_done)                  /* No space at e-o-p */
+                if (!all_done && !zw_break)     /* No space at e-o-p */
                     if (!linsert_byte(1, ' '))  /* Interword space */
                         return FALSE;
                 if (!filler_bword()) return FALSE;  /* To where we can wrap */
                 whitedelete(0, 0);  /* Remove space there */
 /* Do any justify before the move to next line.
- * Needs at least 2 words - see above...
+ * Needs at least 2 words - see words_to_wrap check above.
  */
                 if (justify) {
                     int needed = width - getccol();
@@ -881,10 +856,12 @@ int filler(int indent, int width, int justify) {
                         while(needed) {
                             if (ltor) { /* Check for beyond right margin */
                                 if (!filler_fword()) return FALSE;
+                                if (zw_break) continue;
                                 if (curwp->w.doto >= end_pad_at) break;
                             }
                             else {      /* Check for beyond left margin? */
                                 if (!filler_bword()) return FALSE;
+                                if (zw_break) continue;
                                 if (curwp->w.doto <= start_offs) break;
                             }
                             if (!linsert_byte(1, ' ')) return FALSE;
@@ -921,7 +898,7 @@ int filler(int indent, int width, int justify) {
                 }
                 if (gi.ex) Xfree(gi.ex);    /* Our responsibility */
             }
-            if (!linsert_byte(nsp, ' ')) return FALSE;
+            if (!zw_break && !linsert_byte(nsp, ' ')) return FALSE;
         }
         if (all_done) {                             /* Tidy up */
             curwp->w.dotp = lforw(curwp->w.dotp);   /* End at the start... */
@@ -932,14 +909,11 @@ int filler(int indent, int width, int justify) {
     return TRUE;
 }
 
-/*
- * Fill the current paragraph according to the current
- * fill column.
+/* Fill the current paragraph according to the current fill column.
  * Leave any leading whitespace in the paragraph in place.
  *
  * f and n - deFault flag and Numeric argument
  */
-
 int fillpara(int f, int n) {
     UNUSED(f);
     int justify = 0;
@@ -958,8 +932,7 @@ int fillpara(int f, int n) {
     return status;
 }
 
-/* Fill the current paragraph using the current column as
- * the indent.
+/* Fill the current paragraph using the current column as the indent.
  * Remove any existing leading whitespace in the paragraph.
  *
  * int f, n;            deFault flag and Numeric argument
@@ -996,6 +969,22 @@ int justpara(int f, int n) {
     }
 
     return status;
+}
+
+/* a GGR one.. */
+int fillwhole(int f, int n) {
+    int savline, thisline;
+    int status = FALSE;
+
+    gotobob(TRUE, 1);
+    savline = 0;
+    mlwrite_one(MLbkt("Filling all paragraphs in buffer.."));
+    while ((thisline = getcline()) > savline) {
+        status = fillpara(f, n);
+        savline = thisline;
+    }
+    mlwrite_one("");
+    return(status);
 }
 
 /* Reformat the paragraphs containing the region into a list.

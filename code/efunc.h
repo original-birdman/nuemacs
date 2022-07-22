@@ -19,26 +19,28 @@
 #define inword(wp) class_check(wp, inword_classes, FALSE)
 #define at_abreak(wp) class_check(wp, at_wspace_classes, TRUE)
 #define at_wspace(wp) class_check(wp, at_wspace_classes, FALSE)
+extern int class_check(struct inwbuf *, char *, int);
 
-extern int wrapword(int, int);
 extern int backword(int, int);
 extern int forwword(int, int);
+extern void ensure_case(int);
 extern int upperword(int, int);
 extern int lowerword(int, int);
 extern int capword(int, int);
 extern int delfword(int, int);
 extern int delbword(int, int);
-extern int class_check(struct inwbuf *, char *, int);
-extern int fillpara(int, int);
-extern int justpara(int, int);
+
 extern int killpara(int, int);
 extern int wordcount(int, int);
+
+extern int wrapword(int, int);
+extern int eos_chars(int, int);
+extern int fillpara(int, int);
+extern int justpara(int, int);
+extern int fillwhole(int, int);
 extern int makelist_region(int, int);
 extern int numberlist_region(int, int);
 
-extern int fillwhole(int, int);
-extern int eos_chars(int, int);
-void ensure_case(int);
 
 /* window.c */
 extern int reposition(int, int);
