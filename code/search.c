@@ -2454,6 +2454,22 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
             }
         }
 
+/* We appear to have matched, but if we are searching forwards then we need
+ * to check that the next grapheme is not a combining diacritical as, if
+ * it is, then we haven't actually matched what we were looking for since
+ * that is really part of the current character.
+ * If we are searching backwards we are OK as we'll have gone back to
+ * the base character.
+ */
+        struct grapheme gct;
+        (void)build_next_grapheme(scanline->l_text, scanoff,
+             llength(scanline), &gct);
+        if (gct.ex) Xfree (gct.ex);
+        if (combining_type(gct.uc)) {
+            jump = (direct == FORWARD)? lastchfjump: lastchbjump;
+            goto fail;
+        }
+
 /* A SUCCESSFUL MATCH!!! Reset the global "." pointers */
         if (beg_or_end == PTEND) {      /* at end of string */
             curwp->w.dotp = scanline;
