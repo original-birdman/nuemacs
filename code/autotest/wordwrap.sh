@@ -58,6 +58,9 @@ store-procedure report-status
 
 set %fail 0
 set %ok 0
+select-buffer test-reports
+delete-mode wrap
+1 select-buffer
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure check-position
@@ -114,14 +117,25 @@ store-procedure check-full-line
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " WRONG text for: line " $curline
-    set %test-report &cat %test-report " expected: \n"
+    set %test-report &cat %test-report &cat " expected: " &chr 10
     set %test-report &cat %test-report %expltext
-    set %test-report &cat %test-report " got: \n"
+    set %test-report &cat %test-report &cat &chr 10 &cat " got: " &chr 10
     set %test-report &cat %test-report $line
     set %fail &add %fail 1
   !endif
   execute-procedure report-status
 
+!endm
+
+store-procedure do-wrap one_pass
+; Word wrap occurs on the user typing a space. We cannot do that in a
+; macro.
+; But we can simulate the effect, which is this (the one_pass is needed)
+;
+$uproc_lptotal wrap-word
+!if &not &equ $curcol 0
+  insert-string " "
+!endif
 !endm
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -138,7 +152,7 @@ execute-procedure report-status
 add-mode Magic
 !force search-forward \u{200b}
 !if &equ 0 &len &grp 0
-    set %test-report "The zero-width char is missing. Cannot continue"
+    set %test-report "The zero-width char in Shoulder is missing. Cannot continue"
     execute-procedure report-status
     select-buffer test-reports
     unmark-buffer
@@ -163,8 +177,7 @@ execute-procedure report-status
 ;
 7 goto-line
 end-of-line
-2 wrap-word
-insert-string " "
+2 execute-procedure do-wrap
   set %curtest Line7-FullWrap
   set %expline 8
   set %expcol 8
@@ -180,8 +193,7 @@ read-file autotest.tfile
 
 7 goto-line
 end-of-line
-wrap-word
-insert-string " "
+execute-procedure do-wrap
   set %curtest Line7-OrigWrap
   set %expline 8
   set %expcol 8
@@ -200,8 +212,7 @@ read-file autotest.tfile
 
 8 goto-line
 end-of-line
-2 wrap-word
-insert-string " "
+2 execute-procedure do-wrap
   set %curtest Line8-FullWrap
   set %expline 9
   set %expcol 8
@@ -219,8 +230,7 @@ read-file autotest.tfile
 
 8 goto-line
 end-of-line
-wrap-word
-insert-string " "
+execute-procedure do-wrap
   set %curtest Line8-OrigWrap
   set %expline 9
   set %expcol 8
@@ -228,16 +238,16 @@ insert-string " "
 execute-procedure check-position
 
 previous-line
-; Expect line to end with 3 spaces
-  set %expltext "And another, where spaces follow the text beyond the fill   "
+; Expect line to have trailing spaces
+  set %expltext "And another, where spaces follow the text beyond the fill    "
 execute-procedure check-full-line
 
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Insert space in the space-gap on line 8
-; Note that these behave quite differently.
-; FullWrap leaves you at the end of the line where you were typing.
-; OrigWrap puts you on the next line, after a space in the first column.
+; Note that these behave differently.
+; They both leave you at the start of the next line
+; but FullWrap has removed all spaces from the end of the preceding line.
 ;
 ; Re-read file...
 unmark-buffer
@@ -246,18 +256,21 @@ read-file autotest.tfile
 8 goto-line
 beginning-of-line
 61 forward-character
-2 wrap-word
-insert-string " "
+2 execute-procedure do-wrap
   set %curtest Line8-FullWrap-MidSpace
-  set %expline 8
-  set %expcol 58
-  set %expchar 10
+  set %expline 9
+  set %expcol 0
+  set %expchar &asc c
 execute-procedure check-position
 
-next-line
 ; We expect this line to be the wrapped "column."
-  set %curtest Line8-Fullwrap-MSnextline
   set %expltext "column."
+execute-procedure check-full-line
+
+previous-line
+; We expect this line to have no trailing spaces
+  set %curtest Line8-FullWrap-MSprevline
+  set %expltext "And another, where spaces follow the text beyond the fill"
 execute-procedure check-full-line
 
 ; Re-read file...
@@ -267,17 +280,22 @@ read-file autotest.tfile
 8 goto-line
 beginning-of-line
 61 forward-character
-wrap-word
-insert-string " "
+execute-procedure do-wrap
 ; We expect this to have wrapped
   set %curtest Line8-OrigWrap-MidSpace
   set %expline 9
-  set %expcol 1
+  set %expcol 0
   set %expchar &asc c
 execute-procedure check-position
 
-; Expect to line to be column. with a leading space.
-  set %expltext " column."
+; We expect this line to be the wrapped "column."
+  set %expltext "column."
+execute-procedure check-full-line
+
+previous-line
+; We expect this line to have the trailing spaces left in place
+  set %curtest Line8-OrigWrap-MSprevline
+  set %expltext "And another, where spaces follow the text beyond the fill    "
 execute-procedure check-full-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -289,8 +307,7 @@ read-file autotest.tfile
 
 12 goto-line
 end-of-line
-2 wrap-word
-insert-string " "
+2 execute-procedure do-wrap
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-FullWrap-zwb
   set %expline 13
@@ -298,9 +315,19 @@ insert-string " "
   set %expchar 10
 execute-procedure check-position
 
-; The line is expected to contain the zw break! (Make it obvious)
-  set %expltext &cat &chr &blit 0x200b "oulder. "
+; The line is expected to contain oulder
+  set %expltext "oulder. "
 execute-procedure check-full-line
+
+; The previous line is expected to end with the zero-width break.
+previous-line
+end-of-line
+backward-character
+  set %curtest Line12-FullWrap-zwb-eol
+  set %expline 12
+  set %expcol 57
+  set %expchar &blit 0x200b
+execute-procedure check-position
 
 ;
 ; Re-read file...
@@ -309,9 +336,8 @@ read-file autotest.tfile
 
 12 goto-line
 end-of-line
-; Same results as 2 wrap-word expected
-wrap-word
-insert-string " "
+; Same results as 2 execute-procedure do-wrap expected
+execute-procedure do-wrap
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-OrigWrap-zwb
   set %expline 13
@@ -319,10 +345,19 @@ insert-string " "
   set %expchar 10
 execute-procedure check-position
 
-; Expect to be at end of the wrapped text - looking at the zwb.
-  set %curtest Line12-Origwrap-bol
-  set %expltext &cat &chr &blit 0x200b "oulder. "
+; The line is expected to contain oulder
+  set %expltext "oulder. "
 execute-procedure check-full-line
+
+; The previous line is expected to end with the zero-width break.
+previous-line
+end-of-line
+backward-character
+  set %curtest Line12-OrigWrap-zwb-eol
+  set %expline 12
+  set %expcol 57
+  set %expchar &blit 0x200b
+execute-procedure check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Repeat with extra txt at the end.
@@ -336,14 +371,13 @@ read-file autotest.tfile
 12 goto-line
 end-of-line
 insert-string " xyzzy"
-2 wrap-word
-insert-string " "
+2 execute-procedure do-wrap
   set %curtest Line12+-FullWrap+xyzzy
   set %expline 13
   set %expcol 14
   set %expchar 10
 execute-procedure check-position
-  set %expltext &cat &chr &blit 0x200b "oulder. xyzzy "
+  set %expltext "oulder. xyzzy "
 execute-procedure check-full-line
 
 ;
@@ -354,8 +388,7 @@ read-file autotest.tfile
 12 goto-line
 end-of-line
 insert-string " xyzzy"
-wrap-word
-insert-string " "
+execute-procedure do-wrap
   set %curtest Line12-OrigWrap+xyzzy
   set %expline 13
   set %expcol 6
@@ -363,7 +396,6 @@ insert-string " "
 execute-procedure check-position
   set %expltext "xyzzy "
 execute-procedure check-full-line
-
 
 unmark-buffer
 
