@@ -64,15 +64,24 @@ static int docmd(char *cline) {
         goto final_exit;
     }
 
-/* Process leading argument */
-    if (gettyp(tkn) == TKLIT) {
-        f = TRUE;
-/* GGR - There is the possibility of an illegal overlap of args here.
- *       So it must be done via a temporary buffer.
- *              strcpy(tkn, getval(tkn));
+/* If we have an interactive arg, variable or function, evaluate it.
+ * We may wish to send in a numeric arg that way!
  */
+    int ttype = gettyp(tkn);
+    switch(ttype) {
+    case TKARG:
+    case TKENV:
+    case TKVAR:
+    case TKFUN:
+    case TKBVR:
         strcpy(tbuf, getval(tkn));
         strcpy(tkn, tbuf);
+        ttype = gettyp(tkn);    /* What we have in tkn now... */
+    };
+
+/* Process leading argument */
+    if (ttype == TKLIT) {
+        f = TRUE;
         n = atoi(tkn);
 
 /* and now get the command to execute */
@@ -133,13 +142,6 @@ remember_cmd:
       this_line_seen = ts;
     }
 /* "Just tidy up..." exit */
-/* The gcc 11.2.0 analyzer thinks there is a leak here:
- *    (12) ‘this_line_seen’ leaks here; was allocated at (2)
- * (2) is the strdup() near the start.
- * I can't see it.
- * And adding a fprintf() statement before the return makes it go away.
- * So I suspect this is an analyzer bug.
- */
 final_exit:
     Xfree(this_line_seen);
     execstr = oldestr;
