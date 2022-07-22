@@ -1788,7 +1788,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
             status = srch ? mcstr() : rmcstr();
         }
         else
-            slow_scan = 0;
+            if (srch) slow_scan = 0;
     }
     strcpy(current_base, saved_base);   /* Revert any change */
 
