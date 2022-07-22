@@ -32,7 +32,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 08 déjà vu (which are not the same as the first contains
 09 specifically-accented characters, while the latter uses combining
 -- 0123456789012345678901234567890123456789012345678901234567890123456789
-10 diacriticals.  Then we can have some Russian, Матрица спинового
+10 diacriticals.  Then we can have some Rus​sian, Матрица спинового
 11 гамильтониана, and the same in Greek, Περιστροφή Χαμιλτονιανής μήτρας,
 12 according to Google Translate, although I think it has the wrong meaning
 13 for "spin".
@@ -120,9 +120,9 @@ store-procedure check-full-line
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " WRONG text for: line " $curline
-    set %test-report &cat %test-report " expected: \n"
+    set %test-report &cat %test-report &cat " expected: " &chr 10
     set %test-report &cat %test-report %expltext
-    set %test-report &cat %test-report " got: \n"
+    set %test-report &cat %test-report &cat &chr 10 &cat " got: " &chr 10
     set %test-report &cat %test-report $line
     set %fail &add %fail 1
   !endif
@@ -137,6 +137,20 @@ find-file autotest.tfile
 
 set %test-report "START: Various paragraph filling tests"
 execute-procedure report-status
+
+; First check the zero-width char is there. In case it was
+; accidentally removed in an edit....
+;
+add-mode Magic
+!force search-forward \u{200b}
+!if &equ 0 &len &grp 0
+    set %test-report "The zero-width char in Russian is missing. Cannot continue"
+    execute-procedure report-status
+    select-buffer test-reports
+    unmark-buffer
+    !finish
+!endif
+delete-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Para1 tests"
@@ -161,14 +175,15 @@ previous-word
   set %expchar &asc t
 execute-procedure check-position
 
+; Paragraph2 tests
 ; next-paragraph is actually end of current one
 next-paragraph
 next-word
-previous-word       ; Now at b-o-l in para
+previous-word       ; Now at b-o-l in para2
 10 forward-character
 72 set-fill-column
 ; Justify to current offset. -ve == r/margin justiy.
--1 justify-paragraph        
+-1 justify-paragraph
   set %curtest Para2-justify-paragraphA
   set %expline 17
   set %expcol 10
@@ -176,18 +191,37 @@ previous-word       ; Now at b-o-l in para
 execute-procedure check-position
 
 ; The "spin". at the end should be on its own
-previous-line
-previous-line
+2 previous-line
   set %curtest Para2-justify-paragraphB
   set %expline 15
   set %expcol 10
   set %expchar 34  ; "
 execute-procedure check-position
 
+  set %curtest Para2-justify-paragraph-linetext
+  set %expltext "          ~"spin~"."
+execute-procedure check-full-line
+
+; The text should have wrapped on a zero-width break between the ss in Russian
+; Check that it did.
+;
+3 previous-line
+  set %curtest Para2-justify-paragraph-zwb1
+  set %expltext "          sian, Матрица спинового гамильтониана, and the same in  Greek,"
+execute-procedure check-full-line
+
+; This line should end with the zero-width break
+previous-line
+  set %curtest Para2-justify-paragraph-zwb2
+  set %expltext "          latter uses combining diacriticals.  Then we can have some Rus​"
+execute-procedure check-full-line
+
 ; Now on to para3, which has an over-long line
 ;
-next-line
-next-line
+; next-paragraph is actually end of current one
+next-paragraph
+next-word
+previous-word       ; Now at b-o-l in para2
 55 set-fill-column
 fill-paragraph
   set %curtest Para3-fill-longline-paragraphA
