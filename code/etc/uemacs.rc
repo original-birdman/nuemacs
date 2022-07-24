@@ -185,8 +185,8 @@ store-procedure _mytoggle-mode
     write-message &ptf "Toggle %s mode (FHWCPEVOMYAQDR): " %type-mode
     set .report " "
     set .modesel &upper &gtkey
-    !if &or &seq .modesel "" &seq .modesel "~n"
-        write-message "[Aborted]"
+    !if &or &seq .modesel &chr 0x07 &seq .modesel "~n"
+        write-message "[Aborted]"
         !finish
     !endif
 ; F and H are special...and only global
@@ -214,7 +214,7 @@ store-procedure _mytoggle-mode
 
 ; Handle the rest...
     !if &eq 0 &sin "WCPEVOMYAQDR" .modesel
-        write-message "Unknown mode"
+        write-message "Unknown mode"
         !finish
     !endif
     !goto &cat "togl" .modesel
@@ -333,41 +333,71 @@ store-procedure expand-envvar
 
 ; Toggle ggr_opts settings
 ;
-store-procedure toggle-ggr-opts
-    write-message &ptf "Toggle ggr-opt (Twiddle, Forwword, fullWrap):"
+store-procedure change-ggr-opts one_pass
+    !if &equ $uproc_lpforced 1
+      !if &les $uproc_lptotal 0
+        set .action "Force off"
+        set .how "-off"
+      !else
+        set .action "Force on"
+        set .how "-on"
+      !endif
+    !else
+      set .action "Toggle"
+      set .how "-toggle"
+    !endif
+    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap):" .action
+    delete-var .action
     set .report " "
     set .optsel &upper &gtkey
-    !if &or &seq .optsel "^G" &seq .optsel "~n"
-        write-message "[Aborted]^G"
+    !if &or &seq .optsel &chr 0x07 &seq .optsel "~n"
+        write-message "[Aborted]"
         !finish
     !endif
-    !if &eq 0 &sin "WCPEVOMYAQDR" .optsel
-        write-message "Unknown mode^G"
+    !if &eq 0 &sin "TFW" .optsel
+        write-message "Unknown mode"
         !finish
     !endif
-    !goto &cat "togl" .optsel
-*toglT
+    !goto &cat "change" .optsel
+*changeT
     set .bit 0x01
     set .what "Twiddle"
-    !goto doit
-*toglF
+    !goto &cat doit .how
+*changeF
     set .bit 0x02
     set .what "Forwword"
-    !goto doit
-*toglW
+    !goto &cat doit .how
+*changeW
     set .bit 0x04
     set .what "FullWrap"
-    !goto doit
-*doit
+    !goto &cat doit .how
+;
+*doit-on
+    set .report &ptf "GGR %s mode turned on" .what
+    set $ggr_opts &bor $ggr_opts .bit
+    !goto report
+*doit-off
+    set .report &ptf "GGR %s mode turned off" .what
+    set $ggr_opts &ban $ggr_opts &bno .bit
+    !goto report
+*doit-toggle
     set .report &ptf "GGR %s mode toggled " .what
     !if &band $ggr_opts .bit
-        set .how off
+      set $ggr_opts &ban $ggr_opts &bno .bit
+      set .report &cat .report "off"
     !else
-        set .how on
+      set $ggr_opts &bor $ggr_opts .bit
+      set .report &cat .report "on"
     !endif
-    set $ggr_opts &bxor $ggr_opts .bit
+    !goto report
+;
 *report
-    write-message &cat .report .how
+    write-message .report
+    delete-var .report
+    delete-var .what
+    delete-var .bit
+    delete-var .how
+    delete-var .optsel
 !endm
 
 ;
@@ -391,7 +421,7 @@ bind-to-key numberlist-region           ^X/
 bind-to-key narrow-to-region            ^X<
 bind-to-key widen-from-region           ^X>
 bind-to-key help                        ^X?
-buffer-to-key toggle-ggr-opts           ^XG
+buffer-to-key change-ggr-opts           ^XG
 bind-to-key insert-file                 ^XI
 buffer-to-key centre-line               ^XL
 bind-to-key save-file                   ^XS
