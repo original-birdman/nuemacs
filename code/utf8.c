@@ -208,6 +208,9 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
 int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
     unicode_t c;
 
+    gc->cdm = 0;    /* Must initialize these two... */
+    gc->ex = NULL;  /* ...before offset check returns. */
+
 /* Allow (buf, 0, -1, &gc) to work for NUL-terminated buf string */
     if ((offs == 0) && (max == -1)) max = strlen(buf);
     if (offs >= max) {
@@ -217,8 +220,6 @@ int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
     }
 
     offs += utf8_to_unicode(buf, offs, max, &(gc->uc));
-    gc->cdm = 0;    /* Must initialize.. */
-    gc->ex = NULL;  /* ..these two. */
     int first = 1;
     while(1) {      /* Look for any attached Combining modifiers */
         int next_incr = utf8_to_unicode(buf, offs, max, &c);
