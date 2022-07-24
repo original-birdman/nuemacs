@@ -241,7 +241,7 @@ extern int srch_overlap;
 
 /* Counters (current, total) for repeating a user-procedure */
 
-extern int uproc_lpcount, uproc_lptotal;
+extern int uproc_lpcount, uproc_lptotal, uproc_lpforced;
 
 /* Markers for META|SPEC handler being active. */
 

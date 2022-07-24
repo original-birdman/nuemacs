@@ -660,8 +660,9 @@ static char *gtenv(char *vname) {
             break;
     case EVSRCHCANHUNT:     return ue_itoa(srch_can_hunt);
     case EVSRCHOLAP:        return ue_itoa(srch_overlap);
-    case EVUPLCOUNT:        return ue_itoa(uproc_lpcount);
-    case EVUPLTOTAL:        return ue_itoa(uproc_lptotal);
+    case EVULPCOUNT:        return ue_itoa(uproc_lpcount);
+    case EVULPTOTAL:        return ue_itoa(uproc_lptotal);
+    case EVULPFORCED:       return ue_itoa(uproc_lpforced);
     case EVSDOPTS:          return showdir_opts;
     case EVGGROPTS:         return ue_itoa(ggr_opts);
     }
@@ -972,8 +973,9 @@ static int svar(struct variable_description *var, char *value) {
         case EVSRCHOLAP:
             srch_overlap = atoi(value);
             break;
-        case EVUPLCOUNT:        /* Both read-only */
-        case EVUPLTOTAL:
+        case EVULPCOUNT:        /* All read-only */
+        case EVULPTOTAL:
+        case EVULPFORCED:
             status = FALSE;
             break;
 
