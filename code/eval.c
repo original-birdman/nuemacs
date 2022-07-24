@@ -1123,7 +1123,7 @@ int delvar(int f, int n) {
         del_simple_var(&vd, uv+(vd.v_num), MAXVARS);
         return TRUE;
     case TKBVR:
-        del_simple_var(&vd, (execbp+vd.v_num)->bv, BVALLOC);
+        del_simple_var(&vd, &(execbp->bv[vd.v_num]), BVALLOC);
         return TRUE;
     case -1:
         mlwrite("No such variable as '%s'", var);
