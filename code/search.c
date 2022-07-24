@@ -73,7 +73,7 @@
  * scanner() is now fast_scanner() and mcscanner() is now step_scanner().
  *
  * June 2022 - an explanation of the arrival of srch_can_hunt,
- * do_preskip and srch_overlap.
+ * do_preskip and GGR_SRCHOLAP flag.
  *
  * This is all to do with repeating a search.
  * Take the example of (forward) searching "mississippi".
@@ -97,11 +97,11 @@
  * (less one) before searching again, hence finding overlapping matches.
  * This is just an internal variable.
  *
- *  srch_overlap
- * This is a system variable that determines whether to look for
- * overlapping matches. By default it is on, but it can be unset. e.g. with:
- *      set $srch_overlap 0
- * in your uemacs.rc file.
+ *  GGR_SRCHOLAP flag in $ggr_opts
+ * A flag setting that determines whether to look for overlapping matches.
+ * By default it is on in the standard uemacs.rc start-up file (all $ggr_opts
+ * bits are set on), but it can be switched off by unsetting bit 0x08
+ * in the variable.
  *
  *  srch_can_hunt
  * determines whether a search for a previously set string is valid.
@@ -2575,7 +2575,7 @@ int forwhunt(int f, int n) {
         status = (slow_scan)? step_scanner(mcpat, FORWARD, PTEND)
                             : fast_scanner(pat, FORWARD, PTEND);
 /* We now have a valid group_match, or have failed */
-        if (srch_overlap) do_preskip = 1;
+        if (ggr_opts&GGR_SRCHOLAP) do_preskip = 1;
     } while ((--n > 0) && status);
 
 /* Complain and restore if not there - we already have the saved match... */
@@ -2619,7 +2619,7 @@ int forwsearch(int f, int n) {
         if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
             srch_can_hunt = 1;
 /* A search with the same string should be the same as a reexec */
-            if (!srch_overlap || !could_hunt ||
+            if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
                  strcmp(opat, pat))     do_preskip = 0;
             else                        do_preskip = 1;
         }
@@ -2680,7 +2680,7 @@ int backhunt(int f, int n) {
  * barrier to prevent overlapping matches.
  */
         if (slow_scan) {
-            if (!srch_overlap) {
+            if (!(ggr_opts&GGR_SRCHOLAP)) {
                 barrier_endline = curwp->w.dotp;
                 barrier_offset = curwp->w.doto;
                 barrier_active = 1;
@@ -2692,7 +2692,7 @@ int backhunt(int f, int n) {
             status = fast_scanner(tap, REVERSE, PTBEG);
         }
 /* We now have a valid group_match, or have failed */
-        if (srch_overlap) do_preskip = 1;
+        if (ggr_opts&GGR_SRCHOLAP) do_preskip = 1;
     } while ((--n > 0) && status);
 
 /* Complain and restore if not there - we already have the saved match... */
@@ -2736,7 +2736,7 @@ int backsearch(int f, int n) {
         if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
             srch_can_hunt = -1;
 /* A search with the same string should be the same as a reexec */
-            if (!srch_overlap || !could_hunt ||
+            if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
                  strcmp(opat, pat))     do_preskip = 0;
             else                        do_preskip = 1;
         }

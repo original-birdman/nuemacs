@@ -659,7 +659,6 @@ static char *gtenv(char *vname) {
             else                                return "NFKC";
             break;
     case EVSRCHCANHUNT:     return ue_itoa(srch_can_hunt);
-    case EVSRCHOLAP:        return ue_itoa(srch_overlap);
     case EVULPCOUNT:        return ue_itoa(uproc_lpcount);
     case EVULPTOTAL:        return ue_itoa(uproc_lptotal);
     case EVULPFORCED:       return ue_itoa(uproc_lpforced);
@@ -969,9 +968,6 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVSRCHCANHUNT:
             srch_can_hunt = atoi(value);
-            break;
-        case EVSRCHOLAP:
-            srch_overlap = atoi(value);
             break;
         case EVULPCOUNT:        /* All read-only */
         case EVULPTOTAL:

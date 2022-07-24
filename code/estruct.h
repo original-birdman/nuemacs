@@ -114,6 +114,8 @@
 #define GGR_FORWWORD    0x0002
 /* Do complete line wrapping in fill mode, not just the last word */
 #define GGR_FULLWRAP    0x0004
+/* Allow overlapping matches while searching */
+#define GGR_SRCHOLAP    0x0008
 
 /* Internal constants. */
 
@@ -595,7 +597,7 @@ enum ev_val {
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
     EVSDTKSKIP, EVUPROCOPTS, EVFORCESTAT, EVEQUIVTYPE, EVSRCHCANHUNT,
-    EVSRCHOLAP, EVULPCOUNT, EVULPTOTAL, EVULPFORCED,
+    EVULPCOUNT, EVULPTOTAL, EVULPFORCED,
     EVSDOPTS,   EVGGROPTS,
 };
 
