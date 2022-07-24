@@ -883,7 +883,7 @@ int storeproc(int f, int n) {
 
 /* Run a user-procedure in a buffer */
 
-int run_user_proc(char *procname, int rpts) {
+int run_user_proc(char *procname, int forced, int rpts) {
     char bufn[NBUFN+1];
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
@@ -912,9 +912,9 @@ int run_user_proc(char *procname, int rpts) {
  * Pass on the requested repeats (in uproc_lptotal) even for a one_pass
  * function, in case it wishes to handle it during its one_pass.
  */
-    if (rpts <= 0) rpts = 1;
-    int this_total = rpts;
-    if (bp->btp_opt.one_pass) rpts = 1;
+    int this_total = rpts;                  /* The real value */
+    if (rpts <= 0) rpts = 1;                /* Have to loop at least once */
+    if (bp->btp_opt.one_pass) rpts = 1;     /* and possibly only once */
     int this_count = 0;
     status = TRUE;
     while (rpts-- > 0) {
@@ -924,11 +924,14 @@ int run_user_proc(char *procname, int rpts) {
  */
         int save_count = uproc_lpcount;
         int save_total = uproc_lptotal;
+        int save_forced = uproc_lpforced;
         uproc_lpcount = ++this_count;
         uproc_lptotal = this_total;
+        uproc_lpforced = forced;
         status = dobuf(bp);
         uproc_lpcount = save_count;
         uproc_lptotal = save_total;
+        uproc_lpforced = save_forced;
         if (!status) break;
     }
     return status;
@@ -971,7 +974,7 @@ int execproc(int f, int n) {
         }
     }
 
-    status = run_user_proc(bufn, n);
+    status = run_user_proc(bufn, f, n);
 
 /* dobuf() could contain commands that change prev_bufn, so reinstate
  * it here to allow for recursion.

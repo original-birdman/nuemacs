@@ -259,7 +259,7 @@ int showdir_handled(char *pname) {
         struct buffer *sdb = bfind("/showdir", FALSE, 0);
         if (sdb && (sdb->b_type == BTPROC)) {
             userproc_arg = exp_pname;
-            (void)run_user_proc("showdir", 1);
+            (void)run_user_proc("showdir", 0, 1);
             userproc_arg = NULL;
         }
         else {

@@ -1659,7 +1659,7 @@ int execute(int c, int f, int n) {
             if (upp == fname) upp++;
             *upp = '\0';
             userproc_arg = fname;
-            (void)run_user_proc("showdir", 1);
+            (void)run_user_proc("showdir", 0, 1);
             userproc_arg = NULL;
             break;
            }
