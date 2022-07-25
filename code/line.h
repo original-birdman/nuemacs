@@ -65,6 +65,7 @@ extern struct line *lalloc(int);  /* Allocate a line. */
     if (uc == '\t') { scol |= tabmask; scol++; }    /* Round up */  \
     else if (uc < 0x20 || uc == 0x7f)  scol += 2;   /* ^X */        \
     else if (uc >= 0x80 && uc <= 0xa0) scol += 3;   /* \nn */       \
+    else if ((scol == 0) && combining_type(uc)) scol = 1;           \
     else scol += utf8char_width(uc);                /* Allow my overrides */
 
 #endif  /* LINE_H_ */

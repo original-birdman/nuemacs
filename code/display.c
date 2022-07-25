@@ -244,6 +244,17 @@ static void vtputc(unsigned int c) {
         if (vtcol > 0 && (vtcol <= term.t_ncol)) {
             extend_grapheme(&(vp->v_text[vtcol-1]), c);
         }
+/* If we have a combining char as the first on a line (!?!) then
+ * "pretend" there is a space there for it to combine with, but only
+ * for display. It's not in the line buffer (so won't be written out)
+ * although the update_screenpos_for_char() macro in line.h also needs
+ * to handle it.
+ */
+        if (vtcol == 0) {
+            set_grapheme(&(vp->v_text[0]), ' ', 0);
+            extend_grapheme(&(vp->v_text[0]), c);
+            ++vtcol;
+        }
         return;     /* Nothing else do do... */
     }
 
