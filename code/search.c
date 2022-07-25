@@ -997,10 +997,11 @@ static int mcstr(void) {
     if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
 
 /* We won't have called mcstr() for Exact + non-Magic, so if we
- * find a non-ASCII code we need to use the step_scanner(), as
- * non-ASCII case folding doesn't work with the fast_scanner.
+ * find a non-ASCII code we need to use the step_scanner() if we are
+ * non-Exact, as non-ASCII case folding doesn't work with the fast_scanner.
  */
-        slow_scan = TRUE;   /* The only case that sets this for non-MAGIC */
+        if (!(curwp->w_bufp->b_mode & MDEXACT))
+            slow_scan = TRUE;   /* Only case that sets this for non-MAGIC */
         can_repeat = TRUE;
         patptr += bc;
         if (!gc.cdm)    {   /* No combining marks */
@@ -2848,12 +2849,13 @@ void setpattern(const char apat[], const char tap[]) {
 
 /* Now put in the characters contained in the pattern, duplicating the CASE
  */
+    int nocase = !(curwp->w_bufp->b_mode & MDEXACT);
     for (i = 0; i < patlenadd; i++) {
         deltaf[ch_as_uc(apat[i])] = patlenadd - i;
-        if (isalpha(ch_as_uc(apat[i])))
+        if (nocase && isalpha(ch_as_uc(apat[i])))
             deltaf[ch_as_uc(apat[i] ^ DIFCASE)] = patlenadd - i;
         deltab[ch_as_uc(tap[i])] = patlenadd - i;
-        if (isalpha(ch_as_uc(tap[i])))
+        if (nocase && isalpha(ch_as_uc(tap[i])))
             deltab[ch_as_uc(tap[i] ^ DIFCASE)] = patlenadd - i;
     }
 
@@ -2863,11 +2865,11 @@ void setpattern(const char apat[], const char tap[]) {
  */
     lastchfjump = patlenadd + deltaf[ch_as_uc(apat[patlenadd])];
     deltaf[ch_as_uc(apat[patlenadd])] = 0;
-    if (isalpha(ch_as_uc(apat[patlenadd])))
+    if (nocase && isalpha(ch_as_uc(apat[patlenadd])))
         deltaf[ch_as_uc(apat[patlenadd] ^ DIFCASE)] = 0;
     lastchbjump = patlenadd + deltab[ch_as_uc(apat[0])];
     deltab[ch_as_uc(apat[0])] = 0;
-    if (isalpha(ch_as_uc(apat[0])))
+    if (nocase && isalpha(ch_as_uc(apat[0])))
         deltab[ch_as_uc(apat[0] ^ DIFCASE)] = 0;
 }
 
