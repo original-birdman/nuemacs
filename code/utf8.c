@@ -203,9 +203,11 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
  * the offset that follows it.
  * So repeated calls move forwards through the buffer.
  * If offs == max -> newline.
- * If offs > max -> nul
+ * If offs > max -> UEM_NOCHAR
+ * If no_ex_alloc is set, don't allocate any ex fields (but do count them).
  */
-int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
+int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc,
+    int no_ex_alloc) {
     unicode_t c;
 
     gc->cdm = 0;    /* Must initialize these two... */
@@ -214,16 +216,8 @@ int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
 /* Allow (buf, 0, -1, &gc) to work for NUL-terminated buf string */
     if ((offs == 0) && (max == -1)) max = strlen(buf);
     if (offs >= max) {
-        if (offs == max) {
-            gc->uc = '\n';
-            gc->cdm = 0;
-            gc->ex = NULL;
-        }
-        else {
-            gc->uc = 0;
-            gc->cdm = 0;
-            gc->ex = NULL;
-        }
+        if (offs == max) gc->uc = '\n';
+        else             gc->uc = UEM_NOCHAR;
         return ++offs;
     }
 
@@ -237,7 +231,7 @@ int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
             gc->cdm = c;
             first = 0;
         }
-        else {
+        else if (!no_ex_alloc) {
 /* Need to create or extend an ex section.
  * Such section always end with a UEM_NOCHAR entry (to ignore).
  */
@@ -257,9 +251,10 @@ int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
  * So repeated calls move backwards through the buffer.
  * NOTE: that we don't handle the NUL-terminated buf string here!
  */
-int build_prev_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
+int build_prev_grapheme(char *buf, int offs, int max, struct grapheme *gc,
+     int no_ex_alloc) {
     int final_off = prev_utf8_offset(buf, offs, TRUE);
-    build_next_grapheme(buf, final_off, max, gc);
+    build_next_grapheme(buf, final_off, max, gc, no_ex_alloc);
     return final_off;
 }
 

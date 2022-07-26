@@ -74,8 +74,8 @@ static int promptpattern(char *prompt) {
     int tpi = 0;
     while (tpi < tplen) {
         struct grapheme dummy_gc;
-        tpi = build_next_grapheme(tpat, tpi, tplen, &dummy_gc);
-        if (dummy_gc.ex) Xfree(dummy_gc.ex);
+/* Don't build any ex... */
+        tpi = build_next_grapheme(tpat, tpi, tplen, &dummy_gc, 1);
         glen++;
     }
     return glen;

@@ -458,8 +458,8 @@ static char *gtfun(char *fname) {
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
     case UFASCII: {     /* Return base unicode char - but keep name... */
         struct grapheme gc;
-        (void)build_next_grapheme(arg1, 0, -1, &gc);
-        if (gc.ex) Xfree(gc.ex);
+/* Don't build any ex... */
+        (void)build_next_grapheme(arg1, 0, -1, &gc, 1);
         return ue_itoa(gc.uc);
     }
 /* Allow for unicode as:
@@ -601,9 +601,9 @@ static char *gtenv(char *vname) {
     case EVCURCHAR:     /* Make this return the current Unicode char */
         if (curwp->w.dotp->l_used == curwp->w.doto) return ue_itoa('\n');
         struct grapheme gc;
+/* Don't build any ex... */
         (void)build_next_grapheme(curwp->w.dotp->l_text,
-             curwp->w.doto, curwp->w.dotp->l_used, &gc);
-        if (gc.ex) Xfree(gc.ex);
+             curwp->w.doto, curwp->w.dotp->l_used, &gc, 1);
         return ue_itoa(gc.uc);
     case EVDISCMD:          return ltos(discmd);
     case EVVERSION:         return VERSION;

@@ -64,9 +64,10 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
         }
     }
     else {
-        myoffs = build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc);
+/* Don't build any ex... */
+        myoffs =
+             build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc, 1);
         if (inwp) inwp->offs = myoffs;
-        if (gc.ex) Xfree(gc.ex);                /* Not interested */
         if (gc.uc == 0x200B && gc.cdm == 0) {   /* NOT a combining char */
             zw_break = 1;
             return res_on_zwb;
@@ -887,8 +888,9 @@ static int filler(int indent, int width, int justify) {
             int nsp = 1;
             if (eos_list) {     /* Some eos defined */
                 struct grapheme gi;
+/* Don't build any ex... */
                 (void)build_prev_grapheme(curwp->w.dotp->l_text,
-                 curwp->w.doto, llength(curwp->w.dotp), &gi);
+                 curwp->w.doto, llength(curwp->w.dotp), &gi, 1);
                 for (unicode_t *eosch = eos_list;
                      *eosch != UEM_NOCHAR; eosch++) {
                     if (gi.cdm == 0 && gi.uc == *eosch) {
@@ -896,7 +898,6 @@ static int filler(int indent, int width, int justify) {
                         break;
                     }
                 }
-                if (gi.ex) Xfree(gi.ex);    /* Our responsibility */
             }
             if (!zw_break && !linsert_byte(nsp, ' ')) return FALSE;
         }

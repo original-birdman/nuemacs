@@ -554,7 +554,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
  */
     WHILE_BLOCK(*patptr)
     struct grapheme gc;
-    patptr += build_next_grapheme(patptr, 0, -1, &gc);
+    patptr += build_next_grapheme(patptr, 0, -1, &gc, 0);
 
 /* Check for a range character.
  * But it will be taken literally if it is the first character or the
@@ -567,7 +567,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
  * We overwrite gc here, but we know it was MC_RCCL, so can not have
  * alloc()ed any ex part.
  */
-    patptr += build_next_grapheme(patptr, 0, -1, &gc);
+    patptr += build_next_grapheme(patptr, 0, -1, &gc, 0);
     if (gc.uc == MC_ECCL && gc.cdm == 0) {  /* - was at end -> literal */
         setbit(MC_RCCL, bmap);  /* ...so mark it */
         goto handle_prev;       /* to handle previous char and exit loop */
@@ -674,7 +674,8 @@ handle_prev:
             }
             struct grapheme kgc;
             int klen = strlen(btext);
-            int bc = build_next_grapheme(btext, 0, klen, &kgc);
+/* Don't build any ex... */
+            int bc = build_next_grapheme(btext, 0, klen, &kgc, 1);
             if (bc != klen) {
                 parse_error(patptr,
                      "\\k{} must only contain one unicode char");
@@ -683,10 +684,6 @@ handle_prev:
             if (kgc.cdm) {
                 parse_error(patptr,
                      "\\k{} must only contain a base character");
-                if (kgc.ex) {       /* Our responsibility! */
-                    Xfree(kgc.ex);
-                    kgc.ex = NULL;
-                }
                 return FALSE;
             }
             struct xccl *xp = add2_xt_cclmap(mcptr, UCKIND);
@@ -809,7 +806,7 @@ handle_prev:
  * For it to have done so, gc.ex cannot be set.
  */
 invalidate_current:
-    patptr += build_next_grapheme(patptr, 0, -1, &gc);
+    patptr += build_next_grapheme(patptr, 0, -1, &gc, 0);
 
 switch_current_to_prev:
     if (gc.uc == MC_ECCL) {     /* We've hit the end! */
@@ -993,7 +990,7 @@ static int mcstr(void) {
     mcptr->mc.group_num = curr_group;
 /* Is the next character non-ASCII? */
     struct grapheme gc;
-    int bc = build_next_grapheme(patptr, 0, -1, &gc);
+    int bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
     if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
 
 /* We won't have called mcstr() for Exact + non-Magic, so if we
@@ -1231,7 +1228,8 @@ static int mcstr(void) {
                 }
                 struct grapheme kgc;
                 int klen = strlen(btext);
-                int bc = build_next_grapheme(btext, 0, klen, &kgc);
+/* Don't build any ex... */
+                int bc = build_next_grapheme(btext, 0, klen, &kgc, 1);
                 if (bc != klen) {
                     parse_error(patptr+1,
                          "\\k{} must only contain one unicode char");
@@ -1244,10 +1242,6 @@ static int mcstr(void) {
                 }
                 mcptr->mc.type = UCKIND;
                 mcptr->val.uchar = kgc.uc;
-                if (kgc.ex) {       /* Our responsibility! */
-                    Xfree(kgc.ex);
-                    kgc.ex = NULL;
-                }
                 mcptr->mc.negate_test = (pchr == 'K');
                 can_repeat = TRUE;
                 patptr += strlen(btext);
@@ -1401,7 +1395,7 @@ static int rmcstr(void) {
  */
         struct grapheme gc;
         int bc;
-        bc = build_next_grapheme(patptr, 0, -1, &gc);
+        bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
         if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
             patptr += bc;
             if (!gc.cdm)    {   /* No combining marks */
@@ -1457,7 +1451,7 @@ static int rmcstr(void) {
             rmagical = TRUE;    /* Can't do literal now... */
 	    /* Fall through - to handle next char... */
         default:            /* Need to test for ASCII again after MC_ESC */
-            bc = build_next_grapheme(patptr, 0, -1, &gc);
+            bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
             if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
                 patptr += bc;
                 if (!gc.cdm)    {   /* No combining marks so just UCLITL */
@@ -1880,11 +1874,12 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
                 gc.uc = UEM_NOCHAR;
                 return &gc;
             }
-            typedef int (*fn_gcall)(char *, int, int, struct grapheme *);
+            typedef int (*fn_gcall)(char *, int, int, struct grapheme *, int);
             fn_gcall get_graph;
             if (dir == FORWARD) get_graph = build_next_grapheme;
             else                get_graph = build_prev_grapheme;
-            nextoff = get_graph(curline->l_text, curoff, llength(curline), &gc);
+            nextoff =
+                 get_graph(curline->l_text, curoff, llength(curline), &gc, 0);
         }
         nextline = curline;
         if (bytes_used) *bytes_used = abs(nextoff - curoff);
@@ -2483,8 +2478,8 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
             }
         }
         struct grapheme gct;
-        (void)build_next_grapheme(tline->l_text, toff, llength(tline), &gct);
-        if (gct.ex) Xfree (gct.ex);     /* Our responsibility */
+/* Don't build any ex... */
+        (void)build_next_grapheme(tline->l_text, toff, llength(tline), &gct, 1);
         if (combining_type(gct.uc)) {
             jump = (direct == FORWARD)? lastchfjump: lastchbjump;
             goto fail;

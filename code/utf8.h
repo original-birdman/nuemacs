@@ -26,8 +26,8 @@ struct grapheme {
 int next_utf8_offset(char *, int, int, int);
 int prev_utf8_offset(char *, int, int);
 
-int build_next_grapheme(char *, int, int, struct grapheme *);
-int build_prev_grapheme(char *, int, int, struct grapheme *);
+int build_next_grapheme(char *, int, int, struct grapheme *, int);
+int build_prev_grapheme(char *, int, int, struct grapheme *, int);
 
 /* Flags for same_grapheme */
 #define USE_WPBMODE 0x00000001
