@@ -410,48 +410,16 @@ int lnewline(void) {
 
 /* Get the grapheme structure for what point is looking at.
  * Returns the number of bytes used up by the utf8 string.
+ * If no_ex_alloc is TRUE, don't alloc() any ex parts - just count them.
+ * Now just a front-end to build_next_grapheme.
  */
-int lgetgrapheme(struct grapheme *gp, int utf8_len_only) {
+int lgetgrapheme(struct grapheme *gp, int no_ex_alloc) {
     int len = llength(curwp->w.dotp);
 
-/* Fudge in NL if at eol.
- * ldelgrapheme needs to know there is one char to step over
- * Also, return nothing if out of range(!).
- */
-    if (curwp->w.doto == len) {
-        gp->uc = 0x0a;
-        gp->cdm = 0;
-        gp->ex = NULL;
-        return 1;
-    }
-    if (curwp->w.doto >= len) {
-        gp->uc = 0;
-        gp->cdm = 0;
-        gp->ex = NULL;
-        return 0;
-    }
-    char *buf = curwp->w.dotp->l_text;
-    int used = utf8_to_unicode(buf, curwp->w.doto, len, &(gp->uc));
-    gp->cdm = 0;
-    gp->ex = NULL;
-    unicode_t uc;
-    int xtra = utf8_to_unicode(buf, curwp->w.doto+used, len, &uc);
-    if (!xtra || !combining_type(uc)) {
-        return used;
-    }
-    used += xtra;
-    gp->cdm = uc;
-    for (int xc = 0;;xc++) {
-        xtra = utf8_to_unicode(buf, curwp->w.doto+used, len, &uc);
-        if (!xtra || !combining_type(uc)) break;
-        used += xtra;
-        if (!utf8_len_only) {
-            gp->ex = Xrealloc(gp->ex, (xc+2)*sizeof(unicode_t));
-            gp->ex[xc] = uc;
-            gp->ex[xc+1] = UEM_NOCHAR;
-        }
-    }
-    return used;
+    int spos = curwp->w.doto;
+    int epos = build_next_grapheme(curwp->w.dotp->l_text, curwp->w.doto,
+         len, gp, no_ex_alloc);
+    return (epos - spos);
 }
 
 /* Put the grapheme structure into the buffer at the current point.
