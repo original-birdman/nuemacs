@@ -2456,16 +2456,35 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
         }
 
 /* We appear to have matched, but if we are searching forwards then we need
- * to check that the next grapheme is not a combining diacritical as, if
+ * to check that the next unicode char is not a combining diacritical as, if
  * it is, then we haven't actually matched what we were looking for since
  * that is really part of the current character.
- * If we are searching backwards we are OK as we'll have gone back to
- * the base character.
+ * If we are searching backwards we need to check the character at the
+ * "other end" of the match.
  */
+        struct line *tline = scanline;
+        int toff = scanoff;
+        if (direct == REVERSE) {
+/* We know where we matched, and we know the byte length of the pattern
+ * we matched, so advance that number of bytes to find the test char.
+ */
+            int togo = strlen(patrn);
+            while(togo > 0) {
+                int on_tline = llength(tline) - toff;
+                if (on_tline > togo) on_tline = togo;
+                togo -= on_tline;
+                if (togo > 0) {     /* So on to next line */
+                    togo--;
+                    tline = lforw(tline);
+                    toff = 0;
+                }
+                else
+                    toff += on_tline;
+            }
+        }
         struct grapheme gct;
-        (void)build_next_grapheme(scanline->l_text, scanoff,
-             llength(scanline), &gct);
-        if (gct.ex) Xfree (gct.ex);
+        (void)build_next_grapheme(tline->l_text, toff, llength(tline), &gct);
+        if (gct.ex) Xfree (gct.ex);     /* Our responsibility */
         if (combining_type(gct.uc)) {
             jump = (direct == FORWARD)? lastchfjump: lastchbjump;
             goto fail;
