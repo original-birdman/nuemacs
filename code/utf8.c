@@ -227,9 +227,12 @@ int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
         offs += next_incr;
         if (first) {
             gc->cdm = c;
+            first = 0;
         }
         else {
-/* Need to create or extend an ex section */
+/* Need to create or extend an ex section.
+ * Such section always end with a UEM_NOCHAR entry (to ignore).
+ */
             int xc = 0;
             if (gc->ex != NULL) {
                 while(gc->ex[xc] != UEM_NOCHAR) xc++;
@@ -650,7 +653,7 @@ static int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen,
     memcpy(*rp+reslen, ub, ulen);
     reslen += ulen;
     unicode_t *uc_ex = gc->ex;
-    while (uc_ex) {
+    while (*uc_ex != UEM_NOCHAR) {
         ulen = unicode_to_utf8(*uc_ex++, ub);
         if (reslen+ulen+1 > alen) {
             *rp = Xrealloc(*rp, alen+16);
