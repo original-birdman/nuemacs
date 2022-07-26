@@ -76,6 +76,21 @@ static void mlputi(int i, int r);
 static void mlputli(long l, int r);
 static void mlputf(int s);
 
+/* Set the entry to an ASCII character.
+ * Checks for previous extended cdm usage and frees any such found
+ * unless the no_free flag is set (which it is for a pscreen setting).
+ * Internal to this file.
+ */
+static void set_grapheme(struct grapheme *gp, unicode_t uc, int no_free) {
+    gp->uc = uc;
+    gp->cdm = 0;
+    if (!no_free && gp->ex != NULL) {
+        Xfree(gp->ex);
+        gp->ex = NULL;
+    }
+    return;
+}
+
 /* Add a unicode character as a cdm or dynamic ex entry
  */
 static void extend_grapheme(struct grapheme *gp, unicode_t uc) {

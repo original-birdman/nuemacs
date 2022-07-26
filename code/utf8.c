@@ -214,8 +214,16 @@ int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc) {
 /* Allow (buf, 0, -1, &gc) to work for NUL-terminated buf string */
     if ((offs == 0) && (max == -1)) max = strlen(buf);
     if (offs >= max) {
-        if (offs == max) set_grapheme(gc, '\n', 1);
-        else             set_grapheme(gc, '\0', 1);
+        if (offs == max) {
+            gc->uc = '\n';
+            gc->cdm = 0;
+            gc->ex = NULL;
+        }
+        else {
+            gc->uc = 0;
+            gc->cdm = 0;
+            gc->ex = NULL;
+        }
         return ++offs;
     }
 
@@ -609,20 +617,6 @@ int utf8char_width(unicode_t c) {
 }
 
 /* GGR Some functions to handle struct grapheme usage */
-
-/* Set the entry to an ASCII character.
- * Checks for previous extended cdm usage and frees any such found
- * unless the no_free flag is set (which it is for a pscreen setting).
- */
-void set_grapheme(struct grapheme *gp, unicode_t uc, int no_free) {
-    gp->uc = uc;
-    gp->cdm = 0;
-    if (!no_free && gp->ex != NULL) {
-        Xfree(gp->ex);
-        gp->ex = NULL;
-    }
-    return;
-}
 
 /* Convert a grapheme to a dynamically-allocated byte-array (passed in)
  * May recase the base character
