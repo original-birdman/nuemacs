@@ -74,6 +74,12 @@ int main(int argc, char *argv[]) {
 
     for (uc = 0; uc <= 0x10FFFF; uc++) {
         combining_class = utf8proc_get_property(uc)->combining_class;
+/* Might still be the case. Add all Me or Mn types too */
+        if (!combining_class) {
+            const char *cs = utf8proc_category_string(uc);
+            combining_class = (cs[0] == 'M' &&
+                 ((cs[1] == 'n') || (cs[1] == 'e')));
+        }
         utf8width = utf8proc_charwidth(uc);
         if (!in_combi_class && (combining_class > 0)) {
             combi_class_start = uc;
