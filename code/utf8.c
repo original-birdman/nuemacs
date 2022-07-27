@@ -26,7 +26,7 @@
 unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
      unicode_t *res) {
     if (index >= len) {
-        *res = 0;
+        *res = UEM_NOCHAR;
         return 0;
     }
 
@@ -407,13 +407,13 @@ unicode_t display_for(unicode_t uc) {
 }
 
 /* Common code for the two "length" functions. */
-static unsigned int utf8_to_uclen(char *str, int omit_combining) {
+static unsigned int utf8_to_uclen(char *str, int count_graphemes) {
     unsigned int len = 0;
     int offs = 0;
     int maxlen = strlen(str);
     while (*(str+offs)) {       /* Until we reach the NUL */
         len++;
-        offs = next_utf8_offset(str, offs, maxlen, omit_combining);
+        offs = next_utf8_offset(str, offs, maxlen, count_graphemes);
     }
     return len;
 }
