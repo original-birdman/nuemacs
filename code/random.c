@@ -200,7 +200,6 @@ int setccol(int pos) {
         if (col >= pos) break;  /* Upon reaching the target, drop out */
         unicode_t c;
         i += utf8_to_unicode(dlp->l_text, i, len, &c);
-        if (combining_type(c)) continue;
         update_screenpos_for_char(col, c);
     }
     curwp->w.doto = i;              /* Set us at the new position... */
