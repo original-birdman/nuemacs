@@ -194,7 +194,10 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
             }
         }
         if (got_utf8) res = poss;
-    } while(grapheme_start && (offs >= 0) && combining_type(res));
+/* The offs test is > 0, as the first thing to happen in the loop is
+ * its decrement, and it mustn't go -ve.
+ */
+    } while(grapheme_start && (offs > 0) && combining_type(res));
     return offs;
 }
 
