@@ -26,7 +26,7 @@ The library is available at
 
 Download the zip file, unpack, run ./configure and make.
 You have to enable shared libraries if you want them by adding
---enabled-shared=yes.
+--enable-shared=yes to configure.
 
 You may then either:
 

@@ -1866,7 +1866,7 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
         else {          /* Get the grapheme from the current line */
 
 /* For back searching in slow-scan mode we may have an artificial barrier
- * Note that the direction willactually be FORWARD for this!!!
+ * Note that the direction will actually be FORWARD for this!!!
  */
             if (barrier_active &&
                    (curline == barrier_endline) &&

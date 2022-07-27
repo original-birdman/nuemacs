@@ -5368,4 +5368,129 @@ etc/uemacs.hlp
     Update KNOWN_ISSUES and TODO to reflect changes.
     Update to GGR4.165
 
+========== GGR4.166
+
+eval.c
+    Correct the buffer var address sent to del_simple_var().
+
+utf8.c
+    Initialize gc->cdm+ex *before* offset check returns.
+
+eval.c
+globals.c
+edef.h
+estruct.h
+evar.h
+    Added $uproc_lpforced variable to indicate a user-given numeric arg.
+
+exec.c
+file.c
+main.c
+efunc.h
+    Set $uproc_lpforced for user procedures run via run_user_proc().
+    Set $uproc_lptotal to the requested value even when negative. [exec.c]
+    Add the forced parameter to run_user_proc() calls. [file.c, main.c,
+    efunc.h]
+
+etc/uemacs.rc
+    Changed toggle-ggr-opts to change-ggr-opts.
+    Marked it as one_pass and treat no forced arg as toggle, a given +ve
+    arg as turn on and a given -ve one as turn off.
+
+eval.c
+globals.c
+search.c
+edef.h
+estruct.h
+evar.h
+    Replaced the $srch_overlap variable with a bit in $ggr_opts 
+
+etc/uemacs.rc
+    Added an O option to change-ggr-opts to handle srchOlap.
+
+autotest/search-boundaries.sh
+    New test script for matches at beginning/end of line/buffer.
+
+search.c
+    Only switch to slow scan on a non-ASCII char in mcstr() when we are
+    not in EXACT mode.
+    Only add the case-insensitive entries to the jump tables in
+    setpattern() when we are not in EXACT mode.
+
+display.c
+line.h
+    Handle the display (perverse case) of a combining char as the first
+    on a line.
+
+utf8.c
+    Fix cdm handling in build_next_grapheme().
+    Fix ex handling in grapheme_to_bytes().
+
+tools/Makefile
+tools/combi-class.c
+tools/combi.h
+tools/combi.info
+    Updated combi-class.c to check for Mn and Me categories too.
+    Rebuilt combi.h and combi.info.
+
+combi.h
+    Installed new version for uemacs use.
+
+search.c
+    Added the test for a reverse fast-scan check that the next character
+    is not a combining diacritical.
+
+autotest/multi-ex.sh
+    Add a simple test for multiple combining diacriticals.
+
+display.c
+utf8.c
+utf8.h
+    Moved set_grapheme() function into display.c and marked it static.
+    Removed its usage from build_next_grapheme().
+
+eval.c
+isearch.c
+search.c
+utf8.c
+word.c
+utf8.h
+    Add a no_ex_alloc option to build_next/prev_grapheme().
+
+line.c
+    Change lgetgrapheme() to use build_next_grapheme() for its work.
+
+utf8.c
+    Change loop limit in prev_utf8_offset() to stop offset going
+    negative if the line starts with a combining diacritical.
+
+autotest/00-decrypt-file.sh
+autotest/00-encrypt-file.sh
+    Add 00- prefix to ensure they are run first when run_all is run.
+    (Their output is different to the other scripts).
+
+autotest/combi-col0.sh
+    Add test for lines starting with a combining diacritical.
+
+Makefile
+    Added combi.h as a dependency for utf8.o
+
+eval.c
+    Change some build_next_grapheme() calls to utf8_to_unicode().
+
+random.c
+    Remove combining_type() check in setccol().
+    It was never needed, and is wrong when a line starts with a
+    combining diacritical.
+
+utf8.c
+    Change utf8_to_unicode() to return UEM_NOCHAR no NUL if index is out
+    of range.
+
+../CHANGES
+../PREREQUISITE
+version.h
+etc/uemacs.hlp
+    Update to GGR4.166
+
 ==========
