@@ -136,13 +136,13 @@ ifeq ($(strip $(NOTRACE)),)
 # If no specific option is given we go looking for it.
 
 # The default assumption is that it is installed alongside the nuemacs
-# installation, and will will load the static library.
+# installation, and we will load the static library.
 # If BCKT is set to sys, we assume a system installation (and use a
 # dynamic library)
 # If BCKT is set to syslocal, we assume a /usr/local installation
 # with a dynamic library that needs RPATH set in the executable
-# If UTF8 is set a anything else we assume it is the location of
-# utf8proc and load the static library
+# If BCKT is set a anything else we assume it is the location of
+# libbcktproc.a and load the static library
 #
     BCKT =
     ifeq ($(strip $(BCKT)),)
@@ -368,7 +368,7 @@ search.o: search.c estruct.h utf8.h edef.h efunc.h line.h
 spawn.o: spawn.c estruct.h utf8.h edef.h efunc.h
 tcap.o: tcap.c estruct.h utf8.h edef.h efunc.h
 usage.o: usage.c usage.h
-utf8.o: utf8.c estruct.h utf8.h edef.h efunc.h
+utf8.o: utf8.c estruct.h utf8.h edef.h efunc.h combi.h
 version.o: version.c version.h
 window.o: window.c estruct.h utf8.h edef.h efunc.h line.h
 word.o: word.c estruct.h utf8.h edef.h efunc.h line.h
