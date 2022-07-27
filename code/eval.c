@@ -457,10 +457,9 @@ static char *gtfun(char *fname) {
        }
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
     case UFASCII: {     /* Return base unicode char - but keep name... */
-        struct grapheme gc;
-/* Don't build any ex... */
-        (void)build_next_grapheme(arg1, 0, -1, &gc, 1);
-        return ue_itoa(gc.uc);
+        unicode_t uc_res;
+        (void)utf8_to_unicode(arg1, 0, strlen(arg1), &uc_res);
+        return ue_itoa(uc_res);
     }
 /* Allow for unicode as:
  *      decimal codepoint
@@ -598,13 +597,12 @@ static char *gtenv(char *vname) {
     case EVASAVE:           return ue_itoa(gasave);
     case EVACOUNT:          return ue_itoa(gacount);
     case EVLASTKEY:         return ue_itoa(lastkey);
-    case EVCURCHAR:     /* Make this return the current Unicode char */
+    case EVCURCHAR:     /* Make this return the current Unicode base char */
         if (curwp->w.dotp->l_used == curwp->w.doto) return ue_itoa('\n');
-        struct grapheme gc;
-/* Don't build any ex... */
-        (void)build_next_grapheme(curwp->w.dotp->l_text,
-             curwp->w.doto, curwp->w.dotp->l_used, &gc, 1);
-        return ue_itoa(gc.uc);
+        unicode_t uc_res;
+        (void)utf8_to_unicode(curwp->w.dotp->l_text, curwp->w.doto,
+             curwp->w.dotp->l_used, &uc_res);
+        return ue_itoa(uc_res);
     case EVDISCMD:          return ltos(discmd);
     case EVVERSION:         return VERSION;
     case EVPROGNAME:        return PROGRAM_NAME_LONG;
