@@ -1223,9 +1223,8 @@ int main(int argc, char **argv) {
  */
         if (showdir_handled(*argv) == FALSE) {
 
-/* Set-up a buffer for this file */
-            makename(bname, *argv);
-            unqname(bname);
+/* Set-up a (unique) buffer for this file */
+            makename(bname, *argv, TRUE);
             bp = bfind(bname, TRUE, 0);     /* set this to inactive */
             strcpy(bp->b_fname, *argv);
             bp->b_active = FALSE;
@@ -1445,7 +1444,7 @@ int execute(int c, int f, int n) {
  * We need to do this *now* in order to trap newline for this...and
  * just remap it to the character that implements what we want it to do...
  * ALSO note that since we've handled Space and B above, these cannot take
- * on any different meaning within the dirctory browsing window.
+ * on any different meaning within the directory browsing window.
  */
         else if (!strcmp("//directory", curbp->b_bname)) {
             struct buffer *sdb = bfind("/showdir", FALSE, 0);

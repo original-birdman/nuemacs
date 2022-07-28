@@ -1569,8 +1569,7 @@ int dofile(char *fname) {
     int status;             /* results of various calls */
     char bufn[NBUFN];       /* name of buffer */
 
-    makename(bufn, fname);  /* derive the name of the buffer */
-    unqname(bufn);          /* make sure we don't stomp things */
+    makename(bufn, fname, TRUE);    /* derive unique name for buffer */
     if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
         return FALSE;
     cb = curbp;             /* save the old buffer */

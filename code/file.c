@@ -307,13 +307,13 @@ int getfile(char *fname, int lockfl, int check_dir) {
             return TRUE;
         }
     }
-    makename(bname, fname); /* New buffer name.     */
+    makename(bname, fname, FALSE); /* New buffer name. No unique check. */
     while ((bp = bfind(bname, FALSE, 0)) != NULL) {
 /* Old buffer name conflict code */
         s = mlreply("Buffer name: ", bname, NBUFN, CMPLT_BUF);
         if (s == ABORT) return s;   /* ^G to just quit      */
         if (s == FALSE) {           /* CR to clobber it     */
-            makename(bname, fname);
+            makename(bname, fname, FALSE);
             break;
         }
     }
@@ -493,9 +493,9 @@ out:
 
 /* Take a file name, and from it fabricate a buffer name.
  * The fabricated name is 4-chars short of the maximum, to allow
- * unqname to append nnnn to make it unique
+ * the unique-check code to append !nnn to make it unique
  */
-void makename(char *bname, char *fname) {
+void makename(char *bname, char *fname, int ensure_unique) {
 
 /* First we have to step over any directory part in the name */
 
@@ -532,40 +532,29 @@ void makename(char *bname, char *fname) {
         *(bname+clen-fn4bn_start) = '\0';
     }
     else strcpy(bname, " 0");
-}
 
-/* Make sure a buffer name is unique by, if necessary, appending
- * an up-to 4 digit number.
- * makename() will have left a 4-char space for this.
- *
- * char *name;          name to check on
- */
-static int power10(int exp) {
-    int res = 1;
-    while (exp-- > 0) res *= 10;
-    return res;
-}
+/* All done if we're not checking uniqueness */
 
-void unqname(char *name) {
-    char testname[NBUFN];
+    if (!ensure_unique) return;
+
 /* Check to see if it is in the buffer list */
-    if (bfind(name, 0, FALSE) == NULL) return;  /* OK - not there */
 
-/* That name is already there, so append numbers until it is unique */
+    if (bfind(bname, 0, FALSE) == NULL) return;  /* OK - not there */
 
-    int namelen = strlen(name);
-    strcpy(testname, name);
-    int numlen = NBUFN - namelen - 1;
-    int maxnum = power10(numlen);
-    for (int unum = 0; unum < maxnum; unum++) {
-        snprintf(testname + namelen, NBUFN, "%d", unum);
-/* Check to see if *this* one in the buffer list */
-        if (bfind(testname, 0, FALSE) == NULL) {    /* This is unique */
-            strcpy(name, testname);
+/* That name is already there, so append numbers until it is unique.
+ * the code above has already left 4 bytes free for us so append !nnn
+ * with nnn starting at 000 and increasing until unique.
+ * If we still fail, well...
+ */
+    char *tagp = bname + strlen(bname);
+    for (unsigned int unum = 0; unum < 1000; unum++) {
+        snprintf(tagp, 5, "!%03u", unum);
+/* Check to see if *this* one is in the buffer list */
+        if (bfind(bname, 0, FALSE) == NULL) {   /* This is unique */
             return;
         }
     }
-    mlforce("Unable to generate a unique buffer name - exiting");
+    mlforce("Unable to generate a unique buffer name for %s- exiting", bname);
     sleep(2);
     quickexit(FALSE, 0);
 }
