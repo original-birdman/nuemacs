@@ -1036,7 +1036,12 @@ int execbuf(int f, int n) {
  * struct while_block *wp;              head of structure to free
  */
 static void freewhile(struct while_block *wp) {
-    for (struct while_block *fwp = wp; fwp; fwp = fwp->w_next) Xfree(fwp);
+    struct while_block *fwp = wp;
+    while (fwp) {
+         struct while_block *next = fwp->w_next;
+         Xfree(fwp);
+         fwp = next;
+    }
 }
 
 /*
