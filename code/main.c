@@ -990,11 +990,12 @@ int main(int argc, char **argv) {
 #endif
 
 #if UNIX
-    struct sigaction sigact, oldact;
+    struct sigaction sigact;
+    sigemptyset(&sigact.sa_mask);
 #ifdef SIGWINCH
     sigact.sa_handler = sizesignal;
     sigact.sa_flags = SA_RESTART;
-    sigaction(SIGWINCH, &sigact, &oldact);
+    sigaction(SIGWINCH, &sigact, NULL);
 #endif
 /* Add a handler for other signals, which will exit */
     sigact.sa_handler = exit_via_signal;
@@ -1002,11 +1003,11 @@ int main(int argc, char **argv) {
 /* The SIGTERM is there so you can trace a loop by sending one */
     int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM, SIGABRT };
     for (unsigned int si = 0; si < sizeof(siglist)/sizeof(siglist[0]); si++)
-        sigaction(siglist[si], &sigact, &oldact);
+        sigaction(siglist[si], &sigact, NULL);
     called_as = argv[0];
 /* The old one to get you out... */
     sigact.sa_handler = emergencyexit;
-    sigaction(SIGHUP, &sigact, &oldact);
+    sigaction(SIGHUP, &sigact, NULL);
 #endif
 
 /* GGR The rest of initialization is done after processing optional args */
