@@ -1766,3 +1766,22 @@ void mbupdate(void) {
     mbonly = FALSE;
     return;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_display(void) {
+/* Free any ex graphemes from the vscreen data */
+    for (int ri = 0; ri < term.t_mrow; ri++) {
+        struct video *vp = vscreen[ri];
+        for (int ci = 0; ci < term.t_mcol; ci++) {
+            if (vp->v_text[ci].ex) Xfree(vp->v_text[ci].ex);
+        }
+    }
+    Xfree(vscreen);
+    Xfree(pscreen);
+    Xfree(vdata);
+    return;
+}
+#endif

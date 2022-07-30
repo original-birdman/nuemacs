@@ -608,3 +608,42 @@ int unmark(int f, int n) {
     curwp->w_flag |= WFMODE;
     return TRUE;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_buffer(void) {
+/* Free all of the buffers.
+ * bclear() also frees all of the text, any buffer variables and
+ * any Phonetic Translation table.
+ * A loop over a cut-down zotbuf...with a cut-down bclear too.
+ */
+    struct buffer *nextbp;
+    struct line *lp, *nextlp;
+    for (struct buffer *bp = bheadp; bp; bp = nextbp) {
+        nextbp = bp->b_bufp;    /* Get it while we can */
+        if (bp->b_flag & BFNAROW) {
+            struct buffer *obp = curwp->w_bufp;
+            curwp->w_bufp = bp;             /* Ensure this is current */
+            widen(0, -1);                   /* -1 == no reposition */
+            curwp->w_bufp = obp;
+        }
+        for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = nextlp) {
+            nextlp = lforw(lp);            
+            Xfree(lp);
+        }
+        Xfree(bp->b_linep);
+        if (bp->bv) {       /* Must free the values too... */
+            for (int vnum = 0; vnum < BVALLOC; vnum++) {
+                if (bp->bv[vnum].name[0] == '\0') break;
+                Xfree(bp->bv[vnum].value);
+            }
+        }
+        Xfree(bp->bv);
+        if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
+        Xfree(bp);
+    }
+    return;
+}
+#endif

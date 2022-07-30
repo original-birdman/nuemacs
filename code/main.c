@@ -1833,6 +1833,31 @@ int quit(int f, int n) {
         }
 #endif
         vttidy();
+#ifdef DO_FREE
+
+/* Explicitly free things in debug mode, to help things like valgrind. */
+    free_buffer();
+    free_display();
+    free_eval();
+    free_input();
+    free_line();
+    free_names();
+    free_search();
+    free_utf8();
+
+#if FILOCK && (BSD | SVR4)
+    free_lock();
+#endif
+
+/* Remove all windows */
+
+    struct window *nextwp;
+    for (struct window *wp = wheadp; wp; wp = nextwp) {
+        nextwp = wp->w_wndp;
+        Xfree(wp);
+    }
+
+#endif
         if (f) exit(n);
         else   exit(GOOD);
     }

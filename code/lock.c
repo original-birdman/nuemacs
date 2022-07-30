@@ -155,4 +155,14 @@ int lock(char *fname) {
     else                return ABORT;
 }
 
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_lock(void) {
+    for (int i = 0; i < numlocks; ++i) Xfree(lname[i]);
+    return;
+}
+#endif
+
 #endif

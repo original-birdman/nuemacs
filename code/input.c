@@ -1365,3 +1365,13 @@ abort:
 
     return status;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_input(void) {
+    if (mb_winp) Xfree(mb_winp);
+    return;
+}
+#endif

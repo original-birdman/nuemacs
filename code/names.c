@@ -227,9 +227,9 @@ struct name_bind names[] = {
 
 /* We can ignore the final NULL entry for the index searching */
 static int needed = sizeof(names)/sizeof(struct name_bind) - 1;
-static int *func_index;
-static int *name_index;
-static int *next_name_index;
+static int *func_index = NULL;
+static int *name_index = NULL;
+static int *next_name_index = NULL;
 
 void init_namelookup(void) {
     struct fields fdef;
@@ -310,3 +310,15 @@ int nxti_name_info(int ci) {
     }
     return -2;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_names(void) {
+    if (func_index) Xfree(func_index);
+    if (name_index) Xfree(name_index);
+    if (next_name_index) Xfree(next_name_index);
+    return;
+}
+#endif

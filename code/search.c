@@ -3447,3 +3447,18 @@ char *group_match(int grp) {
     }
     return grp_text[grp];
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_search(void) {
+    if (repl.buf) Xfree(repl.buf);
+    if (last_match.match) Xfree(last_match.match);
+    if (last_match.replace) Xfree(last_match.replace);
+    for (int gi = 0; gi < NGRP; gi++) {
+        if (grp_text[gi]) Xfree(grp_text[gi]);
+    }
+    return;
+}
+#endif

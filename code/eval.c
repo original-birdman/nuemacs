@@ -1303,3 +1303,16 @@ char *getval(char *token) {
     }
     return errorm;
 }
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_eval(void) {
+/* Just the variable indexes.
+ * Buffer vars are freed in free_buffer.
+ */
+    if (envvar_index) Xfree(envvar_index);
+    if (next_envvar_index) Xfree(next_envvar_index);
+    return;
+}
+#endif

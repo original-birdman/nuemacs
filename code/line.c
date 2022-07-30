@@ -995,3 +995,17 @@ int yank_replace(int f, int n) {
         return yankmb(0, (yank_mode == GNU)? 0: 1);
     }
 }
+
+#ifdef DO_FREE
+void free_line(void) {
+    for (int i = 0; i < KRING_SIZE; i++) {
+        struct kill *tp = kbufh[i];
+        while (tp != NULL) {
+            struct kill *np = tp->d_next;
+            Xfree(tp);
+            tp = np;
+        }
+    }
+    return;
+}
+#endif

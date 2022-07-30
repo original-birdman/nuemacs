@@ -729,3 +729,15 @@ check_equiv:
     Xfree(nfkc2);
     return res;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_utf8(void) {
+    if (remap) Xfree(remap);
+    if (gr1.bytes) Xfree(gr1.bytes);
+    if (gr2.bytes) Xfree(gr2.bytes);
+    return;
+}
+#endif

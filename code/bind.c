@@ -1059,6 +1059,9 @@ static int along_path(char *fname, char *fspec) {
 /* GGR - function to set pathname from the command-line
  * This overrides the compiled-in defaults
  */
+#ifdef DO_FREE
+static int free_path_reqd = 0;
+#endif
 void set_pathname(char *cl_string) {
     int slen;
     int add_sep = 0;
@@ -1069,6 +1072,9 @@ void set_pathname(char *cl_string) {
         }
     }
     pathname[0] = Xstrdup(cl_string);
+#ifdef DO_FREE
+    free_path_reqd = 1;
+#endif
     if (add_sep) {
         pathname[0] = Xrealloc(pathname[0], slen+2); /* incl. NULL! */
         pathname[0][slen] = path_sep;
@@ -1219,3 +1225,23 @@ char *transbind(char *skey) {
     if (!ktp) return "ERROR";
     return ktp->fi->n_name;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_bind(void) {
+/* Free any hndlr.pbp for BTPROC entries before we get rid of any
+ * indexes
+ */
+    for (struct key_tab *ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
+        if (ktp->k_type == PROC_KMAP) Xfree(ktp->hndlr.pbp);
+    }
+    if (keytab_alloc_ents) Xfree(keytab);
+    if (key_index) Xfree(key_index);
+    if (keystr_index) Xfree(keystr_index);
+    if (next_keystr_index) Xfree(next_keystr_index);
+    if (free_path_reqd) Xfree(pathname[0]);
+    return;
+}
+#endif
