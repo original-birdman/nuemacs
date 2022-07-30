@@ -40,6 +40,13 @@ else
     DBG_OPTS = -O0 -g
 endif
 
+# Don't bother with free's on xit by default (need them for valgrind).
+#
+FREE =
+ifneq ($(strip $(FREE)),)
+    DBG_OPTS += -DDO_FREE
+endif
+
 # Use the gcc analyzer?
 #
 ANALYZE =
