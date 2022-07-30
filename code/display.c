@@ -53,6 +53,7 @@ struct video {
 
 static struct video **vscreen;          /* Virtual screen. */
 static struct video **pscreen;          /* Physical screen. */
+static void *vdata;                     /* Where we've stored it all */
 
 static int displaying = FALSE;
 #if UNIX
@@ -179,37 +180,50 @@ void vtinit(void) {
     TTopen();               /* open the screen */
     TTkopen();              /* open the keyboard */
     TTrev(FALSE);
+
+/* Allocate the 2 screen arrays */
     vscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
     pscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
 
+/* Allocate the data for these 2 arrays in one go and
+ * assign the array elements in loops.
+ */
+    size_t row_size =
+         sizeof(struct video) + term.t_mcol*sizeof(struct grapheme);
+    vdata = Xmalloc(2 * term.t_mrow * row_size);
+    void *vdp = vdata;
+    void *pdp = vdata + (term.t_mrow * row_size);
     for (i = 0; i < term.t_mrow; ++i) {
-        vp = Xmalloc(sizeof(struct video) +
-             term.t_mcol*sizeof(struct grapheme));
-        vp->v_flag = 0;
-#if COLOR
-/* GGR - use defined colors */
-        vp->v_rfcolor = gfcolor;
-        vp->v_rbcolor = gbcolor;
-#endif
-        vscreen[i] = vp;
-
+        vscreen[i] = vdp;
+        vdp += row_size;
+        pscreen[i] = pdp;
+        pdp += row_size;
+    }
 /* GGR - clear things out at the start.
  * We can't use set_grapheme() until after we have initialized
  * We only need to initialize vscreen, as we do all assigning
- * (including Xmalloc()/Xfree()) there.
- * Need to clear it *all* out now! */
-
-        for (int j = 0; j < term.t_mcol; j++) {
-            vp->v_text[j].uc = ' ';
-            vp->v_text[j].cdm = 0;
-            vp->v_text[j].ex = NULL;
-        }
-
-        vp = Xmalloc(sizeof(struct video) +
-             term.t_mcol*sizeof(struct grapheme));
-        vp->v_flag = 0;
-        pscreen[i] = vp;
+ * (including Xmalloc()/Xfree()) there before copying to pscreen.
+ * Need to clear it *all* out now!
+ * Set-up line 1, then clone it.
+ */
+    vp = vscreen[0];
+    vp->v_flag = 0;
+#if COLOR
+/* GGR - use defined colors */
+    vp->v_rfcolor = gfcolor;
+    vp->v_rbcolor = gbcolor;
+#endif
+    for (i = 0; i < term.t_mcol; i++) {
+        vp->v_text[i].uc = ' ';
+        vp->v_text[i].cdm = 0;
+        vp->v_text[i].ex = NULL;
     }
+    for (i = 1; i < term.t_mrow; ++i) {
+        memcpy(vscreen[i], vscreen[0], row_size);
+    }
+/* Just set the whole of pscreen to zeros */
+    memset(pscreen[0], 0, (term.t_mrow * row_size));
+
     mberase();              /* GGR */
 }
 
