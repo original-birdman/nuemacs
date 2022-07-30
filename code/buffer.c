@@ -581,7 +581,11 @@ int bclear(struct buffer *bp) {
 /* If we are clearing a buffer that had variables defined then we
  * need to free those.
  */
-    if (bp->bv) {
+    if (bp->bv) {       /* Must free the values too... */
+        for (int vnum = 0; vnum < BVALLOC; vnum++) {
+            if (bp->bv[vnum].name[0] == '\0') break;
+            Xfree(bp->bv[vnum].value);
+        }
         Xfree(bp->bv);
         bp->bv = NULL;
     }
