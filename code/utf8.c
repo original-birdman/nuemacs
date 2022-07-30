@@ -629,9 +629,9 @@ static int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen,
     if (nocase) ulen = unicode_to_utf8(utf8proc_toupper(gc->uc), ub);
     else        ulen = unicode_to_utf8(gc->uc, ub);
 
-    if (ulen+1 > alen) {
-        *rp = Xrealloc(*rp, alen+16);
-        alen += 16;
+    if (ulen+1 > alen) {    /* Round up new allocation to multiple of 16 */
+        alen = 16*(((ulen+1)/16)+1);
+        *rp = Xrealloc(*rp, alen);
     }
     memcpy(*rp, ub, ulen);
     reslen = ulen;
