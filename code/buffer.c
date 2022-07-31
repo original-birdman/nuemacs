@@ -565,9 +565,10 @@ int bclear(struct buffer *bp) {
  * all lines - not just those from the narrowed region.
  */
     if (bp->b_flag & BFNAROW) {
-        curwp->w_bufp = bp;             /* Ensure this is current */
+        struct buffer *obp = curwp->w_bufp;
+        curwp->w_bufp = bp;             /* Ensure this buf is current */
         widen(0, -1);                   /* -1 == no reposition */
-        bp = curwp->w_bufp;
+        curwp->w_bufp = obp;            /* Restore original buf */
     }
 
     while ((lp = lforw(bp->b_linep)) != bp->b_linep) lfree(lp);
