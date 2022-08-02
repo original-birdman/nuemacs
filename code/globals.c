@@ -91,7 +91,7 @@ char pat[NPAT+1];               /* Search pattern               */
 char tap[NPAT+1];               /* Reversed pattern array.      */
 char rpat[NPAT+1];              /* replacement pattern          */
 
-struct line *fline = NULL;      /* dynamic return line */
+struct line *fline;             /* dynamic return line */
 
 /* The variable srch_patlen holds the length of the search pattern
  */

@@ -342,17 +342,29 @@ static int add_to_fline(int len) {
     return TRUE;
 }
 
-/* The actual callable function */
+/* The actual callable function.
+ * This starte with a new empty fline and fills it with the next line's data
+ * in a malloc'ed area.
+ * The building is done by add_to_fline().
+ * If there is no data at all (an empty file) fline is not allocated.
+ */
 int ffgetline(void) {
 
-/* Do we have a newline in our cache */
+/* Any previous fline will have been linked into the lp list, so
+ * we can start afresh just by settign this to NULL.
+ */
+    fline = NULL;
+
+/* Do we have a newline in our cache? */
 
     char *nlp = NULL;
     while (!nlp) {
         nlp = memchr(cache.buf+cache.rst, '\n', cache.len);
-        if (!nlp) {
-            if (!add_to_fline(cache.len))
+        if (!nlp) {                 /* No newline found */
+/* If we already have something, add it to fline */
+            if ((cache.len > 0) && !add_to_fline(cache.len))
                 return FIOMEM;      /* Only reason for failure */
+/* Get some more of the file. */
             cache.len = fread(cache.buf, sizeof(*cache.buf),
                 sizeof(cache.buf), ffp);
             cache.rst = 0;
@@ -362,6 +374,10 @@ int ffgetline(void) {
  * missing newline.
  */
             if (eofflag && (cache.len == 0)) {
+/* If we had an empty file then we will never have allocated fline.
+ * So just return that we are at EOF.
+ */
+                if (!fline) return FIOEOF;
                 if (fline->l_used) {
                     curbp->b_EOLmissing = 1;
                     mlforce("Newline absent at end of file. Added....");
