@@ -431,6 +431,7 @@ extern void free_bind(void);
 extern void free_buffer(void);
 extern void free_display(void);
 extern void free_eval(void);
+extern void free_exec(void);
 extern void free_input(void);
 extern void free_line(void);
 extern void free_names(void);

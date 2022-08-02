@@ -1641,3 +1641,13 @@ NMAC(21)    NMAC(22)    NMAC(23)    NMAC(24)    NMAC(25)
 NMAC(26)    NMAC(27)    NMAC(28)    NMAC(29)    NMAC(30)
 NMAC(31)    NMAC(32)    NMAC(33)    NMAC(34)    NMAC(35)
 NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_exec(void) {
+    if (prev_line_seen) Xfree(prev_line_seen);
+    return;
+}
+#endif

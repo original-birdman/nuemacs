@@ -1836,9 +1836,11 @@ int quit(int f, int n) {
 #ifdef DO_FREE
 
 /* Explicitly free things in debug mode, to help things like valgrind. */
+    free_bind();
     free_buffer();
     free_display();
     free_eval();
+    free_exec();
     free_input();
     free_line();
     free_names();
@@ -1856,6 +1858,7 @@ int quit(int f, int n) {
         nextwp = wp->w_wndp;
         Xfree(wp);
     }
+    if (eos_list) Xfree(eos_list);
 
 #endif
         if (f) exit(n);
