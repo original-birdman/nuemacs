@@ -3459,6 +3459,10 @@ void free_search(void) {
     for (int gi = 0; gi < NGRP; gi++) {
         if (grp_text[gi]) Xfree(grp_text[gi]);
     }
+    for (int ix = 0; ix < RING_SIZE; ix++) {
+        Xfree(srch_txt[ix]);
+        Xfree(repl_txt[ix]);
+    }
     return;
 }
 #endif
