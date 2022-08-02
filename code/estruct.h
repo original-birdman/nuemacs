@@ -12,8 +12,8 @@
 
 #include "utf8.h"
 
-#define MAXCOL  500
-#define MAXROW  500
+#define MAXCOL  600
+#define MAXROW  300
 
 /* Various bits of code use chars as indices.
  * Ensure these are treated as unsigned.
