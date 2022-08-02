@@ -127,6 +127,7 @@ static int ifile(char *fname) {
 
 /* And advance and write out the current line */
         curwp->w.dotp = lp1;
+        fline = NULL;           /* We've used this one */
         ++nline;
 
 /* Check for a DOS line ending on line 1 */
@@ -437,6 +438,7 @@ int readin(char *fname, int lockfl) {
         lp1->l_fp = curbp->b_linep;
         lp1->l_bp = lp2;
         curbp->b_linep->l_bp = lp1;
+        fline = NULL;                   /* We've used this one */
         ++nline;
 /* Check for a DOS line ending on line 1?
  * Only if the check is enabled...

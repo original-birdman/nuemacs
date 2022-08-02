@@ -86,7 +86,6 @@ int ffropen(char *fn) {
 /* Unset these on open */
     cache.rst = cache.len = 0;
     curbp->b_EOLmissing = 0;
-    fline = NULL;
     eofflag = FALSE;
 
     return FIOSUC;
@@ -130,7 +129,6 @@ int ffwopen(char *fn) {
  */
 int ffclose(void) {
 
-    fline = NULL;
     eofflag = FALSE;
 
 #if USG | BSD
@@ -346,8 +344,6 @@ static int add_to_fline(int len) {
 
 /* The actual callable function */
 int ffgetline(void) {
-
-    fline = NULL;       /* Start afresh */
 
 /* Do we have a newline in our cache */
 
