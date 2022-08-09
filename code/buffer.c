@@ -286,7 +286,6 @@ static int addline(char *text) {
  *
  * int iflag;           list hidden buffer flag
  */
-#define MAXLINE MAXCOL
 static int makelist(int iflag) {
     char *cp1;
     char *cp2;
@@ -297,7 +296,8 @@ static int makelist(int iflag) {
     int i;
     long nbytes;                        /* # of bytes in current buffer */
     char b[9+1];                        /* field width for nbytes + NL */
-    char line[MAXLINE];
+
+    char *line = Xmalloc(term.t_ncol);
 
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
@@ -388,13 +388,14 @@ static int makelist(int iflag) {
                 while (cp1 < line+42) *cp1++ = ' ';
             }
             while ((c = *cp2++) != 0) {
-                if (cp1 < &line[MAXLINE - 1]) *cp1++ = c;
+                if (cp1 < line+term.t_ncol) *cp1++ = c;
             }
         }
         *cp1 = 0;       /* Add to the buffer.   */
         if (addline(line) == FALSE) return FALSE;
         bp = bp->b_bufp;
     }
+    Xfree(line);
     return TRUE;            /* All done             */
 }
 

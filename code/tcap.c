@@ -130,11 +130,13 @@ static void tcapopen(void) {
         exit(1);
     }
 #ifdef SIGWINCH
-    term.t_mrow = MAXROW;
-    term.t_mcol = MAXCOL;
+    term.t_mcol = 50*(1 + (term.t_ncol + 30)/50);
+    if (term.t_mcol < 270) term.t_mcol = 270;
+    term.t_mrow = 30*(1 + (term.t_nrow + 20)/30);
+    if (term.t_mrow < 100) term.t_mrow = 100;
 #else
-    term.t_mrow = term.t_nrow > MAXROW ? MAXROW : term.t_nrow;
-    term.t_mcol = term.t_ncol > MAXCOL ? MAXCOL : term.t_ncol;
+    term.t_mcol = term.t_ncol;
+    term.t_mrow = term.t_nrow;
 #endif
     p = tcapbuf;
     t = tgetstr("pc", &p);

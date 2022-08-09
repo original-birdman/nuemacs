@@ -173,56 +173,111 @@ int ttput1c(char c) {
  * The original window has "WFCHG" set, so that it will get completely
  * redrawn on the first call to "update".
  */
+static int prev_mrow = 0;
+static int prev_mcol = 0;
+static int prev_size = 0;
 void vtinit(void) {
     int i;
     struct video *vp;
+    static struct video **new_vscreen;  /* Virtual screen. */
+    static struct video **new_pscreen;  /* Physical screen. */
+    static void *new_vdata;             /* Where we've stored it all */
 
-    TTopen();               /* open the screen */
-    TTkopen();              /* open the keyboard */
-    TTrev(FALSE);
+    if (prev_mrow == 0) {
+        TTopen();               /* open the screen */
+        TTkopen();              /* open the keyboard */
+        TTrev(FALSE);
+    }
+
+/* Is this for a larger request? If not, nothing to do. */
+
+    if ((term.t_mrow <= prev_mrow) && (term.t_mcol <= prev_mcol)) return;
 
 /* Allocate the 2 screen arrays */
-    vscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
-    pscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
+    new_vscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
+    new_pscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
 
 /* Allocate the data for these 2 arrays in one go and
  * assign the array elements in loops.
  */
     size_t row_size =
          sizeof(struct video) + term.t_mcol*sizeof(struct grapheme);
-    vdata = Xmalloc(2 * term.t_mrow * row_size);
-    void *vdp = vdata;
-    void *pdp = vdata + (term.t_mrow * row_size);
+    new_vdata = Xmalloc(2 * term.t_mrow * row_size);
+    void *vdp = new_vdata;
+    void *pdp = new_vdata + (term.t_mrow * row_size);
+
     for (i = 0; i < term.t_mrow; ++i) {
-        vscreen[i] = vdp;
+        new_vscreen[i] = vdp;
         vdp += row_size;
-        pscreen[i] = pdp;
+        new_pscreen[i] = pdp;
         pdp += row_size;
     }
+
 /* GGR - clear things out at the start.
  * We can't use set_grapheme() until after we have initialized
  * We only need to initialize vscreen, as we do all assigning
  * (including Xmalloc()/Xfree()) there before copying to pscreen.
  * Need to clear it *all* out now!
  * Set-up line 1, then clone it.
+ * For an enlarging re-init we need to copy across existing data...
  */
-    vp = vscreen[0];
-    vp->v_flag = 0;
+    for (i = 0; i < prev_mrow; i++) {
+        vp = new_vscreen[i];
+        memcpy(vp, vscreen[i], prev_size);
+        for (int xi = prev_mcol; xi < term.t_mcol; xi++) {
+            vp->v_text[xi].uc = ' ';
+            vp->v_text[xi].cdm = 0;
+            vp->v_text[xi].ex = NULL;
+        }
+    }
+    if (prev_mrow < term.t_mrow) {
+        vp = new_vscreen[prev_mrow];
+        vp->v_flag = 0;
 #if COLOR
 /* GGR - use defined colors */
-    vp->v_rfcolor = gfcolor;
-    vp->v_rbcolor = gbcolor;
+        vp->v_rfcolor = gfcolor;
+        vp->v_rbcolor = gbcolor;
 #endif
-    for (i = 0; i < term.t_mcol; i++) {
-        vp->v_text[i].uc = ' ';
-        vp->v_text[i].cdm = 0;
-        vp->v_text[i].ex = NULL;
+        for (i = 0; i < term.t_mcol; i++) {
+            vp->v_text[i].uc = ' ';
+            vp->v_text[i].cdm = 0;
+            vp->v_text[i].ex = NULL;
+        }
+        for (i = prev_mrow+1; i < term.t_mrow; ++i) {
+            memcpy(new_vscreen[i], vp, row_size);
+        }
     }
-    for (i = 1; i < term.t_mrow; ++i) {
-        memcpy(vscreen[i], vscreen[0], row_size);
+/* Just set the whole of pscreen to zeros
+ * But again, preserve existing data...
+ */
+    for (i = 0; i < prev_mrow; i++) {
+        vp = new_pscreen[i];
+        memcpy(vp, pscreen[i], prev_size);                  /* Old data */
+        if ((row_size - prev_size) > 0) {
+/* prev_size is a byte offset, so cast vp to bytes, otherwise prev_size becomes
+ * an element index!
+ */
+            memset((void *)vp+prev_size, 0, row_size - prev_size);  /* New zeroing */
+        }
     }
-/* Just set the whole of pscreen to zeros */
-    memset(pscreen[0], 0, (term.t_mrow * row_size));
+/* Now the rest of the zeroing, if any required */
+    if ((term.t_mrow - prev_mrow) > 0)
+        memset(new_pscreen[prev_mrow], 0,
+             ((term.t_mrow - prev_mrow) * row_size));
+
+/* Now free any previous data and move the new allocations to the live ones */
+
+    if (prev_mrow) {        /* We have previous data to free */
+        Xfree(vscreen);
+        Xfree(pscreen);
+        Xfree(vdata);
+    }
+    vdata = new_vdata;
+    vscreen = new_vscreen;
+    pscreen = new_pscreen;
+    prev_mrow = term.t_mrow;
+    prev_mcol = term.t_mcol;
+    prev_size = row_size;
 
     mberase();              /* GGR */
 }
@@ -1713,10 +1768,11 @@ void sizesignal(int signr) {
     if (h && w && (h - 1 != term.t_nrow || w != term.t_ncol))
         newscreensize(h, w, 0);
 
-    struct sigaction sigact, oldact;
+    struct sigaction sigact;
+    sigemptyset(&sigact.sa_mask);
     sigact.sa_handler = sizesignal;
     sigact.sa_flags = SA_RESTART;
-    sigaction(SIGWINCH, &sigact, &oldact);
+    sigaction(SIGWINCH, &sigact, NULL);
     errno = old_errno;
 }
 
@@ -1727,6 +1783,13 @@ int newscreensize(int h, int w, int no_update_needed) {
         return FALSE;
     }
     chg_width = chg_height = 0;
+
+    term.t_mcol = 50*(1 + (w + 30)/50);
+    if (term.t_mcol < 270) term.t_mcol = 270;
+    term.t_mrow = 30*(1 + (h + 20)/30);
+    if (term.t_mrow < 100) term.t_mrow = 100;
+    vtinit();
+
     if (h - 1 < term.t_mrow) newsize(TRUE, h);
     if (w < term.t_mcol)     newwidth(TRUE, w);
 
