@@ -1137,8 +1137,6 @@ int main(int argc, char **argv) {
 /* GGR - set-up some more things for the FAST search algorithm */
                 rvstrcpy(tap, pat);
                 srch_patlen = strlen(pat);
-                setpattern(pat, tap);
-                srch_can_hunt = 1;
                 break;
             case 'v':       /* -v for View File */
             case 'V':
@@ -1276,6 +1274,8 @@ int main(int argc, char **argv) {
             mlwrite_one(MLbkt("Bogus goto argument"));
         }
     } else if (searchflag) {
+        setpattern(pat, tap);   /* Need a valid curwp for this */
+        srch_can_hunt = 1;
         if (forwhunt(FALSE, 0) == FALSE) update(FALSE);
     }
 
