@@ -158,11 +158,11 @@ static int casechange_region(int newcase) { /* The handling function */
             else {
 /* Need to allocate a new line structure to replace the current one... */
                 struct line *newl = lalloc(llength(linep) + b_more);
-/* Copy in and leading text on this line... */
+/* Copy in any leading text on this line... */
                 if (b_offs) memcpy(newl->l_text, linep->l_text, b_offs);
 /* Copy in the replacement text */
                 memcpy(newl->l_text+b_offs, repstr, replen);
-/* Copy in and trailing text on this line... */
+/* Copy in any trailing text on this line... */
                 ccr_Tail_Copy;
 /* Now need to replace the current line with the new one in the linked list */
                 lforw(lback(linep)) = newl;

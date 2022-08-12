@@ -446,7 +446,7 @@ static int unbindchar(int c) {
 /* ************************************************************
  * Actually add/update the key handler.
  * Used by buffertokey() and switch_internal()
- * We expect to be given a bname *including* teh leading '/'.
+ * We expect to be given a bname *including* the leading '/'.
  */
 static int update_keybind(int c, int ntimes, int internal_OK,
      fn_t kfunc, char *bname) {
@@ -455,7 +455,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
 
 /* switch_internal sets internal_OK on (and will have sent a valid
  * character).
- * So if this is off check that no-on is trying to bind and internal
+ * So if this is off check that no-on is trying to bind an internal
  * key "inadvertently".
  * Also, the non-internal calls may need to log something.
  */

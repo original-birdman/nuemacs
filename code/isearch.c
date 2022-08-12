@@ -236,7 +236,7 @@ int incremental_debug_check(int type) {
     idbg_buf->b_flag &= ~BFCHG;         /* No prompt when deleting */
 
 /* Ensure we start at the beginning of the buffer.
- * NOTE that we never actually swicvth to the buffer - we just get
+ * NOTE that we never actually switch to the buffer - we just get
  * the lines from it.
  */
 
