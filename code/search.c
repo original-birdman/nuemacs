@@ -295,6 +295,9 @@ static struct magic_replacement rmcpat[NPAT]; /* Replacement magic array. */
 
 static int slow_scan = FALSE;
 
+/* Define an End of List struct mg_info type, with null flags */
+static struct mg_info null_mg = { EGRP, 0, 0, 0, 0 };
+
 /* Search ring buffer code... */
 #define RING_SIZE 10
 
@@ -316,6 +319,11 @@ void init_search_ringbuffers(void) {
  * set-up.
  */
     for (int gi = 0; gi < NGRP; gi++) grp_text[gi] = NULL;
+
+/* Ensure that the first mcpat entry is "empty" (it's used as a flag) */
+
+    mcpat[0].mc = null_mg;
+    return;
 }
 
 /* The new string goes in place at the top, pushing the others down
@@ -465,9 +473,6 @@ static char *brace_text(char *fp) {
 #define END_TEST(x) }
 #define WHILE_BLOCK(x) while (x) {
 #define END_WHILE(x) }
-
-/* Define an End of List struct mg_info type, with null flags */
-static struct mg_info null_mg = { EGRP, 0, 0, 0, 0 };
 
 /* setbit -- Set a bit (ON only) in the bitmap.
  * This is used for all 256 values in non-Magic (fast_scanner) mode.
@@ -1754,15 +1759,6 @@ static int readpattern(char *prompt, char *apat, int srch) {
 /* Save this latest string in the search buffer ring? */
         if (do_update_ring) update_ring(tpat);
 
-/* If we are doing the search string, reverse string copy, and remember
- * the length for substitution purposes.
- */
-        if (srch) {
-            rvstrcpy(tap, apat);
-            srch_patlen = strlen(apat);
-            setpattern(apat, tap);
-        }
-
 /* Note that we always rebuild any meta-pattern from scratch even if
  * we used the default pattern (which is reasonable, since it might not
  * be the last one, now we have a search ring!).
@@ -1784,6 +1780,16 @@ static int readpattern(char *prompt, char *apat, int srch) {
         }
         else
             if (srch) slow_scan = 0;
+
+/* If we are doing the search string remember the length for substitution
+ * purposes and reverse string copy. For fast scans, set jump tables.
+ */
+        if (srch) {
+            srch_patlen = strlen(apat);
+            rvstrcpy(tap, apat);
+            if (!slow_scan) setpattern(apat, tap);
+        }
+
     }
     strcpy(current_base, saved_base);   /* Revert any change */
 
@@ -2675,10 +2681,9 @@ int backhunt(int f, int n) {
 
 /* We are at the start of a match (we're going backwards).
  * Since matching is always done forwards in slow_scan mode we don't need
- * to adjust our position before searching again thre, but we might need
+ * to adjust our position before searching again there, but we might need
  * to in fast mode.
  */
-
     struct line *olp;
     int obyte_offset;
 
