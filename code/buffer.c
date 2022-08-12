@@ -297,7 +297,7 @@ static int makelist(int iflag) {
     long nbytes;                        /* # of bytes in current buffer */
     char b[9+1];                        /* field width for nbytes + NL */
 
-    char *line = Xmalloc(term.t_ncol);
+    char *line = Xmalloc(term.t_mcol);
 
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
@@ -383,12 +383,13 @@ static int makelist(int iflag) {
                 for (i = 0; i < 5; i++) *cp1++ = ' ';
             }
             else {
-/* The header line is 3+1+13+1+9+1+13+1 to get to File */
-                if (cp1 >= line+42) *cp1++ = ' '; /* Ensure at least 1 space */
-                while (cp1 < line+42) *cp1++ = ' ';
+/* The header line is 3+1+13+1+9+1+13+1 to get to File
+ * do...while ensures at least 1 space
+ */
+                do { *cp1++ = ' '; } while (cp1 < line+42);
             }
             while ((c = *cp2++) != 0) {
-                if (cp1 < line+term.t_ncol) *cp1++ = c;
+                if (cp1 < line+term.t_mcol) *cp1++ = c;
             }
         }
         *cp1 = 0;       /* Add to the buffer.   */
@@ -632,7 +633,7 @@ void free_buffer(void) {
             curwp->w_bufp = obp;
         }
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = nextlp) {
-            nextlp = lforw(lp);            
+            nextlp = lforw(lp);
             Xfree(lp);
         }
         Xfree(bp->b_linep);
