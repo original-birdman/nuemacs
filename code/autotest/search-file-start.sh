@@ -15,7 +15,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 match - ]xyzzy[
 02 EOF
 EOD
@@ -129,7 +129,7 @@ end-of-file
 search-reverse match
   set %curtest Search1-non-Magic
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc m
   set %expmatch match
 execute-procedure check-position
@@ -140,7 +140,7 @@ add-mode Magic
 search-reverse match
   set %curtest Search1-Magic
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc m
   set %expmatch match
 execute-procedure check-position
@@ -150,7 +150,7 @@ end-of-file
 search-reverse (\X*)(match)
   set %curtest Search2-Magic-0+prechar
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc m
   set %expmatch match
 execute-procedure check-position
@@ -168,6 +168,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

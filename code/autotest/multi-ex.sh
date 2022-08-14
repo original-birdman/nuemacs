@@ -22,7 +22,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 This is a very simple test.
 02 We can't get the bytes from a grapheme, but what we can do is put
 03 an x before and after the grapheme in question and check the columns
@@ -133,7 +133,7 @@ end-of-line
 search-reverse "x"
   set %curtest Search1
   set %expline 6
-  set %expcol 4
+  set %expcol 5
   set %expchar &asc x
   set %expmatch "x"
 execute-procedure check-position
@@ -141,7 +141,7 @@ execute-procedure check-position
 2 backward-character
   set %curtest Search2
   set %expline 6
-  set %expcol 2
+  set %expcol 3
   set %expchar &asc x
   set %expmatch "x"
 execute-procedure check-position
@@ -153,6 +153,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 # Run the tests...

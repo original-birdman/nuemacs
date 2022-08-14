@@ -21,7 +21,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
 03   (but the ὐ has no upper-case equiv, so stays in lowercase!!!)
@@ -30,7 +30,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 06 In UPPER СЕЙЧАС NUMBERS 77712 (ARABIC ٧٧٧١٢) [DEVENAGARI ७७७१२]
 07
 08 Can this be found case-sensitive and insensitive?
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 09
 10 οὐδένmañanaСЕЙЧАС
 11 οὐδένmañanaсейчас
@@ -152,7 +152,7 @@ execute-procedure report-status
 search-forward \p{Lu}{3}\p{P}   ; should match ΔΈΝ. ...
   set %curtest Search1
   set %expline 2
-  set %expcol 15
+  set %expcol 16
   set %expchar 10
   set %expmatch ΔΈΝ.
 execute-procedure check-position
@@ -161,7 +161,7 @@ execute-procedure check-position
 search-forward \p{Lu}{3}\p{P}   ; ...now TCH!
   set %curtest Search2
   set %expline 14
-  set %expcol 62
+  set %expcol 63
   set %expchar &asc )
   set %expmatch TCH!
 execute-procedure check-position
@@ -181,7 +181,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search3
   set %expline 16
-  set %expcol 38
+  set %expcol 39
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -192,7 +192,7 @@ execute-procedure check-matchcount
   search-reverse "\P{Lu} \p{N}{3}"
   set %curtest Search3-reversed
   set %expline 16
-  set %expcol 33
+  set %expcol 34
   set %expchar &asc t
   set %expmatch "t 912"
 execute-procedure check-position
@@ -212,7 +212,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search4
   set %expline 14
-  set %expcol 23
+  set %expcol 24
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -223,7 +223,7 @@ execute-procedure check-matchcount
 2 search-reverse "\p{Ll}\X\p{LU}"
   set %curtest Search4-reversed-twice
   set %expline 12
-  set %expcol 1
+  set %expcol 2
   set %expchar &asc ὐ
   set %expmatch ὐΔΈ
 execute-procedure check-position
@@ -233,6 +233,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 # Run the tests...

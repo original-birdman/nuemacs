@@ -22,7 +22,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
 03
@@ -33,7 +33,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 08 The first is ASCII n (0x6e) + a combining diacritic ~ (U+0303 = 0xcc 0x83)
 09 The second is a utf-8 small n with tilde (U+00F1 = 0xc3 0xb1).
 10 The third is Latin-1 (0xf1) (non-Unicode...)
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 11
 12   mañana  mañana  mañana  mañana
 13   mañana  mañana  mañana  mañana
@@ -44,7 +44,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 18   Here's one at the end of a line - touché
 19
 20 Can these be found case-sensitive and insensitive?
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 21
 22 οὐδένmañanaСЕЙЧАС
 23 οὐδένmañanaсейчас
@@ -173,7 +173,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search1
   set %expline 22
-  set %expcol 13
+  set %expcol 14
   set %expchar &asc Й
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -183,7 +183,7 @@ execute-procedure check-matchcount
   search-reverse δένmañanaСЕ
   set %curtest Search1-reversed
   set %expline 22
-  set %expcol 2
+  set %expcol 3
   set %expchar &asc δ
   set %expmatch δένmañanaСЕ
 execute-procedure check-position
@@ -206,7 +206,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search2
   set %expline 24
-  set %expcol 13
+  set %expcol 14
   set %expchar &asc Й
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -216,7 +216,7 @@ execute-procedure check-matchcount
   search-reverse δένmañanaСЕ
   set %curtest Search2-reversed
   set %expline 24
-  set %expcol 2
+  set %expcol 3
   set %expchar &asc Δ
   set %expmatch ΔΈΝMAÑANAСЕ
 execute-procedure check-position
@@ -230,7 +230,7 @@ search-forward (a|b)*\s\p{L}[]??E
 ; Where did we end up, and wat did we match?
   set %curtest Search3
   set %expline 29
-  set %expcol 18
+  set %expcol 19
   set %expchar &asc N
   set %expmatch (a|b)*\s\p{L}[]??E
 execute-procedure check-position
@@ -242,6 +242,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

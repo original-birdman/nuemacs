@@ -1,9 +1,9 @@
 #!/bin/sh
 #
 
-# Simple testing for combining diacriticals staring a line 
-# i.e. having nothine to combine with
-# (In any other positin they will combin with ethe previous char
+# Simple testing for combining diacriticals starting a line
+# i.e. having nothing to combine with
+# (In any other position they will combine with the previous char
 #  Trying to add a combining diacritical to a newline will result in it
 #  starting the next line, as the line ends as soon as the NL is seen.).
 
@@ -110,7 +110,7 @@ execute-procedure report-status
 6 goto-line
   set %curtest Pos1
   set %expline 6
-  set %expcol 0
+  set %expcol 1
   set %expchar &blit 0x0303
 execute-procedure check-position
 
@@ -118,7 +118,7 @@ execute-procedure check-position
 forward-character
   set %curtest Pos2
   set %expline 6
-  set %expcol 1
+  set %expcol 2
   set %expchar &asc a
 execute-procedure check-position
 
@@ -129,7 +129,7 @@ execute-procedure check-position
 2 backward-character
   set %curtest Pos3
   set %expline 7
-  set %expcol 0
+  set %expcol 1
   set %expchar &blit 0x0303
 execute-procedure check-position
 
@@ -137,7 +137,7 @@ execute-procedure check-position
 forward-character
   set %curtest Pos4
   set %expline 7
-  set %expcol 1
+  set %expcol 2
   set %expchar &asc b
 execute-procedure check-position
 
@@ -147,6 +147,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 # Run the tests...

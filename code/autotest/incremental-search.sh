@@ -13,7 +13,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Entered some silly text which allows us to
 02 look for s then i then m meaning we need to jump
 03 each time.
@@ -121,7 +121,7 @@ store-procedure check1
   execute-procedure report-status
   set %curtest Search-s
   set %expline 1
-  set %expcol 9
+  set %expcol 10
   set %expchar &asc "o"
   set %expmatchlen 1
   execute-procedure check-position
@@ -131,7 +131,7 @@ store-procedure check2
   execute-procedure report-status
   set %curtest Search-i
   set %expline 1
-  set %expcol 15
+  set %expcol 16
   set %expchar &asc "l"
   set %expmatchlen 2
   execute-procedure check-position
@@ -141,7 +141,7 @@ store-procedure check3
   execute-procedure report-status
   set %curtest Search-m
   set %expline 4
-  set %expcol 14
+  set %expcol 15
   set %expchar &asc "p"
   set %expmatchlen 3
   execute-procedure check-position
@@ -174,7 +174,7 @@ store-procedure check1
   execute-procedure report-status
   set %curtest Search-s
   set %expline 4
-  set %expcol 11
+  set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 1
   execute-procedure check-position
@@ -184,7 +184,7 @@ store-procedure check2
   execute-procedure report-status
   set %curtest Search-i
   set %expline 4
-  set %expcol 11
+  set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 2
   execute-procedure check-position
@@ -194,7 +194,7 @@ store-procedure check3
   execute-procedure report-status
   set %curtest Search-m
   set %expline 4
-  set %expcol 11
+  set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 3
   execute-procedure check-position
@@ -221,6 +221,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

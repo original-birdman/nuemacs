@@ -13,7 +13,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Simple testing for */+/{m,n} handling.
 02 acc, adc, a*c, a+c.
 03 
@@ -148,7 +148,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search1
   set %expline 10
-  set %expcol 14
+  set %expcol 15
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -159,7 +159,7 @@ execute-procedure check-matchcount
   search-reverse ab*c
   set %curtest Search1-reversed
   set %expline 10
-  set %expcol 12
+  set %expcol 13
   set %expchar &asc a
   set %expmatch ac
 execute-procedure check-position
@@ -182,7 +182,7 @@ set %mcount 0
 ; Should be the same as Search1
   set %curtest Search2
   set %expline 10
-  set %expcol 14
+  set %expcol 15
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -193,7 +193,7 @@ execute-procedure check-matchcount
   search-reverse ab*?c
   set %curtest Search2-reversed
   set %expline 10
-  set %expcol 12
+  set %expcol 13
   set %expchar &asc a
   set %expmatch ac
 execute-procedure check-position
@@ -215,7 +215,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search3
   set %expline 8
-  set %expcol 6
+  set %expcol 7
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -226,7 +226,7 @@ execute-procedure check-matchcount
   search-reverse ab{2,4}c
   set %curtest Search3-reversed
   set %expline 8
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc a
   set %expmatch abbbbc
 execute-procedure check-position
@@ -248,7 +248,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search4
   set %expline 8
-  set %expcol 5
+  set %expcol 6
   set %expchar &asc c
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -259,7 +259,7 @@ execute-procedure check-matchcount
   search-reverse ab+
   set %curtest Search4-reversed
   set %expline 8
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc a
   set %expmatch abbbb
 execute-procedure check-position
@@ -281,7 +281,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search5
   set %expline 8
-  set %expcol 2
+  set %expcol 3
   set %expchar &asc b
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -292,7 +292,7 @@ execute-procedure check-matchcount
   search-reverse ab+?
   set %curtest Search4-reversed
   set %expline 8
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc a
   set %expmatch ab
 execute-procedure check-position
@@ -303,6 +303,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

@@ -13,7 +13,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 #if it_works
 02     we should get here
 03     and here
@@ -121,7 +121,7 @@ execute-procedure report-status
 search-forward ^[^#]*
   set %curtest Search1
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 0
 execute-procedure check-position
@@ -136,7 +136,7 @@ set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search2
   set %expline 4
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 36
 execute-procedure check-position
@@ -151,7 +151,7 @@ set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search3
   set %expline 4
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 13
 execute-procedure check-position
@@ -166,7 +166,7 @@ set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search4
   set %expline 4
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 0
 execute-procedure check-position
@@ -181,7 +181,7 @@ set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
   set %curtest Search5
   set %expline 6
-  set %expcol 0
+  set %expcol 1
   set %expchar 10
   set %expmatchlen 27
 execute-procedure check-position
@@ -210,6 +210,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

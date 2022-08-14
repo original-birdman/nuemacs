@@ -21,7 +21,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
 03   (but the ὐ has no upper-case equiv, so stays in lowercase!!!)
@@ -30,7 +30,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 06 In UPPER СЕЙЧАС NUMBERS 77712 (ARABIC ٧٧٧١٢) [DEVENAGARI ७७७१२]
 07
 08 Can this be found case-sensitive and insensitive?
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 09
 10 οὐδένmañanaСЕЙЧАС
 11 οὐδένmañanaсейчас
@@ -158,7 +158,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search1
   set %expline 11
-  set %expcol 3
+  set %expcol 4
   set %expchar &asc έ
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -169,7 +169,7 @@ execute-procedure check-matchcount
   search-reverse "\u{03b4}"
   set %curtest Search1-reversed
   set %expline 11
-  set %expcol 2
+  set %expcol 3
   set %expchar &asc δ
   set %expmatch δ
 execute-procedure check-position
@@ -190,7 +190,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search1
   set %expline 12
-  set %expcol 3
+  set %expcol 4
   set %expchar &asc Έ
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -201,7 +201,7 @@ execute-procedure check-matchcount
   search-reverse "\u{03b4}"
   set %curtest Search1-reversed
   set %expline 12
-  set %expcol 2
+  set %expcol 3
   set %expchar &asc Δ
   set %expmatch Δ
 execute-procedure check-position
@@ -212,6 +212,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 # Run the tests...

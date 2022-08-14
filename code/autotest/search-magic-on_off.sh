@@ -27,7 +27,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
 03
@@ -133,7 +133,7 @@ add-mode Magic
 ; Where did we end up
   set %curtest Search-Magic-caseoff
   set %expline 5
-  set %expcol 15
+  set %expcol 16
   set %expchar 10
   set %expmatch "СЕЙЧАС"
 execute-procedure check-position
@@ -149,7 +149,7 @@ search-forward stop
 ; Where did we end up
   set %curtest Search- NoMagic-caseon
   set %expline 7
-  set %expcol 10
+  set %expcol 11
   set %expchar &asc " "
   set %expmatch "stop"
 execute-procedure check-position
@@ -163,6 +163,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

@@ -13,7 +13,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 match - ]xyzzy[
 02 EOF
 EOD
@@ -111,14 +111,14 @@ beginning-of-file
 search-forward []-c]
   set %curtest Search1
   set %expline 1
-  set %expcol 2
+  set %expcol 3
   set %expchar &asc t
   set %expmatch a
 execute-procedure check-position
 search-forward []-c]+
   set %curtest Search2
   set %expline 1
-  set %expcol 4
+  set %expcol 5
   set %expchar &asc h
   set %expmatch c
 execute-procedure check-position
@@ -131,7 +131,7 @@ beginning-of-file
 search-forward []nq]
   set %curtest Search1
   set %expline 1
-  set %expcol 9
+  set %expcol 10
   set %expchar &asc x
   set %expmatch ]
 execute-procedure check-position
@@ -144,14 +144,14 @@ beginning-of-file
 search-forward [-xyz]
   set %curtest Search1
   set %expline 1
-  set %expcol 7
+  set %expcol 8
   set %expchar &asc " "
   set %expmatch -
 execute-procedure check-position
 search-forward [-xyz]+
   set %curtest Search2
   set %expline 1
-  set %expcol 14
+  set %expcol 15
   set %expchar &asc [
   set %expmatch xyzzy
 execute-procedure check-position
@@ -166,14 +166,14 @@ beginning-of-file
 search-forward [xyz-]
   set %curtest Search1
   set %expline 1
-  set %expcol 7
+  set %expcol 8
   set %expchar &asc " "
   set %expmatch -
 execute-procedure check-position
 search-forward [xyz-]+
   set %curtest Search2
   set %expline 1
-  set %expcol 14
+  set %expcol 15
   set %expchar &asc [
   set %expmatch xyzzy
 execute-procedure check-position
@@ -186,14 +186,14 @@ beginning-of-file
 search-forward [x-z]
   set %curtest Search1
   set %expline 1
-  set %expcol 10
+  set %expcol 11
   set %expchar &asc y
   set %expmatch x
 execute-procedure check-position
 search-forward [x-z]+
   set %curtest Search2
   set %expline 1
-  set %expcol 14
+  set %expcol 15
   set %expchar &asc [
   set %expmatch yzzy
 execute-procedure check-position
@@ -206,14 +206,14 @@ beginning-of-file
 search-forward [^x-z]
   set %curtest Search1
   set %expline 1
-  set %expcol 1
+  set %expcol 2
   set %expchar &asc a
   set %expmatch m
 execute-procedure check-position
 search-forward [^x-z]+
   set %curtest Search2
   set %expline 1
-  set %expcol 9
+  set %expcol 10
   set %expchar &asc x
   set %expmatch "atch - ]"
 execute-procedure check-position
@@ -225,6 +225,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

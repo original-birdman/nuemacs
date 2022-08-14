@@ -21,7 +21,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 We need some text to test word movement.
 02 
 03 This is a line containing a zero-width break after Sh. Sh​oulder.
@@ -32,7 +32,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 08 There are three ñ characters here but the bytes differ.
 09    mañana mañana ma�ana
 10
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 11 Now some Greek
 12  Σὲ γνωρίζω ἀπὸ τὴν κόψη
 13 and Russian
@@ -138,7 +138,7 @@ end-of-file
 20 previous-word
   set %curtest BackWord1
   set %expline 9
-  set %expcol 3
+  set %expcol 4
   set %expchar &asc m
 execute-procedure check-position
 
@@ -146,7 +146,7 @@ execute-procedure check-position
 25 previous-word
   set %curtest BackWord2
   set %expline 3
-  set %expcol 57
+  set %expcol 58
   set %expchar &asc o
 execute-procedure check-position
 
@@ -159,7 +159,7 @@ beginning-of-file
 25 next-word
   set %curtest ForwWord-ON
   set %expline 5
-  set %expcol 17
+  set %expcol 18
 ; 34 = "
   set %expchar 34
 execute-procedure check-position
@@ -168,7 +168,7 @@ execute-procedure check-position
 35 next-word
   set %curtest ForwWord-ON
   set %expline 14
-  set %expcol 25
+  set %expcol 26
   set %expchar &asc " "
 execute-procedure check-position
 
@@ -180,7 +180,7 @@ beginning-of-file
 25 next-word
   set %curtest ForwWord-OFF
   set %expline 5
-  set %expcol 19
+  set %expcol 20
   set %expchar &asc l
 execute-procedure check-position
 
@@ -188,7 +188,7 @@ execute-procedure check-position
 35 next-word
   set %curtest ForwWord-OFF
   set %expline 14
-  set %expcol 26
+  set %expcol 27
   set %expchar &asc н
 execute-procedure check-position
 

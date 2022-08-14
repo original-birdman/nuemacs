@@ -15,7 +15,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Start with (Start and enD) and enD
 02 sTart with (sTart and EnD) and EnD
 03 STart with (STart and End) and End
@@ -132,7 +132,7 @@ beginning-of-file
 search-forward ^Start
   set %curtest Search-^Start
   set %expline 1
-  set %expcol 5
+  set %expcol 6
   set %expchar &asc " "
   set %expmatch Start
 execute-procedure check-position
@@ -141,7 +141,7 @@ end-of-file
 search-reverse ^Start
   set %curtest Search-^Start-back-from-end
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc S
   set %expmatch Start
 execute-procedure check-position
@@ -158,7 +158,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Searchrpt-^Start
   set %expline 1
-  set %expcol 5
+  set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -178,7 +178,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search-^start-NonExact
   set %expline 3
-  set %expcol 5
+  set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -197,7 +197,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search-^START-NonExact-rev
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc S
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -211,7 +211,7 @@ beginning-of-file
 search-forward End$
   set %curtest Search-End$
   set %expline 3
-  set %expcol 34
+  set %expcol 35
   set %expchar 10
   set %expmatch End
 execute-procedure check-position
@@ -220,7 +220,7 @@ end-of-file
 search-reverse End$
   set %curtest Search-End$-back-from-end
   set %expline 3
-  set %expcol 31
+  set %expcol 32
   set %expchar &asc E
   set %expmatch End
 execute-procedure check-position
@@ -237,7 +237,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Searchrpt-End$
   set %expline 3
-  set %expcol 34
+  set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -257,7 +257,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search-end$-NonExact
   set %expline 3
-  set %expcol 34
+  set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -276,7 +276,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search-END$-NonExact-rev
   set %expline 1
-  set %expcol 31
+  set %expcol 32
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -290,6 +290,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

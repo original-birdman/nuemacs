@@ -21,7 +21,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
 03   (but the ὐ has no upper-case equiv, so stays in lowercase!!!)
@@ -30,7 +30,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 06 In UPPER СЕЙЧАС NUMBERS 77712 (ARABIC ٧٧٧١٢) [DEVENAGARI ७७७१२]
 07
 08 Can this be found case-sensitive and insensitive?
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 09
 10 οὐδένmañanaСЕЙЧАС
 11 οὐδένmañanaсейчас
@@ -175,7 +175,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest Search3
   set %expline 16
-  set %expcol 14
+  set %expcol 15
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -187,7 +187,7 @@ execute-procedure check-matchcount
   search-reverse "(\p{Lu}+)(\p{Ll}+)"
   set %curtest Search3-reversed
   set %expline 16
-  set %expcol 10
+  set %expcol 11
   set %expchar &asc S
   set %expmatch "Some"
 execute-procedure check-position
@@ -208,7 +208,7 @@ beginning-of-file
   search-forward ".(pp|s)\p{L}" ; \p{L} rather than . stops "as " match.
   set %curtest SearchChoice
   set %expline 3
-  set %expcol 24
+  set %expcol 25
   set %expchar &asc r
   set %expmatch "uppe"
 execute-procedure check-position
@@ -219,7 +219,7 @@ execute-procedure check-group
   search-forward ".(pp|s)."
   set %curtest SearchChoiceRpt
   set %expline 3
-  set %expcol 30
+  set %expcol 31
   set %expchar &asc " "
   set %expmatch "ase"
 execute-procedure check-position
@@ -232,7 +232,7 @@ beginning-of-file
   reexecute             ; Should end up at same place a second search above
   set %curtest SearchChoice+reexecute
   set %expline 3
-  set %expcol 30
+  set %expcol 31
   set %expchar &asc " "
   set %expmatch "ase"
 execute-procedure check-position
@@ -247,6 +247,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 # Run the tests...

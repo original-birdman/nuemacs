@@ -22,7 +22,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Able was I ere I was Elba
 02 Just some text to be searched in each direction
 03 that will produce hist at the start and end of liens and buffer.
@@ -146,7 +146,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest "Forward Elba search"
   set %expline 4
-  set %expcol 25
+  set %expcol 26
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -164,7 +164,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest "Reverse Able search"
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc A
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -185,7 +185,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest "Forward Elb. magic search"
   set %expline 4
-  set %expcol 25
+  set %expcol 26
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -203,7 +203,7 @@ set %mcount 0
 ; Where did we end up, and how many searches succeeded?
   set %curtest "Reverse .ble magic search"
   set %expline 1
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc A
   set %expmatch ""      ; We'll have failed, so no match
 execute-procedure check-position
@@ -218,6 +218,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

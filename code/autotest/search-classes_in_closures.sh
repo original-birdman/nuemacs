@@ -13,7 +13,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Not sure whether the best test of CCLs is to have lots
 02 of alternating classes or not?
 03 Here are some numbers 0123456789
@@ -126,7 +126,7 @@ add-mode Magic
 search-forward [\p{Nd}\p{Po}]*\X\n
   set %curtest [\p{Nd}\p{Po}]*\X\n
   set %expline 2
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc o
   set %expmatch s~n
 execute-procedure check-position
@@ -138,7 +138,7 @@ backward-character
 search-forward [\p{Nd}\p{Po}]+\X\n
   set %curtest [\p{Nd}\p{Po}]+\X\n
   set %expline 6
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc N
   set %expmatch 0,1.2;3:4'5!6*7@8?9~n
 execute-procedure check-position
@@ -146,7 +146,7 @@ execute-procedure check-position
 search-reverse \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest "Search back for NPNPNPNP"
   set %expline 5
-  set %expcol 15
+  set %expcol 16
   set %expchar &asc 5
   set %expmatch 5!6*7@8?
 execute-procedure check-position
@@ -157,6 +157,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

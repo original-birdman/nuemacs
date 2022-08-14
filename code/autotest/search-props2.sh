@@ -13,7 +13,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Not sure whether the best test of CCLs is to have lots
 02 of alternating classes or not?
 03 Here are some numbers 0123456789
@@ -124,14 +124,14 @@ beginning-of-file
 search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest Search1
   set %expline 5
-  set %expcol 11
+  set %expcol 12
   set %expchar &asc 3
   set %expmatch 0,1.2;
 execute-procedure check-position
 search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest Search2
   set %expline 5
-  set %expcol 19
+  set %expcol 20
   set %expchar &asc 7
   set %expmatch 3:4'5!6*
 execute-procedure check-position
@@ -143,7 +143,7 @@ beginning-of-file
 search-forward 789\n
   set %curtest "Placing search"
   set %expline 4
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc H
   set %expmatch 789~n
 execute-procedure check-position
@@ -151,7 +151,7 @@ execute-procedure check-position
 search-forward \P{L}
   set %curtest Search not Letter 
   set %expline 4
-  set %expcol 5
+  set %expcol 6
   set %expchar &asc " "
   set %expmatch ,
 execute-procedure check-position
@@ -163,7 +163,7 @@ beginning-of-file
 search-forward \p{SM}{5}
   set %curtest Search1
   set %expline 9
-  set %expcol 6
+  set %expcol 7
   set %expchar &asc ~~
   set %expmatch +<=>|
 execute-procedure check-position
@@ -175,7 +175,7 @@ beginning-of-file
 search-forward \p{Lm}\p{Sm}\p{Ps}\p{Pe}\p{Nd}\p{Po}
   set %curtest Search1
   set %expline 13
-  set %expcol 11
+  set %expcol 12
   set %expchar &asc z
   set %expmatch ˊ±{]3@
 execute-procedure check-position
@@ -184,7 +184,7 @@ end-of-file
 search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
   set %curtest "Reverse search"
   set %expline 14
-  set %expcol 5
+  set %expcol 6
   set %expchar &asc T
   set %expmatch Td:8)[
 execute-procedure check-position
@@ -195,7 +195,7 @@ execute-procedure report-status
 !force search-reverse \p{M}
   set %curtest "Reverse search for Mark (none there)"
   set %expline 14
-  set %expcol 5
+  set %expcol 6
   set %expchar &asc T
   set %expmatch ""
 execute-procedure check-position
@@ -206,6 +206,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

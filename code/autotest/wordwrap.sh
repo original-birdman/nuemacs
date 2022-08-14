@@ -21,7 +21,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 We need some text to test wrapping.
 02 We'll set the fill-column to 60 before running things.
 03
@@ -31,7 +31,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 07 This is a normal line, where the text goes beyond the fill column.
 08 And another, where spaces follow the text beyond the fill    column.
 09
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 10 These lines are to test zero-width breaks (U+200b).
 11
 12 This is a line containing a zero-width break after Sh. Sh​oulder.
@@ -133,7 +133,7 @@ store-procedure do-wrap one_pass
 ; But we can simulate the effect, which is this (the one_pass is needed)
 ;
 $uproc_lptotal wrap-word
-!if &not &equ $curcol 0
+!if &not &equ $curcol 1
   insert-string " "
 !endif
 !endm
@@ -180,7 +180,7 @@ end-of-line
 2 execute-procedure do-wrap
   set %curtest Line7-FullWrap
   set %expline 8
-  set %expcol 8
+  set %expcol 9
   set %expchar 10
 execute-procedure check-position
 
@@ -196,7 +196,7 @@ end-of-line
 execute-procedure do-wrap
   set %curtest Line7-OrigWrap
   set %expline 8
-  set %expcol 8
+  set %expcol 9
   set %expchar 10
 execute-procedure check-position
 
@@ -215,7 +215,7 @@ end-of-line
 2 execute-procedure do-wrap
   set %curtest Line8-FullWrap
   set %expline 9
-  set %expcol 8
+  set %expcol 9
   set %expchar 10
 execute-procedure check-position
 
@@ -233,7 +233,7 @@ end-of-line
 execute-procedure do-wrap
   set %curtest Line8-OrigWrap
   set %expline 9
-  set %expcol 8
+  set %expcol 9
   set %expchar 10
 execute-procedure check-position
 
@@ -259,7 +259,7 @@ beginning-of-line
 2 execute-procedure do-wrap
   set %curtest Line8-FullWrap-MidSpace
   set %expline 9
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc c
 execute-procedure check-position
 
@@ -284,7 +284,7 @@ execute-procedure do-wrap
 ; We expect this to have wrapped
   set %curtest Line8-OrigWrap-MidSpace
   set %expline 9
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc c
 execute-procedure check-position
 
@@ -311,7 +311,7 @@ end-of-line
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-FullWrap-zwb
   set %expline 13
-  set %expcol 8
+  set %expcol 9
   set %expchar 10
 execute-procedure check-position
 
@@ -325,7 +325,7 @@ end-of-line
 backward-character
   set %curtest Line12-FullWrap-zwb-eol
   set %expline 12
-  set %expcol 57
+  set %expcol 58
   set %expchar &blit 0x200b
 execute-procedure check-position
 
@@ -341,7 +341,7 @@ execute-procedure do-wrap
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-OrigWrap-zwb
   set %expline 13
-  set %expcol 8
+  set %expcol 9
   set %expchar 10
 execute-procedure check-position
 
@@ -355,7 +355,7 @@ end-of-line
 backward-character
   set %curtest Line12-OrigWrap-zwb-eol
   set %expline 12
-  set %expcol 57
+  set %expcol 58
   set %expchar &blit 0x200b
 execute-procedure check-position
 
@@ -374,7 +374,7 @@ insert-string " xyzzy"
 2 execute-procedure do-wrap
   set %curtest Line12+-FullWrap+xyzzy
   set %expline 13
-  set %expcol 14
+  set %expcol 15
   set %expchar 10
 execute-procedure check-position
   set %expltext "oulder. xyzzy "
@@ -391,7 +391,7 @@ insert-string " xyzzy"
 execute-procedure do-wrap
   set %curtest Line12-OrigWrap+xyzzy
   set %expline 13
-  set %expcol 6
+  set %expcol 7
   set %expchar 10
 execute-procedure check-position
   set %expltext "xyzzy "

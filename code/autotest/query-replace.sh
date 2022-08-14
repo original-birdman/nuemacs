@@ -13,7 +13,7 @@ prog='$1 != "--" {print substr($0, 4);}'
 # It's written here with row and column markers.
 #
 awk "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Text for replacement text - query/interactive version
 02 Text should contain a few instances of "ext" and 
 03 we'll change most, but not all, of them to !!!!.
@@ -122,7 +122,7 @@ store-procedure check1
   execute-procedure report-status
   set %curtest Replace-Yes
   set %expline 1
-  set %expcol 1
+  set %expcol 2
   set %expchar &asc "e"
   set %expmatchlen 3
   execute-procedure check-position
@@ -132,7 +132,7 @@ store-procedure check2
   execute-procedure report-status
   set %curtest Replace-No
   set %expline 1
-  set %expcol 23
+  set %expcol 24
   set %expchar &asc "e"
   set %expmatchlen 3
   execute-procedure check-position
@@ -142,7 +142,7 @@ store-procedure check3
   execute-procedure report-status
   set %curtest replace-Yes
   set %expline 2
-  set %expcol 1
+  set %expcol 2
   set %expchar &asc "e"
   set %expmatchlen 3
   execute-procedure check-position
@@ -152,7 +152,7 @@ store-procedure check4
   execute-procedure report-status
   set %curtest Replace-No
   set %expline 2
-  set %expcol 41
+  set %expcol 42
   set %expchar &asc "e"
   set %expmatchlen 3
   execute-procedure check-position
@@ -162,7 +162,7 @@ store-procedure check5
   execute-procedure report-status
   set %curtest Replace-ALL
   set %expline 4
-  set %expcol 30
+  set %expcol 31
   set %expchar &asc "e"
   set %expmatchlen 3
   execute-procedure check-position
@@ -174,7 +174,7 @@ store-procedure check6
   execute-procedure report-status
   set %curtest Replace-ALL
   set %expline 4
-  set %expcol 34
+  set %expcol 35
   set %expchar &asc "!"
   set %expmatchlen 0
   execute-procedure check-position
@@ -207,6 +207,7 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 unmark-buffer
+-2 redraw-display
 EOD
 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc

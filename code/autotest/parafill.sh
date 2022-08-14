@@ -21,7 +21,7 @@ fi
 # It's written here with row and column markers.
 #
 awk $AWKARG "$prog" > autotest.tfile <<EOD
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Just some text to act as a regression test for test wrapping.  It needs
 02 to contain a "selection" of end-of-sentence characters.  Like this?  It
 03 also needs to have a number, such as 3.14159, to check that the "."
@@ -31,7 +31,7 @@ awk $AWKARG "$prog" > autotest.tfile <<EOD
 07 without combining diacriticals (== accents).  So things like déjà vu and
 08 déjà vu (which are not the same as the first contains
 09 specifically-accented characters, while the latter uses combining
--- 0123456789012345678901234567890123456789012345678901234567890123456789
+-- 123456789012345678901234567890123456789012345678901234567890123456789
 10 diacriticals.  Then we can have some Rus​sian, Матрица спинового
 11 гамильтониана, and the same in Greek, Περιστροφή Χαμιλτονιανής μήτρας,
 12 according to Google Translate, although I think it has the wrong meaning
@@ -161,7 +161,7 @@ execute-procedure report-status
 fill-paragraph
   set %curtest Para1-fill-paragraphA
   set %expline 6
-  set %expcol 0
+  set %expcol 1
   set %expchar 10
 execute-procedure check-position
 
@@ -171,7 +171,7 @@ end-of-line
 previous-word
   set %curtest Para1-fill-paragraphB
   set %expline 4
-  set %expcol 54
+  set %expcol 55
   set %expchar &asc t
 execute-procedure check-position
 
@@ -186,7 +186,7 @@ previous-word       ; Now at b-o-l in para2
 -1 justify-paragraph
   set %curtest Para2-justify-paragraphA
   set %expline 17
-  set %expcol 10
+  set %expcol 11
   set %expchar &asc e
 execute-procedure check-position
 
@@ -194,7 +194,7 @@ execute-procedure check-position
 2 previous-line
   set %curtest Para2-justify-paragraphB
   set %expline 15
-  set %expcol 10
+  set %expcol 11
   set %expchar 34  ; "
 execute-procedure check-position
 
@@ -226,7 +226,7 @@ previous-word       ; Now at b-o-l in para2
 fill-paragraph
   set %curtest Para3-fill-longline-paragraphA
   set %expline 23
-  set %expcol 0
+  set %expcol 1
   set %expchar 10
 execute-procedure check-position
 
@@ -237,7 +237,7 @@ execute-procedure check-position
 19 goto-line
   set %curtest Para3-fill-longline-paragraphB
   set %expline 19
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc a
 execute-procedure check-position
 20 goto-line
@@ -245,13 +245,13 @@ end-of-line
 backward-character
   set %curtest Para3-fill-longline-paragraphC
   set %expline 20
-  set %expcol 59
+  set %expcol 60
   set %expchar &asc )
 execute-procedure check-position
 21 goto-line
   set %curtest Para3-fill-longline-paragraphD
   set %expline 21
-  set %expcol 0
+  set %expcol 1
   set %expchar &asc o
 execute-procedure check-position
 
