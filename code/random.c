@@ -93,10 +93,10 @@ int showcpos(int f, int n) {
     }
 
 /* Get real column and end-of-line column. */
-    col = getccol();
+    col = getccol() + 1;        /* Internal 0-based, external 1-based */
     savepos = curwp->w.doto;
     curwp->w.doto = llength(curwp->w.dotp);
-    ecol = getccol();
+    ecol = getccol() + 1;       /* Internal 0-based, external 1-based */
     curwp->w.doto = savepos;
 
 /* If we are in DOS mode we need to add an extra char for the \r

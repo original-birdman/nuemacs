@@ -584,7 +584,7 @@ static char *gtenv(char *vname) {
     switch (evl[vnum].tag) {
     case EVFILLCOL:         return ue_itoa(fillcol);
     case EVPAGELEN:         return ue_itoa(term.t_nrow + 1);
-    case EVCURCOL:          return ue_itoa(getccol());
+    case EVCURCOL:          return ue_itoa(getccol() + 1);
     case EVCURLINE:         return ue_itoa(getcline());
     case EVFLICKER:         return ltos(flickcode);
     case EVCURWIDTH:        return ue_itoa(term.t_ncol);
@@ -630,7 +630,7 @@ static char *gtenv(char *vname) {
     case EVSCROLLJUMP:      return ue_itoa(scrolljump);
     case EVSCROLL:          return ltos(term.t_scroll != NULL);
     case EVINMB:            return ue_itoa(inmb);
-    case EVFCOL:            return(ue_itoa(curwp->w.fcol));
+    case EVFCOL:            return(ue_itoa(curwp->w.fcol) + 1);
     case EVHSCROLL:         return(ltos(hscroll));
     case EVHJUMP:           return(ue_itoa(hjump));
     case EVYANKMODE:        switch (yank_mode) {
@@ -791,7 +791,7 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVCURCOL:
             srch_can_hunt = 0;
-            status = setccol(atoi(value));
+            status = setccol(atoi(value) - 1);
             break;
         case EVCURLINE:
             srch_can_hunt = 0;
@@ -911,7 +911,7 @@ static int svar(struct variable_description *var, char *value) {
         case EVINMB:
             break;
         case EVFCOL:
-            curwp->w.fcol = atoi(value);
+            curwp->w.fcol = atoi(value) - 1;
             if (curwp->w.fcol < 0) curwp->w.fcol = 0;
             curwp->w_flag |= WFHARD | WFMODE;
             break;

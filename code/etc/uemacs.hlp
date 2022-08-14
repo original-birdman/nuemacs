@@ -457,6 +457,8 @@ Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
 
 Others (omitting system-use only ones)...
 
+    $fillcol .............. the maximum column (1-based) to fill text to
+                            when wrapping text
     $pagelen .............. number of lines used by editor
     $curcol ............... current column pos of cursor
     $curline .............. current line in file
@@ -494,7 +496,7 @@ Others (omitting system-use only ones)...
     $tab .................. tab 4 or 8
     $scroll ............... scroll enabled
     $inmb ................. In mini-buffer (read only)
-    $fcol ................. first displayed column in current window
+    $fcol ................. first displayed column in current window (1-based)
     $hjump ................ horizontal screen jump size
     $hscroll .............. horizontal scrolling flag
     $yankmode ............. mode for yank (old/gnu)
