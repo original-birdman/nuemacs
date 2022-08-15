@@ -69,14 +69,57 @@ static int resetkey(void) { /* Reset the encryption key if needed */
     return TRUE;
 }
 
+/* insert file in buffer at iline.
+ * Go to end of inserted file if goto_end is set.
+ * Check for DOS line-endings if check_dos is set.
+ * Return if it is a dos_file in dos_file.
+ * Return lines read in nlines.
+ * Return the read status as the function value.
+ * Used by ifile and readin().
+ */
+static int file2buf(struct line *iline, char *mode, int goto_end,
+     int check_dos, int *nlines, int *dos_file) {
+    int s;
+    int lnl = 0;
+    int ldos = FALSE;
+    struct line *lp0, *lp1, *lp2;
+
+    while ((s = ffgetline()) == FIOSUC) {
+        lp1 = fline;            /* Allocate by ffgetline..*/
+        lp0 = iline;            /* line previous to insert */
+        lp2 = lp0->l_fp;        /* line after insert */
+
+/* Re-link new line between lp0 and lp2 */
+        lp2->l_bp = lp1;
+        lp0->l_fp = lp1;
+        lp1->l_bp = lp0;
+        lp1->l_fp = lp2;
+
+/* And advance and write out the current line */
+        iline = lp1;        
+        ++lnl;
+
+/* Check for a DOS line ending on line 1 */
+        if (check_dos && (lnl == 1) && (lp1->l_text[lp1->l_used-1] == '\r'))
+            ldos = TRUE;  
+        if (ldos && lp1->l_text[lp1->l_used-1] == '\r')
+             lp1->l_used--;             /* Remove the trailing CR */
+
+        if (!(lnl % 300) && !silent)      /* GGR */
+             mlwrite(MLbkt("%s file") " : %d lines", mode, lnl);
+    }
+    if (goto_end) curwp->w.dotp = iline;
+    ffclose();              /* Ignore errors. */
+    *dos_file = ldos;
+    *nlines = lnl;
+    return s;
+}
+
 /* Insert file "fname" into the current buffer.
  * Called by insert file command.
  * Return the final status of the read.
  */
 static int ifile(char *fname) {
-    struct line *lp0;
-    struct line *lp1;
-    struct line *lp2;
     struct buffer *bp;
     int s;
     int nline;
@@ -113,35 +156,9 @@ static int ifile(char *fname) {
     curwp->w.marko = 0;
 
     nline = 0;
-    int dos_include = 0;
-    while ((s = ffgetline()) == FIOSUC) {
-        lp1 = fline;            /* Allocate by ffgetline..*/
-        lp0 = curwp->w.dotp;    /* line previous to insert */
-        lp2 = lp0->l_fp;        /* line after insert */
-
-/* Re-link new line between lp0 and lp2 */
-        lp2->l_bp = lp1;
-        lp0->l_fp = lp1;
-        lp1->l_bp = lp0;
-        lp1->l_fp = lp2;
-
-/* And advance and write out the current line */
-        curwp->w.dotp = lp1;
-        ++nline;
-
-/* Check for a DOS line ending on line 1 */
-        if (nline == 1 && lp1->l_text[lp1->l_used-1] == '\r')
-            dos_include = 1;
-        if (dos_include && lp1->l_text[lp1->l_used-1] == '\r') {
-             lp1->l_used--;             /* Remove the trailing CR */
-        }
-
-        if (!(nline % 300) && !silent)      /* GGR */
-             mlwrite(MLbkt("Inserting file") " : %d lines", nline);
-
-    }
-    ffclose();              /* Ignore errors. */
-    curwp->w.markp = lforw(curwp->w.markp);
+    int dos_include;
+    s = file2buf(curwp->w.dotp, "Inserting", TRUE, TRUE, &nline, &dos_include);
+    curwp->w.markp = lforw(curwp->w.markp);     /* Restore original mark */
     strcpy(readin_mesg, MLpre);
     if (s == FIOERR) {
         strcat(readin_mesg, "I/O ERROR, ");
@@ -365,8 +382,6 @@ static void handle_filehooks(char *fname) {
  * int lockfl;          check for file locks?
  */
 int readin(char *fname, int lockfl) {
-    struct line *lp1;
-    struct line *lp2;
     struct window *wp;
     struct buffer *bp;
     int s;
@@ -429,34 +444,10 @@ int readin(char *fname, int lockfl) {
 
 /* Read the file in */
     if (!silent) mlwrite_one(MLbkt("Reading file"));  /* GGR */
-    nline = 0;
-    while ((s = ffgetline()) == FIOSUC) {
-        lp1 = fline;                    /* Allocated by ffgetline() */
-        lp2 = lback(curbp->b_linep);
-        lp2->l_fp = lp1;
-        lp1->l_fp = curbp->b_linep;
-        lp1->l_bp = lp2;
-        curbp->b_linep->l_bp = lp1;
-        ++nline;
-/* Check for a DOS line ending on line 1?
- * Only if the check is enabled...
- * NOTE!! that we set/unset this flag every time we read line 1,
- * so a file can be re-read with the required autodos setting.
- */
-        if (nline == 1) {
-            if (autodos && lp1->l_text[lp1->l_used-1] == '\r')
-                curbp->b_mode |= MDDOSLE;
-            else
-                curbp->b_mode &= ~MDDOSLE;
-        }
-        if ((curbp->b_mode & MDDOSLE) != 0 &&
-             lp1->l_text[lp1->l_used-1] == '\r') {
-             lp1->l_used--;             /* Remove the trailing CR */
-        }
-        if (!(nline % 300) && !silent)  /* GGR */
-            mlwrite(MLbkt("Reading file") " : %d lines", nline);
-    }
-    ffclose();                          /* Ignore errors. */
+    int dos_file;
+    s = file2buf(curbp->b_linep, "Reading", FALSE, autodos, &nline, &dos_file);
+    if (dos_file) curbp->b_mode |= MDDOSLE;
+    else          curbp->b_mode &= ~MDDOSLE;
     if (!silent) strcpy(readin_mesg, MLpre);
     if (s == FIOERR) {
         if (!silent) strcat(readin_mesg, "I/O ERROR, ");
