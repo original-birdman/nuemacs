@@ -188,7 +188,7 @@ int onlywind(int f, int n) {
         lp = lback(lp);
     }
     curwp->w_toprow = 0;
-    curwp->w_ntrows = term.t_nrow - 1;
+    curwp->w_ntrows = term.t_vscreen;   /* Ignoring mode-line */
     curwp->w_linep = lp;
     curwp->w_flag |= WFMODE | WFHARD;
     return TRUE;
@@ -521,9 +521,9 @@ int newsize(int f, int n) {
         return FALSE;
     }
 
-    if (term.t_nrow == n - 1)
+    if (term.t_nrow == n)
         return TRUE;
-    else if (term.t_nrow < n - 1) {
+    else if (term.t_nrow < n) {
 /* Go to the last window... */
         wp = wheadp;
         while (wp->w_wndp != NULL) wp = wp->w_wndp;
@@ -568,7 +568,8 @@ int newsize(int f, int n) {
     }
 
 /* screen is garbage */
-    term.t_nrow = n - 1;
+    SET_t_nrow(n);
+
     sgarbf = TRUE;
     return TRUE;
 }

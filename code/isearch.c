@@ -88,7 +88,7 @@ static int promptpattern(char *prompt) {
  * int col;             column to be echoed in
  */
 static int echo_char(int c, int col) {
-    movecursor(term.t_nrow, col);   /* Position the cursor         */
+    movecursor(term.t_mbline, col); /* Position the cursor         */
     if ((c < ' ') || (c == 0x7F)) { /* Control character?          */
         switch (c) {                /* Yes, dispatch special cases */
         case '\n':                  /* Newline                     */
@@ -273,7 +273,7 @@ void incremental_debug_cleanup(void) {
 static void hilite(int c, int col) {
     col -= utf8char_width(c);   /* Set it back the correct amount */
 /* Need force_movecursor as movecursor thinks we haven't moved */
-    force_movecursor(term.t_nrow, col);
+    force_movecursor(term.t_mbline, col);
     TTrev(1);
     (void)echo_char(c, col);    /* Character in REV video   */
     TTrev(0);

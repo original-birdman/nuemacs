@@ -110,8 +110,9 @@ extern char outline[];          /* Global string to hold debug line text. */
 
 /* Terminal table defined only in term.c */
 extern struct terminal term;
-
-#endif  /* EDEF_H_ */
+/* Macros for setting t_nrow and derivatives */
+#define SET_t_nrow(h) \
+    term.t_nrow = h; term.t_mbline = h-1; term.t_vscreen = h-2;
 
 /* GGR - Additional declarations */
 extern int inreex;              /* Set when re-executing */
@@ -257,3 +258,5 @@ typedef struct {
     int o;
 } sysmark_t;
 extern sysmark_t sysmark;
+
+#endif  /* EDEF_H_ */

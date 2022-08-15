@@ -67,13 +67,7 @@ static int term_init_ok = 0;
 static char *CS, *DL, *AL, *SF, *SR;
 
 struct terminal term = {
-    0, /* These four values are set dynamically at open time. */
-    0,
-    0,
-    0,
-    MARGIN,
-    SCRSIZ,
-    NPAUSE,
+/* Functions */
     tcapopen,
     tcapclose,
     tcapkopen,
@@ -92,6 +86,19 @@ struct terminal term = {
     tcapbcol,
 #endif
     NULL,              /* set dynamically at open time */
+/* "Constants" (== variables that are set)
+ * The first eight values are set dynamically at open/resize time.
+ */
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    MARGIN,
+    SCRSIZ,
+/* */
+    NPAUSE,
 };
 
 static void tcapopen(void) {
@@ -117,10 +124,10 @@ static void tcapopen(void) {
 
 /* Get screen size from system, or else from termcap.  */
     getscreensize(&int_col, &int_row);
-    term.t_nrow = int_row - 1;
     term.t_ncol = int_col;
+    SET_t_nrow(int_row);
 
-    if ((term.t_nrow <= 0) && (term.t_nrow = (short)tgetnum("li") - 1) == -1) {
+    if ((term.t_nrow <= 0) && (term.t_nrow = (short)tgetnum("li")) == -1) {
         puts("termcap entry incomplete (lines)");
         exit(1);
     }
@@ -130,10 +137,7 @@ static void tcapopen(void) {
         exit(1);
     }
 #ifdef SIGWINCH
-    term.t_mcol = 50*(1 + (term.t_ncol + 30)/50);
-    if (term.t_mcol < 270) term.t_mcol = 270;
-    term.t_mrow = 30*(1 + (term.t_nrow + 20)/30);
-    if (term.t_mrow < 100) term.t_mrow = 100;
+    set_scrarray_size(term.t_nrow, term.t_ncol);
 #else
     term.t_mcol = term.t_ncol;
     term.t_mrow = term.t_nrow;
@@ -195,7 +199,7 @@ static void tcapopen(void) {
 }
 
 static void tcapclose(void) {
-    putpad(tgoto(CM, 0, term.t_nrow));
+    putpad(tgoto(CM, 0, term.t_mbline));
     putpad(TE);
     ttflush();
     ttclose();
@@ -269,7 +273,7 @@ static void tcapscroll_reg(int from, int to, int howmanylines) {
         tcapmove(from, 0);
         for (i = to - from; i > 0; i--) putpad(SR);
     }
-    tcapscrollregion(0, term.t_nrow);
+    tcapscrollregion(0, term.t_mbline);
 }
 
 /* move howmanylines lines starting at from to to */

@@ -1376,7 +1376,7 @@ void edinit(char *bname) {
     wp->w_bcolor = gbcolor;
 #endif
     wp->w.fcol = 0;
-    wp->w_ntrows = term.t_nrow - 1;         /* "-1" for mode line.  */
+    wp->w_ntrows = term.t_vscreen;          /* Ignoring mode-line   */
     wp->w_force = 0;
     wp->w_flag = WFMODE | WFHARD;           /* Full.                */
     return;

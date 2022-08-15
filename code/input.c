@@ -927,7 +927,7 @@ void sigwinch_handler(int signr) {
     int w, h;
 
     getscreensize(&w, &h);
-    if (h && w && (h - 1 != term.t_nrow || w != term.t_ncol))
+    if (h && w && (h != term.t_nrow || w != term.t_ncol))
         newscreensize(h, w, 0);
 
 /* Need to reget the mb_info data now */
@@ -941,7 +941,7 @@ void sigwinch_handler(int signr) {
     curbp = mb_bp;
     curwp = mb_wp;
     wheadp = mb_hp;
-    curwp->w_toprow = term.t_nrow;  /* Set new value */
+    curwp->w_toprow = term.t_mbline;    /* Set new value */
     inmb = TRUE;
 /* Ensure the minibuffer is redrawn */
     mbupdate();
@@ -999,7 +999,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
         mb_winp->w_fcolor = gfcolor;
         mb_winp->w_bcolor = gbcolor;
 #endif
-        mb_winp->w_toprow = term.t_nrow;
+        mb_winp->w_toprow = term.t_mbline;
         mb_winp->w_ntrows = 1;
         mb_winp->w.fcol = 0;
         mb_winp->w_force = 0;
@@ -1065,7 +1065,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 
     if (!swbuffer(bp, 0)) return FALSE;
 
-    curwp->w_toprow = term.t_nrow;
+    curwp->w_toprow = term.t_mbline;
     curwp->w_ntrows = 1;
     curbp->b_mode = new_bmode;
 

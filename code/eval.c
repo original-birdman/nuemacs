@@ -583,7 +583,7 @@ static char *gtenv(char *vname) {
 /* Otherwise, fetch the appropriate value */
     switch (evl[vnum].tag) {
     case EVFILLCOL:         return ue_itoa(fillcol);
-    case EVPAGELEN:         return ue_itoa(term.t_nrow + 1);
+    case EVPAGELEN:         return ue_itoa(term.t_nrow);
     case EVCURCOL:          return ue_itoa(getccol() + 1);
     case EVCURLINE:         return ue_itoa(getcline());
     case EVFLICKER:         return ltos(flickcode);

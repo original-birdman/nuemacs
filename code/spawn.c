@@ -24,6 +24,7 @@ static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
  * Requires setting the new values (lwidth and lheight) and restoring
  * the old ones (term.t_nrow and term.t_ncol). (Just setting the
  * originals to zero can lead to crashes in vtputc).
+ * Need to restore t_mbline and t_vscreen too.
  * Call this at the end of any function that calls system().
  */
 static int orig_width, orig_height;
@@ -37,7 +38,7 @@ void check_for_resize(void) {
     if ((lwidth != orig_width) || (lheight != orig_height)) {
         chg_width = lwidth;
         chg_height = lheight;
-        term.t_nrow = orig_height - 1;
+        SET_t_nrow(orig_height);
         term.t_ncol = orig_width;
     }
     return;
@@ -65,7 +66,7 @@ int spawncli(int f, int n) {
     get_orig_size();
 #endif
 #if USG | BSD
-    movecursor(term.t_nrow, 0);     /* Seek to last line.   */
+    movecursor(term.t_mbline, 0);   /* Seek to last line.   */
     TTflush();
     TTclose();                      /* stty to old settings */
     TTkclose();                     /* Close "keyboard" */

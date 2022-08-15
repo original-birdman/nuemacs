@@ -290,7 +290,7 @@ void vtinit(void) {
  */
 void vttidy(void) {
     mlerase();
-    movecursor(term.t_nrow, 0);
+    movecursor(term.t_mbline, 0);
     TTflush();
     TTclose();
     TTkclose();
@@ -442,11 +442,9 @@ static void updgar(void) {
     struct grapheme *txt;
     int i, j;
 
-/* GGR - include the last row, so <=, (for mini-buffer) */
-    int lrow;
-    if (inmb) lrow = term.t_nrow + 1;
-    else      lrow = term.t_nrow;
-    for (i = 0; i < lrow; ++i) {
+/* GGR - include the last row, so <=. */
+    int lrow = inmb? term.t_mbline: term.t_vscreen;
+    for (i = 0; i <= lrow; ++i) {
         vscreen[i]->v_flag |= VFCHG;
 #if REVSTA
         vscreen[i]->v_flag &= ~VFREV;
@@ -867,10 +865,8 @@ int updupd(int force) {
     scrflags = 0;
 
 /* GGR - include the last row, so <=, (for mini-buffer) */
-    int lrow;
-    if (inmb) lrow = term.t_nrow + 1;
-    else      lrow = term.t_nrow;
-    for (i = 0; i < lrow; ++i) {
+    int lrow = inmb? term.t_mbline: term.t_vscreen;
+    for (i = 0; i <= lrow; ++i) {
         vp1 = vscreen[i];
 
 /* For each line that needs to be updated */
@@ -896,7 +892,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
 
     if (!term.t_scroll) return FALSE;       /* No way to scroll */
 
-    rows = term.t_nrow;
+    rows = term.t_mbline;           /* First line to ignore */
     cols = term.t_ncol;
 
     first = -1;
@@ -1481,7 +1477,7 @@ void force_movecursor(int row, int col) {
 void mlerase(void) {
     int i;
 
-    movecursor(term.t_nrow, 0);
+    movecursor(term.t_mbline, 0);
     if (discmd == FALSE) return;
 
 #if COLOR
@@ -1493,8 +1489,7 @@ void mlerase(void) {
     else {
         for (i = 0; i < term.t_ncol - 1; i++)
             TTputc(' ');                /* No need to update ttcol */
-        movecursor(term.t_nrow, 1);     /* Force the move! */
-        movecursor(term.t_nrow, 0);
+        force_movecursor(term.t_mbline, 0);
     }
     TTflush();
     mpresf = FALSE;
@@ -1537,7 +1532,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
 
 /* If we are not currently echoing on the command line, abort this */
     if (discmd == FALSE) {
-        movecursor(term.t_nrow, 0);
+        movecursor(term.t_mbline, 0);
         return;
     }
 #if COLOR
@@ -1552,7 +1547,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
         mlerase();
         TTflush();
     }
-    movecursor(term.t_nrow, 0);
+    movecursor(term.t_mbline, 0);
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
@@ -1765,8 +1760,8 @@ void sizesignal(int signr) {
 
     getscreensize(&w, &h);
 
-    if (h && w && (h - 1 != term.t_nrow || w != term.t_ncol))
-        newscreensize(h, w, 0);
+    if (h && w && (h != term.t_nrow || w != term.t_ncol))
+         newscreensize(h, w, 0);
 
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
@@ -1776,6 +1771,17 @@ void sizesignal(int signr) {
     errno = old_errno;
 }
 
+/* Given a screen height and width, set t_mcol/t_mrow as a rounded-up
+ * amount, with a minimum size (to avoid re-allocs on small changes).
+ */
+void set_scrarray_size(int h, int w) {
+    term.t_mcol = 50*(1 + (w + 30)/50);
+    if (term.t_mcol < 270) term.t_mcol = 270;
+    term.t_mrow = 30*(1 + (h + 20)/30);
+    if (term.t_mrow < 100) term.t_mrow = 100;
+    return;
+}
+
 int newscreensize(int h, int w, int no_update_needed) {
     if (displaying) {           /* do the change later */
         chg_width = w;
@@ -1783,11 +1789,7 @@ int newscreensize(int h, int w, int no_update_needed) {
         return FALSE;
     }
     chg_width = chg_height = 0;
-
-    term.t_mcol = 50*(1 + (w + 30)/50);
-    if (term.t_mcol < 270) term.t_mcol = 270;
-    term.t_mrow = 30*(1 + (h + 20)/30);
-    if (term.t_mrow < 100) term.t_mrow = 100;
+    set_scrarray_size(h, w);
     vtinit();
 
     if (h - 1 < term.t_mrow) newsize(TRUE, h);
@@ -1808,15 +1810,15 @@ int newscreensize(int h, int w, int no_update_needed) {
 void mberase(void) {
     struct video *vp1;
 
-    vtmove(term.t_nrow, 0);
+    vtmove(term.t_mbline, 0);
     vteeol();
-    vp1 = vscreen[term.t_nrow];
+    vp1 = vscreen[term.t_mbline];
 #if COLOR
     vp1->v_fcolor = gfcolor;
     vp1->v_bcolor = gbcolor;
 #endif
 
-    updateline(term.t_nrow, vp1, pscreen[term.t_nrow]);
+    updateline(term.t_mbline, vp1, pscreen[term.t_mbline]);
     return;
 }
 

@@ -437,13 +437,6 @@ struct inwbuf {
  * one terminal type.
  */
 struct terminal {
-    int t_mrow;                 /* max number of rows allowable  */
-    int t_nrow;                 /* current number of rows used   */
-    int t_mcol;                 /* max Number of columns.        */
-    int t_ncol;                 /* current Number of columns.    */
-    int t_margin;               /* min margin for extended lines */
-    int t_scrsiz;               /* size of scroll region "       */
-    int t_pause;                /* # times thru update to pause  */
     void (*t_open)(void);       /* Open terminal at the start.   */
     void (*t_close)(void);      /* Close terminal at end.        */
     void (*t_kopen)(void);      /* Open keyboard                 */
@@ -462,6 +455,19 @@ struct terminal {
     void (*t_setback) (int);    /* set background color          */
 #endif
     void (*t_scroll)(int, int,int); /* scroll a region of the screen */
+    int t_mrow;                 /* max rows (allocated)          */
+    int t_nrow;                 /* current number of rows used   */
+/* Next two are derived from t_nrow (-1, -2 resp), but it makes
+ * things easier to read/process if we calcutae them one.
+ * USE the SET_t_nrow to set t_nrow - it sets the others too.
+ */
+    int t_mbline;               /* 0-based minibuffer-line index */
+    int t_vscreen;              /* 0-based vscreen max index     */
+    int t_mcol;                 /* max columns (allocated)       */
+    int t_ncol;                 /* current Number of columns.    */
+    int t_margin;               /* min margin for extended lines */
+    int t_scrsiz;               /* size of scroll region "       */
+    int t_pause;                /* # times thru update to pause  */
 };
 
 /* TEMPORARY macros for terminal I/O  (to be placed in a machine

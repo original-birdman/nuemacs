@@ -171,6 +171,7 @@ extern void mlforce_one(const char *);
 extern void mlputs(char *);
 extern void getscreensize(int *, int *);
 extern void sizesignal(int);
+extern void set_scrarray_size(int, int);
 extern int newscreensize(int, int, int);
 
 extern int ttput1c(char);
