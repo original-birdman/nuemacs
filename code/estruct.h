@@ -132,7 +132,6 @@
 #define NSTRING 513             /* # of bytes, string buffers   */
 #define NKBDM   256             /* # of strokes, keyboard macro */
 #define NPAT    128             /* # of bytes, pattern          */
-#define HUGE    1000            /* Huge number                  */
 #define NLOCKS  100             /* max # of file locks active   */
 #define NCOLORS 8               /* number of supported colors   */
 #define KBLOCK  250             /* sizeof kill buffer chunks    */

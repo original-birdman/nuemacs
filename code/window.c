@@ -512,12 +512,12 @@ int newsize(int f, int n) {
     struct window *lastwp;  /* last window scanned */
     int lastline;           /* screen line of last line of current window */
 
-/* If the command defaults, assume the largest */
-    if (f == FALSE) n = term.t_mrow + 1;
+/* If the command defaults, assume the original size */
+    if (f == FALSE) n = orig_nrow;
 
-/* make sure it's in range */
-    if (n < 3 || n > term.t_mrow + 1) {
-        mlwrite_one("%Screen size out of range");
+/* make sure it's resonable */
+    if (n < 3 ) {
+        mlwrite_one("%Screen size too small");
         return FALSE;
     }
 
@@ -582,12 +582,12 @@ int newsize(int f, int n) {
 int newwidth(int f, int n) {
     struct window *wp;
 
-/* If the command defaults, assume the largest */
-    if (f == FALSE) n = term.t_mcol;
+/* If the command defaults, assume the original size */
+    if (f == FALSE) n = orig_ncol;
 
-/* Make sure it's in range */
-    if (n < 10 || n > term.t_mcol) {
-        mlwrite_one("%Screen width out of range");
+/* Make sure it's in reasonable */
+    if (n < 10) {
+        mlwrite_one("%Screen width too small");
         return FALSE;
     }
 

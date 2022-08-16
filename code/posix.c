@@ -94,8 +94,8 @@ void ttopen(void) {
     kbdpoll = FALSE;
 
 /* on all screens we are not sure of the initial position of the cursor */
-    ttrow = 999;
-    ttcol = 999;
+    ttrow = -1;
+    ttcol = -1;
 }
 
 /* This function gets called just before we go back home to the command

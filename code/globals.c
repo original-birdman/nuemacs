@@ -32,8 +32,8 @@ int mstore = FALSE;             /* storing text to macro flag   */
 int discmd = TRUE;              /* display command flag         */
 int disinp = TRUE;              /* display input characters     */
 struct buffer *bstore = NULL;   /* buffer to store macro text to */
-int ttrow = HUGE;               /* Row location of HW cursor */
-int ttcol = HUGE;               /* Column location of HW cursor */
+int ttrow = -1;                 /* Row location of HW cursor */
+int ttcol = -1;                 /* Column location of HW cursor */
 int lbound = 0;                 /* leftmost column of current line
                                    being displayed */
 int metac = CONTROL | '[';      /* current meta character */
@@ -222,3 +222,7 @@ int ggr_opts = 0;
  * p MUST be reset to NULL after every restore!!!
  */
 sysmark_t sysmark = { NULL, 0 };
+
+/* Starting values for screen sizes */
+
+int orig_nrow, orig_ncol;

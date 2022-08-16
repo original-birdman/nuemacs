@@ -142,6 +142,8 @@ static void tcapopen(void) {
     term.t_mcol = term.t_ncol;
     term.t_mrow = term.t_nrow;
 #endif
+    orig_ncol = term.t_ncol;
+    orig_nrow = term.t_nrow;
     p = tcapbuf;
     t = tgetstr("pc", &p);
     if (t) PC = *t;
@@ -208,8 +210,8 @@ static void tcapclose(void) {
 static void tcapkopen(void) {
     putpad(TI);
     ttflush();
-    ttrow = 999;
-    ttcol = 999;
+    ttrow = -1;
+    ttcol = -1;
     sgarbf = TRUE;
     strcpy(sres, "NORMAL");
 }

@@ -1465,7 +1465,7 @@ void movecursor(int row, int col) {
     }
 }
 void force_movecursor(int row, int col) {
-    ttrow = -100;       /* Force the optimizing test to fail */
+    ttrow = -1;         /* Force the optimizing test to fail */
     movecursor(row, col);
 }
 
