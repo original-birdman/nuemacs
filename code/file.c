@@ -72,18 +72,20 @@ static int resetkey(void) { /* Reset the encryption key if needed */
 /* insert file in buffer at iline.
  * Go to end of inserted file if goto_end is set.
  * Check for DOS line-endings if check_dos is set.
- * Return if it is a dos_file in dos_file.
- * Return lines read in nlines.
- * Return the read status as the function value.
+ * Return read status as the function value.
  * Used by ifile and readin().
+ * This is not re-entrant, so use static file-wide variables to "return":
+ *  lines read in nlines.
+ *  whether it is a dos_file in dos_file.
  */
+static int nlines, dos_file;
 static int file2buf(struct line *iline, char *mode, int goto_end,
-     int check_dos, int *nlines, int *dos_file) {
+     int check_dos) {
     int s;
-    int lnl = 0;
-    int ldos = FALSE;
     struct line *lp0, *lp1, *lp2;
 
+    nlines = 0;
+    dos_file = FALSE;
     while ((s = ffgetline()) == FIOSUC) {
         lp1 = fline;            /* Allocate by ffgetline..*/
         lp0 = iline;            /* line previous to insert */
@@ -95,23 +97,20 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
         lp1->l_bp = lp0;
         lp1->l_fp = lp2;
 
-/* And advance and write out the current line */
-        iline = lp1;        
-        ++lnl;
+/* Then advance by remembering the current line */
+        iline = lp1;
 
-/* Check for a DOS line ending on line 1 */
-        if (check_dos && (lnl == 1) && (lp1->l_text[lp1->l_used-1] == '\r'))
-            ldos = TRUE;  
-        if (ldos && lp1->l_text[lp1->l_used-1] == '\r')
-             lp1->l_used--;             /* Remove the trailing CR */
+/* Check for a DOS line ending on first line */
+        if (check_dos && (nlines == 0) && (lp1->l_text[lp1->l_used-1] == '\r'))
+            dos_file = TRUE;
+        if (dos_file && lp1->l_text[lp1->l_used-1] == '\r')
+             lp1->l_used--;                 /* Remove the trailing CR */
 
-        if (!(lnl % 300) && !silent)      /* GGR */
-             mlwrite(MLbkt("%s file") " : %d lines", mode, lnl);
+        if (!(++nlines % 300) && !silent)   /* GGR */
+             mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
     }
     if (goto_end) curwp->w.dotp = iline;
     ffclose();              /* Ignore errors. */
-    *dos_file = ldos;
-    *nlines = lnl;
     return s;
 }
 
@@ -122,7 +121,6 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
 static int ifile(char *fname) {
     struct buffer *bp;
     int s;
-    int nline;
 
     bp = curbp;             /* Cheap.               */
     bp->b_flag |= BFCHG;    /* we have changed      */
@@ -155,9 +153,7 @@ static int ifile(char *fname) {
     curwp->w.markp = curwp->w.dotp;
     curwp->w.marko = 0;
 
-    nline = 0;
-    int dos_include;
-    s = file2buf(curwp->w.dotp, "Inserting", TRUE, TRUE, &nline, &dos_include);
+    s = file2buf(curwp->w.dotp, "Inserting", TRUE, TRUE);
     curwp->w.markp = lforw(curwp->w.markp);     /* Restore original mark */
     strcpy(readin_mesg, MLpre);
     if (s == FIOERR) {
@@ -168,9 +164,9 @@ static int ifile(char *fname) {
         strcat(readin_mesg, "OUT OF MEMORY, ");
         curbp->b_flag |= BFTRUNC;
     }
-    sprintf(&readin_mesg[strlen(readin_mesg)], "Inserted %d line", nline);
-    if (nline > 1) strcat(readin_mesg, "s");
-    if (dos_include) strcat(readin_mesg, " - from DOS file!");
+    sprintf(&readin_mesg[strlen(readin_mesg)], "Inserted %d line", nlines);
+    if (nlines > 1) strcat(readin_mesg, "s");
+    if (dos_file) strcat(readin_mesg, " - from DOS file!");
     strcat(readin_mesg, MLpost);
     mlwrite_one(readin_mesg);
 
@@ -385,7 +381,6 @@ int readin(char *fname, int lockfl) {
     struct window *wp;
     struct buffer *bp;
     int s;
-    int nline;
 
 #if FILOCK && (BSD || SVR4)
     if (lockfl && lockchk(fname) == ABORT) {
@@ -444,8 +439,7 @@ int readin(char *fname, int lockfl) {
 
 /* Read the file in */
     if (!silent) mlwrite_one(MLbkt("Reading file"));  /* GGR */
-    int dos_file;
-    s = file2buf(curbp->b_linep, "Reading", FALSE, autodos, &nline, &dos_file);
+    s = file2buf(curbp->b_linep, "Reading", FALSE, autodos);
     if (dos_file) curbp->b_mode |= MDDOSLE;
     else          curbp->b_mode &= ~MDDOSLE;
     if (!silent) strcpy(readin_mesg, MLpre);
@@ -458,8 +452,8 @@ int readin(char *fname, int lockfl) {
         curbp->b_flag |= BFTRUNC;
     }
     if (!silent) {                      /* GGR */
-        sprintf(&readin_mesg[strlen(readin_mesg)], "Read %d line", nline);
-        if (nline != 1) strcat(readin_mesg, "s");
+        sprintf(&readin_mesg[strlen(readin_mesg)], "Read %d line", nlines);
+        if (nlines != 1) strcat(readin_mesg, "s");
         if (curbp->b_mode & MDDOSLE)
             strcat(readin_mesg, " - DOS mode enabled!");
         strcat(readin_mesg, MLpost);
