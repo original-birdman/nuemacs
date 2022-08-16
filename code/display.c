@@ -1345,7 +1345,7 @@ static void modeline(struct window *wp) {
     int mode_mask = 1;
     for (i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
 /* MDEQUIV and MDRPTMG are never displayed alone */
-        if (mode_mask == MDEQUIV || mode_mask == MDRPTMG) continue;
+        if (mode_mask & (MDEQUIV|MDRPTMG)) goto next_mode;
         if (mwp->w_bufp->b_mode & mode_mask) {
             if (!firstm) strcat(tline, " ");
             firstm = FALSE;
@@ -1372,6 +1372,7 @@ static void modeline(struct window *wp) {
                 strcat(tline, mode2name[i]);
             }
         }
+next_mode:
         mode_mask <<= 1;
     }
     strcat(tline, MLpost " ");
