@@ -515,7 +515,7 @@ int newsize(int f, int n) {
 /* If the command defaults, assume the original size */
     if (f == FALSE) n = orig_nrow;
 
-/* make sure it's resonable */
+/* make sure it's reasonable */
     if (n < 3 ) {
         mlwrite_one("%Screen size too small");
         return FALSE;
@@ -524,6 +524,14 @@ int newsize(int f, int n) {
     if (term.t_nrow == n)
         return TRUE;
     else if (term.t_nrow < n) {
+/* Ensure we have sufficient v/pscreen space.
+ * vtinit needs term.t_mcol/term.t_mrow set first.
+ */
+        if (term.t_mrow < n) {
+            set_scrarray_size(n, term.t_ncol);
+            vtinit();
+        }
+
 /* Go to the last window... */
         wp = wheadp;
         while (wp->w_wndp != NULL) wp = wp->w_wndp;
@@ -567,9 +575,10 @@ int newsize(int f, int n) {
         }
     }
 
-/* screen is garbage */
+/* Set term.t_nrow and all related vars now */
     SET_t_nrow(n);
 
+/* screen is garbage */
     sgarbf = TRUE;
     return TRUE;
 }
@@ -589,6 +598,14 @@ int newwidth(int f, int n) {
     if (n < 10) {
         mlwrite_one("%Screen width too small");
         return FALSE;
+    }
+
+/* Ensure we have sufficient v/pscreen space.
+ * vtinit needs term.t_mcol/term.t_mrow set first.
+ */
+    if (term.t_mrow < n) {
+        set_scrarray_size(term.t_nrow, n);
+        vtinit();
     }
 
 /* Otherwise, just re-width it (no big deal) */
