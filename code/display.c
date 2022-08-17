@@ -1789,12 +1789,14 @@ int newscreensize(int h, int w, int no_update_needed) {
         chg_height = h;
         return FALSE;
     }
+    int old_nrow = term.t_nrow;
+    int old_ncol = term.t_ncol;
     chg_width = chg_height = 0;
     set_scrarray_size(h, w);
     vtinit();
 
-    if (h - 1 < term.t_mrow) newsize(TRUE, h);
-    if (w < term.t_mcol)     newwidth(TRUE, w);
+    if (h != old_nrow) newsize(TRUE, h);
+    if (w != old_ncol) newwidth(TRUE, w);
 
     if (!no_update_needed) update(TRUE);
 
