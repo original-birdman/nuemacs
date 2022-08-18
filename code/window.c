@@ -503,17 +503,13 @@ int restwnd(int f, int n) {
 
 /* Resize the screen height, re-writing the screen
  *
- * int f;       default flag
- * int n;       numeric argument
+ * int n;       new screen height to set
  */
-int newsize(int f, int n) {
+int newsize(int n) {
     struct window *wp;      /* current window being examined */
     struct window *nextwp;  /* next window to scan */
     struct window *lastwp;  /* last window scanned */
     int lastline;           /* screen line of last line of current window */
-
-/* If the command defaults, assume the original size */
-    if (f == FALSE) n = orig_nrow;
 
 /* make sure it's reasonable */
     if (n < 3 ) {
@@ -585,14 +581,10 @@ int newsize(int f, int n) {
 
 /* Resize the screen width, re-writing the screen
  *
- * int f;               default flag
- * int n;               numeric argument
+ * int n;           new width to set
  */
-int newwidth(int f, int n) {
+int newwidth(int n) {
     struct window *wp;
-
-/* If the command defaults, assume the original size */
-    if (f == FALSE) n = orig_ncol;
 
 /* Make sure it's in reasonable */
     if (n < 10) {

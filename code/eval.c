@@ -787,7 +787,7 @@ static int svar(struct variable_description *var, char *value) {
             fillcol = atoi(value);
             break;
         case EVPAGELEN:
-            status = newsize(TRUE, atoi(value));
+            status = newsize(atoi(value));
             break;
         case EVCURCOL:
             srch_can_hunt = 0;
@@ -801,7 +801,7 @@ static int svar(struct variable_description *var, char *value) {
             flickcode = stol(value);
             break;
         case EVCURWIDTH:
-            status = newwidth(TRUE, atoi(value));
+            status = newwidth(atoi(value));
             break;
         case EVCBUFNAME:
             strcpy(curbp->b_bname, value);

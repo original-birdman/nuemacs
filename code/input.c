@@ -21,9 +21,7 @@
 /* GGR - some needed things for minibuffer handling */
 #if UNIX
 #include <signal.h>
-#ifdef SIGWINCH
 static int remap_c_on_intr = 0;
-#endif
 #endif
 #include "line.h"
 
@@ -658,7 +656,6 @@ int tgetc(void) {
     }
 
 /* Fetch a character from the terminal driver */
-#ifdef SIGWINCH
     struct sigaction sigact;
     if (remap_c_on_intr) {
         sigaction(SIGWINCH, NULL, &sigact);
@@ -666,23 +663,18 @@ int tgetc(void) {
         sigaction(SIGWINCH, &sigact, NULL);
         errno = 0;
     }
-#endif
     c = TTgetc();
-#ifdef SIGWINCH
     if (remap_c_on_intr) {
         sigaction(SIGWINCH, NULL, &sigact);
         sigact.sa_flags = SA_RESTART;
         sigaction(SIGWINCH, &sigact, NULL);
     }
-#endif
 /* Record it for $lastkey */
     lastkey = c;
 
-#ifdef SIGWINCH
     if (c == 0 && errno == EINTR && remap_c_on_intr)
         c = UEM_NOCHAR;         /* Note illegal char */
     else
-#endif
 /* Save it if we need to */
         if (kbdmode == RECORD) {
             *kbdptr++ = c;
@@ -900,8 +892,6 @@ int getcmd(void) {
 
 static struct window *mb_winp = NULL;
 
-#ifdef SIGWINCH
-
 typedef void (*sighandler_t)(int);
 
 void sigwinch_handler(int signr) {
@@ -948,7 +938,6 @@ void sigwinch_handler(int signr) {
 
     return;
 }
-#endif
 
 /* The actual getstring() starts now... */
 
@@ -980,7 +969,6 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
  */
     struct window wsave = wsave;
 
-#ifdef SIGWINCH
 /* We need to block SIGWINCH until we have set-up all of the variables
  * we need after the longjmp.
  */
@@ -988,7 +976,6 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     sigemptyset(&sigwinch_set);
     sigaddset(&sigwinch_set, SIGWINCH);
     sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
-#endif
 
 /* Create a minibuffer window for use by all minibuffers */
     if (!mb_winp) {
@@ -1028,9 +1015,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     *buf = '\0';            /* Ensure we never return garbage */
 
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
-#ifdef SIGWINCH
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
-#endif
         return FALSE;
     }
 
@@ -1069,7 +1054,6 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     curwp->w_ntrows = 1;
     curbp->b_mode = new_bmode;
 
-#ifdef SIGWINCH
 /* The oldact is restored on exit. */
     struct sigaction sigact, oldact;
     sigact.sa_handler = sigwinch_handler;
@@ -1078,7 +1062,6 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     sigaction(SIGWINCH, &sigact, &oldact);
 /* Now we can enable the signal */
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
-#endif
 
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
@@ -1143,15 +1126,12 @@ loop:
     curwp->w.doto = savdoto;
 
 /* Get the next command (character) from the keyboard */
-#ifdef SIGWINCH
+
     remap_c_on_intr = 1;
-#endif
     c = getcmd();
 /* We get UEM_NOCHAR back on a sigwin signal. */
-#ifdef SIGWINCH
     remap_c_on_intr = 0;
     if (c == UEM_NOCHAR) goto loop;
-#endif
 
 /* Check for any numeric prefix
  * This looks for Esc<n> prefixes and returns c/f/n in carg.
@@ -1320,13 +1300,11 @@ submit:     /* Tidy up */
     }
 abort:
 
-#ifdef SIGWINCH
 /* If we get here "normally" SIGWINCH will still be enabled, so we need
  * to block it while we tidy up, otherwise we might run through this end
  * code twice.
  */
     sigprocmask(SIG_BLOCK, &sigwinch_set, NULL);
-#endif
 
     if (!swbuffer(bp, 0))   /* Make sure we're still in our minibuffer */
         return FALSE;
@@ -1357,11 +1335,9 @@ abort:
         TTflush();
     }
 
-#ifdef SIGWINCH
 /* We need to re-instate the original handler now... */
     sigaction(SIGWINCH, &oldact, NULL);
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
-#endif
 
     return status;
 }

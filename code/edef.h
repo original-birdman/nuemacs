@@ -260,7 +260,3 @@ typedef struct {
 extern sysmark_t sysmark;
 
 #endif  /* EDEF_H_ */
-
-/* Starting values for screen sizes */
-
-extern int orig_nrow, orig_ncol;

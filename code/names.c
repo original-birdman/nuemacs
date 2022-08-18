@@ -29,8 +29,6 @@ struct name_bind names[] = {
     {"case-word-lower", lowerword, {0, 0, 0, 0, 0}},
     {"case-word-upper", upperword, {0, 0, 0, 0, 0}},
     {"change-file-name", filename, {0, 1, 0, 1, 0}},
-    {"change-screen-size", newsize, {0, 1, 0, 1, 0}},
-    {"change-screen-width", newwidth, {0, 1, 0, 1, 0}},
     {"char-replace", char_replace, {0, 0, 0, 0, 0}},       /* GGR */
     {"clear-and-redraw", redraw, {0, 0, 0, 1, 0}},
     {"clear-message-line", clrmes, {0, 0, 0, 1, 0}},

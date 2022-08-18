@@ -222,7 +222,3 @@ int ggr_opts = 0;
  * p MUST be reset to NULL after every restore!!!
  */
 sysmark_t sysmark = { NULL, 0 };
-
-/* Starting values for screen sizes */
-
-int orig_nrow, orig_ncol;

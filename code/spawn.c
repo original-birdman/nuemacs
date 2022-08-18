@@ -18,7 +18,6 @@
 
 static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
 
-#ifdef SIGWINCH
 /* If the screen size has changed whilst we were away on the command line
  * force a redraw to the new size.
  * Requires setting the new values (lwidth and lheight) and restoring
@@ -43,7 +42,6 @@ void check_for_resize(void) {
     }
     return;
 }
-#endif
 
 /* Create a subjob with a copy of the command interpreter in it. When the
  * command interpreter exits, mark the screen as garbage so that you do a full
@@ -62,9 +60,8 @@ int spawncli(int f, int n) {
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
-#ifdef SIGWINCH
     get_orig_size();
-#endif
+
 #if USG | BSD
     movecursor(term.t_mbline, 0);   /* Seek to last line.   */
     TTflush();
@@ -82,9 +79,9 @@ int spawncli(int f, int n) {
     sleep(2);
     TTopen();
     TTkopen();
-#ifdef SIGWINCH
+
     check_for_resize();
-#endif
+
     return TRUE;
 #endif
 }
@@ -154,9 +151,9 @@ static int run_one_liner(int rxcopy, int wait, char *prompt) {
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
-#ifdef SIGWINCH
+
     get_orig_size();
-#endif
+
 #if USG | BSD
     if ((s = next_spawn_cmd(rxcopy, prompt, line)) != TRUE) return s;
     TTflush();
@@ -174,9 +171,9 @@ static int run_one_liner(int rxcopy, int wait, char *prompt) {
     }
     TTkopen();
     sgarbf = TRUE;
-#ifdef SIGWINCH
+
     check_for_resize();
-#endif
+
     return TRUE;
 #endif
 }
@@ -211,9 +208,8 @@ int pipecmd(int f, int n) {
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
-#ifdef SIGWINCH
     get_orig_size();
-#endif
+
 /* Get the command to pipe in */
     if ((s = next_spawn_cmd(RXARG(pipecmd), "@", line)) != TRUE) return s;
 
@@ -238,9 +234,9 @@ int pipecmd(int f, int n) {
     sgarbf = TRUE;
     s = TRUE;
 #endif
-#ifdef SIGWINCH
+
     check_for_resize();
-#endif
+
     if (s != TRUE) return s;
 
 /* Split the current window to make room for the command output */
@@ -280,9 +276,8 @@ int filter_buffer(int f, int n) {
     if (curbp->b_mode & MDVIEW) /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
 
-#ifdef SIGWINCH
     get_orig_size();
-#endif
+
 /* Get the filter name and its args */
     if ((s = next_spawn_cmd(RXARG(filter_buffer), "#", line)) != TRUE) return s;
 
@@ -316,9 +311,8 @@ int filter_buffer(int f, int n) {
     TTflush();
     sgarbf = TRUE;
 #endif
-#ifdef SIGWINCH
+
     check_for_resize();
-#endif
 
 /* Unset this flag, otherwise readin() prompts for "Discard changes" if
  * the original buffer (which we've just written out...to edit) was marked

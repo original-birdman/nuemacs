@@ -59,9 +59,7 @@ static int displaying = FALSE;
 #if UNIX
 #include <signal.h>
 #endif
-#ifdef SIGWINCH
 #include <sys/ioctl.h>
-#endif
 
 static int reframe(struct window *wp);
 static void updone(struct window *wp);
@@ -492,9 +490,7 @@ int update(int force) {
  * spawn.c forces a redraw using this on return from a command line, and
  * we need to ensure that term.t_ncol is set before doing any vtputc() calls.
  */
-#if SIGWINCH
     if (chg_width || chg_height) newscreensize(chg_height, chg_width, 1);
-#endif
     int was_displaying = displaying;    /* So this can recurse.... */
     displaying = TRUE;
 
@@ -562,9 +558,7 @@ int update(int force) {
     TTflush();
     displaying = was_displaying;
 
-#if SIGWINCH
     if (chg_width || chg_height) newscreensize(chg_height, chg_width, 0);
-#endif
 
     return TRUE;
 }
@@ -1740,20 +1734,14 @@ static void mlputf(int s) {
    If zero or a negative number is stored, the value is not valid.  */
 
 void getscreensize(int *widthp, int *heightp) {
-#ifdef TIOCGWINSZ
     struct winsize size;
     *widthp = 0;
     *heightp = 0;
     if (ioctl(0, TIOCGWINSZ, &size) < 0) return;
     *widthp = size.ws_col;
     *heightp = size.ws_row;
-#else
-    *widthp = 0;
-    *heightp = 0;
-#endif
 }
 
-#ifdef SIGWINCH
 void sizesignal(int signr) {
     UNUSED(signr);
     int w, h;
@@ -1795,16 +1783,13 @@ int newscreensize(int h, int w, int no_update_needed) {
     set_scrarray_size(h, w);
     vtinit();
 
-    if (h != old_nrow) newsize(TRUE, h);
-    if (w != old_ncol) newwidth(TRUE, w);
+    if (h != old_nrow) newsize(h);
+    if (w != old_ncol) newwidth(w);
 
     if (!no_update_needed) update(TRUE);
 
     return TRUE;
 }
-
-#endif
-
 
 /* GGR
  *    function to erase the mapped minibuffer line

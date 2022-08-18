@@ -992,11 +992,11 @@ int main(int argc, char **argv) {
 #if UNIX
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
-#ifdef SIGWINCH
+
     sigact.sa_handler = sizesignal;
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, NULL);
-#endif
+
 /* Add a handler for other signals, which will exit */
     sigact.sa_handler = exit_via_signal;
     sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
