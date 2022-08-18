@@ -175,7 +175,7 @@ static int prev_mrow = 0;
 static int prev_mcol = 0;
 static int prev_size = 0;
 void vtinit(void) {
-    int i;
+    int i, xi;
     struct video *vp;
     static struct video **new_vscreen;  /* Virtual screen. */
     static struct video **new_pscreen;  /* Physical screen. */
@@ -187,8 +187,13 @@ void vtinit(void) {
         TTrev(FALSE);
     }
 
-/* Is this for a larger request? If not, nothing to do. */
-
+/* Is this for a larger request? If not, nothing to do.
+ * NOTE that we never make a change if the current allocation is
+ * sufficient in both directions, but that it IS possible for one dimension
+ * to shrink if other one rises.
+ * The code allows for this (it frees from the previous size then
+ * initializes the new sizes).
+ */
     if ((term.t_mrow <= prev_mrow) && (term.t_mcol <= prev_mcol)) return;
 
 /* Allocate the 2 screen arrays */
@@ -204,64 +209,48 @@ void vtinit(void) {
     void *vdp = new_vdata;
     void *pdp = new_vdata + (term.t_mrow * row_size);
 
-    for (i = 0; i < term.t_mrow; ++i) {
+    for (i = 0; i < term.t_mrow; i++) {
         new_vscreen[i] = vdp;
         vdp += row_size;
         new_pscreen[i] = pdp;
         pdp += row_size;
     }
 
-/* GGR - clear things out at the start.
- * We can't use set_grapheme() until after we have initialized
- * We only need to initialize vscreen, as we do all assigning
- * (including Xmalloc()/Xfree()) there before copying to pscreen.
- * Need to clear it *all* out now!
- * Set-up line 1, then clone it.
- * For an enlarging re-init we need to copy across existing data...
+/* Callers assume the screen is garbage after a call (or empty at startup).
+ * So "all" we need to do is:
+ *  free any grapheme ex parts in the current vscreen
+ *  set new_vscreen to space graphemes
+ *  set new_pscreen to zeroes
+ *
+ * So:
+ * Free any grapheme ex parts in the current vscreen
  */
     for (i = 0; i < prev_mrow; i++) {
-        vp = new_vscreen[i];
-        memcpy(vp, vscreen[i], prev_size);
-        for (int xi = prev_mcol; xi < term.t_mcol; xi++) {
-            vp->v_text[xi].uc = ' ';
-            vp->v_text[xi].cdm = 0;
-            vp->v_text[xi].ex = NULL;
+        vp = vscreen[i];
+        for (xi = 0; xi < prev_mcol; xi++) {
+            if (vp->v_text[xi].ex) Xfree(vp->v_text[xi].ex);
         }
     }
-    if (prev_mrow < term.t_mrow) {
-        vp = new_vscreen[prev_mrow];
-        vp->v_flag = 0;
+/* Set new_vscreen to space graphemes by creating the first line then
+ * copying this into all succeeding lines.
+ */
+    vp = new_vscreen[0];
+    vp->v_flag = 0;
 #if COLOR
 /* GGR - use defined colors */
-        vp->v_rfcolor = gfcolor;
-        vp->v_rbcolor = gbcolor;
+    vp->v_rfcolor = gfcolor;
+    vp->v_rbcolor = gbcolor;
 #endif
-        for (i = 0; i < term.t_mcol; i++) {
-            vp->v_text[i].uc = ' ';
-            vp->v_text[i].cdm = 0;
-            vp->v_text[i].ex = NULL;
-        }
-        for (i = prev_mrow+1; i < term.t_mrow; ++i) {
-            memcpy(new_vscreen[i], vp, row_size);
-        }
+    for (i = 0; i < term.t_mcol; i++) {
+        vp->v_text[i].uc = ' ';
+        vp->v_text[i].cdm = 0;
+        vp->v_text[i].ex = NULL;
     }
-/* Just set the whole of pscreen to zeros
- * But again, preserve existing data...
- */
-    for (i = 0; i < prev_mrow; i++) {
-        vp = new_pscreen[i];
-        memcpy(vp, pscreen[i], prev_size);                  /* Old data */
-        if ((row_size - prev_size) > 0) {
-/* prev_size is a byte offset, so cast vp to bytes, otherwise prev_size becomes
- * an element index!
- */
-            memset((void *)vp+prev_size, 0, row_size - prev_size);  /* New zeroing */
-        }
+    for (i = 1; i < term.t_mrow; i++) {
+        memcpy(new_vscreen[i], vp, row_size);
     }
-/* Now the rest of the zeroing, if any required */
-    if ((term.t_mrow - prev_mrow) > 0)
-        memset(new_pscreen[prev_mrow], 0,
-             ((term.t_mrow - prev_mrow) * row_size));
+/* Set new_pscreen to zeroes */
+    memset(new_pscreen[0], 0, term.t_mrow * row_size);
 
 /* Now free any previous data and move the new allocations to the live ones */
 
@@ -276,8 +265,7 @@ void vtinit(void) {
     prev_mrow = term.t_mrow;
     prev_mcol = term.t_mcol;
     prev_size = row_size;
-
-    mberase();              /* GGR */
+    return;
 }
 
 /*
