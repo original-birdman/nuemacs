@@ -7,6 +7,7 @@
  */
 
 #include <stdio.h>
+#include <sys/utsname.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -662,6 +663,11 @@ static char *gtenv(char *vname) {
     case EVULPFORCED:       return ue_itoa(uproc_lpforced);
     case EVSDOPTS:          return showdir_opts;
     case EVGGROPTS:         return ue_itoa(ggr_opts);
+    case EVSYSTYPE:         {
+                                static struct utsname tuname;
+                                uname(&tuname);    
+                                return tuname.sysname;
+                            }
     }
 
     exit(-12);              /* again, we should never get here */
@@ -970,6 +976,7 @@ static int svar(struct variable_description *var, char *value) {
         case EVULPCOUNT:        /* All read-only */
         case EVULPTOTAL:
         case EVULPFORCED:
+        case EVSYSTYPE:
             status = FALSE;
             break;
 

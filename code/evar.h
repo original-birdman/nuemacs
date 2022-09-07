@@ -72,7 +72,7 @@ struct evlist evl[] = {
  { "uproc_lpforced", EVULPFORCED }, /* Did user set <n>? */
  { "showdir_opts", EVSDOPTS },  /* Start-up state (for user to set) */
  { "ggr_opts",  EVGGROPTS },    /* Optional-style difference */
-
+ { "sys_type",  EVSYSTYPE },    /* System type (== uname -s) */
 };
 
 /* The tags for user functions - used in struct evlist */
