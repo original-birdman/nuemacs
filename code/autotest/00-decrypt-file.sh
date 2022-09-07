@@ -40,7 +40,7 @@ EOD
 # Now check that what was written out (Decrypt-OUT) is what was
 # expected (Expected-Decrypt).
 #
-if diff -q Decrypt-OUT Expected-Decrypt; then
+if diff Decrypt-OUT Expected-Decrypt > /dev/null; then
     echo "File decryption test passed"
     rm -f Expected-Decrypt Decrypt-IN Decrypt-OUT uetest.rc
 else

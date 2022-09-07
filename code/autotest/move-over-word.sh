@@ -9,18 +9,11 @@
 prog='$1 != "--" {print substr($0, 4);}'
 
 # Need the -b because of the non-Unicode (invalid) 0xf1 bytes.
-# But Entware systems don't understand it, and work without it.
 #
-if awk -b '{}' /dev/null >/dev/null 2>&1; then
-    AWKARG=-b
-else
-    AWKARG=
-fi
-
 # Write out the test input file.
 # It's written here with row and column markers.
 #
-awk $AWKARG "$prog" > autotest.tfile <<EOD
+gawk -b "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 We need some text to test word movement.
 02 
