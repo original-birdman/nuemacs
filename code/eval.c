@@ -487,12 +487,8 @@ static char *gtfun(char *fname) {
     case UFABS:         return ue_itoa(abs(atoi(arg1)));
     case UFSINDEX:      return ue_itoa(sindex(arg1, arg2));
     case UFENV:
-#if     ENVFUNC
         tsp = getenv(arg1);
         return tsp == NULL ? "" : tsp;
-#else
-        return "";
-#endif
     case UFBIND:        return transbind(arg1);
     case UFEXIST:       return ltos(fexist(arg1));
     case UFBXIST:       return ltos(bfind(arg1, 0, 0) != NULL);
@@ -568,18 +564,13 @@ static char *gtenv(char *vname) {
         if (strcmp(vname, evl[vnum].var) == 0) break;
 
 /* Return errorm on a bad reference */
-    if (vnum == ARRAY_SIZE(evl))
-#if     ENVFUNC
-    {
+    if (vnum == ARRAY_SIZE(evl)) {
         char *ename = getenv(vname);
         if (ename != NULL)
             return ename;
         else
             return errorm;
     }
-#else
-    return errorm;
-#endif
 
 /* Otherwise, fetch the appropriate value */
     switch (evl[vnum].tag) {

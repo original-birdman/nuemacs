@@ -87,12 +87,6 @@
 
 #define MEMMAP  0
 
-#if USG | BSD
-#define ENVFUNC 1
-#else
-#define ENVFUNC 0
-#endif
-
 /* GGR - whether we want PATH to be searched before table lookup */
 #if GGR_MODE
 #define TABLE_THEN_PATH 1

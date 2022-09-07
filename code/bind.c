@@ -1017,15 +1017,8 @@ int startup(char *sfname) {
 
 /* GGR - Define a path-separator
  */
-static char path_sep =
-#if BSD | USG
-    '/'
-#else
-    '\0'
-#endif
-;
+static char path_sep = '/';
 
-#if ENVFUNC
 static int along_path(char *fname, char *fspec) {
     char *path;     /* environmental PATH variable */
     char *sp;       /* pointer into path spec */
@@ -1054,7 +1047,6 @@ static int along_path(char *fname, char *fspec) {
         }
     return FALSE;
 }
-#endif
 
 /* GGR - function to set pathname from the command-line
  * This overrides the compiled-in defaults
@@ -1113,7 +1105,6 @@ char *flook(char *fname, int hflag, int mode) {
         return res;
     }
 
-#if ENVFUNC
     if (hflag) {
         home = getenv("HOME");
         if (home != NULL) {     /* build home dir file spec */
@@ -1131,7 +1122,6 @@ char *flook(char *fname, int hflag, int mode) {
             }
         }
     }
-#endif
 
 /* Always try the current directory first - if allowed */
     if (allow_current && ffropen(fname) == FIOSUC) {
