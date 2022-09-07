@@ -318,7 +318,7 @@ store-procedure expand-envvar
         !if &equal $curchar 36  ; i.e. "$"
             !break
         !endif
-        !if &equal $curcol 0
+        !if &equal $curcol 1
             write-message "No envvar found"
             exchange-point-and-mark
             !finish
@@ -585,6 +585,15 @@ args-in-reexec ALL
     set .calls &add .calls 1
     !if &equ .calls 1           ; First call...
 
+; We need to GNU sort (for its -s stable sort option) and on
+; Solaris this is gsort, not sort.
+;
+        !if &seq $sys_type "SunOS"
+            set .sort "gsort"
+        !else
+            set .sort "sort"
+        !endif
+
 ; For the following 3 we set the ls flag as the value
 ;
         !if &equ &sin &upp $showdir_opts "T" 0
@@ -706,7 +715,7 @@ args-in-reexec ALL
 ; dangling links (which start l????????).
 ;
     !if &seq .showdir_sort_mixd ""  ; We want type sorting
-        set .sdsort &cat "| sort -s -k 1.1,1.1" .showdir_sort_dirf
+        set .sdsort &ptf "| %s %s%s" .sort "-s -k 1.1,1.1" .showdir_sort_dirf
     !else
         set .sdsort ""
     !endif
