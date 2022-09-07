@@ -132,7 +132,9 @@ endif
 NOTRACE =
 ifeq ($(strip $(NOTRACE)),)
     uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
-    ifneq ($(uname_M), x86_64)
+    ifeq ($(uname_M), x86_64)
+    else ifeq ($(uname_M), i86pc)        # Solaris11
+    else
         NOTRACE = 1
     endif
 endif
@@ -187,8 +189,8 @@ ifeq ($(strip $(NOTRACE)),)
             else
                 BCKTLIB = $(BCKTLOC)/libbacktrace.a
             endif
-    endif
-# If the user gave a specifc BCKT option, use that
+        endif
+# If the user gave a specific BCKT option, use that
     else ifeq ($(strip $(BCKT)),sys)
         BCKTINCL =
         BCKTLIB  = -lbacktrace
@@ -198,7 +200,11 @@ ifeq ($(strip $(NOTRACE)),)
         RPATH    =  -Wl,-rpath=/usr/local/lib
     else
         BCKTINCL = -I$(BCKT)
-        BCKTLIB  = $(BCKT)/libbcktproc.a
+        ulist = $(BCKT)/libbacktrace.a $(BCKT)/.libs/libbacktrace.a
+# Expand the wildcards...
+        xulist = $(shell echo $(ulist))
+        ures := $(firstword $(foreach arg, $(xulist), $(call filex, $(arg))))
+        BCKTLIB = $(ures)
     endif
 
 # If we haven't got a defined BCKTLIB then we haven't found one
@@ -217,14 +223,16 @@ endif
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 ifeq ($(uname_S),Linux)
- DEFINES=-DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
+ DEFINES=-DPOSIX -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 else ifeq ($(uname_S),FreeBSD)
- DEFINES=-DPOSIX -DSYSV -D_FREEBSD_C_SOURCE -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
+ DEFINES=-DPOSIX -DSYSV -D_FREEBSD_C_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
 else ifeq ($(uname_S),Darwin)
- DEFINES=-DPOSIX -DSYSV -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600
+ DEFINES=-DPOSIX -DSYSV -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
+else ifeq ($(uname_S),SunOS)
+ DEFINES=-DPOSIX -DSYSV -D__EXTENSIONS__ -DTCAP_BOOL -DSYS_TERMIOS_H
 # CygWin is just like Linux....
 else ifeq ($(firstword $(subst -, ,$(uname_S))),CYGWIN_NT)
- DEFINES=-DPOSIX -DUSG -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
+ DEFINES=-DPOSIX -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 endif
 
 # Are we building an ARM version for an Android 'phone?

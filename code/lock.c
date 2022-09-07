@@ -5,13 +5,16 @@
  *      written by Daniel Lawrence
  */
 
-#include <stdio.h>
 #include "estruct.h"
+
+#if     FILOCK && (BSD | SVR4)
+
+#include <stdio.h>
+#include <string.h>
 #include "edef.h"
 #include "efunc.h"
 
-#if     FILOCK && (BSD | SVR4)
-#include <sys/errno.h>
+#include <errno.h>
 
 static char *lname[NLOCKS];             /* names of all locked files */
 static int numlocks;                    /* # of current locks active */

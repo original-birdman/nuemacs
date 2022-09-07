@@ -20,6 +20,12 @@
 #include "efunc.h"
 
 #if !defined(__MSYS__)
+
+/* Needed to stop bool being defined twice when curses/term included... */
+#ifdef TCAP_BOOL
+#define _BOOL
+#endif
+
 #include <curses.h>
 #include <term.h>
 #endif
@@ -43,7 +49,6 @@ static void tcapbeep(void);
 static void tcaprev(int);
 static int tcapcres(char *);
 static void tcapscrollregion(int top, int bot);
-static void putpad(char *str);
 
 static void tcapopen(void);
 static void tcapclose(void);
@@ -64,7 +69,7 @@ static char *TI, *TE;
 static int term_init_ok = 0;
 #endif
 
-static char *CS, *DL, *AL, *SF, *SR;
+static char *_CS, *DL, *AL, *SF, *SR;
 
 struct terminal term = {
 /* Functions */
@@ -166,13 +171,13 @@ static void tcapopen(void) {
 
     if (CE == NULL) /* will we be able to use clear to EOL? */
         eolexist = FALSE;
-    CS = tgetstr("cs", &p);
+    _CS = tgetstr("cs", &p);
     SF = tgetstr("sf", &p);
     SR = tgetstr("sr", &p);
     DL = tgetstr("dl", &p);
     AL = tgetstr("al", &p);
 
-    if (CS && SR) {
+    if (_CS && SR) {
         if (SF == NULL) /* assume '\n' scrolls forward */
             SF = "\n";
         term.t_scroll = tcapscroll_reg;
@@ -196,14 +201,14 @@ static void tcapopen(void) {
 }
 
 static void tcapclose(void) {
-    putpad(tgoto(CM, 0, term.t_mbline));
-    putpad(TE);
+    putp(tgoto(CM, 0, term.t_mbline));
+    putp(TE);
     ttflush();
     ttclose();
 }
 
 static void tcapkopen(void) {
-    putpad(TI);
+    putp(TI);
     ttflush();
     ttrow = -1;
     ttcol = -1;
@@ -222,21 +227,21 @@ static void tcapkclose(void) {
 #if USG | BSD
 
 #else
-    putpad(TE);
+    putp(TE);
     ttflush();
 #endif
 }
 
 static void tcapmove(int row, int col) {
-    putpad(tgoto(CM, col, row));
+    putp(tgoto(CM, col, row));
 }
 
 static void tcapeeol(void) {
-    putpad(CE);
+    putp(CE);
 }
 
 static void tcapeeop(void) {
-    putpad(CL);
+    putp(CL);
 }
 
 /* Change reverse video status
@@ -245,9 +250,9 @@ static void tcapeeop(void) {
  */
 static void tcaprev(int state) {
     if (state) {
-        if (SO != NULL) putpad(SO);
+        if (SO != NULL) putp(SO);
     }
-    else if (SE != NULL) putpad(SE);
+    else if (SE != NULL) putp(SE);
 }
 
 /* Change screen resolution. */
@@ -263,12 +268,12 @@ static void tcapscroll_reg(int from, int to, int howmanylines) {
     if (to < from) {
         tcapscrollregion(to, from + howmanylines - 1);
         tcapmove(from + howmanylines - 1, 0);
-        for (i = from - to; i > 0; i--) putpad(SF);
+        for (i = from - to; i > 0; i--) putp(SF);
     }
     else {  /* from < to */
         tcapscrollregion(from, to + howmanylines - 1);
         tcapmove(from, 0);
-        for (i = to - from; i > 0; i--) putpad(SR);
+        for (i = to - from; i > 0; i--) putp(SR);
     }
     tcapscrollregion(0, term.t_mbline);
 }
@@ -279,22 +284,22 @@ static void tcapscroll_delins(int from, int to, int howmanylines) {
     if (to == from) return;
     if (to < from) {
         tcapmove(to, 0);
-        for (i = from - to; i > 0; i--) putpad(DL);
+        for (i = from - to; i > 0; i--) putp(DL);
         tcapmove(to + howmanylines, 0);
-        for (i = from - to; i > 0; i--) putpad(AL);
+        for (i = from - to; i > 0; i--) putp(AL);
     }
     else {
         tcapmove(from + howmanylines, 0);
-        for (i = to - from; i > 0; i--) putpad(DL);
+        for (i = to - from; i > 0; i--) putp(DL);
         tcapmove(from, 0);
-        for (i = to - from; i > 0; i--) putpad(AL);
+        for (i = to - from; i > 0; i--) putp(AL);
     }
 }
 
 /* cs is set up just like cm, so we use tgoto... */
 static void tcapscrollregion(int top, int bot) {
     ttputc(PC);
-    putpad(tgoto(CS, bot, top));
+    putp(tgoto(_CS, bot, top));
 }
 
 #if COLOR
@@ -310,8 +315,4 @@ static void tcapbcol(int color) {
 
 static void tcapbeep(void) {
         ttputc(BEL);
-}
-
-static void putpad(char *str) {
-        tputs(str, 1, ttputc);
 }

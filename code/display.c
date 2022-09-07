@@ -59,6 +59,10 @@ static int displaying = FALSE;
 #if UNIX
 #include <signal.h>
 #endif
+
+#ifdef SYS_TERMIOS_H
+#include <sys/termios.h>
+#endif
 #include <sys/ioctl.h>
 
 static int reframe(struct window *wp);
@@ -1725,7 +1729,7 @@ void getscreensize(int *widthp, int *heightp) {
     struct winsize size;
     *widthp = 0;
     *heightp = 0;
-    if (ioctl(0, TIOCGWINSZ, &size) < 0) return;
+    if (ioctl(1, TIOCGWINSZ, &size) < 0) return;
     *widthp = size.ws_col;
     *heightp = size.ws_row;
 }

@@ -4,10 +4,11 @@
  */
 
 #include "estruct.h"
+
+#if FILOCK && (BSD || SVR4)
 #include "edef.h"
 #include "efunc.h"
 
-#if FILOCK && (BSD || SVR4)
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>

@@ -76,11 +76,10 @@
 #define REVSTA  1  /* Status line appears in reverse video         */
 
 #define COLOR   1
-#ifdef  SVR4
+
+/* Make the file-locking machanism optional for any compilation */
+
 #define FILOCK  0
-#else
-#define FILOCK  BSD
-#endif
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
 
