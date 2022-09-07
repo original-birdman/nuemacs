@@ -25,11 +25,11 @@
  * It's not empty if we have any *byte* other than a space or tab
  */
 static int curline_empty(void) {
-    char c;
-    int end = llength(curwp->w.dotp);
-    for (int ci = 0; ci < end; ci++) {
-        c = lgetc(curwp->w.dotp, ci);
-        if (c != ' ' || c != '\t') return FALSE;
+    char *cp = &curwp->w.dotp->l_text[0];
+    char *ep = &curwp->w.dotp->l_text[llength(curwp->w.dotp)];
+    while (cp < ep) {
+        if ((*cp != ' ') && (*cp != '\t')) return FALSE;
+        cp++;
     }
     return TRUE;
 }
