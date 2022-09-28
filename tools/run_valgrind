@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+
+if [ "$1" = "V" ]; then
+    opts="-s --leak-check=full --show-leak-kinds=all"
+    shift
+else
+    opts="--leak-check=yes"
+fi
+
+valgrind $opts ./uemacs ${1+"$@"} 2>|gml.log
