@@ -1755,11 +1755,13 @@ void sizesignal(int signr) {
 /* Given a screen height and width, set t_mcol/t_mrow as a rounded-up
  * amount, with a minimum size (to avoid re-allocs on small changes).
  */
+#define MINCOL 240
+#define MINROW  70
 void set_scrarray_size(int h, int w) {
     term.t_mcol = 50*(1 + (w + 30)/50);
-    if (term.t_mcol < 270) term.t_mcol = 270;
+    if (term.t_mcol < MINCOL) term.t_mcol = MINCOL;
     term.t_mrow = 30*(1 + (h + 20)/30);
-    if (term.t_mrow < 100) term.t_mrow = 100;
+    if (term.t_mrow < MINROW) term.t_mrow = MINROW;
     return;
 }
 
