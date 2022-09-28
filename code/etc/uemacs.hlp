@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.166 Help Index     (27 July 2022)
+=>                   nuEmacs GGR4.167 Help Index     (28 September 2022)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -508,14 +508,15 @@ Others (omitting system-use only ones)...
     $force_status ......... Actual status when forced to OK
     $equiv_type ........... Function to use for Equiv mode
                              (NFC, NFD, NFKD or NFKC [default])
-    $srch_can_hunt          To allow forw/backhunt to work in test macros
-    $uproc_lpcount          Current loop for Esc<n>user-proc
-    $uproc_lptotal          Requested <n> for Esc<n>user-proc
-    $uproc_lpforced         Was the <n> given explicitly>?
+    $srch_can_hunt ........ To allow forw/backhunt to work in test macros
+    $uproc_lpcount ........ Current loop for Esc<n>user-proc
+    $uproc_lptotal ........ Requested <n> for Esc<n>user-proc
+    $uproc_lpforced ....... Was the <n> given explicitly>?
     $showdir_opts ......... Start-up state (for user to set)
                              (A subset of "TRHFM" - default is "")
-    $ggr_opts               A set of bit flags which control various
+    $ggr_opts ............. A set of bit flags which control various
                             optional style differences.
+    $sys_type ............. System type (uname -s)
 
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS

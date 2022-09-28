@@ -5092,7 +5092,7 @@ exec.c
 version.h
 etc/uemacs.hlp
 etc/uemacs.rc
-`   Comment tidy-ups [exec.c, etc/uemacs.rc]
+    Comment tidy-ups [exec.c, etc/uemacs.rc]
     Add Key bindings, Internal Key bindings and Function, Application
     and KeyPad keys sections to help.
     Added a Universal argument description. [etc/uemacs.hlp]
@@ -5403,7 +5403,7 @@ search.c
 edef.h
 estruct.h
 evar.h
-    Replaced the $srch_overlap variable with a bit in $ggr_opts 
+    Replaced the $srch_overlap variable with a bit in $ggr_opts
 
 etc/uemacs.rc
     Added an O option to change-ggr-opts to handle srchOlap.
@@ -5492,5 +5492,290 @@ utf8.c
 version.h
 etc/uemacs.hlp
     Update to GGR4.166
+
+========== GGR4.167
+
+exec.c
+file.c
+main.c
+efunc.h
+    Modified unqname() to avoid integer overflow in power10() (undefined
+    behaviour since C99). Removed power10() and combined unqname() with
+    makename(). [file.c]
+    Added extra arg for makename calls and remove the associated
+    unqname() calls. [exec.c, file.c, main.c, efunc.h]
+
+exec.c
+    Free the while_block correctly (without using a pointer in what
+    you've just freed).
+
+main.c
+    Initialize sigact.sa_mask and remove oldact from sigaction() calls.
+
+search.c
+    Allocate the screen data in one block, and assign the p/vscreen
+    arrays into it.
+
+buffer.c
+    Delete buffer variable values in bclear().
+
+utf8.c
+    Ensure we always have enough space allocated in grapheme_to_bytes().
+
+word.c
+    Null eos_list if we free it.
+
+Makefile
+    Added a FREE option to Makefile to define DO_FREE when compiling.
+
+bind.c
+buffer.c
+display.c
+eval.c
+input.c
+line.c
+lock.c
+main.c
+names.c
+search.c
+utf8.c
+efunc.h
+    If DO_FREE is set, add a routine to free things at exit that are
+    normally just left allocated.
+    To enable valgrind to look for leaks and incorrect usage.
+    The routines are called from quit() in main,c
+
+buffer.c
+    Save/restore current buffer correctly when unnarrowing.
+
+file.c
+fileio.c
+globals.c
+    Set fline to NULL in the correct places!
+
+eval.c
+    Add free of user-var names to free_eval().
+
+search.c
+    Add free of srch/repl ring buffers to free_search.
+
+exec.c
+main.c
+efunc.h
+    Add a free_exec() (called from quit()) to free prev_line_seen.
+    Add (missed) free_bind() call in quit(). [main.c]
+
+file.c
+fileio.c
+globals.c
+    More fixes for fline handling to avoid a memory leak.
+    Don't call add_to_fline() with an empty cache in ffgetline().
+    At EOF, return immediately if there is no fline.
+    Just initialize fline to NULL at start of ffgetline().
+
+estruct.h
+    Change max dimensions to 600x300 (not 500x500).
+
+buffer.c
+display.c
+tcap.c
+    First changes for making the screen data truly dynamic.
+    No maximum setting for cols/rows. [buffer.c, display.c, tcap.c]
+    Tidy up sigaction call parameters [display.c]
+
+main.c
+    Move setpattern() call (and srch_can_hunt setting) for -s command
+    line option to just before use, rather than when it is found as it
+    now needs a valid curwp.
+
+search.c
+    Don't run setpattern() for slow scans and initialize mcpat[0].mc.
+
+buffer.c
+    Fill buffer list info to t_mcol, not just to t_ncol.
+
+bind.c
+isearch.c
+region.c
+edef.h
+    Fix some comments.
+
+eval.c
+random.c
+etc/uemacs.hlp
+    Change the external usage of columns to be 1-based for $curcol and
+    $fcol [eval.c]
+    Change buffer-position display to show columns as 1-based [random.c]
+    Document $fillcol in help file [etc/uemacs.hlp]
+
+autotest/combi-col0.sh
+autotest/incremental-search.sh
+autotest/move-over-word.sh
+autotest/multi-ex.sh
+autotest/parafill.sh
+autotest/query-replace.sh
+autotest/search-boundaries.sh
+autotest/search-char_classes.sh
+autotest/search-classes_in_closures.sh
+autotest/search-file-start.sh
+autotest/search-groups.sh
+autotest/search-line-endings.sh
+autotest/search-magic-on_off.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-props2.sh
+autotest/search-reexec-macro.sh
+autotest/search-repeats.sh
+autotest/search-u_hex.sh
+autotest/wordwrap.sh
+autotest/zero-length-magic.sh
+    Update tests to allow for $curcol now being 1-based.
+    Ensure all test macros end with "-2 redraw-display".
+
+
+display.c
+eval.c
+input.c
+isearch.c
+main.c
+spawn.c
+tcap.c
+window.c
+edef.h
+efunc.h
+estruct.h
+    Change term.t_nrow to be the real row count and add t_mbline (-1)
+    and t_vscreen (-2) for display usage. [display.c, eval.c, input.c,
+    isearch.c, main.c, spawn.c, tcap.c, window.c, estruct.h]
+    Add SET_t_nrow define to set all 3 from a new row count [edef.h]
+    Add set_scrarray_size() function [display.c, tcap.c, efunc.h]
+
+file.c
+    Combined the readin() and ifile() ffgetline() loop into a file2buf()
+    function.
+
+display.c
+globals.c
+posix.c
+tcap.c
+window.c
+edef.h
+estruct.h
+    Dynamic sizing handling changes to newsize and newwidth. The default
+    sizing is now to the values set at start-up. [globals.c, tcap.c,
+    window.c, edef.h]
+    Change ttrow/ttcol "no value" setting to be -1, not -100, 999 or
+    HUGE (1000). [display.c, globals.c, posix.c, tcap.c, estruct.h]
+
+display.c
+    Fix bug in modeline mode display.
+
+file.c
+    Use local static variables rather then passing args by ref for
+    file2buf().
+
+display.c
+    Fix newsize() and newwidth() calls in newscreensize().
+
+window.c
+    Call vtinit() on screen width/size increases if needed.
+
+display.c
+eval.c
+globals.c
+input.c
+main.c
+names.c
+spawn.c
+tcap.c
+window.c
+edef.h
+efunc.h
+    Assume all builds have SIGWINCH and TIOCGWINSZ.
+    Removed #if tests for SIGWINCH and TIOCGWINSZ by using the TRUE
+    branch in each case. [display.c, input.c, main.c, spawn.c, tcap.c]
+    Remove change-screen-size (newsize) and change-screen-width
+    (newwidth) commands. Changed newsize() and newwidth() to just take
+    one parameter. [display.c, eval.c, names.c, window.c, efunc.h]
+    Remove orig_ncol and orig_nrow as they are no longer needed.
+    [globals.c, tcap.c, edef.h]
+    NOTE: You can still change the height and width "manually" by
+    setting $pagelen and $curwidth.
+
+display.c
+    Improve data initializing and freeing in vtinit().
+    Free any old grapheme ex data then initialize all of the new vscreen
+    and pscreen.  This is simpler, and allows for ncol/nrow shrinking.
+
+
+Minor changes to get uemacs working on Solaris11 (x64)
+-----
+Makefile
+    Remove obsolete compile options.
+    Fix code to look for static libbacktrace.
+    Add Solaris options, and enable libbacktrace for it.
+
+display.c
+    Include sys/termios.h if needed for TIOCGWINSZ, and change
+    getscreensize() to query stdout, not stdin.
+
+estruct.h
+    Make FILOCK an optional compile-time setting, and off by default.
+
+lock.c
+pklock.c
+    Fixes to header file inclusions.
+
+tcap.c
+    Remove internal putpad() and change all its callers to use putp().
+    Optionally defined _BOOL.
+    Change CS variable to be _CS (Solaris has a problem otherwise).
+
+-----
+
+basic.c
+    Fix a(n ancient) logic bug in curline_empty().
+
+eval.c
+evar.h
+estruct.h
+    Added $sys_type system variable.
+
+etc/uemacs.rc
+    Set .sort to be gsort for Solaris (otherwise sort) in userpoc
+    showdir for directory browsing.
+
+autotest/00-decrypt-file.sh
+autotest/move-over-word.sh
+autotest/multi-ex.sh
+autotest/parafill.sh
+autotest/search-boundaries.sh
+autotest/search-groups.sh
+autotest/search-magic-on_off.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-u_hex.sh
+autotest/wordwrap.sh
+    Change "awk -b" to "gawk -b" as that works on both Linux and Solaris.
+
+bind.c
+eval.c
+estruct.h
+    Remove ENVFUNC define and enable all code it controlled.
+
+display.c
+    Parameterize minimum column and row sizes in set_scrarray_size().
+    Set MINCOL to 240 and MINROW to 70.
+
+tools/run_valgrind
+    A simple front-end script for running uemacs under valgrind.
+
+file.c
+    Avoid a gcc 8.4.0 compilation warning in makename().
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to GGR4.167
 
 ==========
