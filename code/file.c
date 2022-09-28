@@ -530,9 +530,11 @@ void makename(char *bname, char *fname, int ensure_unique) {
  * the code above has already left 4 bytes free for us so append !nnn
  * with nnn starting at 000 and increasing until unique.
  * If we still fail, well...
+ * 999 rather than 1000 as otherwise gcc 8.4.0 on Arm64 complians 
+ * about possible excessive field-width.
  */
     char *tagp = bname + strlen(bname);
-    for (unsigned int unum = 0; unum < 1000; unum++) {
+    for (unsigned int unum = 0; unum < 999; unum++) {
         snprintf(tagp, 5, "!%03u", unum);
 /* Check to see if *this* one is in the buffer list */
         if (bfind(bname, 0, FALSE) == NULL) {   /* This is unique */
