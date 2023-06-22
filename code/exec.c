@@ -907,7 +907,7 @@ int run_user_proc(char *procname, int forced, int rpts) {
     }
 
 /* and now execute it as asked.
- * Let the a user-proc know which pass it is on (starting at one)
+ * Let the user-proc know which pass it is on (starting at one)
  * out of the total expected.
  * Pass on the requested repeats (in uproc_lptotal) even for a one_pass
  * function, in case it wishes to handle it during its one_pass.
