@@ -1068,7 +1068,7 @@ int main(int argc, char **argv) {
                  verflag = strlen(arg);
             key1 = *arg;
 /* Allow options to be given as separate tokens */
-            if (strchr("cCdDgGkKmMsSxX", key1)) {
+            if (strchr("CDFGKMSX", key1 & (char)~0x20)) {
                 opt = *argv + 2;
                 if (*opt == '\0' && argc > 0 && !strchr("-@", *(*argv + 1))) {
                     if (--argc <= 0) {
@@ -1079,37 +1079,31 @@ int main(int argc, char **argv) {
                 }
             }
 
-            switch (key1) { /* Process Startup macros */
-            case 'a':       /* process error file */
-            case 'A':
+ /* Process Startup macros - quick Uppercase */
+            switch (key1 & (char)~0x20) {
+            case 'A':       /* process error file */
                 errflag = TRUE;
                 break;
-            case 'c':
             case 'C':       /* GGR -c replacement of default rc */
 /* ffropen() will expand any relative/~ pathname *IN PLACE* so
  * we need a copy of the command line option!
  */
                 if (!set_rcfile(opt)) exit(1);
                 break;
-            case 'd':
             case 'D':       /* GGR -d for config/help directory */
                 set_pathname(opt);
                 break;
-            case 'e':       /* -e for Edit file */
-            case 'E':
+            case 'E':       /* -e for Edit file */
                 viewflag = FALSE;
                 break;
-            case 'g':       /* -g for initial goto */
-            case 'G':
+            case 'G':       /* -g for initial goto */
                 gotoflag = TRUE;
                 gline = atoi(opt);
                 break;
-            case 'i':       /* -i for insecure mode */
-            case 'I':
+            case 'I':       /* -i for insecure mode */
                 allow_current = 1;
                 break;
-            case 'k':       /* -k<key> for code key */
-            case 'K':
+            case 'K':       /* -k<key> for code key */
                 /* GGR only if given a key.. */
                 /* The leading ; *is* needed! */
                 ;int olen = strlen(opt);
@@ -1118,33 +1112,27 @@ int main(int argc, char **argv) {
                      strcpy(ekey, opt);
                 }
                 break;
-            case 'm':       /* -m message for mini-buffer */
-            case 'M':
+            case 'M':       /* -m message for mini-buffer */
                 mbuf_mess = opt;
                 break;
-            case 'n':       /* -n accept null chars */
-            case 'N':
+            case 'N':       /* -n accept null chars */
                 nullflag = TRUE;
                 break;
-            case 'r':       /* -r restrictive use */
-            case 'R':
+            case 'R':       /* -r restrictive use */
                 restflag = TRUE;
                 break;
-            case 's':       /* -s for initial search string */
-            case 'S':
+            case 'S':       /* -s for initial search string */
                 searchflag = TRUE;
                 strncpy(pat, opt, NPAT);
 /* GGR - set-up some more things for the FAST search algorithm */
                 rvstrcpy(tap, pat);
                 srch_patlen = strlen(pat);
                 break;
-            case 'v':       /* -v for View File */
-            case 'V':
+            case 'V':       /* -v for View File */
                 if (!verflag) verflag = 1;    /* could be version or */
                 viewflag = TRUE;    /* view request */
                 break;
-            case 'x':       /* GGR: -x for eXtra rc file */
-            case 'X':
+            case 'X':       /* GGR: -x for eXtra rc file */
                 if (rcnum < sizeof(rcextra)/sizeof(rcextra[0]))
 /* ffropen() will expand any relative/~ pathname *IN PLACE* so
  * we need a copy of the command line option!
