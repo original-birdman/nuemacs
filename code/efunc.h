@@ -238,6 +238,8 @@ extern int bclear(struct buffer *);
 extern int unmark(int, int);
 /* Lookup a buffer by name. */
 extern struct buffer *bfind(const char *, int, int);
+extern char do_force_mode(char *);
+extern int setforcemode(int, int);
 
 /* file.c */
 extern int fileread(int, int);

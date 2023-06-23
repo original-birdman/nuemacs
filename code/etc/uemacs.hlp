@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.167 Help Index     (28 September 2022)
+=>                   nuEmacs GGR4.168 Help Index     (23 June 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -90,6 +90,14 @@ toggle-lmode (^XT) will (un)set the mode in the current buffer while
 toggle-gmode (Meta T) will (un)set the global mode (which means that it
 will be turned on/off in new buffers *not* that it gets turned on in all
 current buffers!).
+The file-hooks routine is run for files as they are read in, which is
+after the buffer is created, so this can change the values set by global
+modes. The global mode is just a default setting.
+You can force a mode to be on or off by using the -f command line option
+or the set-force-mode command. These allow you to set the modes to force
+on (UPPERcase character used) or off (lowercase) from a string. The
+set-force-mode sets an absolute setting, unless the first character is
+"+", in which case it just modifies the current setting.
 
 F   autodos     Check a file for having DOS line endings when reading
                 it into a buffer and set the DOS mode if it does.
@@ -517,6 +525,8 @@ Others (omitting system-use only ones)...
     $ggr_opts ............. A set of bit flags which control various
                             optional style differences.
     $sys_type ............. System type (uname -s)
+    $force_mode_on ........ Buffer modes being forced on
+    $force_mode_off ....... Buffer modes being forced off
 
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS

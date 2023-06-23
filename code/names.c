@@ -179,6 +179,7 @@ struct name_bind names[] = {
     {"set", setvar, {0, 0, 0, 1, 0}},
     {"set-encryption-key", set_encryption_key, {0, 1, 0, 0, 0}},
     {"set-fill-column", setfillcol, {0, 1, 0, 1, 0}},
+    {"set-force-mode", setforcemode, {0, 1, 0, 1, 0}},
     {"set-mark", setmark, {0, 0, 0, 1, 0}},
     {"set-pttable", set_pttable, {0, 0, 0, 1, 0}},         /* GGR */
     {"shell-command", spawn, {0, 1, 0, 0, 0}},

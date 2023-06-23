@@ -659,6 +659,8 @@ static char *gtenv(char *vname) {
                                 uname(&tuname);    
                                 return tuname.sysname;
                             }
+    case EVFORCEMODEON:     return ue_itoa(force_mode_on);
+    case EVFORCEMODEOFF:    return ue_itoa(force_mode_off);
     }
 
     exit(-12);              /* again, we should never get here */

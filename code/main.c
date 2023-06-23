@@ -92,6 +92,8 @@ printf( \
 "      @<filepath>  deprecated legacy synonym for -c"     NL \
 "      -d<dir>      directory holding rc and hlp files"   NL \
 "      -e           edit file (default)"                  NL \
+"      -f<modes>    force mode(s) on (uppercase) or off"  NL \
+"                   valid for WCEVOMQDR modes"            NL \
 "      -g<n>        go to line <n> (same as +<n>)"        NL \
 "      -i           insecure mode - look in current dir"  NL \
 "      -k<key>      encryption key"                       NL \
@@ -1096,6 +1098,13 @@ int main(int argc, char **argv) {
             case 'E':       /* -e for Edit file */
                 viewflag = FALSE;
                 break;
+            case 'F':       /* -f for mode forcing */
+                char err_char = do_force_mode(opt);
+                if (err_char) {
+                    fprintf(stderr, "Invalid force mode: %c\n", err_char);
+                    usage(EXIT_FAILURE);
+                }
+                break;
             case 'G':       /* -g for initial goto */
                 gotoflag = TRUE;
                 gline = atoi(opt);
@@ -1250,7 +1259,7 @@ int main(int argc, char **argv) {
         swbuffer(firstbp, 0);   /* Assume it succeeds */
         zotbuf(bp);
         display_readin_msg = 1;
-    } else bp->b_mode |= gmode;
+    }
 
 /* Deal with startup gotos and searches */
     if (gotoflag && searchflag) {

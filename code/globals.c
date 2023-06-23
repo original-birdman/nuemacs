@@ -18,8 +18,10 @@ char *mode2name[] = {           /* Display name of modes        */
         "Wrap",  "Cmode", "Phon",  "Exact", "View", "Over",
         "Magic", "Crypt", "Asave", "eQuiv", "Dos", "Report"
 };
-char modecode[] = "WCPEVOMYAqDr";   /* letters to represent modes   */
+char modecode[] = "WCPEVOMYAQDR";   /* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
+int force_mode_on = 0;          /* modes forced on              */
+int force_mode_off = 0;         /* modes forced off             */
 int gflags = GFREAD;            /* global control flag          */
 int gfcolor = 7;                /* global forgrnd color (white) */
 int gbcolor = 0;                /* global backgrnd color (black) */

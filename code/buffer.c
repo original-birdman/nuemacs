@@ -93,6 +93,11 @@ static void make_active(struct buffer *nbp) {
     struct buffer *real_curbp = curbp;
     curbp = nbp;
     readin(nbp->b_fname, TRUE);
+/* Set any buffer modes that are forced.
+ * This comes *after* file-hooks.
+ */
+    if (force_mode_on) nbp->b_mode |= force_mode_on;
+    if (force_mode_off) nbp->b_mode &= ~force_mode_off;
     curbp = real_curbp;
     nbp->b.dotp = lforw(nbp->b_linep);
     nbp->b.doto = 0;
@@ -296,6 +301,7 @@ static int makelist(int iflag) {
     int i;
     long nbytes;                        /* # of bytes in current buffer */
     char b[9+1];                        /* field width for nbytes + NL */
+    int mcheck;
 
     char *line = Xmalloc(term.t_mcol);
 
@@ -303,6 +309,7 @@ static int makelist(int iflag) {
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
         return s;
     strcpy(blistp->b_fname, "");
+
     if (addline("ACT MODES   Type↴      Size Buffer        File") == FALSE
      || addline("--- ------------.      ---- ------        ----") == FALSE)
         return FALSE;
@@ -315,10 +322,34 @@ static int makelist(int iflag) {
 
 /* Output the mode codes */
 
-    for (i = 0; i < NUMMODES; i++)
-        *cp1++ = (gmode & (1 << i))? modecode[i]: '.';
+    mcheck = 1;
+    for (i = 0; i < NUMMODES; i++) {
+        *cp1++ = (gmode & mcheck)? modecode[i]: '.';
+        mcheck <<= 1;
+    }
     strcpy(cp1, ".           Global Modes");
     if (addline(line) == FALSE) return FALSE;
+
+/* Build line to report any mode settings forced on/off */
+
+    if (force_mode_on || force_mode_on) {
+        cp1 = line;
+        for (i = 0; i < 4; i++) *cp1++ = ' ';
+
+/* Output the mode codes */
+
+        mcheck = 1;
+        for (i = 0; i < NUMMODES; i++) {
+            char cset;
+            if (force_mode_on & mcheck) cset = modecode[i];
+            else if (force_mode_off & mcheck) cset = DIFCASE | modecode[i];
+            else cset = '-';
+            *cp1++ = cset;
+            mcheck <<= 1;
+        }
+        sprintf(cp1, ".           Forced modes (U==on, l==off)");
+        if (addline(line) == FALSE) return FALSE;
+    }
 
 /* Output the list of buffers */
 
@@ -345,8 +376,11 @@ static int makelist(int iflag) {
 
 /* Output the mode codes */
 
-        for (i = 0; i < NUMMODES; i++)
-            *cp1++ = (bp->b_mode & (1 << i))?  modecode[i]: '.';
+        mcheck = 1;
+        for (i = 0; i < NUMMODES; i++) {
+            *cp1++ = (bp->b_mode & mcheck)?  modecode[i]: '.';
+            mcheck <<= 1;
+        }
 
 /* Append p or x to denote whether it is set to BTPHON or BTPROC */
         if (bp->b_type == BTPHON) *cp1++ = 'p';
@@ -524,6 +558,9 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         bp->b.fcol = 0;
         bp->b_flag = bflag;
         bp->b_mode = gmode;
+/* Set any forced buffer modes at create time - after global mode set */
+        if (force_mode_on) bp->b_mode |= force_mode_on;
+        if (force_mode_off) bp->b_mode &= ~force_mode_off;
         bp->b_nwnd = 0;
         bp->b_linep = lp;
         strcpy(bp->b_fname, "");
@@ -610,6 +647,63 @@ int unmark(int f, int n) {
     curbp->b_flag &= ~BFCHG;
     curwp->w_flag |= WFMODE;
     return TRUE;
+}
+
+/* Set the force_mode settings.
+ *
+ */
+char do_force_mode(char *opt) {    /* Returns 0 if all OK */
+
+/* Are we just changing what is there, or settign an absolute value? */
+
+    if (opt[0] == '+') opt++;      /* Skip the + */
+    else force_mode_off = force_mode_on = 0;
+
+
+    char *op = opt;     /* Brace to allow decl on line 1 */
+    char c;
+    int *word_to_set, *word_to_notset, bit_to_set;
+    while ((c = *op++)) {
+        if (c & 0x20) {     /* It's lowercase */
+            word_to_set = &force_mode_off;
+            word_to_notset = &force_mode_on;
+        }
+        else {
+            word_to_set = &force_mode_on;
+            word_to_notset = &force_mode_off;
+        }
+        switch(c & ~0x20) {
+        case 'W': bit_to_set = MDWRAP;  break;
+        case 'C': bit_to_set = MDCMOD;  break;
+        case 'E': bit_to_set = MDEXACT; break;
+        case 'V': bit_to_set = MDVIEW;  break;
+        case 'O': bit_to_set = MDOVER;  break;
+        case 'M': bit_to_set = MDMAGIC; break;
+        case 'Q': bit_to_set = MDEQUIV; break;
+        case 'D': bit_to_set = MDDOSLE; break;
+        case 'R': bit_to_set = MDRPTMG; break;
+        default:
+            return c;       /* The character in error */
+        }
+        *word_to_set |= bit_to_set;
+        *word_to_notset &= ~bit_to_set;
+    }
+    return 0;
+}
+int setforcemode(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    char cbuf[NPAT];        /* buffer to recieve mode name into */
+
+/* Prompt the user and get an answer */
+
+    int status = mlreply("Force mode to set:", cbuf, NPAT - 1, CMPLT_NONE);
+    if (status != TRUE) return status;
+    char errch = do_force_mode(cbuf);
+    if (errch) {
+        mlforce("Invalid force mode: %c", errch);
+        status = FALSE;
+    }
+    return status;
 }
 
 #ifdef DO_FREE

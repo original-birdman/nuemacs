@@ -73,6 +73,8 @@ struct evlist evl[] = {
  { "showdir_opts", EVSDOPTS },  /* Start-up state (for user to set) */
  { "ggr_opts",  EVGGROPTS },    /* Optional-style difference */
  { "sys_type",  EVSYSTYPE },    /* System type (== uname -s) */
+ { "force_mode_on", EVFORCEMODEON },    /* Modes to force on */
+ { "force_mode_off", EVFORCEMODEOFF },  /* Modes to force off */
 };
 
 /* The tags for user functions - used in struct evlist */

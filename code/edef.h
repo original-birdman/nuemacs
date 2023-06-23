@@ -31,6 +31,8 @@ extern struct key_tab *keytab;  /* key bind to functions table  */
 extern int key_index_valid;     /* Whether idx index for keytab is valid */
 extern struct name_bind names[];/* name to function table */
 extern int gmode;               /* global editor mode           */
+extern int force_mode_on;       /* modes forced to be on        */
+extern int force_mode_off;      /* modes forced to be off       */
 extern int gflags;              /* global control flag          */
 extern int gfcolor;             /* global forgrnd color (white) */
 extern int gbcolor;             /* global backgrnd color (black) */
