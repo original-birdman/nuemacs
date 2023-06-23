@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.164 (requires GGR4.164+)
-;                       Last Update: 18 July 2022
+;                       Version - GGR4.168 (requires GGR4.168+)
+;                       Last Update: 23 June 2023
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -85,23 +85,23 @@ store-procedure spell-check not_mb one_pass
         write-message "[Aborted]"
         !return
     !endif
-    write-message "[Pushing buffer out to SPELL..]~n~r"
+    write-message "[Pushing buffer out to CULSPELL..]~n~r"
     set .savefile $cfname
     write-file "Temp.spell"
     write-message "~n[Starting spelling checker..]  ~n~r"
     !force execute-program &cat "culspell Temp.spell " .extras
     !if &seq $status TRUE
         write-message "[Pulling (corrected) buffer back in..]~n~r"
-        read-file "Temp.spell"
+; The 2 tells insert-file to replace the active content (more of an,
+; "overwrite-from-file") so you can spell-check a narrowed buffer.
+; As a result, the buffer will be marked as modified
+        2 insert-file "Temp.spell"
         write-message "~n[Tidying up temporary files..]"
     !endif
     set $discmd FALSE
-    2 shell-command "rm Temp.spell"
+    shell-command "rm Temp.spell"
     set $discmd TRUE
     set $cfname .savefile
-;   must force buffer to be modified
-    insert-string "."
-    delete-previous-character
 !endm
 ;
 
