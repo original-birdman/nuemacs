@@ -188,7 +188,6 @@ out:
  * Bound to "C-X C-I".
  */
 int insfile(int f, int n) {
-    UNUSED(f); UNUSED(n);
     int s;
     char fname[NFILEN];
 
@@ -198,6 +197,27 @@ int insfile(int f, int n) {
         return rdonly();        /* we are in read only mode     */
     if ((s = mlreply("Insert file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
         return s;
+
+/* If we are given a user arg of 2 then it means "replace the active
+ * content of the buffer by the file contents".
+ * So, if the buffer is narrowed just replace the narrowed data,
+ * otherwise replace the whole buffer.
+ */
+    if (f && (n == 2)) {
+        if (curbp->b_flag & BFNAROW) {
+            gotobob(0, 0);
+            curwp->w.markp = curwp->w.dotp;
+            curwp->w.marko = curwp->w.doto;
+            gotoeob(0, 0);
+/* We do not want this to save the kill, so fudge in such a condition */
+            int save_lastflag = lastflag;
+            lastflag |= CFYANK;
+            killregion(0, 0);
+            lastflag = save_lastflag;
+        }
+        else if ((s = bclear(curbp)) != TRUE) return s; /* Might be old.  */
+    }
+
     if ((s = ifile(fname)) != TRUE)
         return s;
     return reposition(TRUE, -1);
