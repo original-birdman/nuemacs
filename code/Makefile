@@ -267,8 +267,7 @@ WARNINGS = -Wall -Wstrict-prototypes -Wextra
 CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
     $(UTF8INCL) $(BCKTINCL) $(STATIC_XDEFS)
 
-LIBS = -lcurses     # SYSV
-LFLAGS = -hbx
+LIBS = -lncurses -ldl    # All now have ncurses (curses just links to it)
 
 #Let's try to find libcurses/libncurses etc.
 # Start by finding term.h (for Oleg's router distros)
@@ -277,7 +276,6 @@ tlist := /opt/include/ncurses/term.h
 tres := $(firstword $(foreach arg, $(tlist), $(call filex, $(arg) ) ) )
 ifeq ($(strip $(tres)),/opt/include/ncurses/term.h)
    CFLAGS += -I/opt/include/ncurses
-   LIBS= -lncurses
 endif
 
 # The Rules
