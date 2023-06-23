@@ -1198,10 +1198,11 @@ int dobuf(struct buffer *bp) {
 /* Starting at the beginning of the buffer */
     hlp = bp->b_linep;
     lp = hlp->l_fp;
+    einit = NULL;               /* So we alloc on first call */
     while (lp != hlp) {
 /* Allocate eline and copy macro line to it */
         linlen = lp->l_used;
-        einit = eline = Xmalloc(linlen + 1);
+        einit = eline = Xrealloc(einit, linlen + 1);
         memcpy(eline, lp->l_text, linlen);
         eline[linlen] = 0;      /* make sure it ends */
 
@@ -1240,7 +1241,7 @@ int dobuf(struct buffer *bp) {
 /* And get the keystroke */
             if ((c = get1key()) == abortc) {
                 mlforce(MLbkt("Macro aborted"));
-                goto failexit2;
+                goto failexit3;
             }
 
             if (c == metac) macbug = FALSE;
@@ -1260,7 +1261,7 @@ int dobuf(struct buffer *bp) {
 /* and bitch if it's illegal */
             if (dirnum == NUMDIRS) {
                 mlwrite_one("%Unknown Directive");
-                goto failexit2;
+                goto failexit3;
             }
 
 /* service only the !ENDM macro here */
@@ -1287,6 +1288,7 @@ int dobuf(struct buffer *bp) {
                 bp->b_exec_level--;
                 pause_key_index_update = orig_pause_key_index_update;
                 status = FALSE;
+                Xfree(einit);
                 goto single_exit;
             }
 
@@ -1343,7 +1345,7 @@ int dobuf(struct buffer *bp) {
 
                 if (whtemp == NULL) {
                     mlwrite_one("%Internal While loop error");
-                    goto failexit2;
+                    goto failexit3;
                 }
 
 /* Reset the line pointer back.. */
@@ -1376,7 +1378,7 @@ int dobuf(struct buffer *bp) {
                         glp = glp->l_fp;
                     }
                     mlwrite("No such label: %s", golabel);
-                    goto failexit2;
+                    goto failexit3;
                 }
                 goto onward;
 
@@ -1400,7 +1402,7 @@ int dobuf(struct buffer *bp) {
 
                     if (whtemp == NULL) {
                         mlwrite_one("%Internal While loop error");
-                        goto failexit2;
+                        goto failexit3;
                     }
 
 /* reset the line pointer back.. */
@@ -1451,25 +1453,30 @@ int dobuf(struct buffer *bp) {
 /* In any case set the buffer . */
             bp->b.dotp = lp;
             bp->b.doto = 0;
-            Xfree(einit);
             execlevel = 0;
             freewhile(whlist);
             bp->b_exec_level--;
             pause_key_index_update = orig_pause_key_index_update;
+            Xfree(einit);
             goto single_exit;
         }
 
 onward:                 /* On to the next line */
-        Xfree(einit);
         lp = lp->l_fp;
     }
 
 eexec:                  /* Exit the current function */
+    Xfree(einit);
     execlevel = 0;
     status = return_stat;
     goto failexit;
 
-/* This sequence is used for several exits, so only write it once */
+/* This sequence is used for several exits, so only write it once.
+ * And have one which frees einit as well, for loop exits.
+ */
+failexit3:
+    Xfree(einit);
+
 failexit2:
     status = FALSE;
 
