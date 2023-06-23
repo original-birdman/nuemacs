@@ -5778,4 +5778,81 @@ version.h
 etc/uemacs.hlp
     Update to GGR4.167
 
+========== GGR4.168
+
+main.c
+    Uppercase key1 before command option check to shorten tests.
+
+exec.c
+estruct.h
+    Fix typos in comments
+
+version.c
+Makefile
+    Use a run-time test to look utf8proc_unicode_version as it really
+    does depend on what we have now, not what we had when we compiled.
+    Also, fix up libraries used - all now have ncurses.
+
+
+Add force_mode_on and force_mode_off settings to allow specific modes to
+be force on regardless of file-hooks.
+Useful if you know you are about to edit a series of long-lined files
+and don't want the default WRAP mode on, even though file-hooks would
+set it.
+-----
+buffer.c
+edef.h
+efunc.h
+    Add force modes to buffer modes after file-hooks are run.
+    Display forced modes in buffer list.
+    Add code to set force_mode_on and force_mode_off.
+
+eval.c
+evar.h
+estruct.h
+    Add force_mode_on and force_mode_off as readable variables.
+
+globals.c
+    Initialize force_mode_on and force_mode_off to be empty.
+    Change eQuiv buffer status char to be "Q" not "q" - so that
+    the buffer list display makes sense.
+
+main.c
+    Add -f keyword for force_mode_on/off.
+
+names.c
+    Add set-force-mode as a command.
+
+etc/uemacs.hlp
+    Extend description of buffer modes to explain force_mode_on and
+    force_mode_off.
+-----
+
+region.c
+    Avoid going to the end of the full buffer when widening whilst at
+    the end of the narrowed buffer.
+
+file.c
+    Allow a user arg of 2 to insfile (insert-file) to mean "replace the
+    active content", so if the buffer is narrowed that gets overwritten,
+    otherwise the whole buffer is overwritten.
+
+etc/uemacs.rc
+    Use "2 insfile" in spell-check to allow spell checking only the
+    narrowed part of a buffer.
+
+exec.c
+    Ensure all einit mallocs are freed, and use realloc in the loop.
+
+autotest/run_all
+    Print out the number of tests run.
+
+main.c
+    Put a case block in braces to allow a declaration on the first line
+    with older gcc.
+
+../CHANGES
+version.h
+    Update to GGR4.168
+   
 ==========
