@@ -405,6 +405,15 @@ int widen(int f, int n) {
 
 /* Recover the bottom fragment */
     if (bp->b_botline != (struct line *)NULL) {
+
+/* If we are on the last line of the narrowed section (the "phantom",
+ * empty one) then we need to set the start of any bottom segment as
+ * the current position. Otherwise we go to the end of the widened buffer.
+ */
+        if (curwp->w.dotp == curbp->b_linep) {
+            curwp->w.dotp = bp->b_botline;
+        }
+
         lp = bp->b_botline;
         while (lp->l_fp != (struct line *)NULL) lp = lp->l_fp;
         lp->l_fp = bp->b_linep;
