@@ -1099,12 +1099,14 @@ int main(int argc, char **argv) {
                 viewflag = FALSE;
                 break;
             case 'F':       /* -f for mode forcing */
-                char err_char = do_force_mode(opt);
+/* Braces to allow a local declaration */
+               {char err_char = do_force_mode(opt);
                 if (err_char) {
                     fprintf(stderr, "Invalid force mode: %c\n", err_char);
                     usage(EXIT_FAILURE);
                 }
                 break;
+               }
             case 'G':       /* -g for initial goto */
                 gotoflag = TRUE;
                 gline = atoi(opt);
