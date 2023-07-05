@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.168 (requires GGR4.168+)
-;                       Last Update: 23 June 2023
+;                       Version - GGR4.169 (requires GGR4.169+)
+;                       Last Update: 05 Jul 2023
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -85,21 +85,33 @@ store-procedure spell-check not_mb one_pass
         write-message "[Aborted]"
         !return
     !endif
-    write-message "[Pushing buffer out to CULSPELL..]~n~r"
+    write-message "[Pushing buffer out to spell4ue..]~n~r"
     set .savefile $cfname
-    write-file "Temp.spell"
+    set .savecurline $curline
+    set .tempname &cat "spell4ue.tmp." &rnd 1000
+; Only set this from $uproc_lptotal if it was specifically given.
+    !if &equ $uproc_lpforced 1
+      set .rptc $uproc_lptotal
+    !else
+      set .rptc 0
+    !endif
+    write-file .tempname
     write-message "~n[Starting spelling checker..]  ~n~r"
-    !force execute-program &cat "culspell Temp.spell " .extras
+; Shell-escape $pttmode in case it contains some shell-active chars...
+    set .evar &ptf "spell4ueLANG=%s spell4ueRPT=%s" &esc $pttmode .rptc
+    !force execute-program &ptf "%s spell4ue %s %s" .evar .tempname .extras
     !if &seq $status TRUE
         write-message "[Pulling (corrected) buffer back in..]~n~r"
 ; The 2 tells insert-file to replace the active content (more of an,
 ; "overwrite-from-file") so you can spell-check a narrowed buffer.
 ; As a result, the buffer will be marked as modified
-        2 insert-file "Temp.spell"
+; Then go back to our original line number
+        2 insert-file .tempname
+        .savecurline goto-line
         write-message "~n[Tidying up temporary files..]"
     !endif
     set $discmd FALSE
-    shell-command "rm Temp.spell"
+    shell-command &cat "rm -f " .tempname
     set $discmd TRUE
     set $cfname .savefile
 !endm
