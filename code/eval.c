@@ -673,6 +673,10 @@ static char *gtenv(char *vname) {
                             }
     case EVFORCEMODEON:     return ue_itoa(force_mode_on);
     case EVFORCEMODEOFF:    return ue_itoa(force_mode_off);
+    case EVPTTMODE:         if (curbp->b_mode & MDPHON)
+                                return ptt->b_bname + 1;    /* Omit "/" */
+                            else
+                                return "";
     }
 
     exit(-12);              /* again, we should never get here */
