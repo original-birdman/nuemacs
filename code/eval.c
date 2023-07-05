@@ -20,6 +20,12 @@
 #include <stddef.h>
 #include "idxsorter.h"
 
+#if RANDOM_SEED
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+static int seed;
+
 /* Return some of the contents of the kill buffer
  */
 static char *getkill(void) {
@@ -59,6 +65,12 @@ void varinit(void) {
         uv[i].value = NULL;
         uv[i].name[0] = 0;
     }
+/* Take advantage of this initialization call */
+#if RANDOM_SEED
+    seed = abs(getpid());   /* abs() in case of overflow to -ve */
+#else
+    seed = 0;
+#endif
 }
 
 /* SORT ROUTINES
@@ -656,7 +668,7 @@ static char *gtenv(char *vname) {
     case EVGGROPTS:         return ue_itoa(ggr_opts);
     case EVSYSTYPE:         {
                                 static struct utsname tuname;
-                                uname(&tuname);    
+                                uname(&tuname);
                                 return tuname.sysname;
                             }
     case EVFORCEMODEON:     return ue_itoa(force_mode_on);
