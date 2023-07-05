@@ -220,7 +220,8 @@ void vtinit(void) {
         pdp += row_size;
     }
 
-/* Callers assume the screen is garbage after a call (or empty at startup).
+/* We set any visible windows to be marked for a total redraw after
+ * a call (except at startup).
  * So "all" we need to do is:
  *  free any grapheme ex parts in the current vscreen
  *  set new_vscreen to space graphemes
@@ -269,6 +270,16 @@ void vtinit(void) {
     prev_mrow = term.t_mrow;
     prev_mcol = term.t_mcol;
     prev_size = row_size;
+
+/* Ensure any visible windows get redrawn from scratch.... */
+
+    if (wheadp) {       /* Only if it's been set-up! */
+        struct window *wp = wheadp;
+        while (wp->w_wndp != NULL) {
+            wp->w_flag |= WFHARD | WFMODE;
+            wp = wp->w_wndp;
+        }
+    }
     return;
 }
 

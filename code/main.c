@@ -1168,8 +1168,9 @@ int main(int argc, char **argv) {
     }
 
 /* Initialize the editor. */
+
     vtinit();               /* Display */
-    edinit("main");         /* Buffers, windows */
+    edinit("main");         /* Buffers, windows - must be after vtinit */
 
 /* Set this up before running init files */
 

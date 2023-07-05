@@ -520,21 +520,22 @@ int newsize(int n) {
     if (term.t_nrow == n)
         return TRUE;
     else if (term.t_nrow < n) {
+
+/* Find the bottom window... */
+        wp = wheadp;
+        while (wp->w_wndp != NULL) wp = wp->w_wndp;
+
 /* Ensure we have sufficient v/pscreen space.
  * vtinit needs term.t_mcol/term.t_mrow set first.
  */
         if (term.t_mrow < n) {
             set_scrarray_size(n, term.t_ncol);
-            vtinit();
+            vtinit();       /* Sets WFHARD and WFMODE flags on windows */
         }
-
-/* Go to the last window... */
-        wp = wheadp;
-        while (wp->w_wndp != NULL) wp = wp->w_wndp;
-
-/* ...and enlarge it as needed */
+        else                /* Nust Force redraw bottom window */
+            wp->w_flag |= WFHARD | WFMODE;
+/* Now enlarge the bottom window */
         wp->w_ntrows = n - wp->w_toprow - 2;
-        wp->w_flag |= WFHARD | WFMODE;
     } else {
 /* Rebuild the window structure */
         nextwp = wheadp;

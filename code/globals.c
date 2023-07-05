@@ -74,6 +74,8 @@ int nullflag = FALSE;           /* accept null characters */
 int overlap = 0;                /* line overlap in forw/back page */
 int scrolljump = 0;             /* no. lines to scroll (0 == centre screen) */
 
+struct window *wheadp = NULL;   /* vtinit() needs to check this */
+
 /* uninitialized global definitions */
 
 int currow;                     /* Cursor row                   */
@@ -83,7 +85,6 @@ int lastflag;                   /* Flags, last command          */
 int curgoal;                    /* Display column goal for C-P, C-N */
 struct window *curwp;           /* Current window               */
 struct buffer *curbp;           /* Current buffer               */
-struct window *wheadp;          /* Head of list of windows      */
 struct buffer *bheadp;          /* Head of list of buffers      */
 struct buffer *blistp;          /* Buffer for C-X C-B           */
 
