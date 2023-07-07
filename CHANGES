@@ -5854,5 +5854,50 @@ main.c
 ../CHANGES
 version.h
     Update to GGR4.168
-   
+
+========== GGR4.169
+
+display.c
+globals.c
+main.c
+window.c
+    Fix bug introduced in GGR4.167 vscreen/pscreen changes.
+    Set all windows for a full redraw and modeline update in vtinit()
+    [display.c]
+    Initialize wheadp to NULL. [globals.c]
+    Comment note that vtinit() must precede edinit(). [main.c]
+    Remove w_flag setting after vtinit() call. [window.c]
+
+eval.c
+globals.c
+edef.h
+Makefile
+    Use a random start to random numbers (compile-time option).
+    Define RANDOM_SEED during compilation. [Makefile]
+    Make seed a local variable and set it from getpid() if RANDOM_SEED.
+    [eval.c]
+    Removed global seed. [edef.h, globals.c]
+
+eval.c
+estruct.h
+evar.h
+    Added $pttmode user variable (read only). [eval.c, estruct.h,
+    evar.h]
+
+etc/uemacs.rc
+    Change spell-check to use spell4ue external command and pass along
+    any PTT mode (spell4ueLANG) and user arg (spell4ueRPT), allowing the
+    user to write a suitable script to do what they wish.
+    Also return to the original line in the file after spell checking.
+
+combi.h
+tools/combi.h
+tools/combi.info
+    Generated latest values.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to GGR4.169
+
 ==========

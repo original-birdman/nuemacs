@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.168 Help Index     (23 June 2023)
+=>                   nuEmacs GGR4.169 Help Index     (07 July 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -539,8 +539,9 @@ Others (omitting system-use only ones)...
 &sin ....................................... String index
 &exi, &fin, &exb  .......................... File & buffer operations
 &ban, &bor, &bxo, &bno, &bli ............... Bit operations
-&ind, &tru, &gtk, &rnd, &env, &bin, &xla ... Miscellaneous
-&grp n, &ptf templ a1, a2... ............... "   "
+&ind, &tru, &gtk, &env, &bin, &xla ......... Miscellaneous
+&rnd n, &grp n, &ptf templ a1, a2 ..........  "   "
+
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
 
