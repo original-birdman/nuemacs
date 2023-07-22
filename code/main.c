@@ -1263,6 +1263,8 @@ int main(int argc, char **argv) {
         zotbuf(bp);
         display_readin_msg = 1;
     }
+/* Set this for "main" now that init files have run */
+    else bp->b_mode |= gmode;
 
 /* Deal with startup gotos and searches */
     if (gotoflag && searchflag) {
