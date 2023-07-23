@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.169 Help Index     (07 July 2023)
+=>                   nuEmacs GGR4.170 Help Index     (23 July 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -530,17 +530,58 @@ Others (omitting system-use only ones)...
 
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS
-&neg, &abs, &add, &sub, &tim, &div, &mod ... Arithmetic
-&equ, &les, &gre ........................... Arithmetic comparisons
-&not, &and, &or ............................ Logical
-&lef s len, &rig s pos, &mid s pos len ..... Substring
-&cat, &len, &upp, &low, &asc, &chr, &esc ... Other string operations
-&seq, &sle, &sgr ........................... String comparisons
-&sin ....................................... String index
-&exi, &fin, &exb  .......................... File & buffer operations
-&ban, &bor, &bxo, &bno, &bli ............... Bit operations
-&ind, &tru, &gtk, &env, &bin, &xla ......... Miscellaneous
-&rnd n, &grp n, &ptf templ a1, a2 ..........  "   "
+
+Arithmetic
+    &neg, &abs, &add, &sub, &tim, &div, &mod
+
+Arithmetic comparisons
+    &equ, &les, &gre
+
+Logical
+    &not, &and, &or
+
+Real division
+    &rdv n1, n2, prec
+
+Bit operations
+    &ban, &bor, &bxo, &bno
+    &bli            Convert hex ("0x"), octal (0..) or decimal to number.
+
+Substring
+    &lef s len, &rig s pos, &mid s pos len
+
+Other string operations
+    &cat, &len, &upp, &low
+
+String comparisons
+   &seq, &sle, &sgr
+
+String index
+    &sin, str1, str2
+
+Char to Code conversion
+    &asc c          Byte code of base char
+    &chr d          Char for given code (U+nnn, 0xnnn or decimal)
+
+
+File & buffer operations
+    &exi, &exb
+    &fin            Find a file on the uemacs PATH
+
+Miscellaneous
+    &esc s          Escape string for shell usage
+    &ind s          Evaluate arg (for indirect access)
+    &tru s          TRUE or FaLSE
+    &gtk            Get a key (from keyboard)
+    &env name       Get an environment variable
+    &bin key-spec   Get a function bound to key (or ERROR)
+    &xla s, l, t    Translation table.
+                    If char in s is found in l, replace with char
+                    from same offset in t.      (cf. Unix tr)
+    &rnd n          Random integer between 0 and n-1
+    &grp n          After a regex match, the text of group n
+    &ptf templ a1, a2, ...
+                    printf-style formatter.
 
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
