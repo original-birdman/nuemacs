@@ -81,15 +81,15 @@ struct evlist evl[] = {
 /* The tags for user functions - used in struct evlist */
 
 enum uf_val {
-    UFADD,      UFSUB,      UFTIMES,    UFDIV,      UFMOD,
-    UFNEG,      UFCAT,      UFLEFT,     UFRIGHT,    UFMID,
-    UFNOT,      UFEQUAL,    UFLESS,     UFGREATER,  UFSEQUAL,
-    UFSLESS,    UFSGREAT,   UFIND,      UFAND,      UFOR,
-    UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,   UFTRUTH,
-    UFASCII,    UFCHR,      UFGTKEY,    UFRND,      UFABS,
-    UFSINDEX,   UFENV,      UFBIND,     UFEXIST,    UFBXIST,
-    UFFIND,     UFBAND,     UFBOR,      UFBXOR,     UFBNOT,
-    UFBLIT,     UFXLATE,    UFGRPTEXT,  UFPRINTF,
+    UFADD,      UFSUB,      UFTIMES,    UFDIV,      UFRDV,
+    UFMOD,      UFNEG,      UFCAT,      UFLEFT,     UFRIGHT,
+    UFMID,      UFNOT,      UFEQUAL,    UFLESS,     UFGREATER,
+    UFSEQUAL,   UFSLESS,    UFSGREAT,   UFIND,      UFAND,
+    UFOR,       UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,
+    UFTRUTH,    UFASCII,    UFCHR,      UFGTKEY,    UFRND,
+    UFABS,      UFSINDEX,   UFENV,      UFBIND,     UFEXIST,
+    UFBXIST,    UFFIND,     UFBAND,     UFBOR,      UFBXOR,
+    UFBNOT,     UFBLIT,     UFXLATE,    UFGRPTEXT,  UFPRINTF,
 };
 
 enum function_type {
@@ -110,7 +110,8 @@ static struct user_function funcs[] = {
  { "add", DINAMIC,  UFADD },    /* add two numbers together */
  { "sub", DINAMIC,  UFSUB },    /* subtraction */
  { "tim", DINAMIC,  UFTIMES },  /* multiplication */
- { "div", DINAMIC,  UFDIV },    /* division */
+ { "div", DINAMIC,  UFDIV },    /* integer division */
+ { "rdv", TRINAMIC, UFRDV },    /* real division (arg3 is dec places for %G */
  { "mod", DINAMIC,  UFMOD },    /* mod */
  { "neg", MONAMIC,  UFNEG },    /* negate */
  { "cat", DINAMIC,  UFCAT },    /* concatinate string */

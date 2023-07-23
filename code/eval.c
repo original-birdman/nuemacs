@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 #include <sys/utsname.h>
+#include <stddef.h>
+#include <strings.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -16,8 +18,6 @@
 #include "line.h"
 #include "util.h"
 #include "version.h"
-
-#include <stddef.h>
 #include "idxsorter.h"
 
 #if RANDOM_SEED
@@ -270,24 +270,44 @@ static char *xlat(char *source, char *lookup, char *trans) {
 /* ue_printf
  *
  * printf-like handling for multiple args together...
- * Since all values are strings, and trying to start a template with %
- * produces an error (it's taken to be the start of a user variable).
- * The place-holder is %ws with the w being a stated width (may be omitted).
+ * All values are strings, but this allows for integer and float args too
+ * by converting them from the strings then formatting them according
+ * to the template.
+ * The formatting does not allow the use of any formatting optins that
+ * specify specific parameters (* and $) and ignores options which specify
+ * parameter sizes.
  *
  * NOTE!!!!
- * This *might* require the use of a buffer-per-call, but
- *    write-message &cat &ptf "fc: %s " $fillcol &ptf "et: %s" $equiv_type
- * works, so perhaps not...
+ * This you can't call &ptf to format a parametr for &ptf as there is
+ * only one static buffer.
+ * So:
+ *    write-message &ptf "&ptf gave %s on call." &ptf "str: %s" "Text"
+ * outputs:
+ *    str: Text
+ * (the "&ptf gave ... on call" is missing).
+ *
+ * The solution would be to put the second call into a local variable..
+ *    set .pt_arg1 &ptf "str: %s" "Text"
+ *    write-message &ptf "&ptf gave %s on call." .pt_args1
  */
 
 /* The returned value - overflow NOT checked.... */
 static char ue_buf[NSTRING];
-
+static int in_ue_printf = 0;        /* Recursion detection flag */
 #define PHCHAR '%'
-#define TMCHAR 's'
+/* The order here is IMPORTANT!!!
+ * It is int, unsigned, double, char, str, ptr
+ * The latter isn't of any practical use, but is a valid conversion char
+ */
+#define TMPL_CHAR "di ouxX eEfFgGaA c s p"
+#define TMPL_SKIP "hlqLjzZt"
+
 static char *ue_printf(char *fmt) {
     unicode_t c;
     char nexttok[NSTRING];
+
+    if (in_ue_printf) return "Attempted &ptf recursion!";
+    in_ue_printf = 1;
 
     char *op = ue_buf;      /* Output pointer */
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
@@ -305,29 +325,77 @@ static char *ue_printf(char *fmt) {
         }
         fmt += used;
 
-/* We have a PHCHAR, so get the next char */
+/* We have a PHCHAR: test the next char */
 
-        if (*(fmt) == PHCHAR) { /* %% is a literal '%' */
+        if (*fmt == PHCHAR) { /* %% is a literal '%' */
             *op++ = PHCHAR;
             fmt++;
+            bytes_togo--;
             continue;
         }
-        int min_width = 0;
-        while ((*fmt >= '0') && (*fmt <= '9')) {
-            min_width *= 10;
-            min_width += (*fmt - '0');
+
+/* Now keep going until we find a conversion specifier, to pick up the
+ * template - but skip anything we don't want, and any attempt to
+ * specify specific args to use is an error.
+ * We know this shoudl just be ASCII, so can go byte-by-byte.
+ */
+        char t_fmt[NSTRING];    /* So we can avoid a length check */
+        char *tp = t_fmt;
+        *tp++ = PHCHAR;         /* Start the template... */
+        while (!strchr(TMPL_CHAR, *fmt)) {
+            if ((*fmt == '*') || (*fmt == '$')) {
+                strcpy(op, errorm);
+                goto finalize;
+            }
+            if (!strchr(TMPL_SKIP, *fmt)) *tp++ = *fmt;
             fmt++;
-            bytes_togo--;
+            if (--bytes_togo == 0) {
+                strcpy(op, errorm);
+                goto finalize;
+            }
         }
-/* The next char MUST be a TMCHAR - anything else is an error! */
-        if (*fmt != TMCHAR) {
+
+/* The current char MUST be in TMPL_CHAR - anything else is an error! */
+        if (!strchr(TMPL_CHAR, *fmt)) {
             strcpy(op, errorm);
             goto finalize;
         }
-        fmt++;                  /* Skip the TMCHAR */
-        bytes_togo--;
+        char conv_char = *tp++ = *fmt++;
+        *tp = '\0';
+
+/* Get what to format */
         if (macarg(nexttok) != TRUE) break;
-        int slen = sprintf(op, "%*s", min_width, nexttok);
+
+/* We now have nexttok as a string. Need to convert it to the correct
+ * type for sprintf to format it if it is numeric.
+ * Note that we still need to format a string (not just copy it) as
+ * it may have specified field width or justifiction.
+ */
+        int slen;
+        if (conv_char == 'p') {      /* Is this actually useful? */
+            slen = sprintf(op, t_fmt, &nexttok);
+        }
+        else if (conv_char == 's') {
+            slen = sprintf(op, t_fmt, nexttok);
+        }
+        else if (conv_char == 'c') {
+            slen = sprintf(op, t_fmt, nexttok[0]);
+        }
+        else {  /* Check in reverse order of presence in TMPL_CHAR */
+            char *t_pos = (strchr(TMPL_CHAR, conv_char));
+            if (t_pos >= TMPL_CHAR+8) {        /* Doubles */
+                double dv = strtod(nexttok, NULL);
+                slen = sprintf(op, t_fmt, dv);
+            }
+            else if (t_pos >= TMPL_CHAR+3) {   /* Unsigned */
+                unsigned long uv = strtoul(nexttok, NULL, 10);
+                slen = sprintf(op, t_fmt, uv);
+            }
+            else {                          /* Must be signed */
+                long lv = strtol(nexttok, NULL, 10);
+                slen = sprintf(op, t_fmt, lv);
+            }
+        }
         op +=slen;
     }
 
@@ -335,6 +403,7 @@ static char *ue_printf(char *fmt) {
 
 finalize:
     *op = '\0';
+    in_ue_printf = 0;
     return ue_buf;
 }
 
@@ -384,13 +453,19 @@ static char *gtfun(char *fname) {
         }
     }
 
-
 /* And now evaluate it! */
     switch (funcs[fnum].tag) {
     case UFADD:         return ue_itoa(atoi(arg1) + atoi(arg2));
     case UFSUB:         return ue_itoa(atoi(arg1) - atoi(arg2));
     case UFTIMES:       return ue_itoa(atoi(arg1) * atoi(arg2));
     case UFDIV:         return ue_itoa(atoi(arg1) / atoi(arg2));
+    case UFRDV:        {
+        static char rdv_result[32];
+        double res = strtod(arg1, NULL)/strtod(arg2, NULL);
+        int prec = atoi(arg3);
+        sprintf(rdv_result, "%.*G", prec, res);
+        return rdv_result;
+    }
     case UFMOD:         return ue_itoa(atoi(arg1) % atoi(arg2));
     case UFNEG:         return ue_itoa(-atoi(arg1));
     case UFCAT:
