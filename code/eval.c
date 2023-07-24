@@ -277,23 +277,12 @@ static char *xlat(char *source, char *lookup, char *trans) {
  * specify specific parameters (* and $) and ignores options which specify
  * parameter sizes.
  *
- * NOTE!!!!
- * This you can't call &ptf to format a parametr for &ptf as there is
- * only one static buffer.
- * So:
- *    write-message &ptf "&ptf gave %s on call." &ptf "str: %s" "Text"
- * outputs:
- *    str: Text
- * (the "&ptf gave ... on call" is missing).
- *
- * The solution would be to put the second call into a local variable..
- *    set .pt_arg1 &ptf "str: %s" "Text"
- *    write-message &ptf "&ptf gave %s on call." .pt_args1
+ * The output is built up in a local buffer and only copied to the
+ * single static buffer at exit. Thsi is to allow for re-entrancy.
  */
 
 /* The returned value - overflow NOT checked.... */
 static char ue_buf[NSTRING];
-static int in_ue_printf = 0;        /* Recursion detection flag */
 #define PHCHAR '%'
 /* The order here is IMPORTANT!!!
  * It is int, unsigned, double, char, str, ptr
@@ -305,11 +294,9 @@ static int in_ue_printf = 0;        /* Recursion detection flag */
 static char *ue_printf(char *fmt) {
     unicode_t c;
     char nexttok[NSTRING];
+    char local_buf[NSTRING];    /* Local building-up buffer */
 
-    if (in_ue_printf) return "Attempted &ptf recursion!";
-    in_ue_printf = 1;
-
-    char *op = ue_buf;      /* Output pointer */
+    char *op = local_buf;       /* Output pointer */
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
     if (bytes_togo == 0) goto finalize; /* Nothing else...clear line only */
@@ -345,12 +332,14 @@ static char *ue_printf(char *fmt) {
         while (!strchr(TMPL_CHAR, *fmt)) {
             if ((*fmt == '*') || (*fmt == '$')) {
                 strcpy(op, errorm);
+                op += strlen(errorm);
                 goto finalize;
             }
             if (!strchr(TMPL_SKIP, *fmt)) *tp++ = *fmt;
             fmt++;
             if (--bytes_togo == 0) {
                 strcpy(op, errorm);
+                op += strlen(errorm);
                 goto finalize;
             }
         }
@@ -358,12 +347,13 @@ static char *ue_printf(char *fmt) {
 /* The current char MUST be in TMPL_CHAR - anything else is an error! */
         if (!strchr(TMPL_CHAR, *fmt)) {
             strcpy(op, errorm);
+            op += strlen(errorm);
             goto finalize;
         }
         char conv_char = *tp++ = *fmt++;
         *tp = '\0';
 
-/* Get what to format */
+/* Get what to format. */
         if (macarg(nexttok) != TRUE) break;
 
 /* We now have nexttok as a string. Need to convert it to the correct
@@ -399,11 +389,12 @@ static char *ue_printf(char *fmt) {
         op +=slen;
     }
 
-/* Finalize the result with a NUL char */
-
+/* Finalize the result with a NUL char an move it to the static buffer
+ * so we can return a pointer to it.
+ */
 finalize:
     *op = '\0';
-    in_ue_printf = 0;
+    strcpy(ue_buf, local_buf);
     return ue_buf;
 }
 
