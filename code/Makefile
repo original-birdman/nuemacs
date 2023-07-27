@@ -270,9 +270,9 @@ CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1
 
-LIBS = -lncurses -ldl    # All now have ncurses (curses just links to it)
+LIBS = -lm -lncurses -ldl   # All now have ncurses (curses just links to it)
 
-#Let's try to find libcurses/libncurses etc.
+# Let's try to find libcurses/libncurses etc.
 # Start by finding term.h (for Oleg's router distros)
 #
 tlist := /opt/include/ncurses/term.h

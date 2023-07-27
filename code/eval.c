@@ -10,6 +10,7 @@
 #include <sys/utsname.h>
 #include <stddef.h>
 #include <strings.h>
+#include <math.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -450,15 +451,23 @@ static char *gtfun(char *fname) {
     case UFSUB:         return ue_itoa(atoi(arg1) - atoi(arg2));
     case UFTIMES:       return ue_itoa(atoi(arg1) * atoi(arg2));
     case UFDIV:         return ue_itoa(atoi(arg1) / atoi(arg2));
-    case UFRDV:        {
-        static char rdv_result[32];
-        double res = strtod(arg1, NULL)/strtod(arg2, NULL);
-        int prec = atoi(arg3);
-        sprintf(rdv_result, "%.*G", prec, res);
-        return rdv_result;
-    }
     case UFMOD:         return ue_itoa(atoi(arg1) % atoi(arg2));
     case UFNEG:         return ue_itoa(-atoi(arg1));
+    case UFABS:         return ue_itoa(abs(atoi(arg1)));
+
+    case UFEQUAL:       return ltos(atoi(arg1) == atoi(arg2));
+    case UFLESS:        return ltos(atoi(arg1) < atoi(arg2));
+    case UFGREATER:     return ltos(atoi(arg1) > atoi(arg2));
+    case UFNOT:         return ltos(stol(arg1) == FALSE);
+    case UFAND:         return ltos(stol(arg1) && stol(arg2));
+    case UFOR:          return ltos(stol(arg1) || stol(arg2));
+
+    case UFBAND:        return ue_itoa(ue_atoi(arg1) & ue_atoi(arg2));
+    case UFBOR:         return ue_itoa(ue_atoi(arg1) | ue_atoi(arg2));
+    case UFBXOR:        return ue_itoa(ue_atoi(arg1) ^ ue_atoi(arg2));
+    case UFBNOT:        return ue_itoa(~ue_atoi(arg1));
+    case UFBLIT:        return ue_itoa(ue_atoi(arg1));
+
     case UFCAT:
         strcpy(result, arg1);
         return strcat(result, arg2);
@@ -476,16 +485,9 @@ static char *gtfun(char *fname) {
                         result[reslen] = '\0';
                         return result;
                        }
-    case UFNOT:         return ltos(stol(arg1) == FALSE);
-    case UFEQUAL:       return ltos(atoi(arg1) == atoi(arg2));
-    case UFLESS:        return ltos(atoi(arg1) < atoi(arg2));
-    case UFGREATER:     return ltos(atoi(arg1) > atoi(arg2));
     case UFSEQUAL:      return ltos(strcmp(arg1, arg2) == 0);
     case UFSLESS:       return ltos(strcmp(arg1, arg2) < 0);
     case UFSGREAT:      return ltos(strcmp(arg1, arg2) > 0);
-    case UFIND:         return strcpy(result, getval(arg1));
-    case UFAND:         return ltos(stol(arg1) && stol(arg2));
-    case UFOR:          return ltos(stol(arg1) || stol(arg2));
     case UFLENGTH:      return ue_itoa(strlen(arg1));
     case UFUPPER:
     case UFLOWER:
@@ -534,6 +536,16 @@ static char *gtfun(char *fname) {
         *op = '\0';
         return result;
        }
+    case UFSINDEX:      return ue_itoa(sindex(arg1, arg2));
+
+    case UFIND: { /* Evaluate the next arg via temporary execstr */
+        char *oldestr = execstr;
+        execstr = arg1;
+        macarg(result);
+        execstr = oldestr;
+        return result;
+    }
+
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
     case UFASCII: {     /* Return base unicode char - but keep name... */
         unicode_t uc_res;
@@ -562,8 +574,6 @@ static char *gtfun(char *fname) {
         result[nb] = 0;
         return result;
     case UFRND:         return ue_itoa((ernd() % abs(atoi(arg1))) + 1);
-    case UFABS:         return ue_itoa(abs(atoi(arg1)));
-    case UFSINDEX:      return ue_itoa(sindex(arg1, arg2));
     case UFENV:
         tsp = getenv(arg1);
         return tsp == NULL ? "" : tsp;
@@ -573,18 +583,38 @@ static char *gtfun(char *fname) {
     case UFFIND:
         tsp = flook(arg1, TRUE, ONPATH);
         return tsp == NULL ? "" : tsp;
-    case UFBAND:        return ue_itoa(ue_atoi(arg1) & ue_atoi(arg2));
-    case UFBOR:         return ue_itoa(ue_atoi(arg1) | ue_atoi(arg2));
-    case UFBXOR:        return ue_itoa(ue_atoi(arg1) ^ ue_atoi(arg2));
-    case UFBNOT:        return ue_itoa(~ue_atoi(arg1));
-    case UFBLIT:        return ue_itoa(ue_atoi(arg1));
     case UFXLATE:       return xlat(arg1, arg2, arg3);
     case UFGRPTEXT:
         return group_match(atoi(arg1));
     case UFPRINTF:
         return ue_printf(arg1);
-    }
 
+/* Real arithmetic is to precision 12 in G-style strings.
+ * Use &ptf to format the results as you wish.
+ * The first 5 all take 2 real args and return 1 real result (as strings)
+ */
+    case UFRADD:
+    case UFRSUB:
+    case UFRTIMES:
+    case UFRDIV:
+    case UFRPOW: {
+        static char rdv_result[20];
+        double d1 = strtod(arg1, NULL);
+        double d2 = strtod(arg2, NULL);
+        double res;
+        if (funcs[fnum].tag ==  UFRADD)        res = d1 + d2;
+        else if (funcs[fnum].tag ==  UFRSUB)   res = d1 - d2;
+        else if (funcs[fnum].tag ==  UFRTIMES) res = d1 * d2;
+        else if (funcs[fnum].tag ==  UFRDIV)   res = d1 / d2;
+        else   /* UFRPOW left */               res = pow(d1, d2);
+        snprintf(rdv_result, 20, "%.12G", res);
+        return rdv_result;
+    }
+    case UFRLESS:       return ltos(strtold(arg1, NULL) < strtod(arg2, NULL));
+    case UFRGREAT:      return ltos(strtold(arg1, NULL) > strtod(arg2, NULL));
+/* There IS NO UFREQUAL!!! You should never compare reals for equality! */
+    case UFR2I:         return ue_itoa(lround(strtold(arg1, NULL)));
+    }
     exit(-11);              /* never should get here */
 }
 
@@ -1258,14 +1288,14 @@ char *ue_itoa(int i) {
 int gettyp(char *token) {
     char c;         /* first char in token */
 
-    c = *token;     /* grab the first char (all we check) */
+    c = *token;     /* grab the first char (all we usually check) */
 
     if (c == 0) return TKNUL;      /* no blanks!!! */
 
 /* A numeric literal? *GGR* allow for -ve ones too */
 
     if (c >= '0' && c <= '9') return TKLIT;
-    if (c == '-') {
+    if (c == '-' || c == '.') {     /* -n and .nnn are numbers */
         char c2 = token[1];
         if (c2 >= '0' && c2 <= '9') return TKLIT;
     }

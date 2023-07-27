@@ -81,15 +81,17 @@ struct evlist evl[] = {
 /* The tags for user functions - used in struct evlist */
 
 enum uf_val {
-    UFADD,      UFSUB,      UFTIMES,    UFDIV,      UFRDV,
-    UFMOD,      UFNEG,      UFCAT,      UFLEFT,     UFRIGHT,
-    UFMID,      UFNOT,      UFEQUAL,    UFLESS,     UFGREATER,
-    UFSEQUAL,   UFSLESS,    UFSGREAT,   UFIND,      UFAND,
-    UFOR,       UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,
-    UFTRUTH,    UFASCII,    UFCHR,      UFGTKEY,    UFRND,
-    UFABS,      UFSINDEX,   UFENV,      UFBIND,     UFEXIST,
-    UFBXIST,    UFFIND,     UFBAND,     UFBOR,      UFBXOR,
-    UFBNOT,     UFBLIT,     UFXLATE,    UFGRPTEXT,  UFPRINTF,
+    UFADD,      UFSUB,      UFTIMES,    UFDIV,      UFMOD,  UFNEG,  UFABS,
+    UFEQUAL,    UFLESS,     UFGREATER,  UFNOT,      UFAND,  UFOR,
+    UFBAND,     UFBOR,      UFBXOR,     UFBNOT,     UFBLIT,
+    UFCAT,      UFLEFT,     UFRIGHT,    UFMID,      UFSEQUAL,   UFSLESS,
+    UFSGREAT,   UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,   UFSINDEX,
+    UFIND,
+    UFTRUTH,    UFASCII,    UFCHR,      UFGTKEY,    UFRND,  UFENV,
+    UFBIND,     UFEXIST,    UFBXIST,    UFFIND,     UFXLATE,
+    UFGRPTEXT,  UFPRINTF,
+    UFRADD,     UFRSUB,     UFRTIMES,   UFRDIV,     UFRPOW,
+    UFRLESS,    UFRGREAT,   UFR2I,
 };
 
 enum function_type {
@@ -107,51 +109,69 @@ struct user_function {
 };
 
 static struct user_function funcs[] = {
+/* Integer arithmetic*/
  { "add", DINAMIC,  UFADD },    /* add two numbers together */
  { "sub", DINAMIC,  UFSUB },    /* subtraction */
  { "tim", DINAMIC,  UFTIMES },  /* multiplication */
  { "div", DINAMIC,  UFDIV },    /* integer division */
- { "rdv", TRINAMIC, UFRDV },    /* real division (arg3 is dec places for %G */
  { "mod", DINAMIC,  UFMOD },    /* mod */
  { "neg", MONAMIC,  UFNEG },    /* negate */
- { "cat", DINAMIC,  UFCAT },    /* concatinate string */
- { "lef", DINAMIC,  UFLEFT },   /* left string(string, len) */
- { "rig", DINAMIC,  UFRIGHT },  /* right string(string, pos) */
- { "mid", TRINAMIC, UFMID },    /* mid string(string, pos, len) */
- { "not", MONAMIC,  UFNOT },    /* logical not */
+ { "abs", MONAMIC,  UFABS },    /* absolute value of a number */
+
+/* Logical operators */
  { "equ", DINAMIC,  UFEQUAL },  /* logical equality check */
  { "les", DINAMIC,  UFLESS },   /* logical less than */
  { "gre", DINAMIC,  UFGREATER },/* logical greater than */
- { "seq", DINAMIC,  UFSEQUAL }, /* string logical equality check */
- { "sle", DINAMIC,  UFSLESS },  /* string logical less than */
- { "sgr", DINAMIC,  UFSGREAT }, /* string logical greater than */
- { "ind", MONAMIC,  UFIND },    /* evaluate indirect value */
+ { "not", MONAMIC,  UFNOT },    /* logical not */
  { "and", DINAMIC,  UFAND },    /* logical and */
  { "or",  DINAMIC,  UFOR },     /* logical or */
- { "len", MONAMIC,  UFLENGTH }, /* string length */
- { "upp", MONAMIC,  UFUPPER },  /* uppercase string */
- { "low", MONAMIC,  UFLOWER },  /* lower case string */
- { "esc", MONAMIC,  UFESCAPE }, /* SHELL escape string */
- { "tru", MONAMIC,  UFTRUTH },  /* Truth of the universe logical test */
- { "asc", MONAMIC,  UFASCII },  /* char to integer conversion */
- { "chr", MONAMIC,  UFCHR },    /* integer to char conversion */
- { "gtk", NILNAMIC, UFGTKEY },  /* get 1 Unicode character */
- { "rnd", MONAMIC,  UFRND },    /* get a random number */
- { "abs", MONAMIC,  UFABS },    /* absolute value of a number */
- { "sin", DINAMIC,  UFSINDEX }, /* find the index of one string in another */
- { "env", MONAMIC,  UFENV },    /* retrieve a system environment var */
- { "bin", MONAMIC,  UFBIND },   /* loopup what function name is bound to a key */
- { "exi", MONAMIC,  UFEXIST },  /* check whether a file exists */
- { "exb", MONAMIC,  UFBXIST },  /* check whether a buffer exists */
- { "fin", MONAMIC,  UFFIND },   /* look for a file on the path... */
+
+/* Bitwise functions */
  { "ban", DINAMIC,  UFBAND },   /* bitwise and   9-10-87  jwm */
  { "bor", DINAMIC,  UFBOR },    /* bitwise or    9-10-87  jwm */
  { "bxo", DINAMIC,  UFBXOR },   /* bitwise xor   9-10-87  jwm */
  { "bno", MONAMIC,  UFBNOT },   /* bitwise not */
  { "bli", MONAMIC,  UFBLIT },   /* bit literal (for hex, dec, oct input) */
+
+/* String functions */
+ { "cat", DINAMIC,  UFCAT },    /* concatenate string */
+ { "lef", DINAMIC,  UFLEFT },   /* left string(string, len) */
+ { "rig", DINAMIC,  UFRIGHT },  /* right string(string, pos) */
+ { "mid", TRINAMIC, UFMID },    /* mid string(string, pos, len) */
+ { "seq", DINAMIC,  UFSEQUAL }, /* string logical equality check */
+ { "sle", DINAMIC,  UFSLESS },  /* string logical less than */
+ { "sgr", DINAMIC,  UFSGREAT }, /* string logical greater than */
+ { "len", MONAMIC,  UFLENGTH }, /* string length */
+ { "upp", MONAMIC,  UFUPPER },  /* uppercase string */
+ { "low", MONAMIC,  UFLOWER },  /* lower case string */
+ { "esc", MONAMIC,  UFESCAPE }, /* SHELL escape string */
+ { "sin", DINAMIC,  UFSINDEX }, /* find the index of one string in another */
+
+/* Miscellaneous functions */
+ { "ind", MONAMIC,  UFIND },    /* evaluate indirect value */
+ { "tru", MONAMIC,  UFTRUTH },  /* Truth of the universe logical test */
+ { "asc", MONAMIC,  UFASCII },  /* char to integer conversion */
+ { "chr", MONAMIC,  UFCHR },    /* integer to char conversion */
+ { "gtk", NILNAMIC, UFGTKEY },  /* get 1 Unicode character */
+ { "rnd", MONAMIC,  UFRND },    /* get a random number */
+ { "env", MONAMIC,  UFENV },    /* retrieve an OS system environment var */
+ { "bin", MONAMIC,  UFBIND },   /* lookup name of function bound to a key */
+ { "exi", MONAMIC,  UFEXIST },  /* check whether a file exists */
+ { "exb", MONAMIC,  UFBXIST },  /* check whether a buffer exists */
+ { "fin", MONAMIC,  UFFIND },   /* look for a file on the path... */
  { "xla", TRINAMIC, UFXLATE },  /* XLATE character string translation */
  { "grp", MONAMIC,  UFGRPTEXT}, /* Text in group for last match */
  { "ptf", MONAMIC,  UFPRINTF},  /* printf-style string creator */
+
+/* Real artihmetic */
+ { "rad", DINAMIC,  UFRADD },   /* add */
+ { "rsu", DINAMIC,  UFRSUB },   /* subtract */
+ { "rti", DINAMIC,  UFRTIMES }, /* multiply */
+ { "rdv", DINAMIC,  UFRDIV },   /* division */
+ { "rpw", DINAMIC,  UFRPOW },   /* power (exp) */
+ { "rlt", DINAMIC,  UFRLESS },  /* less than */
+ { "rgt", DINAMIC,  UFRGREAT }, /* greater than */
+ { "r2i", MONAMIC,  UFR2I },    /* round real to int */
 };
 
 #endif  /* EVAR_H_ */

@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.170 Help Index     (23 July 2023)
+=>                   nuEmacs GGR4.170 Help Index     (28 July 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -540,8 +540,20 @@ Arithmetic comparisons
 Logical
     &not, &and, &or
 
-Real division
-    &rdv n1, n2, prec
+Real arithmetic (uses doubles internally)
+    &rad, &rsu, &rti, &rdv, &rpw, &r2i
+
+NOTE: There is no &i2r as all integer (strings) are valide real number
+      (strings).
+
+Arithmetic comparisons
+    &rlt, &rgt (no equals, as you shouldn't compare reals for equality)
+
+NOTE: You should probably use the &ptf function to format real numbers
+      to the output format you wish.
+      (They are stored as strings in G format).
+      &r2i rounds them to integers (rounded away from 0, so 0.5 => 1
+      while -0.5 => -1)
 
 Bit operations
     &ban, &bor, &bxo, &bno
@@ -570,8 +582,10 @@ File & buffer operations
 
 Miscellaneous
     &esc s          Escape string for shell usage
-    &ind s          Evaluate arg (for indirect access)
-    &tru s          TRUE or FaLSE
+    &ind s          Evaluate arg s and then evaluate that.
+                    s may expand to a variable (e.g. $xxx, %xxx, .xxx)
+                    or a function + args (e.g. &add 1 2)
+    &tru s          Truth of the universe logical test
     &gtk            Get a key (from keyboard)
     &env name       Get an environment variable
     &bin key-spec   Get a function bound to key (or ERROR)
@@ -582,6 +596,7 @@ Miscellaneous
     &grp n          After a regex match, the text of group n
     &ptf templ a1, a2, ...
                     printf-style formatter.
+                    This does *not* allow * or $ positional arg usage.
 
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
