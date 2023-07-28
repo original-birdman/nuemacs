@@ -9,6 +9,11 @@
 #
 cat >uetest.rc <<'EOD'
 
+set %test_name arithmetic-test
+
+select-buffer test-reports
+insert-string &cat %test_name " started"
+newline
 set %fail 0
 set %ok 0
 
@@ -122,6 +127,7 @@ execute-procedure run-test
 newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
+insert-string &cat %test_name " ended"
 unmark-buffer
 -2 redraw-display
 EOD

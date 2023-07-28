@@ -55,6 +55,11 @@ store-procedure report-status
   1 select-buffer     ; Back to buffer from whence we came
 !endm
 
+set %test_name parafill
+
+select-buffer test-reports
+insert-string &cat %test_name " started"
+newline
 set %fail 0
 set %ok 0
 
@@ -281,6 +286,7 @@ select-buffer test-reports
 newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
+insert-string &cat %test_name " ended"
 unmark-buffer
 -2 redraw-display
 EOD
