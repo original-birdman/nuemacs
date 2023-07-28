@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <strings.h>
 #include <math.h>
+#include <errno.h>
+#include <fenv.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -421,6 +423,7 @@ static char *gtfun(char *fname) {
     static char result[2 * NSTRING];        /* string result */
     int nb;                 /* Number of bytes in string */
     struct mstr csinfo;     /* Casing info structure */
+    int int1, int2 = 0;
 
 /* Look the function up in the function table */
     fname[3] = 0;           /* only first 3 chars significant */
@@ -445,53 +448,105 @@ static char *gtfun(char *fname) {
         }
     }
 
-/* And now evaluate it! */
-    switch (funcs[fnum].tag) {
-    case UFADD:         return ue_itoa(atoi(arg1) + atoi(arg2));
-    case UFSUB:         return ue_itoa(atoi(arg1) - atoi(arg2));
-    case UFTIMES:       return ue_itoa(atoi(arg1) * atoi(arg2));
-    case UFDIV:         return ue_itoa(atoi(arg1) / atoi(arg2));
-    case UFMOD:         return ue_itoa(atoi(arg1) % atoi(arg2));
-    case UFNEG:         return ue_itoa(-atoi(arg1));
-    case UFABS:         return ue_itoa(abs(atoi(arg1)));
+/* And now evaluate it!
+ * The switch statements are grouped by functionality type so they
+ * can share the initial arg1/arg2/arg3 conversions.
+ */
+    int tag = funcs[fnum].tag;  /* Useful for internal switches */
+    switch(funcs[fnum].tag) {   /* enum checks all values are handled */
 
-    case UFEQUAL:       return ltos(atoi(arg1) == atoi(arg2));
-    case UFLESS:        return ltos(atoi(arg1) < atoi(arg2));
-    case UFGREATER:     return ltos(atoi(arg1) > atoi(arg2));
-    case UFNOT:         return ltos(stol(arg1) == FALSE);
-    case UFAND:         return ltos(stol(arg1) && stol(arg2));
-    case UFOR:          return ltos(stol(arg1) || stol(arg2));
+/* Integer arithmetic*/
+    case UFADD:
+    case UFSUB:
+    case UFTIMES:
+    case UFDIV:
+    case UFMOD: {
+        int2 = atoi(arg2);
+        if ((tag == UFDIV) || (tag == UFMOD)) {
+            if (int2 == 0)  /* The only "illegal" case for integer maths */
+                return "ZDIV";
+        }
+    }   /* Falls through */
+    case UFNEG:
+    case UFABS: {
+        int1 = atoi(arg1);
+        switch(tag) {
+        case UFADD:   return ue_itoa(int1 + int2);
+        case UFSUB:   return ue_itoa(int1 - int2);
+        case UFTIMES: return ue_itoa(int1 * int2);
+        case UFDIV:   return ue_itoa(int1 / int2);
+        case UFMOD:   return ue_itoa(int1 % int2);
+        case UFNEG:   return ue_itoa(-int1);
+        default: /* UFABS */    return ue_itoa(abs(int1));
+        }
+    }
 
-    case UFBAND:        return ue_itoa(ue_atoi(arg1) & ue_atoi(arg2));
-    case UFBOR:         return ue_itoa(ue_atoi(arg1) | ue_atoi(arg2));
-    case UFBXOR:        return ue_itoa(ue_atoi(arg1) ^ ue_atoi(arg2));
-    case UFBNOT:        return ue_itoa(~ue_atoi(arg1));
-    case UFBLIT:        return ue_itoa(ue_atoi(arg1));
+/* Logical operators */
+    case UFEQUAL:
+    case UFLESS:
+    case UFGREATER: {
+        int1 = atoi(arg1);
+        int2 = atoi(arg2);
+        switch(tag) {
+        case UFEQUAL:                return ltos(int1 == int2);
+        case UFLESS:                 return ltos(int1 < int2);
+        default: /* UFGREATER */     return ltos(int1 > int2);
+        }
+    }
+    case UFAND:
+    case UFOR:
+        int2 = stol(arg2);      /* Falls through */
+    case UFNOT:
+        int1 = stol(arg1);
+        switch(tag) {
+        case UFNOT:         return ltos(int1 == FALSE);
+        case UFAND:         return ltos(int1 && int2);
+        default: /* UFOR */ return ltos(int1 || int2);
+        }
 
+/* Bitwise functions */
+    case UFBAND:
+    case UFBOR:
+    case UFBXOR:
+        int2 = ue_atoi(arg2);   /* Falls through */
+    case UFBNOT:
+    case UFBLIT:
+        int1 = ue_atoi(arg1);
+        switch(tag) {
+        case UFBAND:            return ue_itoa(int1 & int2);
+        case UFBOR:             return ue_itoa(int1 | int2);
+        case UFBXOR:            return ue_itoa(int1 ^ int2);
+        case UFBNOT:            return ue_itoa(~int1);
+        default: /* UFBLIT */   return ue_itoa(int1);
+        }
+
+/* String functions */
     case UFCAT:
         strcpy(result, arg1);
         return strcat(result, arg2);
-    case UFLEFT:
-                       {int reslen = atoi(arg2);
-                        strncpy(result, arg1, reslen);
-                        result[reslen] = '\0';
-                        return result;
-                       }
+    case UFLEFT: {
+        int reslen = atoi(arg2);
+        strncpy(result, arg1, reslen);
+        result[reslen] = '\0';
+        return result;
+    }
+
+/* Miscellaneous functions */
     case UFRIGHT:
         return (strcpy(result, &arg1[(strlen(arg1) - atoi(arg2))]));
-    case UFMID:
-                       {int reslen = atoi(arg3);
-                        strncpy(result, &arg1[atoi(arg2) - 1], atoi(arg3));
-                        result[reslen] = '\0';
-                        return result;
-                       }
+    case UFMID: {
+        int reslen = atoi(arg3);
+        strncpy(result, &arg1[atoi(arg2) - 1], atoi(arg3));
+        result[reslen] = '\0';
+        return result;
+    }
     case UFSEQUAL:      return ltos(strcmp(arg1, arg2) == 0);
     case UFSLESS:       return ltos(strcmp(arg1, arg2) < 0);
     case UFSGREAT:      return ltos(strcmp(arg1, arg2) > 0);
     case UFLENGTH:      return ue_itoa(strlen(arg1));
     case UFUPPER:
     case UFLOWER:
-        utf8_recase(funcs[fnum].tag == UFUPPER? UTF8_UPPER: UTF8_LOWER,
+        utf8_recase(tag == UFUPPER? UTF8_UPPER: UTF8_LOWER,
              arg1, -1, &csinfo);
         strcpy(result, csinfo.str);
         Xfree(csinfo.str);
@@ -547,7 +602,7 @@ static char *gtfun(char *fname) {
     }
 
     case UFTRUTH:       return ltos(atoi(arg1) == 42);
-    case UFASCII: {     /* Return base unicode char - but keep name... */
+    case UFASCII: {     /* Returns base unicode char - but keep old name... */
         unicode_t uc_res;
         (void)utf8_to_unicode(arg1, 0, strlen(arg1), &uc_res);
         return ue_itoa(uc_res);
@@ -584,36 +639,52 @@ static char *gtfun(char *fname) {
         tsp = flook(arg1, TRUE, ONPATH);
         return tsp == NULL ? "" : tsp;
     case UFXLATE:       return xlat(arg1, arg2, arg3);
-    case UFGRPTEXT:
-        return group_match(atoi(arg1));
-    case UFPRINTF:
-        return ue_printf(arg1);
+    case UFGRPTEXT:     return group_match(atoi(arg1));
+    case UFPRINTF:      return ue_printf(arg1);
 
 /* Real arithmetic is to precision 12 in G-style strings.
  * Use &ptf to format the results as you wish.
  * The first 5 all take 2 real args and return 1 real result (as strings)
+ * Overflow results in +/-INF
+ * Undeflow results in 0.
+ * (Invalid bit patterns result in NAN - but you shouldn't be able
+ * to get those).
+ * Arithmetic with these string values should still work.
+ *
  */
     case UFRADD:
     case UFRSUB:
     case UFRTIMES:
     case UFRDIV:
-    case UFRPOW: {
+    case UFRPOW:
+    case UFRLESS:
+    case UFRGREAT: {
         static char rdv_result[20];
         double d1 = strtod(arg1, NULL);
         double d2 = strtod(arg2, NULL);
         double res;
-        if (funcs[fnum].tag ==  UFRADD)        res = d1 + d2;
-        else if (funcs[fnum].tag ==  UFRSUB)   res = d1 - d2;
-        else if (funcs[fnum].tag ==  UFRTIMES) res = d1 * d2;
-        else if (funcs[fnum].tag ==  UFRDIV)   res = d1 / d2;
-        else   /* UFRPOW left */               res = pow(d1, d2);
+        switch(tag) {
+        case UFRADD:            res = d1 + d2; break;
+        case UFRSUB:            res = d1 - d2; break;
+        case UFRTIMES:          res = d1 * d2; break;
+        case UFRDIV:            res = d1 / d2; break;
+        case UFRPOW:            res = pow(d1, d2); break;
+        case UFRLESS:           return ltos(d1 < d2);
+        default: /* UFRGREAT */ return ltos(d1 > d2);
+        }
         snprintf(rdv_result, 20, "%.12G", res);
         return rdv_result;
     }
-    case UFRLESS:       return ltos(strtold(arg1, NULL) < strtod(arg2, NULL));
-    case UFRGREAT:      return ltos(strtold(arg1, NULL) > strtod(arg2, NULL));
 /* There IS NO UFREQUAL!!! You should never compare reals for equality! */
-    case UFR2I:         return ue_itoa(lround(strtold(arg1, NULL)));
+    case UFR2I: {       /* Add checks for overflow on conversion */
+        errno = 0;
+        feclearexcept(FE_ALL_EXCEPT);
+        int1 = lround(strtod(arg1, NULL));
+        if ((errno != 0) || (fetestexcept(FE_INVALID|FE_OVERFLOW) != 0)) {
+            return "TOOOBIG";
+        }
+        return ue_itoa(int1);
+    }
     }
     exit(-11);              /* never should get here */
 }
