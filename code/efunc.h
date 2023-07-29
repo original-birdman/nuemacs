@@ -285,7 +285,6 @@ extern int execbuf(int, int);
 extern int dobuf(struct buffer *);
 extern int execfile(int, int);
 extern int dofile(char *);
-extern int cbuf(int, int, int bufnum);
 extern int cbuf1(int, int);
 extern int cbuf2(int, int);
 extern int cbuf3(int, int);

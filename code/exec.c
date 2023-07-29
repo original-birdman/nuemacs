@@ -1613,7 +1613,7 @@ int dofile(char *fname) {
  * int f, n;            default flag and numeric arg
  * int bufnum;          number of buffer to execute
  */
-int cbuf(int f, int n, int bufnum) {
+static int cbuf(int f, int n, int bufnum) {
     UNUSED(f);
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
