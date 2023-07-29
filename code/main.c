@@ -79,7 +79,7 @@ static void emergencyexit(int);
 /* ======================================================================
  * GGR - list all options actually available!
  */
-void usage(int status) {
+static void usage(int status) {
 #define NL "\n"
 
 printf( \
@@ -435,7 +435,7 @@ FILE *stkdmp_fp = NULL;
 /* ======================================================================
  * Print stack trace to stdout and the dump file, if open.
  */
-void stk_printf(const char *fmt, ...) {
+static void stk_printf(const char *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
@@ -529,7 +529,7 @@ static char cwd[1024];
  * get to the Dump_Dir - the return value is whether it makes it
  * Also open the INDEX file,if possible.
  */
-int get_to_dumpdir(void) {
+static int get_to_dumpdir(void) {
 
 /* Get the current dir name - possibly needed for the index */
 
@@ -824,7 +824,7 @@ revert_buffer:
  * Signal handler which prints a stack trace (if configured at compile time)
  * and also attempts to save all modified buffers.
  */
-void exit_via_signal(int signr) {
+static void exit_via_signal(int signr) {
 
 /* We have to go back to the normal screen for the printing, otherwise
  * it gets cleared at exit.
@@ -958,7 +958,7 @@ com_arg *multiplier_check(int c) {
 }
 
 static char *rcfile = NULL;     /* GGR non-default rc file */
-int set_rcfile(char *fname) {
+static int set_rcfile(char *fname) {
     if (rcfile) {
         fprintf(stderr, "You cannot have two startup files (-c/@)!\n");
         return FALSE;
