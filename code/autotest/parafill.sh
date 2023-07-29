@@ -1,6 +1,16 @@
 #!/bin/sh
 #
 
+# This needs gawk -b to work, so if it doesn't - stop now...
+#
+gawk -b {exit} </dev/null >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo >&2 "No working 'gawk -b'. Ignoring parafill test"
+    echo -n "Press <CR> to continue"
+    read dnc
+    exit 0
+fi
+
 # Simple testing of wrapping in Wrap mode
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
