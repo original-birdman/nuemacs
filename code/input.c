@@ -894,7 +894,7 @@ static struct window *mb_winp = NULL;
 
 typedef void (*sighandler_t)(int);
 
-void sigwinch_handler(int signr) {
+static void sigwinch_handler(int signr) {
 
     UNUSED(signr);
 
