@@ -171,7 +171,7 @@ int ffclose(void) {
  * We also need to code make a heuristic check between a text and binary file.
  */
 
-int file_is_binary(void) {
+static int file_is_binary(void) {
 
     int bi = 0;
     int uc_total = 0, uc_text = 0;
