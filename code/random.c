@@ -1183,7 +1183,7 @@ int fmatch(int ch) {
  */
 enum istr_type { RAW_STR, COOKED_STR };
 
-int string_getter(int f, int n, enum istr_type call_type) {
+static int string_getter(int f, int n, enum istr_type call_type) {
     int status;                     /* status return code */
     char tstring[NLINE + 1];        /* string to add */
     char *prompt;
