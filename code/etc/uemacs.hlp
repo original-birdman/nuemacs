@@ -534,6 +534,9 @@ Others (omitting system-use only ones)...
 Arithmetic
     &neg, &abs, &add, &sub, &tim, &div, &mod
 
+NOTE: that &div and &mod will return "ZDIV" if the divisor is 0.
+      This will be treated as 0 if it is used as a number.
+
 Arithmetic comparisons
     &equ, &les, &gre
 
@@ -543,8 +546,9 @@ Logical
 Real arithmetic (uses doubles internally)
     &rad, &rsu, &rti, &rdv, &rpw, &r2i
 
-NOTE: There is no &i2r as all integer (strings) are valide real number
+NOTE: There is no &i2r as all integer (strings) are valid real number
       (strings).
+      These functions may return ZDIV, NAN, INF, +INF or TOOBIG (&r2i).
 
 Arithmetic comparisons
     &rlt, &rgt (no equals, as you shouldn't compare reals for equality)
@@ -574,7 +578,6 @@ String index
 Char to Code conversion
     &asc c          Byte code of base char
     &chr d          Char for given code (U+nnn, 0xnnn or decimal)
-
 
 File & buffer operations
     &exi, &exb
@@ -794,8 +797,8 @@ So, to display the current value of a variable you can use:
 and if $var has the value 1, you would see 1.
 (with just a <CR> at the end you would see $var as the output).
 
-Some commands (e.g. insert-tokens) may take the result to be a series of
-tokens, but that is a separate issue.
+Some commands (e.g. insert-tokens) may take the result of a prompt to be
+a series of tokens, but they still only take one argument in macros.
 
 -------------------------------------------------------------------------------
 => Keyboard macros
@@ -929,9 +932,8 @@ Flag    Controls    How
                     When OFF it will only wrap the preceding line and
                     leave any spaces alone.
 0x08    search      When ON, a repeat search will start from the
-        overlap     beginning of the previous match, so searchign for
-                    "issi" in "mississippi" wil lfidn it twice.
-
+        overlap     beginning of the previous match, so searching for
+                    "issi" in "mississippi" will find it twice.
 
 The toggle-ggr-opts user procedure defined in the standard start-up file
 allows you to change the setting of each.
