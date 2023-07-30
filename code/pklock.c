@@ -28,7 +28,7 @@
 #if defined(SVR4) && ! defined(__linux__)
 #include <sys/systeminfo.h>
 
-int gethostname(char *name, int namelen) {
+static int gethostname(char *name, int namelen) {
     return sysinfo(SI_HOSTNAME, name, namelen);
 }
 #endif

@@ -168,7 +168,7 @@ static int uneat(void) {
     return c;                           /* and return the last char    */
 }
 
-void reeat(int c) {
+static void reeat(int c) {
     if (eaten_char != -1)               /* If we've already been here    */
         return /*(NULL) */;             /* Don't do it again             */
     eaten_char = c;                     /* Else, save the char for later */

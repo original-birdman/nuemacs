@@ -27,11 +27,11 @@ static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
  * Call this at the end of any function that calls system().
  */
 static int orig_width, orig_height;
-void get_orig_size(void) {
+static void get_orig_size(void) {
     getscreensize(&orig_width, &orig_height);
     return;
 }
-void check_for_resize(void) {
+static void check_for_resize(void) {
     int lwidth, lheight;
     getscreensize(&lwidth, &lheight);
     if ((lwidth != orig_width) || (lheight != orig_height)) {
