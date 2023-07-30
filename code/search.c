@@ -109,7 +109,7 @@
  * modified since the previous search for the same string.
  * This setting can determine whether a preskip is needed and also enables
  * macro repeat search testing to work whilst reporting match information
- * along the way (this uses the system variable settibng, but this should
+ * along the way (this uses the system variable setting, but this should
  * not normally be set by a user).
  *
  */
@@ -1684,7 +1684,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
 /* readpattern -- Read a pattern.  Stash it in apat.
  * If it is the search string, create the reverse pattern and the
  * magic pattern, assuming we are in MAGIC mode (and defined that way).
- * Apat is not updated if the user types in an empty line.
+ * apat is not updated if the user types in an empty line.
  * If the user typed an empty line, and there is no old pattern, it is
  * an error.
  * Display the old pattern, in the style of Jeff Lomicka.
@@ -1808,7 +1808,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
  */
 
 /* For non-overlapping, reverse slow searches we need to set-up an
- * artifical barrier beyond which we don't retrieve characers.
+ * artifical barrier beyond which we don't retrieve characters.
  */
 static struct line *barrier_endline;
 static int barrier_offset;
@@ -2171,7 +2171,7 @@ failed:
 
 /* Called by step_/fast_scanner at the start of any search to
  * initialize group info (and clear out any old allocated bits).
- * Also at the end of replaces() to foget any matches there.
+ * Also at the end of replaces() to forget any matches there.
  */
 static void init_dyn_group_status(void) {
 /* If we allocated any result strings, free them now... */
@@ -2227,7 +2227,6 @@ static int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
 
     magic_search.start_line = curline;
     magic_search.start_point = curoff;
-
     for (int gi = 0; gi <= group_cntr; gi++) {
         match_grp_info[gi] = null_match_grp_info;
     }
@@ -2437,19 +2436,13 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 /* Scan through the pattern for a match. */
         while (*patptr != '\0') {
             c = nextbyte(&scanline, &scanoff, direct);
-/*
- * Debugging info, show the character and the remains of the string
+#if 0
+/* Debugging info, show the character and the remains of the string
  * it is being compared with.
- *
- *          char tpat[1024];
- *          char src[2];
- *          strcpy(tpat, "matching ");
- *          src[0] = c; src[1] = '\0';
- *          expandp(src, &tpat[strlen(tpat)], NPAT/2);
- *          expandp(" : ", &tpat[strlen(tpat)], NPAT/2);
- *          expandp(patptr, &tpat[strlen(tpat)], NPAT/2);
- *          fprintf(stderr, "3 %s\n", tpat);
  */
+ fprintf(stderr, "fast1: moved to %c(%02x) at %d in %.*s\n", c, c, scanoff,
+    scanline->l_used, scanline->l_text);
+#endif
             if (!asceq(c, *patptr++)) {
                 jump = (direct == FORWARD)? lastchfjump: lastchbjump;
                 goto fail;
@@ -2696,7 +2689,7 @@ int backhunt(int f, int n) {
 
 /* Search for the pattern for as long as n is positive (n == 0 will go
  * through once, which is just fine).
- * For the slow scan in reverse mode we might need to set an artifical
+ * For the slow scan in reverse mode we might need to set an artificial
  * barrier to prevent overlapping matches.
  */
         if (slow_scan) {
@@ -2791,19 +2784,17 @@ int scanmore(char *patrn, int dir, int next_match, int extend_match) {
 
 /* If we aren't in Exact mode we need to run mcstr to determine
  * which scanner to use.
- * There is no MAGIC mode here, so force it off whilast we run.
+ * There is no MAGIC mode here, so force it off whilst we run.
  */
     int real_mode = curwp->w_bufp->b_mode;
     curwp->w_bufp->b_mode &= ~MDMAGIC;
     if (curwp->w_bufp->b_mode & MDEXACT) slow_scan = FALSE;
     else mcstr();   /* Let this decide */
 
-    if (next_match) {   /* get to the other end of the current match */
 /* If this then fails, we have to restore where we were... */
+    if (next_match) {
         sm_line = curwp->w.dotp;    /* Save the current line pointer */
         sm_off = curwp->w.doto;     /* Save the current offset       */
-        int count = prev_match_len - 1;
-        (dir < 0)? back_grapheme(count): forw_grapheme(count);
     }
 
 /* If we've been asked to extend the previous match we step

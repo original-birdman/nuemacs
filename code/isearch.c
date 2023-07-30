@@ -177,7 +177,7 @@ static void reeat(int c) {
 }
 
 /* Functions to check and set-up incremental debug mode.
- * This is only intended to be used for runnign functional tests
+ * This is *only* intended to be used for running functional tests
  * I can see no other use for it....
  */
 #define IDB_BFR "//incremental-debug"
@@ -203,8 +203,8 @@ static void activate_cmd(void) {
 }
 
 /* Get the "next character" from the debug buffer.
- * This is the first characer on the line.
- * The line from col3 onwards is a command to be excuted *before* the
+ * This is the first character on the line.
+ * The line from col3 onwards is a command to be executed *before* the
  * next character is returned.
  */
 static int idbg_nextchar(void) {
@@ -290,9 +290,9 @@ static void hilite(int c, int col) {
  * the next occurrence of the string to be searched for (where the next
  * occurrence does NOT overlap the current occurrence).  A Control-R will
  * change to a backwards search, META will terminate the search and Control-G
- * will abort the search.  Rubout will back up to the previous match of the
- * string, or if the starting point is reached first, it will delete the
- * last character from the search string.
+ * will abort the search.  Backspace or Delete  will back up to the previous
+ * match of the string, or if the starting point is reached first, it will
+ * delete the last character from the search string.
  *
  * While searching backward, each successive character will leave the cursor
  * at the beginning of the matched string.  Typing a Control-R will search
@@ -375,7 +375,7 @@ start_over:
 
 /* Top of the per character loop */
 
-    for (;;) {          /* ISearch per character loop */
+    while (1) {         /* ISearch per character loop */
                         /* Check for special characters first: */
                         /* Most cases here change the search */
 
@@ -398,7 +398,7 @@ start_over:
  * current one.
  */
             status = scanmore(pat, n, TRUE, FALSE); /* Start again   */
-            if (!status) hilite('!', col+1);  /* No further match */
+            if (!status) hilite('!', col+1);        /* No further match */
             c = get_char(); /* Get next char */
             continue;       /* Go continue with the search */
 
@@ -471,7 +471,7 @@ start_over:
              status = scanmore(pat, n, FALSE, TRUE);    /* find next match */
         if (!status) hilite(c, col);
         c = get_char();             /* Get the next char        */
-    }                               /* for {;;} */
+    }
 end_isearch:
     (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
     if (using_incremental_debug) incremental_debug_cleanup();
