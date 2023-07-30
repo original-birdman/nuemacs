@@ -237,14 +237,6 @@ enum cmplt_type {   /* What is looked up and complete */
 */
 #define DIFCASE         0x20
 
-/*      De-allocate memory always on exit (if the operating system or
- *      main program can not
- */
-
-#if     CLEAN
-#define exit(a) cexit(a)
-#endif
-
 /* Some data is kept on a per-window view when a file is displayed in a
  * window, and this is copied back to the file's buffer structure when
  * the window is closed.
