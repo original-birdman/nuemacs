@@ -130,7 +130,6 @@ extern int addto_kbdmacro(char *, int, int);
 extern void addchar_kbdmacro(char);
 extern int macro_helper(int, int);
 extern void dumpdir_tidy(void);
-extern void edinit(char *);
 extern int execute(int c, int, int);
 extern int quickexit(int, int);
 extern int quit(int, int);

@@ -235,7 +235,7 @@ void addchar_kbdmacro(char addch) {
  * Internal routine to flush any pending text so as to be insert raw.
  * Needs to handle spaces, token()'s special characters and NULs.
  */
-    static void flush_kbd_text(void) {
+static void flush_kbd_text(void) {
     lnewline();
     linstr("insert-string ");
     if (must_quote) linsert_byte(1, '"');
@@ -968,6 +968,43 @@ static int set_rcfile(char *fname) {
     return TRUE;
 }
 
+/* ======================================================================
+ * Initialize all of the buffers and windows. The buffer name is passed down
+ * as an argument, because the main routine may have been told to read in a
+ * file by default, and we want the buffer name to be right.
+ */
+static void edinit(char *bname) {
+    struct buffer *bp;
+    struct window *wp;
+
+    bp = bfind(bname, TRUE, 0);             /* First buffer         */
+    blistp = bfind("//List", TRUE, BFINVS); /* Buffer list buffer   */
+    if (bp == NULL || blistp == NULL) exit(1);
+    wp = (struct window *)Xmalloc(sizeof(struct window));   /* First window */
+    curbp = bp;             /* Make this current    */
+    wheadp = wp;
+    curwp = wp;
+    wp->w_wndp = NULL;                      /* Initialize window    */
+    wp->w_bufp = bp;
+    bp->b_nwnd = 1;                         /* Displayed.           */
+    wp->w_linep = bp->b_linep;
+    wp->w.dotp = bp->b_linep;
+    wp->w.doto = 0;
+    wp->w.markp = NULL;
+    wp->w.marko = 0;
+    wp->w_toprow = 0;
+#if     COLOR
+/* initialize colors to global defaults */
+    wp->w_fcolor = gfcolor;
+    wp->w_bcolor = gbcolor;
+#endif
+    wp->w.fcol = 0;
+    wp->w_ntrows = term.t_vscreen;          /* Ignoring mode-line   */
+    wp->w_force = 0;
+    wp->w_flag = WFMODE | WFHARD;           /* Full.                */
+    return;
+}
+
 int main(int argc, char **argv) {
     int c = -1;             /* command character */
     struct buffer *bp;      /* temp buffer pointer */
@@ -1345,43 +1382,6 @@ loop:
     if (carg->f) mlerase();   /* Remove any numeric arg */
     execute(carg->c, carg->f, carg->n);
     goto loop;
-}
-
-/* ======================================================================
- * Initialize all of the buffers and windows. The buffer name is passed down
- * as an argument, because the main routine may have been told to read in a
- * file by default, and we want the buffer name to be right.
- */
-void edinit(char *bname) {
-    struct buffer *bp;
-    struct window *wp;
-
-    bp = bfind(bname, TRUE, 0);             /* First buffer         */
-    blistp = bfind("//List", TRUE, BFINVS); /* Buffer list buffer   */
-    if (bp == NULL || blistp == NULL) exit(1);
-    wp = (struct window *)Xmalloc(sizeof(struct window));   /* First window */
-    curbp = bp;             /* Make this current    */
-    wheadp = wp;
-    curwp = wp;
-    wp->w_wndp = NULL;                      /* Initialize window    */
-    wp->w_bufp = bp;
-    bp->b_nwnd = 1;                         /* Displayed.           */
-    wp->w_linep = bp->b_linep;
-    wp->w.dotp = bp->b_linep;
-    wp->w.doto = 0;
-    wp->w.markp = NULL;
-    wp->w.marko = 0;
-    wp->w_toprow = 0;
-#if     COLOR
-/* initialize colors to global defaults */
-    wp->w_fcolor = gfcolor;
-    wp->w_bcolor = gbcolor;
-#endif
-    wp->w.fcol = 0;
-    wp->w_ntrows = term.t_vscreen;          /* Ignoring mode-line   */
-    wp->w_force = 0;
-    wp->w_flag = WFMODE | WFHARD;           /* Full.                */
-    return;
 }
 
 /* ======================================================================
