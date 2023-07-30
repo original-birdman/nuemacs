@@ -18,6 +18,7 @@ awk "$prog" > autotest.tfile <<EOD
 02 look for s then i then m meaning we need to jump
 03 each time.
 04 It's quite simple.
+05 abbbb bb
 EOD
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -152,7 +153,8 @@ store-procedure check3
   execute-procedure check-position
 !endm
 
-; Now set-up the control buffer
+; Now set up the control buffer
+; This buffer is DELETED by the incremental search when it ends!
 ; 
 select-buffer //incremental-debug
 insert-string "s check1"
@@ -205,7 +207,8 @@ store-procedure check3
   execute-procedure check-position
 !endm
 
-; The test buffer is the same as for the forward search.
+; The control buffer is the same as for the forward search.
+; This buffer is DELETED by the incremental search when it ends!
 ;
 select-buffer //incremental-debug
 insert-string "s check1"
@@ -213,6 +216,114 @@ next-line
 insert-string "i check2"
 next-line
 insert-string "m check3"
+next-line
+insert-tokens 0x03
+2 select-buffer
+
+end-of-file
+reverse-incremental-search
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Now we test the Ctl-S/R (search next/prev) function
+;
+; Prepare the checks.
+
+store-procedure check1
+  set %test-report "  search for b"
+  execute-procedure report-status
+  set %curtest Search-b
+  set %expline 5
+  set %expcol 3
+  set %expchar &asc "b"
+  set %expmatchlen 1
+  execute-procedure check-position
+!endm
+store-procedure check2
+  set %test-report "  search for next b"
+  execute-procedure report-status
+  set %curtest Search-b
+  set %expline 5
+  set %expcol 4
+  set %expchar &asc "b"
+  set %expmatchlen 2
+  execute-procedure check-position
+!endm
+store-procedure check3
+  set %test-report "  search for next bb"
+  execute-procedure report-status
+  set %curtest Research-bb
+  set %expline 5
+  set %expcol 6
+  set %expchar &asc " "
+  set %expmatchlen 2
+  execute-procedure check-position
+!endm
+
+; Then set up the control buffer for next match
+; This buffer is DELETED by the incremental search when it ends!
+;
+select-buffer //incremental-debug
+beginning-of-file
+insert-string "b check1"
+next-line
+insert-string "b check2"
+next-line
+insert-tokens 0x13
+insert-string " check3"
+next-line
+insert-tokens 0x03
+2 select-buffer
+
+beginning-of-file
+incremental-search
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Now we test the Ctl-R (find prev match) function
+;
+; Replace the forward test results
+
+store-procedure check1
+  set %test-report "  search for b"
+  execute-procedure report-status
+  set %curtest Search-b
+  set %expline 5
+  set %expcol 8
+  set %expchar &asc "b"
+  set %expmatchlen 1
+  execute-procedure check-position
+!endm
+store-procedure check2
+  set %test-report "  search for next b"
+  execute-procedure report-status
+  set %curtest Search-b
+  set %expline 5
+  set %expcol 7
+  set %expchar &asc "b"
+  set %expmatchlen 2
+  execute-procedure check-position
+!endm
+store-procedure check3
+  set %test-report "  search for next bb"
+  execute-procedure report-status
+  set %curtest Research-bb
+  set %expline 5
+  set %expcol 4
+  set %expchar &asc b
+  set %expmatchlen 2
+  execute-procedure check-position
+!endm
+
+; Then set up the control buffer for next reverse match
+; This buffer is DELETED by the incremental search when it ends!
+;
+select-buffer //incremental-debug
+beginning-of-file
+insert-string "b check1"
+next-line
+insert-string "b check2"
+next-line
+insert-tokens 0x12
+insert-string " check3"
 next-line
 insert-tokens 0x03
 2 select-buffer
