@@ -681,7 +681,7 @@ static char *gtfun(char *fname) {
         feclearexcept(FE_ALL_EXCEPT);
         int1 = lround(strtod(arg1, NULL));
         if ((errno != 0) || (fetestexcept(FE_INVALID|FE_OVERFLOW) != 0)) {
-            return "TOOOBIG";
+            return "TOOBIG";
         }
         return ue_itoa(int1);
     }

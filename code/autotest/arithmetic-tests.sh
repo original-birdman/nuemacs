@@ -21,7 +21,10 @@ set %ok 0
 ;
 store-procedure run-test
     set .res &ind %test
-    !if &equ .res %expect
+; Use string test, as some results returns strings (ZDIV, NAN, INF,
+;  +INF or TOOBIG
+;
+    !if &seq .res %expect
         set %test-report &cat "OK: " %test
         set %ok &add %ok 1
     !else
@@ -73,11 +76,11 @@ set %expect TRUE
 execute-procedure run-test
 
 set %test "&les 5 6"
-set %expect FALSE
+set %expect TRUE
 execute-procedure run-test
 
 set %test "&gre 5 6"
-set %expect TRUE
+set %expect FALSE
 execute-procedure run-test
 
 set %test "&rad 12.6 18.3"
