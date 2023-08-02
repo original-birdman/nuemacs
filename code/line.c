@@ -34,9 +34,12 @@ struct line *lalloc(int used) {
     struct line *lp;
     int size;
 
-    size = (used + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
+/* Always allocate at least 1 extra byte!
+ * This enables other code to easily NUL-terminate the data if required.
+ */
+    size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
     if (size == 0)              /* Assume that is an empty. */
-        size = BLOCK_SIZE;  /* Line is for type-in. */
+        size = BLOCK_SIZE;      /* Line is for type-in. */
     lp = (struct line *)Xmalloc(sizeof(struct line) + size);
     lp->l_size = size;
     lp->l_used = used;
@@ -179,7 +182,11 @@ int linsert_byte(int n, unsigned char c) {
         return TRUE;
     }
     doto = curwp->w.doto;                   /* Save for later.      */
-    if (lp1->l_used + n > lp1->l_size) {    /* Hard: reallocate     */
+/* >= (not just >) to ensure the final char of l_size is not actually
+ * used.
+ * This enables other code to easily NUL-terminate the data if required.
+ */
+    if (lp1->l_used + n >= lp1->l_size) {   /* Hard: reallocate     */
         if ((lp2 = lalloc(lp1->l_used + n)) == NULL) return FALSE;
         cp1 = &lp1->l_text[0];
         cp2 = &lp2->l_text[0];
@@ -465,7 +472,11 @@ static int ldelnewline(void) {
             lfree(lp1);
         return TRUE;
     }
-    if (lp2->l_used <= lp1->l_size - lp1->l_used) {
+/* < (not <=) to ensure the final char of l_size is not actually
+ * used.
+ * This enables other code to easily NUL-terminate the data if required.
+ */
+    if (lp2->l_used < lp1->l_size - lp1->l_used) {
         cp1 = &lp1->l_text[lp1->l_used];
         cp2 = &lp2->l_text[0];
         while (cp2 != &lp2->l_text[lp2->l_used]) *cp1++ = *cp2++;

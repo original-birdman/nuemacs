@@ -19,6 +19,7 @@ awk "$prog" > autotest.tfile <<EOD
 03 each time.
 04 It's quite simple.
 05 abbbb bb
+06 mississippi mississippi mississippi
 EOD
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -221,6 +222,8 @@ insert-tokens 0x03
 2 select-buffer
 
 end-of-file
+; Skip back over the (added) mississippi line
+previous-line
 reverse-incremental-search
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -249,12 +252,12 @@ store-procedure check2
   execute-procedure check-position
 !endm
 store-procedure check3
-  set %test-report "  search for next bb"
+  set %test-report "  Re-search for next bb (overlap)"
   execute-procedure report-status
   set %curtest Research-bb
   set %expline 5
-  set %expcol 6
-  set %expchar &asc " "
+  set %expcol 5
+  set %expchar &asc "b"
   set %expmatchlen 2
   execute-procedure check-position
 !endm
@@ -268,8 +271,7 @@ insert-string "b check1"
 next-line
 insert-string "b check2"
 next-line
-insert-tokens 0x13
-insert-string " check3"
+insert-tokens 0x13 " check3"
 next-line
 insert-tokens 0x03
 2 select-buffer
@@ -283,7 +285,7 @@ incremental-search
 ; Replace the forward test results
 
 store-procedure check1
-  set %test-report "  search for b"
+  set %test-report "  rev search for b"
   execute-procedure report-status
   set %curtest Search-b
   set %expline 5
@@ -293,7 +295,7 @@ store-procedure check1
   execute-procedure check-position
 !endm
 store-procedure check2
-  set %test-report "  search for next b"
+  set %test-report "  rev search for next b"
   execute-procedure report-status
   set %curtest Search-b
   set %expline 5
@@ -303,7 +305,7 @@ store-procedure check2
   execute-procedure check-position
 !endm
 store-procedure check3
-  set %test-report "  search for next bb"
+  set %test-report "  Re-rev search for next bb"
   execute-procedure report-status
   set %curtest Research-bb
   set %expline 5
@@ -322,14 +324,67 @@ insert-string "b check1"
 next-line
 insert-string "b check2"
 next-line
-insert-tokens 0x12
-insert-string " check3"
+insert-tokens 0x12 " check3"
 next-line
 insert-tokens 0x03
 2 select-buffer
 
 end-of-file
+; Skip back over the (added) mississippi line
+previous-line
 reverse-incremental-search
+
+;
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Now we test overlapping forward searches.
+;
+
+store-procedure check1
+  set %test-report "  search for first issi"
+  execute-procedure report-status
+  set %curtest Search-issi
+  set %expline 6
+  set %expcol 6
+  set %expchar &asc "s"
+  set %expmatchlen 4
+  execute-procedure check-position
+!endm
+store-procedure check2
+  set %test-report "  search for next issi"
+  execute-procedure report-status
+  set %curtest Search-issi-again
+  set %expline 6
+  set %expcol 9
+  set %expchar &asc "p"
+  set %expmatchlen 4
+  execute-procedure check-position
+!endm
+store-procedure check3
+  set %test-report "  search for second next issi"
+  execute-procedure report-status
+  set %curtest Search-issi-againx2
+  set %expline 6
+  set %expcol 21
+  set %expchar &asc "p"
+  set %expmatchlen 4
+  execute-procedure check-position
+!endm
+
+; Then set up the control buffer for next reverse match
+; This buffer is DELETED by the incremental search when it ends!
+;
+select-buffer //incremental-debug
+insert-string "issi check1"
+next-line
+insert-tokens 0x13 " check2"
+next-line
+insert-tokens 0x13 0x13 " check3"
+next-line
+insert-tokens 0x03
+2 select-buffer
+
+beginning-of-file
+incremental-search
 
 ;
 select-buffer test-reports

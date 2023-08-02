@@ -143,8 +143,9 @@ static int get_char(void) {
 
     cmd_reexecute = -1;     /* Say we're in real mode again     */
     update(FALSE);          /* Pretty up the screen             */
-    if (cmd_offset >= CMDBUFLEN - 1) {  /* If we're getting too big ... */
-        mlwrite_one("? command too long");  /* Complain loudly and bitterly */
+/* If we're getting too big ...  Complain loudly and bitterly */
+    if (cmd_offset >= CMDBUFLEN - 1) {
+        mlwrite_one("? command too long");
         return metac;                   /* And force a quit */
     }
     c = get1key();          /* Get the next character              */
@@ -180,32 +181,71 @@ static void activate_cmd(void) {
 }
 
 /* Get the "next character" from the debug buffer.
- * This is the first character on the line.
- * The line from col3 onwards is a command to be executed *before* the
- * next character is returned.
+ * This is the next character from the first token on the line.
+ * The rest of the line is user-proc command to be executed *after*
+ * the last character in the string is enacted.
  */
+static char dbg_chars[128];
+static int dbg_chars_i = 0;
+
 static int idbg_nextchar(void) {
+
+/* Do we have any pending chars to return? */
+
+    if (dbg_chars_i != 0) {
+        if (dbg_chars[dbg_chars_i] == '\0') {   /* Run out of them */
+            dbg_chars_i = 0;
+        }
+        else {
+            return dbg_chars[dbg_chars_i++];
+        }
+    }
+
+/* Do we have a delayed command to run? */
+
     if (call_time == 0) activate_cmd();
 
 /* Now process the next buffer line....
  * NOTE: that we need to get the next Unicode character NOT a grapheme!
  */
-    int retchar;
     if (idbg_line == idbg_head) return '\0';
-    int used = utf8_to_unicode(idbg_line->l_text, 0, llength(idbg_line),
-         (unicode_t*)&retchar);
-    int cmdlen = llength(idbg_line); /* lines not NUL-terminated */
-    cmdlen -= used + 1;
-    if (cmdlen > 0) {
-        strncpy(next_cmd, idbg_line->l_text + used +1, cmdlen);
-        next_cmd[cmdlen] = '\0';
-    }
-    else {
-        next_cmd[0] = '\0';
-    }
+
+/* We want to get the first token, but token() expects NUL terminated strings.
+ * However, token expects NUL-terminated strings.
+ * So, ensure that this line buffer info has a NUL at the end.
+ * The allocation and manipulation code in line.c enbsures there is always
+ * at least one "extra", "free" character at the end of l_text.
+ */
+    idbg_line->l_text[idbg_line->l_used] = '\0';
+
+/* NOTE! that the use of token() overwrites the buffer data with NULs
+ * but that is OK, as we destroy the buffer at the end and we never
+ * re-visit any of the text.
+ */
+    char ntok[128];
+    char *dlp = idbg_line->l_text;
+    dlp = token(idbg_line->l_text, ntok, 128);
+
+    int nch = strlen(ntok);
+    int dbc = 0;
+    int offs = 0;
+    while (nch > offs) {
+        int tc;
+        int used = utf8_to_unicode(ntok, offs, nch, (unicode_t*)&tc);
+        dbg_chars[dbc++] = tc;
+        offs += used;
+     }
+    dbg_chars[dbc] = '\0';
+
+/* Any rest of line is the command to run, but skip spaces before
+ * checking that...
+ */
+    while(*dlp == ' ') {dlp++; idbg_line->l_used--;}
+    strcpy(next_cmd, dlp);
     if (call_time == 1) activate_cmd();
     idbg_line = lforw(idbg_line);
-    return retchar;
+    dbg_chars_i = 1;
+    return dbg_chars[0];
 }
 
 int incremental_debug_check(int type) {
@@ -216,7 +256,6 @@ int incremental_debug_check(int type) {
  * NOTE that we never actually switch to the buffer - we just get
  * the lines from it.
  */
-
     idbg_head = idbg_buf->b_linep;
     idbg_line = lforw(idbg_head);
 
@@ -338,7 +377,7 @@ start_over:
     c = get_char();         /* Get the first character    */
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
 /* Reuse old search string?   */
-/* Yup, find the grapheme length and re-echo the string    */
+/* Yup, find the grapheme length and re-echo the string. */
         cpos = 0;
         int plen = strlen(pat);
         int final_char = '!';
@@ -363,7 +402,7 @@ start_over:
     }
 
 /* Top of the per character loop, although only IS_REVERSE and
- * IS_FORWARD actually loop.
+ * IS_FORWARD actually do loop.
  */
 
     while (1) {         /* ISearch per character loop */
@@ -399,7 +438,7 @@ start_over:
             break;          /* Make sure we use it        */
 
         case IS_QUOTE:      /* Quote character            */
-            c = get_char(); /* Get the next char - might be a control*/
+            c = get_char(); /* Get the next char - might be a control */
             if (c & CONTROL) c = ~CONTROL & (c - '@');
             break;
 
@@ -455,7 +494,7 @@ start_over:
             pat[cpos++] = *(ucbp++);/* put the char in the buffer */
             if (cpos >= NPAT) {     /* too many chars in string?  */
                                     /* Yup.  Complain about it    */
-                mlwrite_one("? Search string too long");
+                if (clexec == FALSE) mlwrite_one("? Search string too long");
                 status = TRUE;       /* Return an error            */
                 goto end_isearch;
             }
@@ -470,6 +509,8 @@ start_over:
              status = scanmore(pat, n, FALSE, TRUE);    /* find next match */
         if (!status) hilite(c, col);
         c = get_char();             /* Get the next char        */
+/* Exit if we run out of input.... */
+        if (c == (CONTROL|'@')) break;
     }
 end_isearch:
     (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
