@@ -2795,6 +2795,15 @@ int scanmore(char *patrn, int dir, int next_match, int extend_match) {
     if (next_match) {
         sm_line = curwp->w.dotp;    /* Save the current line pointer */
         sm_off = curwp->w.doto;     /* Save the current offset       */
+/* If we want to find overlapping matches we need to set point to the
+ * other end of the match to that which we highlight.
+ * Since next_match is TRUE, we've already worked out the glyphcount
+ * to move above.
+ */
+        if (ggr_opts&GGR_SRCHOLAP) {
+            if (dir > 0) back_grapheme(prev_match_len - 1);
+            else         forw_grapheme(prev_match_len - 1);
+        }
     }
 
 /* If we've been asked to extend the previous match we step
