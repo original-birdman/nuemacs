@@ -1529,10 +1529,8 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     unicode_t c;            /* current char in format string */
 
 /* If we are not currently echoing on the command line, abort this */
-    if (discmd == FALSE) {
-        movecursor(term.t_mbline, 0);
-        return;
-    }
+    if (discmd == FALSE) return;
+
 #if COLOR
 /* Set up the proper colors for the command line */
 /* GGR - use configured colors, not 7 and 0 */
