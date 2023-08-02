@@ -44,11 +44,6 @@
 #define IS_QUIT         (CONTROL|'[')   /* Exit the search */
 #define IS_RUBOUT       (0x7F)          /* Delete previous character */
 
-/* A couple of "own" variables for re-eat */
-
-static int (*saved_get_char) (void);    /* Get character routine */
-static int eaten_char = -1;             /* Re-eaten char */
-
 /* A couple more "own" variables for the command string */
 
 static int cmd_buff[CMDBUFLEN]; /* Save the command args here */
@@ -60,12 +55,15 @@ static int cmd_reexecute = -1;          /* > 0 if re-executing command */
 static int promptpattern(char *prompt) {
     char tpat[NPAT + 20];
 
+/* check to see whether we are executing a command line */
+
+    if (clexec) return 0;
+
     strcpy(tpat, prompt);       /* copy prompt to output string */
     strcat(tpat, MLbkt("<Meta>"));
     strcat(tpat, " ");
 
-/* check to see if we are executing a command line */
-    if (!clexec) mlwrite_one(tpat);
+    mlwrite_one(tpat);
 
 /* This now needs the grapheme length of the byte array... */
 
@@ -87,42 +85,40 @@ static int promptpattern(char *prompt) {
  * int c;               character to be echoed
  * int col;             column to be echoed in
  */
+static int echo_str(char *str) {
+    int cw = strlen(str);
+    while(*str) TTputc(*str++);
+    return cw;
+}
+
 static int echo_char(int c, int col) {
     movecursor(term.t_mbline, col); /* Position the cursor         */
+    int cw;
     if ((c < ' ') || (c == 0x7F)) { /* Control character?          */
         switch (c) {                /* Yes, dispatch special cases */
         case '\n':                  /* Newline                     */
-            TTputc('<');
-            TTputc('N');
-            TTputc('L');
-            TTputc('>');
-            col += 3;
+            cw = echo_str("<NL>");
             break;
 
         case '\t':                  /* Tab                        */
-            TTputc('<');
-            TTputc('T');
-            TTputc('A');
-            TTputc('B');
-            TTputc('>');
-            col += 4;
+            cw = echo_str("<TAB>");
             break;
 
         case 0x7F:                  /* Rubout:                    */
-            TTputc('^');            /* Output a funny looking     */
-            TTputc('?');            /*  indication of Rubout      */
-            col++;                  /* Count the extra char       */
+            cw = echo_str("^?");
             break;
 
         default:                    /* Vanilla control char       */
-            TTputc('^');            /* Yes, output prefix         */
-            TTputc(c + 0x40);       /* Make it "^X"               */
-            col++;                  /* Count this char            */
+            static char gen_ctl[3] = "^ ";
+            gen_ctl[1] = c | 0x40;
+            cw = echo_str(gen_ctl);
         }
-    } else
+    }
+    else {
+        cw = utf8char_width(c);
         TTputc(c);                  /* Otherwise, output raw char */
+    }
     TTflush();                      /* Flush the output           */
-    int cw = utf8char_width(c);
     return col + cw;                /* return the new column no   */
 }
 
@@ -134,7 +130,10 @@ static int echo_char(int c, int col) {
 static int get_char(void) {
     int c;                      /* A place to get a character   */
 
-/* See if we're re-executing: */
+/* See if we're re-executing:
+ * If so we want to play out all of the characters again, in order,
+ * so that we replay the whole thing.
+ */
 
     if (cmd_reexecute >= 0)     /* Is there an offset?          */
         if ((c = cmd_buff[cmd_reexecute++]) != 0)
@@ -152,28 +151,6 @@ static int get_char(void) {
     cmd_buff[cmd_offset++] = c;     /* Save the char for next time */
     cmd_buff[cmd_offset] = '\0';    /* And terminate the buffer    */
     return c;               /* Return the character                */
-}
-
-/* Hacky routine to re-eat a character.  This will save the character to be
- * re-eaten by redirecting the input call to a routine here.  Hack, etc.
- *
- * Come here on the next term.t_getchar call.
- */
-static int uneat(void) {
-    int c;
-
-    term.t_getchar = saved_get_char;    /* restore the routine address */
-    c = eaten_char;                     /* Get the re-eaten char       */
-    eaten_char = -1;                    /* Clear the old char          */
-    return c;                           /* and return the last char    */
-}
-
-static void reeat(int c) {
-    if (eaten_char != -1)               /* If we've already been here    */
-        return /*(NULL) */;             /* Don't do it again             */
-    eaten_char = c;                     /* Else, save the char for later */
-    saved_get_char = term.t_getchar;    /* Save the char get routine     */
-    term.t_getchar = uneat;             /* Replace it with ours          */
 }
 
 /* Functions to check and set-up incremental debug mode.
@@ -271,7 +248,19 @@ void incremental_debug_cleanup(void) {
  * The col gets set back to where it was, so no need to return anything.
  */
 static void hilite(int c, int col) {
-    col -= utf8char_width(c);   /* Set it back the correct amount */
+    int cw;
+    if ((c < ' ') || (c == 0x7F)) { /* Control character? */
+        switch (c) {                /* Dispatch special cases */
+        case '\n':  cw = 4; break;  /* <NL> */
+        case '\t':  cw = 5; break;  /* <TAB> */
+        default:    cw = 2; break;  /* ^. or ^? */
+        }
+    }
+    else {
+        cw = utf8char_width(c);   /* Set it back the correct amount */
+    }
+    col -= cw;
+
 /* Need force_movecursor as movecursor thinks we haven't moved */
     force_movecursor(term.t_mbline, col);
     TTrev(1);
@@ -373,7 +362,9 @@ start_over:
         c = get_char();             /* Get another character */
     }
 
-/* Top of the per character loop */
+/* Top of the per character loop, although only IS_REVERSE and
+ * IS_FORWARD actually loop.
+ */
 
     while (1) {         /* ISearch per character loop */
                         /* Check for special characters first: */
@@ -403,16 +394,25 @@ start_over:
             continue;       /* Go continue with the search */
 
         case IS_NEWLINE:    /* Carriage return            */
-            c = '\n';       /* Make it a new line         */
-            break;          /* Make sure we use it        */
-
-        case IS_QUOTE:      /* Quote character            */
-            c = get_char(); /* Get the next char */
-
-        case IS_TAB:        /* Generically allowed        */
+            c = '\n';       /* Make it a real new line    */
         case '\n':          /*  controlled characters     */
             break;          /* Make sure we use it        */
 
+        case IS_QUOTE:      /* Quote character            */
+            c = get_char(); /* Get the next char - might be a control*/
+            if (c & CONTROL) c = ~CONTROL & (c - '@');
+            break;
+
+        case IS_TAB:        /* Generically allowed        */
+            c = '\t';       /* Make it a real tab         */
+            break;          /* Make sure we use it        */
+
+/* The cmd_buff collects *all* chars, including the IS_FORWARD and
+ * IS_REVERSE chars, so it remembers the entire history of how you
+ * got to here.
+ * Backspace after IS_FORWARD/IS_REVERSE undoes the fidn command, but
+ * leaves the search string (which is displayed) the same.
+ */
         case IS_BACKSP:     /* If a backspace:      */
         case IS_RUBOUT:     /*  or if a Rubout:     */
             if (cmd_offset <= 1) {  /* Anything to delete?  */
@@ -428,14 +428,13 @@ start_over:
             cmd_reexecute = 0;      /* Start the whole mess over  */
             goto start_over;        /* Let it take care of itself */
 
-/* Presumably a quasi-normal character comes here */
-
+/* Presumably a quasi-normal character comes here.
+ * This can include control-chars, so revert any such back to their
+ * ASCII representaion.
+ */
         default:                /* All other chars        */
-            if (c < ' ') {      /* Is it printable? Nope. */
-                reeat(c);       /* Re-eat the char        */
-                status = TRUE;  /* Return the previous status */
-                goto end_isearch;
-            }
+            if (c & CONTROL) c = ~CONTROL & (c - '@');
+            break;
         }               /* Switch */
 
 /* I guess we got something to search for, so search for it */
