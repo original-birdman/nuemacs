@@ -1189,26 +1189,32 @@ static int string_getter(int f, int n, enum istr_type call_type) {
     char *prompt;
     char *istrp;                    /* Final string to insert */
 
-/* ask for string to insert, using the requested function */
-
-    if (call_type == RAW_STR) prompt = "String: ";
-    else                      prompt = "Tokens/unicode chars: ";
-
-    status = mlreply(prompt, tstring, NLINE, CMPLT_NONE);
-    if (status != TRUE)
-        return status;
-
-/* For COOKED_STR we have to process this token-by-token
- * NOTE: that this means any spaces in the string WILL BE SKIPPED!
+/* Ask for string to insert, using the requested function.
+ * If we are reading a macro just use the rest of the line (execstr).
  */
+    if (clexec == FALSE) {
+        if (call_type == RAW_STR) prompt = "String: ";
+        else                      prompt = "Tokens/unicode chars: ";
+        status = mlreply(prompt, tstring, NLINE, CMPLT_NONE);
+        if (status != TRUE)
+            return status;
+        execstr = tstring;
+    }
+
+/* For COOKED_STR we have to process the rest of the line token-by-token.
+ * NOTE: that this means any spaces in the string WILL BE SKIPPED!
+ * e.g.
+ *  insert-tokens 0x12 " " check1 " plus some more " &div 4 2
+ * results in:
+ *  ^R check1 plus some more 2
+ */
+    char tok[NLINE];
     if (call_type == COOKED_STR) {
-        char *rp = tstring;
         char *vp;
         char nstring[NLINE] = "";
         int nlen = 0;
-        char tok[NLINE];
-        while(*rp != '\0') {
-            rp = token(rp, tok, NLINE);
+        while(*execstr != '\0') {
+            execstr = token(execstr, tok, NLINE);
             if (tok[0] == '\0') break;
             vp = getval(tok);   /* Must evaluate tokens */
             if (!strncmp(vp, "0x", 2)) {
@@ -1228,8 +1234,20 @@ static int string_getter(int f, int n, enum istr_type call_type) {
         }
         istrp = nstring;
     }
-    else
-        istrp = tstring;
+    else {
+/* For the RAW_STR we just take the next token and evaluate it.
+ * e.g.
+ *  insert-string     A   B   C D
+ * results in:
+ *  A
+ * while:
+ *  insert-string "A B C D"
+ * results in:
+ *  A B C D
+ */
+        execstr = token(execstr, tok, NLINE);
+        istrp = getval(tok);
+    }
 
     if (f == FALSE) n = 1;
     if (n < 0) n = -n;
@@ -1242,8 +1260,8 @@ static int string_getter(int f, int n, enum istr_type call_type) {
 
 /* Insert text into the current buffer at current point
  * GGR
- * Treats response as a set of tokens, allowing unicode (U+xxxx) and utf8
- * (0x..) characters to be entered.
+ * Treats response as a set of (evaluated) tokens, allowing unicode (U+xxxx)
+ * and utf8 (0x..) characters to be inserted.
  * You can enter ASCII words (i.e. space-separated ones) within "..".
  *
  * int f, n;            ignored arguments
@@ -1254,7 +1272,10 @@ int itokens(int f, int n) {
 
 /*
  * Insert a string into current buffer at current point
- * Intended for use by macros.
+ * In macros it inserts the evaulated first token (so a quoted string
+ * may be used).
+ * In interactive mode it will insert the entire response (but ^X-<CR> will
+ * replicated macro-mode).
  */
 int istring(int f, int n) {
     return string_getter(f, n, RAW_STR);
