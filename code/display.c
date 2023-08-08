@@ -346,7 +346,7 @@ static void vtputc(unsigned int c) {
     if (vtcol >= term.t_ncol) {
         ++vtcol;
 /* We have to cater for a multi-width character at eol - so must step
- * back over any NUL graphemes.
+ * back over any NUL graphemes (the padding we use for multi-width chars).
  */
         for (int dcol = term.t_ncol - 1; dcol >= 0; dcol--) {
             if (vp->v_text[dcol].uc == '$') break;  /* Quick repeat exit */
@@ -392,6 +392,9 @@ static void vtputc(unsigned int c) {
         return;
     }
 
+/* Get the character width. If it's > 1 we'll need to put NUL-byte padding
+ * in so that the next character goes into the correct column.
+ */
     int cw = utf8char_width(c);
     if (vtcol >= 0) {
         set_grapheme(&(vp->v_text[vtcol]), c, 0);
@@ -1547,7 +1550,6 @@ static void mlwrite_ap(const char *fmt, npva ap) {
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
-    if (bytes_togo == 0) return;        /* Nothing else...clear line only */
     while (bytes_togo > 0) {
 /* If we are about to go into the last column, put a $ there and stop,
  * otherwise we get wrap-around and the display messes up.
