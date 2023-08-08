@@ -164,7 +164,7 @@ insert-string "i check2"
 next-line
 insert-string "m check3"
 next-line
-insert-tokens 0x03
+insert-tokens 0x07
 2 select-buffer
 
 ; Now run the search, which will produce the report.
@@ -218,7 +218,7 @@ insert-string "i check2"
 next-line
 insert-string "m check3"
 next-line
-insert-tokens 0x03
+insert-tokens 0x07
 2 select-buffer
 
 end-of-file
@@ -273,7 +273,7 @@ insert-string "b check2"
 next-line
 insert-tokens 0x13 " check3"
 next-line
-insert-tokens 0x03
+insert-tokens 0x07
 2 select-buffer
 
 beginning-of-file
@@ -326,7 +326,7 @@ insert-string "b check2"
 next-line
 insert-tokens 0x12 " check3"
 next-line
-insert-tokens 0x03
+insert-tokens 0x07
 2 select-buffer
 
 end-of-file
@@ -380,11 +380,12 @@ insert-tokens 0x13 " check2"
 next-line
 insert-tokens 0x13 0x13 " check3"
 next-line
-insert-tokens 0x03
+insert-tokens 0x07
 2 select-buffer
 
 beginning-of-file
 incremental-search
+clear-message-line
 
 ;
 select-buffer test-reports
