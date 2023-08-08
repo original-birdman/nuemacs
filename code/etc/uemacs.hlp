@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.170 Help Index     (28 July 2023)
+=>                   nuEmacs GGR4.170 Help Index     (08 Aug 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -391,16 +391,22 @@ hunt-backward.)
 determines whether overlapping matches will be reported.  You will be
 positioned at the "end" of each match (in the direction of the search).
 
-(Query)-Replace searching only goes in the forward direction with no
-overlapping matches (and any replacement string is not part of the next
-search).  After each match you will be at the start of what would be
+(Query)-Replace searching only goes in the forward direction (possibly
+with overlapping matches, but any replacement string is not part of the
+next search).  For each match you will be at the start of what would be
 replaced.
 
 Incremental search does not use Magic mode, even if it is on for the
 buffer.  After each match you will be at the left of what has so far
 matched.  If the next incremental character does not match it will be
 highlighted (reverse video) in the prompt.  One level of back-tracking
-allowed.
+allowed.  The $ggr_opts overlap bit determines whether overlapping
+matches will be found.
+NOTE: that this char-by-char incremental search does not work well with
+accented characters (or any combining characters) as the matching is
+always done against an entire glyph, so the matching may skip past a
+location as the base character is added but will not step back when the
+accent (which would have created a glyph match) is then added.
 
 -------------------------------------------------------------------------------
 =>                      ACCESSING THE OPERATING SYSTEM

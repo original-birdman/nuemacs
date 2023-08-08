@@ -34,14 +34,13 @@
  */
 #define CMDBUFLEN       256     /* Length of our command buffer */
 
-#define IS_ABORT        (CONTROL|'G')   /* Abort the isearch */
-#define IS_BACKSP       (CONTROL|'H')   /* Delete previous char */
-#define IS_TAB          (CONTROL|'I')   /* Tab character (allowed search char) */
-#define IS_NEWLINE      (CONTROL|'M')   /* New line from keyboard (Carriage return) */
-#define IS_QUOTE        (CONTROL|'Q')   /* Quote next character */
-#define IS_REVERSE      (CONTROL|'R')   /* Search backward */
-#define IS_FORWARD      (CONTROL|'S')   /* Search forward */
-#define IS_QUIT         (CONTROL|'[')   /* Exit the search */
+#define CTLCHAR(x) (x & ~0x60)          /* UP or low case -> control */
+#define IS_ABORT        (CTLCHAR('G'))  /* Abort the isearch */
+#define IS_BACKSP       (CTLCHAR('H'))  /* Delete previous char */
+#define IS_QUOTE        (CTLCHAR('Q'))  /* Quote next character */
+#define IS_REVERSE      (CTLCHAR('R'))  /* Search backward */
+#define IS_FORWARD      (CTLCHAR('S'))  /* Search forward */
+#define IS_QUIT         (CTLCHAR('['))  /* Exit the search */
 #define IS_RUBOUT       (0x7F)          /* Delete previous character */
 
 /* A couple more "own" variables for the command string */
@@ -100,15 +99,19 @@ static int echo_char(int c, int col) {
             cw = echo_str("<NL>");
             break;
 
-        case '\t':                  /* Tab                        */
+        case '\r':                  /* Carriage return             */
+            cw = echo_str("<CR>");
+            break;
+
+        case '\t':                  /* Tab                         */
             cw = echo_str("<TAB>");
             break;
 
-        case 0x7F:                  /* Rubout:                    */
+        case 0x7F:                  /* Rubout:                     */
             cw = echo_str("^?");
             break;
 
-        default:                    /* Vanilla control char       */
+        default:                    /* Vanilla control char        */
             static char gen_ctl[3] = "^ ";
             gen_ctl[1] = c | 0x40;
             cw = echo_str(gen_ctl);
@@ -148,7 +151,7 @@ static int get_char(void) {
         mlwrite_one("? command too long");
         return metac;                   /* And force a quit */
     }
-    c = get1key();          /* Get the next character              */
+    c = tgetc();            /* Get the next literal character      */
     cmd_buff[cmd_offset++] = c;     /* Save the char for next time */
     cmd_buff[cmd_offset] = '\0';    /* And terminate the buffer    */
     return c;               /* Return the character                */
@@ -208,7 +211,7 @@ static int idbg_nextchar(void) {
 /* Now process the next buffer line....
  * NOTE: that we need to get the next Unicode character NOT a grapheme!
  */
-    if (idbg_line == idbg_head) return '\0';
+    if (idbg_line == idbg_head) return UEM_NOCHAR;  /* No more buffer */
 
 /* We want to get the first token, but token() expects NUL terminated strings.
  * However, token expects NUL-terminated strings.
@@ -290,9 +293,10 @@ static void hilite(int c, int col) {
     int cw;
     if ((c < ' ') || (c == 0x7F)) { /* Control character? */
         switch (c) {                /* Dispatch special cases */
-        case '\n':  cw = 4; break;  /* <NL> */
-        case '\t':  cw = 5; break;  /* <TAB> */
-        default:    cw = 2; break;  /* ^. or ^? */
+        case '\n':
+        case '\r':  cw = 4; break;  /* <NL>, <CR> */
+        case '\t':  cw = 5; break;  /* <TAB>      */
+        default:    cw = 2; break;  /* ^. or ^?   */
         }
     }
     else {
@@ -408,12 +412,11 @@ start_over:
     while (1) {         /* ISearch per character loop */
                         /* Check for special characters first: */
                         /* Most cases here change the search */
-
-        if (c == IS_QUIT) {     /* Want to quit searching?    */
+        switch (c) {            /* dispatch on the input char */
+        case IS_QUIT:           /* Want to quit searching?    */
             status = TRUE;
             goto end_isearch;   /* Quit searching now         */
-        }
-        switch (c) {            /* dispatch on the input char */
+        case UEM_NOCHAR:        /* Run out of input?          */
         case IS_ABORT:          /* If abort search request    */
             status = FALSE;
             goto end_isearch;   /* Quit searching again       */
@@ -423,34 +426,24 @@ start_over:
             if (c == IS_REVERSE)    /* If reverse search  */
                 n = -1;             /* Set the reverse direction  */
             else                    /* Otherwise,         */
-                n = 1;              /*  go forward         */
+                n = 1;              /*  go forward        */
 /* This calls asks for the *next* match, not a continuation of the
  * current one.
  */
             status = scanmore(pat, n, TRUE, FALSE); /* Start again   */
             if (!status) hilite('!', col+1);        /* No further match */
             c = get_char(); /* Get next char */
-            continue;       /* Go continue with the search */
+            continue;       /* Continue the search */
 
-        case IS_NEWLINE:    /* Carriage return            */
-            c = '\n';       /* Make it a real new line    */
-        case '\n':          /*  controlled characters     */
-            break;          /* Make sure we use it        */
-
-        case IS_QUOTE:      /* Quote character            */
+        case IS_QUOTE:      /* Quote next character       */
             c = get_char(); /* Get the next char - might be a control */
-            if (c & CONTROL) c = ~CONTROL & (c - '@');
             break;
-
-        case IS_TAB:        /* Generically allowed        */
-            c = '\t';       /* Make it a real tab         */
-            break;          /* Make sure we use it        */
 
 /* The cmd_buff collects *all* chars, including the IS_FORWARD and
  * IS_REVERSE chars, so it remembers the entire history of how you
  * got to here.
- * Backspace after IS_FORWARD/IS_REVERSE undoes the fidn command, but
- * leaves the search string (which is displayed) the same.
+ * Backspace after IS_FORWARD/IS_REVERSE undoes the last find command,
+ * but leaves the search string (which is displayed) the same.
  */
         case IS_BACKSP:     /* If a backspace:      */
         case IS_RUBOUT:     /*  or if a Rubout:     */
@@ -468,11 +461,9 @@ start_over:
             goto start_over;        /* Let it take care of itself */
 
 /* Presumably a quasi-normal character comes here.
- * This can include control-chars, so revert any such back to their
- * ASCII representaion.
+ * This can include control-chars not explicitly handled.
  */
         default:                /* All other chars        */
-            if (c & CONTROL) c = ~CONTROL & (c - '@');
             break;
         }               /* Switch */
 
@@ -510,7 +501,7 @@ start_over:
         if (!status) hilite(c, col);
         c = get_char();             /* Get the next char        */
 /* Exit if we run out of input.... */
-        if (c == (CONTROL|'@')) break;
+        if (c == UEM_NOCHAR) break;
     }
 end_isearch:
     (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
