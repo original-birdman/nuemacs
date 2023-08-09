@@ -127,6 +127,16 @@ set %test "&r2i 12.493672E123"
 set %expect TOOBIG
 execute-procedure run-test
 
+; Test that -INF can be used as an input number
+;
+set %test "&rti -3.3E333 -INF"
+set %expect INF
+execute-procedure run-test
+
+set %test "&r2i INF"
+set %expect TOOBIG
+execute-procedure run-test
+
 newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline

@@ -8,13 +8,13 @@
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='$1 != "--" {print substr($0, 4);}'
+prog='next if (/^--/); chomp; print substr($_, 3);'
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
 #
-awk "$prog" > autotest.tfile <<EOD
+perl -lne "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Start with (Start and enD) and enD
 02 sTart with (sTart and EnD) and EnD

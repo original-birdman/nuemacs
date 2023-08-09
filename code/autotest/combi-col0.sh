@@ -10,7 +10,6 @@
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='$1 != "--" {print substr($0, 4);}'
 
 # Write out the test input file
 # It's NOT written here with row and column markers, as then

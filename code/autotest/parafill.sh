@@ -1,29 +1,17 @@
 #!/bin/sh
 #
 
-# This needs gawk -b to work, so if it doesn't - stop now...
-#
-gawk -b {exit} </dev/null >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-    echo >&2 "No working 'gawk -b'. Ignoring parafill test"
-    echo -n "Press <CR> to continue"
-    read dnc
-    exit 0
-fi
-
 # Simple testing of wrapping in Wrap mode
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='$1 != "--" {print substr($0, 4);}'
+prog='next if (/^--/); chomp; print substr($_, 3);'
 
-# Need the -b because of the non-Unicode (invalid) 0xf1 bytes.
-#
 # Write out the test input file
 # It's written here with row and column markers.
 #
-gawk -b "$prog" > autotest.tfile <<EOD
+perl -lne "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Just some text to act as a regression test for test wrapping.  It needs
 02 to contain a "selection" of end-of-sentence characters.  Like this?  It

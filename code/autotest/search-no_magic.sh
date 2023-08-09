@@ -1,31 +1,18 @@
 #!/bin/sh
 #
 
-# This needs gawk -b to work, so if it doesn't - stop now...
-#
-gawk -b {exit} </dev/null >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-    echo >&2 "No working 'gawk -b'. Ignoring search-no_magic test"
-    echo -n "Press <CR> to continue"
-    read dnc
-    exit 0
-fi
-
 # Test for Unicode searching.
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='$1 != "--" {print substr($0, 4);}'
-
-# Need the -b because of the non-Unicode (invalid) 0xf1 bytes.
-#
+prog='next if (/^--/); chomp; print substr($_, 3);'
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
 #
-gawk -b $AWKARG "$prog" > autotest.tfile <<EOD
+perl -lne "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Greek text: οὐδέν
 02 In UPPER ΟὐΔΈΝ.
