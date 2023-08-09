@@ -19,11 +19,10 @@
 #include "utf8proc.h"
 
 /* GGR - some needed things for minibuffer handling */
-#if UNIX
+
 #include <signal.h>
-static int remap_c_on_intr = 0;
-#endif
 #include "line.h"
+static int remap_c_on_intr = 0;
 
 /* A set of functions to do with filename/buffer/name completions.
  * Part of the GGR additions.
@@ -50,12 +49,7 @@ static char so_far[NFILEN];     /* Maximal match so far */
  * If the system is not case-sensitive, force lower case.
  */
 #include <sys/types.h>
-
-#if USG
 #include <dirent.h>
-#else
-#include <sys/dir.h>
-#endif
 
 #include <sys/stat.h>
 
@@ -111,11 +105,7 @@ static char *getnfile(void) {
  */
     if (run_id_finder) return id_finder();
 
-#if USG
     struct dirent *dp;
-#else
-    struct direct *dp;
-#endif
     struct stat statbuf;
     int namelen;
 
@@ -380,10 +370,8 @@ static int matcher(char *name, int namelen, char *choices,
 /* Restrict length of returned string to number of columns, so that we
  * don't end up wrapping in the minibuffer line.
  */
-    max = term.t_ncol;
-#if BSD
-    max--;
-#endif
+    max = term.t_ncol - 1;
+
     l = (match_length < max) ? match_length : max;
 /* We also need to check we are not going to overflow the
  * destination buffer, and we have to allow for the final NUL

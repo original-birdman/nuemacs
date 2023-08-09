@@ -5,7 +5,7 @@
 
 #include "estruct.h"
 
-#if FILOCK && (BSD || SVR4)
+#if FILOCK
 #include "edef.h"
 #include "efunc.h"
 
@@ -15,25 +15,11 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <pwd.h>
-#ifdef SVR4
 #include <string.h>
-#else
-#include <strings.h>
-#endif
 #include <errno.h>
 
 #define MAXLOCK 512
 #define MAXNAME 128
-
-#if defined(SVR4) && ! defined(__linux__)
-#include <sys/systeminfo.h>
-
-static int gethostname(char *name, int namelen) {
-    return sysinfo(SI_HOSTNAME, name, namelen);
-}
-#endif
-
-
 
 /**********************
  *

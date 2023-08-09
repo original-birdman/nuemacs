@@ -7,7 +7,7 @@
 
 #include "estruct.h"
 
-#if     FILOCK && (BSD | SVR4)
+#if FILOCK
 
 #include <stdio.h>
 #include <string.h>

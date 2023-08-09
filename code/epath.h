@@ -15,7 +15,7 @@
 
 #ifdef ANDROID
 #define DFLT_PATH "/sdcard/etc/"
-#elif BSD | USG
+#else
 #define DFLT_PATH "/opt/local/etc/", "/usr/local/etc/"
 #endif
 

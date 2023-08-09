@@ -14,25 +14,13 @@
 #define termdef 1 /* Don't define "term" external. */
 
 #include <stdio.h>
+#include <curses.h>
+#include <term.h>
+#include <signal.h>
 
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
-
-#if !defined(__MSYS__)
-
-/* Needed to stop bool being defined twice when curses/term included... */
-#ifdef TCAP_BOOL
-#define _BOOL
-#endif
-
-#include <curses.h>
-#include <term.h>
-#endif
-
-#if UNIX
-#include <signal.h>
-#endif
 
 #define MARGIN  8
 #define SCRSIZ  64
@@ -223,10 +211,9 @@ static void tcapkclose(void) {
  * this clears the *current* screen, and sending it twice means
  * that the original screen gets cleared (as you've switched to it before
  * the second clear arrives).
+ * Actually, don't need to do anything for any valid system now.
  */
-#if USG | BSD
-
-#else
+#if 0
     putp(TE);
     ttflush();
 #endif

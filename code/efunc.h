@@ -431,7 +431,7 @@ extern void free_names(void);
 extern void free_search(void);
 extern void free_utf8(void);
 
-#if FILOCK && (BSD | SVR4)
+#if FILOCK
 extern void free_lock(void);
 #endif
 

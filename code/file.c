@@ -402,7 +402,7 @@ int readin(char *fname, int lockfl) {
     struct buffer *bp;
     int s;
 
-#if FILOCK && (BSD || SVR4)
+#if FILOCK
     if (lockfl && lockchk(fname) == ABORT) {
         s = FIOFNF;
         bp = curbp;

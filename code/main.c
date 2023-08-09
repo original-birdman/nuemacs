@@ -49,7 +49,7 @@
  *
  * 4.0  Petri Kutvonen, 1-Sep-91
  *
- * 4.1  Ian Dunkin, Mike Arnautov and Gordon Lack ~1988->2017
+ * 4.1  Ian Dunkin, Mike Arnautov and Gordon Lack ~1988->2023
  *      GGR tags...
  */
 
@@ -67,14 +67,8 @@
 #include "ebind.h"   /* Default key bindings. */
 #include "version.h"
 
-#ifndef GOOD
-#define GOOD    0
-#endif
-
-#if UNIX
 #include <signal.h>
 static void emergencyexit(int);
-#endif
 
 /* ======================================================================
  * GGR - list all options actually available!
@@ -993,7 +987,7 @@ static void edinit(char *bname) {
     wp->w.markp = NULL;
     wp->w.marko = 0;
     wp->w_toprow = 0;
-#if     COLOR
+#if COLOR
 /* initialize colors to global defaults */
     wp->w_fcolor = gfcolor;
     wp->w_bcolor = gbcolor;
@@ -1024,11 +1018,6 @@ int main(int argc, char **argv) {
     char *rcextra[10];      /* GGR additional rc files */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
 
-#if BSD
-        sleep(1); /* Time for window manager. */
-#endif
-
-#if UNIX
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
 
@@ -1047,7 +1036,6 @@ int main(int argc, char **argv) {
 /* The old one to get you out... */
     sigact.sa_handler = emergencyexit;
     sigaction(SIGHUP, &sigact, NULL);
-#endif
 
 /* GGR The rest of initialization is done after processing optional args */
     varinit();              /* initialise user variables */
@@ -1369,9 +1357,6 @@ loop:
     if (!mline_persist && (mpresf != FALSE)) {
         mlerase();
         update(FALSE);
-#if CLRMSG
-        if (c == ' ') goto loop;    /* ITS EMACS does this  */
-#endif
     }
 
 /* Check for any numeric prefix */
@@ -1695,11 +1680,7 @@ int execute(int c, int f, int n) {
     }
 
     if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
-#if     BSD || USG       /* 8BIT P.K. */
-        || (c >= 0xA0 && c <= 0x10FFFF)) {
-#else
-        ) {
-#endif
+        || (c >= 0xA0 && c <= MAX_UTF8_CHAR)) {
 
 /* GGR - Implement Phonetic Translation iff we are about to self-insert.
  * If the mode is active call the handler.
@@ -1825,7 +1806,7 @@ int quit(int f, int n) {
         || anycb() == FALSE /* All buffers clean.   */
         || (s =             /* User says it's OK.   */
             mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
-#if FILOCK && (BSD || SVR4)
+#if FILOCK
         if (lockrel() != TRUE) {
             ttput1c('\n');
             ttput1c('\r');
@@ -1849,7 +1830,7 @@ int quit(int f, int n) {
     free_search();
     free_utf8();
 
-#if FILOCK && (BSD | SVR4)
+#if FILOCK
     free_lock();
 #endif
 
@@ -1864,7 +1845,7 @@ int quit(int f, int n) {
 
 #endif
         if (f) exit(n);
-        else   exit(GOOD);
+        else   exit(0);
     }
     mlwrite_one("");
     return s;

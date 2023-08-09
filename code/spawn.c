@@ -7,14 +7,11 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
-
-#if USG | BSD
-#include        <signal.h>
-#endif
 
 static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
 
@@ -53,16 +50,13 @@ static void check_for_resize(void) {
  */
 int spawncli(int f, int n) {
     UNUSED(f); UNUSED(n);
-#if USG | BSD
     char *cp;
-#endif
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
     get_orig_size();
 
-#if USG | BSD
     movecursor(term.t_mbline, 0);   /* Seek to last line.   */
     TTflush();
     TTclose();                      /* stty to old settings */
@@ -70,8 +64,12 @@ int spawncli(int f, int n) {
     if ((cp = getenv("SHELL")) != NULL && *cp != '\0')
         dnc = system(cp);
     else
-#if BSD
-        dnc = system("exec /bin/csh");
+#ifdef SYSSHELL
+/* Stringify macros... */
+#define xstr(s) str(s)
+#define str(s) #s
+
+        dnc = system("exec " xstr(SYSSHELL));
 #else
         dnc = system("exec /bin/sh");
 #endif
@@ -83,10 +81,7 @@ int spawncli(int f, int n) {
     check_for_resize();
 
     return TRUE;
-#endif
 }
-
-#if BSD | __hpux | SVR4
 
 int bktoshell(int f, int n) {   /* suspend MicroEMACS and wait to wake up */
     UNUSED(f); UNUSED(n);
@@ -107,7 +102,6 @@ void rtfrmshell(void) {
     curwp->w_flag = WFHARD;
     sgarbf = TRUE;
 }
-#endif
 
 /* Backend for running a one-liner in a subjob.
  * When the command returns, optionally wait for a <return> before
@@ -154,7 +148,6 @@ static int run_one_liner(int rxcopy, int wait, char *prompt) {
 
     get_orig_size();
 
-#if USG | BSD
     if ((s = next_spawn_cmd(rxcopy, prompt, line)) != TRUE) return s;
     TTflush();
     TTclose();              /* stty to old modes    */
@@ -175,7 +168,6 @@ static int run_one_liner(int rxcopy, int wait, char *prompt) {
     check_for_resize();
 
     return TRUE;
-#endif
 }
 
 /* The two front-ends for run_one_liner */
@@ -218,7 +210,6 @@ int pipecmd(int f, int n) {
     if (swbuffer(bp, 0) != TRUE) return FALSE;
     if (bclear(bp) != TRUE) return FALSE;
 
-#if USG | BSD
     char *hp = getenv("HOME");
     if (!hp || (*hp == '\0')) hp = "."; /* Default if absent */
     sprintf(comfile, "%s/.ue_%08x", hp, getpid());
@@ -233,7 +224,6 @@ int pipecmd(int f, int n) {
     TTflush();
     sgarbf = TRUE;
     s = TRUE;
-#endif
 
     check_for_resize();
 
@@ -296,7 +286,6 @@ int filter_buffer(int f, int n) {
         strcpy(bp->b_fname, tmpnam);
         return FALSE;
     }
-#if USG | BSD
     ttput1c('\n');          /* Already have '\r'    */
     TTflush();
     TTclose();              /* stty to old modes    */
@@ -310,7 +299,6 @@ int filter_buffer(int f, int n) {
     TTkopen();
     TTflush();
     sgarbf = TRUE;
-#endif
 
     check_for_resize();
 

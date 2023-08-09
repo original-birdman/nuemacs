@@ -25,8 +25,9 @@
 #include "utf8.h"
 
 /* Since Mac OS X's termios.h doesn't have the following 2 macros, define them.
+ * Neither does FreeBSD.
  */
-#if defined(SYSV) && (defined(_DARWIN_C_SOURCE) || defined(_FREEBSD_C_SOURCE))
+#if defined(_DARWIN_C_SOURCE) || defined(_FREEBSD_C_SOURCE)
 #define OLCUC 0000002
 #define XCASE 0000004
 #endif
@@ -50,10 +51,7 @@ static struct termios ntermios;         /* charactoristics to use inside */
 static char tobuf[TBUFSIZ];             /* terminal output buffer */
 
 
-/*
- * This function is called once to set up the terminal device streams.
- * On VMS, it translates TT until it finds the terminal, then assigns
- * a channel to it and sets it raw. On CPM it is a no-op.
+/* This function is called once to set up the terminal device streams.
  */
 void ttopen(void) {
     tcgetattr(0, &otermios);        /* save old settings */
@@ -99,17 +97,13 @@ void ttopen(void) {
 }
 
 /* This function gets called just before we go back home to the command
- * interpreter. On VMS it puts the terminal back in a reasonable state.
- * Another no-operation on CPM.
+ * interpreter.
  */
 void ttclose(void) {
     tcsetattr(0, TCSADRAIN, &otermios); /* restore terminal settings */
 }
 
-/* Write a character to the display. On VMS, terminal output is buffered, and
- * we just put the characters in the big array, after checking for overflow.
- * On CPM terminal I/O unbuffered, so we just write the byte out. Ditto on
- * MS-DOS (use the very very raw console output routine).
+/* Write a character to the display.
  */
 int ttputc(int c) {
     char utf8[6];

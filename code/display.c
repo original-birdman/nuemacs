@@ -56,9 +56,8 @@ static struct video **pscreen;          /* Physical screen. */
 static void *vdata;                     /* Where we've stored it all */
 
 static int displaying = FALSE;
-#if UNIX
+
 #include <signal.h>
-#endif
 
 #ifdef SYS_TERMIOS_H
 #include <sys/termios.h>
@@ -487,7 +486,7 @@ static int scrflags = 0;
 int update(int force) {
     struct window *wp;
 
-#if     VISMAC == 0
+#if VISMAC == 0
     if (force == FALSE && kbdmode == PLAY) return TRUE;
 #endif
 
@@ -692,7 +691,7 @@ static void updone(struct window *wp) {
     taboff = wp->w.fcol;
     vtmove(sline, -taboff);
     show_line(lp);
-#if     COLOR
+#if COLOR
     vscreen[sline]->v_rfcolor = wp->w_fcolor;
     vscreen[sline]->v_rbcolor = wp->w_bcolor;
 #endif

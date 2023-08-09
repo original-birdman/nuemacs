@@ -65,9 +65,8 @@ static int check_for_file(char *fn) {
  */
 int ffropen(char *fn) {
 
-#if (BSD | USG)
     fixup_fname(fn);
-#endif
+
 /* Opening for reading lets the caller display relevant message on not found.
  * This may be an error (insert file) or just mean you are opening a new file.
  */
@@ -96,9 +95,8 @@ int ffropen(char *fn) {
  */
 int ffwopen(char *fn) {
 
-#if (BSD | USG)
     fixup_fname(fn);
-#endif
+
 /* Opening for writing displays errors here */
     if ((ffp = fopen(fn, "w")) == NULL) {
         if (errno == EISDIR)    /* Can't open a dir for writing */
@@ -130,15 +128,10 @@ int ffwopen(char *fn) {
 int ffclose(void) {
 
     eofflag = FALSE;
-
-#if USG | BSD
     if (fclose(ffp) != FALSE) {
         mlwrite_one("Error closing file");
         return FIOERR;
     }
-#else
-    fclose(ffp);
-#endif
     return FIOSUC;
 }
 
@@ -412,17 +405,13 @@ int ffgetline(void) {
 int fexist(char *fn) {
     struct stat statbuf;
 
-#if (BSD | USG)
     fixup_fname(fn);
-#endif
 
     int status = stat(fn, &statbuf);
     if (status != 0) return FALSE;
     if ((statbuf.st_mode & S_IFMT) != S_IFREG) return FALSE;
     return TRUE;
 }
-
-#if BSD | USG
 
 /* Routines to "fix-up" a filename.
  * fixup_fname() will replace any ~id at the start with its absolute path
@@ -624,4 +613,3 @@ void fixup_full(char *fn) {
     fixup_fname(fn);    /* For '/', '.' and ".."  handling */
     return;
 }
-#endif

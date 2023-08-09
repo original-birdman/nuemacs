@@ -36,38 +36,6 @@
 /* Define an invalid unicode character to mark the end of lists */
 #define UEM_NOCHAR 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
 
-/* Machine/OS definitions. */
-
-/* Cygwin is (as far as we are concerned) just like Linux */
-
-#ifdef __CYGWIN__
-#define __linux__
-#endif
-
-/* Make an intelligent guess about the target system. */
-
-#if defined(BSD) || defined(sun) || defined(ultrix) || (defined(vax) && defined(unix)) || defined(ultrix) || defined(__osf__)
-#ifndef BSD
-#define BSD 1 /* Berkeley UNIX */
-#endif
-#else
-#define BSD 0
-#endif
-
-#if defined(SVR4) || defined(__linux__) /* ex. SunOS 5.3 */
-#define SVR4 1
-#define SYSV 1
-#undef BSD
-#endif
-
-#if defined(SYSV) || defined(u3b2) || defined(_AIX) || (defined(i386) && defined(unix)) || defined(__hpux)
-#define USG 1 /* System V UNIX */
-#else
-#define USG 0
-#endif
-
-#define UNIX    (BSD | USG)
-
 /*      Configuration options   */
 
 #define CLRMSG  0  /* space clears the message line with no insert */
@@ -203,11 +171,7 @@ enum cmplt_type {   /* What is looked up and complete */
 #define BELL    0x07            /* a bell character             */
 #define TAB     0x09            /* a tab character              */
 
-#if USG | BSD
 #define PATHCHR ':'
-#else
-#define PATHCHR ';'
-#endif
 
 #define INTWIDTH        sizeof(int) * 3
 

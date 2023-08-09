@@ -1,5 +1,14 @@
+========== OS ==========
+
+This expects to be compiled and run on a "unix-style" OS.
+It has been tested on:
+    Linux (various sorts)   (gcc compiler)
+    Solaris (x64)           (gcc compiler)
+    FreeBSD                 (clang compiler)
+
 ========== JuliaLang utf8proc ==========
-Version GGR4.115 improved unicode character handling (such as upper and
+
+Version GGR4.115 improved Unicode character handling (such as upper and
 lower-casing) by using the Julia Lang utf8proc library for character
 properties.  As a result this library is now a pre-requisite for this
 version of uemacs.
@@ -14,6 +23,9 @@ uemacs will use the dynamic library.  Read the Makefile for more
 details.
 
 ========== libbacktrace ==========
+
+This is only a requirement if you want backtraces. The code will compile
+and run without this.
 
 Version GGR4.132 added a crude stack trace dump optional capability
 which required the external addr2line program, but this was changed at
