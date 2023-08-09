@@ -376,15 +376,15 @@ static char *ue_printf(char *fmt) {
         }
         else {  /* Check in reverse order of presence in TMPL_CHAR */
             char *t_pos = (strchr(TMPL_CHAR, conv_char));
-            if (t_pos >= TMPL_CHAR+8) {        /* Doubles */
+            if (t_pos >= &TMPL_CHAR[8]) {       /* Doubles */
                 double dv = strtod(nexttok, NULL);
                 slen = sprintf(op, t_fmt, dv);
             }
-            else if (t_pos >= TMPL_CHAR+3) {   /* Unsigned */
+            else if (t_pos >= &TMPL_CHAR[3]) {  /* Unsigned */
                 unsigned long uv = strtoul(nexttok, NULL, 10);
                 slen = sprintf(op, t_fmt, uv);
             }
-            else {                          /* Must be signed */
+            else {                              /* Must be signed */
                 long lv = strtol(nexttok, NULL, 10);
                 slen = sprintf(op, t_fmt, lv);
             }
@@ -673,6 +673,15 @@ static char *gtfun(char *fname) {
         default: /* UFRGREAT */ return ltos(d1 > d2);
         }
         snprintf(rdv_result, 20, "%.12G", res);
+/* Solaris may use inf, Inf, INF, infinity, Infinity or INFINITY
+ * (and nan or NaN, but we can't get those).
+ * Standardize it.
+  */
+#if __sun
+    int si = (rdv_result[0] == '-')? 1: 0;
+    if ((rdv_result[si] == 'i') || (rdv_result[si] == 'I'))
+        strcpy(rdv_result+si, "INF");
+#endif
         return rdv_result;
     }
 /* There IS NO UFREQUAL!!! You should never compare reals for equality! */

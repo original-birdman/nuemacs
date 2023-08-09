@@ -111,10 +111,11 @@ static int echo_char(int c, int col) {
             cw = echo_str("^?");
             break;
 
-        default:                    /* Vanilla control char        */
+        default: {                  /* Vanilla control char        */
             static char gen_ctl[3] = "^ ";
             gen_ctl[1] = c | 0x40;
             cw = echo_str(gen_ctl);
+        }
         }
     }
     else {
