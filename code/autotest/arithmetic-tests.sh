@@ -137,6 +137,12 @@ set %test "&r2i INF"
 set %expect TOOBIG
 execute-procedure run-test
 
+; Test for NAN (actually -NAN)
+;
+set %test "&rti INF 0"
+set %expect -NAN
+execute-procedure run-test
+
 newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline

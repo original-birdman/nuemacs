@@ -647,8 +647,9 @@ static char *gtfun(char *fname) {
  * The first 5 all take 2 real args and return 1 real result (as strings)
  * Overflow results in +/-INF
  * Undeflow results in 0.
- * (Invalid bit patterns result in NAN - but you shouldn't be able
- * to get those).
+ * Invalid bit patterns result in NAN - but you shouldn't be able
+ * to get those. However, you can enter NAN as a number, or
+ * multiply INF by 0. 
  * Arithmetic with these string values should still work.
  *
  */
@@ -674,13 +675,15 @@ static char *gtfun(char *fname) {
         }
         snprintf(rdv_result, 20, "%.12G", res);
 /* Solaris may use inf, Inf, INF, infinity, Infinity or INFINITY
- * (and nan or NaN, but we can't get those).
- * Standardize it.
+ * and nan or NaN.
+ * Standardize them.
   */
 #if __sun
     int si = (rdv_result[0] == '-')? 1: 0;
     if ((rdv_result[si] == 'i') || (rdv_result[si] == 'I'))
         strcpy(rdv_result+si, "INF");
+    else if ((rdv_result[si] == 'n') || (rdv_result[si] == 'N'))
+        strcpy(rdv_result+si, "NAN");
 #endif
         return rdv_result;
     }
