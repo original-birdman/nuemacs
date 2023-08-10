@@ -1,0 +1,54 @@
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+store-procedure check-position-matchlen
+;   Expects these to have been set, since it tests them all.
+; %expline      the line for the match
+; %expcol       the column for the match
+; %expchar      the expected "char" at point (R/h side) at the match
+; %expmatchlen  the text length of the match
+; 
+  !if &equ $curline %expline
+    set %test-report &cat %curtest &cat " - line OK: " $curline
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " - WRONG line, got: " $curline
+    set %fail &add %fail 1  
+  !endif
+  execute-procedure report-status
+  
+  !if &equ $curcol %expcol
+    set %test-report &cat %curtest &cat " - column OK: " $curcol
+    set %ok &add %ok 1   
+  !else
+    set %test-report &cat %curtest &cat " - WRONG column, got: " $curcol
+    set %test-report &cat %test-report &cat " - expected: " %expcol
+    set %fail &add %fail 1
+  !endif   
+  execute-procedure report-status
+
+  !if &equ $curchar 10
+    set %pchar "\n"
+  !else
+    set %pchar &chr $curchar
+  !endif
+  !if &equ $curchar %expchar
+    set %test-report &cat %curtest &cat " - at OK: " %pchar
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
+    set %test-report &cat %test-report &cat " expected: " %expchar
+    set %fail &add %fail 1
+  !endif
+  execute-procedure report-status
+  
+; NOTE!!! We just check the length here as we expect multi-line matches!
+; 
+  !if &equ &len $match %expmatchlen
+    set %test-report &cat %curtest &cat " - matched OK: " %expmatchlen
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " - match WRONG, got: " &len $match
+    set %test-report &cat %test-report &cat " expected: " %expmatchlen
+    set %fail &add %fail 1
+  !endif
+  execute-procedure report-status
+!endm

@@ -1,6 +1,11 @@
 #!/bin/sh
 #
 
+TNAME=`basename $0 .sh`
+export TNAME
+
+rm -f FAIL-$TNAME
+
 # Simple testing repeating a zero-length match in Magic mode
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -34,14 +39,10 @@ cat >uetest.rc <<'EOD'
 ;
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
-store-procedure report-status
-  select-buffer test-reports
-  insert-string %test-report
-  newline
-  1 select-buffer     ; Back to whence we came
-!endm
 
-set %test_name zero-length-magic
+execute-file autotest/report-status.rc
+
+set %test_name &env TNAME
 
 select-buffer test-reports
 insert-string &cat %test_name " started"
@@ -49,61 +50,9 @@ newline
 set %fail 0
 set %ok 0
 
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-store-procedure check-position
-;   Expects these to have been set, since it tests them all.
-; %expline      the line for the match
-; %expcol       the column for the match
-; %expchar      the expected "char" at point (R/h side) at the match
-; %expmatchlen  the text length of the match
+; Load the check routine
 ;
-  !if &equ $curline %expline
-    set %test-report &cat %curtest &cat " - line OK: " $curline
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - WRONG line, got: " $curline
-    set %test-report &cat %test-report &cat " - expected: " %expline
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-
-  !if &equ $curcol %expcol
-    set %test-report &cat %curtest &cat " - column OK: " $curcol
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - WRONG column, got: " $curcol
-    set %test-report &cat %test-report &cat " - expected: " %expcol
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-
-  !if &equ $curchar 10
-    set %pchar "\n"
-  !else
-    set %pchar &chr $curchar
-  !endif
-  !if &equ $curchar %expchar
-    set %test-report &cat %curtest &cat " - at OK: " %pchar
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
-    set %test-report &cat %test-report &cat " expected: " %expchar
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-
-; NOTE!!! We just check the length here as we expect multi-line matches!
-;
-  !if &equ &len $match %expmatchlen
-    set %test-report &cat %curtest &cat " - matched OK: " %expmatchlen
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - match WRONG, got: " &len $match
-    set %test-report &cat %test-report &cat " expected: " %expmatchlen
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-!endm
+execute-file autotest/check-position-matchlen.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -129,7 +78,7 @@ search-forward ^[^#]*
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 0
-execute-procedure check-position
+execute-procedure check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a 2-line + newline at the start of line 2
@@ -144,7 +93,7 @@ hunt-forward
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 36
-execute-procedure check-position
+execute-procedure check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a 1-line + newline at the start of line 3
@@ -159,7 +108,7 @@ hunt-forward
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 13
-execute-procedure check-position
+execute-procedure check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a zero-length match at the start of line 4
@@ -174,7 +123,7 @@ hunt-forward
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 0
-execute-procedure check-position
+execute-procedure check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a 1-line + newline match at the start of line 5
@@ -189,7 +138,7 @@ hunt-forward
   set %expcol 1
   set %expchar 10
   set %expmatchlen 27
-execute-procedure check-position
+execute-procedure check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  ^[^#]* - re-search 5"
@@ -215,8 +164,35 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 insert-string &cat %test_name " ended"
+EOD
+
+# If running them all, leave - but first write out teh buffer if there
+# were any failures.
+#
+if [ "$1" = FULL-RUN ]; then
+    cat >>uetest.rc <<'EOD'
+!if &not &equ %fail 0
+    set $cfname &cat "FAIL-" %test_name
+    save-file
+!else
+    unmark-buffer
+!endif
+exit-emacs
+EOD
+# Just leave display showing if being run singly.
+else   
+    cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
-
+fi
+ 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc
+    
+if [ "$1" = FULL-RUN ]; then
+    if [ -f FAIL-$TNAME ]; then
+        echo "$TNAME FAILed"
+    else
+        echo "$TNAME passed"
+    fi
+fi

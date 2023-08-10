@@ -1,0 +1,15 @@
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+store-procedure check-group
+;   This expected value must be set, since this tests it.
+; %grpno            group to test
+; %expmatch         group text
+  !if &seq %expmatch &grp %grpno
+    set %test-report &cat %curtest &cat " group " &cat %grpno " OK"
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " group " &cat %grpno " WRONG! got: " &grp %grpno
+    set %test-report &cat %test-report &cat " - expected: " %expmatch
+    set %fail &add %fail 1
+  !endif
+  execute-procedure report-status
+!endm

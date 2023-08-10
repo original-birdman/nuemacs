@@ -12,8 +12,13 @@ fi
 
 count=0;
 for f in autotest/*.sh; do
-    $f
+    $f FULL-RUN
     count=`expr $count + 1`
 done
 
 echo "$count tests run"
+
+if /bin/ls FAIL-* 2>/dev/null; then
+    echo "Failed test results:"
+    /bin/ls -1 FAIL-*
+fi

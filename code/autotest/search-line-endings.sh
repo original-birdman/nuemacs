@@ -1,6 +1,11 @@
 #!/bin/sh
 #
 
+TNAME=`basename $0 .sh`
+export TNAME
+
+rm -f FAIL-$TNAME
+
 # Simple test that we can match at the start and end of lines in
 # Magic mode.
 # And that the matched string is correct...
@@ -34,14 +39,10 @@ cat >uetest.rc <<'EOD'
 ; $match  are what I expect them to be.
 ;
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-store-procedure report-status
-  select-buffer test-reports
-  insert-string %test-report
-  newline
-  1 select-buffer     ; Back to whence we came
-!endm
 
-set %test_name search-line-endings
+execute-file autotest/report-status.rc
+
+set %test_name &env TNAME
 
 select-buffer test-reports
 insert-string &cat %test_name " started"
@@ -49,75 +50,11 @@ newline
 set %fail 0
 set %ok 0
 
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-store-procedure check-position
-;   Expects these to have been set, since it tests them all.
-; %expline      the line for the match
-; %expcol       the column for the match
-; %expchar      the expected "char" at point (R/h side) at the match
-; %expmatch     the text of the match
+; Load the check routine
 ;
-  !if &equ $curline %expline
-    set %test-report &cat %curtest &cat " - line OK: " $curline
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - WRONG line, got: " $curline
-    set %test-report &cat %test-report &cat " - expected: " %expline
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
+execute-file autotest/check-position-match.rc
 
-  !if &equ $curcol %expcol
-    set %test-report &cat %curtest &cat " - column OK: " $curcol
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - WRONG column, got: " $curcol
-    set %test-report &cat %test-report &cat " - expected: " %expcol
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-
-  !if &equ $curchar 10
-    set %pchar "\n"
-  !else
-    set %pchar &chr $curchar
-  !endif
-  !if &equ $curchar %expchar
-    set %test-report &cat %curtest &cat " - at OK: " %pchar
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
-    set %test-report &cat %test-report &cat " expected: " %expchar
-    set %fail &add %fail 1
-  !endif
-  set  %test-report &cat %test-report &cat " (match: " &cat $match ")"
-  execute-procedure report-status
-
-  !if &seq $match %expmatch
-    set %test-report &cat %curtest &cat " - matched OK: " %expmatch
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - match WRONG, got: " $match
-    set %test-report &cat %test-report &cat " expected: " %expmatch
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-!endm
-
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-store-procedure check-matchcount
-;   This expected value must be set, since this tests it.
-; %expcount         number of successful matches
-  !if &equ %mcount %expcount
-    set %test-report &cat %curtest &cat " match count OK: " %mcount
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " match count WRONG, got: " %mcount
-    set %test-report &cat %test-report &cat " - expected: " %expcount
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-!endm
+execute-file autotest/check-matchcount.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -140,7 +77,7 @@ search-forward ^Start
   set %expcol 6
   set %expchar &asc " "
   set %expmatch Start
-execute-procedure check-position
+execute-procedure check-position-match
 
 end-of-file
 search-reverse ^Start
@@ -149,7 +86,7 @@ search-reverse ^Start
   set %expcol 1
   set %expchar &asc S
   set %expmatch Start
-execute-procedure check-position
+execute-procedure check-position-match
 
 ; ====
 beginning-of-file
@@ -166,7 +103,7 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position
+execute-procedure check-position-match
   set %expcount 1
 execute-procedure check-matchcount
 
@@ -186,7 +123,7 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position
+execute-procedure check-position-match
   set %expcount 3
 execute-procedure check-matchcount
 
@@ -205,7 +142,7 @@ set %mcount 0
   set %expcol 1
   set %expchar &asc S
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position
+execute-procedure check-position-match
   set %expcount 3
 execute-procedure check-matchcount
 
@@ -219,7 +156,7 @@ search-forward End$
   set %expcol 35
   set %expchar 10
   set %expmatch End
-execute-procedure check-position
+execute-procedure check-position-match
 
 end-of-file
 search-reverse End$
@@ -228,7 +165,7 @@ search-reverse End$
   set %expcol 32
   set %expchar &asc E
   set %expmatch End
-execute-procedure check-position
+execute-procedure check-position-match
 
 ; ====
 beginning-of-file
@@ -245,7 +182,7 @@ set %mcount 0
   set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position
+execute-procedure check-position-match
   set %expcount 1
 execute-procedure check-matchcount
 
@@ -265,7 +202,7 @@ set %mcount 0
   set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position
+execute-procedure check-position-match
   set %expcount 3
 execute-procedure check-matchcount
 
@@ -284,7 +221,7 @@ set %mcount 0
   set %expcol 32
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position
+execute-procedure check-position-match
   set %expcount 3
 execute-procedure check-matchcount
 
@@ -295,8 +232,35 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 insert-string &cat %test_name " ended"
+EOD
+
+# If running them all, leave - but first write out teh buffer if there
+# were any failures.
+#
+if [ "$1" = FULL-RUN ]; then
+    cat >>uetest.rc <<'EOD'
+!if &not &equ %fail 0
+    set $cfname &cat "FAIL-" %test_name
+    save-file
+!else
+    unmark-buffer
+!endif
+exit-emacs
+EOD
+# Just leave display showing if being run singly.
+else   
+    cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
-
+fi
+ 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc
+    
+if [ "$1" = FULL-RUN ]; then
+    if [ -f FAIL-$TNAME ]; then
+        echo "$TNAME FAILed"
+    else
+        echo "$TNAME passed"
+    fi
+fi

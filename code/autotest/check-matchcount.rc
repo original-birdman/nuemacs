@@ -1,0 +1,14 @@
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+store-procedure check-matchcount
+;   This expected value must be set, since this tests it.
+; %expcount         number of successful matches
+  !if &equ %mcount %expcount
+    set %test-report &cat %curtest &cat " match count OK: " %mcount
+    set %ok &add %ok 1
+  !else
+    set %test-report &cat %curtest &cat " match count WRONG, got: " %mcount
+    set %test-report &cat %test-report &cat " - expected: " %expcount
+    set %fail &add %fail 1
+  !endif
+  execute-procedure report-status
+!endm

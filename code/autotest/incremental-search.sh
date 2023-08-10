@@ -1,6 +1,11 @@
 #!/bin/sh
 #
 
+TNAME=`basename $0 .sh`
+export TNAME
+
+rm -f FAIL-$TNAME
+
 # Simple testing repeating a zero-length match in Magic mode
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -35,14 +40,9 @@ cat >uetest.rc <<'EOD'
 ;
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
-store-procedure report-status
-  select-buffer test-reports
-  insert-string %test-report
-  newline
-  1 select-buffer     ; Back to whence we came
-!endm
+execute-file autotest/report-status.rc
 
-set %test_name incremental-search
+set %test_name &env TNAME
 
 select-buffer test-reports
 insert-string &cat %test_name " started"
@@ -50,60 +50,9 @@ newline
 set %fail 0
 set %ok 0
 
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-store-procedure check-position
-;   Expects these to have been set, since it tests them all.
-; %expline      the line for the match
-; %expcol       the column for the match
-; %expchar      the expected "char" at point (R/h side) at the match
-; %expmatchlen  the text length of the match
+; Load the check routine
 ;
-  !if &equ $curline %expline
-    set %test-report &cat %curtest &cat " - line OK: " $curline
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - WRONG line, got: " $curline
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-
-  !if &equ $curcol %expcol
-    set %test-report &cat %curtest &cat " - column OK: " $curcol
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - WRONG column, got: " $curcol
-    set %test-report &cat %test-report &cat " - expected: " %expcol
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-
-  !if &equ $curchar 10
-    set %pchar "\n"
-  !else
-    set %pchar &chr $curchar
-  !endif
-  !if &equ $curchar %expchar
-    set %test-report &cat %curtest &cat " - at OK: " %pchar
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - at WRONG char, got: " %pchar
-    set %test-report &cat %test-report &cat " expected: " %expchar
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-
-; NOTE!!! We just check the length here as we expect multi-line matches!
-;
-  !if &equ &len $match %expmatchlen
-    set %test-report &cat %curtest &cat " - matched OK: " %expmatchlen
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - match WRONG, got: " &len $match
-    set %test-report &cat %test-report &cat " expected: " %expmatchlen
-    set %fail &add %fail 1
-  !endif
-  execute-procedure report-status
-!endm
+execute-file autotest/check-position-matchlen.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -131,7 +80,7 @@ store-procedure check1
   set %expcol 10
   set %expchar &asc "o"
   set %expmatchlen 1
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for i"
@@ -141,7 +90,7 @@ store-procedure check2
   set %expcol 16
   set %expchar &asc "l"
   set %expmatchlen 2
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  search for m"
@@ -151,7 +100,7 @@ store-procedure check3
   set %expcol 15
   set %expchar &asc "p"
   set %expmatchlen 3
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 
 ; Now set up the control buffer
@@ -185,7 +134,7 @@ store-procedure check1
   set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 1
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for i"
@@ -195,7 +144,7 @@ store-procedure check2
   set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 2
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  search for m"
@@ -205,7 +154,7 @@ store-procedure check3
   set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 3
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 
 ; The control buffer is the same as for the forward search.
@@ -239,7 +188,7 @@ store-procedure check1
   set %expcol 3
   set %expchar &asc "b"
   set %expmatchlen 1
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for next b"
@@ -249,7 +198,7 @@ store-procedure check2
   set %expcol 4
   set %expchar &asc "b"
   set %expmatchlen 2
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  Re-search for next bb (overlap)"
@@ -259,7 +208,7 @@ store-procedure check3
   set %expcol 5
   set %expchar &asc "b"
   set %expmatchlen 2
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 
 ; Then set up the control buffer for next match
@@ -292,7 +241,7 @@ store-procedure check1
   set %expcol 8
   set %expchar &asc "b"
   set %expmatchlen 1
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  rev search for next b"
@@ -302,7 +251,7 @@ store-procedure check2
   set %expcol 7
   set %expchar &asc "b"
   set %expmatchlen 2
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  Re-rev search for next bb"
@@ -312,7 +261,7 @@ store-procedure check3
   set %expcol 4
   set %expchar &asc b
   set %expmatchlen 2
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 
 ; Then set up the control buffer for next reverse match
@@ -347,7 +296,7 @@ store-procedure check1
   set %expcol 6
   set %expchar &asc "s"
   set %expmatchlen 4
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for next issi"
@@ -357,7 +306,7 @@ store-procedure check2
   set %expcol 9
   set %expchar &asc "p"
   set %expmatchlen 4
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  search for second next issi"
@@ -367,7 +316,7 @@ store-procedure check3
   set %expcol 21
   set %expchar &asc "p"
   set %expmatchlen 4
-  execute-procedure check-position
+  execute-procedure check-position-matchlen
 !endm
 
 ; Then set up the control buffer for next reverse match
@@ -393,8 +342,35 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 insert-string &cat %test_name " ended"
+EOD
+
+# If running them all, leave - but first write out teh buffer if there
+# were any failures.
+#
+if [ "$1" = FULL-RUN ]; then
+    cat >>uetest.rc <<'EOD'
+!if &not &equ %fail 0
+    set $cfname &cat "FAIL-" %test_name
+    save-file
+!else
+    unmark-buffer
+!endif
+exit-emacs
+EOD
+# Just leave display showing if being run singly.
+else   
+    cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
-
+fi
+ 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc
+    
+if [ "$1" = FULL-RUN ]; then
+    if [ -f FAIL-$TNAME ]; then
+        echo "$TNAME FAILed"
+    else
+        echo "$TNAME passed"
+    fi
+fi

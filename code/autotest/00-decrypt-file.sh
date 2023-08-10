@@ -47,5 +47,3 @@ else
     echo "File decryption test FAILED"
     echo "Expected-Decrypt Decrypt-IN Decrypt-OUT and uetest.rc left for viewing"
 fi
-echo "press <CR> to continue"
-read dnc

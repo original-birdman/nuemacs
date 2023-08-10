@@ -47,5 +47,3 @@ else
     echo "File encryption test FAILED"
     echo "Encrypt-IN Encrypt-OUT Expected-Encrypt and uetest.rc left for viewing"
 fi
-echo "press <CR> to continue"
-read dnc

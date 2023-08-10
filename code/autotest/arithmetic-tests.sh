@@ -1,6 +1,11 @@
 #!/bin/sh
 #
 
+TNAME=`basename $0 .sh`
+export TNAME
+
+rm -f FAIL-$TNAME
+
 # Run some arithmetic tests and put the result into a viewable buffer.
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -9,7 +14,7 @@
 #
 cat >uetest.rc <<'EOD'
 
-set %test_name arithmetic-test
+set %test_name &env TNAME
 
 select-buffer test-reports
 insert-string &cat %test_name " started"
@@ -147,8 +152,35 @@ newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
 newline
 insert-string &cat %test_name " ended"
+EOD
+
+# If running them all, leave - but first write out teh buffer if there
+# were any failures.
+#
+if [ "$1" = FULL-RUN ]; then
+    cat >>uetest.rc <<'EOD'
+!if &not &equ %fail 0
+    set $cfname &cat "FAIL-" %test_name
+    save-file
+!else
+    unmark-buffer
+!endif
+exit-emacs
+EOD
+# Just leave display showing if being run singly.
+else   
+    cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
-
+fi
+ 
 ./uemacs -c etc/uemacs.rc -x ./uetest.rc
+    
+if [ "$1" = FULL-RUN ]; then
+    if [ -f FAIL-$TNAME ]; then
+        echo "$TNAME FAILed"
+    else
+        echo "$TNAME passed"
+    fi
+fi
