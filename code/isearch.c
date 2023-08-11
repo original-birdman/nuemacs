@@ -190,37 +190,33 @@ static void activate_cmd(void) {
  * the last character in the string is enacted.
  */
 static char dbg_chars[128];
-static int dbg_chars_i = 0;
+static int dbg_chars_i = -1;
 
 static int idbg_nextchar(void) {
 
 /* Do we have any pending chars to return? */
 
-    if (dbg_chars_i != 0) {
-        if (dbg_chars[dbg_chars_i] == '\0') {   /* Run out of them */
-            dbg_chars_i = 0;
-        }
-        else {
+    if (dbg_chars_i < 0) return UEM_NOCHAR;     /* Why are we here? */
+
+    if (dbg_chars_i > 0) {                      /* Valid buffer chars */
+        if (dbg_chars[dbg_chars_i] != '\0') {   /* Not run out of them */
             return dbg_chars[dbg_chars_i++];
         }
     }
 
-/* Do we have a delayed command to run? */
-
-    if (call_time == 0) activate_cmd();
-
-/* Now process the next buffer line....
- * NOTE: that we need to get the next Unicode character NOT a grapheme!
- */
     if (idbg_line == idbg_head) return UEM_NOCHAR;  /* No more buffer */
 
-/* We want to get the first token, but token() expects NUL terminated strings.
+/* We want to get the first token.
  * However, token expects NUL-terminated strings.
  * So, ensure that this line buffer info has a NUL at the end.
- * The allocation and manipulation code in line.c enbsures there is always
+ * The allocation and manipulation code in line.c ensures there is always
  * at least one "extra", "free" character at the end of l_text.
  */
     idbg_line->l_text[idbg_line->l_used] = '\0';
+
+/* Do we have a delayed command to run? */
+
+    if (call_time == 0) activate_cmd();
 
 /* NOTE! that the use of token() overwrites the buffer data with NULs
  * but that is OK, as we destroy the buffer at the end and we never
@@ -246,9 +242,20 @@ static int idbg_nextchar(void) {
  */
     while(*dlp == ' ') {dlp++; idbg_line->l_used--;}
     strcpy(next_cmd, dlp);
+
     if (call_time == 1) activate_cmd();
-    idbg_line = lforw(idbg_line);
-    dbg_chars_i = 1;
+
+/* Get to next line, if there is one - skip zero-length ones... */
+
+    do {
+        idbg_line = lforw(idbg_line);
+        if (idbg_line == idbg_head) break;  /* No more buffer */
+    } while (llength(idbg_line) == 0);
+
+/* Note that dbg_chars_i refers to teh line we have just parsed, *NOT*
+ * what idbg_line now points at!.
+ */
+    dbg_chars_i = 1;    /* Must be one, as we skip zero-length lines */
     return dbg_chars[0];
 }
 
@@ -268,6 +275,7 @@ int incremental_debug_check(int type) {
     prev_idbg_func = term.t_getchar;
     term.t_getchar = idbg_nextchar;
     next_cmd[0] = '\0';
+    dbg_chars_i = 0;    /* Where to start */
     call_time = type;
 
     return TRUE;
@@ -284,6 +292,7 @@ void incremental_debug_cleanup(void) {
     if (!idbg_buf) return;
     term.t_getchar = prev_idbg_func;
     zotbuf(idbg_buf);
+    dbg_chars_i = -1;
     return;
 }
 
