@@ -11,7 +11,10 @@
 
 void version(void) {
     printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);
-#ifdef __GNUC__
+#if defined(__clang_version__)
+    printf(" Compiled on %s, by %s, on %s at %s\n",
+        xstr(BUILDER), __VERSION__, __DATE__, __TIME__);
+#elif defined(__GNUC__)
     printf(" Compiled on %s, by GCC %s, on %s at %s\n",
         xstr(BUILDER), __VERSION__, __DATE__, __TIME__);
 #else
