@@ -142,10 +142,16 @@ set %test "&r2i INF"
 set %expect TOOBIG
 execute-procedure run-test
 
-; Test for NAN (actually -NAN)
+; Test for NAN or -NAN.
+; FreeBSD gives NAN, but Linux gives -NAN
 ;
+!if &seq $sys_type FreeBSD
+    set .xres NAN
+!else
+    set .xres -NAN
+!endif
 set %test "&rti INF 0"
-set %expect -NAN
+set %expect .xres
 execute-procedure run-test
 
 newline
