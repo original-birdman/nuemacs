@@ -481,10 +481,14 @@ static int scrflags = 0;
  * correct for the current window. Third, make the virtual and physical
  * screens the same.
  *
+ * Do nothing if we are not displaying (discmd == FALSE)
+ *
  * int force;           force update past type ahead?
  */
 void update(int force) {
     struct window *wp;
+
+    if (!discmd) return;
 
 #if VISMAC == 0
     if (force == FALSE && kbdmode == PLAY) return;

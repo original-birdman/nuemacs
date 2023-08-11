@@ -160,7 +160,11 @@ static int get_char(void) {
 
 /* Functions to check and set-up incremental debug mode.
  * This is *only* intended to be used for running functional tests
- * I can see no other use for it....
+ * that require "interactive" input.
+ * That is incremental searching and query replace.
+ * These MUST save the value of discmd when they start and restore that
+ * when they exit.
+ * I can see no other use for this beyond the autotests....
  */
 #define IDB_BFR "//incremental-debug"
 static struct buffer *idbg_buf;
@@ -278,6 +282,11 @@ int incremental_debug_check(int type) {
     dbg_chars_i = 0;    /* Where to start */
     call_time = type;
 
+/* Whilst this is running we don't want any update() to run.
+ * We've already saved the original discmd (in fisearch() or
+ * replaces) just in case.
+ */
+    discmd = FALSE;
     return TRUE;
 }
 
@@ -527,8 +536,10 @@ int fisearch(int f, int n) {
 
 /* Remember the initial . on entry: */
 
+    int saved_discmd = discmd;      /* Save this in ase we change it. */
     curline = curwp->w.dotp;        /* Save the current line pointer */
     curoff = curwp->w.doto;         /* Save the current offset       */
+
 /* Do the search */
 
     if (!(isearch(f, n))) {         /* Call ISearch forwards  */
@@ -540,7 +551,8 @@ int fisearch(int f, int n) {
         mlwrite_one(MLbkt("search failed"));   /* Say we died */
     } else
         mlerase();      /* If happy, just erase the cmd line  */
-    srch_patlen = strlen(pat);
+    srch_patlen = strlen(pat);      /* Save default search pattern length */
+    discmd = saved_discmd;          /* Back to original... */
     return TRUE;
 }
 /* Reverse direction uses same code, just reverses direction */

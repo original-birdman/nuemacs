@@ -3320,7 +3320,10 @@ int sreplace(int f, int n) {
  * int n;               # of repetitions wanted
  */
 int qreplace(int f, int n) {
-    return replaces(TRUE, f, n);
+    int saved_discmd = discmd;      /* Save this in case we change it. */
+    int retval = replaces(TRUE, f, n);
+    discmd = saved_discmd;          /* Restore original... */
+    return retval;
 }
 
 /*
