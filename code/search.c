@@ -3100,16 +3100,17 @@ static int replaces(int query, int f, int n) {
         goto end_replaces;
     }
 
-/* Now the real check for in "incremental-debug" mode? */
-
-    using_incremental_debug = incremental_debug_check(1);
-
 /* Check for negative repetitions. */
 
     if (n < 0) {
         status = FALSE;
         goto end_replaces;
     }
+
+/* Now the real check for in "incremental-debug" mode?
+ * But only if we are querying!
+ */
+    using_incremental_debug = query && incremental_debug_check(1);
 
 /* Ask the user for the text of a pattern. */
 
