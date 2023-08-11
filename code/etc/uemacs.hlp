@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.170 Help Index     (08 Aug 2023)
+=>                   nuEmacs GGR4.170 Help Index     (09 Aug 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -382,9 +382,9 @@ in from the "other end" of the current match (if bit 0x08 of $ggr_opts
 is set).
 This means that if you get a zero-length match, which is possible in
 magic mode, then a repeat will not stay stuck at the current location.
-You can achieve the same within a macro by calling search-forward,
-writing some information out (but NOT moving point) then calling
-hunt-forward, repeatedly (and the same with search-reverse,
+You can achieve the same situation within a macro by calling
+search-forward, writing some information out (but NOT moving point) then
+calling hunt-forward, repeatedly (and the same with search-reverse,
 hunt-backward.)
 
 "Normal" searching can go in either direction and bit 0x08 of $ggr_opts
@@ -392,21 +392,42 @@ determines whether overlapping matches will be reported.  You will be
 positioned at the "end" of each match (in the direction of the search).
 
 (Query)-Replace searching only goes in the forward direction (possibly
-with overlapping matches, but any replacement string is not part of the
+with overlapping matches - but any replaced string is not part of the
 next search).  For each match you will be at the start of what would be
 replaced.
 
-Incremental search does not use Magic mode, even if it is on for the
-buffer.  After each match you will be at the left of what has so far
-matched.  If the next incremental character does not match it will be
-highlighted (reverse video) in the prompt.  One level of back-tracking
-allowed.  The $ggr_opts overlap bit determines whether overlapping
-matches will be found.
+Incremental search (forwards and backwards exists) does not use Magic
+mode, even if it is on for the buffer.  Neither does it use the standard
+input character processing.
+The hard-wired key-bindings for it are:
+    ctl-G
+        Abort the search. Return to the original location.
+    ctl-H (backspace) or Delete
+        Remove the previous character and go back to the previous match
+        location.
+    ctl-Q
+        Take the next character literally, even if it is a key-binding
+        for Incremental search
+    ctl-S, ctl-R
+        Look for the next occurrence forwards (ctl-S) or backwards
+        (ctl-R) of the current search string. This can chnage the
+        direction of the search.
+    Esc
+        Stop the search and remain at the current location.
+
+After each match you will be at the left of what has so far matched.  If
+the next incremental character does not find a match it will be
+highlighted (reverse video) in the prompt.  The $ggr_opts overlap bit
+determines whether overlapping matches will be found.
+
 NOTE: that this char-by-char incremental search does not work well with
-accented characters (or any combining characters) as the matching is
-always done against an entire glyph, so the matching may skip past a
-location as the base character is added but will not step back when the
-accent (which would have created a glyph match) is then added.
+glyphs containing combining characters) as the matching is always done
+against an entire glyph, so the matching may skip past a location as the
+base character is added but will not step back when the accent or
+decoration (which would have created a glyph match) is then added.
+
+The search group match information is invalid after an incremental
+search, even if the last action succeeds.
 
 -------------------------------------------------------------------------------
 =>                      ACCESSING THE OPERATING SYSTEM
@@ -414,9 +435,9 @@ Quick exit ............ Meta  Z     ::  Write out all changed buffers and exit.
 Exit emacs ............   ^X ^C     ::  Exit without automatic save.
 I shell ...............   ^X  C     ::  Start a new command processor.
 Shell command .........   ^X  !     ::  Execute one operating system command.
-Pipe command ..........   ^X  @     ::  Pipe command results to a new buffer. *
-Filter buffer .........   ^X  #     ::  Filter buffer through a program.      *
-Execute program .......   ^X  $     ::  * Not under VMS.
+Pipe command ..........   ^X  @     ::  Pipe command results to a new buffer.
+Filter buffer .........   ^X  #     ::  Filter buffer through a program.
+Execute program .......   ^X  $     ::  Execute external command.
 -------------------------------------------------------------------------------
 =>                      MACRO COMMANDS
 Begin macro ...........   ^X  (
