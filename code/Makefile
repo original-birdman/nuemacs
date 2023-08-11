@@ -290,13 +290,18 @@ $(PROGRAM): $(OBJ)
 	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_ARM) \
            $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
 
-clean:
+clean: test-clean
 	$(E) "  CLEAN"
 	$(Q) rm -f $(PROGRAM) core lintout makeout tags makefile.bak *.o
-	$(Q) rm -f *.tfile uetest.rc
 
 test-clean:
-	$(Q) rm -f *.tfile uetest.rc
+	$(Q) rm -f *.tfile uetest.rc FAIL-*
+	$(Q) rm -f Expected-Decrypt Decrypt-IN Decrypt-OUT
+	$(Q) rm -f Encrypt-IN Encrypt-OUT Expected-Encrypt
+
+check: uemacs
+	$(E) "	CHECK"
+	$(Q) ./autotest/run_all
 
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.
