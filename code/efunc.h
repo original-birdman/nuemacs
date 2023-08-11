@@ -77,7 +77,7 @@ extern void vtinit(void);
 extern void vttidy(void);
 extern void vtmove(int, int);
 extern int upscreen(int, int);
-extern int update(int);
+extern void update(int);
 extern void updpos(void);
 extern void upddex(void);
 extern int updupd(int);

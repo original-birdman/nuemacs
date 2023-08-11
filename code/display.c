@@ -483,11 +483,11 @@ static int scrflags = 0;
  *
  * int force;           force update past type ahead?
  */
-int update(int force) {
+void update(int force) {
     struct window *wp;
 
 #if VISMAC == 0
-    if (force == FALSE && kbdmode == PLAY) return TRUE;
+    if (force == FALSE && kbdmode == PLAY) return;
 #endif
 
 /* GGR Set-up any requested new screen size before working out a screen
@@ -565,7 +565,7 @@ int update(int force) {
 
     if (chg_width || chg_height) newscreensize(chg_height, chg_width, 0);
 
-    return TRUE;
+    return;
 }
 
 /*
