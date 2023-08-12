@@ -143,15 +143,11 @@ set %expect TOOBIG
 execute-procedure run-test
 
 ; Test for NAN or -NAN.
-; FreeBSD gives NAN, but Linux gives -NAN
+; FreeBSD gives NAN, but Linux gives NAN or -NAN!
+; So look for NAN in the result, and if there the index will be > 0
 ;
-!if &seq $sys_type FreeBSD
-    set .xres NAN
-!else
-    set .xres -NAN
-!endif
-set %test "&rti INF 0"
-set %expect .xres
+set %test "&equ 0 &sin &rti INF 0 NAN"
+set %expect FALSE
 execute-procedure run-test
 
 newline
