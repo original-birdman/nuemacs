@@ -5900,4 +5900,318 @@ version.h
 etc/uemacs.hlp
     Update to GGR4.169
 
+========== GGR4.170
+
+main.c
+    Reinstate setting global mode to main buffer at start, erroneously
+    removed in GGR4.168.
+
+eval.c
+    Modified ue_print (the &ptf function) to allow it to use many printf
+    formatting options (but not * or $).
+    Added a real division function (&rdv).
+
+etc/uemacs.hlp
+    Reformatted end expanded the FUNCTIONS section.
+
+eval.c
+    Make ue_print re-entrant.
+    Correct the adding of an error message text to the output.
+
+eval.c
+evar.h
+Makefile
+etc/uemacs.hlp
+    Added and documented user functions for real (double) numbers.
+    Add, subtract, multiply, divide, power, less than, greater than and
+    real-to-int conversion.
+    Extended &ind function to evaluate its argument, not just expand it
+    as a variable, so that all variable types and functions can be used.
+    [eval.c, evar.h]
+    Added -lm to the build. [Makefile]
+    Updated the FUNCTIONS section. [uemacs.hlp]
+
+eval.c
+    Check for division by zero in integer functions in gtfun().
+    Also check for overflow in real to integer conversion.
+    Refactor the large switch statement in gtfun() to pull out common
+    arg handling requirements.
+
+autotest/arithmetic-tests.sh
+    Added simple tests for arithmetic functions.
+
+autotest/*.sh
+    Add the name of the test at the start and end of each output report.
+
+autotest/move-over-word.sh
+autotest/multi-ex.sh
+autotest/parafill.sh
+autotest/search-boundaries.sh
+autotest/search-groups.sh
+autotest/search-magic-on_off.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-u_hex.sh
+autotest/wordwrap.sh
+    Test for a working gawk -b before running the test.
+
+window.c
+    Reformat enlargewind() function.
+
+random.c
+    Mark string_getter() as static.
+
+main.c
+    Mark usage(), stk_printf(), get_to_dumpdir(), exit_via_signal() and
+    set_rcfile as static.
+
+input.c
+    Mark sigwinch_handler() as static.
+
+fileio.c
+    Mark file_is_binary() as static.
+
+exec.c
+efunc.h
+    Mark cbuf() as static. [exec.c]
+    Remove cbuf from the extern list. [efunc.h]
+
+isearch.c
+pklock.c
+spawn.c
+    Mark reeat() as static. [isearch.c]
+    Mark gethostname() as static. [pklock.c]
+    Mark get_orig_size() and check_for_resize() as static. [spawn.c]
+
+main.c
+efunc.h
+    Mark edinit() as static and move to before main(). [main.c]
+    Remove edinit from the extern list. [efunc.h]
+
+efunc.h
+estruct.h
+    Reorder all extern statements to be in the order they are in the
+    given file, and put the file sections into alphabetical order.
+    [efunc.h]
+    Remove references to cexit (which is not in main.c). [efunc.h,
+    estruct.h]
+    Remove (now gone) vtfree declaration. [efunc.h]
+    Remove a duplicated movecursor() declaration. [efunc.h]
+
+isearch.c
+search.c
+    Fixed a bug in "find next match" in incremental search (in
+    scanmore() as it was adding an (unneeded) pre-skip of the current
+    match length. [search.c]
+    Spell checked comments. [isearch.c, search.c]
+
+autotest/incremental-search.sh
+    Added a simple test for ctl-S/R in incremental search.
+
+eval.c
+autotest/arithmetic-tests.sh
+    Correct TOOOBIG to TOOBIG and fix the regression test to work with
+    string responses.
+
+etc/uemacs.hlp
+    Mention that arithmetic functions may return non-numeric results.
+
+search.c
+    Check for GGR_SRCHOLAP in scanmore() so that incremental searching
+    can match overlapping strings, if chosen. 
+
+random.c
+    Change insert-tokens in macro (non-interactive) mode to insert all
+    of the remaining (evaulated) tokens on the line,
+    (insert-string sill inserts just the evaluated first token).
+
+isearch.c
+    Fix the display and handling of control characters in the search
+    string. 
+
+display.c
+    Don't bother moving cursor if we aren't displaying in mlwrite_ap().
+
+iline.c
+isearch.c
+autotest/incremental-search.sh
+    Ensure that the text in struct line always has room for a
+    terminating NUL char to be added. [line.c]
+    Allow strings of characters (not just one) as control input in the
+    //incremental-debug buffer in idbg_nextchar().  [isearch.c]
+    Extend incremental search tests. [incremental-search.sh]
+    
+isearch.c
+etc/uemacs.hlp
+    Change get_char() to use tgetc() not get1key() and alter the code to
+    look for "normal" control characters. [isearch.c]
+    Update incremental search description to mention it may not work
+    with combining characters. [uemacs.hlp]
+
+display.c
+    Allow mlwrite_ap() to clear the message line if it has no text to
+    display.
+
+autotest/incremental-search.sh
+    Use 0x07 (ctl-G) not 0x03 (ctl-C) to abort searches.
+    Clear resulting "search failed" message line.
+
+----------
+    Minor syntax changes for clang compiler on FreeBSD, 
+
+eval.c
+    It objects to "string"+8. Needs &"string"[8].
+    Also, ensure Solaris returns [-]INF rather than any other string for
+    Infinity.
+
+isearch.c
+    Put braces arround a default clause as it starts with a definition.
+
+----------
+
+autotest/arithmetic-tests.sh
+autotest/combi-col0.sh
+autotest/incremental-search.sh
+autotest/move-over-word.sh
+autotest/multi-ex.sh
+autotest/parafill.sh
+autotest/query-replace.sh
+autotest/search-boundaries.sh
+autotest/search-char_classes.sh
+autotest/search-classes_in_closures.sh
+autotest/search-file-start.sh
+autotest/search-groups.sh
+autotest/search-line-endings.sh
+autotest/search-magic-on_off.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-props2.sh
+autotest/search-reexec-macro.sh
+autotest/search-repeats.sh
+autotest/search-u_hex.sh
+autotest/wordwrap.sh
+autotest/zero-length-magic.sh
+    Changed the use of "awk" or "gawk -b" to use perl, as that is 
+    available everywhere - and works.
+
+----------
+    Changes to remove the BSD/SVR4/SYSV/UNIX defines, none of which is
+    now required.
+
+PREREQUISITE
+    Mentioned that Linux, Solaris or FreeBSD are required as the OS.
+
+Makefile
+    Use cc on FreeBSD, but gcc elsewhere.
+    Remove all -DBSD and -DSYSV from DEFINES.
+    Change DEFINES for FreeBSD.
+
+display.c
+    Include <signal.h> unconditionally.
+
+file.c
+lock.c
+pklock.c
+efunc.h
+    Remove BSD, SVR4 from #if.
+    Remove sys/systeminfo.h + gethostname definition (pklock.c)
+
+fileio.c
+    Remove #if (BSD | USG) around fixup_fname() code.
+
+input.c
+    Remove UNIX, USG and BSD #ifs.
+    Remove struct direct mention.
+
+main.c
+    Remove UNIX, USG and BSD #ifs.
+    Remove CLRMSG code, and GOOD definition.
+
+names.c
+ebind.h
+    Define "suspend-emacs"/bktoshell unconditionally.
+
+posix.c
+    Remove SYSV from a define.
+    Edit comments referring to VMS and CPM so that they no longer do.
+
+spawn.c
+    Remove BSD, SVR4 #ifs.
+    Define "suspend-emacs"/bktoshell unconditionally.
+
+tcap.c
+    Make includes non-conditional. Remove possible _BOOL definition.
+
+epath.h
+    Remove BSD | USG test,.
+
+estruct.h
+    Remove the Machine/OS definitions.
+
+----------
+
+eval.c
+autotest/arithmetic-tests.sh
+    The real arithmetic can produce NAN as a result, so standardize that
+    casing and add a test for it.
+
+autotest/*
+    Changed tests to exit at the end and drop a FAIL-testname file on
+    errors when run from run_all.
+    Dropped common store-procedures into their own rc files and
+    exec-file them as needed into each test.
+
+Makefile
+    Add a "make check" option, and add additional files to the
+    test-clean rule.
+
+isearch.c
+    Rewrite idbg_nextchar() to allow for empty lines.
+
+autotest/arithmetic-tests.sh
+    Allow for FreeBSD giving NAN for INF/0, but Linux giving -NAN.
+
+autotest/run_all
+    Discard *all* output from the "/bin/ls FAIL-*" command.
+
+display.c
+efunc.h
+    Make the update() function return void, as nothing ever uses any
+    return value.
+
+display.c
+isearch.c
+search.c
+    Just return from update() if not displaying. [display.c]
+    Set discmd to FALSE during running of fisearch [isearch.c] and
+    qreplace [search.c] so that the incremental-search.sh and
+    query-replace.sh autotests don't mess up the display on FreeBSD in
+    FULL-RUN mode.
+
+etc/uemacs.hlp
+    Extended the Incremental search information.
+
+version.c
+    Change the "Compiled on" message when using the clang compiler (e.g.
+    FreeBSD).
+
+search.c
+    Only run incremental_debug_check() in replaces() if query is TRUE.
+
+main.c
+    Allow 'n' and 'p' to move to next-/prev-line in VIEW mode.
+
+README
+    Update the list of additions.
+
+autotest/arithmetic-tests.sh
+    Allow NAN or -NAN on any system for the INF/0 test.
+
+../CHANGES
+version.c
+version.h
+    Move xstr define in version.h and remove from version.c to avoid
+    double definition on Android build.
+    Update to GGR4.170
+
 ==========

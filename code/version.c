@@ -5,10 +5,6 @@
 
 #include "utf8proc.h"
 
-/* How to Stringize a defined parameter...*/
-#define str(s) #s
-#define xstr(s) str(s)
-
 void version(void) {
     printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);
 #if defined(__clang_version__)
