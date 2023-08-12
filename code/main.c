@@ -1424,6 +1424,13 @@ int execute(int c, int f, int n) {
         else if ((c | DIFCASE) == 'b') {
             ktp = getbyfnc(backpage);
         }
+        else if ((c | DIFCASE) == 'n') {
+            ktp = getbyfnc(forwline);
+        }
+        else if ((c | DIFCASE) == 'p') {
+            ktp = getbyfnc(backline);
+        }
+
 /* If we are in the //directory buffer in view-only mode with a showdir
  * user_proc then handle certain command chars.
  * NOTE: that the //directory buffer name *MUST* agree with that used
@@ -1431,8 +1438,9 @@ int execute(int c, int f, int n) {
  * Make the test short if it's going to fail...
  * We need to do this *now* in order to trap newline for this...and
  * just remap it to the character that implements what we want it to do...
- * ALSO note that since we've handled Space and B above, these cannot take
- * on any different meaning within the directory browsing window.
+ * ALSO note that since we've handled Space, B, N and P  above, these
+ * cannot take on any different meaning within the directory browsing window.
+ * [The switch(test_char) list under if (dir_browsing), below.]
  */
         else if (!strcmp("//directory", curbp->b_bname)) {
             struct buffer *sdb = bfind("/showdir", FALSE, 0);
