@@ -5,7 +5,7 @@ In the end I put all of that code into my own local git and started from
 there.  So the original 4.015 branch is just that.  Then I  uploaded  it
 to github, but didn't want to go back to a fork and have to start again.
 
-The main extension as to add code which had  been  put  into  3.9e  many
+The main extension is to add code which had  been  put  into  3.9e  many
 years ago to make the bottom line (modeline) into a minibuffer - you can
 use  many uemacs commands to move around, delete, yank etc.  You can set
 modes (including Phon  mode)  in  it.   It  handles  filename  expansion
@@ -28,7 +28,7 @@ Other changes so far made are:
     handling).
   o Add all options to the usage() output, and handle command-line
     options better.
-  o Enable ctl-Q and ctl-S as command (rather than XON/XOFF).
+  o Enable ctl-Q and ctl-S as commands (rather than XON/XOFF).
   o Allow user-created procedures to be bound directly to keys (without
     needing to use one of the 40 numbered macros), and make the
     key-table dynamically assigned, so that it is no longer a limited
@@ -49,7 +49,8 @@ Other changes so far made are:
   o Added a set of ring buffers for each of search and replace string.
     You can move back and forward through the last 10 by using
     previous-window/next-window when searching.
-    You can insert the currently-selected default into the search buffer.
+    You can insert the currently-selected default into the search buffer
+    (^X^I)
   o Added a set of kill-buffers for the last deletes.
     If you yank (^Y) you can then do yank_prev_killbuf (Esc-Y) to change
     that yanked text with the previous deletes in turn. Only works if
@@ -70,20 +71,26 @@ Other changes so far made are:
   o Greatly extended Magic-mode regex capability for searching and
     enabled it to work with Unicode characters.
   o Simple Space/Return and b/B for forward/backward page scrolling in
-    VIEW mode.
+    VIEW mode. Also n/p for next-/prevline.
   o Added per-buffer variables for executing buffers and user procedures.
-  o More paragraph justifying option, including making numeric or
+  o More paragraph justifying options, including making numeric or
     definition lists.
-  o Allow key-bindings for function to have a default numeric argument
+  o Allow key-bindings for functions to have a default numeric argument
     "attached".
   o Improved handling of function/keypad escape sequences.
-  o Add the ability to mark function as "one pass", so they will only be
-    called once. User procedures can determine what numeric arg was
-    given, and which current execution loop they are on.
-  o Allow a user procedure to be installed as one of the four
-    "internal" keybindings.
+  o Add the ability to mark a function as "one pass", so they will only
+    be called once.  User procedures can determine what numeric arg was
+    given, whether this was forced (rather then the default) and which
+    current execution loop they are on (useful if  not "one pass").
+  o Allow a user procedure to be installed as one of the four "internal"
+    keybindings.
   o Allow looking for overlapping matches while searching.
+    Run-time configurable.
+  o Added a sprintf-style function (&ptf) for formatting data.
   o Added a suite of macros for regression testing.
+  o Allow forcing modes on/off for all buffers via a command-line
+    option.
+  o Handle real numbers in macros.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in
