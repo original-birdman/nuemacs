@@ -620,9 +620,9 @@ struct name_bind *getname(char *prompt, int new_command) {
     return NULL;
 }
 
-/*      tgetc:  Get a key from the terminal driver, resolve any keyboard
-                macro action                                    */
-
+/* tgetc:   Get a key from the terminal driver.
+ *          Resolve any keyboard macro action.
+ */
 int tgetc(void) {
     int c;                      /* fetched character */
 
@@ -1057,8 +1057,6 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
  * We start by ensuring that the minibuiffer display is empty...
  */
 loop:
-    mlwrite("");
-    mbupdate();
 
 /* Execute the "command" macro...normally null */
     saveflag = lastflag;        /* preserve lastflag through this */

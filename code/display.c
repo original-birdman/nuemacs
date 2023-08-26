@@ -167,8 +167,7 @@ int ttput1c(char c) {
     return TTput_1uc((unicode_t)c);
 }
 
-/*
- * Initialize the data structures used by the display code. The edge vectors
+/* Initialize the data structures used by the display code. The edge vectors
  * used to access the screens are set up. The operating system's terminal I/O
  * channel is set up. All the other things get initialized at compile time.
  * The original window has "WFCHG" set, so that it will get completely
@@ -282,8 +281,7 @@ void vtinit(void) {
     return;
 }
 
-/*
- * Clean up the virtual terminal system, in anticipation for a return to the
+/* Clean up the virtual terminal system, in anticipation for a return to the
  * operating system. Move down to the last line and clear it out (the next
  * system prompt will be written in the line). Shut down the channel to the
  * terminal.
@@ -297,8 +295,7 @@ void vttidy(void) {
     int dnc __attribute__ ((unused)) = write(1, "\r", 1);
 }
 
-/*
- * Set the virtual cursor to the specified row and column on the virtual
+/* Set the virtual cursor to the specified row and column on the virtual
  * screen. There is no checking for nonsense values; this might be a good
  * idea during the early stages.
  */
@@ -307,15 +304,13 @@ void vtmove(int row, int col) {
     vtcol = col;
 }
 
-/*
- * Write a character to the virtual screen. The virtual row and
+/* Write a character to the virtual screen. The virtual row and
  * column are updated. If we are not yet on left edge, don't print
  * it yet. If the line is too long put a "$" in the last column.
  *
  * This routine only puts printing characters into the virtual
  * terminal buffers. Only column overflow is checked.
  */
-
 static void vtputc(unsigned int c) {
     struct video *vp;       /* ptr to line being updated */
 
@@ -415,8 +410,7 @@ static void vtputc(unsigned int c) {
     vtcol += cw;
 }
 
-/*
- * Erase from the end of the software cursor to the end of the line on which
+/* Erase from the end of the software cursor to the end of the line on which
  * the software cursor is located.
  */
 static void vteeol(void) {
@@ -425,8 +419,7 @@ static void vteeol(void) {
     while (vtcol < term.t_ncol) set_grapheme(&(vcp[vtcol++]), ' ', 0);
 }
 
-/*
- * upscreen:
+/* upscreen:
  *      user routine to force a screen update
  *      always finishes complete update
  */
@@ -436,8 +429,7 @@ int upscreen(int f, int n) {
     return TRUE;
 }
 
-/*
- * updgar:
+/* updgar:
  *      if the screen is garbage, clear the physical screen and
  *      the virtual screen and force a full update
  */
@@ -474,8 +466,7 @@ static void updgar(void) {
 
 static int scrflags = 0;
 
-/*
- * Make sure that the display is right. This is a three part process. First,
+/* Make sure that the display is right. This is a three part process. First,
  * scan through all of the windows looking for dirty ones. Check the framing,
  * and refresh the screen. Second, make sure that "currow" and "curcol" are
  * correct for the current window. Third, make the virtual and physical
@@ -572,8 +563,7 @@ void update(int force) {
     return;
 }
 
-/*
- * reframe:
+/* reframe:
  *      check to see if the cursor is on in the window
  *      and re-frame it if needed or wanted
  */
@@ -671,8 +661,7 @@ static void show_utf8(char *utf8p) {
     }
 }
 
-/*
- * updone:
+/* updone:
  *      update the current line to the virtual screen
  *
  * struct window *wp;           window to update current line in
@@ -703,8 +692,7 @@ static void updone(struct window *wp) {
     taboff = 0;
 }
 
-/*
- * updall:
+/* updall:
  *      update all the lines in a window on the virtual screen
  *
  * struct window *wp;           window to update lines in
@@ -742,8 +730,7 @@ static void updall(struct window *wp) {
     taboff = 0;
 }
 
-/*
- * updpos:
+/* updpos:
  *      update the position of the hardware cursor and handle extended
  *      lines. This is the only update for simple moves.
  */
@@ -807,8 +794,7 @@ void updpos(void) {
     if (curwp->w_flag) update(FALSE);
 }
 
-/*
- * upddex:
+/* upddex:
  *      de-extend any line that deserves it
  */
 void upddex(void) {
@@ -851,8 +837,7 @@ void upddex(void) {
     }
 }
 
-/*
- * updupd:
+/* updupd:
  *      update the physical screen from the virtual screen
  *
  * int force;           forced update flag
@@ -880,8 +865,7 @@ int updupd(int force) {
     return TRUE;
 }
 
-/*
- * optimize out scrolls (line breaks, and newlines)
+/* optimize out scrolls (line breaks, and newlines)
  * arg. chooses between looking for inserts or deletes
  */
 static int scrolls(int inserts) {   /* returns true if it does something */
@@ -1002,8 +986,7 @@ static void scrscroll(int from, int to, int count) {
     (*term.t_scroll) (from, to, count);
 }
 
-/*
- * return TRUE on text match
+/* return TRUE on text match
  *
  * int vrow, prow;              virtual, physical rows
  */
@@ -1014,8 +997,7 @@ static int texttest(int vrow, int prow) {
     return same_grapheme_array(vpv->v_text, vpp->v_text, term.t_ncol);
 }
 
-/*
- * return the index of the first blank of trailing whitespace
+/* return the index of the first blank of trailing whitespace
  */
 static int endofline(struct grapheme *s, int n) {
     int i;
@@ -1024,8 +1006,7 @@ static int endofline(struct grapheme *s, int n) {
     return 0;
 }
 
-/*
- * updext:
+/* updext:
  *      update the extended line which the cursor is currently
  *      on at a column greater than the terminal width. The line
  *      will be scrolled right or left to let the user see where
@@ -1061,12 +1042,10 @@ static void updext(void) {
     }
 }
 
-/*
- * Update a single line. This does not know how to use insert or delete
+/* Update a single line. This does not know how to use insert or delete
  * character sequences; we are using VT52 functionality. Update the physical
  * row and column variables. It does try an exploit erase to end of line.
- */
-/*
+ *
  * updateline()
  *
  * int row;             row of screen to update
@@ -1197,8 +1176,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
 }
 #endif
 
-/*
- * Redisplay the mode line for the window pointed to by the "wp". This is the
+/* Redisplay the mode line for the window pointed to by the "wp". This is the
  * only routine that has any idea of how the modeline is formatted. You can
  * change the modeline format by hacking at this routine. Called by "update"
  * any time there is a dirty window.
@@ -1456,8 +1434,7 @@ void upmode(void) {             /* Update all the mode lines */
     }
 }
 
-/*
- * Send a command to the terminal to move the hardware cursor to row "row"
+/* Send a command to the terminal to move the hardware cursor to row "row"
  * and column "col". The row and column arguments are origin 0. Optimize out
  * random calls. Update "ttrow" and "ttcol".
  */
@@ -1473,8 +1450,7 @@ void force_movecursor(int row, int col) {
     movecursor(row, col);
 }
 
-/*
- * Erase the message line. This is a special routine because the message line
+/* Erase the message line. This is a special routine because the message line
  * is not considered to be part of the virtual screen. It always works
  * immediately; the terminal buffer is flushed via a call to the flusher.
  */
@@ -1499,8 +1475,7 @@ void mlerase(void) {
     mpresf = FALSE;
 }
 
-/*
- * Write a message into the message line. Keep track of the physical cursor
+/* Write a message into the message line. Keep track of the physical cursor
  * position. A small class of printf like format items is handled. Assumes the
  * stack grows down; this assumption is made by the "++" in the argument scan
  * loop. Set the "message line" flag TRUE.
@@ -1531,6 +1506,17 @@ static int TTput_1uc_lim(unicode_t uc) {
     return FALSE;
 }
 
+/* NOTE: that the argument templates here are NOT printf ones.
+ * There are no output width/precision options.
+ * Allow templates are:
+ *  d   integer (decimal)
+ *  o   integer (octal)
+ *  x   integer (hex)
+ *  D   integer (long)
+ *  c   character
+ *  s   string
+ *  f   integer (scaled - real number to 2 dec places * 100)
+ */
 static void mlwrite_ap(const char *fmt, npva ap) {
     unicode_t c;            /* current char in format string */
 
@@ -1544,15 +1530,14 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     TTbacg(gbcolor);
 #endif
 
-/* If we can not erase to end-of-line, do it manually */
-    if (eolexist == FALSE) {
-        mlerase();
-        TTflush();
-    }
+/* Erase to end-of-line, quikcly if we can */
     movecursor(term.t_mbline, 0);
+    if (eolexist)   TTeeol();
+    else            mlerase();
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
+    mpresf = (bytes_togo > 0);
     while (bytes_togo > 0) {
 /* If we are about to go into the last column, put a $ there and stop,
  * otherwise we get wrap-around and the display messes up.
@@ -1606,11 +1591,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             }
         }
     }
-
-/* If we can, erase to the end of screen */
-    if (eolexist == TRUE) TTeeol();
     TTflush();
-    mpresf = TRUE;
 }
 
 void mlwrite(const char *fmt, ...) {
@@ -1621,8 +1602,7 @@ void mlwrite(const char *fmt, ...) {
     return;
 }
 
-/*
- * Force a string out to the message line regardless of the
+/* Force a string out to the message line regardless of the
  * current $discmd setting. This is needed when $debug is TRUE
  * and for the write-message and clear-message-line commands
  *
@@ -1660,8 +1640,7 @@ void mlforce_one(const char *fmt) {
     return;
 }
 
-/*
- * Write out a string. Update the physical cursor position. This no
+/* Write out a string. Update the physical cursor position. This no
  * longer assumes that the characters in the string all have width "1".
  *
  * GGR - modified to handle utf8 strings.
@@ -1677,8 +1656,7 @@ void mlputs(char *s) {
     }
 }
 
-/*
- * Write out an integer, in the specified radix. Update the physical cursor
+/* Write out an integer, in the specified radix. Update the physical cursor
  * position.
  */
 static void mlputi(int i, int r) {
@@ -1697,8 +1675,7 @@ static void mlputi(int i, int r) {
     TTput_1uc_lim(hexdigits[i % r]);
 }
 
-/*
- * do the same except as a long integer.
+/* Do the same except as a long integer.
  */
 static void mlputli(long l, int r) {
     long q;
@@ -1715,8 +1692,7 @@ static void mlputli(long l, int r) {
     TTput_1uc_lim((int) (l % r) + '0');
 }
 
-/*
- * write out a scaled integer with two decimal places
+/* write out a scaled integer with two decimal places
  *
  * int s;               scaled integer to output
  */
