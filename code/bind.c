@@ -68,8 +68,7 @@ int help(int f, int n) {    /* give me some help!!!!
     return TRUE;
 }
 
-/*
- * stock:
+/* stock:
  *      String key name TO Command Key
  *      We need to be careful about signedness in comparisons!!
  *
@@ -169,8 +168,7 @@ static unsigned int stock(char *keyname) {
     return c;
 }
 
-/*
- * get a command key sequence from the keyboard
+/* get a command key sequence from the keyboard
  *
  * int mflag;           going for a meta sequence?
  */
@@ -188,7 +186,9 @@ static unsigned int getckey(int mflag) {
     return (mflag)? get1key(): getcmd();
 }
 
-int deskey(int f, int n) {      /* describe the command for a certain key */
+/* Describe the command for a certain key
+ */
+int deskey(int f, int n) {
     UNUSED(f); UNUSED(n);
     int c;          /* key to describe */
     char *ptr;      /* string pointer to scan output strings */
@@ -283,7 +283,6 @@ static void index_bindings(void) {
  * item for every function.
  * Once we get here we know there are kt_ents entries.
  */
-
 static int *keystr_index = NULL;
 static int *next_keystr_index = NULL;
 static void index_keystr(void) {
@@ -352,9 +351,7 @@ struct key_tab *getbyfnc(fn_t func) {
     return &keytab[keystr_index[first]];
 }
 
-
-/*
- * This function looks a key binding up in the binding table
+/* This function looks a key binding up in the binding table
  * and returns the key_tab entry address.
  * This now returns the key_tab entry address, and callers have
  * been adjusted to work with this.
@@ -370,7 +367,6 @@ struct key_tab *getbind(int c) {
  * So we have a flag for whether the index is up-to-date, and another
  * one as to whether we should update it or just do a linear search.
  */
-
     if (!key_index_valid) {
         if (pause_key_index_update) {
 /* Just do a linear look through the key table. */
@@ -405,8 +401,7 @@ struct key_tab *getbind(int c) {
     return res;
 }
 
-/*
- * unbindchar()
+/* unbindchar()
  *
  * int c;               command key to unbind
  */
@@ -455,7 +450,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
 
 /* switch_internal sets internal_OK on (and will have sent a valid
  * character).
- * So if this is off check that no-on is trying to bind an internal
+ * So if this is off, check that no-one is trying to bind an internal
  * key "inadvertently".
  * Also, the non-internal calls may need to log something.
  */
@@ -472,7 +467,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
         case META|SPEC|'R':
         case META|SPEC|'W':
         case META|SPEC|'X':
-            mlwrite("%s is an internal binding. Use switch_internal.", outseq);
+            mlwrite("%s is an internal binding. Use switch-internal.", outseq);
             return FALSE;
         }
         if (!clexec) mlputs(outseq);
@@ -555,7 +550,7 @@ static int check_procbuf(struct buffer *cbp, char *bufn) {
 /* GGR added
  * buffertokey:
  *      Add a new key to the key binding table to invoke a buffer.
- *      Much copied from bindtokey()and execproc()
+ *      Much copied from bindtokey() and execproc()
  *
  * int f, n;            command arguments [IGNORED]
  */
@@ -579,10 +574,10 @@ int buffertokey(int f, int n) {
  * and we are actually writing this in from offset 1, so we allow NBUFN
  * chars for that and complain if the reply fills the buffer (as that will
  * make the name too long, and we don't want unexpected truncation meaning
- * we have two different names ending up the same.
+ * we have two different names ending up the same).
  * Note that we DO NOT SEND the leading '/', which means that lookups
  * (the CMPLT_BUF) currently fail. This is so that command macro files
- * can use the same names as on the store-procedure line.
+ * can use the same name as on the store-procedure line.
  */
     bname[0] = '/';
     if ((status =
@@ -675,8 +670,7 @@ int switch_internal(int f, int n) {
     return s;
 }
 
-/*
- * bindtokey:
+/* bindtokey:
  *      add a new key to the key binding table
  *
  * int f, n;            command arguments [IGNORED]
@@ -744,8 +738,7 @@ int bindtokey(int f, int n) {
     return update_keybind(c, n, FALSE, kfunc, NULL);
 }
 
-/*
- * unbindkey:
+/* unbindkey:
  *      delete a key from the key binding table
  *
  * int f, n;            command arguments [IGNORED]
@@ -813,13 +806,11 @@ static int show_key_binding(unicode_t key) {
     return TRUE;
 }
 
-/*
- * build a binding list (limited or full)
+/* build a binding list (limited or full)
  *
- * int type;            true = full list,   false = partial list
- * char *mstring;       match string if a partial list
+ * char *mstring;       match string for a partial list
  */
-static int buildlist(int type, char *mstring) {
+static int buildlist(char *mstring) {
     struct window *wp;         /* scanning pointer to windows */
     struct key_tab *ktp;       /* pointer into the command table */
     struct buffer *bp;         /* buffer to put binding list into */
@@ -860,7 +851,7 @@ static int buildlist(int type, char *mstring) {
 /* If we are executing an apropos command.....
  * ...and current string doesn't include the search string
  */
-        if ((type == FALSE) && !strstr(names[ni].n_name, mstring)) continue;
+        if (mstring && !strstr(names[ni].n_name, mstring)) continue;
 
 /* Add in the command name */
         strcpy(outseq, names[ni].n_name);
@@ -905,7 +896,7 @@ static int buildlist(int type, char *mstring) {
  * ...and current string doesn't include the search string
  */
 
-        if ((type == FALSE) && !strstr(ktp->hndlr.pbp, mstring)) continue;
+        if (mstring && !strstr(ktp->hndlr.pbp, mstring)) continue;
 
         if (ktp->k_type == PROC_KMAP) {
             if (!found) {
@@ -929,12 +920,11 @@ static int buildlist(int type, char *mstring) {
 /* Now, if this is not apropos, list everything in key-binding order,
  * with a heading for each "prefix-type".
  */
-
-    if (type) {
+    if (!mstring) {
         if (linstr("\n\nAll key bindings:\n") != TRUE) return FALSE;
 
 /* Note that getcmd() and stock() both prevent SPEC|META being set,
- * so matk any such as (internal)
+ * so mask any such as (internal)
  */
 static char* hdr[] = {
     "Bare char", "Control",        "Meta",           "Meta+Ctrl",
@@ -979,7 +969,7 @@ static char* hdr[] = {
  */
 int desbind(int f, int n) {
         UNUSED(f); UNUSED(n);
-        buildlist(TRUE, "");
+        buildlist(NULL);
         return TRUE;
 }
 
@@ -993,11 +983,10 @@ int apro(int f, int n) {
     status = mlreply("Apropos string: ", mstring, NSTRING - 1, CMPLT_NONE);
     if (status != TRUE) return status;
 
-    return buildlist(FALSE, mstring);
+    return buildlist(mstring);
 }
 
-/*
- * execute the startup file
+/* execute the startup file
  *
  * char *sfname;        name of startup file (null if default)
  */
@@ -1051,9 +1040,7 @@ static int along_path(char *fname, char *fspec) {
 /* GGR - function to set pathname from the command-line
  * This overrides the compiled-in defaults
  */
-#ifdef DO_FREE
 static int free_path_reqd = 0;
-#endif
 void set_pathname(char *cl_string) {
     int slen;
     int add_sep = 0;
@@ -1063,10 +1050,15 @@ void set_pathname(char *cl_string) {
             add_sep = 1;
         }
     }
+/* Have we been here before?
+ * If so, free what we got then.
+ * NOTE: that you can only end up with 1 path set by using the -d
+ * command-line option (even though the compiled in default has two).
+ * The last one wins.
+ */
+    if (free_path_reqd) Xfree(pathname[0]);
     pathname[0] = Xstrdup(cl_string);
-#ifdef DO_FREE
     free_path_reqd = 1;
-#endif
     if (add_sep) {
         pathname[0] = Xrealloc(pathname[0], slen+2); /* incl. NULL! */
         pathname[0][slen] = path_sep;
@@ -1076,8 +1068,7 @@ void set_pathname(char *cl_string) {
     return;
 }
 
-/*
- * Look up the existence of a file along the normal or PATH
+/* Look up the existence of a file along the normal or PATH
  * environment variable. Look first in the HOME directory if
  * asked and possible.
  * GGR - added mode flag determines whether to look along PATH
@@ -1159,8 +1150,7 @@ char *flook(char *fname, int hflag, int mode) {
     return NULL;            /* no such luck */
 }
 
-/*
- * change a key command to a string we can print out
+/* change a key command to a string we can print out
  *
  * int c;               sequence to translate
  * char *seq;           destination string for sequence
@@ -1205,8 +1195,7 @@ void cmdstr(int c, char *seq) {
     *ptr = 0;               /* terminate the string */
 }
 
-/*
- * string key name to binding name....
+/* string key name to binding name....
  *
  * char *skey;          name of key to get binding for
  */
