@@ -54,6 +54,13 @@ ifneq ($(strip $(ANALYZE)),)
     DBG_OPTS += -fanalyzer
 endif
 
+# Does the user want a static build?
+#
+STATIC =
+ifneq ($(strip $(STATIC)),)
+    STATIC_OPT = -static -ltinfo
+endif
+
 # A function to echo a filename if it exists
 #
 filex = $(shell test -f $(1) && echo $(1))
@@ -244,27 +251,16 @@ ifeq ($(strip $(ANDROID)),moto8g)
     ifneq ($(uname_M),aarch64)
         .DEFAULT_GOAL := notarm64_error
     else
-        STATIC=-static
+        STATIC_OPT=-static
         STATIC_XLIBS=-ltinfo
         STATIC_XDEFS=-DANDROID=moto8g
         PROGRAM=uemacs-moto8g
-    endif
-else ifeq ($(strip $(ANDROID)),moto4g)
-    uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
-    ifneq ($(uname_M),armv7l)
-        .DEFAULT_GOAL := notarm_error
-    else
-        STATIC=-static
-        STATIC_ARM=-L/usr/lib/arm-linux-gnueabihf
-        STATIC_XLIBS=-ltinfo
-        STATIC_XDEFS=-DANDROID=moto4g
-        PROGRAM=uemacs-moto4g
     endif
 endif
 
 # Set the default options
 #
-CC = $(MYCC) $(STATIC)
+CC = $(MYCC)
 WARNINGS = -Wall -Wstrict-prototypes -Wextra
 CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
     $(UTF8INCL) $(BCKTINCL) $(STATIC_XDEFS)
@@ -287,8 +283,8 @@ endif
 #
 $(PROGRAM): $(OBJ)
 	$(E) "  LINK    " $@
-	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_ARM) \
-           $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
+	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_OPT) \
+	$(STATIC_ARM) $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
 
 clean: test-clean
 	$(E) "  CLEAN"
