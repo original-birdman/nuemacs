@@ -19,10 +19,13 @@ void version(void) {
 
     const char *utf8vp = utf8proc_version();
     printf(" utf8proc version %s", utf8vp);
-/* Do we have utf8proc_unicode_version()? */
-#include <dlfcn.h>
-    char *(*sym)(void) = dlsym(RTLD_DEFAULT, "utf8proc_unicode_version");
-    if (sym) printf(", supports Unicode %s", sym());
+/* Assume we have utf8proc_unicode_version() */
+// This is the code if we want handle really old libs without it.
+// Needs -ldl
+// #include <dlfcn.h>
+//    char *(*sym)(void) = dlsym(RTLD_DEFAULT, "utf8proc_unicode_version");
+//    if (sym) printf(", supports Unicode %s", sym());
+    printf(", supports Unicode %s", utf8proc_unicode_version());
     printf("\n");
 
 #ifdef NUTRACE

@@ -1,4 +1,4 @@
-# makefile for emacs, updated Tue 15 May 10:24:46 BST 2018
+# Makefile for uemacs
 
 PROGRAM=uemacs
 
@@ -268,7 +268,7 @@ CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1
 
-LIBS = -lm -lncurses -ldl   # All now have ncurses (curses just links to it)
+LIBS = -lm -lncurses    # All now have ncurses (curses just links to it)
 
 # Let's try to find libcurses/libncurses etc.
 # Start by finding term.h (for Oleg's router distros)
