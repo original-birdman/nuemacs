@@ -12,13 +12,7 @@
  * NOTE that there must be at least one!!
  */
 #ifndef DFLT_PATH
-
-#ifdef ANDROID
-#define DFLT_PATH "/sdcard/etc/"
-#else
 #define DFLT_PATH "/opt/local/etc/", "/usr/local/etc/"
-#endif
-
 #endif
 
 static struct init_files {

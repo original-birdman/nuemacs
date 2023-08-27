@@ -6,12 +6,8 @@
 #define str(s) #s
 
 #define PROGRAM_NAME "uemacs"
-#ifdef ANDROID
 
-#define PROGRAM_NAME_LONG "nuEmacs-" xstr(ANDROID)
-#else
 #define PROGRAM_NAME_LONG "nuEmacs"
-#endif
 
 #define VERSION "GGR4.170"
 

@@ -54,11 +54,24 @@ ifneq ($(strip $(ANALYZE)),)
     DBG_OPTS += -fanalyzer
 endif
 
+STANDALONE =
+# Are we building an ARM version for an Android 'phone?
+#
+ifeq ($(strip $(ANDROID)),moto8g)
+    uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+    ifneq ($(uname_M),aarch64)
+        .DEFAULT_GOAL := notarm64_error
+    else
+        STANDALONE = 1
+        DBG_OPTS += -DSDIR_SKIP=7   # Not the GNU/Linux 8
+    endif
+endif
+
 # Does the user want a static build?
 #
-STATIC =
-ifneq ($(strip $(STATIC)),)
+ifneq ($(strip $(STANDALONE)),)
     STATIC_OPT = -static -ltinfo
+    DBG_OPTS += -DSTANDALONE
 endif
 
 # A function to echo a filename if it exists
@@ -242,20 +255,6 @@ else ifeq ($(uname_S),SunOS)
 # CygWin is just like Linux....
 else ifeq ($(firstword $(subst -, ,$(uname_S))),CYGWIN_NT)
  DEFINES=-DPOSIX -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
-endif
-
-# Are we building an ARM version for an Android 'phone?
-#
-ifeq ($(strip $(ANDROID)),moto8g)
-    uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
-    ifneq ($(uname_M),aarch64)
-        .DEFAULT_GOAL := notarm64_error
-    else
-        STATIC_OPT=-static
-        STATIC_XLIBS=-ltinfo
-        STATIC_XDEFS=-DANDROID=moto8g
-        PROGRAM=uemacs-moto8g
-    endif
 endif
 
 # Set the default options

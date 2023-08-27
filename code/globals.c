@@ -138,8 +138,14 @@ struct buffer *ptt = NULL;
 
 int hscroll = FALSE;
 int hjump = 1;
-int autodos = TRUE;     /* Default is to do the check */
-int showdir_tokskip = -1;
+int autodos = TRUE;         /* Default is to do the check */
+/* Set the default to the expected GNU/Linux case
+ * but allow it to be overriden by a compile-time define.
+ */
+#ifndef SDIR_SKIP
+#define SDIR_SKIP 8
+#endif
+int showdir_tokskip = SDIR_SKIP;
 int uproc_opts = 0;
 
 const char kbdmacro_buffer[] = "//kbd_macro";

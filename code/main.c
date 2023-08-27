@@ -1120,6 +1120,21 @@ int main(int argc, char **argv) {
 
     init_search_ringbuffers();
 
+/* If we are building a standalone version, set the config/help directory
+ * location to be the directory containing the executable.
+ * This allows us to put uemacs and its start-up files in one location
+ * on a USB stick...
+ */
+#ifdef STANDALONE
+{
+#include <libgen.h>
+    char *exec_file = strdup(argv[0]);
+    char *exec_path = dirname(exec_file);
+    set_pathname(exec_path);
+    Xfree(exec_file);
+}
+#endif
+
 /* GGR Command line parsing substantially reorganised. It now consists of two
  * separate loops. The first loop processes all optional arguments (command
  * keywords and associated options if any) and stops on reaching the first
@@ -1649,7 +1664,7 @@ int execute(int c, int f, int n) {
             int max = llength(curwp->w.dotp);
             int tok = showdir_tokskip;
             if (tok < 0) {
-                mlwrite_one("Error: $showdir_tokskip is undefined");
+                mlwrite_one("Error: $showdir_tokskip is negative!");
                 break;
             }
             int decr = 1;

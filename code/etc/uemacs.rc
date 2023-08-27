@@ -541,34 +541,15 @@ args-in-reexec ALL
 ;
 ; Enable uemacs to list a directory in a buffer and let you browse
 ; to files and other dirs...
-; This doesn't work on my old Moto4g Android, as pipe-command fails -
-; probably as /bin/sh isn't there and I build it on a Raspberry Pi,
-; which expects it.
-; I'm not worried about it....just don't enable it there.
-; But it DOES work on my Moto8g when built in a qemu Debian Buster
-; aarch64 set-up!! So we may as well set things up for it...
-;
-
-!if &not &sin $progname "moto4g"
 
 ; We have to set how many tokens execute() must skip in the output line
 ; of the /bin/ls command (defined below) to get to the start of the
 ; entryname.
-; The moto8g one is only 7 as it outputs dates with no spaces.
-; (Its sort also seems to not honour the -s option to sort, but I'll
-; just have to live with that...).
-; These are set here, rather than in teh first call set-up block, so
-; that, if necessary(?), a user can change the value before the first
-; call to showdir.
-;
-    !if &sin $progname "moto8g"
-        set $showdir_tokskip 7
-    !else
-        set $showdir_tokskip 8
-    !endif
+; This is set at compile time...but you coudl change it here by setting
+;   $showdir_tokskip
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
- store-procedure showdir
+store-procedure showdir
 
 ; Get the full pathname...expected to be supplied internally by C-code
 ; (via userproc_arg in @"...) and that will have been expanded to a
@@ -783,8 +764,7 @@ args-in-reexec ALL
     update-screen
     write-message &ptf "Sorted by %s%s, %s %s" .tmess .rmess .hmess .xmess
 
- !endm
-!endif
+!endm
 
 ;
 set $discmd TRUE
