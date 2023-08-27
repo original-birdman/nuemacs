@@ -32,20 +32,6 @@ int set_encryption_key(int f, int n) {
     disinp = odisinp;
     if (status != TRUE) return status;
 
-#if PARANOID
-/* GGR - catenate it until at least 63 chars */
-    char keycop[NPAT];      /* GGR */
-    int lcop;               /* GGR */
-
-    strcpy(keycop, key);
-    lcop = strlen(key);
-    while (lcop < 63) {
-        strcpy(keycop, key);        /* Can't strcat to itself, so... */
-        strcat(key, keycop);
-        lcop += lcop;
-    }
-#endif
-
 /* Encrypt it.
  * However, we now encrypt all bytes, so the result here could contain
  * a NUL byte. Hence we need to get (and store) the length first, and
