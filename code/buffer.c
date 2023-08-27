@@ -139,13 +139,11 @@ int swbuffer(struct buffer *bp, int macro_OK) {
         cknewwindow();
         return TRUE;
     }
-    wp = wheadp;                    /* Look for old.        */
-    while (wp != NULL) {
+    for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if (wp != curwp && wp->w_bufp == bp) {
             curwp->w = wp->w;
             break;
         }
-        wp = wp->w_wndp;
     }
     cknewwindow();
     return TRUE;
@@ -229,13 +227,14 @@ ask:
         return FALSE;
 
 /* And check for duplicates */
-    bp = bheadp;
-    while (bp != NULL) {
+    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (bp != curbp) {
-            if (strcmp(bufn, bp->b_bname) == 0) /* If the names the same */
+            if (strcmp(bufn, bp->b_bname) == 0) { /* Names the same? */
+                mlforce("%s already exists!", bufn);
+                sleep(1);
                 goto ask;       /* try again */
+            }
         }
-        bp = bp->b_bufp;        /* onward */
     }
 
     strcpy(curbp->b_bname, bufn);   /* copy buffer name to structure */
@@ -389,18 +388,15 @@ static int makelist(int iflag) {
 
         *cp1++ = ' ';                   /* Gap.                 */
         nbytes = 0L;                    /* Count bytes in buf.  */
-        lp = lforw(bp->b_linep);
-        while (lp != bp->b_linep) {
+        for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = lforw(lp)) {
             nbytes += (long) llength(lp) + 1L;
-            lp = lforw(lp);
         }
         ltoa(b, 9, nbytes);             /* 9 digit buffer size. */
         cp2 = b;
         while ((c = *cp2++) != 0) *cp1++ = c;
         *cp1++ = ' ';                   /* Gap.                 */
         cp2 = &bp->b_bname[0];          /* Buffer name          */
-        while ((c = *cp2++) != 0)
-            *cp1++ = c;
+        while ((c = *cp2++) != 0) *cp1++ = c;
         cp2 = &bp->b_fname[0];          /* File name            */
         if (*cp2 != 0) {
 /*
@@ -459,8 +455,7 @@ int listbuffers(int f, int n) {
         wp->w_bufp = blistp;
         ++blistp->b_nwnd;
     }
-    wp = wheadp;
-    while (wp != NULL) {
+    for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if (wp->w_bufp == blistp) {
             wp->w_linep = lforw(blistp->b_linep);
             wp->w.dotp = lforw(blistp->b_linep);
@@ -469,7 +464,6 @@ int listbuffers(int f, int n) {
             wp->w.marko = 0;
             wp->w_flag |= WFMODE | WFHARD;
         }
-        wp = wp->w_wndp;
     }
     return TRUE;
 }
@@ -484,11 +478,9 @@ int listbuffers(int f, int n) {
 int anycb(void) {
     struct buffer *bp;
 
-    bp = bheadp;
-    while (bp != NULL) {
+    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if ((bp->b_flag & BFINVS) == 0 && (bp->b_flag & BFCHG) != 0)
             return TRUE;
-        bp = bp->b_bufp;
     }
     return FALSE;
 }
@@ -512,8 +504,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         sleep(1);
         return NULL;
     }
-    bp = bheadp;
-    while (bp != NULL) {
+    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (strcmp(bname, bp->b_bname) == 0) {
             if (bp->b_active != TRUE) { /* buffer not active yet */
                 silent = TRUE;          /* As probably not the current buffer */
@@ -522,7 +513,6 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
             }
             return bp;
         }
-        bp = bp->b_bufp;
     }
     if (cflag != FALSE) {
         bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
@@ -531,18 +521,15 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
             return NULL;
         }
 /* Find the place in the list to insert this buffer */
-        if (bheadp == NULL || strcmp(bheadp->b_bname, bname) > 0) {
-            bp->b_bufp = bheadp;        /* insert at the beginning */
+        if (bheadp == NULL) {           /* Insert at the beginning */
+            bp->b_bufp = bheadp;
             bheadp = bp;
-        } else {
-            sb = bheadp;
-            while (sb->b_bufp != NULL) {
+        } else {                        /* Find lexical place... */
+/* Note that we test the buffer *following* the current sb */
+            for (sb = bheadp; sb->b_bufp != NULL; sb = sb->b_bufp) {
                 if (strcmp(sb->b_bufp->b_bname, bname) > 0) break;
-                sb = sb->b_bufp;
             }
-
-/* And insert it */
-            bp->b_bufp = sb->b_bufp;
+            bp->b_bufp = sb->b_bufp;    /* ...and insert it */
             sb->b_bufp = bp;
         }
 
