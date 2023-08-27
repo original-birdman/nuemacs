@@ -442,6 +442,8 @@ bind-to-key insert-file                 ^XI
 buffer-to-key centre-line               ^XL
 bind-to-key save-file                   ^XS
 buffer-to-key toggle-lmode              ^XT
+bind-to-key open-parent                 ^XU
+
 ;
 buffer-to-key rm-dflt-repl              M-^D
 bind-to-key incremental-search          M-^I

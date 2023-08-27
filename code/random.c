@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #include "estruct.h"
 #include "edef.h"
@@ -1345,4 +1346,25 @@ int re_args_exec(int f, int n) {
         return FALSE;
     }
     return TRUE;
+}
+
+/* Open the directory where the file in the current buffer lives.
+ * Bound to ^XU in the standard uemacs.rc.
+ */
+int open_parent(int f, int n) {
+    UNUSED(f); UNUSED(n);
+
+    if (curbp->b_fname[0] == '\0') {
+        mlforce("This buffer has no filename");
+        return FALSE;
+    }
+    char *bpath = strdup(curbp->b_fname);
+    char *parent_path = dirname(bpath);
+    int status = TRUE;
+    if (!showdir_handled(parent_path)) {
+        mlforce("Failed to open parent");
+        status = FALSE;
+    }
+    Xfree(bpath);
+    return status;
 }

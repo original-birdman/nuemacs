@@ -147,6 +147,7 @@ struct name_bind names[] = {
     {"next-window", nextwind, {0, 1, 0, 0, 0}},
     {"next-word", forwword, {0, 0, 0, 0, 0}},
     {"nop", nullproc, {1, 0, 0, 1, 0}},
+    {"open-parent", open_parent, {0, 1, 0, 0, 0}},
     {"open-line", openline, {0, 0, 0, 0, 0}},
     {"overwrite-string", ovstring, {0, 0, 0, 0, 0}},
     {"pipe-command", pipecmd, {0, 1, 0, 0, 0}},
