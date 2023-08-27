@@ -7,19 +7,18 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
 #include "charset.h"
-
 #include "utf8proc.h"
 
 static int tabsize; /* Tab size (0: use real tabs) */
 
-/*
- * Set fill column to n.
+/* Set fill column to n.
  */
 int setfillcol(int f, int n) {
 /* GGR - default to 72 on no arg or an invalid one */
@@ -30,8 +29,7 @@ int setfillcol(int f, int n) {
     return TRUE;
 }
 
-/*
- * Display the current position of the cursor, in origin 1 X-Y coordinates,
+/* Display the current position of the cursor, in origin 1 X-Y coordinates,
  * the character that is under the cursor (in hex), and the fraction of the
  * text that is before the cursor. The displayed column is not the current
  * column, but the column that would be used on an infinite width display.
@@ -159,8 +157,7 @@ int getcline(void) {
     return numlines + 1;
 }
 
-/*
- * Return current column.
+/* Return current column.
  * Column counting needs to take into account zero-widths, and also the
  * 2/3-column displays for control characters done by vtputc() so uses
  * utf8_to_unicode()+update_screenpos_for_char rather than next_utf8_offset().
@@ -180,8 +177,7 @@ int getccol(void) {
     return col;
 }
 
-/*
- * Set current column.
+/* Set current column.
  * Column counting needs to take into account zero-widths, and also the
  * 2/3-column displays for control characters done by vtputc().
  *
@@ -206,8 +202,7 @@ int setccol(int pos) {
     return col >= pos;              /* ..and tell whether we made it */
 }
 
-/*
- * Twiddle the two characters on either side of dot. If dot is at the end of
+/* Twiddle the two characters on either side of dot. If dot is at the end of
  * the line twiddle the two characters before it. Return with an error if dot
  * is at the beginning of line; it seems to be a bit pointless to make this
  * work. This fixes up a very common typo with a single stroke. Normally bound
@@ -274,8 +269,7 @@ int twiddle(int f, int n) {
     return TRUE;
 }
 
-/*
- * Quote the next character, and insert it into the buffer. All the characters
+/* Quote the next character, and insert it into the buffer. All the characters
  * are taken literally, with the exception of the newline, which always has
  * its line splitting meaning. The character is always read, even if it is
  * inserted 0 times, for regularity. Bound to "C-Q"
@@ -333,8 +327,7 @@ int typetab(int f, int n) {
     return linsert_byte((newcol - ccol), ' ');
 }
 
-/*
- * Set tab size if given non-default argument (n <> 1).  Otherwise, insert a
+/* Set tab size if given non-default argument (n <> 1).  Otherwise, insert a
  * tab into file.  If given argument, n, of zero, change to true tabs.
  * If n > 1, simulate tab stop every n-characters using spaces. This has to be
  * done in this slightly funny way because the tab (in ASCII) has been turned
@@ -351,8 +344,7 @@ int insert_tab(int f, int n) {
     return linsert_byte(tabsize - (getccol() % tabsize), ' ');
 }
 
-/*
- * change tabs to spaces
+/* change tabs to spaces
  *
  * int f, n;            default flag and numeric repeat count
  */
@@ -388,8 +380,7 @@ int detab(int f, int n) {
     return TRUE;
 }
 
-/*
- * change spaces to tabs where possible
+/* change spaces to tabs where possible
  *
  * int f, n;            default flag and numeric repeat count
  */
@@ -458,8 +449,7 @@ int entab(int f, int n) {
     return TRUE;
 }
 
-/*
- * trim trailing whitespace from the point to eol
+/* trim trailing whitespace from the point to eol
  *
  * int f, n;            default flag and numeric repeat count
  */
@@ -498,8 +488,7 @@ int trim(int f, int n) {
     return TRUE;
 }
 
-/*
- * Open up some blank space. The basic plan is to insert a bunch of newlines,
+/* Open up some blank space. The basic plan is to insert a bunch of newlines,
  * and then back up over them. Everything is done by the subcommand
  * processors. They even handle the looping. Normally this is bound to "C-O".
  */
@@ -572,8 +561,7 @@ static int cinsert(void) {
     return TRUE;
 }
 
-/*
- * Insert a newline. Bound to "C-M". If we are in CMODE, do automatic
+/* Insert a newline. Bound to "C-M". If we are in CMODE, do automatic
  * indentation as specified.
  */
 int insert_newline(int f, int n) {
@@ -588,8 +576,7 @@ int insert_newline(int f, int n) {
     if (n == 1 && (curbp->b_mode & MDCMOD) && curwp->w.dotp != curbp->b_linep)
           return cinsert();
 
-/*
- * If a newline was typed, fill column is defined, the argument is non-
+/* If a newline was typed, fill column is defined, the argument is non-
  * negative, wrap mode is enabled, and we are now past fill column,
  * and we are not read-only, perform word wrap.
  */
@@ -619,8 +606,7 @@ int insert_newline(int f, int n) {
     return TRUE;
 }
 
-/*
- * insert a brace into the text here...we are in CMODE
+/* insert a brace into the text here...we are in CMODE
  *
  * int n;       repeat count
  * int c;       brace to insert (always } for now)
@@ -724,8 +710,7 @@ int inspound(void) {
     return linsert_byte(1, '#');
 }
 
-/*
- * Delete blank lines around dot. What this command does depends if dot is
+/* Delete blank lines around dot. What this command does depends if dot is
  * sitting on a blank line. If dot is sitting on a blank line, this command
  * deletes all the blank lines above and below the current line. If it is
  * sitting on a non blank line then it deletes all of the blank lines after
@@ -753,8 +738,7 @@ int deblank(int f, int n) {
     return ldelete(nld, FALSE);
 }
 
-/*
- * Insert a newline, then enough tabs and spaces to duplicate the indentation
+/* Insert a newline, then enough tabs and spaces to duplicate the indentation
  * of the previous line. Assumes tabs are every eight characters. Quite simple.
  * Figure out the indentation of the current line. Insert a newline by calling
  * the standard routine. Insert the indentation by inserting the right number
@@ -786,8 +770,7 @@ int indent(int f, int n) {
     return TRUE;
 }
 
-/*
- * Delete forward. This is real easy, because the basic delete routine does
+/* Delete forward. This is real easy, because the basic delete routine does
  * all of the work. Watches for negative arguments, and does the right thing.
  * If any argument is present, it kills rather than deletes, to prevent loss
  * of text if typed with a big argument. Normally bound to "C-D".
@@ -803,8 +786,7 @@ int forwdel(int f, int n) {
     return ldelgrapheme((long) n, f);
 }
 
-/*
- * Delete backwards. This is quite easy too, because it's all done with other
+/* Delete backwards. This is quite easy too, because it's all done with other
  * functions. Just move the cursor back, and delete forwards. Like delete
  * forward, this actually does a kill if presented with an argument. Bound to
  * both "RUBOUT" and "C-H".
@@ -826,8 +808,7 @@ int backdel(int f, int n) {
     return s;
 }
 
-/*
- * Kill text. If called without an argument, it kills from dot to the end of
+/* Kill text. If called without an argument, it kills from dot to the end of
  * the line, unless it is at the end of the line, when it kills the newline.
  * If called with an argument of 0, it kills from the start of the line to dot.
  * If called with a positive argument, it kills from dot forward over that
@@ -873,8 +854,7 @@ int killtext(int f, int n) {
     return ldelete(chunk, TRUE);
 }
 
-/*
- * change the editor mode status
+/* change the editor mode status
  *
  * int kind;            true = set,          false = delete
  * int global;          true = global flag,  false = current buffer flag
@@ -953,8 +933,7 @@ static int adjustmode(int kind, int global) {
     return FALSE;
 }
 
-/*
- * prompt and set an editor mode
+/* prompt and set an editor mode
  *
  * int f, n;            default and argument
  */
@@ -963,8 +942,7 @@ int setemode(int f, int n) {
     return adjustmode(TRUE, FALSE);
 }
 
-/*
- * prompt and delete an editor mode
+/* prompt and delete an editor mode
  *
  * int f, n;            default and argument
  */
@@ -973,8 +951,7 @@ int delmode(int f, int n) {
     return adjustmode(FALSE, FALSE);
 }
 
-/*
- * prompt and set a global editor mode
+/* prompt and set a global editor mode
  *
  * int f, n;            default and argument
  */
@@ -983,8 +960,7 @@ int setgmode(int f, int n) {
     return adjustmode(TRUE, TRUE);
 }
 
-/*
- * prompt and delete a global editor mode
+/* prompt and delete a global editor mode
  *
  * int f, n;            default and argument
  */
@@ -993,8 +969,7 @@ int delgmode(int f, int n) {
     return adjustmode(FALSE, TRUE);
 }
 
-/*
- * This function simply clears the message line,
+/* This function simply clears the message line,
  * mainly for macro usage
  *
  * int f, n;            arguments ignored
@@ -1005,8 +980,7 @@ int clrmes(int f, int n) {
     return TRUE;
 }
 
-/*
- * This function writes a string on the message line
+/* This function writes a string on the message line
  * mainly for macro usage
  *
  * NOTE!!!! The string is checked (as one item) for variable expansion etc.
@@ -1035,8 +1009,7 @@ int writemsg(int f, int n) {
     return TRUE;
 }
 
-/*
- * the cursor is moved to a matching fence
+/* the cursor is moved to a matching fence
  *
  * int f, n;            not used
  */
@@ -1118,64 +1091,6 @@ int getfence(int f, int n) {
     curwp->w.doto = oldoff;
     TTbeep();
     return FALSE;
-}
-
-/*
- * Close fences are matched against their partners, and if
- * on screen the cursor briefly lights there
- *
- * char ch;                     fence type to match against
- */
-int fmatch(int ch) {
-    struct line *oldlp;     /* original line pointer */
-    int oldoff;             /* and offset */
-    struct line *toplp;     /* top line in current window */
-    int count;              /* current fence level count */
-    char opench;            /* open fence */
-    char c;                 /* current character in scan */
-    int i;
-
-/* First get the display update out there */
-    update(FALSE);
-
-/* Save the original cursor position */
-    oldlp = curwp->w.dotp;
-    oldoff = curwp->w.doto;
-
-/* Setup proper open fence for passed close fence */
-    if (ch == ')')      opench = '(';
-    else if (ch == '}') opench = '{';
-    else                opench = '[';
-
-/* Find the top line and set up for scan */
-    toplp = curwp->w_linep->l_bp;
-    count = 1;
-    back_grapheme(2);
-
-/* Scan back until we find it, or reach past the top of the window */
-    while (count > 0 && curwp->w.dotp != toplp) {
-        if (curwp->w.doto == llength(curwp->w.dotp)) c = '\n';
-        else          c = lgetc(curwp->w.dotp, curwp->w.doto);
-        if (c == ch) ++count;
-        if (c == opench) --count;
-        back_grapheme(1);
-        if (curwp->w.dotp == curwp->w_bufp->b_linep->l_fp && curwp->w.doto == 0)
-            break;
-    }
-
-/* If count is zero, we have a match, display the sucker
- * There is a real machine dependant timing problem here we have
- * yet to solve......... (???)
- */
-    if (count == 0) {
-        forw_grapheme(1);
-        for (i = 0; i < term.t_pause; i++) update(FALSE);
-    }
-
-/* Restore the current position */
-    curwp->w.dotp = oldlp;
-    curwp->w.doto = oldoff;
-    return TRUE;
 }
 
 /* A string getter for istring and rawstring, as they only differ in the
@@ -1270,8 +1185,7 @@ int itokens(int f, int n) {
     return string_getter(f, n, COOKED_STR);
 }
 
-/*
- * Insert a string into current buffer at current point
+/* Insert a string into current buffer at current point
  * In macros it inserts the evaulated first token (so a quoted string
  * may be used).
  * In interactive mode it will insert the entire response (but ^X-<CR> will
@@ -1281,8 +1195,7 @@ int istring(int f, int n) {
     return string_getter(f, n, RAW_STR);
 }
 
-/*
- * ask for and overwrite a string into the current
+/* ask for and overwrite a string into the current
  * buffer at the current point
  *
  * int f, n;            ignored arguments
@@ -1367,8 +1280,7 @@ int quotedcount(int f, int n) {
     return(FALSE);
 }
 
-/*
- * Set GGR option flags all on if given non-default argument (n > 1).
+/* Set GGR option flags all on if given non-default argument (n > 1).
  * Otherwise, switch all off.
  * Historic single flag setting for what is now a bit-map.
  */

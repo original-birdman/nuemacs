@@ -286,7 +286,6 @@ extern int delgmode(int, int);
 extern int clrmes(int, int);
 extern int writemsg(int, int);
 extern int getfence(int, int);
-extern int fmatch(int);
 extern int itokens(int, int);
 extern int istring(int, int);
 extern int ovstring(int, int);

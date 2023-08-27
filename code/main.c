@@ -1,5 +1,4 @@
-/*
- *      main.c
+/*      main.c
 
  *      uEmacs/PK 4.0
  *
@@ -962,6 +961,61 @@ static int set_rcfile(char *fname) {
     return TRUE;
 }
 
+/* Close fences are matched against their partners, and if
+ * on screen the cursor briefly lights there
+ *
+ * char ch;                     fence type to match against
+ */
+static int fmatch(int ch) {
+    struct line *oldlp;     /* original line pointer */
+    int oldoff;             /* and offset */
+    struct line *toplp;     /* top line in current window */
+    int count;              /* current fence level count */
+    char opench;            /* open fence */
+    char c;                 /* current character in scan */
+
+/* First get the display update out there */
+    update(FALSE);
+
+/* Save the original cursor position */
+    oldlp = curwp->w.dotp;
+    oldoff = curwp->w.doto;
+
+/* Setup proper open fence for passed close fence */
+    if (ch == ')')      opench = '(';
+    else if (ch == '}') opench = '{';
+    else                opench = '[';
+
+/* Find the top line and set up for scan */
+    toplp = curwp->w_linep->l_bp;
+    count = 1;
+    back_grapheme(2);
+
+/* Scan back until we find it, or reach past the top of the window */
+    while (count > 0 && curwp->w.dotp != toplp) {
+        if (curwp->w.doto == llength(curwp->w.dotp)) c = '\n';
+        else          c = lgetc(curwp->w.dotp, curwp->w.doto);
+        if (c == ch) ++count;
+        if (c == opench) --count;
+        back_grapheme(1);
+        if (curwp->w.dotp == curwp->w_bufp->b_linep->l_fp && curwp->w.doto == 0)
+            break;
+    }
+
+/* If count is zero, we have a match, display the sucker then pause briefly.
+ */
+    if (count == 0) {
+        forw_grapheme(1);
+        update(FALSE);
+        sleep(1);
+    }
+
+/* Restore the current position */
+    curwp->w.dotp = oldlp;
+    curwp->w.doto = oldoff;
+    return TRUE;
+}
+
 /* ======================================================================
  * Initialize all of the buffers and windows. The buffer name is passed down
  * as an argument, because the main routine may have been told to read in a
@@ -1663,8 +1717,7 @@ int execute(int c, int f, int n) {
         return TRUE;
     }
 
-/*
- * If a space was typed, fill column is defined, the argument is non-
+/* If a space was typed, fill column is defined, the argument is non-
  * negative, wrap mode is enabled, and we are now past fill column,
  * and we are not read-only, perform word wrap.
  * NOTE that we then continue on to self-insert the space!
