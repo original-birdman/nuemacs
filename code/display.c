@@ -64,20 +64,6 @@ static int displaying = FALSE;
 #endif
 #include <sys/ioctl.h>
 
-static int reframe(struct window *wp);
-static void updone(struct window *wp);
-static void updall(struct window *wp);
-static int scrolls(int inserts);
-static void scrscroll(int from, int to, int count);
-static int texttest(int vrow, int prow);
-static int endofline(struct grapheme *s, int n);
-static void updext(void);
-static int updateline(int row, struct video *vp1, struct video *vp2);
-static void modeline(struct window *wp);
-static void mlputi(int i, int r);
-static void mlputli(long l, int r);
-static void mlputf(int s);
-
 /* Set the entry to an ASCII character.
  * Checks for previous extended cdm usage and frees any such found
  * unless the no_free flag is set (which it is for a pscreen setting).
@@ -299,7 +285,7 @@ void vttidy(void) {
  * screen. There is no checking for nonsense values; this might be a good
  * idea during the early stages.
  */
-void vtmove(int row, int col) {
+static void vtmove(int row, int col) {
     vtrow = row;
     vtcol = col;
 }
@@ -465,103 +451,6 @@ static void updgar(void) {
 }
 
 static int scrflags = 0;
-
-/* Make sure that the display is right. This is a three part process. First,
- * scan through all of the windows looking for dirty ones. Check the framing,
- * and refresh the screen. Second, make sure that "currow" and "curcol" are
- * correct for the current window. Third, make the virtual and physical
- * screens the same.
- *
- * Do nothing if we are not displaying (discmd == FALSE)
- *
- * int force;           force update past type ahead?
- */
-void update(int force) {
-    struct window *wp;
-
-    if (!discmd) return;
-
-#if VISMAC == 0
-    if (force == FALSE && kbdmode == PLAY) return;
-#endif
-
-/* GGR Set-up any requested new screen size before working out a screen
- * update, rather than waiting until the end.
- * spawn.c forces a redraw using this on return from a command line, and
- * we need to ensure that term.t_ncol is set before doing any vtputc() calls.
- */
-    if (chg_width || chg_height) newscreensize(chg_height, chg_width, 1);
-    int was_displaying = displaying;    /* So this can recurse.... */
-    displaying = TRUE;
-
-/* First, propagate mode line changes to all instances of a buffer
- * displayed in more than one window
- */
-    wp = wheadp;
-    while (wp != NULL) {
-        if (wp->w_flag & WFMODE) {
-            if (wp->w_bufp->b_nwnd > 1) {
-/* Make sure all previous windows have this */
-                struct window *owp;
-                owp = wheadp;
-                while (owp != NULL) {
-                    if (owp->w_bufp == wp->w_bufp) owp->w_flag |= WFMODE;
-                    owp = owp->w_wndp;
-                }
-            }
-        }
-        wp = wp->w_wndp;
-    }
-
-/* Update any windows that need refreshing
- * GGR - get the correct window
- */
-    if (mbonly) wp = curwp;
-    else        wp = wheadp;
-    while (wp != NULL) {
-        if (wp->w_flag) {
-/* If the window has changed, service it */
-            reframe(wp);    /* check the framing */
-            if (wp->w_flag & (WFKILLS | WFINS)) {
-                scrflags |= (wp->w_flag & (WFINS | WFKILLS));
-                wp->w_flag &= ~(WFKILLS | WFINS);
-            }
-            if ((wp->w_flag & ~WFMODE) == WFEDIT)
-                updone(wp);     /* update EDITed line */
-            else if (wp->w_flag & ~WFMOVE)
-                updall(wp);     /* update all lines */
-            if (scrflags || (wp->w_flag & WFMODE))
-                modeline(wp);   /* update modeline */
-            wp->w_flag = 0;
-            wp->w_force = 0;
-        }
-/* On to the next window.   GGR - stop if in minibuffer */
-        if (mbonly) wp = NULL;
-        else        wp = wp->w_wndp;
-    }
-/* Recalc the current hardware cursor location */
-
-    updpos();
-
-/* Check for lines to de-extend */
-    upddex();
-
-/* If screen is garbage, re-plot it */
-    if (sgarbf != FALSE) updgar();
-
-/* Update the virtual screen to the physical screen */
-    updupd(force);
-
-/* Update the cursor and flush the buffers */
-    movecursor(currow, curcol - lbound);
-
-    TTflush();
-    displaying = was_displaying;
-
-    if (chg_width || chg_height) newscreensize(chg_height, chg_width, 0);
-
-    return;
-}
 
 /* reframe:
  *      check to see if the cursor is on in the window
@@ -730,139 +619,30 @@ static void updall(struct window *wp) {
     taboff = 0;
 }
 
-/* updpos:
- *      update the position of the hardware cursor and handle extended
- *      lines. This is the only update for simple moves.
- */
-void updpos(void) {
-    struct line *lp;
-    int i;
-
-/* Find the current row */
-    lp = curwp->w_linep;
-    currow = curwp->w_toprow;
-    while (lp != curwp->w.dotp) {
-        ++currow;
-        lp = lforw(lp);
-    }
-
-/* Find the current column */
-    curcol = 0;
-    i = 0;
-    while (i < curwp->w.doto) {
-        unicode_t c;
-        int bytes = utf8_to_unicode(lp->l_text, i, curwp->w.doto, &c);
-        i += bytes;
-        update_screenpos_for_char(curcol, c);
-    }
-
-/* Adjust by the current first column position */
-
-    curcol -= curwp->w.fcol;
-
-/* Make sure it is not off the left side of the screen */
-    while (curcol < 0) {
-        if (curwp->w.fcol >= hjump) {
-            curcol += hjump;
-            curwp->w.fcol -= hjump;
-        } else {
-            curcol += curwp->w.fcol;
-            curwp->w.fcol = 0;
-        }
-        curwp->w_flag |= WFHARD | WFMODE;
-    }
-
-/* If horizontal scrolling is enabled, shift if needed */
-    if (hscroll) {
-        while (curcol >= term.t_ncol - 1) {
-            curcol -= hjump;
-            curwp->w.fcol += hjump;
-            curwp->w_flag |= WFHARD | WFMODE;
-        }
-    } else {
-/* If extended, flag so and update the virtual line image */
-        if (curcol >= term.t_ncol - 1) {
-            vscreen[currow]->v_flag |= (VFEXT | VFCHG);
-            updext();
-        } else
-            lbound = 0;
-    }
-
-/* If we've now set the w_flag we need to recall update(), which is
- * now re-entrant.
- */
-    if (curwp->w_flag) update(FALSE);
+/* Move the "count" lines starting at "from" to "to" */
+static void scrscroll(int from, int to, int count) {
+    ttrow = ttcol = -1;
+    (*term.t_scroll) (from, to, count);
 }
 
-/* upddex:
- *      de-extend any line that deserves it
- */
-void upddex(void) {
-    struct window *wp;
-    struct line *lp;
-    int i;
-
-    wp = wheadp;
-
-    while (wp != NULL) {
-        lp = wp->w_linep;
-        i = wp->w_toprow;
-
-/* GGR - FIX1 (version 2)
- * Add check for reaching end-of-buffer (== loop back to start) too
- * otherwise we process lines at start of file as if they are
- * beyond the end of it. (the "lp != " part).
- */
-        while ((i < wp->w_toprow + wp->w_ntrows) &&
-             (lp != wp->w_bufp->b_linep)) {
-            if (vscreen[i]->v_flag & VFEXT) {
-                if ((wp != curwp) || (lp != wp->w.dotp) ||
-                     (curcol < term.t_ncol - 1)) {
-                    taboff = wp->w.fcol;
-                    vtmove(i, -taboff);
-                    show_line(lp);
-                    vteeol();
-                    taboff = 0;
-
-/* This line no longer is extended */
-                    vscreen[i]->v_flag &= ~VFEXT;
-                    vscreen[i]->v_flag |= VFCHG;
-                }
-            }
-            lp = lforw(lp);
-            ++i;
-        }
-/* And onward to the next window */
-        wp = wp->w_wndp;
-    }
-}
-
-/* updupd:
- *      update the physical screen from the virtual screen
+/* return TRUE on text match
  *
- * int force;           forced update flag
+ * int vrow, prow;              virtual, physical rows
  */
-int updupd(int force) {
-    UNUSED(force);
-    struct video *vp1;
+static int texttest(int vrow, int prow) {
+    struct video *vpv = vscreen[vrow];      /* virtual screen image */
+    struct video *vpp = pscreen[prow];      /* physical screen image */
+
+    return same_grapheme_array(vpv->v_text, vpp->v_text, term.t_ncol);
+}
+
+/* return the index of the first blank of trailing whitespace
+ */
+static int endofline(struct grapheme *s, int n) {
     int i;
-    if (scrflags & WFKILLS)
-        scrolls(FALSE);
-    if (scrflags & WFINS)
-        scrolls(TRUE);
-    scrflags = 0;
-
-/* GGR - include the last row, so <=, (for mini-buffer) */
-    int lrow = inmb? term.t_mbline: term.t_vscreen;
-    for (i = 0; i <= lrow; ++i) {
-        vp1 = vscreen[i];
-
-/* For each line that needs to be updated */
-        if ((vp1->v_flag & VFCHG) != 0) {
-            updateline(i, vp1, pscreen[i]);
-        }
-    }
-    return TRUE;
+    for (i = n - 1; i >= 0; i--)
+        if (!is_space(s+i)) return i + 1;
+    return 0;
 }
 
 /* optimize out scrolls (line breaks, and newlines)
@@ -980,68 +760,6 @@ static int scrolls(int inserts) {   /* returns true if it does something */
     return FALSE;
 }
 
-/* Move the "count" lines starting at "from" to "to" */
-static void scrscroll(int from, int to, int count) {
-    ttrow = ttcol = -1;
-    (*term.t_scroll) (from, to, count);
-}
-
-/* return TRUE on text match
- *
- * int vrow, prow;              virtual, physical rows
- */
-static int texttest(int vrow, int prow) {
-    struct video *vpv = vscreen[vrow];      /* virtual screen image */
-    struct video *vpp = pscreen[prow];      /* physical screen image */
-
-    return same_grapheme_array(vpv->v_text, vpp->v_text, term.t_ncol);
-}
-
-/* return the index of the first blank of trailing whitespace
- */
-static int endofline(struct grapheme *s, int n) {
-    int i;
-    for (i = n - 1; i >= 0; i--)
-        if (!is_space(s+i)) return i + 1;
-    return 0;
-}
-
-/* updext:
- *      update the extended line which the cursor is currently
- *      on at a column greater than the terminal width. The line
- *      will be scrolled right or left to let the user see where
- *      the cursor is
- */
-static void updext(void) {
-    int rcursor;                /* real cursor location */
-    struct line *lp;            /* pointer to current line */
-
-/* Calculate what column the real cursor will end up in */
-    rcursor = ((curcol - term.t_ncol) % term.t_scrsiz) + term.t_margin;
-    lbound = curcol - rcursor + 1;
-    taboff = lbound + curwp->w.fcol;
-
-/* Scan through the line outputting characters to the virtual screen
- * once we reach the left edge.
- */
-    vtmove(currow, -taboff);    /* start scanning offscreen */
-    lp = curwp->w.dotp;         /* line to output */
-    show_line(lp);
-
-/* Truncate the virtual line, restore tab offset */
-    vteeol();
-    taboff = 0;
-
-/* And put a '$' in column 1. but if this is a multi-width character we also
- * need to change any following NULs to spaces
- */
-    int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
-    set_grapheme(&(vscreen[currow]->v_text[0]), '$', 0);
-    for (int pcol = cw - 1; pcol > 0; pcol--) {
-        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ', 0);
-    }
-}
-
 /* Update a single line. This does not know how to use insert or delete
  * character sequences; we are using VT52 functionality. Update the physical
  * row and column variables. It does try an exploit erase to end of line.
@@ -1054,17 +772,13 @@ static void updext(void) {
  */
 static int updateline(int row, struct video *vp1, struct video *vp2) {
 
-/* UPDATELINE code for all other versions          */
-
     struct grapheme *cp1;
     struct grapheme *cp2;
     struct grapheme *cp3;
     struct grapheme *cp4;
     struct grapheme *cp5;
     int nbflag;             /* non-blanks to the right flag? */
-    int rev;                /* reverse video flag */
     int req;                /* reverse video request flag */
-
 
 /* Set up pointers to virtual and physical lines */
     cp1 = &vp1->v_text[0];
@@ -1075,12 +789,13 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
     TTbacg(vp1->v_rbcolor);
 #endif
 
+    req = (vp1->v_flag & VFREQ) == VFREQ;
 #if REVSTA | COLOR
 /* If we need to change the reverse video status of the
  * current line, we need to re-write the entire line.
  */
+    int rev;                /* reverse video flag */
     rev = (vp1->v_flag & VFREV) == VFREV;
-    req = (vp1->v_flag & VFREQ) == VFREQ;
     if ((rev != req)
 #if COLOR
           || (vp1->v_fcolor != vp1->v_rfcolor)
@@ -1112,6 +827,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
 #endif
         return TRUE;
     }
+#endif
 
 /* Advance past any common chars at the left */
     while (cp1 != &vp1->v_text[term.t_ncol] && same_grapheme(cp1, cp2, 0)) {
@@ -1174,7 +890,177 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
     vp1->v_flag &= ~VFCHG;  /* Flag this line as updated */
     return TRUE;
 }
-#endif
+
+/* updupd:
+ *      update the physical screen from the virtual screen
+ *
+ * int force;           forced update flag
+ */
+static int updupd(int force) {
+    UNUSED(force);
+    struct video *vp1;
+    int i;
+    if (scrflags & WFKILLS)
+        scrolls(FALSE);
+    if (scrflags & WFINS)
+        scrolls(TRUE);
+    scrflags = 0;
+
+/* GGR - include the last row, so <=, (for mini-buffer) */
+    int lrow = inmb? term.t_mbline: term.t_vscreen;
+    for (i = 0; i <= lrow; ++i) {
+        vp1 = vscreen[i];
+
+/* For each line that needs to be updated */
+        if ((vp1->v_flag & VFCHG) != 0) {
+            updateline(i, vp1, pscreen[i]);
+        }
+    }
+    return TRUE;
+}
+
+/* updext:
+ *      update the extended line which the cursor is currently
+ *      on at a column greater than the terminal width. The line
+ *      will be scrolled right or left to let the user see where
+ *      the cursor is
+ */
+static void updext(void) {
+    int rcursor;                /* real cursor location */
+    struct line *lp;            /* pointer to current line */
+
+/* Calculate what column the real cursor will end up in */
+    rcursor = ((curcol - term.t_ncol) % term.t_scrsiz) + term.t_margin;
+    lbound = curcol - rcursor + 1;
+    taboff = lbound + curwp->w.fcol;
+
+/* Scan through the line outputting characters to the virtual screen
+ * once we reach the left edge.
+ */
+    vtmove(currow, -taboff);    /* start scanning offscreen */
+    lp = curwp->w.dotp;         /* line to output */
+    show_line(lp);
+
+/* Truncate the virtual line, restore tab offset */
+    vteeol();
+    taboff = 0;
+
+/* And put a '$' in column 1. but if this is a multi-width character we also
+ * need to change any following NULs to spaces
+ */
+    int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
+    set_grapheme(&(vscreen[currow]->v_text[0]), '$', 0);
+    for (int pcol = cw - 1; pcol > 0; pcol--) {
+        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ', 0);
+    }
+}
+
+/* updpos:
+ *      update the position of the hardware cursor and handle extended
+ *      lines. This is the only update for simple moves.
+ */
+static void updpos(void) {
+    struct line *lp;
+    int i;
+
+/* Find the current row */
+    lp = curwp->w_linep;
+    currow = curwp->w_toprow;
+    while (lp != curwp->w.dotp) {
+        ++currow;
+        lp = lforw(lp);
+    }
+
+/* Find the current column */
+    curcol = 0;
+    i = 0;
+    while (i < curwp->w.doto) {
+        unicode_t c;
+        int bytes = utf8_to_unicode(lp->l_text, i, curwp->w.doto, &c);
+        i += bytes;
+        update_screenpos_for_char(curcol, c);
+    }
+
+/* Adjust by the current first column position */
+
+    curcol -= curwp->w.fcol;
+
+/* Make sure it is not off the left side of the screen */
+    while (curcol < 0) {
+        if (curwp->w.fcol >= hjump) {
+            curcol += hjump;
+            curwp->w.fcol -= hjump;
+        } else {
+            curcol += curwp->w.fcol;
+            curwp->w.fcol = 0;
+        }
+        curwp->w_flag |= WFHARD | WFMODE;
+    }
+
+/* If horizontal scrolling is enabled, shift if needed */
+    if (hscroll) {
+        while (curcol >= term.t_ncol - 1) {
+            curcol -= hjump;
+            curwp->w.fcol += hjump;
+            curwp->w_flag |= WFHARD | WFMODE;
+        }
+    } else {
+/* If extended, flag so and update the virtual line image */
+        if (curcol >= term.t_ncol - 1) {
+            vscreen[currow]->v_flag |= (VFEXT | VFCHG);
+            updext();
+        } else
+            lbound = 0;
+    }
+
+/* If we've now set the w_flag we need to recall update(), which is
+ * now re-entrant.
+ */
+    if (curwp->w_flag) update(FALSE);
+}
+
+/* upddex:
+ *      de-extend any line that deserves it
+ */
+static void upddex(void) {
+    struct window *wp;
+    struct line *lp;
+    int i;
+
+    wp = wheadp;
+
+    while (wp != NULL) {
+        lp = wp->w_linep;
+        i = wp->w_toprow;
+
+/* GGR - FIX1 (version 2)
+ * Add check for reaching end-of-buffer (== loop back to start) too
+ * otherwise we process lines at start of file as if they are
+ * beyond the end of it. (the "lp != " part).
+ */
+        while ((i < wp->w_toprow + wp->w_ntrows) &&
+             (lp != wp->w_bufp->b_linep)) {
+            if (vscreen[i]->v_flag & VFEXT) {
+                if ((wp != curwp) || (lp != wp->w.dotp) ||
+                     (curcol < term.t_ncol - 1)) {
+                    taboff = wp->w.fcol;
+                    vtmove(i, -taboff);
+                    show_line(lp);
+                    vteeol();
+                    taboff = 0;
+
+/* This line no longer is extended */
+                    vscreen[i]->v_flag &= ~VFEXT;
+                    vscreen[i]->v_flag |= VFCHG;
+                }
+            }
+            lp = lforw(lp);
+            ++i;
+        }
+/* And onward to the next window */
+        wp = wp->w_wndp;
+    }
+}
 
 /* Redisplay the mode line for the window pointed to by the "wp". This is the
  * only routine that has any idea of how the modeline is formatted. You can
@@ -1424,6 +1310,103 @@ next_mode:
     while ((c = *cp++) != 0) vtputc(c);
 }
 
+/* Make sure that the display is right. This is a three part process. First,
+ * scan through all of the windows looking for dirty ones. Check the framing,
+ * and refresh the screen. Second, make sure that "currow" and "curcol" are
+ * correct for the current window. Third, make the virtual and physical
+ * screens the same.
+ *
+ * Do nothing if we are not displaying (discmd == FALSE)
+ *
+ * int force;           force update past type ahead?
+ */
+void update(int force) {
+    struct window *wp;
+
+    if (!discmd) return;
+
+#if VISMAC == 0
+    if (force == FALSE && kbdmode == PLAY) return;
+#endif
+
+/* GGR Set-up any requested new screen size before working out a screen
+ * update, rather than waiting until the end.
+ * spawn.c forces a redraw using this on return from a command line, and
+ * we need to ensure that term.t_ncol is set before doing any vtputc() calls.
+ */
+    if (chg_width || chg_height) newscreensize(chg_height, chg_width, 1);
+    int was_displaying = displaying;    /* So this can recurse.... */
+    displaying = TRUE;
+
+/* First, propagate mode line changes to all instances of a buffer
+ * displayed in more than one window
+ */
+    wp = wheadp;
+    while (wp != NULL) {
+        if (wp->w_flag & WFMODE) {
+            if (wp->w_bufp->b_nwnd > 1) {
+/* Make sure all previous windows have this */
+                struct window *owp;
+                owp = wheadp;
+                while (owp != NULL) {
+                    if (owp->w_bufp == wp->w_bufp) owp->w_flag |= WFMODE;
+                    owp = owp->w_wndp;
+                }
+            }
+        }
+        wp = wp->w_wndp;
+    }
+
+/* Update any windows that need refreshing
+ * GGR - get the correct window
+ */
+    if (mbonly) wp = curwp;
+    else        wp = wheadp;
+    while (wp != NULL) {
+        if (wp->w_flag) {
+/* If the window has changed, service it */
+            reframe(wp);    /* check the framing */
+            if (wp->w_flag & (WFKILLS | WFINS)) {
+                scrflags |= (wp->w_flag & (WFINS | WFKILLS));
+                wp->w_flag &= ~(WFKILLS | WFINS);
+            }
+            if ((wp->w_flag & ~WFMODE) == WFEDIT)
+                updone(wp);     /* update EDITed line */
+            else if (wp->w_flag & ~WFMOVE)
+                updall(wp);     /* update all lines */
+            if (scrflags || (wp->w_flag & WFMODE))
+                modeline(wp);   /* update modeline */
+            wp->w_flag = 0;
+            wp->w_force = 0;
+        }
+/* On to the next window.   GGR - stop if in minibuffer */
+        if (mbonly) wp = NULL;
+        else        wp = wp->w_wndp;
+    }
+/* Recalc the current hardware cursor location */
+
+    updpos();
+
+/* Check for lines to de-extend */
+    upddex();
+
+/* If screen is garbage, re-plot it */
+    if (sgarbf != FALSE) updgar();
+
+/* Update the virtual screen to the physical screen */
+    updupd(force);
+
+/* Update the cursor and flush the buffers */
+    movecursor(currow, curcol - lbound);
+
+    TTflush();
+    displaying = was_displaying;
+
+    if (chg_width || chg_height) newscreensize(chg_height, chg_width, 0);
+
+    return;
+}
+
 void upmode(void) {             /* Update all the mode lines */
     struct window *wp;
 
@@ -1476,11 +1459,10 @@ void mlerase(void) {
 }
 
 /* Write a message into the message line. Keep track of the physical cursor
- * position. A small class of printf like format items is handled. Assumes the
- * stack grows down; this assumption is made by the "++" in the argument scan
- * loop. Set the "message line" flag TRUE.
- * The handling is now hived off to mlwrite_ap, which can be called by
- * either mlwrite or mlforce.
+ * position.
+ * A small class of printf like format items is handled by mlwrite() and
+ * mlforce() - mlwrite_one() and mlforce_one() just take a striing.
+ * The handling is now hived off to mlwrite_ap for all four functions.
  *
  * GGR modified to handle utf8 strings.
  *
@@ -1504,6 +1486,61 @@ typedef union {
 static int TTput_1uc_lim(unicode_t uc) {
     if (ttcol < term.t_ncol) return TTput_1uc(uc);
     return FALSE;
+}
+
+/* Write out an integer, in the specified radix. Update the physical cursor
+ * position.
+ */
+static void mlputi(int i, int r) {
+    int q;
+    static char hexdigits[] = "0123456789ABCDEF";
+
+    if (i < 0) {
+        i = -i;
+        TTput_1uc_lim('-');
+    }
+
+    q = i / r;
+
+    if (q != 0) mlputi(q, r);
+
+    TTput_1uc_lim(hexdigits[i % r]);
+}
+
+/* Do the same except as a long integer.
+ */
+static void mlputli(long l, int r) {
+    long q;
+
+    if (l < 0) {
+        l = -l;
+        TTput_1uc_lim('-');
+    }
+
+    q = l / r;
+
+    if (q != 0) mlputli(q, r);
+
+    TTput_1uc_lim((int) (l % r) + '0');
+}
+
+/* write out a scaled integer with two decimal places
+ *
+ * int s;               scaled integer to output
+ */
+static void mlputf(int s) {
+    int i;                  /* integer portion of number */
+    int f;                  /* fractional portion of number */
+
+/* Break it up */
+    i = s / 100;
+    f = s % 100;
+
+/* Send out the integer portion */
+    mlputi(i, 10);
+    TTput_1uc_lim('.');
+    TTput_1uc_lim((f / 10) + '0');
+    TTput_1uc_lim((f % 10) + '0');
 }
 
 /* NOTE: that the argument templates here are NOT printf ones.
@@ -1530,7 +1567,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     TTbacg(gbcolor);
 #endif
 
-/* Erase to end-of-line, quikcly if we can */
+/* Erase to end-of-line, quickly if we can */
     movecursor(term.t_mbline, 0);
     if (eolexist)   TTeeol();
     else            mlerase();
@@ -1654,61 +1691,6 @@ void mlputs(char *s) {
         idx += utf8_to_unicode(s, idx, nbytes, &c);
         TTput_1uc_lim(c);
     }
-}
-
-/* Write out an integer, in the specified radix. Update the physical cursor
- * position.
- */
-static void mlputi(int i, int r) {
-    int q;
-    static char hexdigits[] = "0123456789ABCDEF";
-
-    if (i < 0) {
-        i = -i;
-        TTput_1uc_lim('-');
-    }
-
-    q = i / r;
-
-    if (q != 0) mlputi(q, r);
-
-    TTput_1uc_lim(hexdigits[i % r]);
-}
-
-/* Do the same except as a long integer.
- */
-static void mlputli(long l, int r) {
-    long q;
-
-    if (l < 0) {
-        l = -l;
-        TTput_1uc_lim('-');
-    }
-
-    q = l / r;
-
-    if (q != 0) mlputli(q, r);
-
-    TTput_1uc_lim((int) (l % r) + '0');
-}
-
-/* write out a scaled integer with two decimal places
- *
- * int s;               scaled integer to output
- */
-static void mlputf(int s) {
-    int i;                  /* integer portion of number */
-    int f;                  /* fractional portion of number */
-
-/* Break it up */
-    i = s / 100;
-    f = s % 100;
-
-/* Send out the integer portion */
-    mlputi(i, 10);
-    TTput_1uc_lim('.');
-    TTput_1uc_lim((f / 10) + '0');
-    TTput_1uc_lim((f % 10) + '0');
 }
 
 /* Get terminal size from system.
