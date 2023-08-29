@@ -13,6 +13,9 @@
 #include <math.h>
 #include <errno.h>
 #include <fenv.h>
+#if __sun
+#include <alloca.h>
+#endif
 
 #include "estruct.h"
 #include "edef.h"
@@ -236,37 +239,161 @@ static int sindex(char *source, char *pattern) {
     return 0;
 }
 
+/* FreeBSD doesn't have strndupa(), so make our own....
+ * ...or rather copy the GCC definition from string.h.
+ * If anything has strndupa as something other than a #define
+ * this logic will need to be changed.
+ */
+#ifndef strndupa
+ #define strndupa(s, n)                                     \
+  (__extension__                                            \
+    ({                                                      \
+      const char *__old = (s);                              \
+      size_t __len = (n);                                   \
+      char *__new = (char *) __builtin_alloca (__len + 1);  \
+      __new[__len] = '\0';                                  \
+      (char *) memcpy (__new, __old, __len);                \
+    }))
+#endif
+
 /* Filter a string through a translation table
  *
  * char *source;        string to filter
  * char *lookup;        characters to translate
  * char *trans;         resulting translated characters
+ *
+ * This version now works on graphemes, and if the trans list
+ * is shorter than the lookup list then the "trailing" matches
+ * from lookup result in removals from the result.
+ * Although the mapping is by grapheme, the actual string
+ * replacing is done as utf8-bytes.
+ * There is no Unicode EQUIV ability here...
  */
+struct map_table {
+    union {
+        char c;
+        char *utf8;
+    } from;
+    union {
+        char c;
+        char *utf8;
+    } to;
+    int fr_len;
+    int to_len;
+};
+
 static char *xlat(char *source, char *lookup, char *trans) {
-    char *sp;       /* pointer into source table */
-    char *lp;       /* pointer into lookup table */
-    char *rp;       /* pointer into result */
+
     static char result[NSTRING];    /* temporary result */
 
-/* Scan source string */
-    sp = source;
-    rp = result;
-    while (*sp) {   /* scan lookup table for a match */
-        lp = lookup;
-        while (*lp) {
-            if (*sp == *lp) {
-                *rp++ = trans[lp - lookup];
-                goto xnext;
-            }
-            ++lp;
+/* There cannot be more mappings than the number of bytes in the lookup.
+ * So allocate a table of that size now.
+ */
+
+    int llen = strlen(lookup);
+    int tlen = strlen(trans);
+/* alloca() allocates on the stack, so automatically de-allocates
+ * when we leave.
+ */
+    struct map_table *mtp = alloca(llen*sizeof(struct map_table));
+
+/* Walk along lookup and trans filling in the mappings.
+ * If we run out of trans, we mark them as removals.
+ * If there is any trans left when we run out of lookup, it's an
+ * error.
+ */
+    char *lp = lookup;
+    char *tp = trans;
+    struct map_table *wmtp = mtp;
+    int mtlen = 0;
+    while (*lp) {
+        struct grapheme gph;
+        int used;
+
+/* Build the next lookup grapheme.
+ * We're not actually interested in its Unicode value(s), Just how many
+ * bytes (chars) it uses. So don't allocate any extended bits.
+ */
+        used = build_next_grapheme(lp, 0, llen, &gph, 1);
+        if (used == 1) {
+            wmtp->from.c = *lp;
+            wmtp->fr_len = 1;
         }
-/* No match, copy in the source char untranslated */
-        *rp++ = *sp;
-        xnext:++sp;
+        else {
+/* strndupa uses alloca, so no need for us to free() */
+            wmtp->from.utf8 = strndupa(lp, used);
+            wmtp->fr_len = used;
+        }
+        lp += used;
+        llen -= used;
+/* Build the next trans grapheme.
+ * We're not actually interested in its Unicode value(s), Just how many
+ * bytes (chars) it uses.
+ */
+        if (!*tp)
+            wmtp->to_len = 0;
+        else {
+            used = build_next_grapheme(tp, 0, tlen, &gph, 1);
+            if (used == 1) {
+                wmtp->to.c = *tp;
+                wmtp->to_len = 1;
+            }
+            else {
+                wmtp->to.utf8 = strndupa(tp, used);
+                wmtp->to_len = used;
+            }
+            tp += used;
+            tlen -= used;
+        }
+/* Advance to next map_table entry and count how many we have */
+        wmtp++;
+        mtlen++;
     }
 
-/* Terminate and return the result */
-    *rp = 0;
+/* Out of lookup - check that trans has run out too... */
+    if (*tp) {
+        mlforce("Translation table longer than lookup table.");
+        return "ERROR";
+    }
+
+/* Now copy the source to the result, mapping any matching bytes/strings */
+
+    char *sp = source;
+    char *rp = result;
+    while (*sp) {
+        int ri = -1;    /* No matching index - yet */
+        for (int i = 0; i < mtlen; i++) {
+            if (mtp[i].fr_len == 1) {
+                if (mtp[i].from.c == *sp) {
+                    ri = i;
+                    break;
+                }
+            }
+            else {
+                if (strncmp(sp, mtp[i].from.utf8, mtp[i].fr_len) == 0) {
+                    ri = i;
+                    break;
+                }
+            }
+        }
+        if (ri >= 0) {  /* We found a match, so lookup the translation */
+            switch(mtp[ri].to_len) {
+            case 0:         /* Remove from output */
+                break;
+            case 1:
+                *rp = mtp[ri].to.c;
+                break;
+            default:
+                memcpy(rp, mtp[ri].to.utf8, mtp[ri].to_len);
+            }
+            sp += mtp[ri].fr_len;
+            rp += mtp[ri].to_len;
+        }
+        else            /* Just copy the source byte to the result */
+            *rp++ = *sp++;
+    }
+
+    *rp = '\0';
     return result;
 }
 
@@ -649,7 +776,7 @@ static char *gtfun(char *fname) {
  * Undeflow results in 0.
  * Invalid bit patterns result in NAN - but you shouldn't be able
  * to get those. However, you can enter NAN as a number, or
- * multiply INF by 0. 
+ * multiply INF by 0.
  * Arithmetic with these string values should still work.
  *
  */
