@@ -821,7 +821,7 @@ static int buildlist(char *mstring) {
     if (splitwind(FALSE, 1) == FALSE) return FALSE;
 
 /* and get a buffer for it */
-    bp = bfind("/Binding list", TRUE, 0);
+    bp = bfind("//Binding list", TRUE, BFINVS);
     if (bp == NULL || bclear(bp) == FALSE) {
         mlwrite_one("Cannot display binding list");
         return FALSE;
