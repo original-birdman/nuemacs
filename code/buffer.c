@@ -373,11 +373,13 @@ static int makelist(int iflag) {
         *cp1++ = ((bp->b_flag & BFTRUNC) != 0)? '#': ' ';
         *cp1++ = ' ';                   /* space */
 
-/* Output the mode codes */
+/* Output the mode codes - unknonw for not-yet-active buffers */
 
         mcheck = 1;
+        char mc = '-';  /* Will stay as this for not-yet-active) */
         for (i = 0; i < NUMMODES; i++) {
-            *cp1++ = (bp->b_mode & mcheck)?  modecode[i]: '.';
+            if (bp->b_active) mc = (bp->b_mode & mcheck)? modecode[i]: '.';
+            *cp1++ = mc;
             mcheck <<= 1;
         }
 
