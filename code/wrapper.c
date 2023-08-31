@@ -1,7 +1,11 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "usage.h"
+void die(const char* err) {
+    fprintf(stderr, "FATAL: %s\n", err);
+    exit(128);
+}
 
 void *Xmalloc(size_t size) {
     void *ret = malloc(size);
@@ -22,7 +26,7 @@ void Xfree(void *ptr) {
 
 char *Xstrdup (const char *ostr) {
     char *nstr = strdup(ostr);
-    if (!nstr) die("realloc: Out of memory");
+    if (!nstr) die("strdup: Out of memory");
     return nstr;
 }
     

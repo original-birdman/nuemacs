@@ -5,15 +5,15 @@ PROGRAM=uemacs
 SRC=basic.c bind.c buffer.c crypt.c display.c eval.c \
 	exec.c file.c fileio.c globals.c idxsorter.c input.c \
 	isearch.c line.c lock.c main.c names.c pklock.c posix.c random.c \
-	region.c search.c spawn.c tcap.c usage.c utf8.c \
+	region.c search.c spawn.c tcap.c utf8.c \
 	version.c window.c word.c wrapper.c
 OBJ=basic.o bind.o buffer.o crypt.o display.o eval.o \
 	exec.o file.o fileio.o globals.o idxsorter.o input.o \
 	isearch.o line.o lock.o main.o names.o pklock.o posix.o \
-	random.o region.o search.o spawn.o tcap.o usage.o \
+	random.o region.o search.o spawn.o tcap.o \
 	utf8.o version.o window.o word.o wrapper.o
 HDR=charset.h ebind.h edef.h efunc.h epath.h estruct.h evar.h \
-	idxsorter.h line.h usage.h utf8.h util.h version.h
+	idxsorter.h line.h utf8.h util.h version.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
 
@@ -385,12 +385,11 @@ region.o: region.c estruct.h utf8.h edef.h efunc.h line.h
 search.o: search.c estruct.h utf8.h edef.h efunc.h line.h
 spawn.o: spawn.c estruct.h utf8.h edef.h efunc.h
 tcap.o: tcap.c estruct.h utf8.h edef.h efunc.h
-usage.o: usage.c usage.h
 utf8.o: utf8.c estruct.h utf8.h edef.h efunc.h combi.h
 version.o: version.c version.h
 window.o: window.c estruct.h utf8.h edef.h efunc.h line.h
 word.o: word.c estruct.h utf8.h edef.h efunc.h line.h
-wrapper.o: wrapper.c usage.h
+wrapper.o: wrapper.c
 
 # DEPENDENCIES MUST END AT END OF FILE
 # IF YOU PUT STUFF HERE IT WILL GO AWAY
