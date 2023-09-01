@@ -800,8 +800,7 @@ static int show_key_binding(unicode_t key) {
             strcat(outseq, " ");
             strcat(outseq, ktp->hndlr.pbp);
         }
-        strcat(outseq, "\n");
-        if (linstr(outseq) != TRUE) return FALSE;
+        addline_to_curb(outseq);
     }
     return TRUE;
 }
@@ -863,12 +862,11 @@ static int buildlist(char *mstring) {
 /* Pad out some spaces */
             while (cpos < 28) outseq[cpos++] = ' ';
 
-/* Add in the command sequence */
+/* Add in the command sequence (adds a trailing NUL) */
             cmdstr(ktp->k_code, outseq+cpos);
-            strcat(outseq, "\n");
 
 /* and add it as a line into the buffer */
-            if (linstr(outseq) != TRUE) return FALSE;
+            addline_to_curb(outseq);
             cpos = 0;       /* and clear the line */
 /* Look for any more keybindings ot this function */
             ktp = next_getbyfnc(ktp);
@@ -877,9 +875,8 @@ static int buildlist(char *mstring) {
 
 /* if no key was bound, we need to dump it anyway */
         if (cpos > 0) {
-            outseq[cpos++] = '\n';
             outseq[cpos] = 0;
-            if (linstr(outseq) != TRUE) return FALSE;
+            addline_to_curb(outseq);
         }
     }
 
@@ -900,7 +897,8 @@ static int buildlist(char *mstring) {
 
         if (ktp->k_type == PROC_KMAP) {
             if (!found) {
-                if (linstr("\nProcedure bindings\n") != TRUE) return FALSE;
+                addline_to_curb("");
+                addline_to_curb("Procedure bindings:");
                 found = 1;
             }
         }
@@ -908,12 +906,11 @@ static int buildlist(char *mstring) {
         strcpy(outseq, ktp->hndlr.pbp);
         cpos = strlen(outseq);
         while (cpos < 28) outseq[cpos++] = ' ';
-/* Add in the command sequence */
+/* Add in the command sequence (adds a trailing NUL) */
         cmdstr(ktp->k_code, outseq+cpos);
-        strcat(outseq, "\n");
 
 /* Add the line into the buffer */
-        if (linstr(outseq) != TRUE) return FALSE;
+        addline_to_curb(outseq);
         cpos = 0;       /* and clear the line */
     }
 
@@ -921,7 +918,8 @@ static int buildlist(char *mstring) {
  * with a heading for each "prefix-type".
  */
     if (!mstring) {
-        if (linstr("\n\nAll key bindings:\n") != TRUE) return FALSE;
+        addline_to_curb(""); addline_to_curb(""); /* Two empty lines */
+        addline_to_curb("All key bindings:");
 
 /* Note that getcmd() and stock() both prevent SPEC|META being set,
  * so mask any such as (internal)

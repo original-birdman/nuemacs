@@ -17,8 +17,7 @@
 #include "efunc.h"
 #include "line.h"
 
-/*
- * Attach a buffer to a window. The values of dot and mark come from
+/* Attach a buffer to a window. The values of dot and mark come from
  * the buffer if the use count is 0. Otherwise, they come from some
  * other window.
  * If *any* numeric arg is given, use the savnam buffer directly with
@@ -43,8 +42,7 @@ int usebuffer(int f, int n) {
     return swbuffer(bp, 0);
 }
 
-/*
- * switch to the next buffer in the buffer list
+/* switch to the next buffer in the buffer list
  * This command is disabled in the minibuffer (names in names.c)
  *
  * int f, n;            default flag, numeric argument
@@ -80,8 +78,7 @@ int nextbuffer(int f, int n) {
     return swbuffer(bbp, 0);
 }
 
-/*
- * Make a buffer active...by reading in (possibly delayed) a file.
+/* Make a buffer active...by reading in (possibly delayed) a file.
  */
 static void make_active(struct buffer *nbp) {
 
@@ -104,8 +101,7 @@ static void make_active(struct buffer *nbp) {
     return;
 }
 
-/*
- * make buffer BP current
+/* make buffer BP current
  */
 int swbuffer(struct buffer *bp, int macro_OK) {
     struct window *wp;
@@ -149,8 +145,7 @@ int swbuffer(struct buffer *bp, int macro_OK) {
     return TRUE;
 }
 
-/*
- * Dispose of a buffer, by name.
+/* Dispose of a buffer, by name.
  * Ask for the name. Look it up (don't get too
  * upset if it isn't there at all!). Get quite upset
  * if the buffer is being displayed. Clear the buffer (ask
@@ -181,8 +176,7 @@ int killbuffer(int f, int n) {
     return zotbuf(bp);
 }
 
-/*
- * kill the buffer pointed to by bp
+/* kill the buffer pointed to by bp
  */
 int zotbuf(struct buffer *bp) {
     struct buffer *bp1;
@@ -211,8 +205,7 @@ int zotbuf(struct buffer *bp) {
     return TRUE;
 }
 
-/*
- * Rename the current buffer
+/* Rename the current buffer
  *
  * int f, n;            default Flag & Numeric arg
  */
@@ -259,29 +252,40 @@ static void ltoa(char *buf, int width, long num) {
         buf[--width] = ' ';
 }
 
-/*
- * The argument "text" points to a string. Append this line to the
- * buffer list buffer. Handcraft the EOL on the end.
+/* The argument "text" points to a string.
+ * Append this line to the current buffer.
+ * Handcraft the EOL on the end.
  * Return TRUE if it worked and FALSE if you ran out of room.
  */
-static int addline(char *text) {
+void addline_to_curb(char *text) {
     struct line *lp;
     int ntext;
 
     ntext = strlen(text);
     lp = lalloc(ntext);
     lfillchars(lp, ntext, text);
-    blistp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
-    lp->l_bp = blistp->b_linep->l_bp;
-    blistp->b_linep->l_bp = lp;
-    lp->l_fp = blistp->b_linep;
-    if (blistp->b.dotp == blistp->b_linep)  /* If "." is at the end */
-        blistp->b.dotp = lp;                /* move it to new line  */
-    return TRUE;
+    curbp->b_linep->l_bp->l_fp = lp;        /* Hook onto the end    */
+    lp->l_bp = curbp->b_linep->l_bp;
+    curbp->b_linep->l_bp = lp;
+    lp->l_fp = curbp->b_linep;
+    if (curbp->b.dotp == curbp->b_linep)    /* If "." is at the end */
+        curbp->b.dotp = lp;                 /* move it to new line  */
+    return;
 }
 
-/*
- * This routine rebuilds the text in the special secret buffer
+/* Internal version to add to the //List buffer.
+ */
+static void addline(char *text) {
+/* Pretend we are in //List for the duration od the call */
+
+    struct buffer *obp = curbp;
+    curbp = blistp;
+    addline_to_curb(text);
+    curbp = obp;
+    return;
+}
+
+/* This routine rebuilds the text in the special secret buffer
  * that holds the buffer list.
  * It is called by the list buffers command.
  * Return TRUE if everything works.
@@ -309,9 +313,9 @@ static int makelist(int iflag) {
         return s;
     strcpy(blistp->b_fname, "");
 
-    if (addline("ACT MODES   Type↴      Size Buffer        File") == FALSE
-     || addline("--- ------------.      ---- ------        ----") == FALSE)
-        return FALSE;
+    addline("ACT MODES   Type↴      Size Buffer        File");
+    addline("--- ------------.      ---- ------        ----");
+
     bp = bheadp;                        /* For all buffers      */
 
 /* Build line to report global mode settings */
@@ -327,7 +331,7 @@ static int makelist(int iflag) {
         mcheck <<= 1;
     }
     strcpy(cp1, ".           Global Modes");
-    if (addline(line) == FALSE) return FALSE;
+    addline(line);
 
 /* Build line to report any mode settings forced on/off */
 
@@ -347,7 +351,7 @@ static int makelist(int iflag) {
             mcheck <<= 1;
         }
         sprintf(cp1, ".           Forced modes (U==on, l==off)");
-        if (addline(line) == FALSE) return FALSE;
+        addline(line);
     }
 
 /* Output the list of buffers */
@@ -401,8 +405,7 @@ static int makelist(int iflag) {
         while ((c = *cp2++) != 0) *cp1++ = c;
         cp2 = &bp->b_fname[0];          /* File name            */
         if (*cp2 != 0) {
-/*
- * We know the current screen width, so use it...
+/* We know the current screen width, so use it...
  */
             if (((cp1 - line) + strlen(cp2)) > (unsigned)term.t_ncol) {
                 *cp1++ = ' ';
@@ -410,7 +413,7 @@ static int makelist(int iflag) {
                 *cp1++ = 0x86;      /* U+2185                 */
                 *cp1++ = 0xb5;      /* as utf-8               */
                 *cp1 = 0;           /* Add to the buffer.   */
-                if (addline(line) == FALSE) return FALSE;
+                addline(line);
                 cp1 = line;
                 for (i = 0; i < 5; i++) *cp1++ = ' ';
             }
@@ -425,15 +428,14 @@ static int makelist(int iflag) {
             }
         }
         *cp1 = 0;       /* Add to the buffer.   */
-        if (addline(line) == FALSE) return FALSE;
+        addline(line);
         bp = bp->b_bufp;
     }
     Xfree(line);
     return TRUE;            /* All done             */
 }
 
-/*
- * List all of the active buffers.  First update the special
+/* List all of the active buffers.  First update the special
  * buffer that holds the list.  Next make sure at least 1
  * window is displaying the buffer list, splitting the screen
  * if this is what it takes.  Lastly, repaint all of the
@@ -470,8 +472,7 @@ int listbuffers(int f, int n) {
     return TRUE;
 }
 
-/*
- * Look through the list of buffers. Return TRUE if there are any
+/* Look through the list of buffers. Return TRUE if there are any
  * changed buffers.
  * Buffers that hold magic internal stuff are not considered; who cares
  * if the list of buffer names is hacked.
@@ -487,8 +488,7 @@ int anycb(void) {
     return FALSE;
 }
 
-/*
- * Find a buffer, by name. Return a pointer to the buffer structure
+/* Find a buffer, by name. Return a pointer to the buffer structure
  * associated with it.
  * If the buffer is not found and the "cflag" is TRUE, create it.
  * The "bflag" is the settings for the flags in the buffer.
@@ -563,8 +563,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
     return bp;
 }
 
-/*
- * This routine blows away all of the text in a buffer.
+/* This routine blows away all of the text in a buffer.
  * If the buffer is marked as changed then we ask if it is OK to blow it away;
  * this is to save the user the grief of losing text.
  * The window chain is nearly always wrong if this gets called; the caller
@@ -623,8 +622,7 @@ int bclear(struct buffer *bp) {
     return TRUE;
 }
 
-/*
- * unmark the current buffers change flag
+/* unmark the current buffers change flag
  *
  * int f, n;            unused command arguments
  */

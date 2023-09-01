@@ -172,7 +172,7 @@ static int create_kbdmacro_buffer(void) {
     }
     kbdmac_bp->b_type = BTPROC;     /* Mark the buffer type */
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "init")) return FALSE;
-    linstr("write-message \"No keyboard macro yet defined\"");
+    addline_to_curb("write-message \"No keyboard macro yet defined\"");
     kbdmac_bp->b_flag &= ~BFCHG;    /* Mark as unchanged */
     return kbdmac_buffer_toggle(OutOf_KBDM, "init");
 }
@@ -190,7 +190,7 @@ static int start_kbdmacro(void) {
     bclear(kbdmac_bp);
     kbd_idx = must_quote = 0;
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "start")) return FALSE;
-    linstr("; keyboard macro\n");
+    addline_to_curb("; keyboard macro");
     return kbdmac_buffer_toggle(OutOf_KBDM, "start");
 }
 
@@ -700,15 +700,15 @@ void dumpdir_tidy(void) {
     int start_fd = open(".", O_DIRECTORY);
     if (start_fd < 0) {
         snprintf(info_message, 4096,
-              "Can't open current location: %s\n", strerror(errno));
-        linstr(info_message);
+              "Can't open current location: %s", strerror(errno));
+        addline_to_curb(info_message);
         goto revert_buffer;
     }
 
 /* Now get HOME and go to the dumpdir there */
     char *p;
     if ((p = getenv("HOME")) == NULL) {
-        linstr("Can't find HOME - no auto-tidy:\n");
+        addline_to_curb("Can't find HOME - no auto-tidy.");
         goto revert_buffer;
     }
 
@@ -718,8 +718,8 @@ void dumpdir_tidy(void) {
     strcat(dd_name, Dumpdir_Name);
     if (chdir(dd_name) < 0) {
         snprintf(info_message, 4096,
-              "Can't get to ~/%s: %s\n", Dumpdir_Name, strerror(errno));
-        linstr(info_message);
+              "Can't get to ~/%s: %s", Dumpdir_Name, strerror(errno));
+        addline_to_curb(info_message);
         goto close_start_fd;
     }
 
@@ -728,9 +728,9 @@ void dumpdir_tidy(void) {
     FILE *index_fp = fopen(Dump_Index, "r+");
     if (index_fp == NULL) {
         snprintf(info_message, 4096,
-              "Can't open ~/%s/" Dump_Index ": %s\n",
+              "Can't open ~/%s/" Dump_Index ": %s",
               Dumpdir_Name, strerror(errno));
-        linstr(info_message);
+        addline_to_curb(info_message);
         goto revert_to_start_fd;
     }
 
@@ -753,14 +753,14 @@ void dumpdir_tidy(void) {
             status = unlink(lp);
             if (status) {
                 snprintf(info_message, 4096,
-                      "Delete of %s (<= %s)failed: %s\n", lp, orig_fn,
+                      "Delete of %s (<= %s)failed: %s", lp, orig_fn,
                       strerror(errno));
-                linstr(info_message);
+                addline_to_curb(info_message);
             }
             else {
                 snprintf(info_message, 4096,
-                      "Deleted %s (<= %s)\n", lp, orig_fn);
-                linstr(info_message);
+                      "Deleted %s (<= %s)", lp, orig_fn);
+                addline_to_curb(info_message);
             }
             rewrite_from = ftell(index_fp);
         }
@@ -797,8 +797,8 @@ void dumpdir_tidy(void) {
 
     if (fclose(index_fp)) {
         snprintf(info_message, 4096,
-              Dump_Index " rewrite error: %s\n", strerror(errno));
-        linstr(info_message);
+              Dump_Index " rewrite error: %s", strerror(errno));
+        addline_to_curb(info_message);
     }
     if (lp) Xfree(lp);
 
@@ -809,7 +809,6 @@ close_start_fd:
     close(start_fd);
 revert_buffer:
     swbuffer(saved_bp, 0);  /* Assume it succeeds... */
-    zotbuf(auto_bp);
     return;
 }
 
