@@ -22,7 +22,7 @@ struct line {
     struct line *l_bp;      /* Link to the previous line    */
     int l_size;             /* Allocated size               */
     int l_used;             /* Used size                    */
-    char l_text[1];         /* A bunch of characters.       */
+    char *l_text;           /* A bunch of characters - malloc()ed */
 };
 
 #define lforw(lp)       ((lp)->l_fp)

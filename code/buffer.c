@@ -269,7 +269,7 @@ static int addline(char *text) {
     int ntext;
 
     ntext = strlen(text);
-    if ((lp = lalloc(ntext)) == NULL) return FALSE;
+    lp = lalloc(ntext);
     lfillchars(lp, ntext, text);
     blistp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
     lp->l_bp = blistp->b_linep->l_bp;
@@ -518,10 +518,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
     }
     if (cflag != FALSE) {
         bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
-        if ((lp = lalloc(0)) == NULL) {
-            Xfree((char *) bp);
-            return NULL;
-        }
+        lp = lalloc(0);                 /* No text */
 /* Find the place in the list to insert this buffer */
         if (bheadp == NULL) {           /* Insert at the beginning */
             bp->b_bufp = bheadp;
@@ -717,7 +714,7 @@ void free_buffer(void) {
         }
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = nextlp) {
             nextlp = lforw(lp);
-            Xfree(lp);
+            lfree(lp);
         }
         Xfree(bp->b_linep);
         if (bp->bv) {       /* Must free the values too... */

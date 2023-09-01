@@ -24,40 +24,37 @@
 
 static int force_newline = 0;   /* lnewline may need to be told this */
 
-/*
- * This routine allocates a block of memory large enough to hold a struct
+/* This routine allocates a block of memory large enough to hold a struct
  * line containing "used" characters. The block is always rounded up a bit.
  * Return a pointer to the new block, or NULL if there isn't any memory left.
  * Print a message in the message line if no space.
+ * The assumption is that the user will fill l_text with used bytes
+ * straight after the call. If this is not the case the caller must hande it.
  */
 struct line *lalloc(int used) {
     struct line *lp;
     int size;
 
-/* Always allocate at least 1 extra byte!
+    lp = (struct line *)Xmalloc(sizeof(struct line));
+/* Always allocate at least 1 extra byte to l_text!
  * This enables other code to easily NUL-terminate the data if required.
  */
     size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
-    if (size == 0)              /* Assume that is an empty. */
-        size = BLOCK_SIZE;      /* Line is for type-in. */
-    lp = (struct line *)Xmalloc(sizeof(struct line) + size);
+    if ((used > 0) && (size == BLOCK_SIZE)) size = 2*BLOCK_SIZE;/* Min size */
+    lp->l_text = Xmalloc(size);
     lp->l_size = size;
     lp->l_used = used;
     return lp;
 }
 
-/*
- * Delete line "lp". Fix all of the links that might point at it (they are
+/* Delete line "lp". Fix all of the links that might point at it (they are
  * moved to offset 0 of the next line. Unlink the line from whatever buffer
  * it might be in. Release the memory. The buffers are updated too; the
  * magic conditions described in the above comments don't hold here.
  */
 void lfree(struct line *lp) {
-    struct buffer *bp;
-    struct window *wp;
 
-    wp = wheadp;
-    while (wp != NULL) {
+    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if (wp->w_linep == lp) wp->w_linep = lp->l_fp;
         if (wp->w.dotp == lp) {
             wp->w.dotp = lp->l_fp;
@@ -71,10 +68,8 @@ void lfree(struct line *lp) {
             sysmark.p = lp->l_fp;
             sysmark.o = 0;
         }
-        wp = wp->w_wndp;
     }
-    bp = bheadp;
-    while (bp != NULL) {
+    for (struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (bp->b_nwnd == 0) {
             if (bp->b.dotp == lp) {
                 bp->b.dotp = lp->l_fp;
@@ -89,22 +84,20 @@ void lfree(struct line *lp) {
                 sysmark.o = 0;
             }
         }
-        bp = bp->b_bufp;
     }
     lp->l_bp->l_fp = lp->l_fp;
     lp->l_fp->l_bp = lp->l_bp;
-    Xfree((char *)lp);
+    Xfree(lp->l_text);
+    Xfree(lp);
 }
 
-/*
- * This routine gets called when a character is changed in place in the
+/* This routine gets called when a character is changed in place in the
  * current buffer. It updates all of the required flags in the buffer and
  * window system. The flag used is passed as an argument; if the buffer is
  * being displayed in more than 1 window we change EDIT to HARD. Set MODE
  * if the mode line needs to be updated (the "*" has to be set).
  */
 void lchange(int flag) {
-    struct window *wp;
 
     if (curbp->b_nwnd != 1)             /* Ensure hard.         */
         flag = WFHARD;
@@ -117,10 +110,8 @@ void lchange(int flag) {
  */
     if (curbp == group_match_buffer) group_match_buffer = NULL;
 
-    wp = wheadp;
-    while (wp != NULL) {
+    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if (wp->w_bufp == curbp) wp->w_flag |= flag;
-        wp = wp->w_wndp;
     }
 
 /* If this is a translation table, remove any compiled data */
@@ -128,8 +119,7 @@ void lchange(int flag) {
     if ((curbp->b_type == BTPHON) && curbp->ptt_headp) ptt_free(curbp);
 }
 
-/*
- * insert spaces forward into text
+/* insert spaces forward into text
  *
  * int f, n;            default flag and numeric argument
  */
@@ -140,8 +130,7 @@ int insspace(int f, int n) {
     return TRUE;
 }
 
-/*
- * Insert "n" copies of the character "c" at the current location of dot. In
+/* Insert "n" copies of the character "c" at the current location of dot. In
  * the easy case all that happens is the text is stored in the line. In the
  * hard case, the line has to be Xreallocated. When the window list is updated,
  * take special care; I screwed it up once. You always update dot in the
@@ -149,16 +138,12 @@ int insspace(int f, int n) {
  * greater than the place where you did the insert. Return TRUE if all is
  * well, and FALSE on errors.
  */
-
 int linsert_byte(int n, unsigned char c) {
-    char *cp1;
-    char *cp2;
     struct line *lp1;
     struct line *lp2;
     struct line *lp3;
     int doto;
     int i;
-    struct window *wp;
 
     if (curbp->b_mode & MDVIEW) /* don't allow this command if */
         return rdonly();        /* we are in read only mode    */
@@ -169,8 +154,7 @@ int linsert_byte(int n, unsigned char c) {
             mlwrite_one("bug: linsert");
             return FALSE;
         }
-        if ((lp2 = lalloc(n)) == NULL)  /* Allocate new line   */
-            return FALSE;
+        lp2 = lalloc(n);        /* Allocate new line   */
         lp3 = lp1->l_bp;        /* Previous line        */
         lp3->l_fp = lp2;        /* Link in              */
         lp2->l_fp = lp1;
@@ -181,55 +165,40 @@ int linsert_byte(int n, unsigned char c) {
         curwp->w.doto = n;
         return TRUE;
     }
-    doto = curwp->w.doto;                   /* Save for later.      */
-/* >= (not just >) to ensure the final char of l_size is not actually
- * used.
+    doto = curwp->w.doto;                   /* Save for later. */
+/* Check for >= (not just >) to ensure the final char of l_size is
+ * not actually used.
  * This enables other code to easily NUL-terminate the data if required.
  */
-    if (lp1->l_used + n >= lp1->l_size) {   /* Hard: reallocate     */
-        if ((lp2 = lalloc(lp1->l_used + n)) == NULL) return FALSE;
-        cp1 = &lp1->l_text[0];
-        cp2 = &lp2->l_text[0];
-        while (cp1 != &lp1->l_text[doto]) *cp2++ = *cp1++;
-        cp2 += n;
-        while (cp1 != &lp1->l_text[lp1->l_used]) *cp2++ = *cp1++;
-        lp1->l_bp->l_fp = lp2;
-        lp2->l_fp = lp1->l_fp;
-        lp1->l_fp->l_bp = lp2;
-        lp2->l_bp = lp1->l_bp;
-        Xfree((char *)lp1);
+    if (lp1->l_used + n >= lp1->l_size) {   /* Need to reallocate */
+        int size = (lp1->l_used + n + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
+        lp1->l_text = Xrealloc(lp1->l_text, size);
+        lp1->l_size = size;
     }
-    else {                          /* Easy: in place       */
-        lp2 = lp1;                  /* Pretend new line     */
-        lp2->l_used += n;
-        cp2 = &lp1->l_text[lp1->l_used];
-        cp1 = cp2 - n;
-        while (cp1 != &lp1->l_text[doto]) *--cp2 = *--cp1;
-    }
-    for (i = 0; i < n; ++i)         /* Add the characters   */
-        lp2->l_text[doto + i] = c;
-    wp = wheadp;                    /* Update windows       */
-    while (wp != NULL) {
-        if (wp->w_linep == lp1) wp->w_linep = lp2;
-        if (wp->w.dotp == lp1) {
-            wp->w.dotp = lp2;
-            if (wp == curwp || wp->w.doto > doto) wp->w.doto += n;
+/* All we now need to do is move the bytes beyond the insert point along
+ * by n bytes, then insert our n chars.
+ */
+    memmove(lp1->l_text+doto+n, lp1->l_text+doto, lp1->l_used - doto);
+    for (i = 0; i < n; ++i)         /* Add the new characters */
+        lp1->l_text[doto + i] = c;
+    lp1->l_used += n;
+
+/* Update windows */
+    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+        if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
+            wp->w.doto += n;
         }
-        if (wp->w.markp == lp1) {
-            wp->w.markp = lp2;
-            if (wp->w.marko > doto) wp->w.marko += n;
+        if ((wp->w.markp == lp1) && (wp->w.marko > doto)) {
+            wp->w.marko += n;
         }
-        if (sysmark.p == lp1) {
-            sysmark.p = lp2;
-            if (sysmark.o > doto) sysmark.o += n;
+        if ((sysmark.p == lp1) && (sysmark.o > doto)) {
+            sysmark.o += n;
         }
-        wp = wp->w_wndp;
     }
     return TRUE;
 }
 
-/*
- * linstr -- Insert a string at the current point
+/* linstr -- Insert a string at the current point
  */
 
 int linstr(char *instr) {
@@ -257,8 +226,7 @@ int linstr(char *instr) {
     return status;
 }
 
-/*
- * lins_nc -- Insert bytes given a pointer and count
+/* lins_nc -- Insert bytes given a pointer and count
  * Currently only used from this file.
  */
 
@@ -281,8 +249,7 @@ static int lins_nc(char *instr, int nb) {
     return status;
 }
 
-/*
- * Insert n copies of unicode char c
+/* Insert n copies of unicode char c
  */
 int linsert_uc(int n, unicode_t c) {
     char utf8[6];
@@ -302,9 +269,7 @@ int linsert_uc(int n, unicode_t c) {
     return TRUE;
 }
 
-/*
- * Overwrite a character into the current line at the current position
- *
+/* Overwrite a character into the current line at the current position
  * int c;       character to overwrite on current position
  */
 static int lowrite(unicode_t c) {
@@ -315,8 +280,7 @@ static int lowrite(unicode_t c) {
     return linsert_uc(1, c);
 }
 
-/*
- * lover -- Overwrite a string at the current point
+/* lover -- Overwrite a string at the current point
  */
 int lover(char *ostr) {
     int status = TRUE;
@@ -335,29 +299,22 @@ int lover(char *ostr) {
     return status;
 }
 
-/*
- * Insert a newline into the buffer at the current location of dot in the
- * current window. The funny ass-backwards way it does things is not a botch;
- * it just makes the last line in the file not a special case. Return TRUE if
- * everything works out and FALSE on error (memory allocation failure). The
- * update of dot and mark is a bit easier than in the above case, because the
- * split forces more updating.
+/* Insert a newline into the buffer at the current location of dot in the
+ * current window.
+ * Now done by splitting of the "excess" text beyond the newline into
+ * a new line buffer.
  */
 int lnewline(void) {
-    char *cp1;
-    char *cp2;
     struct line *lp1;
     struct line *lp2;
-    int doto;
-    struct window *wp;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
          return rdonly();           /* we are in read only mode     */
     lchange(WFHARD | WFINS);
 
-/* Ignore the original comment at the start of the routine - we *do* need
- * to make a special case of the last line *if we are at the end of it*
- * AND it is not empty!
+/* We need to make a special case of the last line *if we are at the
+ * end of it*!
+ * If it is not empty we just move dot to the next (dummy) line.
  * In that case we don't need to allocate a new line, but do need to
  * update the current line pointer (to the next line, which will be headp)
  * and set doto to zero.
@@ -365,6 +322,7 @@ int lnewline(void) {
     if (force_newline) {
         force_newline = 0;          /* Reset the force */
     }
+/* Are we at the end of the text on the last "real" line? */
     else if (curwp->w.dotp->l_used
              && curwp->w.doto == curwp->w.dotp->l_used
              && lforw(curwp->w.dotp) == curbp->b_linep) {
@@ -372,22 +330,40 @@ int lnewline(void) {
         curwp->w.doto = 0;
         return TRUE;
     }
+/* Are we are already on the dummy last line?
+ * If so, we need to put a new empty line in place before it (and stay
+ * where we are - on the dummy end line).
+ */
+    else if (curwp->w.dotp == curbp->b_linep) {
+        lp1 = lalloc(0);
+        lp2 = curwp->w.dotp;
+/* Fix up back/forw pointers for these two lines */
+        lp2->l_bp->l_fp = lp1;
+        lp1->l_bp = lp2->l_bp;
+        lp1->l_fp = lp2;
+        lp2->l_bp = lp1;
+        return TRUE;
+    }
 
-    lp1 = curwp->w.dotp;    /* Get the address and  */
-    doto = curwp->w.doto;   /* offset of "."        */
-    if ((lp2 = lalloc(doto)) == NULL)   /* New first half line      */
-        return FALSE;
-    cp1 = &lp1->l_text[0];  /* Shuffle text around  */
-    cp2 = &lp2->l_text[0];
-    while (cp1 != &lp1->l_text[doto]) *cp2++ = *cp1++;
-    cp2 = &lp1->l_text[0];
-    while (cp1 != &lp1->l_text[lp1->l_used]) *cp2++ = *cp1++;
-    lp1->l_used -= doto;
-    lp2->l_bp = lp1->l_bp;
-    lp1->l_bp = lp2;
-    lp2->l_bp->l_fp = lp2;
-    lp2->l_fp = lp1;
-    wp = wheadp;            /* Windows              */
+/* Otherwise we just split off the excess text into a new line.
+ * We do this such that lp1 is the start of the line and lp2 the end
+ * of it (so follows lp1).
+ */
+    lp1 = curwp->w.dotp;        /* Get the address and  */
+    int doto = curwp->w.doto;   /*   offset of "."      */
+    int xs = lp1->l_used - doto;
+
+/* Create a new line for the second part and copy the "trailing" text in */
+    lp2 = lalloc(xs);
+    memcpy(lp2->l_text, lp1->l_text+doto, xs);
+    lp1->l_used = doto;     /* valid text left in lp1 */
+
+/* Fix up back/forw pointers for the two lines */
+
+    lp2->l_fp = lp1->l_fp;
+    lp1->l_fp = lp2;
+    lp2->l_bp = lp1;
+    lp2->l_fp->l_bp = lp2;
 
 /* When inserting a newline we want to keep any mark on the original line if
  * the newline is inserted after it, *including* if we insert a newline
@@ -396,21 +372,19 @@ int lnewline(void) {
  * already at the end of line.
  * Hence the different < and <= tests below.
  */
-     while (wp != NULL) {
-        if (wp->w_linep == lp1)      wp->w_linep = lp2;
-        if (wp->w.dotp == lp1) {
-            if (wp->w.doto < doto)   wp->w.dotp = lp2;
-            else                     wp->w.doto -= doto;
+    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+        if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
+            wp->w.dotp = lp2;
+            wp->w.doto -= doto;
         }
-        if (wp->w.markp == lp1) {
-            if (wp->w.marko <= doto) wp->w.markp = lp2;
-            else                     wp->w.marko -= doto;
+        if ((wp->w.markp == lp1) && (wp->w.marko > doto)) {
+            wp->w.markp = lp2;
+            wp->w.marko -= doto;
         }
-        if (sysmark.p == lp1) {
-            if (sysmark.o <= doto) sysmark.p = lp2;
-            else                   sysmark.o -= doto;
+        if ((sysmark.p == lp1) && (sysmark.o > doto)) {
+            sysmark.p = lp2;
+            sysmark.o -= doto;
         }
-        wp = wp->w_wndp;
     }
     return TRUE;
 }
@@ -446,107 +420,71 @@ int lputgrapheme(struct grapheme *gp) {
     return status;
 }
 
-/*
- * Delete a newline. Join the current line with the next line. If the next line
- * is the magic header line always return TRUE; merging the last line with the
- * header line can be thought of as always being a successful operation, even
- * if nothing is done, and this makes the kill buffer work "right". Easy cases
- * can be done by shuffling data around. Hard cases require that lines be moved
- * about in memory. Return FALSE on error and TRUE if all looks OK. Called by
- * "ldelete" only.
+/* Delete a newline. Join the current line with the next line.
+ *  If the current line is empty - just delete it
+ *  If the next line is the magic header line just return TRUE and do nothing
+ *  Append line2 text to the end of line1
+ *  Fix up the forward/backward pointers as line2 is about to go.
+ *  Fix up any window pointers (headp and marks) that refer to line2
+ *  Free the now redundant line2.
  */
 static int ldelnewline(void) {
-    char *cp1;
-    char *cp2;
     struct line *lp1;
     struct line *lp2;
-    struct line *lp3;
-    struct window *wp;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
         return rdonly();            /* we are in read only mode     */
     lp1 = curwp->w.dotp;
     lp2 = lp1->l_fp;
-    if (lp2 == curbp->b_linep) {    /* At the buffer end.           */
-        if (lp1->l_used == 0)       /* Blank line.                  */
-            lfree(lp1);
-        return TRUE;
-    }
-/* < (not <=) to ensure the final char of l_size is not actually
- * used.
- * This enables other code to easily NUL-terminate the data if required.
+
+/* All we need to do is append the text content lp2 to the end of
+ * lp1.
+ * However, there are some special cases.
  */
-    if (lp2->l_used < lp1->l_size - lp1->l_used) {
-        cp1 = &lp1->l_text[lp1->l_used];
-        cp2 = &lp2->l_text[0];
-        while (cp2 != &lp2->l_text[lp2->l_used]) *cp1++ = *cp2++;
-        wp = wheadp;
-        while (wp != NULL) {
-            if (wp->w_linep == lp2) wp->w_linep = lp1;
-            if (wp->w.dotp == lp2) {
-                wp->w.dotp = lp1;
-                wp->w.doto += lp1->l_used;
-            }
-            if (wp->w.markp == lp2) {
-                wp->w.markp = lp1;
-                wp->w.marko += lp1->l_used;
-            }
-            if (sysmark.p == lp2) {
-                sysmark.p = lp1;
-                sysmark.o += lp1->l_used;
-            }
-            wp = wp->w_wndp;
-        }
-        lp1->l_used += lp2->l_used;
-        lp1->l_fp = lp2->l_fp;
-        lp2->l_fp->l_bp = lp1;
-        Xfree((char *)lp2);
+    if (lp1->l_used == 0) {         /* Blank line? Just remove it   */
+        lfree(lp1);
         return TRUE;
     }
-    if ((lp3 = lalloc(lp1->l_used + lp2->l_used)) == NULL) return FALSE;
-    cp1 = &lp1->l_text[0];
-    cp2 = &lp3->l_text[0];
-    while (cp1 != &lp1->l_text[lp1->l_used]) *cp2++ = *cp1++;
-    cp1 = &lp2->l_text[0];
-    while (cp1 != &lp2->l_text[lp2->l_used]) *cp2++ = *cp1++;
-    lp1->l_bp->l_fp = lp3;
-    lp3->l_fp = lp2->l_fp;
-    lp2->l_fp->l_bp = lp3;
-    lp3->l_bp = lp1->l_bp;
-    wp = wheadp;
-    while (wp != NULL) {
-        if (wp->w_linep == lp1 || wp->w_linep == lp2) wp->w_linep = lp3;
-        if (wp->w.dotp == lp1)
-            wp->w.dotp = lp3;
-        else if (wp->w.dotp == lp2) {
-            wp->w.dotp = lp3;
-            wp->w.doto += lp1->l_used;
-        }
-        if (wp->w.markp == lp1)
-            wp->w.markp = lp3;
-        else if (wp->w.markp == lp2) {
-            wp->w.markp = lp3;
-            wp->w.marko += lp1->l_used;
-        }
-        if (sysmark.p == lp1)
-            sysmark.p = lp3;
-        else if (sysmark.p == lp2) {
-            sysmark.p = lp3;
-            sysmark.o += lp1->l_used;
-        }
-        wp = wp->w_wndp;
+    if (lp2 == curbp->b_linep) {    /* At the buffer end? Do nothing. */
+        return TRUE;
     }
-    Xfree((char *)lp1);
-    Xfree((char *)lp2);
+
+/* Add the lp2 text to lp1 */
+
+    int orig_lp1_len = lp1->l_used; /* Might be needed */
+    int used = lp1->l_used + lp2->l_used;
+    int size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
+    lp1->l_text = Xrealloc(lp1->l_text, size);
+    memcpy(lp1->l_text+orig_lp1_len, lp2->l_text, lp2->l_used);
+    lp1->l_used = used;
+    lp1->l_size = size;
+
+/* Now fix up lp1 forward pointer and lp2 back pointer */
+
+    lp1->l_fp = lp2->l_fp;
+    lp2->l_fp->l_bp = lp1;
+
+/* Fix up anything which referred to lp2 */
+
+    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+        if (wp->w_linep == lp2) wp->w_linep = lp1;
+        if (wp->w.markp == lp2) {
+            wp->w.markp = lp1;
+            wp->w.marko += orig_lp1_len;
+        }
+        if (sysmark.p == lp2) {
+            sysmark.p = lp1;
+            sysmark.o += orig_lp1_len;
+        }
+    }
+    lfree(lp2);
     return TRUE;
 }
 
-/*
- * ldelete() really fundamentally works on bytes, not characters.
+/* ldelete() really fundamentally works on bytes, not characters.
  * It is used for things like "scan 5 words forwards, and remove
  * the bytes we scanned".
  * GGR - cater for combining characters...with lgetgrapheme.
- *
  * If you want to delete character-places<, use ldelgrapheme().
  */
 int ldelgrapheme(long n, int kflag) {
@@ -557,12 +495,10 @@ int ldelgrapheme(long n, int kflag) {
     return TRUE;
 }
 
-/*
- * This function deletes "n" bytes, starting at dot. It understands how do deal
+/* This function deletes "n" bytes, starting at dot. It understands how do deal
  * with end of lines, etc. It returns TRUE if all of the characters were
  * deleted, and FALSE if they were not (because dot ran into the end of the
  * buffer. The "kflag" is TRUE if the text should be put in the kill buffer.
- *
  * long n;              # of chars to delete
  * int kflag;            put killed text in kill buffer flag
  */
@@ -572,7 +508,6 @@ int ldelete(long n, int kflag) {
     struct line *dotp;
     int doto;
     int chunk;
-    struct window *wp;
 
     if (curbp->b_mode & MDVIEW) /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
@@ -603,8 +538,9 @@ int ldelete(long n, int kflag) {
         }
         while (cp2 != &dotp->l_text[dotp->l_used]) *cp1++ = *cp2++;
         dotp->l_used -= chunk;
-        wp = wheadp;                    /* Fix windows          */
-        while (wp != NULL) {
+
+/* Fix-up windows */
+        for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
             if (wp->w.dotp == dotp && wp->w.doto >= doto) {
                 wp->w.doto -= chunk;
                 if (wp->w.doto < doto) wp->w.doto = doto;
@@ -617,22 +553,19 @@ int ldelete(long n, int kflag) {
                 sysmark.o -= chunk;
                 if (sysmark.o < doto) sysmark.o = doto;
             }
-            wp = wp->w_wndp;
         }
         n -= chunk;
     }
     return TRUE;
 }
 
-/*
- * getctext:    grab and return a string with the text of
+/* getctext:    grab and return a string with the text of
  *              the current line
  */
 char *getctext(void) {
     struct line *lp;            /* line to copy */
     int size;                   /* length of line to return */
     char *sp;                   /* string pointer into line */
-    char *dp;                   /* string pointer into returned line */
     static char rline[NSTRING]; /* line to return */
 
 /* Find the contents of the current line and its length */
@@ -642,16 +575,13 @@ char *getctext(void) {
     if (size >= NSTRING) size = NSTRING - 1;
 
 /* Copy it across */
-    dp = rline;
-    while (size--) *dp++ = *sp++;
-    *dp = 0;
+    memcpy(rline, sp, size);
+    *(rline+size) = 0;
     return rline;
 }
 
-/*
- * putctext:
+/* putctext:
  *      replace the current line with the passed in text
- *
  * char *iline;                 contents of new line
  */
 int putctext(char *iline) {
@@ -759,8 +689,7 @@ static void rotate_kill_ring(int n) {
     return;
 }
 
-/*
- * Insert a character to the kill buffer, allocating new chunks as needed.
+/* Insert a character to the kill buffer, allocating new chunks as needed.
  * Return TRUE if all is well, and FALSE on errors.
  *
  * int c;                       character to insert in the kill buffer
@@ -785,8 +714,7 @@ int kinsert(int c) {
     return TRUE;
 }
 
-/*
- * Yank text back from the kill buffer. This is really easy. All of the work
+/* Yank text back from the kill buffer. This is really easy. All of the work
  * is done by the standard insert routines. All you do is run the loop, and
  * check for errors. Bound to "C-Y".
  * The yankmb() code is very similar, but the lins* loop differs.

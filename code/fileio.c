@@ -319,13 +319,12 @@ static int add_to_fline(int len) {
     if (newlen >= 0) {      /* Need a new/bigger fline */
         if (fline) {        /* realloc.... */
             int newsize = (newlen + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
-            fline = (struct line *)Xrealloc(fline, sizeof(struct line) + newsize);
+            fline->l_text = Xrealloc(fline->l_text, newsize);
             fline->l_size = newsize;    /* Don't update l_used YET!! */
         }
         else {              /* alloc.... */
             fline = lalloc(newlen);
-            if (fline == NULL) return FALSE;
-            fline->l_used = 0;  /* Set was is actually there NOW!! */
+            fline->l_used = 0;  /* Set what is actually there NOW!! */
         }
     }
     memcpy(fline->l_text+fline->l_used, cache.buf+cache.rst, len);

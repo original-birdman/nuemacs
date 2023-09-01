@@ -1283,14 +1283,7 @@ int dobuf(struct buffer *bp) {
         if (mstore) {
 /* Allocate the space for the line */
             linlen = strlen(eline);
-            if ((mp = lalloc(linlen)) == NULL) {
-                mlwrite_one ("Out of memory while storing macro");
-                bp->b_exec_level--;
-                pause_key_index_update = orig_pause_key_index_update;
-                status = FALSE;
-                Xfree(einit);
-                goto single_exit;
-            }
+            mp = lalloc(linlen);
 
 /* Copy the text into the new line */
             lfillchars(mp, linlen, eline);
