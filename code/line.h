@@ -47,7 +47,7 @@ extern int ldelgrapheme(long n, int kflag);
 extern int lgetgrapheme(struct grapheme *, int);
 extern int lputgrapheme(struct grapheme *gp);
 extern char *getctext(void);
-extern int putctext(char *iline);
+
 extern void kdelete(void);
 extern void addto_lastmb_ring(char *);
 extern int kinsert(int c);

@@ -196,7 +196,6 @@ int linsert_byte(int n, unsigned char c) {
     for (i = 0; i < n; ++i)         /* Add the new characters */
         lp1->l_text[doto + i] = c;
     lp1->l_used += n;
-
 /* Update windows */
     for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
@@ -589,24 +588,6 @@ char *getctext(void) {
     memcpy(rline, sp, size);
     *(rline+size) = 0;
     return rline;
-}
-
-/* putctext:
- *      replace the current line with the passed in text
- * char *iline;                 contents of new line
- */
-int putctext(char *iline) {
-    int status;
-
-/* Delete the current line */
-    curwp->w.doto = 0;      /* starting at the beginning of the line */
-    if ((status = killtext(TRUE, 1)) != TRUE) return status;
-
-/* Insert the new line */
-    if ((status = linstr(iline)) != TRUE) return status;
-    status = lnewline();
-    backline(TRUE, 1);
-    return status;
 }
 
 /* Free up the first kill buffer ring entry for nex text by pushing all

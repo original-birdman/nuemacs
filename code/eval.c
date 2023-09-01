@@ -1207,7 +1207,14 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVLINE:
             srch_can_hunt = 0;
-            putctext(value);
+/* Just replace the current line's text with this text, and put dot at 0 */
+            struct line *tlp = curwp->w.dotp;
+            int can_hold = tlp->l_size;
+            int need = strlen(value);
+            if (need >= can_hold) ltextgrow(tlp, need - can_hold);
+            strcpy(tlp->l_text, value);
+            tlp->l_used = need;
+            curwp->w.doto = 0;      /* Has to go somewhere */
             break;
         case EVGFLAGS:
             gflags = ue_atoi(value);
