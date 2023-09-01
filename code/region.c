@@ -99,8 +99,10 @@ int copyregion(int f, int n) {
 
 /* If mark or dot are on this line then we might need to update
  * their offset after the move.
- * They can only be at the start or end of the moved chars,
- * and if at the start there is nothing to do, as that hasn't moved.
+ * They can only be at the start or end of the moved chars (as the
+ * region we are case-changing is that between dot and mark!) so
+ * we only have to consider those case, not anythign in between.
+ * If at the start there is nothing to do, as that hasn't moved.
  * Turns out a macro is more efficient (in terms of executable size)
  * than a function...
  */
@@ -150,34 +152,13 @@ static int casechange_region(int newcase) { /* The handling function */
         }
         else {              /* replen > this_blen  Potentially trickier */
             int b_more = replen - this_blen;
-            if ((linep->l_size - linep->l_used) >= b_more) {    /* OK */
-                ccr_Tail_Copy;  /* Must move the tail out-of-the-way first!! */
-                memcpy(linep->l_text+b_offs, repstr, replen);
-                llength(linep) += b_more;   /* Fix-up length */
+/* If we don't have the space, get some more */
+            if ((linep->l_size - linep->l_used) < b_more) { /* Need more */
+                ltextgrow(linep, b_more);
             }
-            else {
-/* Need to allocate a new line structure to replace the current one... */
-                struct line *newl = lalloc(llength(linep) + b_more);
-/* Copy in any leading text on this line... */
-                if (b_offs) memcpy(newl->l_text, linep->l_text, b_offs);
-/* Copy in the replacement text */
-                memcpy(newl->l_text+b_offs, repstr, replen);
-/* Copy in any trailing text on this line... */
-                ccr_Tail_Copy;
-/* Now need to replace the current line with the new one in the linked list */
-                lforw(lback(linep)) = newl;
-                lback(lforw(linep)) = newl;
-                lforw(newl) = lforw(linep);
-                lback(newl) = lback(linep);
-/* If either mark or dot were on this old line then we need to move
- * them to the new one
- */
-                if (sysmark.p == linep) sysmark.p = newl;
-                if (curwp->w.markp == linep) curwp->w.markp = newl;
-                if (curwp->w.dotp == linep)  curwp->w.dotp = newl;
-                Xfree(linep);
-                linep = newl;
-            }
+            ccr_Tail_Copy;  /* Must move the tail out-of-the-way first!! */
+            memcpy(linep->l_text+b_offs, repstr, replen);
+            llength(linep) += b_more;   /* Fix-up length */
             MarkDotFixup(b_more);
         }
         Xfree(repstr);      /* Used this now (== mstr.str), so free */

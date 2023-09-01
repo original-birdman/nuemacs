@@ -318,9 +318,7 @@ static int add_to_fline(int len) {
     }
     if (newlen >= 0) {      /* Need a new/bigger fline */
         if (fline) {        /* realloc.... */
-            int newsize = (newlen + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1);
-            fline->l_text = Xrealloc(fline->l_text, newsize);
-            fline->l_size = newsize;    /* Don't update l_used YET!! */
+            ltextgrow(fline, len);
         }
         else {              /* alloc.... */
             fline = lalloc(newlen);

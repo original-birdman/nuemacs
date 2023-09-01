@@ -32,6 +32,8 @@ struct line {
 #define llength(lp)     ((lp)->l_used)
 #define lfillchars(lp, n, c)    (memcpy((lp)->l_text, (c), (n)))
 
+extern struct line *lalloc(int);            /* Allocate a line. */
+extern void ltextgrow(struct line *, int);  /* Extend line buffer */
 extern void lfree(struct line *lp);
 extern void lchange(int flag);
 extern int insspace(int f, int n);
@@ -52,7 +54,6 @@ extern int kinsert(int c);
 extern int yank(int f, int n);
 extern int yank_replace(int, int);
 extern int yankmb(int f, int n);
-extern struct line *lalloc(int);  /* Allocate a line. */
 
 /* A macro to determine the effect on the "display column" of adding a
  * given character.

@@ -518,7 +518,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
     }
     if (cflag != FALSE) {
         bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
-        lp = lalloc(0);                 /* No text */
+        lp = lalloc(-1);                /* No text buffer for head record */
 /* Find the place in the list to insert this buffer */
         if (bheadp == NULL) {           /* Insert at the beginning */
             bp->b_bufp = bheadp;
@@ -714,9 +714,11 @@ void free_buffer(void) {
         }
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = nextlp) {
             nextlp = lforw(lp);
-            lfree(lp);
+/* Just free the text and struct. No point fixing up pointers, etc... */
+            Xfree(lp->l_text);
+            Xfree(lp);
         }
-        Xfree(bp->b_linep);
+        Xfree(bp->b_linep); /* No text in this one */
         if (bp->bv) {       /* Must free the values too... */
             for (int vnum = 0; vnum < BVALLOC; vnum++) {
                 if (bp->bv[vnum].name[0] == '\0') break;

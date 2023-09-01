@@ -39,12 +39,28 @@ struct line *lalloc(int used) {
 /* Always allocate at least 1 extra byte to l_text!
  * This enables other code to easily NUL-terminate the data if required.
  */
-    size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
-    if ((used > 0) && (size == BLOCK_SIZE)) size = 2*BLOCK_SIZE;/* Min size */
-    lp->l_text = Xmalloc(size);
-    lp->l_size = size;
-    lp->l_used = used;
+    if (used < 0) {
+        lp->l_text = NULL;
+        lp->l_size = lp->l_used = 0;
+    }
+    else {
+        size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
+        if ((used > 0) && (size == BLOCK_SIZE))
+             size = 2*BLOCK_SIZE;   /* Min size */
+        lp->l_text = Xmalloc(size);
+        lp->l_size = size;
+        lp->l_used = used;
+    }
     return lp;
+}
+
+/* Routine to grow l_text to accomodate xtra more bytes */
+void ltextgrow(struct line *lp, int xtra) {
+
+    int size = lp->l_size + xtra;
+    size = (size + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
+    lp->l_text = Xrealloc(lp->l_text, size);
+    lp->l_size = size;
 }
 
 /* Delete line "lp". Fix all of the links that might point at it (they are
@@ -171,9 +187,7 @@ int linsert_byte(int n, unsigned char c) {
  * This enables other code to easily NUL-terminate the data if required.
  */
     if (lp1->l_used + n >= lp1->l_size) {   /* Need to reallocate */
-        int size = (lp1->l_used + n + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
-        lp1->l_text = Xrealloc(lp1->l_text, size);
-        lp1->l_size = size;
+        ltextgrow(lp1, n);
     }
 /* All we now need to do is move the bytes beyond the insert point along
  * by n bytes, then insert our n chars.
@@ -452,12 +466,9 @@ static int ldelnewline(void) {
 /* Add the lp2 text to lp1 */
 
     int orig_lp1_len = lp1->l_used; /* Might be needed */
-    int used = lp1->l_used + lp2->l_used;
-    int size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
-    lp1->l_text = Xrealloc(lp1->l_text, size);
+    ltextgrow(lp1, lp2->l_used);
     memcpy(lp1->l_text+orig_lp1_len, lp2->l_text, lp2->l_used);
-    lp1->l_used = used;
-    lp1->l_size = size;
+    lp1->l_used += lp2->l_used;
 
 /* Now fix up lp1 forward pointer and lp2 back pointer */
 
