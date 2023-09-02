@@ -189,7 +189,7 @@ int zotbuf(struct buffer *bp) {
     }
     if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
         return s;
-    Xfree((char *) bp->b_linep);     /* Release header line. */
+    Xfree((char *) bp->b_linep);    /* Release header line (no l_text here) */
     bp1 = NULL;                     /* Find the header.     */
     bp2 = bheadp;
     while (bp2 != bp) {
@@ -253,35 +253,37 @@ static void ltoa(char *buf, int width, long num) {
 }
 
 /* The argument "text" points to a string.
- * Append this line to the current buffer.
+ * Append this line to the given buffer.
  * Handcraft the EOL on the end.
- * Return TRUE if it worked and FALSE if you ran out of room.
+ * It is the CALLER'S responsibility to know that bp is a valid
+ * buffer pointer.
  */
-void addline_to_curb(char *text) {
+void addline_to_anyb(char *text, struct buffer *bp) {
     struct line *lp;
     int ntext;
 
     ntext = strlen(text);
     lp = lalloc(ntext);
     lfillchars(lp, ntext, text);
-    curbp->b_linep->l_bp->l_fp = lp;        /* Hook onto the end    */
-    lp->l_bp = curbp->b_linep->l_bp;
-    curbp->b_linep->l_bp = lp;
-    lp->l_fp = curbp->b_linep;
-    if (curbp->b.dotp == curbp->b_linep)    /* If "." is at the end */
-        curbp->b.dotp = lp;                 /* move it to new line  */
+    bp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
+    lp->l_bp = bp->b_linep->l_bp;
+    bp->b_linep->l_bp = lp;
+    lp->l_fp = bp->b_linep;
+    if (bp->b.dotp == bp->b_linep)      /* If "." is at the end */
+        bp->b.dotp = lp;                /* move it to new line  */
     return;
 }
 
-/* Internal version to add to the //List buffer.
+/* Front-end to append to current buffer */
+void addline_to_curb(char *text) {
+    addline_to_anyb(text, curbp);
+    return;
+}
+
+/* Internal front-end to add to the //List buffer.
  */
 static void addline(char *text) {
-/* Pretend we are in //List for the duration od the call */
-
-    struct buffer *obp = curbp;
-    curbp = blistp;
-    addline_to_curb(text);
-    curbp = obp;
+    addline_to_anyb(text, blistp);
     return;
 }
 

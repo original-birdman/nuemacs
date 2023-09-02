@@ -58,6 +58,7 @@ extern int swbuffer(struct buffer *, int);
 extern int killbuffer(int, int);
 extern int zotbuf(struct buffer *);
 extern int namebuffer(int, int);
+extern void addline_to_anyb(char *, struct buffer *bp);
 extern void addline_to_curb(char *);
 extern int listbuffers(int, int);
 extern int anycb(void);
