@@ -19,9 +19,10 @@
  * Ask "getregion" to figure out the bounds of the region.
  * Move "." to the start, and kill the characters.
  * Bound to "C-W".
+ * If given and arg of 2, don't put the text killed onto the kill ring.
  */
 int killregion(int f, int n) {
-    UNUSED(f); UNUSED(n);
+    UNUSED(f);
     int s;
     struct region region;
 
@@ -32,7 +33,9 @@ int killregion(int f, int n) {
 /* If the last command was a yank we don't want to change the kill-ring
  * (the text is what is already on the top, or the last minibuffer).
  */
-    int save_to_kill_ring = (lastflag & CFYANK)? FALSE: TRUE;
+    int save_to_kill_ring;
+    if (n == 2) save_to_kill_ring = FALSE;
+    else save_to_kill_ring = (lastflag & CFYANK)? FALSE: TRUE;
     if ((lastflag & CFKILL) == 0) {         /* This is a kill type  */
         if (save_to_kill_ring) kdelete();   /* command, so do magic */
     }
