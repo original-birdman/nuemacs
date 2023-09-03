@@ -1026,6 +1026,7 @@ static void edinit(char *bname) {
 
     bp = bfind(bname, TRUE, 0);             /* First buffer         */
     blistp = bfind("//List", TRUE, BFINVS); /* Buffer list buffer   */
+    bdbgp = bfind("//Debug", TRUE, BFINVS); /* Macro debug buffer   */
     if (bp == NULL || blistp == NULL) exit(1);
     wp = (struct window *)Xmalloc(sizeof(struct window));   /* First window */
     curbp = bp;             /* Make this current    */

@@ -69,7 +69,7 @@ extern int kbdmode;             /* current keyboard macro mode  */
 extern int kbdrep;              /* number of repetitions        */
 extern int restflag;            /* restricted use?              */
 extern int lastkey;             /* last keystoke                */
-extern int macbug;              /* macro debuging flag          */
+extern int macbug;              /* macro debugging flag         */
 extern char errorm[];           /* error literal                */
 extern char truem[];            /* true literal                 */
 extern char falsem[];           /* false litereal               */
@@ -94,6 +94,7 @@ extern struct buffer *curbp;    /* Current buffer               */
 extern struct window *wheadp;   /* Head of list of windows      */
 extern struct buffer *bheadp;   /* Head of list of buffers      */
 extern struct buffer *blistp;   /* Buffer for C-X C-B           */
+extern struct buffer *bdbgp;    /* Buffer for macro debug info  */
 
 extern char sres[NBUFN];        /* Current screen resolution.   */
 extern char pat[];              /* Search pattern.              */
@@ -103,11 +104,6 @@ extern char rpat[];             /* Replacement pattern.         */
 extern unsigned int srch_patlen;
 
 extern char *dname[];           /* Directive name table.        */
-
-#if     DEBUGM
-/* Vars needed for macro debugging output. */
-extern char outline[];          /* Global string to hold debug line text. */
-#endif
 
 /* Terminal table defined only in term.c */
 extern struct terminal term;

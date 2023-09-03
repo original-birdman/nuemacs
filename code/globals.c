@@ -61,7 +61,7 @@ int kbdmode = STOP;             /* current keyboard macro mode  */
 int kbdrep = 0;                 /* number of repetitions        */
 int restflag = FALSE;           /* restricted use?              */
 int lastkey = 0;                /* last keystoke                */
-int macbug = FALSE;             /* macro debuging flag          */
+int macbug = 0;                 /* macro debuging flag          */
 char errorm[] = "ERROR";        /* error literal                */
 char truem[] = "TRUE";          /* true literal                 */
 char falsem[] = "FALSE";        /* false litereal               */
@@ -86,6 +86,7 @@ struct window *curwp;           /* Current window               */
 struct buffer *curbp;           /* Current buffer               */
 struct buffer *bheadp;          /* Head of list of buffers      */
 struct buffer *blistp;          /* Buffer for C-X C-B           */
+struct buffer *bdbgp;           /* Buffer for macro debug info  */
 
 char sres[NBUFN];               /* current screen resolution    */
 /* GGR - Add one to these three to allow for trailing NULs      */
@@ -109,11 +110,6 @@ char *dname[] = {
         "force"
         , "finish"              /* GGR */
 };
-
-#if     DEBUGM
-/*      vars needed for macro debugging output  */
-char outline[NSTRING];          /* global string to hold debug line text */
-#endif
 
 /* GGR - Additional initializations */
 int  inreex          = FALSE;

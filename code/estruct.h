@@ -39,7 +39,6 @@
 /*      Configuration options   */
 
 #define CLRMSG  0  /* space clears the message line with no insert */
-#define DEBUGM  1  /* $debug triggers macro debugging              */
 #define VISMAC  0  /* update display during keyboard macros        */
 #define REVSTA  1  /* Status line appears in reverse video         */
 

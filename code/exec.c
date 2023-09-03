@@ -1212,41 +1212,34 @@ int dobuf(struct buffer *bp) {
 /* dump comments and blank lines */
         if (*eline == ';' || *eline == 0) goto onward;
 
-#if DEBUGM
-/* If $debug == TRUE, every line to execute gets echoed and a key needs
- * to be pressed to continue.
- * ^G will abort the command.
+/* If $debug & 0x01, every assignment will be reported in the minibuffer.
+ *      The user then needs to press a key to continue.
+ *      If that key is abortc (ctl-G) the macro is aborted
+ *      If that key is metac (Esc) then ALL debug is turned off.
+ * If $debug & 0x02, every assignment will be reported in //Debug buffer
  */
-
         if (macbug) {
-            strcpy(outline, "<<<");
+            char outline[NSTRING];
+            snprintf(outline, NSTRING, "<%s:%s:%s>", bp->b_bname,
+                ue_itoa(execlevel), eline);
 
-/* Debug macro name */
-            strcat(outline, bp->b_bname);
-            strcat(outline, ":");
-
-/* Debug if levels */
-            strcat(outline, ue_itoa(execlevel));
-            strcat(outline, ":");
-
-/* and lastly the line. GGR - if line > 80 chars, chop it */
-            if (strlen(eline) > 80) strncat(outline, eline, 80);
-            else                    strcat(outline, eline);
-            strcat(outline, ">>>");
-
-/* Write out the debug line */
-            mlforce(outline);
-            update(TRUE);
+/* Write out the debug line to //Debug? */
+            if (macbug & 0x2) {
+                addline_to_anyb(outline, bdbgp);
+            }
+/* Write out the debug line to the message line? */
+            if (macbug & 0x1) {
+                mlforce(outline);
+                update(TRUE);
 
 /* And get the keystroke */
-            if ((c = get1key()) == abortc) {
-                mlforce(MLbkt("Macro aborted"));
-                goto failexit3;
+                if ((c = get1key()) == abortc) {
+                    mlforce(MLbkt("Macro aborted"));
+                    goto failexit3;
+                }
+                if (c == metac) macbug = 0;
             }
-
-            if (c == metac) macbug = FALSE;
         }
-#endif
 
 /* Parse directives here.... */
         dirnum = -1;

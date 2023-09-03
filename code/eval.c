@@ -901,7 +901,7 @@ static char *gtenv(char *vname) {
     case EVCBUFNAME:        return curbp->b_bname;
     case EVCFNAME:          return curbp->b_fname;
     case EVSRES:            return sres;
-    case EVDEBUG:           return ltos(macbug);
+    case EVDEBUG:           return ue_itoa(macbug);
     case EVSTATUS:          return ltos(cmdstatus);
     case EVPALETTE:         return palstr;
     case EVASAVE:           return ue_itoa(gasave);
@@ -1136,7 +1136,7 @@ static int svar(struct variable_description *var, char *value) {
             status = TTrez(value);
             break;
         case EVDEBUG:
-            macbug = stol(value);
+            macbug = atoi(value);
             break;
         case EVSTATUS:
             cmdstatus = stol(value);
@@ -1359,36 +1359,31 @@ int setvar(int f, int n) {
 /* And set the appropriate value */
     status = svar(&vd, value);
 
-#if DEBUGM
-/* If $debug == TRUE, every assignment will echo a statement to
- * that effect here.
+/* If $debug & 0x01, every assignment will be reported in the minibuffer.
+ *      The user then needs to press a key to continue.
+ *      If that key is abortc (ctl-G) the macro is aborted
+ * If $debug & 0x02, every assignment will be reported in //Debug buffer
  */
     if (macbug) {
-        strcpy(outline, "(((");
+        char outline[NSTRING];
+        snprintf(outline, NSTRING, "(%s:%s:%s)", ltos(status), var, value);
 
-/* Assignment status */
-        strcat(outline, ltos(status));
-        strcat(outline, ":");
+/* Write out the debug line to //Debug? */
+        if (macbug & 0x2) {
+            addline_to_anyb(outline, bdbgp);
+        }
+/* Write out the debug line to the message line? */
+        if (macbug & 0x1) {
+            mlforce(outline);
+            update(TRUE);
 
-/* Variable name */
-        strcat(outline, var);
-        strcat(outline, ":");
-
-/* And lastly the value we tried to assign */
-        strcat(outline, value);
-        strcat(outline, ")))");
-
-/* Write out the debug line */
-        mlforce(outline);
-        update(TRUE);
-
-/* And get the keystroke to hold the output */
-        if (get1key() == abortc) {
-            mlforce(MLbkt("Macro aborted"));
-            status = FALSE;
+/* And get the keystroke */
+            if (get1key() == abortc) {
+                mlforce(MLbkt("Macro aborted"));
+                status = FALSE;
+            }
         }
     }
-#endif
 
 /* And return it */
     return status;
