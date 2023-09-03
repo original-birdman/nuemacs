@@ -824,7 +824,7 @@ int ptt_handler(int c) {
  * int f;               default flag
  * int n;               macro number to use
  */
-struct func_opts null_func_opts = { 0, 0, 0, 0, 0 };
+struct func_opts null_func_opts = { 0, 0, 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
@@ -861,6 +861,7 @@ int storeproc(int f, int n) {
         if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
         if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
         if (!strcmp(optstr, "one_pass"))        bp->btp_opt.one_pass = 1;
+        if (!strcmp(optstr, "no_macbug"))       bp->btp_opt.no_macbug = 1;
 /* Individual commands in the procedure will determine the "search_ok"
  * status, so set it to true here.
  */
@@ -917,6 +918,8 @@ int run_user_proc(char *procname, int forced, int rpts) {
     if (bp->btp_opt.one_pass) rpts = 1;     /* and possibly only once */
     int this_count = 0;
     status = TRUE;
+    int orig_macbug_off = macbug_off;
+    if (bp->btp_opt.no_macbug) macbug_off = 1;
     while (rpts-- > 0) {
 /* Since one user-proc can call another we have to remember the current
  * setting, install our current ones, then restore the originals
@@ -934,6 +937,7 @@ int run_user_proc(char *procname, int forced, int rpts) {
         uproc_lpforced = save_forced;
         if (!status) break;
     }
+    macbug_off = orig_macbug_off;
     return status;
 }
 
@@ -1217,8 +1221,11 @@ int dobuf(struct buffer *bp) {
  *      If that key is abortc (ctl-G) the macro is aborted
  *      If that key is metac (Esc) then ALL debug is turned off.
  * If $debug & 0x02, every assignment will be reported in //Debug buffer
+ *
+ * NOTE that a user-macro can turn this off while running.
+ *      This is used by the ones which set macbug and clear //Debug.
  */
-        if (macbug) {
+        if (macbug && !macbug_off) {    /* More likely failure first */
             char outline[NSTRING];
             snprintf(outline, NSTRING, "<%s:%s:%s>", bp->b_bname,
                 ue_itoa(execlevel), eline);

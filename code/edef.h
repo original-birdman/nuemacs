@@ -70,6 +70,7 @@ extern int kbdrep;              /* number of repetitions        */
 extern int restflag;            /* restricted use?              */
 extern int lastkey;             /* last keystoke                */
 extern int macbug;              /* macro debugging flag         */
+extern int macbug_off;          /* macro debug global-off flag  */
 extern char errorm[];           /* error literal                */
 extern char truem[];            /* true literal                 */
 extern char falsem[];           /* false litereal               */

@@ -304,6 +304,7 @@ struct func_opts {
     unsigned int not_interactive :1;
     unsigned int search_ok :1;      /* *hunt() can run */
     unsigned int one_pass :1;       /* ignore any repeat arg (user-proc) */
+    unsigned int no_macbug :1;      /* No macbug display while running */
 };
 
 /* These are allocated in bfind()  and freed in zotbuf() */

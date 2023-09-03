@@ -1363,8 +1363,11 @@ int setvar(int f, int n) {
  *      The user then needs to press a key to continue.
  *      If that key is abortc (ctl-G) the macro is aborted
  * If $debug & 0x02, every assignment will be reported in //Debug buffer
+ *
+ * NOTE that a user-macro can turn this off while running.
+ *      This is used by the ones which set macbug and clear //Debug.
  */
-    if (macbug) {
+    if (macbug && !macbug_off) {    /* More likely failure first */
         char outline[NSTRING];
         snprintf(outline, NSTRING, "(%s:%s:%s)", ltos(status), var, value);
 

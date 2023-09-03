@@ -62,6 +62,7 @@ int kbdrep = 0;                 /* number of repetitions        */
 int restflag = FALSE;           /* restricted use?              */
 int lastkey = 0;                /* last keystoke                */
 int macbug = 0;                 /* macro debuging flag          */
+int macbug_off = 0;             /* macro debug global-off flag  */
 char errorm[] = "ERROR";        /* error literal                */
 char truem[] = "TRUE";          /* true literal                 */
 char falsem[] = "FALSE";        /* false litereal               */
