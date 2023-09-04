@@ -1084,7 +1084,6 @@ int dobuf(struct buffer *bp) {
     struct line *lp;        /* pointer to line to execute */
     struct line *hlp;       /* pointer to line header */
     struct line *glp;       /* line to goto */
-    struct line *mp;        /* Macro line storage temp */
     int dirnum;             /* directive index */
     int linlen;             /* length of line to execute */
     int i;                  /* index */
@@ -1281,18 +1280,7 @@ int dobuf(struct buffer *bp) {
 
 /* If macro store is on, just salt this away */
         if (mstore) {
-/* Allocate the space for the line */
-            linlen = strlen(eline);
-            mp = lalloc(linlen);
-
-/* Copy the text into the new line */
-            lfillchars(mp, linlen, eline);
-
-/* Attach the line to the end of the buffer */
-            bstore->b_linep->l_bp->l_fp = mp;
-            mp->l_bp = bstore->b_linep->l_bp;
-            bstore->b_linep->l_bp = mp;
-            mp->l_fp = bstore->b_linep;
+            addline_to_anyb(eline, bstore);
             goto onward;
         }
         force = FALSE;

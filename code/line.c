@@ -156,8 +156,6 @@ int insspace(int f, int n) {
  */
 int linsert_byte(int n, unsigned char c) {
     struct line *lp1;
-    struct line *lp2;
-    struct line *lp3;
     int doto;
     int i;
 
@@ -170,15 +168,16 @@ int linsert_byte(int n, unsigned char c) {
             mlwrite_one("bug: linsert");
             return FALSE;
         }
-        lp2 = lalloc(n);        /* Allocate new line   */
-        lp3 = lp1->l_bp;        /* Previous line        */
-        lp3->l_fp = lp2;        /* Link in              */
-        lp2->l_fp = lp1;
-        lp1->l_bp = lp2;
-        lp2->l_bp = lp3;
-        for (i = 0; i < n; ++i) lp2->l_text[i] = c;
-        curwp->w.dotp = lp2;
-        curwp->w.doto = n;
+/* We have a function to add a line at the end of a buffer */
+        char *tbuf = alloca(n+1);
+        memset(tbuf, c, n);
+        tbuf[n] = '\0';
+        addline_to_curb(tbuf);
+/* addline_to_curb will put dot on the dummy end line, effectively
+ * adding a newline at the end of it.
+ * So we move dot back 1 char, to the end of what we've added....
+ */
+        backchar(0, 1);
         return TRUE;
     }
     doto = curwp->w.doto;                   /* Save for later. */

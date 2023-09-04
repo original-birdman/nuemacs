@@ -264,7 +264,7 @@ void addline_to_anyb(char *text, struct buffer *bp) {
 
     ntext = strlen(text);
     lp = lalloc(ntext);
-    lfillchars(lp, ntext, text);
+    memcpy(lp->l_text, text, ntext);
     bp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
     lp->l_bp = bp->b_linep->l_bp;
     bp->b_linep->l_bp = lp;
