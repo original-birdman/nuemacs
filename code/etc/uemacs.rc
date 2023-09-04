@@ -768,5 +768,42 @@ store-procedure showdir
 
 !endm
 
+; Macro debug convenience handlers
+;
+; This sets $debug to the numeric arg used to call it.
+; If none was given - report that....
+;
+store-procedure set-debug not_mb one_pass no_macbug
+  !if &not &equ $uproc_lpforced 1
+    write-message "set-debug requires a numeric arg (multiplier)"
+    !return
+  !endif
+
+  set $debug $uproc_lptotal
+  write-message &ptf "$debug is now 0x%02x" $debug
+!endm
+
+; This clears the //Debug buffer
+; Mark the whole file as a region then kill it, with no save to the kill ring.
+;
+store-procedure clear-debug-buffer not_mb one_pass no_macbug
+  set .odisp $discmd
+  set $discmd FALSE
+  set .obuf $cbufname
+  select-buffer "//Debug"
+  end-of-file
+  set-mark
+  beginning-of-file
+  2 kill-region
+  unmark-buffer
+  select-buffer .obuf
+  set $discmd .odisp
+  write-message "//Debug cleared"
+!endm
+
+buffer-to-key   set-debug           ^XM-D
+buffer-to-key   clear-debug-buffer  ^XM-C
+;
+
 ;
 set $discmd TRUE
