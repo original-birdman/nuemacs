@@ -186,6 +186,71 @@ static unsigned int getckey(int mflag) {
     return (mflag)? get1key(): getcmd();
 }
 
+/* change a key command to a string we can print out
+ *
+ * int c;               sequence to translate
+ * char *seq;           destination string for sequence
+ */
+static void cmdstr(int c, char *seq) {
+    char *ptr;      /* pointer into current position in sequence */
+
+    ptr = seq;
+
+    if (c & CTLX) {     /* apply ^X sequence if needed */
+        *ptr++ = '^';
+        *ptr++ = 'X';
+    }
+    if (c & META) {     /* apply meta sequence if needed */
+        *ptr++ = 'M';
+        *ptr++ = '-';
+    }
+    if (c & SPEC) {     /* apply SPEC sequence if needed */
+        *ptr++ = 'F';
+        *ptr++ = 'N';
+    }
+    if (c & CONTROL) {  /* apply control sequence if needed */
+        *ptr++ = '^';
+    }
+
+/* Strip the prefixes and output the final sequence */
+
+    c &= 0x0fffffff;
+    if (c  == ' ') {        /* Handle the "SP" for space which we allow */
+        *ptr++ = 'S';
+        *ptr++ = 'P';
+    }
+    else if (c == 0x7f) {   /* Handle "^?" for delete */
+        *ptr++ = '^';
+        *ptr++ = '?';
+    }
+    else {
+/* If we have a non-ASCII char we need to convert it to utf8.... */
+        if (c < 0x80)  *ptr++ = c & 255;
+        else            ptr += unicode_to_utf8(c, ptr);
+    }
+    *ptr = 0;               /* terminate the string */
+}
+
+/* ======================================================================
+ * What gets called if we try to run something in the minibuffer which
+ * we shouldn't.
+ * Requires not_in_mb to have been filled out.
+ */
+int not_in_mb_error(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    char vis_key_paras[23];
+    if (not_in_mb.keystroke != -1) {
+        char vis_key[20];
+        cmdstr(not_in_mb.keystroke, vis_key);
+        snprintf(vis_key_paras, 22, "(%s)", vis_key);
+    }
+    else
+        strcpy(vis_key_paras, "(?!?)");
+    mlwrite("%s%s not allowed in the minibuffer!!",
+         not_in_mb.funcname, vis_key_paras);
+    return(TRUE);
+}
+
 /* Describe the command for a certain key
  */
 int deskey(int f, int n) {
@@ -903,10 +968,11 @@ static int buildlist(char *mstring) {
             }
         }
         else continue;
-        strcpy(outseq, ktp->hndlr.pbp);
-        cpos = strlen(outseq);
-        while (cpos < 28) outseq[cpos++] = ' ';
-/* Add in the command sequence (adds a trailing NUL) */
+
+/* Display the handling procedure then in the command sequence
+ * (adds a trailing NUL)
+ */
+        cpos = snprintf(outseq, sizeof(outseq), "%-28s", ktp->hndlr.pbp);
         cmdstr(ktp->k_code, outseq+cpos);
 
 /* Add the line into the buffer */
@@ -1146,51 +1212,6 @@ char *flook(char *fname, int hflag, int mode) {
 
     pathexpand = TRUE;                          /* GGR */
     return NULL;            /* no such luck */
-}
-
-/* change a key command to a string we can print out
- *
- * int c;               sequence to translate
- * char *seq;           destination string for sequence
- */
-void cmdstr(int c, char *seq) {
-    char *ptr;      /* pointer into current position in sequence */
-
-    ptr = seq;
-
-    if (c & CTLX) {     /* apply ^X sequence if needed */
-        *ptr++ = '^';
-        *ptr++ = 'X';
-    }
-    if (c & META) {     /* apply meta sequence if needed */
-        *ptr++ = 'M';
-        *ptr++ = '-';
-    }
-    if (c & SPEC) {     /* apply SPEC sequence if needed */
-        *ptr++ = 'F';
-        *ptr++ = 'N';
-    }
-    if (c & CONTROL) {  /* apply control sequence if needed */
-        *ptr++ = '^';
-    }
-
-/* Strip the prefixes and output the final sequence */
-
-    c &= 0x0fffffff;
-    if (c  == ' ') {        /* Handle the "SP" for space which we allow */
-        *ptr++ = 'S';
-        *ptr++ = 'P';
-    }
-    else if (c == 0x7f) {   /* Handle "^?" for delete */
-        *ptr++ = '^';
-        *ptr++ = '?';
-    }
-    else {
-/* If we have a non-ASCII char we need to convert it to utf8.... */
-        if (c < 0x80)  *ptr++ = c & 255;
-        else            ptr += unicode_to_utf8(c, ptr);
-    }
-    *ptr = 0;               /* terminate the string */
 }
 
 /* string key name to binding name....

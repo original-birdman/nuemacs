@@ -34,6 +34,7 @@ extern int swapmark(int, int);
 
 /* bind.c */
 extern int help(int, int);
+extern int not_in_mb_error(int, int);
 extern int deskey(int, int);
 extern struct key_tab *getbyfnc(fn_t);
 extern struct key_tab *getbind(int);
@@ -48,7 +49,6 @@ extern void set_pathname(char *);
 #define ONPATH 1
 #define INTABLE 2
 extern char *flook(char *, int, int);
-extern void cmdstr(int, char *);
 extern char *transbind(char *);
 
 /* buffer.c */
@@ -219,7 +219,6 @@ extern int addto_kbdmacro(char *, int, int);
 extern int macro_helper(int, int);
 extern void dumpdir_tidy(void);
 extern com_arg *multiplier_check(int);
-extern int not_in_mb_error(int, int);
 extern int not_interactive(int, int);
 extern int execute(int c, int, int);
 extern int quickexit(int, int);

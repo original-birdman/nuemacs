@@ -1439,26 +1439,6 @@ loop:
 }
 
 /* ======================================================================
- * What gets called if we try to run something in the minibuffer which
- * we shouldn't.
- * Requires not_in_mb to have been filled out.
- */
-int not_in_mb_error(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    char vis_key_paras[23];
-    if (not_in_mb.keystroke != -1) {
-        char vis_key[20];
-        cmdstr(not_in_mb.keystroke, vis_key);
-        snprintf(vis_key_paras, 22, "(%s)", vis_key);
-    }
-    else
-        strcpy(vis_key_paras, "(?!?)");
-    mlwrite("%s%s not allowed in the minibuffer!!",
-         not_in_mb.funcname, vis_key_paras);
-    return(TRUE);
-}
-
-/* ======================================================================
  * What gets called if we try to run something interactively which
  * we shouldn't.
  * Requires not_interactive_fname to have been set.
