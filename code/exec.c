@@ -290,20 +290,20 @@ static char prev_cmd[NSTRING] = "";
 int execcmd(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
-    char cmdstr[NSTRING];   /* string holding command to execute */
+    char thecmd[NSTRING];   /* string holding command to execute */
 
 /* Re-use last obtained command? */
     if (inreex && (prev_cmd[0] != '\0') && RXARG(execcmd))
-        strcpy(cmdstr, prev_cmd);
+        strcpy(thecmd, prev_cmd);
     else {
 /* Get the line wanted */
         if ((status =
-             mlreply("command: ", cmdstr, NSTRING, CMPLT_NONE)) != TRUE)
+             mlreply("command: ", thecmd, NSTRING, CMPLT_NONE)) != TRUE)
             return status;
     }
     execlevel = 0;
-    status = docmd(cmdstr);
-    strcpy(prev_cmd, cmdstr);   /* Now we remember this... */
+    status = docmd(thecmd);
+    strcpy(prev_cmd, thecmd);   /* Now we remember this... */
 
     return status;
 }
