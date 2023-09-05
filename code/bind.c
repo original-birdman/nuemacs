@@ -187,14 +187,18 @@ static unsigned int getckey(int mflag) {
 }
 
 /* change a key command to a string we can print out
+ * The result is built up in a local buffer and we return the
+ * address of this - so the assumpton is that this is used immediately
+ * (before any other call here).
  *
  * int c;               sequence to translate
  * char *seq;           destination string for sequence
  */
-static void cmdstr(int c, char *seq) {
+static char *cmdstr(int c) {
+    static char result[16];
     char *ptr;      /* pointer into current position in sequence */
 
-    ptr = seq;
+    ptr = result;
 
     if (c & CTLX) {     /* apply ^X sequence if needed */
         *ptr++ = '^';
@@ -229,6 +233,7 @@ static void cmdstr(int c, char *seq) {
         else            ptr += unicode_to_utf8(c, ptr);
     }
     *ptr = 0;               /* terminate the string */
+    return result;
 }
 
 /* ======================================================================
@@ -240,9 +245,7 @@ int not_in_mb_error(int f, int n) {
     UNUSED(f); UNUSED(n);
     char vis_key_paras[23];
     if (not_in_mb.keystroke != -1) {
-        char vis_key[20];
-        cmdstr(not_in_mb.keystroke, vis_key);
-        snprintf(vis_key_paras, 22, "(%s)", vis_key);
+        snprintf(vis_key_paras, 22, "(%s)", cmdstr(not_in_mb.keystroke));
     }
     else
         strcpy(vis_key_paras, "(?!?)");
@@ -257,7 +260,6 @@ int deskey(int f, int n) {
     UNUSED(f); UNUSED(n);
     int c;          /* key to describe */
     char *ptr;      /* string pointer to scan output strings */
-    char outseq[NSTRING];   /* output buffer for command sequence */
 
 /* Prompt the user to type us a key to describe */
     mlwrite_one(": describe-key ");
@@ -270,8 +272,7 @@ int deskey(int f, int n) {
         mlwrite_one("Can't parse key string!");
         return FALSE;
     }
-    cmdstr(c, outseq);
-    mlputs(outseq);
+    mlputs(cmdstr(c));
     mlputs(" ");
 
 /* Find the right function */
@@ -525,18 +526,17 @@ static int update_keybind(int c, int ntimes, int internal_OK,
  * order, regardless of character ranges, we now allow non-ASCII
  * characters to be bound.
  */
-        char outseq[80];
-        cmdstr(c, outseq);
+        char *cstr = cmdstr(c);
         switch(c) {
         case META|SPEC|'C':
         case META|SPEC|'R':
         case META|SPEC|'W':
         case META|SPEC|'X':
-            mlwrite("%s is an internal binding. Use switch-internal.", outseq);
+            mlwrite("%s is an internal binding. Use switch-internal.", cstr);
             return FALSE;
         }
-        if (!clexec) mlputs(outseq);
-        if (kbdmode == RECORD) addto_kbdmacro(outseq, 0, 0);
+        if (!clexec) mlputs(cstr);
+        if (kbdmode == RECORD) addto_kbdmacro(cstr, 0, 0);
     }
 
 /* Search the table to see whether it exists */
@@ -811,7 +811,6 @@ int bindtokey(int f, int n) {
 int unbindkey(int f, int n) {
     UNUSED(f); UNUSED(n);
     int c;                  /* command key to unbind */
-    char outseq[80];        /* output buffer for keystroke sequence */
 
 /* Prompt the user to type in a key to unbind */
     if (!clexec) {
@@ -826,11 +825,8 @@ int unbindkey(int f, int n) {
         return FALSE;
     }
 
-/* Change it to something we can print as well */
-    cmdstr(c, outseq);
-
-/* And dump it out */
-    if (!clexec) mlputs(outseq);
+/* Dump out a printable version */
+    if (!clexec) mlputs(cmdstr(c));
 
 /* If it isn't bound, bitch */
     if (unbindchar(c) == FALSE) {
@@ -849,10 +845,8 @@ static int show_key_binding(unicode_t key) {
     int cpos;
     struct key_tab *ktp;
     if ((ktp = getbind(key))) {
-        cmdstr(key, outseq);
+        sprintf(outseq, "%-12s", cmdstr(key));
         cpos = strlen(outseq);
-/* Pad out some spaces */
-        while (cpos < 12) outseq[cpos++] = ' ';
         if (ktp->bk_multiplier != 1) {  /* Mention a non-default multiplier */
             char tbuf[16];
             sprintf(tbuf, "{%d}", ktp->bk_multiplier);
@@ -928,7 +922,7 @@ static int buildlist(char *mstring) {
             while (cpos < 28) outseq[cpos++] = ' ';
 
 /* Add in the command sequence (adds a trailing NUL) */
-            cmdstr(ktp->k_code, outseq+cpos);
+            strcpy(outseq+cpos, cmdstr(ktp->k_code));
 
 /* and add it as a line into the buffer */
             addline_to_curb(outseq);
@@ -972,8 +966,8 @@ static int buildlist(char *mstring) {
 /* Display the handling procedure then in the command sequence
  * (adds a trailing NUL)
  */
-        cpos = snprintf(outseq, sizeof(outseq), "%-28s", ktp->hndlr.pbp);
-        cmdstr(ktp->k_code, outseq+cpos);
+        snprintf(outseq, sizeof(outseq), "%-28s%s",
+             ktp->hndlr.pbp, cmdstr(ktp->k_code));
 
 /* Add the line into the buffer */
         addline_to_curb(outseq);
