@@ -14,8 +14,10 @@
  */
 
 #include "line.h"
-
 #include <stdio.h>
+#if __sun
+#include <alloca.h>
+#endif
 
 #include "estruct.h"
 #include "edef.h"
