@@ -1228,26 +1228,50 @@ int leaveone(int f, int n) {
 
 int whitedelete(int f, int n) {
     UNUSED(f); UNUSED(n);
-    int c;
-    int status;
 
-    status = FALSE;
-/* Use forwdel and backdel so *they* take care of VIEW etc */
-    while (curwp->w.doto != 0 &&
-         ((c = lgetc(curwp->w.dotp, (curwp->w.doto)-1)) == ' '
-         || c == '\t')) {
-         if (!backdel(0, 1)) return FALSE;
-         status = TRUE;
+    char *lp, *rp, *stp, *etp;
+    stp = curwp->w.dotp->l_text;            /* Start of line text */
+    etp = stp + llength(curwp->w.dotp);     /* End of line text */
+    lp = rp = stp + curwp->w.doto;          /* Working pointers */
+
+/* Find the left-most space */
+    while (lp > stp) {
+        switch(*(lp-1)) {
+        case ' ':
+        case '\t':
+            lp--;
+            continue;
+        default:
+            break;
+        }
+        break;          /* End loop if no match */
     }
-    while (curwp->w.doto != llength(curwp->w.dotp) &&
-         ((c = lgetc(curwp->w.dotp, curwp->w.doto)) == ' '
-         || c == '\t')) {
-         if (!forwdel(0, 1)) return FALSE;
-         status = TRUE;
+
+/* Find the first non-space on the right */
+    while (rp < etp) {
+        switch(*rp) {
+        case ' ':
+        case '\t':
+            rp++;
+            continue;
+        default:
+            break;
+        }
+        break;          /* End loop if no match */
     }
-    return status;
+
+/* Delete from lp up to (but not including) rp */
+
+    int to_delete = rp - lp;
+    if (to_delete <= 0) return FALSE;
+    curwp->w.doto = lp - stp;       /* Move dot to left-most space */
+    ldelete(to_delete, FALSE);      /* Delete the in one go */
+    return TRUE;
 }
 
+/* Insert a ' and string length count at the end of a 'xxxx string.
+ * For Fortran code....C doesn't really use the idiom.
+ */
 int quotedcount(int f, int n) {
     UNUSED(f); UNUSED(n);
     int savedpos;
