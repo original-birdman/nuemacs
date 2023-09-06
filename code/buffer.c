@@ -236,22 +236,6 @@ ask:
     return TRUE;
 }
 
-/* This is being put into a 9-char (+NL) field, but could actually
- * have 10 chars...
- */
-static void ltoa(char *buf, int width, long num) {
-
-    buf[width] = 0;                 /* End of string.       */
-    while (num >= 10 && width) {    /* Conditional digits.  */
-        buf[--width] = (int) (num % 10L) + '0';
-        num /= 10L;
-    }
-    if (width) buf[--width] = (int) num + '0';  /* If room */
-    else buf[0] = '+';                          /* if not */
-    while (width != 0)      /* Pad with blanks.     */
-        buf[--width] = ' ';
-}
-
 /* The argument "text" points to a string.
  * Append this line to the given buffer.
  * Handcraft the EOL on the end.
@@ -305,7 +289,6 @@ static int makelist(int iflag) {
     int s;
     int i;
     long nbytes;                        /* # of bytes in current buffer */
-    char b[9+1];                        /* field width for nbytes + NL */
     int mcheck;
 
     char *line = Xmalloc(term.t_mcol);
@@ -352,7 +335,7 @@ static int makelist(int iflag) {
             *cp1++ = cset;
             mcheck <<= 1;
         }
-        sprintf(cp1, ".           Forced modes (U==on, l==off)");
+        strcpy(cp1, ".           Forced modes (U==on, l==off)");
         addline(line);
     }
 
@@ -396,16 +379,19 @@ static int makelist(int iflag) {
 
         *cp1++ = ' ';                   /* Gap.                 */
         nbytes = 0L;                    /* Count bytes in buf.  */
+        long nlc = (bp->b_mode & MDDOSLE)? 2: 1;
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = lforw(lp)) {
-            nbytes += (long) llength(lp) + 1L;
+            nbytes += (long) llength(lp) + nlc;
         }
-        ltoa(b, 9, nbytes);             /* 9 digit buffer size. */
-        cp2 = b;
+        char nb[21];                    /* To handle longest long + NULL */
+        sprintf(nb, "%20ld", nbytes);
+        if (nb[11] != ' ') nb[11] = '+';    /* The last 9 chars */
+        cp2 = nb + 11;
         while ((c = *cp2++) != 0) *cp1++ = c;
         *cp1++ = ' ';                   /* Gap.                 */
-        cp2 = &bp->b_bname[0];          /* Buffer name          */
+        cp2 = bp->b_bname;              /* Buffer name          */
         while ((c = *cp2++) != 0) *cp1++ = c;
-        cp2 = &bp->b_fname[0];          /* File name            */
+        cp2 = bp->b_fname;              /* File name            */
         if (*cp2 != 0) {
 /* We know the current screen width, so use it...
  */
@@ -640,13 +626,12 @@ int unmark(int f, int n) {
  */
 char do_force_mode(char *opt) {    /* Returns 0 if all OK */
 
-/* Are we just changing what is there, or settign an absolute value? */
+/* Are we just changing what is there, or setting an absolute value? */
 
     if (opt[0] == '+') opt++;      /* Skip the + */
     else force_mode_off = force_mode_on = 0;
 
-
-    char *op = opt;     /* Brace to allow decl on line 1 */
+    char *op = opt;
     char c;
     int *word_to_set, *word_to_notset, bit_to_set;
     while ((c = *op++)) {
