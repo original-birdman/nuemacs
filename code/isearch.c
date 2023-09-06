@@ -59,9 +59,7 @@ static int promptpattern(char *prompt) {
     if (clexec) return 0;
 
     strcpy(tpat, prompt);       /* copy prompt to output string */
-    strcat(tpat, MLbkt("<Meta>"));
-    strcat(tpat, " ");
-
+    strcat(tpat, MLbkt("<Meta>") " ");
     mlwrite_one(tpat);
 
 /* This now needs the grapheme length of the byte array... */

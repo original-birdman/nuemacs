@@ -73,12 +73,7 @@ int lockchk(char *fname) {
  * char *errstr;        lock error string to print out
  */
 static void lckerror(char *errstr) {
-    char obuf[NSTRING];     /* output buffer for error message */
-
-    strcpy(obuf, errstr);
-    strcat(obuf, " - ");
-    strcat(obuf, strerror(errno));
-    mlwrite_one(obuf);
+    mlwrite("%s - %s", errstr, strerror(errno));
 }
 
 /*

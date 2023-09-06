@@ -763,11 +763,7 @@ int bindtokey(int f, int n) {
     }
 
     kfunc = nm_info->n_func;
-    if (!clexec) {
-        char pbuf[NSTRING];
-        sprintf(pbuf, "key for %s: ", nm_info->n_name);
-        mlwrite(pbuf);
-    }
+    if (!clexec) mlwrite("key for %s: ", nm_info->n_name);
 
 /* Get the command sequence to bind */
     mflag = ((kfunc == metafn) || (kfunc == cex) ||

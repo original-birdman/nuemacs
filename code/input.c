@@ -548,13 +548,9 @@ static int comp_var(char *name, char *choices) {
  */
 int mlyesno(char *prompt) {
     int c;                  /* input character - tgetc() returns unicode */
-    char buf[NPAT];         /* prompt to user */
-
-    strcpy(buf, prompt);    /* build the prompt once */
-    strcat(buf, " " MLbkt("y/n") "? ");
     int res = -1;           /* NOT ABORT, TRUE or FALSE */
     while(res == -1) {
-        mlwrite_one(buf);
+        mlwrite("%s%s", prompt, " " MLbkt("y/n") "? ");
 
         c = get1key();        /* get the response */
         switch(c) {
