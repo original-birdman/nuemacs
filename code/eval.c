@@ -1372,8 +1372,8 @@ int setvar(int f, int n) {
  *      This is used by the ones which set macbug and clear //Debug.
  */
     if (macbug && !macbug_off) {    /* More likely failure first */
-        char outline[NSTRING];
-        snprintf(outline, NSTRING, "(%s:%s:%s)", ltos(status), var, value);
+        char outline[9+NVSIZE+NSTRING];
+        sprintf(outline, "(%s:%s:%s)", ltos(status), var, value);
 
 /* Write out the debug line to //Debug? */
         if (macbug & 0x2) {
