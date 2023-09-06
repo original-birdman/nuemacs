@@ -319,8 +319,6 @@ extern void setpattern(const char[], const char[]);
 extern void rvstrcpy(char *, char *);
 extern int sreplace(int, int);
 extern int qreplace(int, int);
-extern int expandp(const char *, char *, int);
-extern int boundry(struct line *, int, int);
 extern char *group_match(int);
 
 /* spawn.c */

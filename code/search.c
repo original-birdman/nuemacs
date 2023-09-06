@@ -302,7 +302,8 @@ static struct mg_info null_mg = { EGRP, 0, 0, 0, 0 };
 #define RING_SIZE 10
 
 static char *srch_txt[RING_SIZE], *repl_txt[RING_SIZE];
-char current_base[NSTRING] = "";
+/* This only needs to hold the Search/Query replace/etc. text */
+char current_base[16] = "";
 
 enum call_type {Search, Replace};  /* So we know the current call type */
 static enum call_type this_rt;
@@ -367,16 +368,88 @@ static void update_ring(const char *str) {
     return;
 }
 
+/* expandp -- Expand control key sequences for output.
+ *            Assumes caller has sent a large enough buffer.
+ *
+ * char *srcstr;                string to expand
+ * char *deststr;               destination of expanded string
+ *                              If NULL, use internal one.
+ *  returns the expanded text.
+ */
+static char *expandp(const char *srcstr, char *deststr) {
+    static char ibuf[NPAT/2];
+    unsigned char c;        /* current char to translate */
+    char *dp;               /* Destination buffer pointer */
+    char *rp;               /* Final result */
+
+    dp = (deststr)? deststr: ibuf;
+    rp = dp;
+
+/* Scan through the string. */
+
+    while ((c = *srcstr++) != 0) {
+        if (c == '\n') {                        /* it's a newline */
+            *dp++ = '<';
+            *dp++ = 'N';
+            *dp++ = 'L';
+            *dp++ = '>';
+        }
+        else if ((c > 0 && c < 0x20) || c == 0x7f) { /* control character */
+            *dp++ = '^';
+            *dp++ = c ^ 0x40;
+        }
+        else {                                  /* any other character */
+            *dp++ = c;
+        }
+    }
+    *dp = '\0';
+    return rp;
+}
+
+/* boundry -- Return information depending on whether we may search no
+ *      further.  Beginning of file and end of file are the obvious
+ *      cases, but we may want to add further optional boundary restrictions
+ *      in future, a' la VMS EDT.  At the moment, just return TRUE or
+ *      FALSE depending on if a boundary is hit (ouch).
+ *      The end of file is now taken to be *on* the last line (b_linep)
+ *      rather than at the end of the "last line with buffer text" so that
+ *      we can include the terminating newline (which we always assume is
+ *      there) in a search.
+ */
+static int boundry(struct line *curline, int curoff, int dir) {
+    int border;
+
+    if (dir == FORWARD) {
+        border = (curline == curbp->b_linep);
+    }
+    else {
+/* Reverse searching has an additional boundary to consider - the
+ * original point.
+ */
+        if ((curline == magic_search.start_line) &&
+            (curoff > magic_search.start_point)) {
+             border = TRUE;
+        }
+        else {
+/* A reverse slow scan has to be able to get to curoff == 0 on
+ * the first line...
+ */
+            if (slow_scan)
+                border = (curline == curbp->b_linep);
+            else
+                border = (curoff == 0) && (lback(curline) == curbp->b_linep);
+	}
+    }
+    return border;
+}
+
 /* A function to regenerate the prompt string with the given
  * text as the default.
  * Also called from svar() if it sets $replace or $search
  */
 void new_prompt(char *dflt_str) {
-    strcpy(prmpt_buf.prompt, current_base); /* copy prompt to output string */
-    strcat(prmpt_buf.prompt, " " MLpre);    /* build new prompt string */
-    expandp(dflt_str, prmpt_buf.prompt+strlen(prmpt_buf.prompt), NPAT / 2);
-                                            /* add default pattern */
-    strcat(prmpt_buf.prompt, MLpost ": ");
+    sprintf(prmpt_buf.prompt, "%s " MLpre "%s" MLpost ": ",
+        current_base, expandp(dflt_str, NULL));
     prmpt_buf.update = 1;
     return;
 }
@@ -495,8 +568,7 @@ static void parse_error(char *pptr, char *message) {    /* Helper routine */
     return;
 }
 
-/*
- * add2_xt_cclmap - add a new entry to the end of the xt_cclmap list
+/* add2_xt_cclmap - add a new entry to the end of the xt_cclmap list
  *                  returns the ptr to the new entry *not* the base of
  *                  the list (which is stored in mp->x.xt_cclmap.
  */
@@ -1702,11 +1774,7 @@ static int readpattern(char *prompt, char *apat, int srch) {
  */
     strcpy(saved_base, current_base);
     strcpy(current_base, prompt);
-
-    strcpy(tpat, prompt);       /* copy prompt to output string */
-    strcat(tpat, " " MLpre);    /* build new prompt string */
-    expandp(apat, tpat+strlen(tpat), NPAT / 2); /* add old pattern */
-    strcat(tpat, MLpost ": ");
+    sprintf(tpat, "%s " MLpre "%s" MLpost ": ", prompt, expandp(apat, NULL));
 
 /* Read a pattern.  Either we get one or we just get an empty result
  * and use the previous pattern.
@@ -1720,8 +1788,8 @@ static int readpattern(char *prompt, char *apat, int srch) {
     status = mlreply(tpat, tpat, NPAT, CMPLT_SRCH);
     this_rt = our_rt;           /* Set our call type for update_ring() */
     int do_update_ring = 1;
-/*
- * status values from mlreply (-> getstring()) are
+
+/* status values from mlreply (-> getstring()) are
  *  ABORT  (something went wrong)
  *  FALSE  the result (tpat) is empty
  *  TRUE   we have something in tpat
@@ -2534,8 +2602,7 @@ static void report_match(void) {
     return;
 }
 
-/*
- * forwhunt -- Search forward for a previously acquired search string.
+/* forwhunt -- Search forward for a previously acquired search string.
  *      If found, reset the "." to be just after the match string,
  *      and (perhaps) repaint the display.
  *
@@ -2606,8 +2673,7 @@ int forwhunt(int f, int n) {
     return status;
 }
 
-/*
- * forwsearch -- Search forward.  Get a search string from the user, and
+/* forwsearch -- Search forward.  Get a search string from the user, and
  *      then use forwhunt to do the work...
  *
  * int f, n;                    default flag / numeric argument
@@ -2644,8 +2710,7 @@ int forwsearch(int f, int n) {
     return forwhunt(f, n);
 }
 
-/*
- * backhunt -- Reverse search for a previously acquired search string,
+/* backhunt -- Reverse search for a previously acquired search string,
  *      starting at "." and proceeding toward the front of the buffer.
  *      If found "." is left pointing at the first character of the pattern
  *      (i.e. "looking at" the match)
@@ -2722,8 +2787,7 @@ int backhunt(int f, int n) {
     return status;
 }
 
-/*
- * backsearch -- Reverse search.  Get a search string from the user, and
+/* backsearch -- Reverse search.  Get a search string from the user, and
  *      then use backhunt to do the work...
  *
  * int f, n;            default flag / numeric argument
@@ -2892,8 +2956,7 @@ void setpattern(const char apat[], const char tap[]) {
         deltab[ch_as_uc(apat[0] ^ DIFCASE)] = 0;
 }
 
-/*
- * rvstrcpy -- Reverse string copy.
+/* rvstrcpy -- Reverse string copy.
  */
 void rvstrcpy(char *rvstr, char *str) {
     int i;
@@ -3066,8 +3129,7 @@ static int delins(char *repstr) {
     return status;
 }
 
-/*
- * replaces -- Search for a string and replace it with another
+/* replaces -- Search for a string and replace it with another
  *      string.  Query might be enabled (according to query).
  *
  * int query            Query enabled flag
@@ -3086,7 +3148,6 @@ static int replaces(int query, int f, int n) {
     int nlflag;             /* last char of search string a <NL>? */
     int nlrepl;             /* was a replace done on the last line? */
     int c;                  /* input char for query - tgetc() returns unicode */
-    char tpat[NPAT];        /* temporary to hold search pattern */
     struct line *origline;  /* original "." position */
     int origoff;            /* and offset (for . query option) */
     int undone = 0;         /* Set if we undo a replace */
@@ -3180,14 +3241,12 @@ pprompt:
                 if (rmagical) repl_p = last_match.replace;
                 else          repl_p = rpat;
             }
-            strcpy(tpat, "Replace '");
-            expandp(match_p, tpat+strlen(tpat), NPAT / 3);
-            strcat(tpat, "' with '");
 /* rpat can't change on an undo unless rmagical is set */
-            expandp(repl_p, tpat+strlen(tpat), NPAT/3);
-            strcat(tpat, "'? ");
+/* We need our own temp buf for one of these expandp calls */
+            char tbuf[NPAT/2];
+            mlwrite("Replace '%s' with '%s'? ",
+                expandp(match_p, tbuf), expandp(repl_p, NULL));
 
-            mlwrite(tpat, pat, rpat);
 qprompt:
             update(TRUE);   /* show the proposed place to change */
             c = tgetc();    /* and input */
@@ -3304,8 +3363,7 @@ end_replaces:
     return TRUE;
 }
 
-/*
- * sreplace -- Search and replace.
+/* sreplace -- Search and replace.
  *
  * int f;               default flag
  * int n;               # of repetitions wanted
@@ -3314,8 +3372,7 @@ int sreplace(int f, int n) {
     return replaces(FALSE, f, n);
 }
 
-/*
- * qreplace -- search and replace with query.
+/* qreplace -- search and replace with query.
  *
  * int f;               default flag
  * int n;               # of repetitions wanted
@@ -3325,84 +3382,6 @@ int qreplace(int f, int n) {
     int retval = replaces(TRUE, f, n);
     discmd = saved_discmd;          /* Restore original... */
     return retval;
-}
-
-/*
- * expandp -- Expand control key sequences for output.
- *
- * char *srcstr;                string to expand
- * char *deststr;               destination of expanded string
- * int maxlength;               maximum chars in destination
- */
-int expandp(const char *srcstr, char *deststr, int maxlength) {
-    unsigned char c;        /* current char to translate */
-
-/* Scan through the string. */
-
-    while ((c = *srcstr++) != 0) {
-        if (c == '\n') {                        /* it's a newline */
-            *deststr++ = '<';
-            *deststr++ = 'N';
-            *deststr++ = 'L';
-            *deststr++ = '>';
-            maxlength -= 4;
-        }
-        else if ((c > 0 && c < 0x20) || c == 0x7f) { /* control character */
-            *deststr++ = '^';
-            *deststr++ = c ^ 0x40;
-            maxlength -= 2;
-        }
-        else {                                  /* any other character */
-            *deststr++ = c;
-            maxlength--;
-        }
-
-        if (maxlength < 4) {                    /* Check for maxlength */
-            *deststr++ = '$';
-            *deststr = '\0';
-            return FALSE;
-        }
-    }
-    *deststr = '\0';
-    return TRUE;
-}
-
-/*
- * boundry -- Return information depending on whether we may search no
- *      further.  Beginning of file and end of file are the obvious
- *      cases, but we may want to add further optional boundary restrictions
- *      in future, a' la VMS EDT.  At the moment, just return TRUE or
- *      FALSE depending on if a boundary is hit (ouch).
- *      The end of file is now taken to be *on* the last line (b_linep)
- *      rather than at the end of the "last line with buffer text" so that
- *      we can include the terminating newline (which we always assume is
- *      there) in a search.
- */
-int boundry(struct line *curline, int curoff, int dir) {
-    int border;
-
-    if (dir == FORWARD) {
-        border = (curline == curbp->b_linep);
-    }
-    else {
-/* Reverse searching has an additional boundary to consider - the
- * original point.
- */
-        if ((curline == magic_search.start_line) &&
-            (curoff > magic_search.start_point)) {
-             border = TRUE;
-        }
-        else {
-/* A reverse slow scan has to be able to get to curoff == 0 on
- * the first line...
- */
-            if (slow_scan)
-                border = (curline == curbp->b_linep);
-            else
-                border = (curoff == 0) && (lback(curline) == curbp->b_linep);
-	}
-    }
-    return border;
 }
 
 /* Return a malloc()ed copy of the text for the given group in
@@ -3455,6 +3434,177 @@ char *group_match(int grp) {
         *dp = '\0';     /* Terminate the text */
     }
     return grp_text[grp];
+}
+
+/* These two (insbrace and getfence) are here as they do searching and
+ * use boundry.
+ */
+
+/* Insert a brace into the text here...we are in CMODE
+ *
+ * int n;       repeat count
+ * int c;       brace to insert (always } for now)
+ */
+int insbrace(int n, int c) {
+    int ch;                 /* last character before input */
+    int oc;                 /* caractere oppose a c */
+    int i, count;
+    int target;             /* column brace should go after */
+    struct line *oldlp;
+    int oldoff;
+
+/* If we aren't at the beginning of the line... */
+    if (curwp->w.doto != 0)
+
+/* Scan to see if all space before this is white space */
+    for (i = curwp->w.doto - 1; i >= 0; --i) {
+        ch = lgetc(curwp->w.dotp, i);
+        if (ch != ' ' && ch != '\t') return linsert_uc(n, c);
+    }
+
+/* Chercher le caractere oppose correspondant */
+    switch (c) {
+    case '}':
+        oc = '{';
+        break;
+    case ']':
+        oc = '[';
+        break;
+    case ')':
+        oc = '(';
+        break;
+    default:
+        return FALSE;
+    }
+
+    oldlp = curwp->w.dotp;
+    oldoff = curwp->w.doto;
+
+    count = 1;
+    back_grapheme(1);
+
+    while (count > 0) {
+        if (curwp->w.doto == llength(curwp->w.dotp))
+            ch = '\n';
+        else
+            ch = lgetc(curwp->w.dotp, curwp->w.doto);
+
+        if (ch == c) ++count;
+        if (ch == oc) --count;
+
+        back_grapheme(1);
+        if (boundry(curwp->w.dotp, curwp->w.doto, REVERSE)) break;
+    }
+
+    if (count != 0) {       /* no match */
+        curwp->w.dotp = oldlp;
+        curwp->w.doto = oldoff;
+        return linsert_uc(n, c);
+    }
+
+    curwp->w.doto = 0;      /* Debut de ligne */
+/* Aller au debut de la ligne apres la tabulation */
+    while ((ch = lgetc(curwp->w.dotp, curwp->w.doto)) == ' ' || ch == '\t')
+        forw_grapheme(1);
+
+/* Delete back first */
+    target = getccol();    /* c'est l'indent que l'on doit avoir */
+    curwp->w.dotp = oldlp;
+    curwp->w.doto = oldoff;
+
+    while (target != getccol()) {
+        if (target < getccol()) /* on doit detruire des caracteres */
+            while (getccol() > target) backdel(FALSE, 1);
+        else {          /* on doit en inserer */
+            linsert_byte(target - getccol(), ' '); /* spaces, not tabs */
+        }
+    }
+/* And insert the required brace(s) */
+    return linsert_uc(n, c);
+}
+
+/* The cursor is moved to a matching fence
+ *
+ * int f, n;            not used
+ */
+int getfence(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct line *oldlp;     /* original line pointer */
+    int oldoff;             /* and offset */
+    int sdir;               /* direction of search (1/-1) */
+    int count;              /* current fence level count */
+    char ch;                /* fence type to match against */
+    char ofence;            /* open fence */
+    char c;                 /* current character in scan */
+
+/* Save the original cursor position */
+    oldlp = curwp->w.dotp;
+    oldoff = curwp->w.doto;
+
+/* Get the current character */
+    if (oldoff == llength(oldlp)) ch = '\n';
+    else                          ch = lgetc(oldlp, oldoff);
+
+/* Setup proper matching fence */
+    switch (ch) {
+    case '(':
+        ofence = ')';
+        sdir = FORWARD;
+        break;
+    case '{':
+        ofence = '}';
+        sdir = FORWARD;
+        break;
+    case '[':
+        ofence = ']';
+        sdir = FORWARD;
+        break;
+    case ')':
+        ofence = '(';
+        sdir = REVERSE;
+        break;
+    case '}':
+        ofence = '{';
+        sdir = REVERSE;
+        break;
+    case ']':
+        ofence = '[';
+        sdir = REVERSE;
+        break;
+    default:
+        TTbeep();
+        return FALSE;
+    }
+
+/* Set up for scan */
+    count = 1;
+    if (sdir == REVERSE) back_grapheme(1);
+    else                 forw_grapheme(1);
+
+/* Scan until we find it, or reach the end of file */
+    while (count > 0) {
+        if (curwp->w.doto == llength(curwp->w.dotp)) c = '\n';
+        else          c = lgetc(curwp->w.dotp, curwp->w.doto);
+        if (c == ch) ++count;
+        if (c == ofence) --count;
+        if (sdir == FORWARD) forw_grapheme(1);
+        else                 back_grapheme(1);
+        if (boundry(curwp->w.dotp, curwp->w.doto, sdir)) break;
+    }
+
+/* If count is zero, we have a match, move the sucker */
+    if (count == 0) {
+        if (sdir == FORWARD) back_grapheme(1);
+        else                 forw_grapheme(1);
+        curwp->w_flag |= WFMOVE;
+        return TRUE;
+    }
+
+/* Restore the current position */
+    curwp->w.dotp = oldlp;
+    curwp->w.doto = oldoff;
+    TTbeep();
+    return FALSE;
 }
 
 #ifdef DO_FREE
