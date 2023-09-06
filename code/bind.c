@@ -840,28 +840,25 @@ int unbindkey(int f, int n) {
 }
 
 /* Function used to show the binding of a key */
-static int show_key_binding(unicode_t key) {
+static void show_key_binding(unicode_t key) {
     char outseq[80];
-    int cpos;
     struct key_tab *ktp;
-    if ((ktp = getbind(key))) {
-        sprintf(outseq, "%-12s", cmdstr(key));
-        cpos = strlen(outseq);
-        if (ktp->bk_multiplier != 1) {  /* Mention a non-default multiplier */
-            char tbuf[16];
-            sprintf(tbuf, "{%d}", ktp->bk_multiplier);
-            strcpy(outseq+cpos, tbuf);
-            cpos += strlen(tbuf);
-        }
-        strcpy(outseq+cpos, ktp->fi->n_name);
-/* Is this an execute-procedure? If so, say which procedure... */
-        if (ktp->k_type == PROC_KMAP) {
-            strcat(outseq, " ");
-            strcat(outseq, ktp->hndlr.pbp);
-        }
-        addline_to_curb(outseq);
+    if (!(ktp = getbind(key))) return;  /* No binding */
+
+    sprintf(outseq, "%-12s", cmdstr(key));
+    if (ktp->bk_multiplier != 1) {  /* Mention a non-default multiplier */
+        char tbuf[16];
+        sprintf(tbuf, "{%d}", ktp->bk_multiplier);
+        strcat(outseq, tbuf);
     }
-    return TRUE;
+    strcat(outseq, ktp->fi->n_name);
+/* Is this an execute-procedure? If so, say which procedure... */
+    if (ktp->k_type == PROC_KMAP) {
+        strcat(outseq, " ");
+        strcat(outseq, ktp->hndlr.pbp);
+    }
+    addline_to_curb(outseq);
+    return;
 }
 
 /* build a binding list (limited or full)
@@ -872,7 +869,6 @@ static int buildlist(char *mstring) {
     struct window *wp;         /* scanning pointer to windows */
     struct key_tab *ktp;       /* pointer into the command table */
     struct buffer *bp;         /* buffer to put binding list into */
-    int cpos;                  /* current position to use in outseq */
     char outseq[80];           /* output buffer for keystroke sequence */
 
 /* Split the current window to make room for the binding list */
@@ -912,30 +908,23 @@ static int buildlist(char *mstring) {
         if (mstring && !strstr(names[ni].n_name, mstring)) continue;
 
 /* Add in the command name */
-        strcpy(outseq, names[ni].n_name);
-        cpos = strlen(outseq);
+        char *np = names[ni].n_name;
 
 /* Search down for any keys bound to this. */
         ktp = getbyfnc(names[ni].n_func);
         while (ktp) {
-/* Pad out some spaces */
-            while (cpos < 28) outseq[cpos++] = ' ';
-
-/* Add in the command sequence (adds a trailing NUL) */
-            strcpy(outseq+cpos, cmdstr(ktp->k_code));
-
-/* and add it as a line into the buffer */
+            sprintf(outseq, "%-28s%s", np, cmdstr(ktp->k_code));
             addline_to_curb(outseq);
-            cpos = 0;       /* and clear the line */
+            np = "";    /* For any fursther bindings */
+
 /* Look for any more keybindings ot this function */
             ktp = next_getbyfnc(ktp);
             if (ktp->hndlr.k_fp != names[ni].n_func) ktp = NULL;
         }
 
 /* if no key was bound, we need to dump it anyway */
-        if (cpos > 0) {
-            outseq[cpos] = 0;
-            addline_to_curb(outseq);
+        if (np == names[ni].n_name) {   /* So not set to "" */
+            addline_to_curb(np);
         }
     }
 
@@ -944,7 +933,6 @@ static int buildlist(char *mstring) {
  * aren't sorted by procedure buffer name (only by the char * that
  * points to it).
  */
-    cpos = 0;
     int found = 0;
     for (ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
 
@@ -964,14 +952,11 @@ static int buildlist(char *mstring) {
         else continue;
 
 /* Display the handling procedure then in the command sequence
- * (adds a trailing NUL)
+ * (adds a trailing NUL) and add the line into the buffer
  */
         snprintf(outseq, sizeof(outseq), "%-28s%s",
              ktp->hndlr.pbp, cmdstr(ktp->k_code));
-
-/* Add the line into the buffer */
         addline_to_curb(outseq);
-        cpos = 0;       /* and clear the line */
     }
 
 /* Now, if this is not apropos, list everything in key-binding order,
@@ -1003,8 +988,7 @@ static char* hdr[] = {
                 lnewline();
                 prev_cmask = cmask;
             }
-            int status = show_key_binding(key);
-            if (!status) return status;
+            show_key_binding(key);
         }
     }
 
