@@ -983,6 +983,7 @@ static char *gtenv(char *vname) {
                                 return ptt->b_bname + 1;    /* Omit "/" */
                             else
                                 return "";
+    case EVVISMAC:          return ltos(vismac);
     }
 
     exit(-12);              /* again, we should never get here */
@@ -1311,6 +1312,9 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVGGROPTS:
             ggr_opts = ue_atoi(value);
+            break;
+        case EVVISMAC:
+            vismac = stol(value);
             break;
         }
         break;

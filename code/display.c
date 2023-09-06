@@ -1325,9 +1325,7 @@ void update(int force) {
 
     if (!discmd) return;
 
-#if VISMAC == 0
-    if (force == FALSE && kbdmode == PLAY) return;
-#endif
+    if (!vismac && (force == FALSE) && (kbdmode == PLAY)) return;
 
 /* GGR Set-up any requested new screen size before working out a screen
  * update, rather than waiting until the end.

@@ -632,9 +632,7 @@ int tgetc(void) {
             return (int) *kbdptr++;
         if (--kbdrep < 1) {     /* at the end of last repetition? */
             kbdmode = STOP;     /* Leave ctlxe_togo alone */
-#if VISMAC == 0
-            update(FALSE);      /* force a screen update after all is done */
-#endif
+            if (!vismac) update(FALSE); /* force update now all is done? */
         }
         else {
             kbdptr = kbdm;      /* reset macro to beginning for the next rep */

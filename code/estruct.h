@@ -39,7 +39,6 @@
 /*      Configuration options   */
 
 #define CLRMSG  0  /* space clears the message line with no insert */
-#define VISMAC  0  /* update display during keyboard macros        */
 #define REVSTA  1  /* Status line appears in reverse video         */
 
 #define COLOR   1
@@ -553,7 +552,7 @@ enum ev_val {
     EVSDTKSKIP, EVUPROCOPTS, EVFORCESTAT, EVEQUIVTYPE, EVSRCHCANHUNT,
     EVULPCOUNT, EVULPTOTAL, EVULPFORCED,
     EVSDOPTS,   EVGGROPTS,  EVSYSTYPE,
-    EVFORCEMODEON,  EVFORCEMODEOFF,     EVPTTMODE,
+    EVFORCEMODEON,  EVFORCEMODEOFF,     EVPTTMODE,  EVVISMAC,
 };
 
 struct evlist {
