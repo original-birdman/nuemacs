@@ -181,8 +181,7 @@ int stol(char *val) {
  * int val;             value to translate
  */
 static char *ltos(int val) {
-    if (val) return truem;
-    else     return falsem;
+    return (val)? truem: falsem;
 }
 
 /* Make a string lower case
@@ -192,12 +191,8 @@ static char *ltos(int val) {
  * char *str;           string to lower case
  */
 static char *mklower(char *str) {
-    char *sp;
-
-    sp = str;
-    while (*sp) {
+    for (char *sp = str; *sp; sp++) {
         if ('A' <= *sp && *sp <= 'Z') *sp += 'a' - 'A';
-        ++sp;
     }
     return str;
 }
@@ -209,34 +204,14 @@ static int ernd(void) {
     return seed;
 }
 
-/* Find pattern within source
+/* Find pattern within source. Returns index of the start, or 0.
  *
  * char *source;        source string to search
  * char *pattern;       string to look for
  */
 static int sindex(char *source, char *pattern) {
-    char *sp;               /* ptr to current position to scan */
-    char *csp;              /* ptr to source string during comparison */
-    char *cp;               /* ptr to place to check for equality */
-
-/* Scanning through the source string. Assumes ASCII.... */
-    sp = source;
-    while (*sp) {           /* Scan through the pattern */
-        cp = pattern;
-        csp = sp;
-        while (*cp) {
-            if (!asceq(*cp, *csp)) break;
-            ++cp;
-            ++csp;
-        }
-
-/* Was it a match? */
-        if (*cp == 0) return (int) (sp - source) + 1;
-        ++sp;
-    }
-
-/* No match at all.. */
-    return 0;
+    char *locp = strstr(source, pattern);
+    return (locp)? (locp - source + 1): 0;
 }
 
 /* FreeBSD doesn't have strndupa(), so make our own....
@@ -270,14 +245,8 @@ static int sindex(char *source, char *pattern) {
  * There is no Unicode EQUIV ability here...
  */
 struct map_table {
-    union {
-        char c;
-        char *utf8;
-    } from;
-    union {
-        char c;
-        char *utf8;
-    } to;
+    union { char c; char *utf8; } from;
+    union { char c; char *utf8; } to;
     int fr_len;
     int to_len;
 };
@@ -413,7 +382,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
 
 /* The returned value - overflow NOT checked.... */
 static char ue_buf[NSTRING];
-#define PHCHAR '%'
+
 /* The order here is IMPORTANT!!!
  * It is int, unsigned, double, char, str, ptr
  * The latter isn't of any practical use, but is a valid conversion char
@@ -434,7 +403,7 @@ static char *ue_printf(char *fmt) {
     while (bytes_togo > 0) {
         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
-        if (c != PHCHAR) {      /* So copy in the *bytes*! */
+        if (c != '%') {         /* So copy in the *bytes*! */
             memcpy(op, fmt, used);
             op += used;
             fmt += used;
@@ -442,10 +411,10 @@ static char *ue_printf(char *fmt) {
         }
         fmt += used;
 
-/* We have a PHCHAR: test the next char */
+/* We have a '%': test the next char */
 
-        if (*fmt == PHCHAR) { /* %% is a literal '%' */
-            *op++ = PHCHAR;
+        if (*fmt == '%') {      /* %% is a literal '%' */
+            *op++ = '%';
             fmt++;
             bytes_togo--;
             continue;
@@ -458,7 +427,7 @@ static char *ue_printf(char *fmt) {
  */
         char t_fmt[NSTRING];    /* So we can avoid a length check */
         char *tp = t_fmt;
-        *tp++ = PHCHAR;         /* Start the template... */
+        *tp++ = '%';            /* Start the template... */
         while (!strchr(TMPL_CHAR, *fmt)) {
             if ((*fmt == '*') || (*fmt == '$')) {
                 strcpy(op, errorm);
@@ -536,6 +505,20 @@ static int ue_atoi(char *ustr) {
     return (int)strtol(ustr, NULL, 0);
 }
 
+/* ue_itoa:
+ *      integer to ascii string.......... This is too
+ *      inconsistent to use the system's
+ *      Actually, this is no longer true...
+ *
+ * int i;               integer to translate to a string
+ */
+char *ue_itoa(int i) {
+    static char result[INTWIDTH + 1];       /* resulting string */
+
+    sprintf(result, "%d", i);
+    return result;
+}
+
 /* Evaluate a function.
  *
  * @fname: name of function to evaluate.
@@ -561,19 +544,16 @@ static char *gtfun(char *fname) {
 /* Return errorm on a bad reference */
     if (fnum == ARRAY_SIZE(funcs)) return errorm;
 
-/* If needed, retrieve the first argument */
-    if (funcs[fnum].f_type >= MONAMIC) {
+/* Retrieve the required arguments */
+    do {
+        int ft = funcs[fnum].f_type;
+        if (ft == NILNAMIC) break;
         if ((status = macarg(arg1)) != TRUE) return errorm;
-
-/* If needed, retrieve the second argument */
-        if (funcs[fnum].f_type >= DINAMIC) {
-            if ((status = macarg(arg2)) != TRUE) return errorm;
-
-/* If needed, retrieve the third argument */
-            if (funcs[fnum].f_type >= TRINAMIC)
-                if ((status = macarg(arg3)) != TRUE) return errorm;
-        }
-    }
+        if (ft == MONAMIC) break;
+        if ((status = macarg(arg2)) != TRUE) return errorm;
+        if (ft == DINAMIC) break;
+        if ((status = macarg(arg3)) != TRUE) return errorm;
+    } while(0);     /* A 1-pass loop */
 
 /* And now evaluate it!
  * The switch statements are grouped by functionality type so they
@@ -651,20 +631,36 @@ static char *gtfun(char *fname) {
     case UFCAT:
         strcpy(result, arg1);
         return strcat(result, arg2);
-    case UFLEFT: {
+
+/* These two start the same - and now have range checking. on the
+ * first three.
+ */
+    case UFLEFT:
+    case UFRIGHT: {
+        int inlen = strlen(arg1);
         int reslen = atoi(arg2);
-        strncpy(result, arg1, reslen);
-        result[reslen] = '\0';
+        if (reslen > inlen) reslen = inlen;
+        if (tag == UFLEFT) {
+            strncpy(result, arg1, reslen);
+            result[reslen] = '\0';
+        }
+        else {
+            strcpy(result, arg1 + (inlen - reslen));
+        }
         return result;
     }
-
-/* Miscellaneous functions */
-    case UFRIGHT:
-        return (strcpy(result, &arg1[(strlen(arg1) - atoi(arg2))]));
     case UFMID: {
-        int reslen = atoi(arg3);
-        strncpy(result, &arg1[atoi(arg2) - 1], atoi(arg3));
-        result[reslen] = '\0';
+        int inlen = strlen(arg1);
+        int from = atoi(arg2);
+        int reslen;
+        if (from > inlen) reslen = 0;
+        else {
+            from--;     /* Easier for indexing and checks... */
+            reslen = atoi(arg3);
+            if (reslen > (inlen - from)) reslen = (inlen - from);
+            strncpy(result, arg1+from, reslen);
+        }
+        *(result + reslen) = '\0';
         return result;
     }
     case UFSEQUAL:      return ltos(strcmp(arg1, arg2) == 0);
@@ -681,38 +677,8 @@ static char *gtfun(char *fname) {
     case UFESCAPE:              /* Only need to escape ASCII chars */
        {char *ip = arg1;        /* This is SHELL escaping... */
         char *op = result;
-        while (*ip) {
-            if (*ip == '\t') {  /* tab - word separator */
-                *op++ = '\\';
-                *op++ = 't';
-                ip++;
-                continue;
-            }
-            if (*ip == '\n') {  /* newline - word separator */
-                *op++ = '\\';
-                *op++ = 'n';
-                ip++;
-                continue;
-            }
-            switch(*ip) {       /* Check for the chars we need to escape */
-            case ' ':           /* Spaces */
-            case '"':           /* Double quote */
-            case '$':           /* Environment vars */
-            case '&':           /* Backgrounding */
-            case '\'':          /* Single quote */
-            case '(':           /* Word separator */
-            case ')':           /* Word separator */
-            case '*':           /* multi-Wildcard */
-            case ';':           /* Command separator */
-            case '<':           /* Input redirection */
-            case '>':           /* Output redirection */
-            case '?':           /* single-Wildcard */
-            case '\\':          /* Escaper itself */
-            case '`':           /* Command interpolation */
-            case '{':           /* Brace expansion */
-            case '|':           /* Pipeline */
-                *op++ = '\\';   /* Escape it */
-            }
+        while (*ip) {           /* Escape it? */
+            if (strchr(" \"$&'()*;<>?\\`{|", *ip)) *op++ = '\\';
             *op++ = *ip++;
         }
         *op = '\0';
@@ -720,6 +686,7 @@ static char *gtfun(char *fname) {
        }
     case UFSINDEX:      return ue_itoa(sindex(arg1, arg2));
 
+/* Miscellaneous functions */
     case UFIND: { /* Evaluate the next arg via temporary execstr */
         char *oldestr = execstr;
         execstr = arg1;
@@ -758,13 +725,13 @@ static char *gtfun(char *fname) {
     case UFRND:         return ue_itoa((ernd() % abs(atoi(arg1))) + 1);
     case UFENV:
         tsp = getenv(arg1);
-        return tsp == NULL ? "" : tsp;
+        return (tsp == NULL)? "" : tsp;
     case UFBIND:        return transbind(arg1);
     case UFEXIST:       return ltos(fexist(arg1));
     case UFBXIST:       return ltos(bfind(arg1, 0, 0) != NULL);
     case UFFIND:
         tsp = flook(arg1, TRUE, ONPATH);
-        return tsp == NULL ? "" : tsp;
+        return (tsp == NULL)? "" : tsp;
     case UFXLATE:       return xlat(arg1, arg2, arg3);
     case UFGRPTEXT:     return group_match(atoi(arg1));
     case UFPRINTF:      return ue_printf(arg1);
@@ -828,7 +795,7 @@ static char *gtfun(char *fname) {
     exit(-11);              /* never should get here */
 }
 
-/* Look up a user var's value
+/* Look up a user var's value (%xxx)
  *
  * char *vname;                 name of user variable to fetch
  */
@@ -851,7 +818,7 @@ static char *gtusr(char *vname) {
     return errorm;
 }
 
-/* Look up a buffer var's value
+/* Look up a buffer var's value (.xxx)
  *
  * char *vname;                 name of user variable to fetch
  */
@@ -869,8 +836,7 @@ static char *gtbvr(char *vname) {
     return errorm;
 }
 
-/*
- * gtenv()
+/* gtenv()
  *
  * char *vname;                 name of environment variable to retrieve
  */
@@ -961,10 +927,13 @@ static char *gtenv(char *vname) {
     case EVUPROCOPTS:       return ue_itoa(uproc_opts);
     case EVFORCESTAT:       return force_status;
     case EVEQUIVTYPE:
+/* Can't use switch - utf8proc_NFC etc. are not constants.
+ * We'll put the standard setting first...
+ */
+            if (equiv_handler == utf8proc_NFKC) return "NFKC";
             if (equiv_handler == utf8proc_NFC)  return "NFC";
             if (equiv_handler == utf8proc_NFD)  return "NFD";
-            if (equiv_handler == utf8proc_NFKD) return "NFKD";
-            else                                return "NFKC";
+            return "NFKD";
             break;
     case EVSRCHCANHUNT:     return ue_itoa(srch_can_hunt);
     case EVULPCOUNT:        return ue_itoa(uproc_lpcount);
@@ -1058,13 +1027,9 @@ fvar:
             }
         break;
 
-    case '&':               /* Indirect operator? */
-        var[4] = 0;
-        if (strcmp(var+1, "ind") == 0) {  /* Grab token, and eval it */
-            execstr = token(execstr, var, NVSIZE+1);
-            strcpy(var, getval(var));
-            goto fvar;
-        }
+    case '&':               /* A function to generate the name? */
+        var = getval(var);
+        goto fvar;
     }
 
 /* Return the results */
@@ -1287,12 +1252,19 @@ static int svar(struct variable_description *var, char *value) {
 /* Set the Equiv handler. Default is utf8proc_NFKC.
  * Just in case this could usefully produce different results...
  */
-        case EVEQUIVTYPE:
-            if (!strcasecmp("NFC", value))       equiv_handler = utf8proc_NFC;
-            else if (!strcasecmp("NFD", value))  equiv_handler = utf8proc_NFD;
-            else if (!strcasecmp("NFKD", value)) equiv_handler = utf8proc_NFKD;
-            else                                 equiv_handler = utf8proc_NFKC;
+        case EVEQUIVTYPE: {
+            static char choices[] = "NFC NFD NFKD";
+            char *which = strstr(choices, value);
+            equiv_handler = utf8proc_NFKC;  /* Default */
+            if (which) {
+                switch(which - choices) {
+                case 0:  equiv_handler = utf8proc_NFC;  break;
+                case 4:  equiv_handler = utf8proc_NFD;  break;
+                case 8:  equiv_handler = utf8proc_NFKD; break;
+                }
+            }
             break;
+        }
         case EVSRCHCANHUNT:
             srch_can_hunt = atoi(value);
             break;
@@ -1396,7 +1368,7 @@ int setvar(int f, int n) {
     return status;
 }
 
-/* Delete a a user or buffer var.
+/* Delete a user (%xxx) or buffer (.xxx) var.
  * These have the same structure - so we just need to know the pointer
  * of the one to delete. we just need to know how many is in the list sent
  *
@@ -1462,45 +1434,7 @@ int delvar(int f, int n) {
     return FALSE;
 }
 
-/*
- * ue_itoa:
- *      integer to ascii string.......... This is too
- *      inconsistent to use the system's
- *
- * int i;               integer to translate to a string
- */
-char *ue_itoa(int i) {
-    int digit;      /* current digit being used */
-    char *sp;       /* pointer into result */
-    int sign;       /* sign of resulting number */
-    static char result[INTWIDTH + 1];       /* resulting string */
-
-/* Record the sign... */
-    sign = 1;
-    if (i < 0) {
-        sign = -1;
-        i = -i;
-    }
-
-/* And build the string (backwards!) */
-    sp = result + INTWIDTH;
-    *sp = 0;
-    do {
-        digit = i % 10;
-        *(--sp) = '0' + digit;  /* And install the new digit */
-        i = i / 10;
-    } while (i);
-
-/* And fix the sign */
-    if (sign == -1) {
-        *(--sp) = '-';          /* And install the minus sign */
-    }
-
-    return sp;
-}
-
-/*
- * find the type of a passed token
+/* find the type of a passed token
  *
  * char *token;         token to analyze
  */
@@ -1518,7 +1452,6 @@ int gettyp(char *token) {
         char c2 = token[1];
         if (c2 >= '0' && c2 <= '9') return TKLIT;
     }
-
     switch (c) {
     case '"':   return TKSTR;
     case '!':   return TKDIR;
@@ -1529,12 +1462,11 @@ int gettyp(char *token) {
     case '&':   return TKFUN;
     case '*':   return TKLBL;
     case '.':   return TKBVR;
-    default:    return TKCMD;
     }
+    return TKCMD;
 }
 
-/*
- * find the value of a token
+/* find the value of a token
  *
  * char *token;         token to evaluate
  */
@@ -1634,6 +1566,7 @@ char *getval(char *token) {
     }
     return errorm;
 }
+
 #ifdef DO_FREE
 /* Add a call to allow free() of normally-unfreed items here for, e.g,
  * valgrind usage.
