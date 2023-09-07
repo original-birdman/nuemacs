@@ -45,10 +45,10 @@ store-pttable accents
 ; y (either case)
     y'  ý
 ; y (lowercase only)
-    caseset off
+    caseset-off
     y~" ÿ
 ; n (either case)
-    caseset on
+    caseset-on
     n~  ñ
 ; Misc
 ; Spanish
