@@ -19,8 +19,7 @@
 
 static char *prev_line_seen = NULL;
 
-/*
- * docmd:
+/* docmd:
  *      take a passed string as a command line and translate
  *      it to be executed as a command. This function will be
  *      used by execute-command-line and by all source and
@@ -66,6 +65,8 @@ static int docmd(char *cline) {
 
 /* If we have an interactive arg, variable or function, evaluate it.
  * We may wish to send in a numeric arg that way!
+ *
+ * NOTE!!! We can only pass in ONE token this way!
  */
     int ttype = gettyp(tkn);
     switch(ttype) {
@@ -148,8 +149,7 @@ final_exit:
     return status;
 }
 
-/*
- * token:
+/* token:
  *      chop a token off a string
  *      return a pointer past the token
  *
@@ -184,57 +184,40 @@ char *token(char *src, char *tok, int size) {
             src++;
             if (*src == 0) break;
             switch (*src++) {
-            case 'r':
-                c = 13;
-                break;
-            case 'n':
-                c = 10;
-                break;
-            case 't':
-                c = 9;
-                break;
-            case 'b':
-                c = 8;
-                break;
-            case 'f':
-                c = 12;
-                break;
-            default:
-                c = *(src - 1);
-            }
-            if (--size > 0) {
-                *tok++ = c;
+            case 'r':   c = 13; break;
+            case 'n':   c = 10; break;
+            case 't':   c = 9;  break;
+            case 'b':   c = 8;  break;
+            case 'f':   c = 12; break;
+            default:    c = *(src - 1);
             }
         }
         else {      /* check for the end of the token */
+            c = *src++;
             if (quotef) {
-                if (*src == '"') break;
+                if (c == '"') break;
             }
             else {
-                if (*src == ' ' || *src == '\t') break;
+                if (c == ' ' || c == '\t') break;
             }
 
 /* Set quote mode if quote found */
-            if (*src == '"') {
-                src++;
+            if (c == '"') {
                 quotef = TRUE;
                 continue;   /* Don't record it...only in pos1 is it kept */
             }
 
 /* Record the character */
-            c = *src++;
-            if (--size > 0) *tok++ = c;
         }
+        if (--size > 0) *tok++ = c;
     }
 
 /* Terminate the token and exit */
-    if (*src) ++src;
     *tok = 0;
     return src;
 }
 
-/*
- * Execute a named command even if it is not bound.
+/* Execute a named command even if it is not bound.
  */
 static fn_t last_ncfunc = NULL;
 static int this_can_hunt = 0;
@@ -280,8 +263,7 @@ int namedcmd(int f, int n) {
 
 static char prev_cmd[NSTRING] = "";
 
-/*
- * execcmd:
+/* execcmd:
  *      Execute a command line command to be typed in
  *      by the user
  *
@@ -308,8 +290,7 @@ int execcmd(int f, int n) {
     return status;
 }
 
-/*
- * get a macro line argument
+/* get a macro line argument
  *
  * char *tok;           buffer to place argument
  */
@@ -324,8 +305,7 @@ int macarg(char *tok) {
     return status;
 }
 
-/*
- * nextarg:
+/* nextarg:
  *      get the next argument
  *
  * char *prompt;                prompt to use if we must be interactive
@@ -345,15 +325,13 @@ int nextarg(char *prompt, char *buffer, int size, enum cmplt_type ctype) {
 /* Evaluate it */
 /* GGR - There is the possibility of an illegal overlap of args here.
  *       So it must be done via a temporary buffer.
- *      strcpy(buffer, getval(buffer));
  */
     strcpy(tbuf, getval(buffer));
     strcpy(buffer, tbuf);
     return TRUE;
 }
 
-/*
- * storemac:
+/* storemac:
  *      Set up a macro buffer and flag to store all
  *      executed command lines there
  *
@@ -423,6 +401,9 @@ static inline void use_pttable(struct buffer *bp) {
     curwp->w_flag |= WFMODE;
 }
 
+/* Get the 2 grapheme display code for modeline display when this PTT
+ * is active.
+ */
 static char* get_display_code(char *buf) {
     static char ml_display_code[32];
 
@@ -472,29 +453,32 @@ static int ptt_compile(struct buffer *bp) {
             from_start = tok;
         }
         strcpy(from_string, from_start);
-        if (!strcmp("caseset-on", from_string)) {
-            caseset = CASESET_ON;
-            continue;
-        }
-        if (!strcmp("caseset-capinit1", from_string)) {
-            caseset = CASESET_CAPI_ONE;
-            continue;
-        }
-        if (!strcmp("caseset-capinitall", from_string)) {
-            caseset = CASESET_CAPI_ALL;
-            continue;
-        }
-        if (!strcmp("caseset-lowinit1", from_string)) {
-            caseset = CASESET_LOWI_ONE;
-            continue;
-        }
-        if (!strcmp("caseset-lowinitall", from_string)) {
-            caseset = CASESET_LOWI_ALL;
-            continue;
-        }
-        if (!strcmp("caseset-off", from_string)) {
-            caseset = CASESET_OFF;
-            continue;
+        if (!strcmp("caseset-", from_string)) {
+            char *test_opt = from_string + strlen("caseset-");
+            if (!strcmp("on", test_opt)) {
+                caseset = CASESET_ON;
+                continue;
+            }
+            if (!strcmp("capinit1", test_opt)) {
+                caseset = CASESET_CAPI_ONE;
+                continue;
+            }
+            if (!strcmp("capinitall", test_opt)) {
+                caseset = CASESET_CAPI_ALL;
+                continue;
+            }
+            if (!strcmp("lowinit1", test_opt)) {
+                caseset = CASESET_LOWI_ONE;
+                continue;
+            }
+            if (!strcmp("lowinitall", test_opt)) {
+                caseset = CASESET_LOWI_ALL;
+                continue;
+            }
+            if (!strcmp("off", test_opt)) {
+                caseset = CASESET_OFF;
+                continue;
+            }
         }
         if (!strcmp("display-code", from_string)) {
             rp = token(rp, tok, NLINE);
@@ -566,7 +550,6 @@ static int ptt_compile(struct buffer *bp) {
     use_pttable(bp);
     return TRUE;
 }
-
 
 /* GGR
  * Store a phonetic translation table.
@@ -642,11 +625,11 @@ int next_pttable(int f, int n) {
     struct buffer *bp, *tmp_ptt = ptt;
     while (n-- > 0) {
         bp = tmp_ptt;
-        bp = bp->b_bufp;                /* Start at next buffer */
+        bp = bp->b_bufp;                    /* Start at next buffer */
         if (bp == NULL) bp = bheadp;
-        while (bp != ptt && bp->b_type != BTPHON) {
-            bp = bp->b_bufp;            /* Onto next buffer */
-            if (bp == NULL) bp = bheadp;
+        while (bp != ptt && (bp->b_type != BTPHON)) {
+            bp = bp->b_bufp;                /* Onto next buffer */
+            if (bp == NULL) bp = bheadp;    /* Loop around */
         }
         tmp_ptt = bp;
     }
@@ -701,8 +684,7 @@ int ptt_handler(int c) {
         int start_at = unicode_back_utf8(ptr->from_len_uc,
              curwp->w.dotp->l_text, curwp->w.doto);
         if (ptr->caseset != CASESET_OFF) {
-/*
- * Need a unicode-case insensitive strncmp!!!
+/* Need a unicode-case insensitive strncmp!!!
  * Also, since we can't guarantee that a case-changed string will be
  * the same length, we need to step back the right number of unicode
  * chars first.
@@ -713,8 +695,7 @@ int ptt_handler(int c) {
                  ptr->from, 0, ptr->from_len)) continue;
         }
         else {
-/*
- * We need to check there are sufficient chars to check, then
+/* We need to check there are sufficient chars to check, then
  * just compare the bytes.
  */
             if (curwp->w.doto < ptr->from_len) continue;
@@ -882,7 +863,7 @@ int storeproc(int f, int n) {
     return TRUE;
 }
 
-/* Run a user-procedure in a buffer */
+/* Run (execute) a user-procedure stored in a buffer */
 
 int run_user_proc(char *procname, int forced, int rpts) {
     char bufn[NBUFN+1];
@@ -945,8 +926,7 @@ int run_user_proc(char *procname, int forced, int rpts) {
 
 static char prev_bufn[NBUFN+1] = "";
 
-/*
- * execproc:
+/* execproc:
  *      Execute a procedure
  *
  * int f, n;            default flag and numeric arg
@@ -987,8 +967,7 @@ int execproc(int f, int n) {
     return status;
 }
 
-/*
- * execbuf:
+/* execbuf:
  *      Execute the contents of a buffer of commands
  *
  * int f, n;            default flag and numeric arg
@@ -1034,8 +1013,7 @@ int execbuf(int f, int n) {
     return status;
 }
 
-/*
- * free a list of while block pointers
+/* free a list of while block pointers
  *
  * struct while_block *wp;              head of structure to free
  */
@@ -1048,8 +1026,7 @@ static void freewhile(struct while_block *wp) {
     }
 }
 
-/*
- * dobuf:
+/* dobuf:
  *      execute the contents of the buffer pointed to
  *      by the passed BP
  *
@@ -1207,7 +1184,7 @@ int dobuf(struct buffer *bp) {
         linlen = lp->l_used;
         einit = eline = Xrealloc(einit, linlen + 1);
         memcpy(eline, lp->l_text, linlen);
-        eline[linlen] = 0;      /* make sure it ends */
+        eline[linlen] = '\0';   /* make sure it ends */
 
 /* trim leading whitespace */
         while (*eline == ' ' || *eline == '\t') ++eline;
@@ -1252,11 +1229,10 @@ int dobuf(struct buffer *bp) {
         if (*eline == '!') {
 /* Find out which directive this is */
             ++eline;
-            for (dirnum = 0; dirnum < NUMDIRS; dirnum++)
+            for (dirnum = 0; dirnum < NUMDIRS; dirnum++) {
                 if (strncmp(eline, dname[dirnum],
-                    strlen(dname[dirnum])) == 0)
-                break;
-
+                     strlen(dname[dirnum])) == 0)   break;
+            }
 /* and bitch if it's illegal */
             if (dirnum == NUMDIRS) {
                 mlwrite_one("%Unknown Directive");
@@ -1285,7 +1261,10 @@ int dobuf(struct buffer *bp) {
         }
         force = FALSE;
 
-/* Dump comments */
+/* Dump comments
+ * Although these are actually targets for gotos!!
+ * But goto just searches for the label from the start of the file each time.
+ */
         if (*eline == '*') goto onward;
 
 /* Now, execute directives */
@@ -1318,12 +1297,9 @@ int dobuf(struct buffer *bp) {
 /* Jump down to the endwhile
  * Find the right while loop
  */
-                whtemp = whlist;
-                while (whtemp) {
+                for (whtemp = whlist; whtemp; whtemp = whtemp->w_next) {
                     if (whtemp->w_begin == lp) break;
-                    whtemp = whtemp->w_next;
                 }
-
                 if (whtemp == NULL) {
                     mlwrite_one("%Internal While loop error");
                     goto failexit3;
@@ -1349,14 +1325,12 @@ int dobuf(struct buffer *bp) {
                     eline = token(eline, golabel, NPAT);
                     strcpy(golabel, getval(golabel));
                     linlen = strlen(golabel);
-                    glp = hlp->l_fp;
-                    while (glp != hlp) {
+                    for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
                         if (*glp->l_text == '*' &&
-                            (strncmp(&glp->l_text[1], golabel, linlen) == 0)) {
+                            (strncmp(glp->l_text+1, golabel, linlen) == 0)) {
                             lp = glp;
                             goto onward;
                         }
-                        glp = glp->l_fp;
                     }
                     mlwrite("No such label: %s", golabel);
                     goto failexit3;
@@ -1374,13 +1348,10 @@ int dobuf(struct buffer *bp) {
                 }
                 else {
 /* Find the right while loop */
-                    whtemp = whlist;
-                    while (whtemp) {
+                    for (whtemp = whlist; whtemp; whtemp = whtemp->w_next) {
                         if (whtemp->w_type == BTWHILE &&
                             whtemp->w_end == lp) break;
-                        whtemp = whtemp->w_next;
                     }
-
                     if (whtemp == NULL) {
                         mlwrite_one("%Internal While loop error");
                         goto failexit3;
@@ -1422,14 +1393,12 @@ int dobuf(struct buffer *bp) {
 /* Check for a command error */
         if (status != TRUE) {
 /* Look if buffer is showing */
-            wp = wheadp;
-            while (wp != NULL) {
+            for (wp = wheadp; wp; wp = wp->w_wndp) {
                 if (wp->w_bufp == bp) { /* And point it */
                     wp->w.dotp = lp;
                     wp->w.doto = 0;
                     wp->w_flag |= WFHARD;
                 }
-                wp = wp->w_wndp;
             }
 /* In any case set the buffer . */
             bp->b.dotp = lp;
@@ -1549,8 +1518,7 @@ int execfile(int f, int n) {
     return TRUE;
 }
 
-/*
- * dofile:
+/* dofile:
  *      yank a file into a buffer and execute it
  *      if there are no errors, delete the buffer on exit
  *
@@ -1587,8 +1555,7 @@ int dofile(char *fname) {
     return TRUE;
 }
 
-/*
- * cbuf:
+/* cbuf:
  *      Execute the contents of a numbered buffer
  *
  * int f, n;            default flag and numeric arg
