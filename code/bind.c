@@ -506,13 +506,21 @@ static int unbindchar(int c) {
 
 /* ************************************************************
  * Actually add/update the key handler.
- * Used by buffertokey() and switch_internal()
+ * Used by bindtokey(), buffertokey() and switch_internal()
  * We expect to be given a bname *including* the leading '/'.
  */
 static int update_keybind(int c, int ntimes, int internal_OK,
      fn_t kfunc, char *bname) {
     struct key_tab *ktp;    /* pointer into the command table */
     struct key_tab *destp;  /* Where to copy the name and type */
+
+/* Check for an attempt to bind Esc-minus, which will never run as
+ * the multiplier_check() in main.c will get there first.
+ */
+    if (c == (META|'-')) {
+ mlwrite_one("You cannot bind M-- it can be the start of a numeric multiplier");
+        return FALSE;
+    }
 
 /* switch_internal sets internal_OK on (and will have sent a valid
  * character).
