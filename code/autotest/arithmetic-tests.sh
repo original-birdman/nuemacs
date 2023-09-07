@@ -144,9 +144,9 @@ execute-procedure run-test
 
 ; Test for NAN or -NAN.
 ; FreeBSD gives NAN, but Linux gives NAN or -NAN!
-; So look for NAN in the result, and if there the index will be > 0
+; So use &xla to remove any - from -NAN before checking against NAN
 ;
-set %test "&equ 0 &sin &rti INF 0 NAN"
+set %test "&seq NAN &xla - ~"~" &rti INF 0"
 set %expect FALSE
 execute-procedure run-test
 
