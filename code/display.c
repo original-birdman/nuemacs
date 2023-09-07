@@ -55,6 +55,8 @@ static struct video **vscreen;          /* Virtual screen. */
 static struct video **pscreen;          /* Physical screen. */
 static void *vdata;                     /* Where we've stored it all */
 
+static struct grapheme blank_gph = { ' ', 0, NULL };
+
 static int displaying = FALSE;
 
 #include <signal.h>
@@ -230,11 +232,7 @@ void vtinit(void) {
     vp->v_rfcolor = gfcolor;
     vp->v_rbcolor = gbcolor;
 #endif
-    for (i = 0; i < term.t_mcol; i++) {
-        vp->v_text[i].uc = ' ';
-        vp->v_text[i].cdm = 0;
-        vp->v_text[i].ex = NULL;
-    }
+    for (i = 0; i < term.t_mcol; i++) vp->v_text[i] = blank_gph;
     for (i = 1; i < term.t_mrow; i++) {
         memcpy(new_vscreen[i], vp, row_size);
     }
@@ -251,6 +249,7 @@ void vtinit(void) {
     vdata = new_vdata;
     vscreen = new_vscreen;
     pscreen = new_pscreen;
+/* The current set will be the previosu values if we return here. */
     prev_mrow = term.t_mrow;
     prev_mcol = term.t_mcol;
     prev_size = row_size;
@@ -435,10 +434,11 @@ static void updgar(void) {
         vscreen[i]->v_bcolor = gbcolor;
 #endif
 /* We only ever free the extended parts from the virtual screen info, not the
- * physical one, so set the no_free flag here.
+ * physical one.
+ * This is a pscreen, no need to worry about freeing any ex field.
  */
         txt = pscreen[i]->v_text;
-        for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ', 1);
+        for (j = 0; j < term.t_ncol; ++j) txt[j] = blank_gph;
     }
 
     movecursor(0, 0);       /* Erase the screen. */
@@ -751,8 +751,8 @@ static int scrolls(int inserts) {   /* returns true if it does something */
         for (i = from; i < to; i++) {
             struct grapheme *txt;
             txt = pscreen[i]->v_text;
-/* This is a pscreen, so set the no_free flag */
-            for (j = 0; j < term.t_ncol; ++j) set_grapheme(txt+j, ' ', 1);
+/* This is a pscreen, no need to worry about freeing any ex field */
+            for (j = 0; j < term.t_ncol; ++j) txt[j] = blank_gph;
             vscreen[i]->v_flag |= VFCHG;
         }
         return TRUE;
@@ -1339,20 +1339,13 @@ void update(int force) {
 /* First, propagate mode line changes to all instances of a buffer
  * displayed in more than one window
  */
-    wp = wheadp;
-    while (wp != NULL) {
-        if (wp->w_flag & WFMODE) {
-            if (wp->w_bufp->b_nwnd > 1) {
+    for (wp = wheadp; wp; wp = wp->w_wndp) {
+        if ((wp->w_flag & WFMODE) && (wp->w_bufp->b_nwnd > 1)) {
 /* Make sure all previous windows have this */
-                struct window *owp;
-                owp = wheadp;
-                while (owp != NULL) {
-                    if (owp->w_bufp == wp->w_bufp) owp->w_flag |= WFMODE;
-                    owp = owp->w_wndp;
-                }
+            for (struct window *owp = wheadp; owp; owp = owp->w_wndp) {
+                if (owp->w_bufp == wp->w_bufp) owp->w_flag |= WFMODE;
             }
         }
-        wp = wp->w_wndp;
     }
 
 /* Update any windows that need refreshing
@@ -1406,12 +1399,9 @@ void update(int force) {
 }
 
 void upmode(void) {             /* Update all the mode lines */
-    struct window *wp;
 
-    wp = wheadp;
-    while (wp != NULL) {
+    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
         wp->w_flag |= WFMODE;
-        wp = wp->w_wndp;
     }
 }
 
@@ -1486,40 +1476,29 @@ static int TTput_1uc_lim(unicode_t uc) {
     return FALSE;
 }
 
-/* Write out an integer, in the specified radix. Update the physical cursor
- * position.
- */
-static void mlputi(int i, int r) {
-    int q;
-    static char hexdigits[] = "0123456789ABCDEF";
-
-    if (i < 0) {
-        i = -i;
-        TTput_1uc_lim('-');
-    }
-
-    q = i / r;
-
-    if (q != 0) mlputi(q, r);
-
-    TTput_1uc_lim(hexdigits[i % r]);
-}
-
-/* Do the same except as a long integer.
+/* Write out a long integer, in the specified radix (8, 10, 16).
+ * Update the physical cursor position.
  */
 static void mlputli(long l, int r) {
-    long q;
+    char tbuf[32];
+    char *fmt;
 
-    if (l < 0) {
-        l = -l;
-        TTput_1uc_lim('-');
+    switch(r) {
+    case  8: fmt = "%lo"; break;
+    case 16: fmt = "%lX"; break;
+    default: fmt = "%ld"; break;
     }
+    sprintf(tbuf, fmt, l);
+    char *op = tbuf;
+    while (*op++) TTput_1uc_lim(*op);
+    return;
+}
 
-    q = l / r;
-
-    if (q != 0) mlputli(q, r);
-
-    TTput_1uc_lim((int) (l % r) + '0');
+/* Do the same except with an integer.
+ * So we just pass it on to its longer brother.
+ */
+static void mlputi(int i, int r) {
+    mlputli((long) i, r);
 }
 
 /* write out a scaled integer with two decimal places
@@ -1543,14 +1522,14 @@ static void mlputf(int s) {
 
 /* NOTE: that the argument templates here are NOT printf ones.
  * There are no output width/precision options.
- * Allow templates are:
+ * Allowed templates are:
  *  d   integer (decimal)
  *  o   integer (octal)
  *  x   integer (hex)
  *  D   integer (long)
  *  c   character
  *  s   string
- *  f   integer (scaled - real number to 2 dec places * 100)
+ *  f   scaled integer (uemacs - real number to 2 dec places * 100)
  */
 static void mlwrite_ap(const char *fmt, npva ap) {
     unicode_t c;            /* current char in format string */
@@ -1589,38 +1568,18 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             fmt += used;
 
             switch (c) {
-            case 'd':
-                mlputi(va_arg(ap.ap, int), 10);
-                break;
-
-            case 'o':
-                mlputi(va_arg(ap.ap, int), 8);
-                break;
-
-            case 'x':
-                mlputi(va_arg(ap.ap, int), 16);
-                break;
-
-            case 'D':
-                mlputli(va_arg(ap.ap, long), 10);
-                break;
-
-            case 'c':
-                c = va_arg(ap.ap, int);
-                TTput_1uc(c);
-                break;
-
+            case 'd':   mlputi(va_arg(ap.ap, int), 10);     break;
+            case 'o':   mlputi(va_arg(ap.ap, int), 8);      break;
+            case 'x':   mlputi(va_arg(ap.ap, int), 16);     break;
+            case 'D':   mlputli(va_arg(ap.ap, long), 10);   break;
+            case 'f':   mlputf(va_arg(ap.ap, int));         break;
+            case 'c':   TTput_1uc(va_arg(ap.ap, int));      break;
             case 's':
                {char *tp = va_arg(ap.ap, char *);
                 if (tp == NULL) tp = "(nil)";
                 mlputs(tp);
                 break;
                }
-
-            case 'f':
-                mlputf(va_arg(ap.ap, int));
-                break;
-
             default:
                 TTput_1uc_lim(c);
             }
