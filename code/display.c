@@ -1490,7 +1490,7 @@ static void mlputli(long l, int r) {
     }
     sprintf(tbuf, fmt, l);
     char *op = tbuf;
-    while (*op++) TTput_1uc_lim(*op);
+    while (*op) TTput_1uc_lim(*op++);
     return;
 }
 

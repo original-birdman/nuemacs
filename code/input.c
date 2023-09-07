@@ -508,7 +508,7 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
         p = NULL;
     }
     if (p == NULL) {
-        mlwrite(NOMATCH);
+	mlwrite(NOMATCH);
         sleep(1);
         return FALSE;
     }
@@ -1051,6 +1051,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
  * We start by ensuring that the minibuiffer display is empty...
  */
 loop:
+    mbupdate();
 
 /* Execute the "command" macro...normally null */
     saveflag = lastflag;        /* preserve lastflag through this */
