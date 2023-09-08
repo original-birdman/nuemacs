@@ -147,7 +147,9 @@ static int ifile(char *fname) {
     s = resetkey();
     if (s != TRUE) return s;
 
-/* Back up a line and save the mark here */
+/* Back up a line and save the mark here.
+ * We can only insert between lines, not into the middle of one.
+ */
     curwp->w.dotp = lback(curwp->w.dotp);
     curwp->w.doto = 0;
     curwp->w.markp = curwp->w.dotp;
@@ -155,20 +157,17 @@ static int ifile(char *fname) {
 
     s = file2buf(curwp->w.dotp, "Inserting", TRUE, TRUE);
     curwp->w.markp = lforw(curwp->w.markp);     /* Restore original mark */
-    strcpy(readin_mesg, MLpre);
+    char *emg = "";
     if (s == FIOERR) {
-        strcat(readin_mesg, "I/O ERROR, ");
+        emg = "I/O ERROR, ";
         curbp->b_flag |= BFTRUNC;
     }
-    if (s == FIOMEM) {
-        strcat(readin_mesg, "OUT OF MEMORY, ");
-        curbp->b_flag |= BFTRUNC;
-    }
-    sprintf(&readin_mesg[strlen(readin_mesg)], "Inserted %d line", nlines);
-    if (nlines > 1) strcat(readin_mesg, "s");
-    if (dos_file) strcat(readin_mesg, " - from DOS file!");
-    strcat(readin_mesg, MLpost);
-    mlwrite_one(readin_mesg);
+    char *dmg = "";
+    if (dos_file) dmg = " - from DOS file!";
+/* This doesn't need to set readin_mesg - which is only for start-up */
+    mlwrite(MLbkt("%sInserted %d line%s%s"), emg, nlines,
+        (nlines > 1)? "s": "", dmg);
+    if (s == FIOERR) sleep(1);  /* Let it be seen */
 
 out:
 /* Advance to the next line and mark the window for changes */
@@ -462,23 +461,18 @@ int readin(char *fname, int lockfl) {
     s = file2buf(curbp->b_linep, "Reading", FALSE, autodos);
     if (dos_file) curbp->b_mode |= MDDOSLE;
     else          curbp->b_mode &= ~MDDOSLE;
-    if (!silent) strcpy(readin_mesg, MLpre);
+    char *emg = "";
     if (s == FIOERR) {
-        if (!silent) strcat(readin_mesg, "I/O ERROR, ");
-        curbp->b_flag |= BFTRUNC;
-    }
-    if (s == FIOMEM) {
-        if (!silent) strcat(readin_mesg, "OUT OF MEMORY, ");
+        emg = "I/O ERROR, ";
         curbp->b_flag |= BFTRUNC;
     }
     if (!silent) {                      /* GGR */
-        sprintf(&readin_mesg[strlen(readin_mesg)], "Read %d line", nlines);
-        if (nlines != 1) strcat(readin_mesg, "s");
-        if (curbp->b_mode & MDDOSLE)
-            strcat(readin_mesg, " - DOS mode enabled!");
-        strcat(readin_mesg, MLpost);
+        char *dmg = "";
+        if (dos_file) dmg = " - from DOS file!";
+        sprintf(readin_mesg, MLbkt("%sRead %d line%s%s"), emg, nlines,
+             (nlines > 1)? "s": "", dmg);
         mlwrite_one(readin_mesg);
-        if (s == FIOERR || s == FIOMEM) sleep(1);   /* Let it be seen */
+        if (s == FIOERR) sleep(1);   /* Let it be seen */
     }
 
 out:
@@ -550,7 +544,7 @@ void makename(char *bname, char *fname, int ensure_unique) {
  * the code above has already left 4 bytes free for us so append !nnn
  * with nnn starting at 000 and increasing until unique.
  * If we still fail, well...
- * 999 rather than 1000 as otherwise gcc 8.4.0 on Arm64 complians 
+ * 999 rather than 1000 as otherwise gcc 8.4.0 on Arm64 complians
  * about possible excessive field-width.
  */
     char *tagp = bname + strlen(bname);

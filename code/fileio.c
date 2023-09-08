@@ -1,4 +1,4 @@
-/*      FILEIO.C
+/*      fileio.c
  *
  * The routines in this file read and write ASCII files from the disk. All of
  * the knowledge about files are here.
@@ -301,35 +301,34 @@ int ffputline(char *buf, int nbuf) {
  * need to be freed here...
  */
 
-/* Helper routine to add text into fline, re-allocating it if required */
-static int add_to_fline(int len) {
-
-    int newlen = -1;
-    if (fline == NULL) {
-/* Ensure we don't fall through to memcpy() with fline==NULL.
- * Reported by -fanalyzer option to gcc-10.
- * (len should never be -ve anyway).
+/* Helper routine to add text into fline, re-allocating it if required.
+ * Cannot return with any error. Any allocation error exist uemacs.
  */
-        if (len < 0) return FALSE;
-        newlen = len;
+static void add_to_fline(int len) {
+    enum need_type { NONE, MORE, NEW };
+
+    enum need_type need = NONE;
+    if (fline == NULL) {
+        need = NEW;
     }
     else if (len >= (fline->l_size - fline->l_used)) {
-        newlen = len + fline->l_used;
+        need = MORE;
     }
-    if (newlen >= 0) {      /* Need a new/bigger fline */
-        if (fline) {        /* realloc.... */
-            ltextgrow(fline, len);
-        }
-        else {              /* alloc.... */
-            fline = lalloc(newlen);
-            fline->l_used = 0;  /* Set what is actually there NOW!! */
-        }
+    switch(need) {
+    case NEW:
+        fline = lalloc(len);
+        fline->l_used = 0;  /* Set what is actually there NOW!! */
+        break;
+    case MORE:
+        ltextgrow(fline, len + fline->l_used);
+        break;
+    case NONE:
     }
     memcpy(fline->l_text+fline->l_used, cache.buf+cache.rst, len);
     fline->l_used += len;   /* Record the real size of the line */
     cache.rst += len;       /* Advance cache read-pointer */
     cache.len -= len;       /* Decrement left-to-read counter */
-    return TRUE;
+    return;
 }
 
 /* The actual callable function.
@@ -341,7 +340,7 @@ static int add_to_fline(int len) {
 int ffgetline(void) {
 
 /* Any previous fline will have been linked into the lp list, so
- * we can start afresh just by settign this to NULL.
+ * we can start afresh just by setting this to NULL.
  */
     fline = NULL;
 
@@ -352,8 +351,7 @@ int ffgetline(void) {
         nlp = memchr(cache.buf+cache.rst, '\n', cache.len);
         if (!nlp) {                 /* No newline found */
 /* If we already have something, add it to fline */
-            if ((cache.len > 0) && !add_to_fline(cache.len))
-                return FIOMEM;      /* Only reason for failure */
+            if (cache.len > 0) add_to_fline(cache.len);
 /* Get some more of the file. */
             cache.len = fread(cache.buf, sizeof(*cache.buf),
                 sizeof(cache.buf), ffp);
@@ -388,7 +386,7 @@ int ffgetline(void) {
         }
     }
     int cc = nlp - (cache.buf+cache.rst);
-    if (!add_to_fline(cc)) return FIOMEM;
+    add_to_fline(cc);
     cache.rst++;        /* Step over newline */
     cache.len--;        /* Step over newline */
 

@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* NOTE: These allocation routines all exit uemacs on failure.
+ * We could try to call exit_via_signal to attempt a dump of modified
+ * files but if we've run out of memory that's not likely to work.(?)
+ */
 void die(const char* err) {
     fprintf(stderr, "FATAL: %s\n", err);
     exit(128);
@@ -29,4 +33,3 @@ char *Xstrdup (const char *ostr) {
     if (!nstr) die("strdup: Out of memory");
     return nstr;
 }
-    
