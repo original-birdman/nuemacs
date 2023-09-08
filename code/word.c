@@ -965,8 +965,8 @@ int justpara(int f, int n) {
         for (int i = 0; i < leftmarg; i++) linsert_byte(1, ' ');
         status = filler(leftmarg, fillcol, justify);
         if (status != TRUE) break;
-/* Position cursor at indent column in next paragraph */
-        forwword(FALSE, 1);
+/* Position cursor at indent column in next non-blank line */
+        while(forwline(0, 1)) if (llength(curbp->b_linep) == 0) break;
         setccol(leftmarg);
     }
 
