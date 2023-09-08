@@ -968,6 +968,11 @@ static int string_getter(int f, int n, enum istr_type call_type) {
             vp = getval(tok);   /* Must evaluate tokens */
             if (!strncmp(vp, "0x", 2)) {
                 long add = strtol(vp+2, NULL, 16);
+/* This is only for a single byte */
+                if ((add < 0) || (add > 0xFF)) {
+                    mlwrite("Oxnn syntax is only for a single byte (%s)", tok);
+                    continue;
+                }
                 nstring[nlen++] = add;
             }
             else if (*vp == 'U' && *(vp+1) == '+') {

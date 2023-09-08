@@ -490,6 +490,11 @@ static int ptt_compile(struct buffer *bp) {
             if (tok[0] == '\0') break;
             if (!strncmp(tok, "0x", 2)) {
                 long add = strtol(tok+2, NULL, 16);
+/* This is only for a single byte */
+                if ((add < 0) || (add > 0xFF)) {
+                    mlwrite("Oxnn syntax is only for a single byte (%s)", tok);
+                    continue;
+                }
                 to_string[to_len++] = add;
             }
             else if (tok[0] == 'U' && tok[1] == '+') {
