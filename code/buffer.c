@@ -497,9 +497,11 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (strcmp(bname, bp->b_bname) == 0) {
             if (bp->b_active != TRUE) { /* buffer not active yet */
-                silent = TRUE;          /* As probably not the current buffer */
+/* silent was set to TRUE around this at one point, but it's been
+ * removed as it makes sense to show teh file being read in for
+ * the first time.
+ */
                 make_active(bp);
-                silent = FALSE;
             }
             return bp;
         }
