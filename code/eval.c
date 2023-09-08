@@ -1103,7 +1103,7 @@ static int svar(struct variable_description *var, char *value) {
             status = TTrez(value);
             break;
         case EVDEBUG:
-            macbug = atoi(value);
+            macbug = ue_atoi(value);
             break;
         case EVSTATUS:
             cmdstatus = stol(value);
@@ -1248,7 +1248,7 @@ static int svar(struct variable_description *var, char *value) {
             showdir_tokskip = atoi(value);
             break;
         case EVUPROCOPTS:
-            uproc_opts = strtol(value, NULL, 0);    /* Allow hex input */
+            uproc_opts = ue_atoi(value);
             break;
 /* Set the Equiv handler. Default is utf8proc_NFKC.
  * Just in case this could usefully produce different results...

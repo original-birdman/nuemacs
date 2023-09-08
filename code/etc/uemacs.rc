@@ -774,12 +774,12 @@ store-procedure showdir
 ; If none was given - report that....
 ;
 store-procedure set-debug not_mb one_pass no_macbug
-  !if &not &equ $uproc_lpforced 1
-    write-message "set-debug requires a numeric arg (multiplier)"
-    !return
+  !if &equ $uproc_lpforced 1
+    set $debug $uproc_lptotal
+  !else
+    set $debug @"debug flags (0x...): "
   !endif
 
-  set $debug $uproc_lptotal
   write-message &ptf "$debug is now 0x%02x" $debug
 !endm
 
