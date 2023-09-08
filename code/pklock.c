@@ -67,8 +67,12 @@ char *dolock(char *fname) {
 /* cuserid() is deprecated - its Linux man pages says, "Do not use cuserid()."
                 cuserid(locker);
  */
+#ifndef STANDALONE
         struct passwd *pwe = getpwuid(geteuid());
         strcpy(locker, pwe->pw_name);
+#else
+        strcpy(locker, "You");
+#endif
         strcat(locker + strlen(locker), "@");
         gethostname(locker + strlen(locker), 64);
         int dnc __attribute__ ((unused)) = write(fd, locker, strlen(locker));

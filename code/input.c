@@ -67,6 +67,7 @@ static void close_dir(void) {
     }
 }
 
+#ifndef STANDALONE
 /* We need to remember these across successive calls to getnfile */
 static char exp_id[NFILEN];
 static char id_to_find[40];
@@ -89,6 +90,7 @@ static char *id_finder(void) {
     endpwent();
     return NULL;
 }
+#endif
 
 /* What to show in the minibuffer if completion doesn't find anything */
 
@@ -103,7 +105,9 @@ static char *getnfile(void) {
  * NOTE that ~xxx/ has specified a full id, and so is handled by
  * fixup_fname() when we drop into the filename code.
  */
+#ifndef STANDALONE
     if (run_id_finder) return id_finder();
+#endif
 
     struct dirent *dp;
     struct stat statbuf;
@@ -143,6 +147,13 @@ static char *getffile(char *fspec) {
 
     dirptr = NULL;                  /* Initialise things */
 
+/* "'getpwent' in statically linked applications requires at runtime the
+ * shared libraries from the glibc version used for linking"
+ * But that can't happen and in the likely setting for a STANDALONE
+ * version you won't be tryign to lookup by id.
+ */
+#ifndef STANDALONE
+
 /* Handle ~xxx by looking up all matching login ids.
  * NOTE that ~xxx/ has specified a full id, and that is handled by
  * fixup_fname().
@@ -163,6 +174,7 @@ static char *getffile(char *fspec) {
     }
     if (run_id_finder) endpwent();  /* In case it was opened earlier */
     run_id_finder = 0;
+#endif
 
 /* fixup_fname will strip any trailing '/'
  * This leads to a "loop", as the rest of this code would just add it back

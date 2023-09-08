@@ -424,8 +424,7 @@ static int have_pwd = 0;    /* 1 == have it, -1 == tried and failed */
 
 void fixup_fname(char *fn) {
     char fn_copy[NFILEN];
-    char *p, *q;
-    struct passwd *pwptr;
+    char *p;
 
 /* Look for a ~ at the start. */
 
@@ -441,7 +440,10 @@ void fixup_fname(char *fn) {
                 strcat(fn, fn_copy+i);
             }
         }
+#ifndef STANDALONE
         else {
+           struct passwd *pwptr;
+           char *q;
             p = fn + 1;
             q = fn_copy;
             while (*p != 0 && *p != '/')
@@ -453,6 +455,7 @@ void fixup_fname(char *fn) {
                 strcpy(fn, fn_copy);
             }
         }
+#endif
     }
     else if ((have_pwd >= 0) &&
   ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
