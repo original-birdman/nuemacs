@@ -7,8 +7,6 @@
 
 #include "estruct.h"
 
-#if FILOCK
-
 #include <stdio.h>
 #include <string.h>
 #include "edef.h"
@@ -161,6 +159,4 @@ void free_lock(void) {
     for (int i = 0; i < numlocks; ++i) Xfree(lname[i]);
     return;
 }
-#endif
-
 #endif

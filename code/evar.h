@@ -77,6 +77,7 @@ struct evlist evl[] = {
  { "force_mode_off", EVFORCEMODEOFF },  /* Modes to force off */
  { "pttmode",   EVPTTMODE },    /* Current ptt mode, or "" (read-only)  */
  { "vismac", EVVISMAC },        /* update display during keyboard macros? */
+ { "filock", EVFILOCK },        /* Do we want file locking? */
 };
 
 /* The tags for user functions - used in struct evlist */

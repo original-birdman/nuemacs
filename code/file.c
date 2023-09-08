@@ -401,16 +401,13 @@ int readin(char *fname, int lockfl) {
     struct buffer *bp;
     int s;
 
-#if FILOCK
-    if (lockfl && lockchk(fname) == ABORT) {
+    if (filock && lockfl && lockchk(fname) == ABORT) {
         s = FIOFNF;
         bp = curbp;
         strcpy(bp->b_fname, "");
         goto out;
     }
-#else
-        UNUSED(lockfl);
-#endif
+
     bp = curbp;                             /* Cheap.        */
     if ((s = bclear(bp)) != TRUE) return s; /* Might be old. */
     bp->b_flag &= ~(BFINVS | BFCHG);

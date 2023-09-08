@@ -1862,15 +1862,15 @@ int quit(int f, int n) {
         || anycb() == FALSE /* All buffers clean.   */
         || (s =             /* User says it's OK.   */
             mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
-#if FILOCK
-        if (lockrel() != TRUE) {
-            ttput1c('\n');
-            ttput1c('\r');
-            TTclose();
-            TTkclose();
-            exit(1);
+        if (filock) {
+            if (lockrel() != TRUE) {
+                ttput1c('\n');
+                ttput1c('\r');
+                TTclose();
+                TTkclose();
+                exit(1);
+            }
         }
-#endif
         vttidy();
 #ifdef DO_FREE
 

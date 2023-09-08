@@ -953,6 +953,7 @@ static char *gtenv(char *vname) {
                             else
                                 return "";
     case EVVISMAC:          return ltos(vismac);
+    case EVFILOCK:          return ltos(filock);
     }
 
     exit(-12);              /* again, we should never get here */
@@ -1287,6 +1288,9 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVVISMAC:
             vismac = stol(value);
+            break;
+        case EVFILOCK:
+            filock = stol(value);
             break;
         }
         break;

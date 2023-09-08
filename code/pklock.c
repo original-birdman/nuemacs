@@ -5,7 +5,6 @@
 
 #include "estruct.h"
 
-#if FILOCK
 #include "edef.h"
 #include "efunc.h"
 
@@ -103,4 +102,3 @@ char *undolock(char *fname) {
     }
     return NULL;
 }
-#endif
