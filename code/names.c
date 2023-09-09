@@ -5,6 +5,8 @@
  * These are used for the bind-to-key function.
 */
 
+#define NAMES_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"

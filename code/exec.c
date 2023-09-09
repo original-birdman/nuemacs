@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define EXEC_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -18,6 +20,115 @@
 #include "utf8proc.h"
 
 static char *prev_line_seen = NULL;
+
+/* token:
+ *      chop a token off a string
+ *      return a pointer past the token
+ *
+ * char *src, *tok;     source string, destination token string
+ * int size;            maximum size of token
+ */
+char *token(char *src, char *tok, int size) {
+    int quotef;     /* is the current string quoted? */
+    char c;         /* temporary character */
+
+/* First scan past any whitespace in the source string */
+    while (*src == ' ' || *src == '\t') ++src;
+
+/* Scan through the source string.
+ * DO record a " IFF the first character
+ * Then getval() knows it is a string (TKSTR) and returns
+ * the rest of the buffer as the string value.
+ * So "$fillcol" -> "$fillcol, and getval() will treat it (without the
+ *  leading ") as a TKSTR
+ * But %"My Var" -> %My Var and getval() will treat it as a user variable
+ * with a space in its name.
+ * The terminating " is NOT added...neither are any "s along the way.
+ */
+    if (*src == '"') {
+        quotef = TRUE;
+        src++;
+        if (--size > 0) *tok++ = '"';
+    }
+    else quotef = FALSE;
+    while (*src) {      /* process special characters */
+        if (*src == '~') {
+            src++;
+            if (*src == 0) break;
+            switch (*src++) {
+            case 'r':   c = 13; break;
+            case 'n':   c = 10; break;
+            case 't':   c = 9;  break;
+            case 'b':   c = 8;  break;
+            case 'f':   c = 12; break;
+            default:    c = *(src - 1);
+            }
+        }
+        else {      /* check for the end of the token */
+            c = *src++;
+            if (quotef) {
+                if (c == '"') break;
+            }
+            else {
+                if (c == ' ' || c == '\t') break;
+            }
+
+/* Set quote mode if quote found */
+            if (c == '"') {
+                quotef = TRUE;
+                continue;   /* Don't record it...only in pos1 is it kept */
+            }
+
+/* Record the character */
+        }
+        if (--size > 0) *tok++ = c;
+    }
+
+/* Terminate the token and exit */
+    *tok = 0;
+    return src;
+}
+
+/* nextarg:
+ *      get the next argument
+ *
+ * char *prompt;                prompt to use if we must be interactive
+ * char *buffer;                buffer to put token into
+ * int size;                    size of the buffer
+ * int terminator;              terminating char to be used on interactive fetch
+ */
+int nextarg(char *prompt, char *buffer, int size, enum cmplt_type ctype) {
+    char tbuf[NSTRING];     /* string buffer for some workings */
+
+/* If we are interactive, go get it! */
+    if (clexec == FALSE) return getstring(prompt, buffer, size, ctype);
+
+/* Grab token and advance past */
+    execstr = token(execstr, buffer, size);
+
+/* Evaluate it */
+/* GGR - There is the possibility of an illegal overlap of args here.
+ *       So it must be done via a temporary buffer.
+ */
+    strcpy(tbuf, getval(buffer));
+    strcpy(buffer, tbuf);
+    return TRUE;
+}
+
+/* get a macro line argument
+ *
+ * char *tok;           buffer to place argument
+ */
+int macarg(char *tok) {
+    int savcle;             /* buffer to store original clexec */
+    int status;
+
+    savcle = clexec;        /* save execution mode */
+    clexec = TRUE;          /* get the argument */
+    status = nextarg("", tok, NSTRING, CMPLT_NONE);
+    clexec = savcle;        /* restore execution mode */
+    return status;
+}
 
 /* docmd:
  *      take a passed string as a command line and translate
@@ -149,74 +260,6 @@ final_exit:
     return status;
 }
 
-/* token:
- *      chop a token off a string
- *      return a pointer past the token
- *
- * char *src, *tok;     source string, destination token string
- * int size;            maximum size of token
- */
-char *token(char *src, char *tok, int size) {
-    int quotef;     /* is the current string quoted? */
-    char c;         /* temporary character */
-
-/* First scan past any whitespace in the source string */
-    while (*src == ' ' || *src == '\t') ++src;
-
-/* Scan through the source string.
- * DO record a " IFF the first character
- * Then getval() knows it is a string (TKSTR) and returns
- * the rest of the buffer as the string value.
- * So "$fillcol" -> "$fillcol, and getval() will treat it (without the
- *  leading ") as a TKSTR
- * But %"My Var" -> %My Var and getval() will treat it as a user variable
- * with a space in its name.
- * The terminating " is NOT added...neither are any "s along the way.
- */
-    if (*src == '"') {
-        quotef = TRUE;
-        src++;
-        if (--size > 0) *tok++ = '"';
-    }
-    else quotef = FALSE;
-    while (*src) {      /* process special characters */
-        if (*src == '~') {
-            src++;
-            if (*src == 0) break;
-            switch (*src++) {
-            case 'r':   c = 13; break;
-            case 'n':   c = 10; break;
-            case 't':   c = 9;  break;
-            case 'b':   c = 8;  break;
-            case 'f':   c = 12; break;
-            default:    c = *(src - 1);
-            }
-        }
-        else {      /* check for the end of the token */
-            c = *src++;
-            if (quotef) {
-                if (c == '"') break;
-            }
-            else {
-                if (c == ' ' || c == '\t') break;
-            }
-
-/* Set quote mode if quote found */
-            if (c == '"') {
-                quotef = TRUE;
-                continue;   /* Don't record it...only in pos1 is it kept */
-            }
-
-/* Record the character */
-        }
-        if (--size > 0) *tok++ = c;
-    }
-
-/* Terminate the token and exit */
-    *tok = 0;
-    return src;
-}
-
 /* Execute a named command even if it is not bound.
  */
 static fn_t last_ncfunc = NULL;
@@ -288,47 +331,6 @@ int execcmd(int f, int n) {
     strcpy(prev_cmd, thecmd);   /* Now we remember this... */
 
     return status;
-}
-
-/* get a macro line argument
- *
- * char *tok;           buffer to place argument
- */
-int macarg(char *tok) {
-    int savcle;             /* buffer to store original clexec */
-    int status;
-
-    savcle = clexec;        /* save execution mode */
-    clexec = TRUE;          /* get the argument */
-    status = nextarg("", tok, NSTRING, CMPLT_NONE);
-    clexec = savcle;        /* restore execution mode */
-    return status;
-}
-
-/* nextarg:
- *      get the next argument
- *
- * char *prompt;                prompt to use if we must be interactive
- * char *buffer;                buffer to put token into
- * int size;                    size of the buffer
- * int terminator;              terminating char to be used on interactive fetch
- */
-int nextarg(char *prompt, char *buffer, int size, enum cmplt_type ctype) {
-    char tbuf[NSTRING];     /* string buffer for some workings */
-
-/* If we are interactive, go get it! */
-    if (clexec == FALSE) return getstring(prompt, buffer, size, ctype);
-
-/* Grab token and advance past */
-    execstr = token(execstr, buffer, size);
-
-/* Evaluate it */
-/* GGR - There is the possibility of an illegal overlap of args here.
- *       So it must be done via a temporary buffer.
- */
-    strcpy(tbuf, getval(buffer));
-    strcpy(buffer, tbuf);
-    return TRUE;
 }
 
 /* storemac:
@@ -553,6 +555,73 @@ static int ptt_compile(struct buffer *bp) {
     }
     if (lastp == NULL) return FALSE;
     use_pttable(bp);
+    return TRUE;
+}
+
+/* storeproc:
+ *  Set up a procedure buffer and flag to store all executed command
+ *  lines there.
+ *  NOTE that this only sets up a buffer (in bstore) to store the
+ *  commands. The reading into that buffer continues to be done by dobuf().
+ *
+ * int f;               default flag
+ * int n;               macro number to use
+ */
+struct func_opts null_func_opts = { 0, 0, 0, 0, 0, 0 };
+int storeproc(int f, int n) {
+    struct buffer *bp;      /* pointer to macro buffer */
+    int status;             /* return status */
+    char bufn[NBUFN+1];     /* name of buffer to use */
+
+/* A numeric argument means its a numbered macro */
+    if (f == TRUE) return storemac(f, n);
+
+/* Append the procedure name to the buffer marker tag */
+    bufn[0] = '/';
+    if ((status =
+         mlreply("Procedure name: ", bufn+1, NBUFN, CMPLT_BUF)) != TRUE)
+        return status;
+    if (strlen(bufn) >= NBUFN) {
+        mlforce("Procedure name too long (store): %s. Ignored.", bufn);
+        sleep(1);
+        return TRUE;    /* Don't abort start-up file */
+    }
+
+/* Set up the new macro buffer */
+    if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
+        mlwrite_one("Cannot create macro");
+        return FALSE;
+    }
+
+/* Add any options */
+
+    bp->btp_opt = null_func_opts;
+    char optstr[NBUFN+1];
+    while (1) {
+        mlreply("opts: ", optstr, NBUFN, CMPLT_BUF);
+        if (optstr[0] == '\0') break;
+        if (!strcmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
+        if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
+        if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
+        if (!strcmp(optstr, "one_pass"))        bp->btp_opt.one_pass = 1;
+        if (!strcmp(optstr, "no_macbug"))       bp->btp_opt.no_macbug = 1;
+/* Individual commands in the procedure will determine the "search_ok"
+ * status, so set it to true here.
+ */
+        bp->btp_opt.search_ok = 1;
+    }
+
+/* And make sure it is empty
+ * If we are redefining a procedure then we need to remove any variables
+ * that the previous version had defined.
+ * This is done by bclear().
+ */
+    bclear(bp);
+
+/* And set the macro store pointers to it */
+    mstore = TRUE;
+    bp->b_type = BTPROC;    /* Mark the buffer type */
+    bstore = bp;
     return TRUE;
 }
 
@@ -799,223 +868,6 @@ int ptt_handler(int c) {
     curwp->w.doto = orig_doto;
     ldelgrapheme(1, FALSE);
     return FALSE;
-}
-
-/* storeproc:
- *  Set up a procedure buffer and flag to store all executed command
- *  lines there.
- *  NOTE that this only sets up a buffer (in bstore) to store the
- *  commands. The reading into that buffer continues to be done by dobuf().
- *
- * int f;               default flag
- * int n;               macro number to use
- */
-struct func_opts null_func_opts = { 0, 0, 0, 0, 0, 0 };
-int storeproc(int f, int n) {
-    struct buffer *bp;      /* pointer to macro buffer */
-    int status;             /* return status */
-    char bufn[NBUFN+1];     /* name of buffer to use */
-
-/* A numeric argument means its a numbered macro */
-    if (f == TRUE) return storemac(f, n);
-
-/* Append the procedure name to the buffer marker tag */
-    bufn[0] = '/';
-    if ((status =
-         mlreply("Procedure name: ", bufn+1, NBUFN, CMPLT_BUF)) != TRUE)
-        return status;
-    if (strlen(bufn) >= NBUFN) {
-        mlforce("Procedure name too long (store): %s. Ignored.", bufn);
-        sleep(1);
-        return TRUE;    /* Don't abort start-up file */
-    }
-
-/* Set up the new macro buffer */
-    if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
-        mlwrite_one("Cannot create macro");
-        return FALSE;
-    }
-
-/* Add any options */
-
-    bp->btp_opt = null_func_opts;
-    char optstr[NBUFN+1];
-    while (1) {
-        mlreply("opts: ", optstr, NBUFN, CMPLT_BUF);
-        if (optstr[0] == '\0') break;
-        if (!strcmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
-        if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
-        if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
-        if (!strcmp(optstr, "one_pass"))        bp->btp_opt.one_pass = 1;
-        if (!strcmp(optstr, "no_macbug"))       bp->btp_opt.no_macbug = 1;
-/* Individual commands in the procedure will determine the "search_ok"
- * status, so set it to true here.
- */
-        bp->btp_opt.search_ok = 1;
-    }
-
-/* And make sure it is empty
- * If we are redefining a procedure then we need to remove any variables
- * that the previous version had defined.
- * This is done by bclear().
- */
-    bclear(bp);
-
-/* And set the macro store pointers to it */
-    mstore = TRUE;
-    bp->b_type = BTPROC;    /* Mark the buffer type */
-    bstore = bp;
-    return TRUE;
-}
-
-/* Run (execute) a user-procedure stored in a buffer */
-
-int run_user_proc(char *procname, int forced, int rpts) {
-    char bufn[NBUFN+1];
-    struct buffer *bp;      /* ptr to buffer to execute */
-    int status;             /* status return */
-
-/* Construct the buffer name */
-    bufn[0] = '/';
-    strcpy(bufn+1, procname);
-
-/* Find the pointer to that buffer */
-    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite("No such procedure: %s", bufn);
-        return FALSE;
-    }
-
-/* Check that it is a procedure buffer */
-
-    if (bp->b_type != BTPROC) {
-        mlforce("Buffer %s is not a procedure buffer.", bufn);
-        sleep(1);
-        return TRUE;    /* Don't abort start-up file */
-    }
-
-/* and now execute it as asked.
- * Let the user-proc know which pass it is on (starting at one)
- * out of the total expected.
- * Pass on the requested repeats (in uproc_lptotal) even for a one_pass
- * function, in case it wishes to handle it during its one_pass.
- */
-    int this_total = rpts;                  /* The real value */
-    if (rpts <= 0) rpts = 1;                /* Have to loop at least once */
-    if (bp->btp_opt.one_pass) rpts = 1;     /* and possibly only once */
-    int this_count = 0;
-    status = TRUE;
-    int orig_macbug_off = macbug_off;
-    if (bp->btp_opt.no_macbug) macbug_off = 1;
-    while (rpts-- > 0) {
-/* Since one user-proc can call another we have to remember the current
- * setting, install our current ones, then restore the originals
- * after we're done.
- */
-        int save_count = uproc_lpcount;
-        int save_total = uproc_lptotal;
-        int save_forced = uproc_lpforced;
-        uproc_lpcount = ++this_count;
-        uproc_lptotal = this_total;
-        uproc_lpforced = forced;
-        status = dobuf(bp);
-        uproc_lpcount = save_count;
-        uproc_lptotal = save_total;
-        uproc_lpforced = save_forced;
-        if (!status) break;
-    }
-    macbug_off = orig_macbug_off;
-    return status;
-}
-
-/* Buffer name for reexecute - shared by all buffer-callers */
-
-static char prev_bufn[NBUFN+1] = "";
-
-/* execproc:
- *      Execute a procedure
- *
- * int f, n;            default flag and numeric arg
- */
-int execproc(int f, int n) {
-    UNUSED(f);
-    char bufn[NBUFN];       /* name of buffer to execute */
-    int status;             /* status return */
-
-/* Handle a reexecute */
-
-/* Re-use last obtained buffer? */
-    if (inreex && (prev_bufn[0] != '\0') && RXARG(execproc))
-        strcpy(bufn, prev_bufn);
-    else {
-        if (input_waiting != NULL) {
-            strcpy(bufn, input_waiting);
-            input_waiting = NULL;   /* We've used it */
-        }
-        else {
-            if ((status = mlreply("Execute procedure: ", bufn, NBUFN,
-                 CMPLT_PROC)) != TRUE)
-                return status;
-            if (strlen(bufn) >= NBUFN) {
-                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
-                sleep(1);
-                return TRUE;    /* Don't abort start-up file */
-            }
-        }
-    }
-
-    status = run_user_proc(bufn, f, n);
-
-/* dobuf() could contain commands that change prev_bufn, so reinstate
- * it here to allow for recursion.
- */
-    if (status == TRUE) strcpy(prev_bufn, bufn);
-    return status;
-}
-
-/* execbuf:
- *      Execute the contents of a buffer of commands
- *
- * int f, n;            default flag and numeric arg
- */
-int execbuf(int f, int n) {
-    UNUSED(f);
-    struct buffer *bp;      /* ptr to buffer to execute */
-    int status;             /* status return */
-    char bufn[NSTRING];     /* name of buffer to execute */
-
-/* Handle a reexecute */
-
-/* Re-use last obtained buffer? */
-    if (inreex && (prev_bufn[0] != '\0') && RXARG(execbuf))
-        strcpy(bufn, prev_bufn);
-    else {
-/* Find out what buffer the user wants to execute */
-        if ((status = mlreply("Execute buffer: ", bufn, NBUFN,
-             CMPLT_BUF)) != TRUE)
-            return status;
-
-        if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
-            mlwrite_one("%Cannot run keyboard macro when collecting it");
-            return FALSE;
-        }
-    }
-
-/* Find the pointer to that buffer */
-    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite("No such buffer: %s", bufn);
-        return FALSE;
-    }
-
-/* And now execute it as asked */
-
-    status = TRUE;
-    while (n-- > 0) if ((status = dobuf(bp)) != TRUE) break;
-
-/* dobuf() could contain commands that change prev_bufn, so reinstate
- * it here to allow for recursion.
- */
-    strcpy(prev_bufn, bufn);
-    return status;
 }
 
 /* free a list of while block pointers
@@ -1459,6 +1311,193 @@ single_exit:
     return status;
 }
 
+/* Run (execute) a user-procedure stored in a buffer */
+
+int run_user_proc(char *procname, int forced, int rpts) {
+    char bufn[NBUFN+1];
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+
+/* Construct the buffer name */
+    bufn[0] = '/';
+    strcpy(bufn+1, procname);
+
+/* Find the pointer to that buffer */
+    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
+        mlwrite("No such procedure: %s", bufn);
+        return FALSE;
+    }
+
+/* Check that it is a procedure buffer */
+
+    if (bp->b_type != BTPROC) {
+        mlforce("Buffer %s is not a procedure buffer.", bufn);
+        sleep(1);
+        return TRUE;    /* Don't abort start-up file */
+    }
+
+/* and now execute it as asked.
+ * Let the user-proc know which pass it is on (starting at one)
+ * out of the total expected.
+ * Pass on the requested repeats (in uproc_lptotal) even for a one_pass
+ * function, in case it wishes to handle it during its one_pass.
+ */
+    int this_total = rpts;                  /* The real value */
+    if (rpts <= 0) rpts = 1;                /* Have to loop at least once */
+    if (bp->btp_opt.one_pass) rpts = 1;     /* and possibly only once */
+    int this_count = 0;
+    status = TRUE;
+    int orig_macbug_off = macbug_off;
+    if (bp->btp_opt.no_macbug) macbug_off = 1;
+    while (rpts-- > 0) {
+/* Since one user-proc can call another we have to remember the current
+ * setting, install our current ones, then restore the originals
+ * after we're done.
+ */
+        int save_count = uproc_lpcount;
+        int save_total = uproc_lptotal;
+        int save_forced = uproc_lpforced;
+        uproc_lpcount = ++this_count;
+        uproc_lptotal = this_total;
+        uproc_lpforced = forced;
+        status = dobuf(bp);
+        uproc_lpcount = save_count;
+        uproc_lptotal = save_total;
+        uproc_lpforced = save_forced;
+        if (!status) break;
+    }
+    macbug_off = orig_macbug_off;
+    return status;
+}
+
+/* Buffer name for reexecute - shared by all buffer-callers */
+
+static char prev_bufn[NBUFN+1] = "";
+
+/* execproc:
+ *      Execute a procedure
+ *
+ * int f, n;            default flag and numeric arg
+ */
+int execproc(int f, int n) {
+    UNUSED(f);
+    char bufn[NBUFN];       /* name of buffer to execute */
+    int status;             /* status return */
+
+/* Handle a reexecute */
+
+/* Re-use last obtained buffer? */
+    if (inreex && (prev_bufn[0] != '\0') && RXARG(execproc))
+        strcpy(bufn, prev_bufn);
+    else {
+        if (input_waiting != NULL) {
+            strcpy(bufn, input_waiting);
+            input_waiting = NULL;   /* We've used it */
+        }
+        else {
+            if ((status = mlreply("Execute procedure: ", bufn, NBUFN,
+                 CMPLT_PROC)) != TRUE)
+                return status;
+            if (strlen(bufn) >= NBUFN) {
+                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
+                sleep(1);
+                return TRUE;    /* Don't abort start-up file */
+            }
+        }
+    }
+
+    status = run_user_proc(bufn, f, n);
+
+/* dobuf() could contain commands that change prev_bufn, so reinstate
+ * it here to allow for recursion.
+ */
+    if (status == TRUE) strcpy(prev_bufn, bufn);
+    return status;
+}
+
+/* execbuf:
+ *      Execute the contents of a buffer of commands
+ *
+ * int f, n;            default flag and numeric arg
+ */
+int execbuf(int f, int n) {
+    UNUSED(f);
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+    char bufn[NSTRING];     /* name of buffer to execute */
+
+/* Handle a reexecute */
+
+/* Re-use last obtained buffer? */
+    if (inreex && (prev_bufn[0] != '\0') && RXARG(execbuf))
+        strcpy(bufn, prev_bufn);
+    else {
+/* Find out what buffer the user wants to execute */
+        if ((status = mlreply("Execute buffer: ", bufn, NBUFN,
+             CMPLT_BUF)) != TRUE)
+            return status;
+
+        if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
+            mlwrite_one("%Cannot run keyboard macro when collecting it");
+            return FALSE;
+        }
+    }
+
+/* Find the pointer to that buffer */
+    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
+        mlwrite("No such buffer: %s", bufn);
+        return FALSE;
+    }
+
+/* And now execute it as asked */
+
+    status = TRUE;
+    while (n-- > 0) if ((status = dobuf(bp)) != TRUE) break;
+
+/* dobuf() could contain commands that change prev_bufn, so reinstate
+ * it here to allow for recursion.
+ */
+    strcpy(prev_bufn, bufn);
+    return status;
+}
+
+/* dofile:
+ *      yank a file into a buffer and execute it
+ *      if there are no errors, delete the buffer on exit
+ *
+ * char *fname;         file name to execute
+ */
+int dofile(char *fname) {
+    struct buffer *bp;      /* buffer to place file to exeute */
+    struct buffer *cb;      /* temp to hold current buf while we read */
+    int status;             /* results of various calls */
+    char bufn[NBUFN];       /* name of buffer */
+
+    makename(bufn, fname, TRUE);    /* derive unique name for buffer */
+    if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
+        return FALSE;
+    cb = curbp;             /* save the old buffer */
+    curbp = bp;             /* make this one current */
+    if (silent)             /* GGR */
+        pathexpand = FALSE;
+
+/* And try to read in the file to execute */
+    if ((status = readin(fname, FALSE)) != TRUE) {
+        curbp = cb;     /* restore the current buffer */
+        pathexpand = TRUE;  /* GGR */
+        return status;
+    }
+    pathexpand = TRUE;          /* GGR */
+
+/* Go execute it! */
+    curbp = cb;             /* restore the current buffer */
+    if ((status = dobuf(bp)) != TRUE) return status;
+
+/* If not displayed, remove the now unneeded buffer and exit */
+    if (bp->b_nwnd == 0) zotbuf(bp);
+    return TRUE;
+}
+
 /* Filename for reexecute - shared by all file-callers */
 
 static char prev_fname[NSTRING] = "";
@@ -1520,43 +1559,6 @@ int execfile(int f, int n) {
  * it here to allow for recursion.
  */
     strcpy(prev_fname, fname);
-    return TRUE;
-}
-
-/* dofile:
- *      yank a file into a buffer and execute it
- *      if there are no errors, delete the buffer on exit
- *
- * char *fname;         file name to execute
- */
-int dofile(char *fname) {
-    struct buffer *bp;      /* buffer to place file to exeute */
-    struct buffer *cb;      /* temp to hold current buf while we read */
-    int status;             /* results of various calls */
-    char bufn[NBUFN];       /* name of buffer */
-
-    makename(bufn, fname, TRUE);    /* derive unique name for buffer */
-    if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
-        return FALSE;
-    cb = curbp;             /* save the old buffer */
-    curbp = bp;             /* make this one current */
-    if (silent)             /* GGR */
-        pathexpand = FALSE;
-
-/* And try to read in the file to execute */
-    if ((status = readin(fname, FALSE)) != TRUE) {
-        curbp = cb;     /* restore the current buffer */
-        pathexpand = TRUE;  /* GGR */
-        return status;
-    }
-    pathexpand = TRUE;          /* GGR */
-
-/* Go execute it! */
-    curbp = cb;             /* restore the current buffer */
-    if ((status = dobuf(bp)) != TRUE) return status;
-
-/* If not displayed, remove the now unneeded buffer and exit */
-    if (bp->b_nwnd == 0) zotbuf(bp);
     return TRUE;
 }
 

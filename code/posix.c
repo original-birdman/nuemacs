@@ -10,14 +10,14 @@
  *      fixed for termios rather than the old termio.. Linus Torvalds
  */
 
-#ifdef POSIX
-
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
+
+#define POSIX_C
 
 #include "estruct.h"
 #include "edef.h"
@@ -118,8 +118,8 @@ int ttputc(int c) {
  * up. A no-operation on systems where byte at a time terminal I/O is done.
  */
 void ttflush(void) {
-/*
- * Add some terminal output success checking, sometimes an orphaned
+
+/* Add some terminal output success checking, sometimes an orphaned
  * process may be left looping on SunOS 4.1.
  *
  * How to recover here, or is it best just to exit and lose
@@ -209,5 +209,3 @@ int typahead(void) {
 #endif
     return x;
 }
-
-#endif                          /* POSIX */

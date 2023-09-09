@@ -3,11 +3,6 @@
  *      locking routines as modified by Petri Kutvonen
  */
 
-#include "estruct.h"
-
-#include "edef.h"
-#include "efunc.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -16,6 +11,13 @@
 #include <pwd.h>
 #include <string.h>
 #include <errno.h>
+
+#define PKLOCK_C
+
+#include "estruct.h"
+#include "edef.h"
+#include "efunc.h"
+
 
 #define MAXLOCK 512
 #define MAXNAME 128

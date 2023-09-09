@@ -7,6 +7,8 @@
 
 #include "estruct.h"
 
+#define LOCK_C
+
 #include <stdio.h>
 #include <string.h>
 #include "edef.h"
@@ -17,8 +19,71 @@
 static char *lname[NLOCKS];             /* names of all locked files */
 static int numlocks;                    /* # of current locks active */
 
-/*
- * lockchk:
+/* report a lock error
+ *
+ * char *errstr;        lock error string to print out
+ */
+static void lckerror(char *errstr) {
+    mlwrite("%s - %s", errstr, strerror(errno));
+}
+
+/* unlock:
+ *      Unlock a file
+ *      this only warns the user if it fails
+ *
+ * char *fname;         file to unlock
+ */
+static int unlock(char *fname) {
+    char *locker;   /* undolock return string */
+
+/* Unlock and return */
+
+    locker = undolock(fname);
+    if (locker == NULL) return TRUE;
+
+/* Report the error and come back */
+
+    lckerror(locker);
+    return FALSE;
+}
+
+/* lock:
+ *      Check and lock a file from access by others
+ *      returns TRUE = files was not locked and now is
+ *              FALSE = file was locked and overridden
+ *              ABORT = file was locked, abort command
+ *
+ * char *fname;         file name to lock
+ */
+int lock(char *fname) {
+    char *locker;       /* lock error message */
+    int status;         /* return status      */
+    char msg[NSTRING];  /* message string     */
+
+/* Attempt to lock the file */
+
+    locker = dolock(fname);
+    if (locker == NULL)     /* we win */
+        return TRUE;
+
+/* File failed...abort */
+
+    if (strncmp(locker, "LOCK", 4) == 0) {
+        lckerror(locker);
+        return ABORT;
+    }
+
+/* Someone else has it....override? */
+
+    strcpy(msg, "File in use by ");
+    strcat(msg, locker);
+    strcat(msg, ", override?");
+    status = mlyesno(msg);  /* ask them */
+    if (status == TRUE) return FALSE;
+    else                return ABORT;
+}
+
+/* lockchk:
  *      check a file for locking and add it to the list
  *
  * NOTE!
@@ -65,38 +130,7 @@ int lockchk(char *fname) {
     return status;
 }
 
-/*
- * report a lock error
- *
- * char *errstr;        lock error string to print out
- */
-static void lckerror(char *errstr) {
-    mlwrite("%s - %s", errstr, strerror(errno));
-}
-
-/*
- * unlock:
- *      Unlock a file
- *      this only warns the user if it fails
- *
- * char *fname;         file to unlock
- */
-static int unlock(char *fname) {
-    char *locker;   /* undolock return string */
-
-/* Unlock and return */
-
-    locker = undolock(fname);
-    if (locker == NULL) return TRUE;
-
-/* Report the error and come back */
-
-    lckerror(locker);
-    return FALSE;
-}
-
-/*
- * lockrel:
+/* lockrel:
  *      release all the file locks so others may edit
  */
 int lockrel(void) {
@@ -112,43 +146,6 @@ int lockrel(void) {
         }
     numlocks = 0;
     return status;
-}
-
-/*
- * lock:
- *      Check and lock a file from access by others
- *      returns TRUE = files was not locked and now is
- *              FALSE = file was locked and overridden
- *              ABORT = file was locked, abort command
- *
- * char *fname;         file name to lock
- */
-int lock(char *fname) {
-    char *locker;       /* lock error message */
-    int status;         /* return status      */
-    char msg[NSTRING];  /* message string     */
-
-/* Attempt to lock the file */
-
-    locker = dolock(fname);
-    if (locker == NULL)     /* we win */
-        return TRUE;
-
-/* File failed...abort */
-
-    if (strncmp(locker, "LOCK", 4) == 0) {
-        lckerror(locker);
-        return ABORT;
-    }
-
-/* Someone else has it....override? */
-
-    strcpy(msg, "File in use by ");
-    strcat(msg, locker);
-    strcat(msg, ", override?");
-    status = mlyesno(msg);  /* ask them */
-    if (status == TRUE) return FALSE;
-    else                return ABORT;
 }
 
 #ifdef DO_FREE

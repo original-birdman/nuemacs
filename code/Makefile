@@ -244,17 +244,17 @@ uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 MYCC = gcc
 ifeq ($(uname_S),Linux)
- DEFINES=-DPOSIX -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
+ DEFINES=-D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 else ifeq ($(uname_S),FreeBSD)
  MYCC = cc
- DEFINES=-DPOSIX -D_FREEBSD_C_SOURCE -DSYSSHELL=/bin/csh
+ DEFINES=-D_FREEBSD_C_SOURCE -DSYSSHELL=/bin/csh
 else ifeq ($(uname_S),Darwin)
- DEFINES=-DPOSIX -D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
+ DEFINES=-D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
 else ifeq ($(uname_S),SunOS)
- DEFINES=-DPOSIX -D__EXTENSIONS__ -DSYS_TERMIOS_H
+ DEFINES=-D__EXTENSIONS__ -DSYS_TERMIOS_H
 # CygWin is just like Linux....
 else ifeq ($(firstword $(subst -, ,$(uname_S))),CYGWIN_NT)
- DEFINES=-DPOSIX -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
+ DEFINES=-D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 endif
 
 # Set the default options

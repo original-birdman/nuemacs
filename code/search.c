@@ -118,6 +118,8 @@
 #include <unistd.h>
 #include <limits.h>
 
+#define SEARCH_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -1753,6 +1755,58 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
     return res;
 }
 
+/* rvstrcpy -- Reverse string copy.
+ */
+void rvstrcpy(char *rvstr, char *str) {
+    int i;
+
+    str += (i = strlen(str));
+    while (i-- > 0) *rvstr++ = *--str;
+    *rvstr = '\0';
+}
+
+/*      Setting up search jump tables.
+ *      the default for any character to jump
+ *      is the pattern length
+ */
+void setpattern(const char apat[], const char tap[]) {
+    int i;
+
+/* Add pattern to search run if called during command line processing */
+    if (comline_processing) update_ring(apat);
+
+    patlenadd = srch_patlen - 1;
+    for (i = 0; i < HICHAR; i++) {
+        deltaf[i] = srch_patlen;
+        deltab[i] = srch_patlen;
+    }
+
+/* Now put in the characters contained in the pattern, duplicating the CASE
+ */
+    int nocase = !(curwp->w_bufp->b_mode & MDEXACT);
+    for (i = 0; i < patlenadd; i++) {
+        deltaf[ch_as_uc(apat[i])] = patlenadd - i;
+        if (nocase && isalpha(ch_as_uc(apat[i])))
+            deltaf[ch_as_uc(apat[i] ^ DIFCASE)] = patlenadd - i;
+        deltab[ch_as_uc(tap[i])] = patlenadd - i;
+        if (nocase && isalpha(ch_as_uc(tap[i])))
+            deltab[ch_as_uc(tap[i] ^ DIFCASE)] = patlenadd - i;
+    }
+
+/* The last character will have the pattern length unless there are
+ * duplicates of it. Get the number to jump from the arrays delta, and
+ * overwrite with zeros in delta duplicating the CASE.
+ */
+    lastchfjump = patlenadd + deltaf[ch_as_uc(apat[patlenadd])];
+    deltaf[ch_as_uc(apat[patlenadd])] = 0;
+    if (nocase && isalpha(ch_as_uc(apat[patlenadd])))
+        deltaf[ch_as_uc(apat[patlenadd] ^ DIFCASE)] = 0;
+    lastchbjump = patlenadd + deltab[ch_as_uc(apat[0])];
+    deltab[ch_as_uc(apat[0])] = 0;
+    if (nocase && isalpha(ch_as_uc(apat[0])))
+        deltab[ch_as_uc(apat[0] ^ DIFCASE)] = 0;
+}
+
 /* readpattern -- Read a pattern.  Stash it in apat.
  * If it is the search string, create the reverse pattern and the
  * magic pattern, assuming we are in MAGIC mode (and defined that way).
@@ -2579,6 +2633,58 @@ fail:;                                  /* continue to search */
     return FALSE;                       /* We could not find a match */
 }
 
+/* Return a malloc()ed copy of the text for the given group in
+ * the last match.
+ * If a group doesn't exist or has no match then an empty string is
+ * returned.
+ * We only allocate each group text on demand for each search.
+ * Any allocated space is freed by the reset for a new search.
+ */
+char *group_match(int grp) {
+
+/* Is the group-match data valid?? */
+
+    if (!group_match_buffer) return "";
+
+/* Is there a match to return? */
+
+    if ((grp < 0) || (grp > group_cntr)) return "";
+    if (!match_grp_info[grp].mline) return "";
+
+/* Have we already sorted out this match for this search?
+ * If not, set one up.
+ */
+    if (!grp_text[grp]) {
+
+        grp_text[grp] = Xmalloc(match_grp_info[grp].len + 1);
+
+/* Create the match text for this group... */
+
+        char *dp = grp_text[grp];
+        int togo = match_grp_info[grp].len;
+        struct line *cline = match_grp_info[grp].mline;
+        int coff = match_grp_info[grp].start;
+        while(togo > 0) {
+            int on_cline = llength(cline) - coff;
+            if (on_cline > togo) on_cline = togo;
+            memcpy(dp, (cline->l_text)+coff, on_cline);
+            dp += on_cline;
+            togo -= on_cline;
+
+/* Add in the newline, if needed, and switch to next line */
+
+            if (togo > 0) {
+                *dp++ = '\n';
+                togo--;
+                cline = lforw(cline);
+                coff = 0;
+            }
+        }
+        *dp = '\0';     /* Terminate the text */
+    }
+    return grp_text[grp];
+}
+
 /* Whether we should run the back_grapheme code on the first
  * loop pass in forwhunt.
  * We only what to do this if we have a previous match of the same
@@ -2608,6 +2714,7 @@ static void report_match(void) {
  *
  * int f, n;            default flag / numeric argument
  */
+int backhunt(int, int);     /* Forward declaration */
 int forwhunt(int f, int n) {
     int status = TRUE;
 
@@ -2678,6 +2785,7 @@ int forwhunt(int f, int n) {
  *
  * int f, n;                    default flag / numeric argument
  */
+int backsearch(int, int);   /* Forward declaration */
 int forwsearch(int f, int n) {
     int status;
 
@@ -2912,60 +3020,6 @@ int scanmore(char *patrn, int dir, int next_match, int extend_match) {
         }
     }
     return sts;             /* else, don't even try       */
-}
-
-/*      Setting up search jump tables.
- *      the default for any character to jump
- *      is the pattern length
- */
-void setpattern(const char apat[], const char tap[]) {
-    int i;
-
-/* Add pattern to search run if called during command line processing */
-    if (comline_processing) update_ring(apat);
-
-    patlenadd = srch_patlen - 1;
-    for (i = 0; i < HICHAR; i++) {
-        deltaf[i] = srch_patlen;
-        deltab[i] = srch_patlen;
-    }
-
-/* Now put in the characters contained in the pattern, duplicating the CASE
- */
-    int nocase = !(curwp->w_bufp->b_mode & MDEXACT);
-    for (i = 0; i < patlenadd; i++) {
-        deltaf[ch_as_uc(apat[i])] = patlenadd - i;
-        if (nocase && isalpha(ch_as_uc(apat[i])))
-            deltaf[ch_as_uc(apat[i] ^ DIFCASE)] = patlenadd - i;
-        deltab[ch_as_uc(tap[i])] = patlenadd - i;
-        if (nocase && isalpha(ch_as_uc(tap[i])))
-            deltab[ch_as_uc(tap[i] ^ DIFCASE)] = patlenadd - i;
-    }
-
-/* The last character will have the pattern length unless there are
- * duplicates of it. Get the number to jump from the arrays delta, and
- * overwrite with zeros in delta duplicating the CASE.
- */
-    lastchfjump = patlenadd + deltaf[ch_as_uc(apat[patlenadd])];
-    deltaf[ch_as_uc(apat[patlenadd])] = 0;
-    if (nocase && isalpha(ch_as_uc(apat[patlenadd])))
-        deltaf[ch_as_uc(apat[patlenadd] ^ DIFCASE)] = 0;
-    lastchbjump = patlenadd + deltab[ch_as_uc(apat[0])];
-    deltab[ch_as_uc(apat[0])] = 0;
-    if (nocase && isalpha(ch_as_uc(apat[0])))
-        deltab[ch_as_uc(apat[0] ^ DIFCASE)] = 0;
-}
-
-/* rvstrcpy -- Reverse string copy.
- */
-void rvstrcpy(char *rvstr, char *str) {
-    int i;
-
-    str += (i = strlen(str));
-
-    while (i-- > 0) *rvstr++ = *--str;
-
-    *rvstr = '\0';
 }
 
 /* Work out the replacement text for the current match.
@@ -3382,58 +3436,6 @@ int qreplace(int f, int n) {
     int retval = replaces(TRUE, f, n);
     discmd = saved_discmd;          /* Restore original... */
     return retval;
-}
-
-/* Return a malloc()ed copy of the text for the given group in
- * the last match.
- * If a group doesn't exist or has no match then an empty string is
- * returned.
- * We only allocate each group text on demand for each search.
- * Any allocated space is freed by the reset for a new search.
- */
-char *group_match(int grp) {
-
-/* Is the group-match data valid?? */
-
-    if (!group_match_buffer) return "";
-
-/* Is there a match to return? */
-
-    if ((grp < 0) || (grp > group_cntr)) return "";
-    if (!match_grp_info[grp].mline) return "";
-
-/* Have we already sorted out this match for this search?
- * If not, set one up.
- */
-    if (!grp_text[grp]) {
-
-        grp_text[grp] = Xmalloc(match_grp_info[grp].len + 1);
-
-/* Create the match text for this group... */
-
-        char *dp = grp_text[grp];
-        int togo = match_grp_info[grp].len;
-        struct line *cline = match_grp_info[grp].mline;
-        int coff = match_grp_info[grp].start;
-        while(togo > 0) {
-            int on_cline = llength(cline) - coff;
-            if (on_cline > togo) on_cline = togo;
-            memcpy(dp, (cline->l_text)+coff, on_cline);
-            dp += on_cline;
-            togo -= on_cline;
-
-/* Add in the newline, if needed, and switch to next line */
-
-            if (togo > 0) {
-                *dp++ = '\n';
-                togo--;
-                cline = lforw(cline);
-                coff = 0;
-            }
-        }
-        *dp = '\0';     /* Terminate the text */
-    }
-    return grp_text[grp];
 }
 
 /* These two (insbrace and getfence) are here as they do searching and

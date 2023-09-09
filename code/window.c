@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 
+#define WINDOW_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -38,6 +40,21 @@ int redraw(int f, int n) {
     }
 
     return TRUE;
+}
+
+void cknewwindow(void) {
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ * Also, don't do this if a macro is being generated (as it switches
+ * to/from the keyboard macro buffer to log commands and may complain
+ * about getting there from any user-proc buffer used here).
+ * It's OK if the macro is being executed.
+ */
+    if (!meta_spec_active.X && !(kbdmode == RECORD)) {
+        meta_spec_active.X = 1;
+        execute(META|SPEC|'X', FALSE, 1);
+        meta_spec_active.X = 0;
+    }
 }
 
 /* The command make the next window (next => down the screen) the current
@@ -116,6 +133,7 @@ int prevwind(int f, int n) {
  * a new dot. We share the code by having "move down" just be an interface to
  * "move up". Magic. Bound to "C-X C-N".
  */
+int mvupwind(int, int);     /* Forward declaration */
 int mvdnwind(int f, int n) {
     return mvupwind(f, -n);
 }
@@ -333,8 +351,51 @@ int splitwind(int f, int n) {
     return TRUE;
 }
 
-/*
- * Enlarge the current window. Find the window that loses space. Make sure it
+/* Shrink the current window. Find the window that gains space. Hack at the
+ * window descriptions. Ask the redisplay to do all the hard work. Bound to
+ * "C-X C-Z".
+ */
+int enlargewind(int, int);  /* Forward declaration */
+int shrinkwind(int f, int n) {
+    struct window *adjwp;
+    struct line *lp;
+    int i;
+
+    if (n < 0) return enlargewind(f, -n);
+    if (wheadp->w_wndp == NULL) {
+        mlwrite_one("Only one window");
+        return FALSE;
+    }
+    if ((adjwp = curwp->w_wndp) == NULL) {
+        adjwp = wheadp;
+        while (adjwp->w_wndp != curwp) adjwp = adjwp->w_wndp;
+    }
+    if (curwp->w_ntrows <= n) {
+        mlwrite_one("Impossible change");
+        return FALSE;
+    }
+    if (curwp->w_wndp == adjwp) {   /* Grow below */
+        lp = adjwp->w_linep;
+        for (i = 0; i < n && lback(lp) != adjwp->w_bufp->b_linep; ++i)
+            lp = lback(lp);
+        adjwp->w_linep = lp;
+        adjwp->w_toprow -= n;
+    }
+    else {                          /* Grow above */
+        lp = curwp->w_linep;
+        for (i = 0; i < n && lp != curbp->b_linep; ++i)
+            lp = lforw(lp);
+        curwp->w_linep = lp;
+        curwp->w_toprow += n;
+    }
+    curwp->w_ntrows -= n;
+    adjwp->w_ntrows += n;
+    curwp->w_flag |= WFMODE | WFHARD | WFKILLS;
+    adjwp->w_flag |= WFMODE | WFHARD | WFINS;
+    return TRUE;
+}
+
+/* Enlarge the current window. Find the window that loses space. Make sure it
  * is big enough. If so, hack the window descriptions, and ask redisplay to do
  * all the hard work. You don't just set "force reframe" because dot would
  * move. Bound to "C-X Z".
@@ -375,49 +436,6 @@ int enlargewind(int f, int n) {
     adjwp->w_ntrows -= n;
     curwp->w_flag |= WFMODE | WFHARD | WFINS;
     adjwp->w_flag |= WFMODE | WFHARD | WFKILLS;
-    return TRUE;
-}
-
-/* Shrink the current window. Find the window that gains space. Hack at the
- * window descriptions. Ask the redisplay to do all the hard work. Bound to
- * "C-X C-Z".
- */
-int shrinkwind(int f, int n) {
-    struct window *adjwp;
-    struct line *lp;
-    int i;
-
-    if (n < 0) return enlargewind(f, -n);
-    if (wheadp->w_wndp == NULL) {
-        mlwrite_one("Only one window");
-        return FALSE;
-    }
-    if ((adjwp = curwp->w_wndp) == NULL) {
-        adjwp = wheadp;
-        while (adjwp->w_wndp != curwp) adjwp = adjwp->w_wndp;
-    }
-    if (curwp->w_ntrows <= n) {
-        mlwrite_one("Impossible change");
-        return FALSE;
-    }
-    if (curwp->w_wndp == adjwp) {   /* Grow below */
-        lp = adjwp->w_linep;
-        for (i = 0; i < n && lback(lp) != adjwp->w_bufp->b_linep; ++i)
-            lp = lback(lp);
-        adjwp->w_linep = lp;
-        adjwp->w_toprow -= n;
-    }
-    else {                          /* Grow above */
-        lp = curwp->w_linep;
-        for (i = 0; i < n && lp != curbp->b_linep; ++i)
-            lp = lforw(lp);
-        curwp->w_linep = lp;
-        curwp->w_toprow += n;
-    }
-    curwp->w_ntrows -= n;
-    adjwp->w_ntrows += n;
-    curwp->w_flag |= WFMODE | WFHARD | WFKILLS;
-    adjwp->w_flag |= WFMODE | WFHARD | WFINS;
     return TRUE;
 }
 
@@ -630,19 +648,4 @@ int getwpos(void) {
 
 /* And return the value */
     return sline;
-}
-
-void cknewwindow(void) {
-/* Don't start the handler when it is already running as that might
- * just get into a loop...
- * Also, don't do this if a macro is being generated (as it switches
- * to/from the keyboard macro buffer to log commands and may complain
- * about getting there from any user-proc buffer used here).
- * It's OK if the macro is being executed.
- */
-    if (!meta_spec_active.X && !(kbdmode == RECORD)) {
-        meta_spec_active.X = 1;
-        execute(META|SPEC|'X', FALSE, 1);
-        meta_spec_active.X = 0;
-    }
 }

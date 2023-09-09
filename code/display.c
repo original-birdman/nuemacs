@@ -13,6 +13,8 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+#define DISPLAY_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -65,6 +67,47 @@ static int displaying = FALSE;
 #include <sys/termios.h>
 #endif
 #include <sys/ioctl.h>
+
+/* Send a command to the terminal to move the hardware cursor to row "row"
+ * and column "col". The row and column arguments are origin 0. Optimize out
+ * random calls. Update "ttrow" and "ttcol".
+ */
+void movecursor(int row, int col) {
+    if (row != ttrow || col != ttcol) {
+        ttrow = row;
+        ttcol = col;
+        TTmove(row, col);
+    }
+}
+void force_movecursor(int row, int col) {
+    ttrow = -1;         /* Force the optimizing test to fail */
+    movecursor(row, col);
+}
+
+/* Erase the message line. This is a special routine because the message line
+ * is not considered to be part of the virtual screen. It always works
+ * immediately; the terminal buffer is flushed via a call to the flusher.
+ */
+void mlerase(void) {
+    int i;
+
+    movecursor(term.t_mbline, 0);
+    if (discmd == FALSE) return;
+
+#if COLOR
+/* GGR - use configured colors, not 7 and 0 */
+    TTforg(gfcolor);
+    TTbacg(gbcolor);
+#endif
+    if (eolexist == TRUE) TTeeol();
+    else {
+        for (i = 0; i < term.t_ncol - 1; i++)
+            TTputc(' ');                /* No need to update ttcol */
+        force_movecursor(term.t_mbline, 0);
+    }
+    TTflush();
+    mpresf = FALSE;
+}
 
 /* Set the entry to an ASCII character.
  * Checks for previous extended cdm usage and frees any such found
@@ -167,9 +210,9 @@ static int prev_size = 0;
 void vtinit(void) {
     int i, xi;
     struct video *vp;
-    static struct video **new_vscreen;  /* Virtual screen. */
-    static struct video **new_pscreen;  /* Physical screen. */
-    static void *new_vdata;             /* Where we've stored it all */
+    struct video **new_vscreen;     /* Virtual screen. */
+    struct video **new_pscreen;     /* Physical screen. */
+    void *new_vdata;                /* Where we've stored it all */
 
     if (prev_mrow == 0) {
         TTopen();               /* open the screen */
@@ -403,6 +446,8 @@ static void vteeol(void) {
 
     while (vtcol < term.t_ncol) set_grapheme(&(vcp[vtcol++]), ' ', 0);
 }
+
+void update(int);           /* Forward declaration */
 
 /* upscreen:
  *      user routine to force a screen update
@@ -1310,6 +1355,46 @@ next_mode:
     while ((c = *cp++) != 0) vtputc(c);
 }
 
+void upmode(void) {             /* Update all the mode lines */
+
+    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
+        wp->w_flag |= WFMODE;
+    }
+}
+
+/* Given a screen height and width, set t_mcol/t_mrow as a rounded-up
+ * amount, with a minimum size (to avoid re-allocs on small changes).
+ */
+#define MINCOL 240
+#define MINROW  70
+void set_scrarray_size(int h, int w) {
+    term.t_mcol = 50*(1 + (w + 30)/50);
+    if (term.t_mcol < MINCOL) term.t_mcol = MINCOL;
+    term.t_mrow = 30*(1 + (h + 20)/30);
+    if (term.t_mrow < MINROW) term.t_mrow = MINROW;
+    return;
+}
+
+int newscreensize(int h, int w, int no_update_needed) {
+    if (displaying) {           /* do the change later */
+        chg_width = w;
+        chg_height = h;
+        return FALSE;
+    }
+    int old_nrow = term.t_nrow;
+    int old_ncol = term.t_ncol;
+    chg_width = chg_height = 0;
+    set_scrarray_size(h, w);
+    vtinit();
+
+    if (h != old_nrow) newsize(h);
+    if (w != old_ncol) newwidth(w);
+
+    if (!no_update_needed) update(TRUE);
+
+    return TRUE;
+}
+
 /* Make sure that the display is right. This is a three part process. First,
  * scan through all of the windows looking for dirty ones. Check the framing,
  * and refresh the screen. Second, make sure that "currow" and "curcol" are
@@ -1398,54 +1483,6 @@ void update(int force) {
     return;
 }
 
-void upmode(void) {             /* Update all the mode lines */
-
-    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
-        wp->w_flag |= WFMODE;
-    }
-}
-
-/* Send a command to the terminal to move the hardware cursor to row "row"
- * and column "col". The row and column arguments are origin 0. Optimize out
- * random calls. Update "ttrow" and "ttcol".
- */
-void movecursor(int row, int col) {
-    if (row != ttrow || col != ttcol) {
-        ttrow = row;
-        ttcol = col;
-        TTmove(row, col);
-    }
-}
-void force_movecursor(int row, int col) {
-    ttrow = -1;         /* Force the optimizing test to fail */
-    movecursor(row, col);
-}
-
-/* Erase the message line. This is a special routine because the message line
- * is not considered to be part of the virtual screen. It always works
- * immediately; the terminal buffer is flushed via a call to the flusher.
- */
-void mlerase(void) {
-    int i;
-
-    movecursor(term.t_mbline, 0);
-    if (discmd == FALSE) return;
-
-#if COLOR
-/* GGR - use configured colors, not 7 and 0 */
-    TTforg(gfcolor);
-    TTbacg(gbcolor);
-#endif
-    if (eolexist == TRUE) TTeeol();
-    else {
-        for (i = 0; i < term.t_ncol - 1; i++)
-            TTputc(' ');                /* No need to update ttcol */
-        force_movecursor(term.t_mbline, 0);
-    }
-    TTflush();
-    mpresf = FALSE;
-}
-
 /* Write a message into the message line. Keep track of the physical cursor
  * position.
  * A small class of printf like format items is handled by mlwrite() and
@@ -1518,6 +1555,22 @@ static void mlputf(int s) {
     TTput_1uc_lim('.');
     TTput_1uc_lim((f / 10) + '0');
     TTput_1uc_lim((f % 10) + '0');
+}
+
+/* Write out a string. Update the physical cursor position. This no
+ * longer assumes that the characters in the string all have width "1".
+ *
+ * GGR - modified to handle utf8 strings.
+ */
+void mlputs(char *s) {
+    unicode_t c;
+
+    int nbytes = strlen(s);
+    int idx = 0;
+    while (idx < nbytes) {
+        idx += utf8_to_unicode(s, idx, nbytes, &c);
+        TTput_1uc_lim(c);
+    }
 }
 
 /* NOTE: that the argument templates here are NOT printf ones.
@@ -1634,22 +1687,6 @@ void mlforce_one(const char *fmt) {
     return;
 }
 
-/* Write out a string. Update the physical cursor position. This no
- * longer assumes that the characters in the string all have width "1".
- *
- * GGR - modified to handle utf8 strings.
- */
-void mlputs(char *s) {
-    unicode_t c;
-
-    int nbytes = strlen(s);
-    int idx = 0;
-    while (idx < nbytes) {
-        idx += utf8_to_unicode(s, idx, nbytes, &c);
-        TTput_1uc_lim(c);
-    }
-}
-
 /* Get terminal size from system.
    Store number of lines into *heightp and width into *widthp.
    If zero or a negative number is stored, the value is not valid.  */
@@ -1679,39 +1716,6 @@ void sizesignal(int signr) {
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, NULL);
     errno = old_errno;
-}
-
-/* Given a screen height and width, set t_mcol/t_mrow as a rounded-up
- * amount, with a minimum size (to avoid re-allocs on small changes).
- */
-#define MINCOL 240
-#define MINROW  70
-void set_scrarray_size(int h, int w) {
-    term.t_mcol = 50*(1 + (w + 30)/50);
-    if (term.t_mcol < MINCOL) term.t_mcol = MINCOL;
-    term.t_mrow = 30*(1 + (h + 20)/30);
-    if (term.t_mrow < MINROW) term.t_mrow = MINROW;
-    return;
-}
-
-int newscreensize(int h, int w, int no_update_needed) {
-    if (displaying) {           /* do the change later */
-        chg_width = w;
-        chg_height = h;
-        return FALSE;
-    }
-    int old_nrow = term.t_nrow;
-    int old_ncol = term.t_ncol;
-    chg_width = chg_height = 0;
-    set_scrarray_size(h, w);
-    vtinit();
-
-    if (h != old_nrow) newsize(h);
-    if (w != old_ncol) newwidth(w);
-
-    if (!no_update_needed) update(TRUE);
-
-    return TRUE;
 }
 
 /* GGR

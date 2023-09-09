@@ -17,6 +17,8 @@
 #include <alloca.h>
 #endif
 
+#define EVAL_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -544,6 +546,8 @@ static char *gtfun(char *fname) {
 /* Return errorm on a bad reference */
     if (fnum == ARRAY_SIZE(funcs)) return errorm;
 
+    arg1[0] = arg2[0] = arg3[0] = '\0'; /* Keep gcc analyzer happy */
+    
 /* Retrieve the required arguments */
     do {
         int ft = funcs[fnum].f_type;
@@ -910,12 +914,8 @@ static char *gtenv(char *vname) {
     case EVHSCROLL:         return(ltos(hscroll));
     case EVHJUMP:           return(ue_itoa(hjump));
     case EVYANKMODE:        switch (yank_mode) {
-                            case Old:
-                                return "old";
-                                break;
-                            case GNU:
-                                return "gnu";
-                                break;
+                            case Old:   return "old";   break;
+                            case GNU:   return "gnu";   break;
                             }
                             return "";
                             break;
@@ -957,6 +957,139 @@ static char *gtenv(char *vname) {
     }
 
     exit(-12);              /* again, we should never get here */
+}
+
+/* find the type of a passed token
+ *
+ * char *token;         token to analyze
+ */
+int gettyp(char *token) {
+    char c;         /* first char in token */
+
+    c = *token;     /* grab the first char (all we usually check) */
+
+    if (c == 0) return TKNUL;      /* no blanks!!! */
+
+/* A numeric literal? *GGR* allow for -ve ones too */
+
+    if (c >= '0' && c <= '9') return TKLIT;
+    if (c == '-' || c == '.') {     /* -n and .nnn are numbers */
+        char c2 = token[1];
+        if (c2 >= '0' && c2 <= '9') return TKLIT;
+    }
+    switch (c) {
+    case '"':   return TKSTR;
+    case '!':   return TKDIR;
+    case '@':   return TKARG;
+    case '#':   return TKBUF;
+    case '$':   return TKENV;
+    case '%':   return TKVAR;
+    case '&':   return TKFUN;
+    case '*':   return TKLBL;
+    case '.':   return TKBVR;
+    }
+    return TKCMD;
+}
+
+/* find the value of a token
+ *
+ * char *token;         token to evaluate
+ */
+char *getval(char *token) {
+    struct buffer *bp;          /* temp buffer pointer */
+    int blen;                   /* length of buffer argument */
+    static char buf[NSTRING];   /* string buffer for some returns */
+    char tbuf[NSTRING];         /* string buffer for some workings */
+
+    switch (gettyp(token)) {
+    case TKNUL:
+        return "";
+
+    case TKARG: {               /* interactive argument */
+/* We allow internal uemacs code to set the response of the next TKARG
+ * (this was set-up so that the showdir user-proc could be given a
+ * "pre-loaded" response).
+ */
+        int do_fixup = (uproc_opts & UPROC_FIXUP);
+        uproc_opts = 0;         /* Always reset flags after use */
+        if (userproc_arg) {
+            strcpy(buf, userproc_arg);
+        }
+        else {
+/* GGR - There is the possibility (actually, certainty) of an illegal
+ * overlap of args here. So it must be done to a temporary buffer.
+ *              strcpy(token, getval(token+1));
+ */
+            strcpy(tbuf, getval(token+1));
+            int distmp = discmd;    /* Remember initial state */
+            discmd = TRUE;
+            int status = getstring(tbuf, buf, NSTRING, CMPLT_NONE);
+            discmd = distmp;
+            if (status == ABORT) return errorm;
+        }
+        if (do_fixup) fixup_full(buf);
+        return buf;
+    }
+    case TKBUF:                 /* buffer contents fetch */
+/* Grab the right buffer
+ * GGR - There is the possibility of an illegal overlap of args here.
+ *       So it must be done via a temporary buffer.
+ *              strcpy(token, getval(token+1));
+ */
+        strcpy(tbuf, getval(token+1));
+        bp = bfind(tbuf, FALSE, 0);
+        if (bp == NULL) return errorm;
+
+/* If the buffer is displayed, get the window vars instead of the buffer vars */
+        if (bp->b_nwnd > 0) {
+            curbp->b.dotp = curwp->w.dotp;
+            curbp->b.doto = curwp->w.doto;
+        }
+
+/* Make sure we are not at the end */
+        if (bp->b_linep == bp->b.dotp) return errorm;
+
+/* Grab the line as an argument */
+        blen = bp->b.dotp->l_used - bp->b.doto;
+        if (blen >= NSTRING)        /* GGR >= to allow for NUL */
+            blen = NSTRING - 1;
+        memcpy(buf, bp->b.dotp->l_text + bp->b.doto, blen);
+        buf[blen] = 0;
+
+/* And step the buffer's line ptr ahead a line */
+        bp->b.dotp = bp->b.dotp->l_fp;
+        bp->b.doto = 0;
+
+/* If displayed buffer, reset window ptr vars */
+        if (bp->b_nwnd > 0) {
+            curwp->w.dotp = curbp->b.dotp;
+            curwp->w.doto = 0;
+            curwp->w_flag |= WFMOVE;
+        }
+
+/* And return the spoils */
+        return buf;
+
+    case TKVAR:
+        return gtusr(token + 1);
+    case TKBVR:
+        return gtbvr(token + 1);
+    case TKENV:
+        return gtenv(token + 1);
+    case TKFUN:
+        return gtfun(token + 1);
+    case TKDIR:
+        return errorm;
+    case TKLBL:
+        return errorm;
+    case TKLIT:
+        return token;
+    case TKSTR:
+        return token + 1;
+    case TKCMD:
+        return token;
+    }
+    return errorm;
 }
 
 /* Find a variables type and name.
@@ -1436,139 +1569,6 @@ int delvar(int f, int n) {
         break;
     }
     return FALSE;
-}
-
-/* find the type of a passed token
- *
- * char *token;         token to analyze
- */
-int gettyp(char *token) {
-    char c;         /* first char in token */
-
-    c = *token;     /* grab the first char (all we usually check) */
-
-    if (c == 0) return TKNUL;      /* no blanks!!! */
-
-/* A numeric literal? *GGR* allow for -ve ones too */
-
-    if (c >= '0' && c <= '9') return TKLIT;
-    if (c == '-' || c == '.') {     /* -n and .nnn are numbers */
-        char c2 = token[1];
-        if (c2 >= '0' && c2 <= '9') return TKLIT;
-    }
-    switch (c) {
-    case '"':   return TKSTR;
-    case '!':   return TKDIR;
-    case '@':   return TKARG;
-    case '#':   return TKBUF;
-    case '$':   return TKENV;
-    case '%':   return TKVAR;
-    case '&':   return TKFUN;
-    case '*':   return TKLBL;
-    case '.':   return TKBVR;
-    }
-    return TKCMD;
-}
-
-/* find the value of a token
- *
- * char *token;         token to evaluate
- */
-char *getval(char *token) {
-    struct buffer *bp;          /* temp buffer pointer */
-    int blen;                   /* length of buffer argument */
-    static char buf[NSTRING];   /* string buffer for some returns */
-    char tbuf[NSTRING];         /* string buffer for some workings */
-
-    switch (gettyp(token)) {
-    case TKNUL:
-        return "";
-
-    case TKARG: {               /* interactive argument */
-/* We allow internal uemacs code to set the response of the next TKARG
- * (this was set-up so that the showdir user-proc could be given a
- * "pre-loaded" response).
- */
-        int do_fixup = (uproc_opts & UPROC_FIXUP);
-        uproc_opts = 0;         /* Always reset flags after use */
-        if (userproc_arg) {
-            strcpy(buf, userproc_arg);
-        }
-        else {
-/* GGR - There is the possibility (actually, certainty) of an illegal
- * overlap of args here. So it must be done to a temporary buffer.
- *              strcpy(token, getval(token+1));
- */
-            strcpy(tbuf, getval(token+1));
-            int distmp = discmd;    /* Remember initial state */
-            discmd = TRUE;
-            int status = getstring(tbuf, buf, NSTRING, CMPLT_NONE);
-            discmd = distmp;
-            if (status == ABORT) return errorm;
-        }
-        if (do_fixup) fixup_full(buf);
-        return buf;
-    }
-    case TKBUF:                 /* buffer contents fetch */
-/* Grab the right buffer
- * GGR - There is the possibility of an illegal overlap of args here.
- *       So it must be done via a temporary buffer.
- *              strcpy(token, getval(token+1));
- */
-        strcpy(tbuf, getval(token+1));
-        bp = bfind(tbuf, FALSE, 0);
-        if (bp == NULL) return errorm;
-
-/* If the buffer is displayed, get the window vars instead of the buffer vars */
-        if (bp->b_nwnd > 0) {
-            curbp->b.dotp = curwp->w.dotp;
-            curbp->b.doto = curwp->w.doto;
-        }
-
-/* Make sure we are not at the end */
-        if (bp->b_linep == bp->b.dotp) return errorm;
-
-/* Grab the line as an argument */
-        blen = bp->b.dotp->l_used - bp->b.doto;
-        if (blen >= NSTRING)        /* GGR >= to allow for NUL */
-            blen = NSTRING - 1;
-        memcpy(buf, bp->b.dotp->l_text + bp->b.doto, blen);
-        buf[blen] = 0;
-
-/* And step the buffer's line ptr ahead a line */
-        bp->b.dotp = bp->b.dotp->l_fp;
-        bp->b.doto = 0;
-
-/* If displayed buffer, reset window ptr vars */
-        if (bp->b_nwnd > 0) {
-            curwp->w.dotp = curbp->b.dotp;
-            curwp->w.doto = 0;
-            curwp->w_flag |= WFMOVE;
-        }
-
-/* And return the spoils */
-        return buf;
-
-    case TKVAR:
-        return gtusr(token + 1);
-    case TKBVR:
-        return gtbvr(token + 1);
-    case TKENV:
-        return gtenv(token + 1);
-    case TKFUN:
-        return gtfun(token + 1);
-    case TKDIR:
-        return errorm;
-    case TKLBL:
-        return errorm;
-    case TKLIT:
-        return token;
-    case TKSTR:
-        return token + 1;
-    case TKCMD:
-        return token;
-    }
-    return errorm;
 }
 
 #ifdef DO_FREE

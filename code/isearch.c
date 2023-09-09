@@ -24,13 +24,14 @@
 
 #include <stdio.h>
 
+#define ISEARCH_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
 
-/*
- * Incremental search defines.
+/* Incremental search defines.
  */
 #define CMDBUFLEN       256     /* Length of our command buffer */
 

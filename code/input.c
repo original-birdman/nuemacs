@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+#define INPUT_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -532,6 +534,61 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
     return TRUE;
 }
 
+/* tgetc:   Get a key from the terminal driver.
+ *          Resolve any keyboard macro action.
+ */
+int tgetc(void) {
+    int c;                      /* fetched character */
+
+/* If we are playing a keyboard macro back, */
+    if (kbdmode == PLAY) {
+        if (kbdptr < kbdend)    /* if there is some left... */
+            return (int) *kbdptr++;
+        if (--kbdrep < 1) {     /* at the end of last repetition? */
+            kbdmode = STOP;     /* Leave ctlxe_togo alone */
+            if (!vismac) update(FALSE); /* force update now all is done? */
+        }
+        else {
+            kbdptr = kbdm;      /* reset macro to beginning for the next rep */
+            f_arg = p_arg;      /* Restore original f_arg */
+            return (int) *kbdptr++;
+        }
+    }
+
+/* Fetch a character from the terminal driver */
+    struct sigaction sigact;
+    if (remap_c_on_intr) {
+        sigaction(SIGWINCH, NULL, &sigact);
+        sigact.sa_flags = 0;
+        sigaction(SIGWINCH, &sigact, NULL);
+        errno = 0;
+    }
+    c = TTgetc();
+    if (remap_c_on_intr) {
+        sigaction(SIGWINCH, NULL, &sigact);
+        sigact.sa_flags = SA_RESTART;
+        sigaction(SIGWINCH, &sigact, NULL);
+    }
+/* Record it for $lastkey */
+    lastkey = c;
+
+    if (c == 0 && errno == EINTR && remap_c_on_intr)
+        c = UEM_NOCHAR;         /* Note illegal char */
+    else
+/* Save it if we need to */
+        if (kbdmode == RECORD) {
+            *kbdptr++ = c;
+            kbdend = kbdptr;
+            if (kbdptr == &kbdm[NKBDM - 1]) {   /* don't overrun buffer */
+                kbdmode = STOP; /* Must be collecting - leave ctlxe_togo */
+                TTbeep();
+            }
+        }
+
+/* And finally give the char back */
+    return c;
+}
+
 /* Entry point for buffer name completion. And userprocs.
  * Front-end to comp_gen().
  */
@@ -553,6 +610,17 @@ static int comp_var(char *name, char *choices) {
     return comp_gen(name, choices, CMPLT_VAR);
 }
 
+/* get1key: Get one keystroke.
+ *          The only prefixes legal here are SPEC and CONTROL.
+ */
+int get1key(void) {
+    int c;
+
+    c = tgetc();                    /* get a keystroke */
+    if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
+        c = CONTROL | (c + '@');
+    return c;
+}
 
 /* Ask a yes or no question in the message line. Return either TRUE, FALSE, or
  * ABORT. The ABORT status is returned if the user bumps out of the question
@@ -626,73 +694,6 @@ struct name_bind *getname(char *prompt, int new_command) {
     }
     mlwrite("No such function: %s", buf);
     return NULL;
-}
-
-/* tgetc:   Get a key from the terminal driver.
- *          Resolve any keyboard macro action.
- */
-int tgetc(void) {
-    int c;                      /* fetched character */
-
-/* If we are playing a keyboard macro back, */
-    if (kbdmode == PLAY) {
-        if (kbdptr < kbdend)    /* if there is some left... */
-            return (int) *kbdptr++;
-        if (--kbdrep < 1) {     /* at the end of last repetition? */
-            kbdmode = STOP;     /* Leave ctlxe_togo alone */
-            if (!vismac) update(FALSE); /* force update now all is done? */
-        }
-        else {
-            kbdptr = kbdm;      /* reset macro to beginning for the next rep */
-            f_arg = p_arg;      /* Restore original f_arg */
-            return (int) *kbdptr++;
-        }
-    }
-
-/* Fetch a character from the terminal driver */
-    struct sigaction sigact;
-    if (remap_c_on_intr) {
-        sigaction(SIGWINCH, NULL, &sigact);
-        sigact.sa_flags = 0;
-        sigaction(SIGWINCH, &sigact, NULL);
-        errno = 0;
-    }
-    c = TTgetc();
-    if (remap_c_on_intr) {
-        sigaction(SIGWINCH, NULL, &sigact);
-        sigact.sa_flags = SA_RESTART;
-        sigaction(SIGWINCH, &sigact, NULL);
-    }
-/* Record it for $lastkey */
-    lastkey = c;
-
-    if (c == 0 && errno == EINTR && remap_c_on_intr)
-        c = UEM_NOCHAR;         /* Note illegal char */
-    else
-/* Save it if we need to */
-        if (kbdmode == RECORD) {
-            *kbdptr++ = c;
-            kbdend = kbdptr;
-            if (kbdptr == &kbdm[NKBDM - 1]) {   /* don't overrun buffer */
-                kbdmode = STOP; /* Must be collecting - leave ctlxe_togo */
-                TTbeep();
-            }
-        }
-
-/* And finally give the char back */
-    return c;
-}
-
-/* get1key: Get one keystroke.
- *          The only prefixes legal here are SPEC and CONTROL.
- */
-int get1key(void) {
-    int c;
-
-    c = tgetc();                    /* get a keystroke */
-    if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
-        c = CONTROL | (c + '@');
-    return c;
 }
 
 /* Force a char to uppercase

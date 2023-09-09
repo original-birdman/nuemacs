@@ -11,34 +11,12 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#define FILE_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
-
-/* Read a file into the current buffer.
- * This is really easy; all you do is find the name of the file and
- * call the standard "read a file into the current buffer" code.
- * Bound to "C-X C-R".
- */
-int fileread(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    int s;
-    char fname[NFILEN];
-
-    if (restflag)           /* don't allow this command if restricted */
-        return resterr();
-/* GGR - return any current filename for the buffer on <CR>.
- *      Useful for ^X^R <CR> to re-read current file on erroneous change
- */
-    s = mlreply("Read file: ", fname, NFILEN, CMPLT_FILE);
-    if (s == ABORT) return(s);
-    else if (s == FALSE) {
-        if (strlen(curbp->b_fname) == 0) return(s);
-        else strcpy(fname, curbp->b_fname);
-    }
-    return readin(fname, TRUE);
-}
 
 static int resetkey(void) { /* Reset the encryption key if needed */
     int s;              /* return status */
@@ -111,258 +89,6 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
     }
     if (goto_end) curwp->w.dotp = iline;
     ffclose();              /* Ignore errors. */
-    return s;
-}
-
-/* Insert file "fname" into the current buffer.
- * Called by insert file command.
- * Return the final status of the read.
- */
-static int ifile(char *fname) {
-    struct buffer *bp;
-    int s;
-
-    bp = curbp;             /* Cheap.               */
-    bp->b_flag |= BFCHG;    /* we have changed      */
-    bp->b_flag &= ~BFINVS;  /* and are not temporary */
-
-/* If we are modfying the buffer that the match-group info points
- * to we have to mark them as invalid.
- */
-    if (bp == group_match_buffer) group_match_buffer = NULL;
-
-/* If this is a translation table, remove any compiled data */
-
-    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
-
-    pathexpand = FALSE;     /* GGR */
-
-    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
-    if (s == FIOFNF) {                              /* File not found */
-        mlwrite_one(MLbkt("No such file"));
-        return FALSE;
-    }
-    mlwrite_one(MLbkt("Inserting file"));
-
-    s = resetkey();
-    if (s != TRUE) return s;
-
-/* Back up a line and save the mark here.
- * We can only insert between lines, not into the middle of one.
- */
-    curwp->w.dotp = lback(curwp->w.dotp);
-    curwp->w.doto = 0;
-    curwp->w.markp = curwp->w.dotp;
-    curwp->w.marko = 0;
-
-    s = file2buf(curwp->w.dotp, "Inserting", TRUE, TRUE);
-    curwp->w.markp = lforw(curwp->w.markp);     /* Restore original mark */
-    char *emg = "";
-    if (s == FIOERR) {
-        emg = "I/O ERROR, ";
-        curbp->b_flag |= BFTRUNC;
-    }
-    char *dmg = "";
-    if (dos_file) dmg = " - from DOS file!";
-/* This doesn't need to set readin_mesg - which is only for start-up */
-    mlwrite(MLbkt("%sInserted %d line%s%s"), emg, nlines,
-        (nlines > 1)? "s": "", dmg);
-    if (s == FIOERR) sleep(1);  /* Let it be seen */
-
-out:
-/* Advance to the next line and mark the window for changes */
-    curwp->w.dotp = lforw(curwp->w.dotp);
-    curwp->w_flag |= WFHARD | WFMODE;
-
-/* Copy window parameters back to the buffer structure */
-    curbp->b = curwp->w;
-
-    if (s == FIOERR) return FALSE;      /* False if error. */
-    return TRUE;
-}
-
-/* Insert a file into the current buffer.
- * This is really easy; all you do it find the name of the file and
- * call the standard "insert a file into the current buffer" code.
- * Bound to "C-X C-I".
- */
-int insfile(int f, int n) {
-    int s;
-    char fname[NFILEN];
-
-    if (restflag)           /* don't allow this command if restricted */
-        return resterr();
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if      */
-        return rdonly();        /* we are in read only mode     */
-    if ((s = mlreply("Insert file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
-        return s;
-
-/* If we are given a user arg of 2 then it means "replace the active
- * content of the buffer by the file contents".
- * So, if the buffer is narrowed just replace the narrowed data,
- * otherwise replace the whole buffer.
- */
-    if (f && (n == 2)) {
-        if (curbp->b_flag & BFNAROW) {
-            gotobob(0, 0);
-            curwp->w.markp = curwp->w.dotp;
-            curwp->w.marko = curwp->w.doto;
-            gotoeob(0, 0);
-/* We do not want this to save the kill, so fudge in such a condition */
-            int save_lastflag = lastflag;
-            lastflag |= CFYANK;
-            killregion(0, 0);
-            lastflag = save_lastflag;
-        }
-        else if ((s = bclear(curbp)) != TRUE) return s; /* Might be old.  */
-    }
-
-    if ((s = ifile(fname)) != TRUE)
-        return s;
-    return reposition(TRUE, -1);
-}
-
-/*
- * Select a file for editing.
- * Look around to see if you can find the file in another buffer; if you
- * can find it just switch to the buffer.
- * If you cannot find the file, create a new buffer, read in the text
- * and switch to the new buffer.
- * Bound to C-X C-F.
- */
-int filefind(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    char fname[NFILEN];     /* file user wishes to find */
-    int s;                  /* status return */
-
-    if (restflag)           /* don't allow this command if restricted */
-        return resterr();
-    if ((s = mlreply("Find file: ", fname, NFILEN, CMPLT_FILE)) != TRUE) {
-        return s;
-    }
-    run_filehooks = 1;      /* set flag */
-    return getfile(fname, TRUE, TRUE);
-}
-
-int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
-    UNUSED(f); UNUSED(n);
-    char fname[NFILEN];         /* File user wishes to find */
-    int s;                      /* Status return */
-    struct window *wp;          /* Scan for windows that need updating */
-
-    if (restflag)               /* Don't allow this command if restricted */
-        return resterr();
-    if ((s = mlreply("View file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
-        return s;
-    run_filehooks = 1;          /* Set flag */
-    s = getfile(fname, FALSE, TRUE);
-    if (s) {                    /* If we succeed, put it in view mode */
-        curwp->w_bufp->b_mode |= MDVIEW;
-
-/* Scan through and update mode lines of all windows */
-        wp = wheadp;
-        while (wp != NULL) {
-            wp->w_flag |= WFMODE;
-            wp = wp->w_wndp;
-        }
-    }
-    return s;
-}
-
-/*
- * showdir_handled
- *  Check for the incoming pathname being a directory.
- *  If it is, and we have a "showdir" userproc, then let that handle it.
- *  Return TRUE if we passed it to showdir, otherwise FALSE.
- */
-int showdir_handled(char *pname) {
-    struct stat statbuf;
-    char exp_pname[NFILEN];
-
-/* Have to expand it *now* to allow for ~ usage in dir-check */
-
-    strcpy(exp_pname, pname);
-    fixup_full(exp_pname);     /* Make absolute pathname */
-    int status = stat(exp_pname, &statbuf);
-    if ((status == 0) && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
-/* We can only call showdir if it exists as a userproc.
- * If it doesn't we report that...
- */
-        struct buffer *sdb = bfind("/showdir", FALSE, 0);
-        if (sdb && (sdb->b_type == BTPROC)) {
-            userproc_arg = exp_pname;
-            (void)run_user_proc("showdir", 0, 1);
-            userproc_arg = NULL;
-        }
-        else {
-           mlwrite("No showdir userproc handler: %s", pname);
-           if (comline_processing) sleep(2);    /* Let user see it */
-        }
-        status = TRUE;
-    }
-    else {
-        status = FALSE;
-    }
-    return status;
-}
-
-/*
- * getfile()
- *
- * char fname[];        file name to find
- * int lockfl;          check the file for locks?
- */
-int getfile(char *fname, int lockfl, int check_dir) {
-    struct buffer *bp;
-    struct line *lp;
-    int i;
-    int s;
-    char bname[NBUFN];      /* buffer name to put file */
-
-/* Check *now* if this is a directory and we've been asked to check.
- * This prevents setting up an incomplete buffer that isn't used by
- * the showdir code.
- * If it isn't a directory, or we can't find out, just continue,
- */
-    if ((check_dir == TRUE) && (showdir_handled(fname) == TRUE)) return TRUE;
-
-    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-        if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
-            if (!swbuffer(bp, 0)) return FALSE;
-            lp = curwp->w.dotp;
-            i = curwp->w_ntrows / 2;
-            while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
-            curwp->w_linep = lp;
-            curwp->w_flag |= WFMODE | WFHARD;
-            cknewwindow();
-            mlwrite_one(MLbkt("Old buffer"));
-            return TRUE;
-        }
-    }
-    makename(bname, fname, FALSE); /* New buffer name. No unique check. */
-    while ((bp = bfind(bname, FALSE, 0)) != NULL) {
-/* Old buffer name conflict code */
-        s = mlreply("Buffer name: ", bname, NBUFN, CMPLT_BUF);
-        if (s == ABORT) return s;   /* ^G to just quit      */
-        if (s == FALSE) {           /* CR to clobber it     */
-            makename(bname, fname, FALSE);
-            break;
-        }
-    }
-    if (bp == NULL && (bp = bfind(bname, TRUE, 0)) == NULL) {
-        mlwrite_one("Cannot create buffer");
-        return FALSE;
-    }
-    if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Undisplay */
-
-/* GGR - remember last buffer */
-    if (!inmb) strcpy(savnam, curbp->b_bname);
-
-    curbp = bp;                     /* Switch to it.        */
-    curwp->w_bufp = bp;
-    curbp->b_nwnd++;
-    s = readin(fname, lockfl);      /* Read it in.          */
-    cknewwindow();
     return s;
 }
 
@@ -487,6 +213,174 @@ out:
     return TRUE;
 }
 
+/* Read a file into the current buffer.
+ * This is really easy; all you do is find the name of the file and
+ * call the standard "read a file into the current buffer" code.
+ * Bound to "C-X C-R".
+ */
+int fileread(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int s;
+    char fname[NFILEN];
+
+    if (restflag)           /* don't allow this command if restricted */
+        return resterr();
+/* GGR - return any current filename for the buffer on <CR>.
+ *      Useful for ^X^R <CR> to re-read current file on erroneous change
+ */
+    s = mlreply("Read file: ", fname, NFILEN, CMPLT_FILE);
+    if (s == ABORT) return(s);
+    else if (s == FALSE) {
+        if (strlen(curbp->b_fname) == 0) return(s);
+        else strcpy(fname, curbp->b_fname);
+    }
+    return readin(fname, TRUE);
+}
+
+/* Insert file "fname" into the current buffer.
+ * Called by insert file command.
+ * Return the final status of the read.
+ */
+static int ifile(char *fname) {
+    struct buffer *bp;
+    int s;
+
+    bp = curbp;             /* Cheap.               */
+    bp->b_flag |= BFCHG;    /* we have changed      */
+    bp->b_flag &= ~BFINVS;  /* and are not temporary */
+
+/* If we are modfying the buffer that the match-group info points
+ * to we have to mark them as invalid.
+ */
+    if (bp == group_match_buffer) group_match_buffer = NULL;
+
+/* If this is a translation table, remove any compiled data */
+
+    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
+
+    pathexpand = FALSE;     /* GGR */
+
+    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
+    if (s == FIOFNF) {                              /* File not found */
+        mlwrite_one(MLbkt("No such file"));
+        return FALSE;
+    }
+    mlwrite_one(MLbkt("Inserting file"));
+
+    s = resetkey();
+    if (s != TRUE) return s;
+
+/* Back up a line and save the mark here.
+ * We can only insert between lines, not into the middle of one.
+ */
+    curwp->w.dotp = lback(curwp->w.dotp);
+    curwp->w.doto = 0;
+    curwp->w.markp = curwp->w.dotp;
+    curwp->w.marko = 0;
+
+    s = file2buf(curwp->w.dotp, "Inserting", TRUE, TRUE);
+    curwp->w.markp = lforw(curwp->w.markp);     /* Restore original mark */
+    char *emg = "";
+    if (s == FIOERR) {
+        emg = "I/O ERROR, ";
+        curbp->b_flag |= BFTRUNC;
+    }
+    char *dmg = "";
+    if (dos_file) dmg = " - from DOS file!";
+/* This doesn't need to set readin_mesg - which is only for start-up */
+    mlwrite(MLbkt("%sInserted %d line%s%s"), emg, nlines,
+        (nlines > 1)? "s": "", dmg);
+    if (s == FIOERR) sleep(1);  /* Let it be seen */
+
+out:
+/* Advance to the next line and mark the window for changes */
+    curwp->w.dotp = lforw(curwp->w.dotp);
+    curwp->w_flag |= WFHARD | WFMODE;
+
+/* Copy window parameters back to the buffer structure */
+    curbp->b = curwp->w;
+
+    if (s == FIOERR) return FALSE;      /* False if error. */
+    return TRUE;
+}
+
+/* Insert a file into the current buffer.
+ * This is really easy; all you do it find the name of the file and
+ * call the standard "insert a file into the current buffer" code.
+ * Bound to "C-X C-I".
+ */
+int insfile(int f, int n) {
+    int s;
+    char fname[NFILEN];
+
+    if (restflag)           /* don't allow this command if restricted */
+        return resterr();
+    if (curbp->b_mode & MDVIEW)     /* don't allow this command if      */
+        return rdonly();        /* we are in read only mode     */
+    if ((s = mlreply("Insert file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
+        return s;
+
+/* If we are given a user arg of 2 then it means "replace the active
+ * content of the buffer by the file contents".
+ * So, if the buffer is narrowed just replace the narrowed data,
+ * otherwise replace the whole buffer.
+ */
+    if (f && (n == 2)) {
+        if (curbp->b_flag & BFNAROW) {
+            gotobob(0, 0);
+            curwp->w.markp = curwp->w.dotp;
+            curwp->w.marko = curwp->w.doto;
+            gotoeob(0, 0);
+/* We do not want this to save the kill, so fudge in such a condition */
+            int save_lastflag = lastflag;
+            lastflag |= CFYANK;
+            killregion(0, 0);
+            lastflag = save_lastflag;
+        }
+        else if ((s = bclear(curbp)) != TRUE) return s; /* Might be old.  */
+    }
+
+    if ((s = ifile(fname)) != TRUE)
+        return s;
+    return reposition(TRUE, -1);
+}
+
+/* showdir_handled
+ *  Check for the incoming pathname being a directory.
+ *  If it is, and we have a "showdir" userproc, then let that handle it.
+ *  Return TRUE if we passed it to showdir, otherwise FALSE.
+ */
+int showdir_handled(char *pname) {
+    struct stat statbuf;
+    char exp_pname[NFILEN];
+
+/* Have to expand it *now* to allow for ~ usage in dir-check */
+
+    strcpy(exp_pname, pname);
+    fixup_full(exp_pname);     /* Make absolute pathname */
+    int status = stat(exp_pname, &statbuf);
+    if ((status == 0) && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
+/* We can only call showdir if it exists as a userproc.
+ * If it doesn't we report that...
+ */
+        struct buffer *sdb = bfind("/showdir", FALSE, 0);
+        if (sdb && (sdb->b_type == BTPROC)) {
+            userproc_arg = exp_pname;
+            (void)run_user_proc("showdir", 0, 1);
+            userproc_arg = NULL;
+        }
+        else {
+           mlwrite("No showdir userproc handler: %s", pname);
+           if (comline_processing) sleep(2);    /* Let user see it */
+        }
+        status = TRUE;
+    }
+    else {
+        status = FALSE;
+    }
+    return status;
+}
+
 /* Take a file name, and from it fabricate a buffer name.
  * The fabricated name is 4-chars short of the maximum, to allow
  * the unique-check code to append !nnn to make it unique
@@ -555,6 +449,151 @@ void makename(char *bname, char *fname, int ensure_unique) {
     mlforce("Unable to generate a unique buffer name for %s- exiting", bname);
     sleep(2);
     quickexit(FALSE, 0);
+}
+
+/* getfile()
+ *
+ * char fname[];        file name to find
+ * int lockfl;          check the file for locks?
+ */
+int getfile(char *fname, int lockfl, int check_dir) {
+    struct buffer *bp;
+    struct line *lp;
+    int i;
+    int s;
+    char bname[NBUFN];      /* buffer name to put file */
+
+/* Check *now* if this is a directory and we've been asked to check.
+ * This prevents setting up an incomplete buffer that isn't used by
+ * the showdir code.
+ * If it isn't a directory, or we can't find out, just continue,
+ */
+    if ((check_dir == TRUE) && (showdir_handled(fname) == TRUE)) return TRUE;
+
+    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+        if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
+            if (!swbuffer(bp, 0)) return FALSE;
+            lp = curwp->w.dotp;
+            i = curwp->w_ntrows / 2;
+            while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
+            curwp->w_linep = lp;
+            curwp->w_flag |= WFMODE | WFHARD;
+            cknewwindow();
+            mlwrite_one(MLbkt("Old buffer"));
+            return TRUE;
+        }
+    }
+    makename(bname, fname, FALSE); /* New buffer name. No unique check. */
+    while ((bp = bfind(bname, FALSE, 0)) != NULL) {
+/* Old buffer name conflict code */
+        s = mlreply("Buffer name: ", bname, NBUFN, CMPLT_BUF);
+        if (s == ABORT) return s;   /* ^G to just quit      */
+        if (s == FALSE) {           /* CR to clobber it     */
+            makename(bname, fname, FALSE);
+            break;
+        }
+    }
+    if (bp == NULL && (bp = bfind(bname, TRUE, 0)) == NULL) {
+        mlwrite_one("Cannot create buffer");
+        return FALSE;
+    }
+    if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Undisplay */
+
+/* GGR - remember last buffer */
+    if (!inmb) strcpy(savnam, curbp->b_bname);
+
+    curbp = bp;                     /* Switch to it.        */
+    curwp->w_bufp = bp;
+    curbp->b_nwnd++;
+    s = readin(fname, lockfl);      /* Read it in.          */
+    cknewwindow();
+    return s;
+}
+
+/* Select a file for editing.
+ * Look around to see if you can find the file in another buffer; if you
+ * can find it just switch to the buffer.
+ * If you cannot find the file, create a new buffer, read in the text
+ * and switch to the new buffer.
+ * Bound to C-X C-F.
+ */
+int filefind(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    char fname[NFILEN];     /* file user wishes to find */
+    int s;                  /* status return */
+
+    if (restflag)           /* don't allow this command if restricted */
+        return resterr();
+    if ((s = mlreply("Find file: ", fname, NFILEN, CMPLT_FILE)) != TRUE) {
+        return s;
+    }
+    run_filehooks = 1;      /* set flag */
+    return getfile(fname, TRUE, TRUE);
+}
+
+int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
+    UNUSED(f); UNUSED(n);
+    char fname[NFILEN];         /* File user wishes to find */
+    int s;                      /* Status return */
+    struct window *wp;          /* Scan for windows that need updating */
+
+    if (restflag)               /* Don't allow this command if restricted */
+        return resterr();
+    if ((s = mlreply("View file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
+        return s;
+    run_filehooks = 1;          /* Set flag */
+    s = getfile(fname, FALSE, TRUE);
+    if (s) {                    /* If we succeed, put it in view mode */
+        curwp->w_bufp->b_mode |= MDVIEW;
+
+/* Scan through and update mode lines of all windows */
+        wp = wheadp;
+        while (wp != NULL) {
+            wp->w_flag |= WFMODE;
+            wp = wp->w_wndp;
+        }
+    }
+    return s;
+}
+
+/* This function performs the details of file writing.
+ * Uses the file management routines in the "fileio.c" package.
+ * The number of lines written is displayed.
+ * Most of the grief is error checking of some sort.
+ */
+int writeout(char *fn) {
+    int s;
+    struct line *lp;
+    int nline;
+
+    s = resetkey();
+    if (s != TRUE) return s;
+
+    if ((s = ffwopen(fn)) != FIOSUC) return FALSE;  /* Open writes message */
+
+    mlwrite_one(MLbkt("Writing..."));       /* tell us were writing */
+    lp = lforw(curbp->b_linep);             /* First line.          */
+    nline = 0;                              /* Number of lines.     */
+    while (lp != curbp->b_linep) {
+        if ((s = ffputline(lp->l_text, llength(lp))) != FIOSUC) break;
+        ++nline;
+        if (!(nline % 300) && !silent)      /* GGR */
+            mlwrite(MLbkt("Writing...") " : %d lines",nline);
+        lp = lforw(lp);
+    }
+    if (s == FIOSUC) {                      /* No write error.      */
+        ffputline(NULL, 0);                 /* Must flush write cache!! */
+        s = ffclose();
+        if (s == FIOSUC) {                  /* No close error.      */
+            if (nline == 1)
+                mlwrite_one(MLbkt("Wrote 1 line"));
+            else
+                mlwrite(MLbkt("Wrote %d lines"), nline);
+            }
+    } else                                  /* Ignore close error   */
+        ffclose();                          /* if a write error.    */
+    if (s != FIOSUC) return FALSE;          /* Some sort of error.  */
+    return TRUE;
 }
 
 /* Ask for a file name, and write the contents of the current buffer
@@ -631,46 +670,6 @@ int filesave(int f, int n) {
         }
     }
     return s;
-}
-
-/* This function performs the details of file writing.
- * Uses the file management routines in the "fileio.c" package.
- * The number of lines written is displayed.
- * Most of the grief is error checking of some sort.
- */
-int writeout(char *fn) {
-    int s;
-    struct line *lp;
-    int nline;
-
-    s = resetkey();
-    if (s != TRUE) return s;
-
-    if ((s = ffwopen(fn)) != FIOSUC) return FALSE;  /* Open writes message */
-
-    mlwrite_one(MLbkt("Writing..."));       /* tell us were writing */
-    lp = lforw(curbp->b_linep);             /* First line.          */
-    nline = 0;                              /* Number of lines.     */
-    while (lp != curbp->b_linep) {
-        if ((s = ffputline(lp->l_text, llength(lp))) != FIOSUC) break;
-        ++nline;
-        if (!(nline % 300) && !silent)      /* GGR */
-            mlwrite(MLbkt("Writing...") " : %d lines",nline);
-        lp = lforw(lp);
-    }
-    if (s == FIOSUC) {                      /* No write error.      */
-        ffputline(NULL, 0);                 /* Must flush write cache!! */
-        s = ffclose();
-        if (s == FIOSUC) {                  /* No close error.      */
-            if (nline == 1)
-                mlwrite_one(MLbkt("Wrote 1 line"));
-            else
-                mlwrite(MLbkt("Wrote %d lines"), nline);
-            }
-    } else                                  /* Ignore close error   */
-        ffclose();                          /* if a write error.    */
-    if (s != FIOSUC) return FALSE;          /* Some sort of error.  */
-    return TRUE;
 }
 
 /* The command allows the user to modify the file name associated with

@@ -7,44 +7,11 @@
 
 #include        <stdio.h>
 #include        "estruct.h"
+
+#define CRYPT_C
+
 #include        "edef.h"
 #include        "efunc.h"
-
-/*
- * reset encryption key of current buffer
- *
- * int f;               default flag
- * int n;               numeric argument
- */
-int set_encryption_key(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    int status;             /* return status */
-    int odisinp;            /* original value of disinp */
-    char key[NPAT];         /* new encryption string */
-
-/* Turn command input echo off */
-    odisinp = disinp;
-    disinp = FALSE;
-
-/* Get the string to use as an encryption string */
-    status = mlreply("Encryption String: ", key, NPAT - 1, CMPLT_NONE);
-    mlwrite_one(" ");       /* clear it off the bottom line */
-    disinp = odisinp;
-    if (status != TRUE) return status;
-
-/* Encrypt it.
- * However, we now encrypt all bytes, so the result here could contain
- * a NUL byte. Hence we need to get (and store) the length first, and
- * remember to use that in any copying (including elsewhere in uemacs).
- */
-    curbp->b_keylen = strlen(key);
-    myencrypt((char *) NULL, 0);
-    myencrypt(key, curbp->b_keylen);
-
-/* Now save it off */
-    memcpy(curbp->b_key, key, curbp->b_keylen);
-    return TRUE;
-}
 
 /**********
  *
@@ -194,4 +161,39 @@ void myencrypt(char *bptr, unsigned len) {
         *bptr++ = cc;   /* put character back into buffer */
     }
     return;
+}
+
+/* reset encryption key of current buffer
+ *
+ * int f;               default flag
+ * int n;               numeric argument
+ */
+int set_encryption_key(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int status;             /* return status */
+    int odisinp;            /* original value of disinp */
+    char key[NPAT];         /* new encryption string */
+
+/* Turn command input echo off */
+    odisinp = disinp;
+    disinp = FALSE;
+
+/* Get the string to use as an encryption string */
+    status = mlreply("Encryption String: ", key, NPAT - 1, CMPLT_NONE);
+    mlwrite_one(" ");       /* clear it off the bottom line */
+    disinp = odisinp;
+    if (status != TRUE) return status;
+
+/* Encrypt it.
+ * However, we now encrypt all bytes, so the result here could contain
+ * a NUL byte. Hence we need to get (and store) the length first, and
+ * remember to use that in any copying (including elsewhere in uemacs).
+ */
+    curbp->b_keylen = strlen(key);
+    myencrypt((char *) NULL, 0);
+    myencrypt(key, curbp->b_keylen);
+
+/* Now save it off */
+    memcpy(curbp->b_key, key, curbp->b_keylen);
+    return TRUE;
 }

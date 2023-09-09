@@ -1,7 +1,7 @@
 /*      ebind.h
  *
- *      Initial default key to function bindings
- *
+ *      Initial default key to function bindings (for use by main.c)
+*
  *      Modified by Petri Kutvonen
  */
 

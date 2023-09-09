@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 
+#define BASIC_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -34,8 +36,7 @@ static int curline_empty(void) {
     return TRUE;
 }
 
-/*
- * This routine, given a pointer to a struct line, and the current cursor goal
+/* This routine, given a pointer to a struct line, and the current cursor goal
  * column, return the best choice for the offset. The offset is returned.
  * Used by "C-N" and "C-P".
  */
@@ -54,8 +55,7 @@ static int offset_for_curgoal(struct line *dlp) {
     return dbo;
 }
 
-/*
- * Move the cursor to the beginning of the current line.
+/* Move the cursor to the beginning of the current line.
  */
 int gotobol(int f, int n) {
     UNUSED(f); UNUSED(n);
@@ -63,8 +63,48 @@ int gotobol(int f, int n) {
     return TRUE;
 }
 
-/*
- * Move the cursor backwards by "n" characters.
+/* Move the cursor forwards by "n" characters.
+ * GGR - we now move by grapheme - or actual *display* character - rather
+ * than by byte or utf8 character.
+ * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
+ * the way results in it returning minus the actual move (NEW!).
+ * If "n" is less than zero call "back_grapheme" to actually do the move.
+ * Otherwise compute the new cursor location, and move ".".
+ * Error if you try and move off the end of the buffer.
+ * Set the flag if the line pointer for dot changes.
+ * The macro-callable forwchar() (as macros need something that returns
+ * TRUE/FALSE) is a write-through to this, with the "f" arg ignored (it
+ * has never done anything).
+ * Internal calls should be to forw_grapheme() *not* forwchar().
+ */
+int back_grapheme(int);     /* Forward declaration */
+int forw_grapheme(int n) {
+    if (n < 0) return back_grapheme(-n);
+    int moved = 0;
+    while (n--) {
+        int len = llength(curwp->w.dotp);
+        if (curwp->w.doto == len) {
+            if (curwp->w.dotp == curbp->b_linep) return -moved;
+            curwp->w.dotp = lforw(curwp->w.dotp);
+            curwp->w.doto = 0;
+            curwp->w_flag |= WFMOVE;
+            moved++;
+        }
+        else {
+/* GGR - We must cater for utf8 characters in the same way
+ * as the rest of the utf8 code does.
+ */
+            int saved_doto = curwp->w.doto;
+            curwp->w.doto =
+                 next_utf8_offset(curwp->w.dotp->l_text, curwp->w.doto,
+                                  llength(curwp->w.dotp), TRUE);
+            moved += curwp->w.doto - saved_doto;
+        }
+    }
+    return moved;
+}
+
+/* Move the cursor backwards by "n" characters.
  * GGR - we now move by grapheme - or actual *display* character - rather
  * than by byte or utf8 character.
  * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
@@ -78,6 +118,7 @@ int gotobol(int f, int n) {
  * has never done anything).
  * Internal calls should be to back_grapheme() *not* backchar().
  */
+
 int back_grapheme(int n) {
     struct line *lp;
 
@@ -118,81 +159,10 @@ int gotoeol(int f, int n) {
     return TRUE;
 }
 
-/* Move the cursor forwards by "n" characters.
- * GGR - we now move by grapheme - or actual *display* character - rather
- * than by byte or utf8 character.
- * SO THIS NOW RETURNS THE bytes MOVED!!! Although any failure along
- * the way results in it returning minus the actual move (NEW!).
- * If "n" is less than zero call "back_grapheme" to actually do the move.
- * Otherwise compute the new cursor location, and move ".".
- * Error if you try and move off the end of the buffer.
- * Set the flag if the line pointer for dot changes.
- * The macro-callable forwchar() (as macros need something that returns
- * TRUE/FALSE) is a write-through to this, with the "f" arg ignored (it
- * has never done anything).
- * Internal calls should be to forw_grapheme() *not* forwchar().
- */
-int forw_grapheme(int n) {
-    if (n < 0) return back_grapheme(-n);
-    int moved = 0;
-    while (n--) {
-        int len = llength(curwp->w.dotp);
-        if (curwp->w.doto == len) {
-            if (curwp->w.dotp == curbp->b_linep) return -moved;
-            curwp->w.dotp = lforw(curwp->w.dotp);
-            curwp->w.doto = 0;
-            curwp->w_flag |= WFMOVE;
-            moved++;
-        }
-        else {
-/* GGR - We must cater for utf8 characters in the same way
- * as the rest of the utf8 code does.
- */
-            int saved_doto = curwp->w.doto;
-            curwp->w.doto =
-                 next_utf8_offset(curwp->w.dotp->l_text, curwp->w.doto,
-                                  llength(curwp->w.dotp), TRUE);
-            moved += curwp->w.doto - saved_doto;
-        }
-    }
-    return moved;
-}
-
 /* We still need a bindable/macro function that returns TRUE/FALSE */
 int forwchar(int f, int n) {
     UNUSED(f);
     return (forw_grapheme(n) > 0);
-}
-
-/* Move to a particular line.
- *
- * @n: The specified line position at the current buffer.
- */
-int gotoline(int f, int n) {
-    int status;
-    char arg[NSTRING]; /* Buffer to hold argument. */
-
-/* Get an argument if one doesn't exist. */
-    if (f == FALSE) {
-        if ((status =
-          mlreply("Line to GOTO: ", arg, NSTRING, CMPLT_NONE)) != TRUE) {
-            mlwrite_one(MLbkt("Aborted"));
-            return status;
-        }
-        n = atoi(arg);
-    }
-/* Handle the case where the user may be passed something like this:
- * em filename +
- * In this case we just go to the end of the buffer.
- */
-    if (n == 0) return gotoeob(f, n);
-
-/* If a bogus argument was passed, then returns false. */
-    if (n < 0) return FALSE;
-
-/* First, we go to the begin of the buffer. */
-    gotobob(f, n);
-    return forwline(f, n - 1);
 }
 
 /* Goto the beginning of the buffer. Massive adjustment of dot. This is
@@ -224,6 +194,7 @@ int gotoeob(int f, int n) {
  * controls how the goal column is set. Bound to "C-N". No errors are
  * possible.
  */
+int backline(int, int);     /* Forward declaration */
 int forwline(int f, int n) {
     struct line *dlp;
 
@@ -289,6 +260,37 @@ int backline(int f, int n) {
     return TRUE;
 }
 
+/* Move to a particular line.
+ *
+ * @n: The specified line position at the current buffer.
+ */
+int gotoline(int f, int n) {
+    int status;
+    char arg[NSTRING]; /* Buffer to hold argument. */
+
+/* Get an argument if one doesn't exist. */
+    if (f == FALSE) {
+        if ((status =
+          mlreply("Line to GOTO: ", arg, NSTRING, CMPLT_NONE)) != TRUE) {
+            mlwrite_one(MLbkt("Aborted"));
+            return status;
+        }
+        n = atoi(arg);
+    }
+/* Handle the case where the user may be passed something like this:
+ * em filename +
+ * In this case we just go to the end of the buffer.
+ */
+    if (n == 0) return gotoeob(f, n);
+
+/* If a bogus argument was passed, then returns false. */
+    if (n < 0) return FALSE;
+
+/* First, we go to the begin of the buffer. */
+    gotobob(f, n);
+    return forwline(f, n - 1);
+}
+
 /* The inword() test has been replaced with this, as we really want to
  * be skipping whitespace, not skipping over words. Things like
  * punctuation need to be counted too.
@@ -312,6 +314,7 @@ static int at_whitespace(void) {
  *
  * int f, n;            default Flag & Numeric argument
  */
+int gotoeop(int, int);      /* Forward declaration */
 int gotobop(int f, int n) {
     int suc;        /* Bytes moved by last back_grapheme() */
 
@@ -382,6 +385,7 @@ int gotoeop(int f, int n) {
  * the overlap; this value is the default overlap value in ITS EMACS. Because
  * this zaps the top line in the display window, we have to do a hard update.
  */
+int backpage(int, int);     /* Forward declaration */
 int forwpage(int f, int n) {
     struct line *lp;
 

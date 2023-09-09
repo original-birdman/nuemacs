@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <signal.h>
 
+#define SPAWN_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -38,6 +40,12 @@ static void check_for_resize(void) {
         term.t_ncol = orig_width;
     }
     return;
+}
+
+void rtfrmshell(void) {
+    TTopen();
+    curwp->w_flag = WFHARD;
+    sgarbf = TRUE;
 }
 
 /* Create a subjob with a copy of the command interpreter in it. When the
@@ -95,12 +103,6 @@ int bktoshell(int f, int n) {   /* suspend MicroEMACS and wait to wake up */
     kill(0, SIGTSTP);
     rtfrmshell();               /* fg seems to get us back to here... */
     return TRUE;
-}
-
-void rtfrmshell(void) {
-    TTopen();
-    curwp->w_flag = WFHARD;
-    sgarbf = TRUE;
 }
 
 /* Backend for running a one-liner in a subjob.

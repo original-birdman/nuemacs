@@ -10,10 +10,74 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define REGION_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
+
+/* This routine figures out the bounds of the region in the current window
+ * and fills in the fields of the "struct region" structure pointed
+ * to by "rp".
+ * Because the dot and mark are usually very close together we scan
+ * outwards from dot looking for mark. This should save time.
+ * Return a standard code.
+ */
+int getregion(struct region *rp) {
+    struct line *flp;
+    struct line *blp;
+    long fsize;
+    long bsize;
+
+    if (curwp->w.markp == NULL) {
+        mlwrite_one("No mark set in this window");
+        return FALSE;
+    }
+    if (curwp->w.dotp == curwp->w.markp) {
+        rp->r_linep = curwp->w.dotp;
+        if (curwp->w.doto < curwp->w.marko) {
+            rp->r_offset = curwp->w.doto;
+            rp->r_bytes = (long) (curwp->w.marko - curwp->w.doto);
+        }
+        else {
+            rp->r_offset = curwp->w.marko;
+            rp->r_bytes = (long) (curwp->w.doto - curwp->w.marko);
+        }
+        return TRUE;
+    }
+    blp = curwp->w.dotp;
+    bsize = (long) curwp->w.doto;
+    flp = curwp->w.dotp;
+    fsize = (long) (llength(flp) - curwp->w.doto + 1);
+/* We start at dot and look for the mark, spreading out... */
+    while (flp != curbp->b_linep || lback(blp) != curbp->b_linep) {
+        if (flp != curbp->b_linep) {
+            flp = lforw(flp);   /* Look for mark after dot */
+            if (flp == curwp->w.markp) {
+                rp->r_linep = curwp->w.dotp;
+                rp->r_offset = curwp->w.doto;
+                rp->r_bytes = fsize + curwp->w.marko;
+                rp->r_endp = curwp->w.markp;
+                return TRUE;
+             }
+             fsize += llength(flp) + 1;
+         }
+         if (lback(blp) != curbp->b_linep) {
+            blp = lback(blp);   /* Look for mark before dot */
+            bsize += llength(blp) + 1;
+            if (blp == curwp->w.markp) {
+                rp->r_linep = blp;
+                rp->r_offset = curwp->w.marko;
+                rp->r_bytes = bsize - curwp->w.marko;
+                rp->r_endp = curwp->w.dotp;
+                return TRUE;
+            }
+        }
+    }
+    mlwrite_one("Bug: lost mark");
+    return FALSE;
+}
 
 /* Kill the region.
  * Ask "getregion" to figure out the bounds of the region.
@@ -184,68 +248,6 @@ int upperregion(int f, int n) {
 int lowerregion(int f, int n) {
     UNUSED(f); UNUSED(n);
     return casechange_region(UTF8_LOWER);
-}
-
-/* This routine figures out the bounds of the region in the current window
- * and fills in the fields of the "struct region" structure pointed
- * to by "rp".
- * Because the dot and mark are usually very close together we scan
- * outwards from dot looking for mark. This should save time.
- * Return a standard code.
- */
-int getregion(struct region *rp) {
-    struct line *flp;
-    struct line *blp;
-    long fsize;
-    long bsize;
-
-    if (curwp->w.markp == NULL) {
-        mlwrite_one("No mark set in this window");
-        return FALSE;
-    }
-    if (curwp->w.dotp == curwp->w.markp) {
-        rp->r_linep = curwp->w.dotp;
-        if (curwp->w.doto < curwp->w.marko) {
-            rp->r_offset = curwp->w.doto;
-            rp->r_bytes = (long) (curwp->w.marko - curwp->w.doto);
-        }
-        else {
-            rp->r_offset = curwp->w.marko;
-            rp->r_bytes = (long) (curwp->w.doto - curwp->w.marko);
-        }
-        return TRUE;
-    }
-    blp = curwp->w.dotp;
-    bsize = (long) curwp->w.doto;
-    flp = curwp->w.dotp;
-    fsize = (long) (llength(flp) - curwp->w.doto + 1);
-/* We start at dot and look for the mark, spreading out... */
-    while (flp != curbp->b_linep || lback(blp) != curbp->b_linep) {
-        if (flp != curbp->b_linep) {
-            flp = lforw(flp);   /* Look for mark after dot */
-            if (flp == curwp->w.markp) {
-                rp->r_linep = curwp->w.dotp;
-                rp->r_offset = curwp->w.doto;
-                rp->r_bytes = fsize + curwp->w.marko;
-                rp->r_endp = curwp->w.markp;
-                return TRUE;
-             }
-             fsize += llength(flp) + 1;
-         }
-         if (lback(blp) != curbp->b_linep) {
-            blp = lback(blp);   /* Look for mark before dot */
-            bsize += llength(blp) + 1;
-            if (blp == curwp->w.markp) {
-                rp->r_linep = blp;
-                rp->r_offset = curwp->w.marko;
-                rp->r_bytes = bsize - curwp->w.marko;
-                rp->r_endp = curwp->w.dotp;
-                return TRUE;
-            }
-        }
-    }
-    mlwrite_one("Bug: lost mark");
-    return FALSE;
 }
 
 /* GGR extensions to regions */

@@ -9,11 +9,12 @@
 
 #include <stdio.h>
 
+#define WORD_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
-
 #include "utf8proc.h"
 #include "utf8.h"
 
@@ -84,8 +85,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
     return FALSE;
 }
 
-/*
- * Move the cursor backward by "n" words. All of the details of motion are
+/* Move the cursor backward by "n" words. All of the details of motion are
  * performed by the "back_grapheme" routine.
  * This always ends up at the previous start of a word.
  * Error if you try to move beyond the start of the buffer...BUT, since
@@ -93,6 +93,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
  * then stepping forward one, we must handle *arriving* at BOF while
  * looking for the "before word" char correctly.
  */
+int forwword(int, int);     /* Forward declaration */
 int backword(int f, int n) {
 /* Have to go back one at the start it case we are looking at the
  * first char of a word.
@@ -117,8 +118,7 @@ int backword(int f, int n) {
     return (forw_grapheme(1) > 0);  /* Success count => T/F */
 }
 
-/*
- * Move the cursor forward by the specified number of words. All of the motion
+/* Move the cursor forward by the specified number of words. All of the motion
  * is done by "forw_grapheme".
  * Error if you try and move beyond the buffer's end.
  */
@@ -218,8 +218,7 @@ ensure_ex_free:
     return;
 }
 
-/*
- * Move the cursor forward by the specified number of words. As you move,
+/* Move the cursor forward by the specified number of words. As you move,
  * convert any characters to upper case. Error if you try and move beyond the
  * end of the buffer. Bound to "M-U".
  */
@@ -242,8 +241,7 @@ int upperword(int f, int n) {
     return TRUE;
 }
 
-/*
- * Move the cursor forward by the specified number of words. As you move
+/* Move the cursor forward by the specified number of words. As you move
  * convert characters to lower case. Error if you try and move over the end of
  * the buffer. Bound to "M-L".
  */
@@ -266,8 +264,7 @@ int lowerword(int f, int n) {
     return TRUE;
 }
 
-/*
- * Move the cursor forward by the specified number of words. As you move
+/* Move the cursor forward by the specified number of words. As you move
  * convert the first character of the word to upper case, and subsequent
  * characters to lower case. Error if you try and move past the end of the
  * buffer. Bound to "M-C".
@@ -294,14 +291,14 @@ int capword(int f, int n) {
     return TRUE;
 }
 
-/*
- * Kill forward by "n" words. Remember the location of dot. Move forward by
+/* Kill forward by "n" words. Remember the location of dot. Move forward by
  * the right number of words. Put dot back where it was and issue the kill
  * command for the right number of characters. With a zero argument, just
  * kill one word and no whitespace. Bound to "M-D".
  * GGR - forw_grapheme()/back_grapheme() now move by graphemes, so we need
  *       to track the byte count (which they now return).
  */
+int delbword(int, int);     /* Forward declaration */
 int delfword(int f, int n) {
     struct line *dotp;      /* original cursor line */
     int doto;               /*      and row */
@@ -373,8 +370,7 @@ int delfword(int f, int n) {
     return ldelete(size, TRUE);
 }
 
-/*
- * Kill backwards by "n" words. Move backwards by the desired number of words,
+/* Kill backwards by "n" words. Move backwards by the desired number of words,
  * counting the characters. When dot is finally moved to its resting place,
  * fire off the kill command. Bound to "M-Rubout" and to "M-Backspace".
  * GGR - forw_grapheme()/back_grapheme() now move by graphemes, so we need
@@ -452,8 +448,7 @@ bckdel:
     return(status);
 }
 
-/*
- * delete n paragraphs starting with the current one
+/* delete n paragraphs starting with the current one
  *
  * int f        default flag
  * int n        # of paras to delete

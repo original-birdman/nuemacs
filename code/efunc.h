@@ -11,9 +11,13 @@
 #ifndef EFUNC_H_
 #define EFUNC_H_
 
+#define ONPATH 1
+#define INTABLE 2
+
 /* External function declarations. */
 
 /* basic.c */
+#ifndef BASIC_C
 extern int gotobol(int, int);
 extern int back_grapheme(int);
 extern int backchar(int, int);
@@ -31,8 +35,10 @@ extern int forwpage(int, int);
 extern int backpage(int, int);
 extern int setmark(int, int);
 extern int swapmark(int, int);
+#endif
 
 /* bind.c */
+#ifndef BIND_C
 extern int help(int, int);
 extern int not_in_mb_error(int, int);
 extern int deskey(int, int);
@@ -46,12 +52,12 @@ extern int desbind(int, int);
 extern int apro(int, int);
 extern int startup(char *);
 extern void set_pathname(char *);
-#define ONPATH 1
-#define INTABLE 2
 extern char *flook(char *, int, int);
 extern char *transbind(char *);
+#endif
 
 /* buffer.c */
+#ifndef BUFFER_C
 extern int usebuffer(int, int);
 extern int nextbuffer(int, int);
 extern int swbuffer(struct buffer *, int);
@@ -68,12 +74,16 @@ extern int bclear(struct buffer *);
 extern int unmark(int, int);
 extern char do_force_mode(char *);
 extern int setforcemode(int, int);
+#endif
 
 /* crypt.c */
+#ifndef CRYPT_C
 extern int set_encryption_key(int, int);
 extern void myencrypt(char *, unsigned int);
+#endif
 
 /* display.c */
+#ifndef DISPLAY_C
 extern int ttput1c(char);
 extern void vtinit(void);
 extern void vttidy(void);
@@ -94,8 +104,10 @@ extern void set_scrarray_size(int, int);
 extern int newscreensize(int, int, int);
 extern void mberase(void);
 extern void mbupdate(void);
+#endif
 
 /* eval.c */
+#ifndef EVAL_C
 extern void varinit(void);
 extern void init_envvar_index(void);
 extern int nxti_envvar(int);
@@ -107,8 +119,10 @@ extern int delvar(int, int);
 extern char *ue_itoa(int);
 extern int gettyp(char *);
 extern char *getval(char *);
+#endif
 
 /* exec.c */
+#ifndef EXEC_C
 extern char *token(char *, char *, int);
 extern int namedcmd(int, int);
 extern int execcmd(int, int);
@@ -168,8 +182,10 @@ extern int cbuf37(int, int);
 extern int cbuf38(int, int);
 extern int cbuf39(int, int);
 extern int cbuf40(int, int);
+#endif
 
 /* file.c */
+#ifndef FILE_C
 extern int fileread(int, int);
 extern int insfile(int, int);
 extern int filefind(int, int);
@@ -182,8 +198,10 @@ extern int filewrite(int, int);
 extern int filesave(int, int);
 extern int writeout(char *);
 extern int filename(int, int);
+#endif
 
 /* fileio.c */
+#ifndef FILEIO_C
 extern int ffropen(char *);
 extern int ffwopen(char *);
 extern int ffclose(void);
@@ -192,8 +210,10 @@ extern int ffgetline(void);
 extern int fexist(char *);
 extern void fixup_fname(char *);
 extern void fixup_full(char *);
+#endif
 
 /* input.c */
+#ifndef INPUT_C
 extern int mlyesno(char *);
 extern int mlreply(char *, char *, int, enum cmplt_type);
 extern struct name_bind *getname(char *, int);
@@ -201,19 +221,25 @@ extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);
 extern int getstring(char *, char *, int , enum cmplt_type);
+#endif
 
 /* isearch.c */
+#ifndef ISEARCH_C
 extern int incremental_debug_check(int);
 extern void incremental_debug_cleanup(void);
 extern int risearch(int, int);
 extern int fisearch(int, int);
+#endif
 
 /* lock.c */
+#ifndef LOCK_C
 extern int lockchk(char *);
 extern int lockrel(void);
 extern int lock(char *);
+#endif
 
 /* main.c */
+#ifndef MAIN_C
 extern void addchar_kbdmacro(char);
 extern int addto_kbdmacro(char *, int, int);
 extern int macro_helper(int, int);
@@ -235,26 +261,34 @@ extern int cex(int, int);
 extern int unarg(int, int);
 extern int reexecute(int, int);
 extern void extend_keytab(int);
+#endif
 
 /* names.c */
+#ifndef NAMES_C
 extern void init_namelookup(void);
 extern struct name_bind *func_info(fn_t);
 extern struct name_bind *name_info(char *);
 extern int nxti_name_info(int);
+#endif
 
 /* pklock.c */
+#ifndef PKLOCK_C
 extern char *dolock(char *);
 extern char *undolock(char *);
+#endif
 
 /* posix.c */
+#ifndef POSIX_C
 extern void ttopen(void);
 extern void ttclose(void);
 extern int ttputc(int c);
 extern void ttflush(void);
 extern int ttgetc(void);
 extern int typahead(void);
+#endif
 
 /* random.c */
+#ifndef RANDOM_C
 extern int setfillcol(int, int);
 extern int showcpos(int, int);
 extern int getcline(void);
@@ -292,8 +326,10 @@ extern int quotedcount(int, int);
 extern int ggr_style(int, int);
 extern int re_args_exec(int, int);
 extern int open_parent(int, int);
+#endif
 
 /* region.c */
+#ifndef REGION_C
 extern int killregion(int, int);
 extern int copyregion(int, int);
 extern int lowerregion(int, int);
@@ -301,9 +337,10 @@ extern int upperregion(int, int);
 extern int getregion(struct region *);
 extern int narrow(int, int);
 extern int widen(int, int);
+#endif
 
 /* search.c */
-
+#ifndef SEARCH_C
 extern void init_search_ringbuffers(void);
 extern void new_prompt(char *);
 extern void rotate_sstr(int);
@@ -320,8 +357,10 @@ extern void rvstrcpy(char *, char *);
 extern int sreplace(int, int);
 extern int qreplace(int, int);
 extern char *group_match(int);
+#endif
 
 /* spawn.c */
+#ifndef SPAWN_C
 extern int spawncli(int, int);
 extern int bktoshell(int, int);
 extern void rtfrmshell(void);
@@ -329,8 +368,10 @@ extern int spawn(int, int);
 extern int execprg(int, int);
 extern int pipecmd(int, int);
 extern int filter_buffer(int, int);
+#endif
 
 /* window.c */
+#ifndef WINDOW_C
 extern int reposition(int, int);
 extern int redraw(int, int);
 extern int nextwind(int, int);
@@ -352,13 +393,10 @@ extern int newsize(int);
 extern int newwidth(int);
 extern int getwpos(void);
 extern void cknewwindow(void);
+#endif
 
 /* word.c */
-#define inword_classes "LN"
-#define at_wspace_classes "ZC"
-#define inword(wp) class_check(wp, inword_classes, FALSE)
-#define at_abreak(wp) class_check(wp, at_wspace_classes, TRUE)
-#define at_wspace(wp) class_check(wp, at_wspace_classes, FALSE)
+#ifndef WORD_C
 extern int class_check(struct inwbuf *, char *, int);
 
 extern int backword(int, int);
@@ -380,9 +418,18 @@ extern int justpara(int, int);
 extern int fillwhole(int, int);
 extern int makelist_region(int, int);
 extern int numberlist_region(int, int);
+#endif
+
+#if defined(WORD_C) || defined (EXEC_C)
+#define inword_classes "LN"  
+#define at_wspace_classes "ZC"
+#define inword(wp) class_check(wp, inword_classes, FALSE)
+#define at_abreak(wp) class_check(wp, at_wspace_classes, TRUE)
+#define at_wspace(wp) class_check(wp, at_wspace_classes, FALSE)
+#endif
 
 /* wrapper.c */
-
+#ifndef WRAPPER_C
 extern void *Xfree(void *);
 
 #if __GCC__ >= 11
@@ -412,9 +459,12 @@ extern void *Xrealloc(void *, size_t) REALLOC_ATTR;
 #endif
 extern char *Xstrdup (const char *) STRDUP_ATTR;
 #undef STRDUP_ATTR
+#endif
 
 #ifdef DO_FREE
-/* Calls to allow free()s when compiing in debug mode */
+/* Calls to allow free()s when compiling in debug mode. */
+
+#ifdef MAIN_C
 extern void free_bind(void);
 extern void free_buffer(void);
 extern void free_display(void);
@@ -425,9 +475,6 @@ extern void free_line(void);
 extern void free_names(void);
 extern void free_search(void);
 extern void free_utf8(void);
-
-#if FILOCK
-extern void free_lock(void);
 #endif
 
 #endif

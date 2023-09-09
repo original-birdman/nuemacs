@@ -60,10 +60,12 @@
 #include <fcntl.h>
 #include <stdarg.h>
 
+#define MAIN_C
+
 #include "estruct.h" /* Global structures and defines. */
 #include "edef.h"    /* Global definitions. */
 #include "efunc.h"   /* Function declarations and name table. */
-#include "ebind.h"   /* Default key bindings. */
+#include "line.h"
 #include "version.h"
 
 #include <signal.h>
@@ -1053,6 +1055,705 @@ static void edinit(char *bname) {
     return;
 }
 
+/* ======================================================================
+ * Begin a keyboard macro.
+ * Error if not at the top level in keyboard processing. Set up variables and
+ * return.
+ */
+int ctlxlp(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    if (kbdmode != STOP) {
+        mlwrite_one("%Macro already active");
+        return FALSE;
+    }
+    if (strcmp(curbp->b_bname, kbdmacro_buffer) == 0) {
+        mlwrite_one("%Cannot collect macro when in keyboard macro buffer");
+        return FALSE;
+    }
+
+/* Have to save current c/f/n-last */
+    p_arg = f_arg;          /* Restored on ctlxrp in execute() */
+
+    mlwrite_one(MLbkt("Start macro"));
+    kbdptr = kbdm;
+    kbdend = kbdptr;
+    kbdmode = RECORD;
+    start_kbdmacro();
+    return TRUE;
+}
+
+/* ======================================================================
+ * Execute a macro.
+ * The command argument is the number of times to loop. Quit as soon as a
+ * command gets an error. Return TRUE if all OK, else FALSE.
+ */
+int ctlxe(int f, int n) {
+    UNUSED(f);
+    if (kbdmode != STOP) {
+        mlwrite_one("%Macro already active");
+        return FALSE;
+    }
+    if (n <= 0) return TRUE;
+
+/* Have to save current c/f/n-last */
+    p_arg = f_arg;          /* Restored on ctlxrp in execute() */
+
+    kbdrep = n;             /* remember how many times to execute */
+    kbdmode = PLAY;         /* start us in play mode */
+    kbdptr = kbdm;          /*    at the beginning */
+    return TRUE;
+}
+
+/* ======================================================================
+ * User function that does NOTHING
+ */
+int nullproc(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    return TRUE;
+}
+
+/* ======================================================================
+ * What gets called if we try to run something interactively which
+ * we shouldn't.
+ * Requires not_interactive_fname to have been set.
+ */
+int not_interactive(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    mlwrite("%s may not be run interactively!!", not_interactive_fname);
+    return(TRUE);
+}
+
+/* ======================================================================
+ * End keyboard macro. Check for the same limit conditions as the above
+ * routine. Set up the variables and return to the caller.
+ * NOTE that since the key strokes to get here when recording a macro
+ * are in the macro buffer we take advantage of that to implement
+ * re-executing the macro multiple-times.
+ */
+int reexecute(int, int);    /* Forward declaration */
+int ctlxrp(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    if (kbdmode == STOP) {
+        mlwrite_one("%Macro not active");
+        return FALSE;
+    }
+    if (kbdmode == RECORD) end_kbdmacro();
+
+/* Collecting a keyboard macro puts a ctlxrp at the end of the buffer.
+ * this is somewhat fortunate, as it allows us to detect the end of a
+ * macro pass and set things up for the next reexecute call when we
+ * have a numeric arg > 1 for execute-macro.
+ */
+    if (kbdmode != STOP) {
+        f_arg = p_arg;      /* Restore saved set - should be ctlxe */
+
+/* On the last keyboard repeat kbdrep will be 1 (haven't yet reached
+ * the end - it will be >1 if we've been asked to run the macro
+ * multiple times).
+ * If we are on the last keyboard repeat, in PLAY mode and ctlxe still
+ * has more repeats to go then call reexecute to set things up for the
+ * next pass.
+ */
+        if ((kbdrep == 1) && kbdmode == PLAY && (ctlxe_togo > 0)) {
+            kbdmode = STOP;     /* Leave ctlxe_togo as-is */
+            return reexecute(f_arg.ca.f, f_arg.ca.n);
+        }
+        inreex = FALSE;
+/* If an mlforce() message has been written we want it to remain there
+ * for the next pass, but then go.
+ * This means we need to skip the mpresf test near the start of loop for
+ * one (more) pass.
+ */
+        mline_persist = FALSE;
+    }
+    return TRUE;
+}
+
+/* ======================================================================
+ * This is the general command execution routine. It handles the fake binding
+ * of all the keys to "self-insert". It also clears out the "thisflag" word,
+ * and arranges to move it to the "lastflag", so that the next command can
+ * look at it. Return the status of command.
+ */
+int execute(int c, int f, int n) {
+    int status;
+
+/* If the keystroke is a bound function...do it.
+ * However, we'll handle Space and B/b as special in VIEW mode
+ * and <Return> as special in VIEW and dir_browsing mode (which is only
+ * active in VIEW mode).
+ */
+    int dir_browsing = 0;
+    struct key_tab *ktp = NULL;
+    if (((c & 0x7fffffff) < 0x7f || c == (CONTROL|'M')) &&
+        (curbp->b_mode & MDVIEW)) {
+        if (c == ' ') {
+            ktp = getbyfnc(forwpage);
+        }
+        else if ((c | DIFCASE) == 'b') {
+            ktp = getbyfnc(backpage);
+        }
+        else if ((c | DIFCASE) == 'n') {
+            ktp = getbyfnc(forwline);
+        }
+        else if ((c | DIFCASE) == 'p') {
+            ktp = getbyfnc(backline);
+        }
+
+/* If we are in the //directory buffer in view-only mode with a showdir
+ * user_proc then handle certain command chars.
+ * NOTE: that the //directory buffer name *MUST* agree with that used
+ * in the showdir userproc.
+ * Make the test short if it's going to fail...
+ * We need to do this *now* in order to trap newline for this...and
+ * just remap it to the character that implements what we want it to do...
+ * ALSO note that since we've handled Space, B, N and P  above, these
+ * cannot take on any different meaning within the directory browsing window.
+ * [The switch(test_char) list under if (dir_browsing), below.]
+ */
+        else if (!strcmp("//directory", curbp->b_bname)) {
+            struct buffer *sdb = bfind("/showdir", FALSE, 0);
+            dir_browsing = (sdb && (sdb->b_type == BTPROC));
+        }
+        if (c == (CONTROL|'M')) {
+            if (dir_browsing) c = 'd';
+            else ktp = getbyfnc(forwpage);
+        }
+    }
+    if (!ktp) ktp = getbind(c);
+
+    if (ktp) {
+        fn_t execfunc = ktp->hndlr.k_fp;
+        if (execfunc == nullproc) return(TRUE);
+        int run_not_in_mb = 0;
+        int run_not_interactive = 0;
+        struct buffer *proc_bp = NULL;
+        if (inmb) {
+            if (ktp->k_type == FUNC_KMAP) {
+                if (ktp->fi->opt.not_mb) {
+                    run_not_in_mb = 1;
+                    not_in_mb.funcname = ktp->fi->n_name;
+                }
+            }
+            else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
+                char pbuf[NBUFN+1];
+                pbuf[0] = '/';
+                strcpy(pbuf+1, ktp->hndlr.pbp);
+                if ((proc_bp = bfind(pbuf, FALSE, 0)) != NULL) {
+                    if (proc_bp->btp_opt.not_mb) {
+                        run_not_in_mb = 1;
+                        not_in_mb.funcname = ktp->hndlr.pbp;
+                    }
+                }
+            }
+        }
+
+        if (!clexec) {
+            if (ktp->k_type == FUNC_KMAP) {
+                if (!clexec && ktp->fi->opt.not_interactive) {
+                    run_not_interactive = 1;
+                    not_interactive_fname = ktp->fi->n_name;
+                }
+            }
+            else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
+                if (!proc_bp) {     /* We might have just done this above */
+                    char pbuf[NBUFN+1];
+                    pbuf[0] = '/';
+                    strcpy(pbuf+1, ktp->hndlr.pbp);
+                    proc_bp = bfind(pbuf, FALSE, 0);
+                }
+                if (proc_bp != NULL) {
+                    if (!clexec && proc_bp->btp_opt.not_interactive) {
+                        run_not_interactive = 1;
+                        not_interactive_fname = ktp->hndlr.pbp;
+                    }
+                }
+            }
+        }
+
+/* Factor in any keybinding specified multiplier */
+
+        if (ktp->bk_multiplier != 1) {
+            n *= ktp->bk_multiplier;
+            f = TRUE;
+        }
+        if (run_not_in_mb) {
+            not_in_mb.keystroke = c;
+            execfunc = not_in_mb_error;
+        }
+        if (run_not_interactive) {
+            execfunc = not_interactive;
+        }
+        thisflag = 0;
+/* GGR - implement re-execute */
+        if ((execfunc != reexecute) && (execfunc != nullproc) &&
+            (execfunc != ctlxrp)) {     /* Remember current set */
+            f_arg.func = execfunc;
+            f_arg.ca.c = c;
+            f_arg.ca.f = f;
+            f_arg.ca.n = n;
+        }
+
+/* If we are recording a macro and:
+ *  o we are not in the minibuffer (which is collected elsewhere)
+ *  o we are not re-executing (if we are we've already recorded the reexecute)
+ */
+        if (!inmb && !inreex && kbdmode == RECORD) {
+            if (ktp->fi->opt.skip_in_macro) {   /* Skip these, mostly... */
+                if (execfunc == namedcmd) {     /* Use next func directly... */
+                    if ((f > 0) && (n != 1))    /* ...but record any count */
+                        set_narg_kbdmacro(n);
+                }
+            }
+            else {                          /* Record it */
+                if ((f > 0) && (n != 1)) set_narg_kbdmacro(n);
+                addto_kbdmacro(ktp->fi->n_name, 1, 0);
+            }
+        }
+        if (!run_not_in_mb &&
+             ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
+            execfunc = execproc;    /* Run this instead... */
+            input_waiting = ktp->hndlr.pbp;
+            if (!inmb && kbdmode == RECORD)
+                 addto_kbdmacro(input_waiting, 0, 0);
+        }
+        else input_waiting = NULL;
+
+        running_function = 1;   /* Rather than keyboard input */
+        status = execfunc(f, n);
+        if (!ktp->fi->opt.search_ok) srch_can_hunt = 0;
+        running_function = 0;
+        input_waiting = NULL;
+        if (execfunc != showcpos) lastflag = thisflag;
+/* GGR - abort running/collecting keyboard macro at point of error */
+        if ((kbdmode != STOP) & !status) end_kbdmacro();
+        return status;
+    }
+
+/* A single character "self-insert" also has to be remembered so that
+ * ctl-C while typing repeats the last character
+ */
+    f_arg.func = NULL;
+    f_arg.ca.c = c;
+    f_arg.ca.f = f;
+    f_arg.ca.n = n;
+
+    if (dir_browsing) {
+        int test_char = c | DIFCASE;    /* Quick lowercase */
+        switch(test_char) { /* NOTE: Space and 'b' *cannot* be used here! */
+        case 'd':           /* Dive into entry on current line */
+        case 'o':           /* Open entry on current line */
+        case 'v':           /* View entry on current line */
+
+/* We want to get to the end of the relevant token.
+ * This is defined when setting up the showdir userproc, so that if the
+ * line-generating code is changed you don't need to recompile uemacs to
+ * change things.
+ * Then advance a space and take the rest of the line as the entry name
+ * since we're only looking for space we can just use ASCII.
+ */
+           {char *lp = curwp->w.dotp->l_text;
+/* Check that we can handle this type of entry.
+ * The showdir command will have followed all symlinks, so
+ * we're only interested in directories and files.
+ */
+            if (*lp != '-' && *lp != 'd') {
+                mlwrite_one("Error: showdir only views directories and files");
+                break;
+            }
+            int max = llength(curwp->w.dotp);
+            int tok = showdir_tokskip;
+            if (tok < 0) {
+                mlwrite_one("Error: $showdir_tokskip is negative!");
+                break;
+            }
+            int decr = 1;
+            char fname[NFILEN];
+            int fnlen;
+            for (;;) {
+                if (decr && *lp == ' ') {
+                    decr = 0;
+                    if (--tok == 0) break;
+                }
+                else
+                    if (!decr && *lp != ' ') {
+                        decr = 1;
+                    }
+                if (--max == 0) break;
+                lp++;
+            }
+            if (tok) {      /* Didn't get them all? */
+                mlwrite_one("Can't parse line");
+                break;
+            }
+/* Move to start of name, and get the length to end-of-data (no NUL here) */
+            lp++;   /* Step over next space */
+            fnlen = curwp->w.dotp->l_text+llength(curwp->w.dotp) - lp;
+
+/* Now build up the full pathname
+ * Start with the current buffer filename, and append "/", unless we
+ * are actually at "/" (quick test).
+ */
+            strcpy(fname, curwp->w_bufp->b_fname);
+            if (fname[1] != '\0') strcat(fname, "/");
+/* Add in this entryname, then work out the full pathname length
+ * and append a NUL
+ */
+            strncat(fname, lp, fnlen);
+            int full_len = strlen(curwp->w_bufp->b_fname) + 1 + fnlen;
+            fname[full_len] = '\0';
+
+/* May be file or dir - getfile() sorts it out */
+            getfile(fname, test_char != 'v', TRUE); /* c.f. filefind/viewfile */
+            if (test_char == 'v') curwp->w_bufp->b_mode |= MDVIEW;
+            break;
+           }
+        case 'a':           /* Refresh/toggle current view in ASCII mode */
+        case 't':           /* Refresh/toggle current view in TIME mode */
+        case 'r':           /* Refresh current view in current mode */
+        case 'h':           /* Toggle hidden files in current mode */
+        case 'm':           /* Toggle mixed/type-sorted display */
+        case 'f':           /* Toggle dirs/files order in type-sorted mode */
+            getfile(curbp->b_fname, FALSE, TRUE);
+            break;
+        case 'u':           /* Up to parent. Needs run_user_proc() */
+           {char fname[NFILEN];
+            strcpy(fname, curwp->w_bufp->b_fname);
+            char *upp = strrchr(fname, '/');
+            if (upp == fname) upp++;
+            *upp = '\0';
+            userproc_arg = fname;
+            (void)run_user_proc("showdir", 0, 1);
+            userproc_arg = NULL;
+            break;
+           }
+        }
+        lastflag = 0;       /* Fake last flags.     */
+        return TRUE;
+    }
+
+/* If a space was typed, fill column is defined, the argument is non-
+ * negative, wrap mode is enabled, and we are now past fill column,
+ * and we are not read-only, perform word wrap.
+ * NOTE that we then continue on to self-insert the space!
+ */
+    if (c == ' ' && (curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
+          n >= 0 && getccol() > fillcol &&
+         (curwp->w_bufp->b_mode & MDVIEW) == FALSE) {
+/* Don't start the handler when it is already running as that might
+ * just get into a loop...
+ */
+        if (!meta_spec_active.W) {
+            meta_spec_active.W = 1;
+            execute(META|SPEC|'W', FALSE, (ggr_opts&GGR_FULLWRAP)? 2: 1);
+            meta_spec_active.W = 0;
+/* If the result of the wrap is that we are at the start of a line then
+ * we don't want to add a space.
+ * This has to match the handling in insert_newline() in random.c.
+ */
+            if (curwp->w.doto == 0) return TRUE;
+        }
+    }
+
+    if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
+        || (c >= 0xA0 && c <= MAX_UTF8_CHAR)) {
+
+/* GGR - Implement Phonetic Translation iff we are about to self-insert.
+ * If the mode is active call the handler.
+ * If this returns TRUE then the character has been handled such that
+ * we do not need to insert it.
+ */
+        if (curbp->b_mode & MDPHON) {
+            if (ptt_handler(c)) return TRUE;
+        }
+
+        if (n <= 0) {   /* Fenceposts.          */
+            lastflag = 0;
+            return n < 0 ? FALSE : TRUE;
+        }
+        thisflag = 0;   /* For the future.      */
+
+/* If we are in overwrite mode, not at eol, and next char is not a tab
+ * or we are at a tab stop, delete a char forward
+ */
+        if (curwp->w_bufp->b_mode & MDOVER &&
+            curwp->w.doto < curwp->w.dotp->l_used &&
+            (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
+            (curwp->w.doto) % 8 == 7))
+                ldelgrapheme(1, FALSE);
+
+/* Do the appropriate insertion */
+        if (c == '}' && (curbp->b_mode & MDCMOD) != 0) {
+            status = insbrace(n, c);
+            if (!inmb && kbdmode == RECORD) {
+                if ((f > 0) && (n != 1))    /* Record any count */
+                    set_narg_kbdmacro(n);
+                addto_kbdmacro("macro-helper", 1, 0);
+                addto_kbdmacro("}", 0, 0);
+            }
+        }
+        else if (c == '#' && (curbp->b_mode & MDCMOD) != 0) {
+            status = inspound();
+            if (!inmb && kbdmode == RECORD) {
+                 addto_kbdmacro("macro-helper", 1, 0);
+                 addto_kbdmacro("#", 0, 0);
+            }
+	}
+        else {
+            status = linsert_uc(n, c);    /* We get Unicode, not utf-8 */
+            if (!inmb && kbdmode == RECORD) {
+                int nc = 1;
+                if ((f > 0) && (n > 1)) nc = n;
+                while(nc--) addchar_kbdmacro(c);
+	    }
+	}
+
+/* Check for CMODE fence matching */
+         if ((c == '}' || c == ')' || c == ']') &&
+            (curbp->b_mode & MDCMOD) != 0)
+                fmatch(c);
+
+/* Check auto-save mode */
+        if (curbp->b_mode & MDASAVE)
+            if (--gacount == 0) {   /* And save the file if needed */
+                upscreen(FALSE, 0);
+                filesave(FALSE, 0);
+                gacount = gasave;
+            }
+
+        lastflag = thisflag;
+        return status;
+    }
+    TTbeep();
+    mlwrite_one(MLbkt("Key not bound"));  /* complain             */
+    lastflag = 0;                           /* Fake last flags.     */
+    return FALSE;
+}
+
+/* ======================================================================
+ * GGR - Function to implement re-execute last command
+ */
+int reexecute(int f, int n) {
+    UNUSED(f);
+    int reloop;
+/* If we are being asked to reexec running the macro (ctlxe) then we have
+ * to return to let it happen (i.e. collect keys from the macro buffer).
+ * We also need to remember how many times to pass here if n > 1.
+ * Since we can't actually recurse into a keyboard macro we can
+ * manage with this fudge, rather than having to restructure everything
+ * into recursive calls.
+ * Do NOT set inreex for this!! We aren't reexecing anything - instead
+ * we're setting up the macro to replay, which is not the same thing...
+ */
+    if (f_arg.func == ctlxe) {
+        if (ctlxe_togo == 0) {  /* First call */
+            if (n > 1)  ctlxe_togo = n;
+            else        ctlxe_togo = 1;
+        }
+        ctlxe(f_arg.ca.f, f_arg.ca.n);
+        ctlxe_togo--;
+        return TRUE;
+    }
+
+    inreex = TRUE;
+/* We can't just multiply n's. Must loop. */
+    for (reloop = 1; reloop<=n; ++reloop) {
+        execute(f_arg.ca.c, f_arg.ca.f, f_arg.ca.n);
+    }
+    inreex = FALSE;
+    return(TRUE);
+}
+
+/* ======================================================================
+ * Abort.
+ * Beep the beeper. Kill off any keyboard macro, etc., that is in progress.
+ * Sometimes called as a routine, to do general aborting of stuff.
+ */
+int ctrlg(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    TTbeep();
+    if (kbdmode == RECORD) end_kbdmacro();
+    mlwrite_one(MLbkt("Aborted"));
+    return ABORT;
+}
+
+/* ======================================================================
+ * Tell the user that this command is illegal while we are in
+ * particular modes.
+ */
+int rdonly(void) {
+    TTbeep();
+    if (running_function)
+        mlwrite(MLbkt("%s illegal in read-only buffer: %s"),
+            current_command, curbp->b_fname);
+    else
+        mlwrite_one(MLbkt("Key illegal in VIEW mode"));
+    return FALSE;
+}
+int resterr(void) {
+    TTbeep();
+    mlwrite_one(MLbkt("That command is RESTRICTED"));
+    return FALSE;
+}
+
+/* ======================================================================
+ * Dummy function for binding to meta prefix.
+ */
+int metafn(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    return TRUE;
+}
+/* ======================================================================
+ * Dummy function for binding to control-x prefix.
+ */
+int cex(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    return TRUE;
+}
+
+/* ======================================================================
+ * Dummy function for binding to universal-argument
+ */
+int unarg(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    return TRUE;
+}
+
+/* ======================================================================
+ * Quit command. If an argument, always quit. Otherwise confirm if a buffer
+ * has been changed and not written out. Normally bound to "C-X C-C".
+ */
+int quit(int f, int n) {
+    int s;
+
+    if (f != FALSE          /* Argument forces it.  */
+        || anycb() == FALSE /* All buffers clean.   */
+        || (s =             /* User says it's OK.   */
+            mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
+        if (filock) {
+            if (lockrel() != TRUE) {
+                ttput1c('\n');
+                ttput1c('\r');
+                TTclose();
+                TTkclose();
+                exit(1);
+            }
+        }
+        vttidy();
+#ifdef DO_FREE
+
+/* Explicitly free things in debug mode, to help things like valgrind. */
+    free_bind();
+    free_buffer();
+    free_display();
+    free_eval();
+    free_exec();
+    free_input();
+    free_line();
+    free_names();
+    free_search();
+    free_utf8();
+
+#if FILOCK
+    free_lock();
+#endif
+
+/* Remove all windows */
+
+    struct window *nextwp;
+    for (struct window *wp = wheadp; wp; wp = nextwp) {
+        nextwp = wp->w_wndp;
+        Xfree(wp);
+    }
+    if (eos_list) Xfree(eos_list);
+
+#endif
+        if (f) exit(n);
+        else   exit(0);
+    }
+    mlwrite_one("");
+    return s;
+}
+
+/* ======================================================================
+ * Fancy quit command, as implemented by Norm. If any buffer has changed
+ * do a write on that buffer and exit uemacs, otherwise simply exit.
+ */
+int quickexit(int f, int n) {
+    struct buffer *bp;      /* scanning pointer to buffers */
+    struct buffer *oldcb;   /* original current buffer */
+    int status;
+
+    oldcb = curbp;          /* save in case we fail */
+
+    bp = bheadp;
+    while (bp != NULL) {
+        if ((bp->b_flag & BFCHG) != 0       /* Changed.             */
+             && (bp->b_flag & BFTRUNC) == 0  /* Not truncated P.K.   */
+             && (bp->b_flag & BFINVS) == 0) {/* Real.                */
+            curbp = bp;                 /* make that buffer cur */
+            mlwrite(MLbkt("Saving %s"), bp->b_fname);
+            mlwrite_one("\n");              /* So user can see filename */
+            if ((status = filesave(f, n)) != TRUE) {
+                curbp = oldcb;          /* restore curbp */
+                sleep(1);
+                redraw(FALSE, 0);       /* Redraw - remove filenames */
+                return status;
+            }
+        }
+        bp = bp->b_bufp;            /* on to the next buffer */
+    }
+    quit(f, n);                     /* conditionally quit   */
+    return TRUE;
+}
+
+/* *Now* include the bindings - aftre we've defined the functions
+ * in this file.
+ */
+#include "ebind.h"   /* Default key bindings. */
+
+/* ======================================================================
+ * GGR - Extend the size of the key_table list.
+ * If input arg is non-zero use that, otherwise extend by the
+ * defined increment and update keytab_alloc_ents.
+ */
+static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}, NULL, 0};
+static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}, NULL, 0};
+
+void extend_keytab(int n_ents) {
+
+    int init_from;
+    if (n_ents == 0) {
+        init_from = keytab_alloc_ents;
+        keytab_alloc_ents += KEYTAB_INCR;
+    }
+    else {      /* Only happens at start */
+        init_from = 0;
+        keytab_alloc_ents = n_ents;
+    }
+    keytab = Xrealloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
+    if (init_from == 0) {           /* Add in starting data */
+        int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
+        struct key_tab *ktp = keytab;
+        for (int n = 0; n < n_init_keys; n++, ktp++) {
+            ktp->k_type = FUNC_KMAP;    /* All init ones are this */
+            ktp->k_code = init_keytab[n].k_code;
+            ktp->hndlr.k_fp = init_keytab[n].k_fp;
+            ktp->fi = func_info(ktp->hndlr.k_fp);
+            ktp->bk_multiplier = 1;
+        }
+        init_from = n_init_keys;    /* Only need to add tags from here */
+    }
+/* Add in marker tags for (new) free entries */
+    for (int i = init_from; i < keytab_alloc_ents - 1; i++)
+        keytab[i] = endl_keytab;
+    keytab[keytab_alloc_ents - 1] = ends_keytab;
+
+    key_index_valid = 0;    /* Rebuild index before using it. */
+
+    return;
+}
+
 int main(int argc, char **argv) {
     int c = -1;             /* command character */
     struct buffer *bp;      /* temp buffer pointer */
@@ -1439,703 +2140,10 @@ loop:
 }
 
 /* ======================================================================
- * What gets called if we try to run something interactively which
- * we shouldn't.
- * Requires not_interactive_fname to have been set.
- */
-int not_interactive(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    mlwrite("%s may not be run interactively!!", not_interactive_fname);
-    return(TRUE);
-}
-
-/* ======================================================================
- * This is the general command execution routine. It handles the fake binding
- * of all the keys to "self-insert". It also clears out the "thisflag" word,
- * and arranges to move it to the "lastflag", so that the next command can
- * look at it. Return the status of command.
- */
-int execute(int c, int f, int n) {
-    int status;
-
-/* If the keystroke is a bound function...do it.
- * However, we'll handle Space and B/b as special in VIEW mode
- * and <Return> as special in VIEW and dir_browsing mode (which is only
- * active in VIEW mode).
- */
-    int dir_browsing = 0;
-    struct key_tab *ktp = NULL;
-    if (((c & 0x7fffffff) < 0x7f || c == (CONTROL|'M')) &&
-        (curbp->b_mode & MDVIEW)) {
-        if (c == ' ') {
-            ktp = getbyfnc(forwpage);
-        }
-        else if ((c | DIFCASE) == 'b') {
-            ktp = getbyfnc(backpage);
-        }
-        else if ((c | DIFCASE) == 'n') {
-            ktp = getbyfnc(forwline);
-        }
-        else if ((c | DIFCASE) == 'p') {
-            ktp = getbyfnc(backline);
-        }
-
-/* If we are in the //directory buffer in view-only mode with a showdir
- * user_proc then handle certain command chars.
- * NOTE: that the //directory buffer name *MUST* agree with that used
- * in the showdir userproc.
- * Make the test short if it's going to fail...
- * We need to do this *now* in order to trap newline for this...and
- * just remap it to the character that implements what we want it to do...
- * ALSO note that since we've handled Space, B, N and P  above, these
- * cannot take on any different meaning within the directory browsing window.
- * [The switch(test_char) list under if (dir_browsing), below.]
- */
-        else if (!strcmp("//directory", curbp->b_bname)) {
-            struct buffer *sdb = bfind("/showdir", FALSE, 0);
-            dir_browsing = (sdb && (sdb->b_type == BTPROC));
-        }
-        if (c == (CONTROL|'M')) {
-            if (dir_browsing) c = 'd';
-            else ktp = getbyfnc(forwpage);
-        }
-    }
-    if (!ktp) ktp = getbind(c);
-
-    if (ktp) {
-        fn_t execfunc = ktp->hndlr.k_fp;
-        if (execfunc == nullproc) return(TRUE);
-        int run_not_in_mb = 0;
-        int run_not_interactive = 0;
-        struct buffer *proc_bp = NULL;
-        if (inmb) {
-            if (ktp->k_type == FUNC_KMAP) {
-                if (ktp->fi->opt.not_mb) {
-                    run_not_in_mb = 1;
-                    not_in_mb.funcname = ktp->fi->n_name;
-                }
-            }
-            else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
-                char pbuf[NBUFN+1];
-                pbuf[0] = '/';
-                strcpy(pbuf+1, ktp->hndlr.pbp);
-                if ((proc_bp = bfind(pbuf, FALSE, 0)) != NULL) {
-                    if (proc_bp->btp_opt.not_mb) {
-                        run_not_in_mb = 1;
-                        not_in_mb.funcname = ktp->hndlr.pbp;
-                    }
-                }
-            }
-        }
-
-        if (!clexec) {
-            if (ktp->k_type == FUNC_KMAP) {
-                if (!clexec && ktp->fi->opt.not_interactive) {
-                    run_not_interactive = 1;
-                    not_interactive_fname = ktp->fi->n_name;
-                }
-            }
-            else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
-                if (!proc_bp) {     /* We might have just done this above */
-                    char pbuf[NBUFN+1];
-                    pbuf[0] = '/';
-                    strcpy(pbuf+1, ktp->hndlr.pbp);
-                    proc_bp = bfind(pbuf, FALSE, 0);
-                }
-                if (proc_bp != NULL) {
-                    if (!clexec && proc_bp->btp_opt.not_interactive) {
-                        run_not_interactive = 1;
-                        not_interactive_fname = ktp->hndlr.pbp;
-                    }
-                }
-            }
-        }
-
-/* Factor in any keybinding specified multiplier */
-
-        if (ktp->bk_multiplier != 1) {
-            n *= ktp->bk_multiplier;
-            f = TRUE;
-        }
-        if (run_not_in_mb) {
-            not_in_mb.keystroke = c;
-            execfunc = not_in_mb_error;
-        }
-        if (run_not_interactive) {
-            execfunc = not_interactive;
-        }
-        thisflag = 0;
-/* GGR - implement re-execute */
-        if ((execfunc != reexecute) && (execfunc != nullproc) &&
-            (execfunc != ctlxrp)) {     /* Remember current set */
-            f_arg.func = execfunc;
-            f_arg.ca.c = c;
-            f_arg.ca.f = f;
-            f_arg.ca.n = n;
-        }
-
-/* If we are recording a macro and:
- *  o we are not in the minibuffer (which is collected elsewhere)
- *  o we are not re-executing (if we are we've already recorded the reexecute)
- */
-        if (!inmb && !inreex && kbdmode == RECORD) {
-            if (ktp->fi->opt.skip_in_macro) {   /* Skip these, mostly... */
-                if (execfunc == namedcmd) {     /* Use next func directly... */
-                    if ((f > 0) && (n != 1))    /* ...but record any count */
-                        set_narg_kbdmacro(n);
-                }
-            }
-            else {                          /* Record it */
-                if ((f > 0) && (n != 1)) set_narg_kbdmacro(n);
-                addto_kbdmacro(ktp->fi->n_name, 1, 0);
-            }
-        }
-        if (!run_not_in_mb &&
-             ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
-            execfunc = execproc;    /* Run this instead... */
-            input_waiting = ktp->hndlr.pbp;
-            if (!inmb && kbdmode == RECORD)
-                 addto_kbdmacro(input_waiting, 0, 0);
-        }
-        else input_waiting = NULL;
-
-        running_function = 1;   /* Rather than keyboard input */
-        status = execfunc(f, n);
-        if (!ktp->fi->opt.search_ok) srch_can_hunt = 0;
-        running_function = 0;
-        input_waiting = NULL;
-        if (execfunc != showcpos) lastflag = thisflag;
-/* GGR - abort running/collecting keyboard macro at point of error */
-        if ((kbdmode != STOP) & !status) end_kbdmacro();
-        return status;
-    }
-
-/* A single character "self-insert" also has to be remembered so that
- * ctl-C while typing repeats the last character
- */
-    f_arg.func = NULL;
-    f_arg.ca.c = c;
-    f_arg.ca.f = f;
-    f_arg.ca.n = n;
-
-    if (dir_browsing) {
-        int test_char = c | DIFCASE;    /* Quick lowercase */
-        switch(test_char) { /* NOTE: Space and 'b' *cannot* be used here! */
-        case 'd':           /* Dive into entry on current line */
-        case 'o':           /* Open entry on current line */
-        case 'v':           /* View entry on current line */
-
-/* We want to get to the end of the relevant token.
- * This is defined when setting up the showdir userproc, so that if the
- * line-generating code is changed you don't need to recompile uemacs to
- * change things.
- * Then advance a space and take the rest of the line as the entry name
- * since we're only looking for space we can just use ASCII.
- */
-           {char *lp = curwp->w.dotp->l_text;
-/* Check that we can handle this type of entry.
- * The showdir command will have followed all symlinks, so
- * we're only interested in directories and files.
- */
-            if (*lp != '-' && *lp != 'd') {
-                mlwrite_one("Error: showdir only views directories and files");
-                break;
-            }
-            int max = llength(curwp->w.dotp);
-            int tok = showdir_tokskip;
-            if (tok < 0) {
-                mlwrite_one("Error: $showdir_tokskip is negative!");
-                break;
-            }
-            int decr = 1;
-            char fname[NFILEN];
-            int fnlen;
-            for (;;) {
-                if (decr && *lp == ' ') {
-                    decr = 0;
-                    if (--tok == 0) break;
-                }
-                else
-                    if (!decr && *lp != ' ') {
-                        decr = 1;
-                    }
-                if (--max == 0) break;
-                lp++;
-            }
-            if (tok) {      /* Didn't get them all? */
-                mlwrite_one("Can't parse line");
-                break;
-            }
-/* Move to start of name, and get the length to end-of-data (no NUL here) */
-            lp++;   /* Step over next space */
-            fnlen = curwp->w.dotp->l_text+llength(curwp->w.dotp) - lp;
-
-/* Now build up the full pathname
- * Start with the current buffer filename, and append "/", unless we
- * are actually at "/" (quick test).
- */
-            strcpy(fname, curwp->w_bufp->b_fname);
-            if (fname[1] != '\0') strcat(fname, "/");
-/* Add in this entryname, then work out the full pathname length
- * and append a NUL
- */
-            strncat(fname, lp, fnlen);
-            int full_len = strlen(curwp->w_bufp->b_fname) + 1 + fnlen;
-            fname[full_len] = '\0';
-
-/* May be file or dir - getfile() sorts it out */
-            getfile(fname, test_char != 'v', TRUE); /* c.f. filefind/viewfile */
-            if (test_char == 'v') curwp->w_bufp->b_mode |= MDVIEW;
-            break;
-           }
-        case 'a':           /* Refresh/toggle current view in ASCII mode */
-        case 't':           /* Refresh/toggle current view in TIME mode */
-        case 'r':           /* Refresh current view in current mode */
-        case 'h':           /* Toggle hidden files in current mode */
-        case 'm':           /* Toggle mixed/type-sorted display */
-        case 'f':           /* Toggle dirs/files order in type-sorted mode */
-            getfile(curbp->b_fname, FALSE, TRUE);
-            break;
-        case 'u':           /* Up to parent. Needs run_user_proc() */
-           {char fname[NFILEN];
-            strcpy(fname, curwp->w_bufp->b_fname);
-            char *upp = strrchr(fname, '/');
-            if (upp == fname) upp++;
-            *upp = '\0';
-            userproc_arg = fname;
-            (void)run_user_proc("showdir", 0, 1);
-            userproc_arg = NULL;
-            break;
-           }
-        }
-        lastflag = 0;       /* Fake last flags.     */
-        return TRUE;
-    }
-
-/* If a space was typed, fill column is defined, the argument is non-
- * negative, wrap mode is enabled, and we are now past fill column,
- * and we are not read-only, perform word wrap.
- * NOTE that we then continue on to self-insert the space!
- */
-    if (c == ' ' && (curwp->w_bufp->b_mode & MDWRAP) && fillcol > 0 &&
-          n >= 0 && getccol() > fillcol &&
-         (curwp->w_bufp->b_mode & MDVIEW) == FALSE) {
-/* Don't start the handler when it is already running as that might
- * just get into a loop...
- */
-        if (!meta_spec_active.W) {
-            meta_spec_active.W = 1;
-            execute(META|SPEC|'W', FALSE, (ggr_opts&GGR_FULLWRAP)? 2: 1);
-            meta_spec_active.W = 0;
-/* If the result of the wrap is that we are at the start of a line then
- * we don't want to add a space.
- * This has to match the handling in insert_newline() in random.c.
- */
-            if (curwp->w.doto == 0) return TRUE;
-        }
-    }
-
-    if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
-        || (c >= 0xA0 && c <= MAX_UTF8_CHAR)) {
-
-/* GGR - Implement Phonetic Translation iff we are about to self-insert.
- * If the mode is active call the handler.
- * If this returns TRUE then the character has been handled such that
- * we do not need to insert it.
- */
-        if (curbp->b_mode & MDPHON) {
-            if (ptt_handler(c)) return TRUE;
-        }
-
-        if (n <= 0) {   /* Fenceposts.          */
-            lastflag = 0;
-            return n < 0 ? FALSE : TRUE;
-        }
-        thisflag = 0;   /* For the future.      */
-
-/* If we are in overwrite mode, not at eol, and next char is not a tab
- * or we are at a tab stop, delete a char forward
- */
-        if (curwp->w_bufp->b_mode & MDOVER &&
-            curwp->w.doto < curwp->w.dotp->l_used &&
-            (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
-            (curwp->w.doto) % 8 == 7))
-                ldelgrapheme(1, FALSE);
-
-/* Do the appropriate insertion */
-        if (c == '}' && (curbp->b_mode & MDCMOD) != 0) {
-            status = insbrace(n, c);
-            if (!inmb && kbdmode == RECORD) {
-                if ((f > 0) && (n != 1))    /* Record any count */
-                    set_narg_kbdmacro(n);
-                addto_kbdmacro("macro-helper", 1, 0);
-                addto_kbdmacro("}", 0, 0);
-            }
-        }
-        else if (c == '#' && (curbp->b_mode & MDCMOD) != 0) {
-            status = inspound();
-            if (!inmb && kbdmode == RECORD) {
-                 addto_kbdmacro("macro-helper", 1, 0);
-                 addto_kbdmacro("#", 0, 0);
-            }
-	}
-        else {
-            status = linsert_uc(n, c);    /* We get Unicode, not utf-8 */
-            if (!inmb && kbdmode == RECORD) {
-                int nc = 1;
-                if ((f > 0) && (n > 1)) nc = n;
-                while(nc--) addchar_kbdmacro(c);
-	    }
-	}
-
-/* Check for CMODE fence matching */
-         if ((c == '}' || c == ')' || c == ']') &&
-            (curbp->b_mode & MDCMOD) != 0)
-                fmatch(c);
-
-/* Check auto-save mode */
-        if (curbp->b_mode & MDASAVE)
-            if (--gacount == 0) {   /* And save the file if needed */
-                upscreen(FALSE, 0);
-                filesave(FALSE, 0);
-                gacount = gasave;
-            }
-
-        lastflag = thisflag;
-        return status;
-    }
-    TTbeep();
-    mlwrite_one(MLbkt("Key not bound"));  /* complain             */
-    lastflag = 0;                           /* Fake last flags.     */
-    return FALSE;
-}
-
-/* ======================================================================
- * Fancy quit command, as implemented by Norm. If any buffer has changed
- * do a write on that buffer and exit uemacs, otherwise simply exit.
- */
-int quickexit(int f, int n) {
-    struct buffer *bp;      /* scanning pointer to buffers */
-    struct buffer *oldcb;   /* original current buffer */
-    int status;
-
-    oldcb = curbp;          /* save in case we fail */
-
-    bp = bheadp;
-    while (bp != NULL) {
-        if ((bp->b_flag & BFCHG) != 0       /* Changed.             */
-             && (bp->b_flag & BFTRUNC) == 0  /* Not truncated P.K.   */
-             && (bp->b_flag & BFINVS) == 0) {/* Real.                */
-            curbp = bp;                 /* make that buffer cur */
-            mlwrite(MLbkt("Saving %s"), bp->b_fname);
-            mlwrite_one("\n");              /* So user can see filename */
-            if ((status = filesave(f, n)) != TRUE) {
-                curbp = oldcb;          /* restore curbp */
-                sleep(1);
-                redraw(FALSE, 0);       /* Redraw - remove filenames */
-                return status;
-            }
-        }
-        bp = bp->b_bufp;            /* on to the next buffer */
-    }
-    quit(f, n);                     /* conditionally quit   */
-    return TRUE;
-}
-
-/* ======================================================================
  * The original signal handler - left bound to SIGHUP.
  */
 static void emergencyexit(int signr) {
     UNUSED(signr);
     quickexit(FALSE, 0);
     quit(TRUE, 0);
-}
-
-/* ======================================================================
- * Quit command. If an argument, always quit. Otherwise confirm if a buffer
- * has been changed and not written out. Normally bound to "C-X C-C".
- */
-int quit(int f, int n) {
-    int s;
-
-    if (f != FALSE          /* Argument forces it.  */
-        || anycb() == FALSE /* All buffers clean.   */
-        || (s =             /* User says it's OK.   */
-            mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
-        if (filock) {
-            if (lockrel() != TRUE) {
-                ttput1c('\n');
-                ttput1c('\r');
-                TTclose();
-                TTkclose();
-                exit(1);
-            }
-        }
-        vttidy();
-#ifdef DO_FREE
-
-/* Explicitly free things in debug mode, to help things like valgrind. */
-    free_bind();
-    free_buffer();
-    free_display();
-    free_eval();
-    free_exec();
-    free_input();
-    free_line();
-    free_names();
-    free_search();
-    free_utf8();
-
-#if FILOCK
-    free_lock();
-#endif
-
-/* Remove all windows */
-
-    struct window *nextwp;
-    for (struct window *wp = wheadp; wp; wp = nextwp) {
-        nextwp = wp->w_wndp;
-        Xfree(wp);
-    }
-    if (eos_list) Xfree(eos_list);
-
-#endif
-        if (f) exit(n);
-        else   exit(0);
-    }
-    mlwrite_one("");
-    return s;
-}
-
-/* ======================================================================
- * Begin a keyboard macro.
- * Error if not at the top level in keyboard processing. Set up variables and
- * return.
- */
-int ctlxlp(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    if (kbdmode != STOP) {
-        mlwrite_one("%Macro already active");
-        return FALSE;
-    }
-    if (strcmp(curbp->b_bname, kbdmacro_buffer) == 0) {
-        mlwrite_one("%Cannot collect macro when in keyboard macro buffer");
-        return FALSE;
-    }
-
-/* Have to save current c/f/n-last */
-    p_arg = f_arg;          /* Restored on ctlxrp in execute() */
-
-    mlwrite_one(MLbkt("Start macro"));
-    kbdptr = kbdm;
-    kbdend = kbdptr;
-    kbdmode = RECORD;
-    start_kbdmacro();
-    return TRUE;
-}
-
-/* ======================================================================
- * End keyboard macro. Check for the same limit conditions as the above
- * routine. Set up the variables and return to the caller.
- * NOTE that since the key strokes to get here when recording a macro
- * are in the macro buffer we take advantage of that to implement
- * re-executing the macro multiple-times.
- */
-int ctlxrp(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    if (kbdmode == STOP) {
-        mlwrite_one("%Macro not active");
-        return FALSE;
-    }
-    if (kbdmode == RECORD) end_kbdmacro();
-
-/* Collecting a keyboard macro puts a ctlxrp at the end of the buffer.
- * this is somewhat fortunate, as it allows us to detect the end of a
- * macro pass and set things up for the next reexecute call when we
- * have a numeric arg > 1 for execute-macro.
- */
-    if (kbdmode != STOP) {
-        f_arg = p_arg;      /* Restore saved set - should be ctlxe */
-
-/* On the last keyboard repeat kbdrep will be 1 (haven't yet reached
- * the end - it will be >1 if we've been asked to run the macro
- * multiple times).
- * If we are on the last keyboard repeat, in PLAY mode and ctlxe still
- * has more repeats to go then call reexecute to set things up for the
- * next pass.
- */
-        if ((kbdrep == 1) && kbdmode == PLAY && (ctlxe_togo > 0)) {
-            kbdmode = STOP;     /* Leave ctlxe_togo as-is */
-            return reexecute(f_arg.ca.f, f_arg.ca.n);
-        }
-        inreex = FALSE;
-/* If an mlforce() message has been written we want it to remain there
- * for the next pass, but then go.
- * This means we need to skip the mpresf test near the start of loop for
- * one (more) pass.
- */
-        mline_persist = FALSE;
-    }
-    return TRUE;
-}
-
-/* ======================================================================
- * Execute a macro.
- * The command argument is the number of times to loop. Quit as soon as a
- * command gets an error. Return TRUE if all OK, else FALSE.
- */
-int ctlxe(int f, int n) {
-    UNUSED(f);
-    if (kbdmode != STOP) {
-        mlwrite_one("%Macro already active");
-        return FALSE;
-    }
-    if (n <= 0) return TRUE;
-
-/* Have to save current c/f/n-last */
-    p_arg = f_arg;          /* Restored on ctlxrp in execute() */
-
-    kbdrep = n;             /* remember how many times to execute */
-    kbdmode = PLAY;         /* start us in play mode */
-    kbdptr = kbdm;          /*    at the beginning */
-    return TRUE;
-}
-
-/* ======================================================================
- * Abort.
- * Beep the beeper. Kill off any keyboard macro, etc., that is in progress.
- * Sometimes called as a routine, to do general aborting of stuff.
- */
-int ctrlg(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    TTbeep();
-    if (kbdmode == RECORD) end_kbdmacro();
-    mlwrite_one(MLbkt("Aborted"));
-    return ABORT;
-}
-
-/* ======================================================================
- * Tell the user that this command is illegal while we are in
- * particular modes.
- */
-int rdonly(void) {
-    TTbeep();
-    if (running_function)
-        mlwrite(MLbkt("%s illegal in read-only buffer: %s"),
-            current_command, curbp->b_fname);
-    else
-        mlwrite_one(MLbkt("Key illegal in VIEW mode"));
-    return FALSE;
-}
-int resterr(void) {
-    TTbeep();
-    mlwrite_one(MLbkt("That command is RESTRICTED"));
-    return FALSE;
-}
-
-/* ======================================================================
- * User function that does NOTHING
- */
-int nullproc(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    return TRUE;
-}
-
-/* ======================================================================
- * Dummy function for binding to meta prefix.
- */
-int metafn(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    return TRUE;
-}
-/* ======================================================================
- * Dummy function for binding to control-x prefix.
- */
-int cex(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    return TRUE;
-}
-
-/* ======================================================================
- * Dummy function for binding to universal-argument
- */
-int unarg(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    return TRUE;
-}
-
-/* ======================================================================
- * GGR - Function to implement re-execute last command
- */
-int reexecute(int f, int n) {
-    UNUSED(f);
-    int reloop;
-/* If we are being asked to reexec running the macro (ctlxe) then we have
- * to return to let it happen (i.e. collect keys from the macro buffer).
- * We also need to remember how many times to pass here if n > 1.
- * Since we can't actually recurse into a keyboard macro we can
- * manage with this fudge, rather than having to restructure everything
- * into recursive calls.
- * Do NOT set inreex for this!! We aren't reexecing anything - instead
- * we're setting up the macro to replay, which is not the same thing...
- */
-    if (f_arg.func == ctlxe) {
-        if (ctlxe_togo == 0) {  /* First call */
-            if (n > 1)  ctlxe_togo = n;
-            else        ctlxe_togo = 1;
-        }
-        ctlxe(f_arg.ca.f, f_arg.ca.n);
-        ctlxe_togo--;
-        return TRUE;
-    }
-
-    inreex = TRUE;
-/* We can't just multiply n's. Must loop. */
-    for (reloop = 1; reloop<=n; ++reloop) {
-        execute(f_arg.ca.c, f_arg.ca.f, f_arg.ca.n);
-    }
-    inreex = FALSE;
-    return(TRUE);
-}
-
-/* ======================================================================
- * GGR - Extend the size of the key_table list.
- * If input arg is non-zero use that, otherwise extend by the
- * defined increment and update keytab_alloc_ents.
- */
-static struct key_tab endl_keytab = {ENDL_KMAP, 0, {NULL}, NULL, 0};
-static struct key_tab ends_keytab = {ENDS_KMAP, 0, {NULL}, NULL, 0};
-
-void extend_keytab(int n_ents) {
-
-    int init_from;
-    if (n_ents == 0) {
-        init_from = keytab_alloc_ents;
-        keytab_alloc_ents += KEYTAB_INCR;
-    }
-    else {      /* Only happens at start */
-        init_from = 0;
-        keytab_alloc_ents = n_ents;
-    }
-    keytab = Xrealloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
-    if (init_from == 0) {           /* Add in starting data */
-        int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
-        struct key_tab *ktp = keytab;
-        for (int n = 0; n < n_init_keys; n++, ktp++) {
-            ktp->k_type = FUNC_KMAP;    /* All init ones are this */
-            ktp->k_code = init_keytab[n].k_code;
-            ktp->hndlr.k_fp = init_keytab[n].k_fp;
-            ktp->fi = func_info(ktp->hndlr.k_fp);
-            ktp->bk_multiplier = 1;
-        }
-        init_from = n_init_keys;    /* Only need to add tags from here */
-    }
-/* Add in marker tags for (new) free entries */
-    for (int i = init_from; i < keytab_alloc_ents - 1; i++)
-        keytab[i] = endl_keytab;
-    keytab[keytab_alloc_ents - 1] = ends_keytab;
-
-    key_index_valid = 0;    /* Rebuild index before using it. */
-
-    return;
 }

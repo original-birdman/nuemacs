@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define BIND_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -20,6 +22,121 @@
 #include "utf8proc.h"
 
 #define HELP_BUF "//Help"
+
+/* GGR - Define a path-separator
+ */
+static char path_sep = '/';
+
+static int along_path(char *fname, char *fspec) {
+    char *path;     /* environmental PATH variable */
+    char *sp;       /* pointer into path spec */
+
+/* get the PATH variable */
+    path = getenv("PATH");
+    if (path != NULL)
+        while (*path) {
+
+/* Build next possible file spec */
+            sp = fspec;
+            while (*path && (*path != PATHCHR)) *sp++ = *path++;
+
+/* Add a terminating dir separator if we need it */
+            if (sp != fspec) *sp++ = path_sep;
+            *sp = 0;
+            strcat(fspec, fname);
+
+/* And try it out */
+            if (ffropen(fspec) == FIOSUC) {
+                ffclose();
+                return TRUE;
+            }
+
+            if (*path == PATHCHR) ++path;
+        }
+    return FALSE;
+}
+
+/* Look up the existence of a file along the normal or PATH
+ * environment variable. Look first in the HOME directory if
+ * asked and possible.
+ * GGR - added mode flag determines whether to look along PATH
+ * or in the set list of directories.
+ *
+ * char *fname;         base file name to search for
+ * int hflag;           Look in the HOME environment variable first?
+ */
+char *flook(char *fname, int hflag, int mode) {
+    char *home;                     /* path to home directory */
+    int i;                          /* index */
+    static char fspec[NSTRING];     /* full path spec to search */
+
+    pathexpand = FALSE;             /* GGR */
+
+/* If we've been given a pathname, rather than a filename, just use that */
+
+    if (strchr(fname, path_sep)) {
+        char *res = NULL;   /* Assume the worst */
+        if (ffropen(fname) == FIOSUC) {
+            ffclose();
+            res = fname;
+        }
+        pathexpand = TRUE;  /* GGR */
+        return res;
+    }
+
+    if (hflag) {
+        home = getenv("HOME");
+        if (home != NULL) {     /* build home dir file spec */
+            strcpy(fspec, home);
+            char psbuf[2];
+            psbuf[0] = path_sep;
+            psbuf[1] = '\0';
+            strcat(fspec, psbuf);
+            strcat(fspec, fname);
+
+            if (ffropen(fspec) == FIOSUC) { /* and try it out */
+                ffclose();
+                pathexpand = TRUE;  /* GGR */
+                return fspec;
+            }
+        }
+    }
+
+/* Always try the current directory first - if allowed */
+    if (allow_current && ffropen(fname) == FIOSUC) {
+        ffclose();
+        pathexpand = TRUE;                  /* GGR */
+        return fname;
+    }
+
+/* GGR - use PATH or TABLE according to mode.
+ * You want to use ONPATH when looking for a command, but INTABLE
+ * when looking for a config files.
+ * The caller knows which...
+ */
+    if (mode == ONPATH) {
+        if (along_path(fname, fspec) == TRUE) {
+            pathexpand = TRUE;                  /* GGR */
+            return fspec;
+        }
+    }
+
+    if (mode == INTABLE) {  /* look it up via the old table method */
+        for (i = 0;; i++) {
+            if (pathname[i] == NULL) break;
+            strcpy(fspec, pathname[i]);
+            strcat(fspec, fname);
+            if (ffropen(fspec) == FIOSUC) {    /* and try it out */
+                ffclose();
+                pathexpand = TRUE;          /* GGR */
+                return fspec;
+            }
+        }
+    }
+
+    pathexpand = TRUE;                          /* GGR */
+    return NULL;            /* no such luck */
+}
 
 int help(int f, int n) {    /* give me some help!!!!
                                bring up a fake buffer and read the help file
@@ -254,53 +371,6 @@ int not_in_mb_error(int f, int n) {
     return(TRUE);
 }
 
-/* Describe the command for a certain key
- */
-int deskey(int f, int n) {
-    UNUSED(f); UNUSED(n);
-    int c;          /* key to describe */
-    char *ptr;      /* string pointer to scan output strings */
-
-/* Prompt the user to type us a key to describe */
-    mlwrite_one(": describe-key ");
-
-/* Get the command sequence to describe.
- * Change it to something we can print as well and dump it out.
- */
-    c = getckey(FALSE);
-    if (c == 0) {
-        mlwrite_one("Can't parse key string!");
-        return FALSE;
-    }
-    mlputs(cmdstr(c));
-    mlputs(" ");
-
-/* Find the right function */
-    struct key_tab *ktp = getbind(c);
-    if (!ktp) ptr = "Not Bound";
-    else {
-        ptr = ktp->fi->n_name;
-/* Display a possible multiplier */
-        if (ktp->bk_multiplier != 1) {
-            char tbuf[16];
-            sprintf(tbuf, "{%d}", ktp->bk_multiplier);
-            mlputs(tbuf);
-        }
-    }
-
-/* Output the function name */
-    mlputs(ptr);
-
-/* Add buffer-name, if relevant */
-    if (ktp && ktp->k_type == PROC_KMAP) {
-        mlputs(" ");
-        mlputs(ktp->hndlr.pbp);
-    }
-    if (inmb) TTflush();    /* Need this if we are in the minibuffer */
-    mpresf = TRUE;          /* GGR */
-    return TRUE;
-}
-
 /* (Re)Index the key bindings...
  */
 #include <stddef.h>
@@ -449,8 +519,8 @@ struct key_tab *getbind(int c) {
  * entry of any multiple ones, as there can't be such entries!
  */
     int first = 0;
+    int middle = 0;     /* Keep the gcc analyzer happy */
     int last = kt_ents - 1;
-    int middle;
 
     while (first <= last) {
         middle = (first + last)/2;
@@ -465,6 +535,53 @@ struct key_tab *getbind(int c) {
     struct key_tab *res = &keytab[key_index[middle]];
     current_command = res->fi->n_name;
     return res;
+}
+
+/* Describe the command for a certain key
+ */
+int deskey(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    int c;          /* key to describe */
+    char *ptr;      /* string pointer to scan output strings */
+
+/* Prompt the user to type us a key to describe */
+    mlwrite_one(": describe-key ");
+
+/* Get the command sequence to describe.
+ * Change it to something we can print as well and dump it out.
+ */
+    c = getckey(FALSE);
+    if (c == 0) {
+        mlwrite_one("Can't parse key string!");
+        return FALSE;
+    }
+    mlputs(cmdstr(c));
+    mlputs(" ");
+
+/* Find the right function */
+    struct key_tab *ktp = getbind(c);
+    if (!ktp) ptr = "Not Bound";
+    else {
+        ptr = ktp->fi->n_name;
+/* Display a possible multiplier */
+        if (ktp->bk_multiplier != 1) {
+            char tbuf[16];
+            sprintf(tbuf, "{%d}", ktp->bk_multiplier);
+            mlputs(tbuf);
+        }
+    }
+
+/* Output the function name */
+    mlputs(ptr);
+
+/* Add buffer-name, if relevant */
+    if (ktp && ktp->k_type == PROC_KMAP) {
+        mlputs(" ");
+        mlputs(ktp->hndlr.pbp);
+    }
+    if (inmb) TTflush();    /* Need this if we are in the minibuffer */
+    mpresf = TRUE;          /* GGR */
+    return TRUE;
 }
 
 /* unbindchar()
@@ -1050,39 +1167,6 @@ int startup(char *sfname) {
     return dofile(fname);
 }
 
-/* GGR - Define a path-separator
- */
-static char path_sep = '/';
-
-static int along_path(char *fname, char *fspec) {
-    char *path;     /* environmental PATH variable */
-    char *sp;       /* pointer into path spec */
-
-/* get the PATH variable */
-    path = getenv("PATH");
-    if (path != NULL)
-        while (*path) {
-
-/* Build next possible file spec */
-            sp = fspec;
-            while (*path && (*path != PATHCHR)) *sp++ = *path++;
-
-/* Add a terminating dir separator if we need it */
-            if (sp != fspec) *sp++ = path_sep;
-            *sp = 0;
-            strcat(fspec, fname);
-
-/* And try it out */
-            if (ffropen(fspec) == FIOSUC) {
-                ffclose();
-                return TRUE;
-            }
-
-            if (*path == PATHCHR) ++path;
-        }
-    return FALSE;
-}
-
 /* GGR - function to set pathname from the command-line
  * This overrides the compiled-in defaults
  */
@@ -1112,88 +1196,6 @@ void set_pathname(char *cl_string) {
     }
     pathname[1] = NULL;
     return;
-}
-
-/* Look up the existence of a file along the normal or PATH
- * environment variable. Look first in the HOME directory if
- * asked and possible.
- * GGR - added mode flag determines whether to look along PATH
- * or in the set list of directories.
- *
- * char *fname;         base file name to search for
- * int hflag;           Look in the HOME environment variable first?
- */
-char *flook(char *fname, int hflag, int mode) {
-    char *home;                     /* path to home directory */
-    int i;                          /* index */
-    static char fspec[NSTRING];     /* full path spec to search */
-
-    pathexpand = FALSE;             /* GGR */
-
-/* If we've been given a pathname, rather than a filename, just use that */
-
-    if (strchr(fname, path_sep)) {
-        char *res = NULL;   /* Assume the worst */
-        if (ffropen(fname) == FIOSUC) {
-            ffclose();
-            res = fname;
-        }
-        pathexpand = TRUE;  /* GGR */
-        return res;
-    }
-
-    if (hflag) {
-        home = getenv("HOME");
-        if (home != NULL) {     /* build home dir file spec */
-            strcpy(fspec, home);
-            char psbuf[2];
-            psbuf[0] = path_sep;
-            psbuf[1] = '\0';
-            strcat(fspec, psbuf);
-            strcat(fspec, fname);
-
-            if (ffropen(fspec) == FIOSUC) { /* and try it out */
-                ffclose();
-                pathexpand = TRUE;  /* GGR */
-                return fspec;
-            }
-        }
-    }
-
-/* Always try the current directory first - if allowed */
-    if (allow_current && ffropen(fname) == FIOSUC) {
-        ffclose();
-        pathexpand = TRUE;                  /* GGR */
-        return fname;
-    }
-
-/* GGR - use PATH or TABLE according to mode.
- * You want to use ONPATH when looking for a command, but INTABLE
- * when looking for a config files.
- * The caller knows which...
- */
-    if (mode == ONPATH) {
-        if (along_path(fname, fspec) == TRUE) {
-            pathexpand = TRUE;                  /* GGR */
-            return fspec;
-        }
-    }
-
-    if (mode == INTABLE) {  /* look it up via the old table method */
-        for (i = 0;; i++) {
-            if (pathname[i] == NULL) break;
-            strcpy(fspec, pathname[i]);
-            strcat(fspec, fname);
-            if (ffropen(fspec) == FIOSUC) {    /* and try it out */
-                ffclose();
-                pathexpand = TRUE;          /* GGR */
-                return fspec;
-            }
-        }
-    }
-
-    pathexpand = TRUE;                          /* GGR */
-    return NULL;            /* no such luck */
 }
 
 /* string key name to binding name....

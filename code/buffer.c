@@ -12,70 +12,99 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define BUFFER_C
+
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
 
-/* Attach a buffer to a window. The values of dot and mark come from
- * the buffer if the use count is 0. Otherwise, they come from some
- * other window.
- * If *any* numeric arg is given, use the savnam buffer directly with
- * no prompting.
- * This command is disabled in the minibuffer (names in names.c)
+/* This routine blows away all of the text in a buffer.
+ * If the buffer is marked as changed then we ask if it is OK to blow it away;
+ * this is to save the user the grief of losing text.
+ * The window chain is nearly always wrong if this gets called; the caller
+ * must arrange for the updates that are required.
+ * Return TRUE if everything looks good.
  */
-int usebuffer(int f, int n) {
-    UNUSED(n);
-    struct buffer *bp;
+int bclear(struct buffer *bp) {
+    struct line *lp;
     int s;
-    char bufn[NBUFN];
 
-    if (f) strcpy(bufn, savnam);
-    else
-/* GGR - handle saved buffer name in minibuffer */
-        if ((s = mlreply("Use buffer: ", bufn, NBUFN, CMPLT_BUF)) != TRUE) {
-            if (s != ABORT) strcpy(bufn, savnam);
-            else                     return(s);
+    if ((bp->b_flag & BFINVS) == 0      /* Not scratch buffer.  */
+        && (bp->b_flag & BFCHG) != 0    /* Something changed    */
+        && (s = mlyesno("Discard changes")) != TRUE)
+            return s;
+    bp->b_flag &= ~BFCHG;               /* Not changed          */
+
+/* If we are modfying the buffer that the match-group info points
+ * to we have to mark them as invalid.
+ */
+    if (bp == group_match_buffer) group_match_buffer = NULL;
+
+/* If the buffer is narrowed we must widen it first to ensure we free
+ * all lines - not just those from the narrowed region.
+ */
+    if (bp->b_flag & BFNAROW) {
+        struct buffer *obp = curwp->w_bufp;
+        curwp->w_bufp = bp;             /* Ensure this buf is current */
+        widen(0, -1);                   /* -1 == no reposition */
+        curwp->w_bufp = obp;            /* Restore original buf */
+    }
+
+    while ((lp = lforw(bp->b_linep)) != bp->b_linep) lfree(lp);
+
+    bp->b.dotp = bp->b_linep;           /* Fix "."              */
+    bp->b.doto = 0;
+    bp->b.markp = NULL;                 /* Invalidate "mark"    */
+    bp->b.marko = 0;
+    bp->b.fcol = 0;
+
+/* If we are clearing a buffer that had variables defined then we
+ * need to free those.
+ */
+    if (bp->bv) {       /* Must free the values too... */
+        for (int vnum = 0; vnum < BVALLOC; vnum++) {
+            if (bp->bv[vnum].name[0] == '\0') break;
+            Xfree(bp->bv[vnum].value);
         }
+        Xfree(bp->bv);
+        bp->bv = NULL;
+    }
 
-    if ((bp = bfind(bufn, TRUE, 0)) == NULL) return FALSE;
-    return swbuffer(bp, 0);
+/* If it's a Phonetic Translation table, remove that too. */
+
+    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
+
+    return TRUE;
 }
 
-/* switch to the next buffer in the buffer list
- * This command is disabled in the minibuffer (names in names.c)
- *
- * int f, n;            default flag, numeric argument
+/* kill the buffer pointed to by bp
  */
-int nextbuffer(int f, int n) {
-    struct buffer *bp;          /* test buffer pointer */
-    struct buffer *bbp;         /* eligible buffer to switch to */
+int zotbuf(struct buffer *bp) {
+    struct buffer *bp1;
+    struct buffer *bp2;
+    int s;
 
-/* Make sure the arg is legit */
-    if (f == FALSE) n = 1;
-
-/* We now allow -ve changes. Since we only have forward pointers this is
- * implemented by counting the valid buffers and taking the (+ve) modulus.
- */
-    if (n < 1) {
-        int nb = 0;
-        for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
-            if (!(bp->b_flag & BFINVS)) nb++;
-        n %= nb;
-        if (n == 0) return FALSE;
-        if (n < 0) n += nb;     /* Ensure it is +ve - modulus does not */
+    if (bp->b_nwnd != 0) {          /* Error if on screen.  */
+        mlwrite_one("Buffer is being displayed");
+        return FALSE;
     }
-
-    bbp = curbp;                /* Start here */
-    while (n-- > 0) {
-        bp = bbp->b_bufp? bbp->b_bufp: bheadp;  /* Next buffer */
-        while (bp->b_flag & BFINVS) {           /* Skip ineligible ones */
-            bp = bp->b_bufp? bp->b_bufp: bheadp;
-            if (bp == bbp)  return FALSE;       /* No infinite loops! */
-        }
-        bbp = bp;                               /* Next eligible one */
+    if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
+        return s;
+    Xfree((char *) bp->b_linep);    /* Release header line (no l_text here) */
+    bp1 = NULL;                     /* Find the header.     */
+    bp2 = bheadp;
+    while (bp2 != bp) {
+        bp1 = bp2;
+        bp2 = bp2->b_bufp;
     }
-    return swbuffer(bbp, 0);
+    bp2 = bp2->b_bufp;              /* Next one in chain.   */
+    if (bp1 == NULL)                /* Unlink it.           */
+        bheadp = bp2;
+    else
+        bp1->b_bufp = bp2;
+    Xfree((char *) bp);              /* Release buffer block */
+    return TRUE;
 }
 
 /* Make a buffer active...by reading in (possibly delayed) a file.
@@ -145,6 +174,144 @@ int swbuffer(struct buffer *bp, int macro_OK) {
     return TRUE;
 }
 
+/* Find a buffer, by name. Return a pointer to the buffer structure
+ * associated with it.
+ * If the buffer is not found and the "cflag" is TRUE, create it.
+ * The "bflag" is the settings for the flags in the buffer.
+ */
+struct buffer *bfind(const char *bname, int cflag, int bflag) {
+    struct buffer *bp;
+    struct buffer *sb;      /* buffer to insert after */
+    struct line *lp;
+
+/* GGR Add a check on the sent namelength, given that we are going
+ * to copy it into a structure if we create a new buffer.
+ */
+    if (strlen(bname) >= NBUFN) {   /* We need a NUL too */
+        mlforce("Buffer name too long: %s. Ignored.", bname);
+        sleep(1);
+        return NULL;
+    }
+    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+        if (strcmp(bname, bp->b_bname) == 0) {
+            if (bp->b_active != TRUE) { /* buffer not active yet */
+/* silent was set to TRUE around this at one point, but it's been
+ * removed as it makes sense to show teh file being read in for
+ * the first time.
+ */
+                make_active(bp);
+            }
+            return bp;
+        }
+    }
+    if (cflag != FALSE) {
+        bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
+        lp = lalloc(-1);                /* No text buffer for head record */
+/* Find the place in the list to insert this buffer */
+        if (bheadp == NULL) {           /* Insert at the beginning */
+            bp->b_bufp = bheadp;
+            bheadp = bp;
+        } else {                        /* Find lexical place... */
+/* Note that we test the buffer *following* the current sb */
+            for (sb = bheadp; sb->b_bufp != NULL; sb = sb->b_bufp) {
+                if (strcmp(sb->b_bufp->b_bname, bname) > 0) break;
+            }
+            bp->b_bufp = sb->b_bufp;    /* ...and insert it */
+            sb->b_bufp = bp;
+        }
+
+/* And set up the other buffer fields */
+        bp->b_topline = NULL;   /* GGR - for widen and  */
+        bp->b_botline = NULL;   /* GGR - shrink windows */
+        bp->bv = NULL;          /* No vars */
+        bp->b_active = TRUE;
+        bp->b.dotp = lp;
+        bp->b.doto = 0;
+        bp->b.markp = NULL;
+        bp->b.marko = 0;
+        bp->b.fcol = 0;
+        bp->b_flag = bflag;
+        bp->b_mode = gmode;
+/* Set any forced buffer modes at create time - after global mode set */
+        if (force_mode_on) bp->b_mode |= force_mode_on;
+        if (force_mode_off) bp->b_mode &= ~force_mode_off;
+        bp->b_nwnd = 0;
+        bp->b_linep = lp;
+        strcpy(bp->b_fname, "");
+        strcpy(bp->b_bname, bname);
+        bp->b_key[0] = 0;
+        bp->b_keylen = 0;
+        bp->b_EOLmissing = 0;
+        bp->ptt_headp = NULL;
+        bp->b_type = BTNORM;
+        bp->b_exec_level = 0;
+        lp->l_fp = lp;
+        lp->l_bp = lp;
+    }
+    return bp;
+}
+
+/* Attach a buffer to a window. The values of dot and mark come from
+ * the buffer if the use count is 0. Otherwise, they come from some
+ * other window.
+ * If *any* numeric arg is given, use the savnam buffer directly with
+ * no prompting.
+ * This command is disabled in the minibuffer (names in names.c)
+ */
+int usebuffer(int f, int n) {
+    UNUSED(n);
+    struct buffer *bp;
+    int s;
+    char bufn[NBUFN];
+
+    if (f) strcpy(bufn, savnam);
+    else
+/* GGR - handle saved buffer name in minibuffer */
+        if ((s = mlreply("Use buffer: ", bufn, NBUFN, CMPLT_BUF)) != TRUE) {
+            if (s != ABORT) strcpy(bufn, savnam);
+            else                     return(s);
+        }
+
+    if ((bp = bfind(bufn, TRUE, 0)) == NULL) return FALSE;
+    return swbuffer(bp, 0);
+}
+
+/* switch to the next buffer in the buffer list
+ * This command is disabled in the minibuffer (names in names.c)
+ *
+ * int f, n;            default flag, numeric argument
+ */
+int nextbuffer(int f, int n) {
+    struct buffer *bp;          /* test buffer pointer */
+    struct buffer *bbp;         /* eligible buffer to switch to */
+
+/* Make sure the arg is legit */
+    if (f == FALSE) n = 1;
+
+/* We now allow -ve changes. Since we only have forward pointers this is
+ * implemented by counting the valid buffers and taking the (+ve) modulus.
+ */
+    if (n < 1) {
+        int nb = 0;
+        for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+            if (!(bp->b_flag & BFINVS)) nb++;
+        n %= nb;
+        if (n == 0) return FALSE;
+        if (n < 0) n += nb;     /* Ensure it is +ve - modulus does not */
+    }
+
+    bbp = curbp;                /* Start here */
+    while (n-- > 0) {
+        bp = bbp->b_bufp? bbp->b_bufp: bheadp;  /* Next buffer */
+        while (bp->b_flag & BFINVS) {           /* Skip ineligible ones */
+            bp = bp->b_bufp? bp->b_bufp: bheadp;
+            if (bp == bbp)  return FALSE;       /* No infinite loops! */
+        }
+        bbp = bp;                               /* Next eligible one */
+    }
+    return swbuffer(bbp, 0);
+}
+
 /* Dispose of a buffer, by name.
  * Ask for the name. Look it up (don't get too
  * upset if it isn't there at all!). Get quite upset
@@ -174,35 +341,6 @@ int killbuffer(int f, int n) {
             return TRUE;            /* by doing nothing.    */
     }
     return zotbuf(bp);
-}
-
-/* kill the buffer pointed to by bp
- */
-int zotbuf(struct buffer *bp) {
-    struct buffer *bp1;
-    struct buffer *bp2;
-    int s;
-
-    if (bp->b_nwnd != 0) {          /* Error if on screen.  */
-        mlwrite_one("Buffer is being displayed");
-        return FALSE;
-    }
-    if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
-        return s;
-    Xfree((char *) bp->b_linep);    /* Release header line (no l_text here) */
-    bp1 = NULL;                     /* Find the header.     */
-    bp2 = bheadp;
-    while (bp2 != bp) {
-        bp1 = bp2;
-        bp2 = bp2->b_bufp;
-    }
-    bp2 = bp2->b_bufp;              /* Next one in chain.   */
-    if (bp1 == NULL)                /* Unlink it.           */
-        bheadp = bp2;
-    else
-        bp1->b_bufp = bp2;
-    Xfree((char *) bp);              /* Release buffer block */
-    return TRUE;
 }
 
 /* Rename the current buffer
@@ -474,142 +612,6 @@ int anycb(void) {
             return TRUE;
     }
     return FALSE;
-}
-
-/* Find a buffer, by name. Return a pointer to the buffer structure
- * associated with it.
- * If the buffer is not found and the "cflag" is TRUE, create it.
- * The "bflag" is the settings for the flags in the buffer.
- */
-struct buffer *bfind(const char *bname, int cflag, int bflag) {
-    struct buffer *bp;
-    struct buffer *sb;      /* buffer to insert after */
-    struct line *lp;
-
-/* GGR Add a check on the sent namelength, given that we are going
- * to copy it into a structure if we create a new buffer.
- */
-    if (strlen(bname) >= NBUFN) {   /* We need a NUL too */
-        mlforce("Buffer name too long: %s. Ignored.", bname);
-        sleep(1);
-        return NULL;
-    }
-    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-        if (strcmp(bname, bp->b_bname) == 0) {
-            if (bp->b_active != TRUE) { /* buffer not active yet */
-/* silent was set to TRUE around this at one point, but it's been
- * removed as it makes sense to show teh file being read in for
- * the first time.
- */
-                make_active(bp);
-            }
-            return bp;
-        }
-    }
-    if (cflag != FALSE) {
-        bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
-        lp = lalloc(-1);                /* No text buffer for head record */
-/* Find the place in the list to insert this buffer */
-        if (bheadp == NULL) {           /* Insert at the beginning */
-            bp->b_bufp = bheadp;
-            bheadp = bp;
-        } else {                        /* Find lexical place... */
-/* Note that we test the buffer *following* the current sb */
-            for (sb = bheadp; sb->b_bufp != NULL; sb = sb->b_bufp) {
-                if (strcmp(sb->b_bufp->b_bname, bname) > 0) break;
-            }
-            bp->b_bufp = sb->b_bufp;    /* ...and insert it */
-            sb->b_bufp = bp;
-        }
-
-/* And set up the other buffer fields */
-        bp->b_topline = NULL;   /* GGR - for widen and  */
-        bp->b_botline = NULL;   /* GGR - shrink windows */
-        bp->bv = NULL;          /* No vars */
-        bp->b_active = TRUE;
-        bp->b.dotp = lp;
-        bp->b.doto = 0;
-        bp->b.markp = NULL;
-        bp->b.marko = 0;
-        bp->b.fcol = 0;
-        bp->b_flag = bflag;
-        bp->b_mode = gmode;
-/* Set any forced buffer modes at create time - after global mode set */
-        if (force_mode_on) bp->b_mode |= force_mode_on;
-        if (force_mode_off) bp->b_mode &= ~force_mode_off;
-        bp->b_nwnd = 0;
-        bp->b_linep = lp;
-        strcpy(bp->b_fname, "");
-        strcpy(bp->b_bname, bname);
-        bp->b_key[0] = 0;
-        bp->b_keylen = 0;
-        bp->b_EOLmissing = 0;
-        bp->ptt_headp = NULL;
-        bp->b_type = BTNORM;
-        bp->b_exec_level = 0;
-        lp->l_fp = lp;
-        lp->l_bp = lp;
-    }
-    return bp;
-}
-
-/* This routine blows away all of the text in a buffer.
- * If the buffer is marked as changed then we ask if it is OK to blow it away;
- * this is to save the user the grief of losing text.
- * The window chain is nearly always wrong if this gets called; the caller
- * must arrange for the updates that are required.
- * Return TRUE if everything looks good.
- */
-int bclear(struct buffer *bp) {
-    struct line *lp;
-    int s;
-
-    if ((bp->b_flag & BFINVS) == 0      /* Not scratch buffer.  */
-        && (bp->b_flag & BFCHG) != 0    /* Something changed    */
-        && (s = mlyesno("Discard changes")) != TRUE)
-            return s;
-    bp->b_flag &= ~BFCHG;               /* Not changed          */
-
-/* If we are modfying the buffer that the match-group info points
- * to we have to mark them as invalid.
- */
-    if (bp == group_match_buffer) group_match_buffer = NULL;
-
-/* If the buffer is narrowed we must widen it first to ensure we free
- * all lines - not just those from the narrowed region.
- */
-    if (bp->b_flag & BFNAROW) {
-        struct buffer *obp = curwp->w_bufp;
-        curwp->w_bufp = bp;             /* Ensure this buf is current */
-        widen(0, -1);                   /* -1 == no reposition */
-        curwp->w_bufp = obp;            /* Restore original buf */
-    }
-
-    while ((lp = lforw(bp->b_linep)) != bp->b_linep) lfree(lp);
-
-    bp->b.dotp = bp->b_linep;           /* Fix "."              */
-    bp->b.doto = 0;
-    bp->b.markp = NULL;                 /* Invalidate "mark"    */
-    bp->b.marko = 0;
-    bp->b.fcol = 0;
-
-/* If we are clearing a buffer that had variables defined then we
- * need to free those.
- */
-    if (bp->bv) {       /* Must free the values too... */
-        for (int vnum = 0; vnum < BVALLOC; vnum++) {
-            if (bp->bv[vnum].name[0] == '\0') break;
-            Xfree(bp->bv[vnum].value);
-        }
-        Xfree(bp->bv);
-        bp->bv = NULL;
-    }
-
-/* If it's a Phonetic Translation table, remove that too. */
-
-    if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
-
-    return TRUE;
 }
 
 /* unmark the current buffers change flag
