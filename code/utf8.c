@@ -6,8 +6,7 @@
 
 #include "utf8proc.h"
 
-/*
- * utf8_to_unicode()
+/* utf8_to_unicode()
  *
  * Convert a UTF-8 sequence to its unicode value, and return the length of
  * the sequence in bytes.
@@ -71,16 +70,19 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
     return bytes;
 }
 
-static void reverse_string(char *begin, char *end) {
+/* This takes two pointers (the begin and end of the bytes to reverse)
+ * and swaps their contents as they move towards each other.
+ * Once they meet the work is done.
+ */
+static inline void reverse_bytes(char *begin, char *end) {
     do {
-        char a = *begin, b = *end;
-        *end = a; *begin = b;
-        begin++; end--;
+        char a = *begin;    /* Original begin */
+        *begin++ = *end;    /* Copy end to begin */
+        *end-- = a;         /* Original begin into end */
     } while (begin < end);
 }
 
-/*
- * unicode_to_utf8()
+/* unicode_to_utf8()
  *
  * Convert a unicode value to its canonical utf-8 sequence.
  *
@@ -101,16 +103,27 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8) {
  */
         unsigned int prefix = 0x80;
         unsigned max = 0x3f;
-        char *p = utf8;
+        char *bp, *ep;
+        bp = ep = utf8;
         do {
-            *p++ = 0x80 + (c & 0x3f);
+            *ep++ = 0x80 + (c & 0x3f);
             bytes++;
             prefix = 0x80 | (prefix >> 1);
             max >>= 1;
             c >>= 6;            /* We use 6-bits in each extension byte */
         } while (c > max);
-        *p = (prefix | c);      /* Add in the final byte */
-        reverse_string(utf8, p);
+        *ep = (prefix | c);     /* Add in the final byte */
+
+/* We now need to reverse the bytes we've put in.
+ * So use two pointers (begin and end of the bytes to reverse)
+ * and swap their contents as they move towards each other.
+ * Once they meet the work is done.
+ */
+        do {
+            char a = *bp;   /* Original begin */
+            *bp++ = *ep;    /* Copy end to begin */
+            *ep-- = a;      /* Original begin into end */
+        } while (bp < ep);
     }
     return bytes;
 }
