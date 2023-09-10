@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #define FILEIO_C
 
@@ -20,8 +21,7 @@
 
 #include "utf8proc.h"
 
-static FILE *ffp;                       /* File pointer, all functions. */
-static int eofflag;                     /* end-of-file flag */
+static int ffp;                         /* File unit, all functions. */
 
 /* The cache.
  * Used for reading and writing as only one can be active at any one time.
@@ -42,13 +42,20 @@ static struct {
     char buf[FILE_START_LEN];
 } file_start;
 
-/* Close a file. Should look at the status in all systems.
+/* Close the ffp file descriptor. Should look at the status in all systems.
  */
+static int ffp_mode;
 int ffclose(void) {
 
-    eofflag = FALSE;
-    if (fclose(ffp) != FALSE) {
-        mlwrite_one("Error closing file");
+    int error_number = -1;
+    if (ffp_mode == O_WRONLY) {
+        if (fdatasync(ffp) < 0) error_number = errno;
+    }
+    if (close(ffp) < 0) {
+        if (error_number != -1) error_number = errno;
+    }
+    if (error_number != -1) {
+        mlwrite("Error closing file: %s", strerror(error_number));
         return FIOERR;
     }
     return FIOSUC;
@@ -226,7 +233,7 @@ void fixup_fname(char *fn) {
 static int check_for_file(char *fn) {
     struct stat statbuf;
 
-    int status = fstat(fileno(ffp), &statbuf);
+    int status = fstat(ffp, &statbuf);
     if (status != 0)
         mlwrite("Cannot stat %s", fn);
     else {
@@ -239,16 +246,17 @@ static int check_for_file(char *fn) {
     return status;
 }
 
-/* Open file <fn> for reading on global file-handle ffp
+/* Open file <fn> for reading on global file-unit ffp
  */
 int ffropen(char *fn) {
 
     fixup_fname(fn);
+    ffp_mode = O_RDONLY;
 
 /* Opening for reading lets the caller display relevant message on not found.
  * This may be an error (insert file) or just mean you are opening a new file.
  */
-    if ((ffp = fopen(fn, "r")) == NULL) return FIOFNF;
+    if ((ffp = open(fn, O_RDONLY)) < 0) return FIOFNF;
     int status = check_for_file(fn);    /* Checks ffp - fn is for messages */
     if (status != FIOSUC) return status;
 
@@ -263,28 +271,26 @@ int ffropen(char *fn) {
 /* Unset these on open */
     cache.rst = cache.len = 0;
     curbp->b_EOLmissing = 0;
-    eofflag = FALSE;
 
     return FIOSUC;
 }
 
-/* Open file <fn> for writing on global file-handle ffp
+/* Open file <fn> for writing on global file-unit ffp
  */
 int ffwopen(char *fn) {
 
     fixup_fname(fn);
+    ffp_mode = O_WRONLY;
 
 /* Opening for writing displays errors here */
-    if ((ffp = fopen(fn, "w")) == NULL) {
+
+    if ((ffp = open(fn, O_WRONLY|O_CREAT, 0666)) < 0) {
         if (errno == EISDIR)    /* Can't open a dir for writing */
             mlwrite("Can't write a directory: %s", fn);
         else
-            mlwrite("Cannot open %s for writing", fn);
+            mlwrite("Cannot open %s for writing - %s", fn, strerror(errno));
         return FIOERR;
     }
-    int status = check_for_file(fn);    /* Checks ffp - fn is for messages */
-    if (status != FIOSUC) return status;
-
     if (pathexpand) {       /* GGR */
 /* If activating an inactive buffer, these may be the same and the
  * action of strcpy() is undefined for overlapping strings.
@@ -367,12 +373,17 @@ static int file_is_binary(void) {
 /* Routine to flush the cache */
 static int flush_write_cache(void) {
     if (cryptflag) myencrypt(cache.buf, cache.len);
-    fwrite(cache.buf, sizeof(*cache.buf), cache.len, ffp);
-    cache.len = 0;
-    if (ferror(ffp)) {
-        mlwrite_one("Write I/O error");
+    int written = 0;
+    errno = 0;
+    while(1) {  /* Allow for interrupted writes */
+        written = write(ffp, cache.buf, cache.len);
+        if (errno != EINTR) break;
+    }
+    if (written < 0) {
+        mlwrite("Write I/O error: %s", strerror(errno));
         return FIOERR;
     }
+    cache.len -= written;
     return FIOSUC;
 }
 
@@ -515,15 +526,23 @@ int ffgetline(void) {
 /* If we already have something, add it to fline */
             if (cache.len > 0) add_to_fline(cache.len);
 /* Get some more of the file. */
-            cache.len = fread(cache.buf, sizeof(*cache.buf),
-                sizeof(cache.buf), ffp);
+            errno = 0;
+            while(1) {  /* Allow for interrupted reads */
+                cache.len = read(ffp, cache.buf, sizeof(cache.buf));
+                if (errno != EINTR) break;
+            }
+            if (cache.len < 0) {
+                mlwrite("Read I/O error: %s", strerror(errno));
+                cache.len = 0;
+                return FIOERR;
+            }
             cache.rst = 0;
 /* If we are at the end...return it.
  * But - if we still have cached data then there was no final
  * newline, but we still have to return that, and warn about the
  * missing newline.
  */
-            if (eofflag && (cache.len == 0)) {
+            if (cache.len == 0) {   /* We read nothing... */
 /* If we had an empty file then we will never have allocated fline.
  * So just return that we are at EOF.
  */
@@ -534,15 +553,6 @@ int ffgetline(void) {
                     sleep(1);
                 }
                 return fline->l_used? FIOSUC: FIOEOF;
-            }
-            if (cache.len != sizeof(cache.buf)) { /* short read - why? */
-                if (feof(ffp)) {
-                    eofflag = TRUE;
-                }
-                else {
-                    mlwrite_one("File read error");
-                    return FIOERR;
-                }
             }
             if (cryptflag) myencrypt(cache.buf, cache.len);
         }
