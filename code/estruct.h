@@ -43,10 +43,6 @@
 
 #define COLOR   1
 
-/* Make the file-locking machanism optional for any compilation */
-
-#define FILOCK  0
-
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
 
 /* Define some ability flags. */

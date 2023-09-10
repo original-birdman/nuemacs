@@ -1627,44 +1627,42 @@ int quit(int f, int n) {
         || anycb() == FALSE /* All buffers clean.   */
         || (s =             /* User says it's OK.   */
             mlyesno("Modified buffers exist. Leave anyway")) == TRUE) {
+
+        vttidy();
+
         if (filock) {
             if (lockrel() != TRUE) {
-                ttput1c('\n');
-                ttput1c('\r');
-                TTclose();
-                TTkclose();
-                exit(1);
+                fprintf(stderr, "Lock file release failed\n");
             }
         }
-        vttidy();
+
 #ifdef DO_FREE
 
 /* Explicitly free things in debug mode, to help things like valgrind. */
-    free_bind();
-    free_buffer();
-    free_display();
-    free_eval();
-    free_exec();
-    free_input();
-    free_line();
-    free_names();
-    free_search();
-    free_utf8();
+        free_bind();
+        free_buffer();
+        free_display();
+        free_eval();
+        free_exec();
+        free_input();
+        free_line();
+        free_names();
+        free_search();
+        free_utf8();
 
-#if FILOCK
-    free_lock();
-#endif
+        if (filock) free_lock();
 
 /* Remove all windows */
 
-    struct window *nextwp;
-    for (struct window *wp = wheadp; wp; wp = nextwp) {
-        nextwp = wp->w_wndp;
-        Xfree(wp);
-    }
-    if (eos_list) Xfree(eos_list);
+        struct window *nextwp;
+        for (struct window *wp = wheadp; wp; wp = nextwp) {
+            nextwp = wp->w_wndp;
+            Xfree(wp);
+        }
+        if (eos_list) Xfree(eos_list);
 
 #endif
+
         if (f) exit(n);
         else   exit(0);
     }
