@@ -1219,15 +1219,10 @@ static void modeline(struct window *wp) {
         else
             vtputc(lchar);
 
-        strcpy(tline, " ");
-        strcat(tline, PROGRAM_NAME_LONG);
-        strcat(tline, " ");
+        strcpy(tline, " " PROGRAM_NAME_LONG);
 
 /* GGR - only if no filename (space issue) */
-        if (bp->b_fname[0] == 0) {
-            strcat(tline, " ");
-            strcat(tline, VERSION);
-        }
+        if (bp->b_fname[0] == 0) strcat(tline, " " VERSION);
         strcat(tline, ": ");
         cp = tline;
         while ((c = *cp++) != 0) vtputc(c);

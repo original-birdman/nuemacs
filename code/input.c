@@ -469,13 +469,8 @@ static int comp_file(char *name, char *choices) {
     unique = matcher(name, 0, choices, CMPLT_FILE);
     close_dir();
 
-    if (directory[0]) {
-        strcpy(name, directory);
-        strcat(name, so_far);
-    }
-    else {
-        strcpy(name, so_far);
-    }
+    if (directory[0])   sprintf(name, "%s%s", directory, so_far);
+    else                strcpy(name, so_far);
 
 /* If we found a single entry that begins with '~' and contains no '/'
  * pass it to fixup_fname() so that it can expand any login id to its

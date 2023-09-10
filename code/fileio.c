@@ -103,9 +103,9 @@ void fixup_fname(char *fn) {
                 *q++ = *p++;
             *q = 0;
             if ((pwptr = getpwnam(fn_copy)) != NULL) {
-                strcpy(fn_copy, pwptr->pw_dir);
-                strcat(fn_copy, p);
+                sprintf(fn_copy, "%s%s", pwptr->pw_dir, p);
                 strcpy(fn, fn_copy);
+
             }
         }
 #endif
@@ -126,9 +126,7 @@ void fixup_fname(char *fn) {
             }
         }
         if (have_pwd == 1) {
-            strcpy(fn_copy, pwd_var);
-            strcat(fn_copy, "/");
-            strcat(fn_copy, fn);
+            sprintf(fn_copy, "%s/%s", pwd_var, fn);
             strcpy(fn, fn_copy);
         }
     }
@@ -605,9 +603,7 @@ void fixup_full(char *fn) {
             }
         }
         if (have_pwd == 1) {
-            strcpy(fn_copy, pwd_var);
-            strcat(fn_copy, "/");
-            strcat(fn_copy, fn);
+            sprintf(fn_copy, "%s/%s", pwd_var, fn);
             strcpy(fn, fn_copy);
         }
     }

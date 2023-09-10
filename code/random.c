@@ -787,11 +787,8 @@ static int adjustmode(int kind, int global) {
     char cbuf[NPAT];        /* buffer to recieve mode name into */
 
 /* Build the proper prompt string */
-    if (global) strcpy(prompt, "Global mode to ");
-    else        strcpy(prompt, "Mode to ");
-
-    if (kind == TRUE) strcat(prompt, "add: ");
-    else              strcat(prompt, "delete: ");
+    sprintf(prompt, "%sode to %s: ", (global)? "Global m": "M",
+         (kind == TRUE)? "add": "delete");
 
 /* Prompt the user and get an answer */
 

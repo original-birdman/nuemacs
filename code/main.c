@@ -494,8 +494,7 @@ static void do_stackdump(void) {
 
     char stack_dump_name[40];
     if (can_dump_files) {
-        strcpy(stack_dump_name, time_stamp);
-        strcat(stack_dump_name, "-StackDump");
+        sprintf(stack_dump_name, "%s-StackDump", time_stamp);
         stkdmp_fp = fopen(stack_dump_name, "w");
         if (!stkdmp_fp) perror("Failed to open -StackDump");
     }
@@ -715,9 +714,7 @@ void dumpdir_tidy(void) {
     }
 
     char dd_name[2048]; /* Hopefully large enough */
-    strcpy(dd_name, p);
-    strcat(dd_name, "/");
-    strcat(dd_name, Dumpdir_Name);
+    sprintf(dd_name, "%s" "/" Dumpdir_Name, p);
     if (chdir(dd_name) < 0) {
         snprintf(info_message, 4096,
               "Can't get to ~/%s: %s", Dumpdir_Name, strerror(errno));

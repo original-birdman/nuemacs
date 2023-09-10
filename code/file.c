@@ -104,8 +104,7 @@ static void handle_filehooks(char *fname) {
     if (sfx && strlen(sfx) <= 19) {     /* Max bufname is 32, incl NUL */
         sfx++;                          /* Skip over '.' */
         char sfx_bname[NBUFN];
-        strcpy(sfx_bname, "/file-hooks-");
-        strcat(sfx_bname, sfx);
+        sprintf(sfx_bname, "/file-hooks-%s", sfx);
         if ((sb = bfind(sfx_bname, FALSE, 0)) != NULL) dobuf(sb);
     }
     return;
@@ -116,8 +115,8 @@ static void handle_filehooks(char *fname) {
  * Return the final status of the read.
  * Also called by the main routine to read in a file specified on the
  * command line as an argument.
- * The command bound to M-FNR is called after the buffer is set up
- * and before it is read.
+ * The command bound to M-FNR (Meta+Spec+R) is called after the buffer
+ * is set up and before it is read.
  *
  * char fname[];        name of file to read
  * int lockfl;          check for file locks?
@@ -130,7 +129,7 @@ int readin(char *fname, int lockfl) {
     if (filock && lockfl && lockchk(fname) == ABORT) {
         s = FIOFNF;
         bp = curbp;
-        strcpy(bp->b_fname, "");
+        bp->b_fname[0] = '\0';
         goto out;
     }
 
@@ -172,6 +171,9 @@ int readin(char *fname, int lockfl) {
     }
     lastflag = saveflag;
 
+/* NOTE! that all of the above (in particular) filehooks and Esc-Spec-R
+ * are run *before* the file is read into the buffer.
+ */
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
     if (s == FIOFNF) {                              /* File not found. */
         strcpy(readin_mesg, MLbkt("New file"));
@@ -389,37 +391,34 @@ void makename(char *bname, char *fname, int ensure_unique) {
 
 /* First we have to step over any directory part in the name */
 
-    unsigned int clen = 0;
-    unsigned int fn4bn_start = 0;
     unsigned int maxlen = strlen(fname);
-    unicode_t uc;
-    while (1) {
-        unsigned int nb = utf8_to_unicode(fname, clen, maxlen, &uc);
-        if (nb == 0) break;
-        clen += nb;
-        if (uc == '/')
-            fn4bn_start = clen;
-    }
 
 /* We wish to copy as much of the fname into bname as we can such that
  * we have 4 free bytes (besides the terminating NUL) for unqname
  * to ensure uniqueness.
+ * We need to find and dir separator first.
  */
-    clen = fn4bn_start;
-    while(1) {
-        unsigned int newlen = next_utf8_offset(fname, clen, maxlen, 1);
-        if (newlen == clen) break;                          /* End of string */
-        if ((newlen - fn4bn_start) > (NBUFN - 5)) break;    /* Out of space */
-        if (newlen > maxlen) break;                         /* ??? */
-        clen = newlen;
+    unsigned int ci;
+    char *dsp = strrchr(fname, '/');
+    if (dsp)  ci = dsp - fname;
+    else      ci = 0;
+    unsigned int orig_ci = ci;
+    unsigned int newlen = 0;
+    while(newlen < maxlen) {
+        newlen = next_utf8_offset(fname, ci, maxlen, 1);
+        if (newlen == ci) break;            /* End of string */
+        if ((newlen) > (NBUFN - 5)) break;  /* Out of space */
+        ci = newlen;
     }
 
-/* We can't have an empty buffer name (you couldn't specify it in any
- * command, so if it is empty (fname with a trailing /) change it to " 0"
+/* We can't have an empty buffer name (you wouldn't be able to specify
+ * it in any command), so if it is empty (fname with a trailing /) change
+ * it to " 0"
  */
-    if (clen > fn4bn_start) {
-        memcpy(bname, fname + fn4bn_start, clen - fn4bn_start);
-        *(bname+clen-fn4bn_start) = '\0';
+    int bn_len = ci - orig_ci;
+    if (bn_len > 0) {
+        memcpy(bname, fname + orig_ci, bn_len);
+        *(bname+bn_len) = '\0';
     }
     else strcpy(bname, " 0");
 
@@ -689,10 +688,7 @@ int filename(int f, int n) {
         return resterr();
     if ((s = mlreply("Name: ", fname, NFILEN, CMPLT_FILE)) == ABORT)
         return s;
-    if (s == FALSE)
-        strcpy(curbp->b_fname, "");
-    else
-        strcpy(curbp->b_fname, fname);
+    strcpy(curbp->b_fname, (s == FALSE)? "": fname);
     wp = wheadp;            /* Update mode lines.   */
     while (wp != NULL) {
         if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;
