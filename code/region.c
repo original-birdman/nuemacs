@@ -168,7 +168,7 @@ int copyregion(int f, int n) {
  * their offset after the move.
  * They can only be at the start or end of the moved chars (as the
  * region we are case-changing is that between dot and mark!) so
- * we only have to consider those case, not anythign in between.
+ * we only have to consider those case, not anything in between.
  * If at the start there is nothing to do, as that hasn't moved.
  * Turns out a macro is more efficient (in terms of executable size)
  * than a function...
@@ -258,103 +258,74 @@ int lowerregion(int f, int n) {
 int narrow(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* return status */
-    struct buffer *bp;      /* buffer being narrowed */
-    struct window *wp;      /* windows to fix up pointers in as well */
+
 /* Avoid "may be used uninitialized" in gcc4.4.7 */
     struct region creg = creg;  /* region boundry structure */
 
 /* Find the proper buffer and make sure we aren't already narrow */
-    bp = curwp->w_bufp;     /* find the right buffer */
+    struct buffer *bp = curwp->w_bufp;  /* find the right buffer */
     if (bp->b_flag&BFNAROW) {
         mlwrite_one("This buffer is already narrowed");
         return(FALSE);
     }
 
-/* We want to include all of the lines that mark and dot are on.
- * We also need to reset the original mark and dot if we return
- * without narrowing...
- */
-    struct window orig_wp = *curwp;         /* Copy original struct */
-    struct line *lp = lforw(bp->b_linep);
-    int fix_up = 0;
-/* Is mark or doto earliest in the file?
- * We need to move the *other* one to the start of its next line if
- * it is not at the start of a line.
- */
-    while (lp != bp->b_linep) {
-        if (lp == curwp->w.dotp) {          /* doto */
-            fix_up = 1;
-            break;
-        }
-        else if (lp == curwp->w.markp) {    /* mark */
-            fix_up = -1;
-            break;
-        }
-        lp = lforw(lp);
-    }
-    if ((fix_up == 1) && (curwp->w.marko > 0)) {
-        curwp->w.markp = lforw(curwp->w.markp);
-        curwp->w.marko = 0;
-    }
-    else if ((fix_up == -1) && (curwp->w.doto > 0)) {
-        curwp->w.dotp = lforw(curwp->w.dotp);
-        curwp->w.doto = 0;
-    }
-
 /* Find the boundaries of the current region */
+    struct window orig_wp = *curwp;         /* Copy original struct */
     if ((status = getregion(&creg)) != TRUE) {
         *curwp = orig_wp;       /* restore original struct */
         return(status);
     }
-    curwp->w.dotp = creg.r_linep;   /* only by full lines please! */
-    curwp->w.doto = 0;
-    creg.r_bytes += (long)creg.r_offset; /* Add in what we've added */
 
-/* Might no longer be possible for this to happen because we now move
- * to the start of next line after the later of mark/doto.
- * Actually it is possible.
- * Just set a mark at the beginning of a line then narrow.
+/* We now have a region, but take it to be "whole lines" (so ignoring
+ * doto and marko).
+ * Top fragment is up to r_linep.
+ * Bottom fragment starts at lforw(r_endp) (or r_endp if at eob).
  */
-    if (creg.r_bytes <= (long)curwp->w.dotp->l_used) {
-        mlwrite_one("Must narrow at least 1 full line");
-        *curwp = orig_wp;       /* restore original struct */
-        return(FALSE);
-    }
 
-/* Archive the top fragment */
-    if (bp->b_linep->l_fp != creg.r_linep) {
-        bp->b_topline = bp->b_linep->l_fp;
-        creg.r_linep->l_bp->l_fp = (struct line *)NULL;
-        bp->b_linep->l_fp = creg.r_linep;
-        creg.r_linep->l_bp = bp->b_linep;
-    }
-
-/* A region know knows its last line, so just set the curwp to this
- * with a 0 offset.
+/* Archive the top fragment - marking its end (for widen) with a NULL l_fp.
+ * If this starts at line 1 there is nothing to do (b_topline stays NULL).
+ * Otherwise, save the first line of the top fragment, make the top of the
+ * narrowed region the new top and fix up pointers.
  */
-    curwp->w.dotp = creg.r_endp;
-    curwp->w.doto = 0;              /* only full lines! */
-
-/* Archive the bottom fragment */
-    if (bp->b_linep != curwp->w.dotp) {
-        bp->b_botline = curwp->w.dotp;
-        bp->b_botline->l_bp->l_fp = bp->b_linep;
-        bp->b_linep->l_bp->l_fp = (struct line *)NULL;
-        bp->b_linep->l_bp = bp->b_botline->l_bp;
+     if (bp->b_linep->l_fp != creg.r_linep) {   /* Not on line 1 */
+        bp->b_topline = bp->b_linep->l_fp;      /* Save start of top */
+        creg.r_linep->l_bp->l_fp = NULL;        /* Mark end of top */
+        bp->b_linep->l_fp = creg.r_linep;       /* Region top -> top */
+        creg.r_linep->l_bp = bp->b_linep;       /* Back ptr to head */
     }
 
-/* Let all the proper windows be updated */
-    wp = wheadp;
-    while (wp) {
+/* A region knows its last line, so just set the curwp to this
+ * with a 0 offset. Must cater for being on the final line.
+ */
+    curwp->w.dotp = (creg.r_endp == bp->b_linep)?
+         creg.r_endp: lforw(creg.r_endp);
+
+/* Archive the bottom fragment - marking its end (for widen) with a NULL l_fp.
+ * If this starts at the "dummy" last line there is nothing to do (b_botline
+ * stays NULL).
+ * Otherwise, save the first line of the bottom fragment, mark the end of
+ * the narrowed region as the end of a buffer and fix up pointers.
+ * NOTE. that bp->b_botline is the *start* of the bottom section (the first
+ * line qwe will *not* show) so bp->b_botline->l_bp is the last line which
+ * we will show.
+ */
+
+    if (bp->b_linep != curwp->w.dotp) {         /* Not on last line */
+        bp->b_botline = curwp->w.dotp;          /* Save start of bottom */
+        bp->b_botline->l_bp->l_fp = bp->b_linep;    /* Mark end of region */
+        bp->b_linep->l_bp->l_fp = NULL;         /* Mark end of bottom */
+        bp->b_linep->l_bp = bp->b_botline->l_bp;    /* Back ptr from head */
+    }
+
+/* Let all the proper windows be updated with dot and mark both
+ * on the first line (and the first window line) of the narrowed buffer.
+ */
+    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
         if (wp->w_bufp == bp) {
-            wp->w_linep = creg.r_linep;
-            wp->w.dotp = creg.r_linep;
-            wp->w.doto = 0;
-            wp->w.markp = creg.r_linep;
-            wp->w.marko = 0;
+            wp->w_linep = wp->w.dotp = wp->w.markp = creg.r_linep;
+            wp->w.doto = wp->w.marko = 0;
             wp->w_flag |= (WFHARD|WFMODE);
         }
-        wp = wp->w_wndp;
     }
 
 /* And now remember we are narrowed */
@@ -367,12 +338,10 @@ int narrow(int f, int n) {
 
 int widen(int f, int n) {
     UNUSED(f); UNUSED(n);
-    struct line *lp;       /* temp line pointer */
-    struct buffer *bp;     /* buffer being narrowed */
-    struct window *wp;     /* windows to fix up pointers in as well */
+    struct line *lp;
 
 /* Find the proper buffer and make sure we are narrow */
-    bp = curwp->w_bufp;     /* find the right buffer */
+    struct buffer *bp = curwp->w_bufp;     /* find the right buffer */
     if ((bp->b_flag&BFNAROW) == 0) {
         mlwrite_one("This buffer is not narrowed");
         return(FALSE);
@@ -410,11 +379,10 @@ int widen(int f, int n) {
     }
 
 /* Let all the proper windows be updated */
-    wp = wheadp;
-    while (wp) {
+    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
         if (wp->w_bufp == bp) wp->w_flag |= (WFHARD|WFMODE);
-        wp = wp->w_wndp;
     }
+
 /* And now remember we are not narrowed */
     bp->b_flag &= (~BFNAROW);
 
