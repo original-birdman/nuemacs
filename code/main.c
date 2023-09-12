@@ -408,7 +408,7 @@ static int set_time_stamp(int days_back) {
     time_t t = time(NULL) - days_back*86400;;
     return strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
 }
-static FILE *index_fp = NULL;  /* Avoid "may be used uninitialized" */
+static FILE *index_fp = NULL;   /* File open if not NULL */
 static int can_dump_files = 0;
 
 /* ===================== START OF NUTRACE ONLY CODE ===================== */
@@ -425,7 +425,7 @@ struct bt_ctx {
     int error;
 };
 
-FILE *stkdmp_fp = NULL;
+FILE *stkdmp_fp = NULL;         /* File open if not NULL */
 
 /* ======================================================================
  * Print stack trace to stdout and the dump file, if open.
@@ -434,13 +434,14 @@ static void stk_printf(const char *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
+    if (stkdmp_fp) {
+        va_list apc;
+        va_copy(apc, ap);
+        vfprintf(stkdmp_fp, fmt, apc);
+        va_end(apc);
+    }
     vprintf(fmt, ap);
     va_end(ap);
-    if (stkdmp_fp) {
-        va_start(ap, fmt);
-        vfprintf(stkdmp_fp, fmt, ap);
-        va_end(ap);
-    }
     return;
 }
 
@@ -450,12 +451,7 @@ static void stk_printf(const char *fmt, ...) {
 static void syminfo_callback (void *data, uintptr_t pc,
      const char *symname, uintptr_t symval, uintptr_t symsize) {
     UNUSED(data); UNUSED(symval); UNUSED(symsize);
-    if (symname) {
-        stk_printf("0x%lx %s ??:0\n", (unsigned long)pc, symname);
-    }
-    else {
-        stk_printf("0x%lx ?? ??:0\n", (unsigned long)pc);
-    }
+    stk_printf("0x%lx %s ??:0\n", (unsigned long)pc, (symname)? symname: "??");
 }
 static void error_callback(void *data, const char *msg, int errnum) {
     struct bt_ctx *ctx = data;
@@ -465,12 +461,12 @@ static void error_callback(void *data, const char *msg, int errnum) {
 static int full_callback(void *data, uintptr_t pc, const char *filename,
      int lineno, const char *function) {
 
-    struct bt_ctx *ctx = data;
     if (function) {
         stk_printf("0x%lx %s %s:%d\n", (unsigned long)pc, function,
-             filename? filename: "??", lineno);
+             (filename)? filename: "??", lineno);
     }
     else {
+        struct bt_ctx *ctx = data;
         backtrace_syminfo(ctx->state, pc, syminfo_callback,
              error_callback, data);
     }
@@ -577,8 +573,6 @@ static void dump_modified_buffers(void) {
 
 /* Scan the buffers */
 
-    int index_open = 0;
-    int do_index = 0;
     int add_cwd;
 
     for(struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
@@ -640,17 +634,7 @@ static void dump_modified_buffers(void) {
         }
         else
             printf("\n");
-        if (!index_open) {
-            index_open = 1;                 /* Don't try again */
-            index_fp = fopen(Dump_Index, "a");
-            if (index_fp == NULL) {
-                perror("No " Dump_Index " update");
-            }
-            else {
-                do_index = 1;
-            }
-        }
-        if (do_index) {
+        if (index_fp) {         /* Did get_to_dumpdir() open it? */
             char *dir, *sep;
             if (add_cwd) {
                 dir = cwd;
@@ -664,7 +648,6 @@ static void dump_modified_buffers(void) {
                   orig_name);
         }
     }
-    if (do_index) fclose(index_fp);
     return;
 }
 
@@ -697,7 +680,7 @@ void dumpdir_tidy(void) {
 
     char info_message[4096]; /* Hopefully large enough */
 
-/* Open the current directory on a file-descriptor for ease of return */
+/* Open the current directory on a file-unit for ease of return */
     int start_fd = open(".", O_DIRECTORY);
     if (start_fd < 0) {
         snprintf(info_message, 4096,
@@ -724,8 +707,8 @@ void dumpdir_tidy(void) {
 
 /* Open file read/write using "r+". "a+" always writes at the end!! */
 
-    FILE *index_fp = fopen(Dump_Index, "r+");
-    if (index_fp == NULL) {
+    FILE *index_tidy_fp = fopen(Dump_Index, "r+");
+    if (index_tidy_fp == NULL) {
         snprintf(info_message, 4096,
               "Can't open ~/%s/" Dump_Index ": %s",
               Dumpdir_Name, strerror(errno));
@@ -741,7 +724,7 @@ void dumpdir_tidy(void) {
     size_t blen = 0;
     ts_len = set_time_stamp(autoclean);
     long rewrite_from = 0;             /* Only if there is a deletion */
-    while (getline(&lp, &blen, index_fp) >= 0) {
+    while (getline(&lp, &blen, index_tidy_fp) >= 0) {
         if (strncmp(lp, time_stamp, ts_len - 1) < 0) { /* Too old... */
 /* Original filename is for reporting ONLY */
             char *orig_fn = strstr(lp, " <= ");
@@ -761,7 +744,7 @@ void dumpdir_tidy(void) {
                       "Deleted %s (<= %s)", lp, orig_fn);
                 addline_to_curb(info_message);
             }
-            rewrite_from = ftell(index_fp);
+            rewrite_from = ftell(index_tidy_fp);
         }
         else
             break;
@@ -771,30 +754,30 @@ void dumpdir_tidy(void) {
     if (rewrite_from) {
         long new_offs = 0;
         int done = 0;
-        while (!done && (fseek(index_fp, rewrite_from, SEEK_SET) == 0)) {
+        while (!done && (fseek(index_tidy_fp, rewrite_from, SEEK_SET) == 0)) {
             char cbuf[4096];
-            size_t rc = fread(cbuf, sizeof(char), sizeof(cbuf), index_fp);
-            if (feof(index_fp)) {
+            size_t rc = fread(cbuf, sizeof(char), sizeof(cbuf), index_tidy_fp);
+            if (feof(index_tidy_fp)) {
                 done = 1;
-                clearerr(index_fp);
+                clearerr(index_tidy_fp);
             }
             else {                  /* Update where we read from */
-                rewrite_from = ftell(index_fp);
+                rewrite_from = ftell(index_tidy_fp);
             }
             if (rc) {
-                status = fseek(index_fp, new_offs, SEEK_SET);
-                size_t wc = fwrite(cbuf, sizeof(char), rc, index_fp);
+                status = fseek(index_tidy_fp, new_offs, SEEK_SET);
+                size_t wc = fwrite(cbuf, sizeof(char), rc, index_tidy_fp);
                 new_offs += wc;
                 if (wc != rc) break;    /* We have a problem... */
-                status = fflush(index_fp);       /* See man fopen */
+                status = fflush(index_tidy_fp);       /* See man fopen */
             }
         }
-        status = ftruncate(fileno(index_fp), new_offs);
+        status = ftruncate(fileno(index_tidy_fp), new_offs);
     }
 
 /* Close files and free buffers */
 
-    if (fclose(index_fp)) {
+    if (fclose(index_tidy_fp)) {
         snprintf(info_message, 4096,
               Dump_Index " rewrite error: %s", strerror(errno));
         addline_to_curb(info_message);
@@ -834,7 +817,7 @@ static void exit_via_signal(int signr) {
 /* Let's go through the steps order...various globals get set here... */
 
     ts_len = set_time_stamp(0);             /* Set it for "now" */
-    can_dump_files = get_to_dumpdir();      /* Also opens INDEX */
+    can_dump_files = get_to_dumpdir();      /* Opens INDEX if possible */
 
 /* Possibly a stack dump */
 #if defined(NUTRACE)
