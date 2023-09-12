@@ -172,14 +172,14 @@ int set_encryption_key(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* return status */
     int odisinp;            /* original value of disinp */
-    char key[NPAT];         /* new encryption string */
+    char ukey[NPAT];        /* new encryption string */
 
 /* Turn command input echo off */
     odisinp = disinp;
     disinp = FALSE;
 
 /* Get the string to use as an encryption string */
-    status = mlreply("Encryption String: ", key, NPAT - 1, CMPLT_NONE);
+    status = mlreply("Encryption String: ", ukey, NPAT - 1, CMPLT_NONE);
     mlwrite_one(" ");       /* clear it off the bottom line */
     disinp = odisinp;
     if (status != TRUE) return status;
@@ -188,12 +188,25 @@ int set_encryption_key(int f, int n) {
  * However, we now encrypt all bytes, so the result here could contain
  * a NUL byte. Hence we need to get (and store) the length first, and
  * remember to use that in any copying (including elsewhere in uemacs).
+ * Also, we repeat the string such that it fills the buffer.
+ * Without this !!!! 1111 AAAA QQQQ aaaa qqqq all produce the same result.
  */
-    curbp->b_keylen = strlen(key);
+
+    int klen = strlen(ukey);
+    char *tp = ukey + klen;             /* Where to pad */
+    char *fp = ukey;                    /* What to pad with */
+    int pad = sizeof(ukey) - klen - 1;
+    while (pad-- > 0) {
+        *tp++ = *fp++;
+        if (*fp == '\0') fp = ukey;     /* Back to start of key */
+    }
+    *tp = '\0';                         /* Terminate string */
+
+    curbp->b_keylen = strlen(ukey);
     myencrypt((char *) NULL, 0);
-    myencrypt(key, curbp->b_keylen);
+    myencrypt(ukey, curbp->b_keylen);
 
 /* Now save it off */
-    memcpy(curbp->b_key, key, curbp->b_keylen);
+    memcpy(curbp->b_key, ukey, curbp->b_keylen);
     return TRUE;
 }

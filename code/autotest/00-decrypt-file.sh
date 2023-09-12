@@ -16,11 +16,11 @@ EOD
 # ATestEncryptionString as the key
 #
 base64 -d > Decrypt-IN <<EOD
-E8KrkON5e+F3iKOoFF26ABJBHkOX2g8MN6baAwcdj8z9gbbTBixkmRVpr9Tsel2myjO72CcwWJ7j
-c1un4fum/kV6xxhfsAUdy6sNmhdvrRbFrOh6guQquEKo3lT0+H/ZmT+yAGCzFNHbaLk/vCv2I2nH
-D3wGUAn6KLCNNqSN1FY4+ob2exapZHUIfgj1QJkwIcIyzFQs6mr+mzrohTDPpVwG5yutkmL/w07f
-7zgImVIImV9y3KUsORPHjzsLBuN5jGg/GubRRvsl+NqxwB/tz7KKRwcyMh0PEJ/NHqZyVy0AIS7u
-xIOeCWwzkBljDxhUXUpHOrYx3w==
+gpoOZCm2LwaO52DOqUXdEo0EVN+8dQNZ5bqB5l362hizoDvTbxCiOR7unky+u4tDy56l+bVJ7adJ
+T5pP85uxixTSiE3lf1Hz80wSKOu9hEY+QuXiJe+mjm5VDMe0ooMQO1ASyqRhLGK3nXdsL+ohDdTE
+cmg7IEIhCPk/dUebZVKf17y2pZeY3Yuco2GrzKeH7I54eY3AUEZDEwwoLlZjksu8J1VUw2BmcYJt
+5oeywNHwDByY+CQXrtf8OGBz+ebuUSFVhY/12xKj3ClIsiAhXKfyKVPovRFu21VsZWadByhm8ATp
+HHUjwhTVIBK39VX9crSSZsUrIw==
 EOD
 
 # Command to get uemacs to read in the encrypted file and write it out,

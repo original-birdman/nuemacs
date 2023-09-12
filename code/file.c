@@ -29,20 +29,6 @@ static int resetkey(void) { /* Reset the encryption key if needed */
             if (s != TRUE) return s;
         }
         cryptflag = TRUE;           /* let others know... */
-
-/* Set up the key to be used! */
-        myencrypt(NULL, 0);
-        myencrypt(curbp->b_key, curbp->b_keylen);
-
-/* curbp->b_key is encrypted when you set it, and since this is done in
- * place we've just decrypted it. So we re-encrypt it.
- * Since this uses a symmetric cipher the running key ends up the same
- * Taking a copy would mean we could do only one set of encrypting, but
- * would then leave us with the decrypted key in memory, and we're trying
- * to avoid that...
- */
-        myencrypt(NULL, 0);
-        myencrypt(curbp->b_key, curbp->b_keylen);
     }
     return TRUE;
 }
@@ -584,11 +570,8 @@ int writeout(char *fn) {
         ffputline(NULL, 0);                 /* Must flush write cache!! */
         s = ffclose();
         if (s == FIOSUC) {                  /* No close error.      */
-            if (nline == 1)
-                mlwrite_one(MLbkt("Wrote 1 line"));
-            else
-                mlwrite(MLbkt("Wrote %d lines"), nline);
-            }
+            mlwrite(MLbkt("Wrote %d line%s"), nline, (nline == 1)? "": "s");
+        }
     } else                                  /* Ignore close error   */
         ffclose();                          /* if a write error.    */
     if (s != FIOSUC) return FALSE;          /* Some sort of error.  */
