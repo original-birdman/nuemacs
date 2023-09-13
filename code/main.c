@@ -1104,9 +1104,9 @@ int not_interactive(int f, int n) {
 }
 
 /* ======================================================================
- * End keyboard macro. Check for the same limit conditions as the above
- * routine. Set up the variables and return to the caller.
- * NOTE that since the key strokes to get here when recording a macro
+ * End keyboard macro. Set up the variables and return to the caller,
+ * or go round again if still repeating.
+ * NOTE that since the key stroke to get here when recording a macro
  * are in the macro buffer we take advantage of that to implement
  * re-executing the macro multiple-times.
  */
@@ -1141,8 +1141,7 @@ int ctlxrp(int f, int n) {
         inreex = FALSE;
 /* If an mlforce() message has been written we want it to remain there
  * for the next pass, but then go.
- * This means we need to skip the mpresf test near the start of loop for
- * one (more) pass.
+ * Now we've finished the macro it can go.
  */
         mline_persist = FALSE;
     }
@@ -1167,18 +1166,10 @@ int execute(int c, int f, int n) {
     struct key_tab *ktp = NULL;
     if (((c & 0x7fffffff) < 0x7f || c == (CONTROL|'M')) &&
         (curbp->b_mode & MDVIEW)) {
-        if (c == ' ') {
-            ktp = getbyfnc(forwpage);
-        }
-        else if ((c | DIFCASE) == 'b') {
-            ktp = getbyfnc(backpage);
-        }
-        else if ((c | DIFCASE) == 'n') {
-            ktp = getbyfnc(forwline);
-        }
-        else if ((c | DIFCASE) == 'p') {
-            ktp = getbyfnc(backline);
-        }
+        if       (c == ' ')             ktp = getbyfnc(forwpage);
+        else if ((c | DIFCASE) == 'b')  ktp = getbyfnc(backpage);
+        else if ((c | DIFCASE) == 'n')  ktp = getbyfnc(forwline);
+        else if ((c | DIFCASE) == 'p')  ktp = getbyfnc(backline);
 
 /* If we are in the //directory buffer in view-only mode with a showdir
  * user_proc then handle certain command chars.
@@ -1733,7 +1724,7 @@ void extend_keytab(int n_ents) {
 }
 
 int main(int argc, char **argv) {
-    int c = -1;             /* command character */
+    int c;                  /* command character */
     struct buffer *bp;      /* temp buffer pointer */
     int firstfile;          /* first file flag */
     struct buffer *firstbp = NULL;  /* ptr to first buffer in cmd line */
@@ -1746,7 +1737,6 @@ int main(int argc, char **argv) {
     char bname[NBUFN];      /* buffer name of file to read */
     int cryptflag;          /* encrypting on the way in? */
     char ekey[NPAT];        /* startup encryption key */
-    int newc;
     int verflag = 0;        /* GGR Flags -v/-V presence on command line */
     char *rcextra[10];      /* GGR additional rc files */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
@@ -2070,36 +2060,19 @@ loop:
     }
     lastflag = saveflag;
 
-    if (typahead()) {
-        newc = getcmd();
-        update(FALSE);
-        do {
-            if (c == newc) {
-                struct key_tab *ktp = getbind(c);
-                if (ktp) {
-                    fn_t execfunc = ktp->hndlr.k_fp;
-                    if (execfunc != insert_newline && execfunc != insert_tab)
-                         newc = getcmd();
-                }
-            }
-            else break;
-        } while (typahead());
-        c = newc;
+    if (!typahead())  update(FALSE);
+    if (display_readin_msg ||   /* First one gets removed by update() */
+          mbuf_mess) {          /* Specific user message */
+        int scol = curcol;
+        int srow = currow;
+        mlwrite_one(mbuf_mess? mbuf_mess: readin_mesg);
+        display_readin_msg = 0;
+        mbuf_mess = NULL;
+        movecursor(srow, scol); /* Send the cursor back to where it was */
+        TTflush();
     }
-    else {
-        update(FALSE);
-        if (display_readin_msg ||   /* First one gets removed by update() */
-              mbuf_mess) {          /* Specific user message */
-            int scol = curcol;
-            int srow = currow;
-            mlwrite_one(mbuf_mess? mbuf_mess: readin_mesg);
-            display_readin_msg = 0;
-            mbuf_mess = NULL;
-            movecursor(srow, scol); /* Send the cursor back to where it was */
-            TTflush();
-        }
-        c = getcmd();
-    }
+    c = getcmd();
+
 /* If there is something on the command line, clear it */
 
     if (!mline_persist && (mpresf != FALSE)) {
