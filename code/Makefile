@@ -285,6 +285,7 @@ $(PROGRAM): $(OBJ)
 	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_OPT) \
 	$(STATIC_ARM) $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
 
+.PHONY: clean test-clean check vgcheck
 clean: test-clean
 	$(E) "  CLEAN"
 	$(Q) rm -f $(PROGRAM) core lintout makeout tags makefile.bak *.o
@@ -295,13 +296,18 @@ test-clean:
 	$(Q) rm -f Encrypt-IN Encrypt-OUT Expected-Encrypt
 	$(Q) rm -f VG*.log
 
+# Run checks with HOME set to ,, so that we don't run any
+# user-specific start-up files.
+#
 check: uemacs
-	$(E) "	CHECK"
-	$(Q) ./autotest/run_all
+	$(E) "	CHECK" $(LIST)
+	$(Q) HOME=. ./autotest/run_all $(LIST)
 
+# Run valgrind in verbose (V) mode.
+#
 vgcheck: uemacs
-	$(E) "	Valgrind CHECK"
-	$(Q) UE2RUN=../tools/run_valgrind ./autotest/run_all
+	$(E) "	Valgrind CHECK" $(LIST)
+	$(Q) HOME=. UE2RUN="../tools/run_valgrind V" ./autotest/run_all $(LIST)
 
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.

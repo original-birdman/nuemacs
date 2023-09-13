@@ -10,8 +10,12 @@ if [ ! -d autotest ]; then
     fi
 fi
 
-count=0;
-for f in autotest/*.sh; do
+count=0
+
+# If we have any command line left, use it as a filter pattern.
+#
+patt="$1"       # May be empty....
+for f in autotest/*${patt}*.sh; do
     $f FULL-RUN
     count=`expr $count + 1`
 done
