@@ -384,27 +384,27 @@ void makename(char *bname, char *fname, int ensure_unique) {
  * to ensure uniqueness.
  * We need to find and dir separator first.
  */
-    unsigned int ci;
+    char *cp, *ocp;
     char *dsp = strrchr(fname, '/');
-    if (dsp)  ci = dsp - fname;
-    else      ci = 0;
-    unsigned int orig_ci = ci;
+    if (dsp)  cp = dsp + 1;
+    else      cp = fname;
+    ocp = cp;
+    unsigned int bn_len = 0;
     unsigned int newlen = 0;
     while(newlen < maxlen) {
-        newlen = next_utf8_offset(fname, ci, maxlen, 1);
-        if (newlen == ci) break;            /* End of string */
-        if ((newlen) > (NBUFN - 5)) break;  /* Out of space */
-        ci = newlen;
+        newlen = next_utf8_offset(cp, bn_len, maxlen, 1);
+        if (newlen == bn_len) break;        /* End of string */
+        if (newlen > (NBUFN - 5)) break;    /* Out of space */
+        bn_len = newlen;
     }
 
 /* We can't have an empty buffer name (you wouldn't be able to specify
  * it in any command), so if it is empty (fname with a trailing /) change
  * it to " 0"
  */
-    int bn_len = ci - orig_ci;
     if (bn_len > 0) {
-        memcpy(bname, fname + orig_ci, bn_len);
-        *(bname+bn_len) = '\0';
+        memcpy(bname, ocp, bn_len);
+        *(bname+bn_len) = '\0' ;
     }
     else strcpy(bname, " 0");
 
