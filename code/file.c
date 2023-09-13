@@ -71,7 +71,7 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
         if ((nlines == 0) && check_dos && (llength(lp1) > 0) &&
              (lp1->l_text[lp1->l_used-1] == '\r')) dos_file = TRUE;
         if (dos_file && (llength(lp1) > 0) &&
-             (lp1->l_text[lp1->l_used-1] == '\r')) 
+             (lp1->l_text[lp1->l_used-1] == '\r'))
              lp1->l_used--;                 /* Remove the trailing CR */
         if (!(++nlines % 300) && !silent)   /* GGR */
              mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
@@ -389,7 +389,10 @@ void makename(char *bname, char *fname, int ensure_unique) {
  */
     char *cp, *ocp;
     char *dsp = strrchr(fname, '/');
-    if (dsp)  cp = dsp + 1;
+    if (dsp)  {
+        cp = dsp + 1;
+        maxlen -= (cp - fname);
+    }
     else      cp = fname;
     ocp = cp;
     unsigned int bn_len = 0;
