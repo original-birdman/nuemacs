@@ -64,12 +64,15 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
 /* Then advance by remembering the current line */
         iline = lp1;
 
-/* Check for a DOS line ending on first line */
-        if (check_dos && (nlines == 0) && (lp1->l_text[lp1->l_used-1] == '\r'))
-            dos_file = TRUE;
-        if (dos_file && lp1->l_text[lp1->l_used-1] == '\r')
+/* Check for a DOS line ending on first line, and on other lines
+ * if this is marked as a DOS file.
+ * NOTE, if the line is empty it cannot contain a CR!
+ */
+        if ((nlines == 0) && check_dos && (llength(lp1) > 0) &&
+             (lp1->l_text[lp1->l_used-1] == '\r')) dos_file = TRUE;
+        if (dos_file && (llength(lp1) > 0) &&
+             (lp1->l_text[lp1->l_used-1] == '\r')) 
              lp1->l_used--;                 /* Remove the trailing CR */
-
         if (!(++nlines % 300) && !silent)   /* GGR */
              mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
     }
