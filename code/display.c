@@ -32,6 +32,12 @@ static int taboff = 0;          /* tab offset for display       */
  * is copied (in update()) to pscreen, which is sent to the
  * display with TTputc calls, with ttcol tracked by other TTput* calls.
  * Only this source file needs to know about the data.
+ *
+ * Any malloc for extended grapheme data are dealt with as entries
+ * are put into (malloc) or removed from (free) vscreen ONLY!
+ * This means we can just copy (clone) entries ffrom vscreen to pscreen
+ * overwriting (discarding) anything that is there. No mallocs or frees
+ * are needed for pscreen entries.
  */
 static int vtrow = 0;                  /* Row location of SW cursor */
 static int vtcol = 0;                  /* Column location of SW cursor */
@@ -109,15 +115,15 @@ void mlerase(void) {
     mpresf = FALSE;
 }
 
-/* Set the entry to an ASCII character.
+/* Set the entry to an Unicode character.
  * Checks for previous extended cdm usage and frees any such found
- * unless the no_free flag is set (which it is for a pscreen setting).
+ * (no longer has a "no_free" flag, as such callers remain).
  * Internal to this file.
  */
-static void set_grapheme(struct grapheme *gp, unicode_t uc, int no_free) {
+static void set_grapheme(struct grapheme *gp, unicode_t uc) {
     gp->uc = uc;
     gp->cdm = 0;
-    if (!no_free && gp->ex != NULL) {
+    if (gp->ex != NULL) {
         Xfree(gp->ex);
         gp->ex = NULL;
     }
@@ -358,7 +364,7 @@ static void vtputc(unsigned int c) {
  * to handle it.
  */
         if (vtcol == 0) {
-            set_grapheme(&(vp->v_text[0]), ' ', 0);
+            set_grapheme(&(vp->v_text[0]), ' ');
             extend_grapheme(&(vp->v_text[0]), c);
             ++vtcol;
         }
@@ -373,11 +379,11 @@ static void vtputc(unsigned int c) {
         for (int dcol = term.t_ncol - 1; dcol >= 0; dcol--) {
             if (vp->v_text[dcol].uc == '$') break;  /* Quick repeat exit */
             if (vp->v_text[dcol].uc != 0) {
-                set_grapheme(&(vp->v_text[dcol]), '$', 0);
+                set_grapheme(&(vp->v_text[dcol]), '$');
                 break;
             }
         }
-        set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$', 0);
+        set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
         return;
     }
 
@@ -419,12 +425,12 @@ static void vtputc(unsigned int c) {
  */
     int cw = utf8char_width(c);
     if (vtcol >= 0) {
-        set_grapheme(&(vp->v_text[vtcol]), c, 0);
+        set_grapheme(&(vp->v_text[vtcol]), c);
 /* This code assumes that a NUL byte will not be displayed */
         int pvcol = vtcol;
         for (int nulpad = cw - 1; nulpad > 0; nulpad--) {
             pvcol++;
-            set_grapheme(&(vp->v_text[pvcol]), 0, 0);
+            set_grapheme(&(vp->v_text[pvcol]), 0);
         }
     }
 /* If vtcol is -ve, but will be +ve after the cw increment we need to space
@@ -432,7 +438,7 @@ static void vtputc(unsigned int c) {
  */
     else {
         for (int pcol = vtcol + cw; pcol > 0; pcol--) {
-            set_grapheme(&(vp->v_text[pcol-1]), ' ', 0);
+            set_grapheme(&(vp->v_text[pcol-1]), ' ');
         }
     }
     vtcol += cw;
@@ -440,11 +446,13 @@ static void vtputc(unsigned int c) {
 
 /* Erase from the end of the software cursor to the end of the line on which
  * the software cursor is located.
+ * Since this is a vscreen allocation we need to ensure we free any
+ * pre-exisiting gc.ex entries.
  */
 static void vteeol(void) {
     struct grapheme *vcp = vscreen[vtrow]->v_text;
 
-    while (vtcol < term.t_ncol) set_grapheme(&(vcp[vtcol++]), ' ', 0);
+    while (vtcol < term.t_ncol) set_grapheme(&(vcp[vtcol++]), ' ');
 }
 
 void update(int);           /* Forward declaration */
@@ -815,7 +823,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
  * struct video *vp1;   virtual screen image
  * struct video *vp2;   physical screen image
  */
-static int updateline(int row, struct video *vp1, struct video *vp2) {
+static void updateline(int row, struct video *vp1, struct video *vp2) {
 
     struct grapheme *cp1;
     struct grapheme *cp2;
@@ -870,7 +878,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
         vp1->v_fcolor = vp1->v_rfcolor;
         vp1->v_bcolor = vp1->v_rbcolor;
 #endif
-        return TRUE;
+        return;
     }
 #endif
 
@@ -889,7 +897,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
 /* If both lines are the same, no update needs to be done */
     if (cp1 == &vp1->v_text[term.t_ncol]) {
         vp1->v_flag &= ~VFCHG;      /* Flag this line is changed */
-        return TRUE;
+        return;
     }
 
 /* Find out if there is a match on the right */
@@ -933,7 +941,7 @@ static int updateline(int row, struct video *vp1, struct video *vp2) {
     TTrev(FALSE);
 #endif
     vp1->v_flag &= ~VFCHG;  /* Flag this line as updated */
-    return TRUE;
+    return;
 }
 
 /* updupd:
@@ -994,9 +1002,9 @@ static void updext(void) {
  * need to change any following NULs to spaces
  */
     int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
-    set_grapheme(&(vscreen[currow]->v_text[0]), '$', 0);
+    set_grapheme(&(vscreen[currow]->v_text[0]), '$');
     for (int pcol = cw - 1; pcol > 0; pcol--) {
-        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ', 0);
+        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
     }
 }
 
@@ -1252,7 +1260,7 @@ static void modeline(struct window *wp) {
     int mode_mask = 1;
     for (i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
 /* MDEQUIV and MDRPTMG are never displayed alone */
-        if (mode_mask & (MDEQUIV|MDRPTMG)) goto next_mode;
+        if (mode_mask & MD_EQVRPT) goto next_mode;
         if (mwp->w_bufp->b_mode & mode_mask) {
             if (!firstm) strcat(tline, " ");
             firstm = FALSE;
@@ -1262,8 +1270,7 @@ static void modeline(struct window *wp) {
                 break;
             case MDMAGIC:
 /* How we display Magic depends on whether Equiv mode is on. */
-                if ((mwp->w_bufp->b_mode & (MDEQUIV|MDRPTMG))
-                       == (MDEQUIV|MDRPTMG)) {
+                if ((mwp->w_bufp->b_mode & MD_EQVRPT) == MD_EQVRPT) {
                     strcat(tline, "RMgEqv");
                     break;
                 }
@@ -1592,14 +1599,17 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     TTbacg(gbcolor);
 #endif
 
-/* Erase to end-of-line, quickly if we can */
-    movecursor(term.t_mbline, 0);
-    if (eolexist)   TTeeol();
-    else            mlerase();
+/* Erase to end-of-line, quickly if we can.
+ * If we're crashing out (saving files...) when the original terminal
+ * window was not at the bottom line, this may leave a lot of blank lines
+ * but we don't know where we were on the screen, so just let it happen.
+ * Trying to remove this may (will?) just introduce the possibility of
+ * something worse.
+ */
+    mlerase();      /* Leaves us at col0 of mbline */
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
-    mpresf = (bytes_togo > 0);
     while (bytes_togo > 0) {
 /* If we are about to go into the last column, put a $ there and stop,
  * otherwise we get wrap-around and the display messes up.
@@ -1634,6 +1644,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
         }
     }
     TTflush();
+    mpresf = TRUE;  /* Even if it is empty */
 }
 
 void mlwrite(const char *fmt, ...) {

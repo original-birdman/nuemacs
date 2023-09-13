@@ -412,8 +412,8 @@ int lgetgrapheme(struct grapheme *gp, int no_ex_alloc) {
     int len = llength(curwp->w.dotp);
 
     int spos = curwp->w.doto;
-    int epos = build_next_grapheme(curwp->w.dotp->l_text, curwp->w.doto,
-         len, gp, no_ex_alloc);
+    int epos = build_next_grapheme(curwp->w.dotp->l_text, spos, len, gp,
+         no_ex_alloc);
     return (epos - spos);
 }
 

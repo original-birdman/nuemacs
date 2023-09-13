@@ -2769,8 +2769,7 @@ int forwhunt(int f, int n) {
 /* Complain and restore if not there - we already have the saved match... */
 
     if (status) {
-        if ((curbp->b_mode & (MDMAGIC|MDRPTMG)) == (MDMAGIC|MDRPTMG))
-            report_match();
+        if ((curbp->b_mode & MD_MAGRPT) == MD_MAGRPT) report_match();
     }
     else {
         mlwrite_one("Not found");
@@ -2884,8 +2883,7 @@ int backhunt(int f, int n) {
 /* Complain and restore if not there - we already have the saved match... */
 
     if (status) {
-        if ((curbp->b_mode & (MDMAGIC|MDRPTMG)) == (MDMAGIC|MDRPTMG))
-            report_match();
+        if ((curbp->b_mode & MD_MAGRPT) == MD_MAGRPT) report_match();
     }
     else {
         mlwrite_one("Not found");

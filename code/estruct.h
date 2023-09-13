@@ -349,8 +349,10 @@ struct buffer {
 #define MDEQUIV 0x0200          /* Equivalent unicode searching */
 #define MDDOSLE 0x0400          /* DOS line endings             */
 #define MDRPTMG 0x0800          /* Report match in Magic mode   */
-/* Equiv mode only applies in Magic mode, so this is useful */
+/* Equiv and Report modes only applies in Magic mode, so these are useful */
 #define MD_MAGEQV (MDMAGIC | MDEQUIV)
+#define MD_MAGRPT (MDMAGIC | MDRPTMG)
+#define MD_EQVRPT (MDEQUIV | MDRPTMG)
 
 #define NUMMODES    12          /* # of defined modes           */
 

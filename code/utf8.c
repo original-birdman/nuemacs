@@ -217,7 +217,8 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
 /* Routines to build full graphemes...
  * Build the grapheme starting at the current position and return
  * the offset that follows it.
- * So repeated calls move forwards through the buffer.
+ * So repeated calls move forwards through the buffer, if offs is
+ * incremented by the return value.
  * If offs == max -> newline.
  * If offs > max -> UEM_NOCHAR
  * If no_ex_alloc is set, don't allocate any ex fields (but do count them).

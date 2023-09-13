@@ -17,8 +17,19 @@
 struct key_tab *keytab;
 #define KEYTAB_INCR 32
 
-/*
- * Command table.
+/* NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+ * When in the minibuffer some actions are hard-wired (see
+ * getstring() in input.c)
+ *
+ *  META|CONTROL|'I'    rotate the search string when searching
+ *  CTLX|CONTROL|'I'    insert the current saecrh string when searching
+ *  CTLX|CONTROL|'M'    evaluate the line, submit the result
+ *  CONTROL|'M' (== <Return>)  or CTLX|CONTROL|'C'
+ *                      submit the command
+ * CONTROL|'G'          abort
+ */
+
+/* Command table.
  * This table  is *roughly* in ASCII order, left to right across the
  * characters of the command. This explains the funny location of the
  * control-X commands.

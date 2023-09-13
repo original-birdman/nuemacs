@@ -646,11 +646,11 @@ int mlyesno(char *prompt) {
     return res;
 }
 
-/* Write a prompt into the message line, then read back a response. Keep
- * track of the physical position of the cursor. If we are in a keyboard
- * macro throw the prompt away, and return the remembered response. This
- * lets macros run at full speed. The reply is always terminated by a carriage
- * return. Handle erase, kill, and abort keys.
+/* Write a prompt into the message line, then read back a response.
+ * Actually done by using nextarg, which either gets the next token
+ * (when running a macro) or comes back to getstring() (in this file)
+ * if interactive. This lets macros run at full speed.
+ *
  * NOTE that when the function is processing macros from a (start-up) file
  * it will get one arg at a time.
  * BUT when run interactively it will return the entire response.
@@ -983,13 +983,12 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
         mb_winp->w_flag = WFMODE | WFHARD;    /* Full.                */
     }
 
-/* Expansion commands leave junk in mb */
+/* Get a minibuffer name based on the current level */
 
-    mlerase();
     sprintf(mbname, "//minib%04d", mb_info.mbdepth+1);
     cb = curbp;
 
-/* Update main screen before entering minibuffer */
+/* Update main screen before entering the minibuffer */
 
     update(FALSE);
 
@@ -1035,6 +1034,8 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     curwp = mb_winp;
     wheadp = curwp;
 
+/* Clear the bottom line... */
+
     if (mpresf) mlerase();
     mberase();
 
@@ -1056,7 +1057,8 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
  *
- * We start by ensuring that the minibuiffer display is empty...
+ * We start by ensuring that the minibuffer display is refreshed,
+ * in case it has been overwritten by a message.
  */
 loop:
     mbupdate();
@@ -1178,7 +1180,6 @@ loop:
                     size = (strlen(choices) < 42) ? 1 : 2;
                     sleep(size);
                     mlerase();
-                    mberase();
                 }
             }
             else
@@ -1191,7 +1192,7 @@ loop:
         }
     }
 
-/* Some further "hard-wired" key-bindings - aka minibuffer specials. */
+/* Some "hard-wired" key-bindings - aka minibuffer specials. */
 
     do_evaluate = FALSE;
     switch(carg->c) {           /* The default is to do nothing here */
