@@ -937,6 +937,10 @@ static int set_rcfile(char *fname) {
         fprintf(stderr, "You cannot have two startup files (-c/@)!\n");
         return FALSE;
     }
+/* ffropen() will expand any relative/~ pathname *IN PLACE* so
+ * we need a copy of the command line option that is sufficiently long!
+ * Do NOT use strdup here!.
+ */
     rcfile = Xmalloc(NFILEN);
     strcpy(rcfile, fname);
     return TRUE;
@@ -1590,6 +1594,10 @@ int unarg(int f, int n) {
     return TRUE;
 }
 
+#ifdef DO_FREE
+static char *pending_rcextra = NULL;
+#endif
+
 /* ======================================================================
  * Quit command. If an argument, always quit. Otherwise confirm if a buffer
  * has been changed and not written out. Normally bound to "C-X C-C".
@@ -1634,7 +1642,7 @@ int quit(int f, int n) {
             Xfree(wp);
         }
         if (eos_list) Xfree(eos_list);
-
+        Xfree(pending_rcextra);
 #endif
 
         if (f) exit(n);
@@ -1909,7 +1917,8 @@ int main(int argc, char **argv) {
             case 'X':       /* GGR: -x for eXtra rc file */
                 if (rcnum < sizeof(rcextra)/sizeof(rcextra[0]))
 /* ffropen() will expand any relative/~ pathname *IN PLACE* so
- * we need a copy of the command line option!
+ * we need a copy of the command line option that is sufficiently long!
+ * Do NOT use strdup here!.
  */
                 rcextra[rcnum] = Xmalloc(NFILEN);
                 strcpy(rcextra[rcnum], opt);
@@ -1952,8 +1961,14 @@ int main(int argc, char **argv) {
     }
     if (rcnum) {
         for (unsigned int n = 0; n < rcnum; n++) {
+#ifdef DO_FREE
+            pending_rcextra = rcextra[n];
+#endif
             startup(rcextra[n]);
             Xfree(rcextra[n]);
+#ifdef DO_FREE
+            pending_rcextra = NULL;
+#endif
         }
     }
     silent = FALSE;

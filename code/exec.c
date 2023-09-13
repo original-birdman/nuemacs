@@ -20,6 +20,10 @@
 #include "utf8proc.h"
 
 static char *prev_line_seen = NULL;
+#ifdef DO_FREE
+static char *pending_line_seen = NULL;
+static char *pending_einit = NULL;
+#endif
 
 /* token:
  *      chop a token off a string
@@ -233,7 +237,19 @@ static int docmd(char *cline) {
     oldcle = clexec;        /* save old clexec flag */
     clexec = TRUE;          /* in cline execution */
     current_command = nbp->n_name;
+
+/* If this command is exit-emacs we'll never get back and
+ * never free this_line_seen.
+ * So valgrind reports it.
+ * Add it to the free_exec list...
+ */
+#ifdef DO_FREE
+    pending_line_seen = this_line_seen;
+#endif
     status = (nbp->n_func)(f, n); /* call the function */
+#ifdef DO_FREE
+    pending_line_seen = NULL;
+#endif
     if (!nbp->opt.search_ok) srch_can_hunt = 0;
     cmdstatus = status;     /* save the status */
     clexec = oldcle;        /* restore clexec flag */
@@ -1036,10 +1052,20 @@ int dobuf(struct buffer *bp) {
     hlp = bp->b_linep;
     lp = hlp->l_fp;
     einit = NULL;               /* So we alloc on first call */
+    int eilen = 0;
     while (lp != hlp) {
 /* Allocate eline and copy macro line to it */
         linlen = lp->l_used;
-        einit = eline = Xrealloc(einit, linlen + 1);
+        if (linlen == 0) goto onward;
+        if (linlen > eilen) {
+            einit = Xrealloc(einit, linlen + 1);
+            eline = einit;
+            eilen = linlen;
+#if DO_FREE
+            pending_einit = einit;
+#endif
+        }
+        eline = einit;
         memcpy(eline, lp->l_text, linlen);
         eline[linlen] = '\0';   /* make sure it ends */
 
@@ -1185,6 +1211,8 @@ int dobuf(struct buffer *bp) {
                     strcpy(golabel, tbuf);
                     linlen = strlen(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
+/* We need at least 2 chars on the line for a label... */
+                        if (glp->l_used < 2) continue;
                         if (*glp->l_text == '*' &&
                             (strncmp(glp->l_text+1, golabel, linlen) == 0)) {
                             lp = glp;
@@ -1305,6 +1333,9 @@ single_exit:
 /* Restore the original inreex value before leaving */
     inreex = init_inreex;
     execbp = init_execbp;
+#if DO_FREE
+    pending_einit = NULL;   /* It's gone... */
+#endif
 
 /* Revert to the original read-only status if it wasn't originally set
  * i.e. restore any writeability!
@@ -1609,9 +1640,12 @@ NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
 #ifdef DO_FREE
 /* Add a call to allow free() of normally-unfreed items here for, e.g,
  * valgrind usage.
+ * Freeing NULL is a no-op.
  */
 void free_exec(void) {
-    if (prev_line_seen) Xfree(prev_line_seen);
+    Xfree(prev_line_seen);
+    Xfree(pending_line_seen);
+    Xfree(pending_einit);
     return;
 }
 #endif
