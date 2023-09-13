@@ -472,6 +472,7 @@ extern void free_eval(void);
 extern void free_exec(void);
 extern void free_input(void);
 extern void free_line(void);
+extern void free_lock(void);
 extern void free_names(void);
 extern void free_search(void);
 extern void free_utf8(void);
