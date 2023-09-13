@@ -1,6 +1,9 @@
 #!/bin/sh
 #
 
+TNAME=`basename $0 .sh`
+export TNAME
+
 # The original input file
 #
 cat > Encrypt-IN <<EOD
@@ -33,8 +36,9 @@ write-file Encrypt-OUT ATestEncryptionString
 exit-emacs
 EOD
 
-# Do it...
-./uemacs -c etc/uemacs.rc -x ./uetest.rc
+# Do it...set the default uemacs if caller hasn't set one.
+[ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
+$UE2RUN -x ./uetest.rc
 
 # Now check that what was written out (Encrypt-OUT) is what was
 # expected.

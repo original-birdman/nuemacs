@@ -8,4 +8,12 @@ else
     opts="--leak-check=yes"
 fi
 
-valgrind $opts ./uemacs ${1+"$@"} 2>|gml.log
+# Tag log name if running under check
+#
+if [ -n "$TNAME" ]; then
+    log=VG-$TNAME.log
+else
+    log=VG.log
+fi
+
+valgrind $opts ./uemacs -d etc ${1+"$@"} 2>|$log

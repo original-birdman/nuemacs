@@ -1,6 +1,9 @@
 #!/bin/sh
 #
 
+TNAME=`basename $0 .sh`
+export TNAME
+
 # The original input file - so what we expect when we decrypt.
 #
 cat > Expected-Decrypt <<EOD
@@ -34,8 +37,9 @@ write-file Decrypt-OUT
 exit-emacs
 EOD
 
-# Do it...
-./uemacs -c etc/uemacs.rc -x ./uetest.rc
+# Do it...set the default uemacs if caller hasn't set one.
+[ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
+$UE2RUN -x ./uetest.rc
 
 # Now check that what was written out (Decrypt-OUT) is what was
 # expected (Expected-Decrypt).

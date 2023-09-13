@@ -177,7 +177,9 @@ unmark-buffer
 EOD
 fi
  
-./uemacs -c etc/uemacs.rc -x ./uetest.rc
+# Do it...set the default uemacs if caller hasn't set one.
+[ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
+$UE2RUN -x ./uetest.rc
     
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then

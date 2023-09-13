@@ -293,10 +293,15 @@ test-clean:
 	$(Q) rm -f *.tfile uetest.rc FAIL-*
 	$(Q) rm -f Expected-Decrypt Decrypt-IN Decrypt-OUT
 	$(Q) rm -f Encrypt-IN Encrypt-OUT Expected-Encrypt
+	$(Q) rm -f VG*.log
 
 check: uemacs
 	$(E) "	CHECK"
 	$(Q) ./autotest/run_all
+
+vgcheck: uemacs
+	$(E) "	Valgrind CHECK"
+	$(Q) UE2RUN=../tools/run_valgrind ./autotest/run_all
 
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.
