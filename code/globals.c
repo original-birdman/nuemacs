@@ -8,7 +8,6 @@
 int fillcol = 72;               /* Current fill column          */
 int kbdm[NKBDM];                /* Macro                        */
 char *execstr = NULL;           /* pointer to string to execute */
-char golabel[NPAT] = "";        /* current line to go to        */
 int execlevel = 0;              /* execution IF level           */
 int eolexist = TRUE;            /* does clear to EOL exist      */
 int revexist = FALSE;           /* does reverse video exist?    */

@@ -92,10 +92,10 @@ char *token(char *src, char *tok, int size) {
 /* nextarg:
  *      get the next argument
  *
- * char *prompt;                prompt to use if we must be interactive
- * char *buffer;                buffer to put token into
- * int size;                    size of the buffer
- * int terminator;              terminating char to be used on interactive fetch
+ * char *prompt             prompt to use if we must be interactive
+ * char *buffer             buffer to put token into
+ * int size                 size of the buffer
+ * int ctype                type of context completion if we prompt
  */
 int nextarg(char *prompt, char *buffer, int size, enum cmplt_type ctype) {
     char tbuf[NSTRING];     /* string buffer for some workings */
@@ -1179,8 +1179,10 @@ int dobuf(struct buffer *bp) {
 /* .....only if we are currently executing */
                 if (execlevel == 0) {
 /* Grab label to jump to.  Allow it to be evaulated. */
+                    char golabel[NPAT], tbuf[NPAT];
                     eline = token(eline, golabel, NPAT);
-                    strcpy(golabel, getval(golabel));
+                    strcpy(tbuf, getval(golabel));  /* So no overlap of args */
+                    strcpy(golabel, tbuf);
                     linlen = strlen(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
                         if (*glp->l_text == '*' &&
