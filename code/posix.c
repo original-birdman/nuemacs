@@ -152,11 +152,12 @@ static struct pollfd ue_wait = { 0, POLLIN, 0 };
 
 int ttgetc(void) {
     static char buffer[32];
-    static int pending;
+    static int pending = 0;
+
     unicode_t c;
     int count, bytes = 1, expected;
 
-    count = pending;
+    count = pending;        /* So we don't update pending on error */
     if (!count) {
         count = read(0, buffer, sizeof(buffer));
         if (count <= 0) return 0;
@@ -177,7 +178,7 @@ int ttgetc(void) {
     while (pending < expected) {
         int chars_waiting = poll(&ue_wait, 1, 100);
         if (chars_waiting <= 0) break;
-        pending += read(0, buffer + count, sizeof(buffer) - count);
+        pending += read(0, buffer + pending, sizeof(buffer) - pending);
     }
     if (pending > 1) {
         char second = buffer[1];
@@ -191,7 +192,16 @@ int ttgetc(void) {
 
 done:
     pending -= bytes;
-    memmove(buffer, buffer+bytes, pending);
+
+/* We need to shufle down any still-pending bytes.
+ * Will not be many - so just use simple loop.
+ */
+    if (pending > 0) {
+        char *fp = buffer+bytes;
+        char *tp = buffer;
+        count = pending;    /* So we don't update pending!!! */
+        while(count--) *tp++ = *fp++;
+    }
     return c;
 }
 
