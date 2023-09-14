@@ -494,6 +494,7 @@ static void add_to_fline(int len) {
         ltextgrow(fline, len + fline->l_used);
         break;
     case NONE:
+        break;
     }
     memcpy(fline->l_text+fline->l_used, cache.buf+cache.rst, len);
     fline->l_used += len;   /* Record the real size of the line */
