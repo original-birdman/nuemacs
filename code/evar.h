@@ -87,10 +87,10 @@ enum uf_val {
     UFEQUAL,    UFLESS,     UFGREATER,  UFNOT,      UFAND,  UFOR,
     UFBAND,     UFBOR,      UFBXOR,     UFBNOT,     UFBLIT,
     UFCAT,      UFLEFT,     UFRIGHT,    UFMID,      UFSEQUAL,   UFSLESS,
-    UFSGREAT,   UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,   UFSINDEX,
-    UFIND,
-    UFTRUTH,    UFASCII,    UFCHR,      UFGTKEY,    UFRND,  UFENV,
-    UFBIND,     UFEXIST,    UFBXIST,    UFFIND,     UFXLATE,
+    UFSGREAT,   UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,
+    UFSINDEX,   UFRINDEX,
+    UFIND,      UFTRUTH,    UFASCII,    UFCHR,      UFGTKEY,    UFRND,
+    UFENV,      UFBIND,     UFEXIST,    UFBXIST,    UFFIND,     UFXLATE,
     UFGRPTEXT,  UFPRINTF,
     UFRADD,     UFRSUB,     UFRTIMES,   UFRDIV,     UFRPOW,
     UFRLESS,    UFRGREAT,   UFR2I,
@@ -148,6 +148,7 @@ static struct user_function funcs[] = {
  { "low", MONAMIC,  UFLOWER },  /* lower case string */
  { "esc", MONAMIC,  UFESCAPE }, /* SHELL escape string */
  { "sin", DINAMIC,  UFSINDEX }, /* find the index of one string in another */
+ { "rin", DINAMIC,  UFRINDEX }, /* reverse index of one string in another */
 
 /* Miscellaneous functions */
  { "ind", MONAMIC,  UFIND },    /* evaluate indirect value */

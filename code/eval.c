@@ -206,14 +206,33 @@ static int ernd(void) {
     return seed;
 }
 
-/* Find pattern within source. Returns index of the start, or 0.
+/* Find pattern within source.
+ * Returns index of the start, or 0.
  *
  * char *source;        source string to search
  * char *pattern;       string to look for
  */
-static int sindex(char *source, char *pattern) {
+static int strindex(char *source, char *pattern) {
     char *locp = strstr(source, pattern);
     return (locp)? (locp - source + 1): 0;
+}
+
+/* Find the last pattern within source.
+ * Returns index of the start, or 0.
+ *
+ * char *source;        source string to search
+ * char *pattern;       string to look for
+ */
+static int rstrindex(char *source, char *pattern) {
+/* We keep trying from one past where the last match matched
+ * until we fail.
+ */
+    char *origp, *locp;
+    origp = locp = source;;
+    char *lastp = NULL;
+/* () around assigment used for result. */
+    while((locp = strstr(locp+1, pattern))) lastp = locp;
+    return (lastp)? (lastp - origp + 1): 0;
 }
 
 /* FreeBSD doesn't have strndupa(), so make our own....
@@ -689,7 +708,8 @@ static char *gtfun(char *fname) {
         *op = '\0';
         return result;
        }
-    case UFSINDEX:      return ue_itoa(sindex(arg1, arg2));
+    case UFSINDEX:      return ue_itoa(strindex(arg1, arg2));
+    case UFRINDEX:      return ue_itoa(rstrindex(arg1, arg2));
 
 /* Miscellaneous functions */
     case UFIND: { /* Evaluate the next arg via temporary execstr */
