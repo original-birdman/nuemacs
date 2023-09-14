@@ -379,7 +379,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
  * parameter sizes.
  *
  * The output is built up in a local buffer and only copied to the
- * single static buffer at exit. Thsi is to allow for re-entrancy.
+ * single static buffer at exit. This is to allow for re-entrancy.
  */
 
 /* The returned value - overflow NOT checked.... */
@@ -411,10 +411,10 @@ static char *ue_printf(char *fmt) {
             fmt += used;
             continue;
         }
-        fmt += used;
 
 /* We have a '%': test the next char */
 
+        fmt += used;
         if (*fmt == '%') {      /* %% is a literal '%' */
             *op++ = '%';
             fmt++;
@@ -425,7 +425,7 @@ static char *ue_printf(char *fmt) {
 /* Now keep going until we find a conversion specifier, to pick up the
  * template - but skip anything we don't want, and any attempt to
  * specify specific args to use is an error.
- * We know this shoudl just be ASCII, so can go byte-by-byte.
+ * We know this should just be ASCII, so can go byte-by-byte.
  */
         char t_fmt[NSTRING];    /* So we can avoid a length check */
         char *tp = t_fmt;
@@ -451,6 +451,7 @@ static char *ue_printf(char *fmt) {
             op += strlen(errorm);
             goto finalize;
         }
+        --bytes_togo;   /* We're about to use it... */
         char conv_char = *tp++ = *fmt++;
         *tp = '\0';
 
