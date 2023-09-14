@@ -22,7 +22,13 @@
 static char *prev_line_seen = NULL;
 #ifdef DO_FREE
 static char *pending_line_seen = NULL;
-static char *pending_einit = NULL;
+/* We only need this for valgrind testing, so 10 should be more than
+ * sufficient.
+ * pending_line_seen doesn't seem to need it an array
+ */
+#define PE_ENTS 10
+static char *pending_einit[PE_ENTS] = { [0 ... PE_ENTS-1] = NULL };
+static int pe_level = -1;
 #endif
 
 /* token:
@@ -972,6 +978,9 @@ int dobuf(struct buffer *bp) {
     bp->b_mode |= MDVIEW;
 
     bp->b_exec_level++;
+#if DO_FREE
+    pe_level++;
+#endif
     orig_pause_key_index_update = pause_key_index_update;
     pause_key_index_update = 1;
 
@@ -1062,7 +1071,7 @@ int dobuf(struct buffer *bp) {
             eline = einit;
             eilen = linlen;
 #if DO_FREE
-            pending_einit = einit;
+            pending_einit[pe_level] = einit;
 #endif
         }
         eline = einit;
@@ -1292,7 +1301,6 @@ int dobuf(struct buffer *bp) {
             bp->b.doto = 0;
             execlevel = 0;
             freewhile(whlist);
-            bp->b_exec_level--;
             pause_key_index_update = orig_pause_key_index_update;
             Xfree(einit);
             goto single_exit;
@@ -1319,7 +1327,6 @@ failexit2:
 
 failexit:
     freewhile(whlist);
-    bp->b_exec_level--;
     pause_key_index_update = orig_pause_key_index_update;
 
 /* If this was (meant to be) a procedure buffer, we must switch that off
@@ -1333,8 +1340,10 @@ single_exit:
 /* Restore the original inreex value before leaving */
     inreex = init_inreex;
     execbp = init_execbp;
+    bp->b_exec_level--;
 #if DO_FREE
-    pending_einit = NULL;   /* It's gone... */
+    pending_einit[pe_level] = NULL; /* It's gone... */
+    pe_level--;
 #endif
 
 /* Revert to the original read-only status if it wasn't originally set
@@ -1645,7 +1654,7 @@ NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
 void free_exec(void) {
     Xfree(prev_line_seen);
     Xfree(pending_line_seen);
-    Xfree(pending_einit);
+    for (int i = 0; i < PE_ENTS; i++) Xfree(pending_einit[i]);
     return;
 }
 #endif
