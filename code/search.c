@@ -514,7 +514,6 @@ static char *clearbits(void) {
 
     cclmap = cclstart = (char *)Xmalloc(BMBYTES);
     for (i = 0; i < BMBYTES; i++) *cclmap++ = 0;
-
     return cclstart;
 }
 
@@ -962,7 +961,8 @@ static char *set_lims(char *patp, struct magic *mcp, int first_call) {
 static void mcclear(void) {
     struct magic *mcptr = mcpat;
 
-    while (mcptr->mc.type != EGRP && mcptr->mc.group_num > 0) {
+/* Keep going until we reach the End group entry for Group 0 */
+    while (!((mcptr->mc.type == EGRP) && (mcptr->mc.group_num == 0))) {
         if ((mcptr->mc.type) == CCL) {
             Xfree(mcptr->val.cclmap);
             if (mcptr->x.xt_cclmap) {
@@ -3622,6 +3622,7 @@ void free_search(void) {
         Xfree(srch_txt[ix]);
         Xfree(repl_txt[ix]);
     }
+    if (mc_alloc) mcclear();
     return;
 }
 #endif
