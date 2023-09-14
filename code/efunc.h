@@ -326,6 +326,7 @@ extern int quotedcount(int, int);
 extern int ggr_style(int, int);
 extern int re_args_exec(int, int);
 extern int open_parent(int, int);
+extern int simulate(int, int);
 #endif
 
 /* region.c */

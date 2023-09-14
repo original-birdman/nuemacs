@@ -187,6 +187,7 @@ struct name_bind names[] = {
     {"set-pttable", set_pttable, {0, 0, 0, 1, 0, 0}},         /* GGR */
     {"shell-command", spawn, {0, 1, 0, 0, 0, 0}},
     {"shrink-window", shrinkwind, {0, 1, 0, 1, 0, 0}},
+    {"simulate", simulate, {0, 1, 1, 1, 0, 1}},
     {"split-current-window", splitwind, {0, 1, 0, 1, 0, 0}},
     {"store-macro", storemac, {0, 0, 0, 1, 0, 0}},
     {"store-procedure", storeproc, {0, 0, 1, 1, 0, 0}},
