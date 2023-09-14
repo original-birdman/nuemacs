@@ -1,3 +1,14 @@
+/* To use this, #include it into search.c aftre declarations and
+ * before the first function (init_search_ringbuffers()?)>
+ * Then, at the point where you wish to dump a struct magic(_replacement)
+ * put:
+{
+  DUMP_MATCH("Identity text...")
+or
+  DUMP_REPLACE("Identity text...")
+}
+ */
+
 #ifndef _DUMP_MC_DEBUG_
 #define _DUMP_MC_DEBUG_
 
@@ -114,7 +125,7 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
  */
                 unsigned char *pc = (unsigned char *)mp.mmp->val.cclmap;
                 fprintf(stderr, " >");
-                for (int i = 0; i < HIBYTE; i++) {
+                for (int i = 0; i < BMBYTES; i++) {
                     if (!(i%4)) fprintf(stderr, " ");
                     unsigned char orig_byte = *pc++;
                     unsigned char orig_mask = 0x01;
