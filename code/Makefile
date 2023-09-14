@@ -294,7 +294,8 @@ test-clean:
 	$(Q) rm -f *.tfile uetest.rc FAIL-*
 	$(Q) rm -f Expected-Decrypt Decrypt-IN Decrypt-OUT
 	$(Q) rm -f Encrypt-IN Encrypt-OUT Expected-Encrypt
-	$(Q) rm -f VG*.log
+	$(Q) rm -f VG*.log VG*.log.orig
+	$(Q) rm -rf uemacs-dumps
 
 # Run checks with HOME set to ,, so that we don't run any
 # user-specific start-up files.
@@ -311,7 +312,7 @@ vgcheck: uemacs
 
 vgstrip:
 	$(E) "	Strip valgrind logs"
-	$(Q) perl -i ../tools/remove-tcap-bits.pl VG*.log
+	$(Q) perl -i.orig ../tools/remove-tcap-bits.pl VG*.log
 
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.
