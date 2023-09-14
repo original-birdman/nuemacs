@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.170 Help Index     (09 Aug 2023)
+=>                   nuEmacs GGR4.171 Help Index     (15 Sep 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -591,7 +591,10 @@ Bit operations
     &bli            Convert hex ("0x"), octal (0..) or decimal to number.
 
 Substring
-    &lef s len, &rig s pos, &mid s pos len
+    &lef s len      Leftmost len bytes from string s
+    &rig s pos      Rightmost len bytes from string s
+    &mid s pos len  Rightmost len bytes from string s staring at pos
+        These only copy up to end-of-string if len/pos is too big.
 
 Other string operations
     &cat, &len, &upp, &low
@@ -600,7 +603,8 @@ String comparisons
    &seq, &sle, &sgr
 
 String index
-    &sin, str1, str2
+    &sin str1 str2  Index of first str2 in str1 (0 if not found).
+    &rin str1 str2  Index of last str2 in str1 (0 if not found).
 
 Char to Code conversion
     &asc c          Byte code of base char
