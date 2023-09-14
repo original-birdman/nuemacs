@@ -285,7 +285,7 @@ $(PROGRAM): $(OBJ)
 	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_OPT) \
 	$(STATIC_ARM) $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
 
-.PHONY: clean test-clean check vgcheck
+.PHONY: clean test-clean check vgcheck vgstrip
 clean: test-clean
 	$(E) "  CLEAN"
 	$(Q) rm -f $(PROGRAM) core lintout makeout tags makefile.bak *.o
@@ -308,6 +308,10 @@ check: uemacs
 vgcheck: uemacs
 	$(E) "	Valgrind CHECK" $(LIST)
 	$(Q) HOME=. UE2RUN="../tools/run_valgrind V" ./autotest/run_all $(LIST)
+
+vgstrip:
+	$(E) "	Strip valgrind logs"
+	$(Q) perl -i ../tools/remove-tcap-bits.pl VG*.log
 
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.

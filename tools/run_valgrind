@@ -8,6 +8,8 @@ else
     opts="--leak-check=yes"
 fi
 
+opts="$opts --error-markers=BEGIN,END"
+
 # Tag log name if running under check
 #
 if [ -n "$TNAME" ]; then
