@@ -70,18 +70,6 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
     return bytes;
 }
 
-/* This takes two pointers (the begin and end of the bytes to reverse)
- * and swaps their contents as they move towards each other.
- * Once they meet the work is done.
- */
-static inline void reverse_bytes(char *begin, char *end) {
-    do {
-        char a = *begin;    /* Original begin */
-        *begin++ = *end;    /* Copy end to begin */
-        *end-- = a;         /* Original begin into end */
-    } while (begin < end);
-}
-
 /* unicode_to_utf8()
  *
  * Convert a unicode value to its canonical utf-8 sequence.
