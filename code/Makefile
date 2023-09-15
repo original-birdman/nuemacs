@@ -302,13 +302,13 @@ test-clean:
 #
 check: uemacs
 	$(E) "	CHECK" $(LIST)
-	$(Q) HOME=. ./autotest/run_all $(LIST)
+	$(Q) unset HOME && ./autotest/run_all $(LIST)
 
 # Run valgrind in verbose (V) mode.
 #
 vgcheck: uemacs
 	$(E) "	Valgrind CHECK" $(LIST)
-	$(Q) HOME=. UE2RUN="../tools/run_valgrind V" ./autotest/run_all $(LIST)
+	$(Q) unset HOME && UE2RUN="../tools/run_valgrind V" ./autotest/run_all $(LIST)
 
 vgstrip:
 	$(E) "	Strip valgrind logs"
