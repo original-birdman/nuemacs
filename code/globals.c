@@ -34,6 +34,7 @@ int discmd = TRUE;              /* display command flag         */
 int disinp = TRUE;              /* display input characters     */
 int vismac = FALSE;             /* update display during keyboard macros? */
 int filock = FALSE;             /* Do we want file-locking */
+int crypt_mode = 0;             /* Crypt mode - default is NONE */
 struct buffer *bstore = NULL;   /* buffer to store macro text to */
 int ttrow = -1;                 /* Row location of HW cursor */
 int ttcol = -1;                 /* Column location of HW cursor */

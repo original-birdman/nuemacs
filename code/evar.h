@@ -78,6 +78,7 @@ struct evlist evl[] = {
  { "pttmode",   EVPTTMODE },    /* Current ptt mode, or "" (read-only)  */
  { "vismac", EVVISMAC },        /* update display during keyboard macros? */
  { "filock", EVFILOCK },        /* Do we want file locking? */
+ { "crypt_mode", EVCRYPT },     /* Crypt mode to use (default NONE) */
 };
 
 /* The tags for user functions - used in struct evlist */

@@ -13,6 +13,20 @@
 #include        "edef.h"
 #include        "efunc.h"
 
+/*  Apparently "The mathematical MOD does not match the computer MOD"
+ */
+static int mod95(int val) {
+
+/*  Yes, what I do here may look strange, but it gets the
+ * job done, and portably at that.
+ */
+        while (val >= 9500) val -= 9500;
+        while (val >= 950)  val -= 950;
+        while (val >= 95)   val -= 95;
+        while (val < 0)     val += 95;
+        return val;
+}
+
 /**********
  *
  *      myencrypt - in place encryption/decryption of a buffer
@@ -112,7 +126,7 @@
 void myencrypt(char *bptr, unsigned len) {
     int cc; /* current character being considered */
 
-    static int key = 0; /* 29 bit encipherment key */
+    static int key = 0;     /* 29 bit encipherment key */
     static int salt = 0;    /* salt to spice up key with */
 
     if (!bptr) {            /* is there anything here to encrypt? */
@@ -121,15 +135,19 @@ void myencrypt(char *bptr, unsigned len) {
         return;
     }
 
-/* We got though every *byte* in the buffer.
- * Leave anything below space alone and map the rest into their own
- * range, which also means we can never generate a newline, which would
- * really mess things up! So the range is 32(' ')->255 == 224 bytes.
+    int printing_only = (crypt_mode & CRYPT_ONLYP);
+    int do_mod95 = (crypt_mode & CRYPT_MOD95);
+
+/* We go through every *byte* in the buffer.
+ * If CRYPT_ONLYP we use the old code that leaves anything below space
+ * alone and map the rest into their own range, which also means we can
+ * never generate a newline, which would (apparently) have really messed
+ * things up! So the range is 32(' ')->255 == 224 bytes.
+ * We now read/write in a block, so can en/decrypt any byte.
  */
     while (len--) {
         cc = ch_as_uc(*bptr);   /* Get the next char - unsigned */
-
-/* We now read/write in block, so can en/decrypt any byte. */
+        if (!printing_only || ((cc >= ' ') && (cc <= '~'))) {
 
 /* Feed the upper few bits of the key back into itself.
  * This ensures that the starting key affects the entire message.
@@ -138,12 +156,22 @@ void myencrypt(char *bptr, unsigned len) {
  * our autokey, won't overflow, making the key go negative.
  * Machine behavior in these cases does not tend to be portable.
  */
-        key = (key & 0x1FFFFFFF) ^ ((key >> 29) & 0x03);
+            key = (key & 0x1FFFFFFF) ^ ((key >> 29) & 0x03);
 
+            if (do_mod95) {
+/* Down-bias the character, perform a Beaufort encipherment, and
+ * up-bias the character again.  We want key to be positive
+ * so that the left shift here will be more portable and the
+ * mod95() faster
+ */
+                cc = mod95((key % 95) - (cc - ' ')) + ' ';
+            }
+            else {
 /* Perform a Beaufort encipherment.
  * Just pick up the final 8-bits (we may have gone -ve here).
  */
-        cc = ((key & 0xff) - cc) & 0xff;
+                cc = ((key & 0xff) - cc) & 0xff;
+            }
 
 /* The salt will spice up the key a little bit, helping to obscure any
  * patterns in the clear text, particularly when all the characters (or
@@ -152,12 +180,13 @@ void myencrypt(char *bptr, unsigned len) {
  * too radically.
  * It is always a good idea to chop off cyclics to prime values.
  */
-        if (++salt >= 20857) salt = 0;  /* prime modulus */
+            if (++salt >= 20857) salt = 0;  /* prime modulus */
 
 /* Our autokey (a special case of the running key) is being generated
  * by a weighted checksum of cipher text, (unsigned) clear text and salt.
  */
-        key = key + key + (cc ^ ch_as_uc(*bptr)) + salt;
+            key = key + key + (cc ^ ch_as_uc(*bptr)) + salt;
+        }
         *bptr++ = cc;   /* put character back into buffer */
     }
     return;
@@ -174,6 +203,13 @@ int set_encryption_key(int f, int n) {
     int odisinp;            /* original value of disinp */
     char ukey[NPAT];        /* new encryption string */
 
+/* Is it enabled at all? */
+
+    if (crypt_mode == 0) {
+        mlforce("Crypt is not enabled. Set $crypt_mode");
+        return FALSE;
+    }
+
 /* Turn command input echo off */
     odisinp = disinp;
     disinp = FALSE;
@@ -184,6 +220,9 @@ int set_encryption_key(int f, int n) {
     disinp = odisinp;
     if (status != TRUE) return status;
 
+    int method = crypt_mode & ~CRYPT_MOD95;
+
+    switch(method) {
 /* Encrypt it.
  * However, we now encrypt all bytes, so the result here could contain
  * a NUL byte. Hence we need to get (and store) the length first, and
@@ -191,16 +230,22 @@ int set_encryption_key(int f, int n) {
  * Also, we repeat the string such that it fills the buffer.
  * Without this !!!! 1111 AAAA QQQQ aaaa qqqq all produce the same result.
  */
+    case CRYPT_RAW:     /* Do nothing */
+        break;
+    case CRYPT_FILL63: {
+        char keycop[NPAT];      /* GGR */
+        int lcop;               /* GGR */
 
-    int klen = strlen(ukey);
-    char *tp = ukey + klen;             /* Where to pad */
-    char *fp = ukey;                    /* What to pad with */
-    int pad = sizeof(ukey) - klen - 1;
-    while (pad-- > 0) {
-        *tp++ = *fp++;
-        if (*fp == '\0') fp = ukey;     /* Back to start of key */
+        strcpy(keycop, ukey);
+        lcop = strlen(ukey);
+        while (lcop < 63) {
+            strcpy(keycop, ukey);   /* Can't strcat to itself, so... */
+            strcat(ukey, keycop);
+            lcop += lcop;
+        }
+        break;
     }
-    *tp = '\0';                         /* Terminate string */
+    }
 
     curbp->b_keylen = strlen(ukey);
     myencrypt((char *) NULL, 0);

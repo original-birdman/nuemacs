@@ -258,4 +258,17 @@ typedef struct {
 } sysmark_t;
 extern sysmark_t sysmark;
 
+/* Crypt bits */
+
+extern int crypt_mode;          /* Type of crypt to use */
+
+/* Crypt code modes */
+#define CRYPT_MOD95     0x1000  /* Use the mod95 code */
+#define CRYPT_ONLYP     0x2000  /* Only work on printing chars */
+
+/* Key setup mode */
+#define CRYPT_RAW         1
+#define CRYPT_FILL63      2
+#define CRYPT_MODEMASK 0x03     /* Cover all bits used in *setup* modes */
+
 #endif  /* EDEF_H_ */

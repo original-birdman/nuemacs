@@ -25,6 +25,7 @@
 .. Internal Key bindings
 .. Function, Application and KeyPad keys
 .. GGR style
+.. Crypt mode
 .. Start-up file
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
@@ -110,7 +111,7 @@ E   exact       Use Exact mode when searching (see below).
 V   view        Use view mode (no editing allowed).
 O   over        Overwrite, not insert, when typing.
 M   magic       Magic mode (see below).
-Y   crypt       Use an encrypted mode for files.
+Y   crypt       Use an encrypted mode for files (see "Crypt mode" section)
 A   asave       Autosave the file periodically.
 Q   equiv       Use equivalence mode when searching (see below).
 D   dos         Write out file with DOS line endings.
@@ -968,6 +969,39 @@ Flag    Controls    How
 
 The toggle-ggr-opts user procedure defined in the standard start-up file
 allows you to change the setting of each.
+
+-------------------------------------------------------------------------------
+=> Crypt mode
+
+Historically there seem to have been various (incompatible) ways to do
+this.
+
+There was a mod95 call within the encryption that was removed in
+GGR4.120 along with the restriction of only encrypting only ASCII
+printing chars.
+
+The GGR code (but not the original nUemacs) had catenated the key with
+itself until it is over a certain length - but this was changed to a
+compile time option in GGR4.121 (and not turned on by default) to make
+it compatible with JASSPA uemacs.
+
+So, to get the these compatibilities set $crypt_mode as follows:
+
+original nUemacs    0x3003
+pre-GGR4.120        0x3020
+GGR4.120            0x02
+GGR4.121            0x01
+
+You must now set your own setting for $crypt_mode before CRYPT mode will
+do anything. You can set this in your uemacs.rc start-up file if you use
+it frequently.
+
+The values to set are the addition of:
+
+Use Mod95:          0x1000
+Only print chars:   0x2000
+No key catenating:       1
+Catenate to 63+chars:    2
 
 -------------------------------------------------------------------------------
 => Start-up file.

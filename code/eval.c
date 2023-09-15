@@ -975,6 +975,7 @@ static char *gtenv(char *vname) {
                                 return "";
     case EVVISMAC:          return ltos(vismac);
     case EVFILOCK:          return ltos(filock);
+    case EVCRYPT:           return ue_itoa(crypt_mode);
     }
 
     exit(-12);              /* again, we should never get here */
@@ -1446,6 +1447,32 @@ static int svar(struct variable_description *var, char *value) {
         case EVFILOCK:
             filock = stol(value);
             break;
+        case EVCRYPT: {
+            int new_mode = ue_atoi(value);
+            int fail = 0;
+/* There must no unexpected bits set and a valid value in the bottom bits. */
+
+            do {
+                if ((new_mode & ~(CRYPT_MOD95|CRYPT_ONLYP|CRYPT_MODEMASK))) {
+                    fail = 1;
+                    break;
+                }
+                int key_fill = (new_mode & CRYPT_MODEMASK);
+                switch(key_fill) {      /* Check for a valid value */
+                case CRYPT_RAW:
+                case CRYPT_FILL63:
+                    break;
+                default:
+                    fail = 1;
+                }
+            } while(0);     /* 1-pass block */
+            if (fail) {
+               mlforce("0x%x is an invalid $crypt-mode setting", new_mode);
+               status = FALSE;
+            }
+            else crypt_mode = new_mode;
+            break;
+        }
         }
         break;
     }
