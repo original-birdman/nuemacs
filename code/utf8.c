@@ -408,12 +408,15 @@ unicode_t display_for(unicode_t uc) {
     return uc;
 }
 
-/* Common code for the two "length" functions. */
-static unsigned int utf8_to_uclen(char *str, int count_graphemes) {
+/* Common code for the two "length" functions.
+ * If -ve maxxlen assume we have a NUL-terminated string.
+ */
+static unsigned int utf8_to_uclen(char *str, int count_graphemes,
+     int maxlen) {
     unsigned int len = 0;
     int offs = 0;
-    int maxlen = strlen(str);
-    while (*(str+offs)) {       /* Until we reach the NUL */
+    if (maxlen < 0) maxlen = strlen(str);
+    while (maxlen > offs) {     /* Until we run out */
         len++;
         offs = next_utf8_offset(str, offs, maxlen, count_graphemes);
     }
@@ -424,14 +427,21 @@ static unsigned int utf8_to_uclen(char *str, int count_graphemes) {
  * This is NOT the character/glyph count!!!
  */
 unsigned int uclen_utf8(char *str) {
-    return utf8_to_uclen(str, FALSE);
+    return utf8_to_uclen(str, FALSE, -1);
 }
 /* Get the number of characters/glyphs corresponding to a
  * NUL-terminated utf8 string.
- * This ignores combining unicode characters.
+ * This ignores combining unicode characters (so counts full graphemes).
  */
 unsigned int glyphcount_utf8(char *str) {
-    return utf8_to_uclen(str, TRUE);
+    return utf8_to_uclen(str, TRUE, -1);
+}
+/* Get the number of characters/glyphs corresponding to a
+ * utf8 string og a given length
+ * This ignores combining unicode characters (so counts full graphemes).
+ */
+unsigned int glyphcount_utf8_array(char *str, int maxlen) {
+    return utf8_to_uclen(str, TRUE, maxlen);
 }
 
 /* Compare two utf8 buffers case-insensitively.
