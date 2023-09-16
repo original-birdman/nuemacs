@@ -207,18 +207,22 @@ static int ernd(void) {
 }
 
 /* Find pattern within source.
- * Returns index of the start, or 0.
+ * Returns grapheme index of the start, or 0.
  *
  * char *source;        source string to search
  * char *pattern;       string to look for
  */
 static int strindex(char *source, char *pattern) {
     char *locp = strstr(source, pattern);
-    return (locp)? (locp - source + 1): 0;
+    int res;
+    if (!locp) res = 0;  /* Not found */
+/* For a non-zero result, convert to graphemes */
+    else res = glyphcount_utf8_array(source, locp - source) + 1;
+    return res;
 }
 
 /* Find the last pattern within source.
- * Returns index of the start, or 0.
+ * Returns grapheme index of the start, or 0.
  *
  * char *source;        source string to search
  * char *pattern;       string to look for
@@ -227,12 +231,15 @@ static int rstrindex(char *source, char *pattern) {
 /* We keep trying from one past where the last match matched
  * until we fail.
  */
-    char *origp, *locp;
-    origp = locp = source;;
+    char *locp = source - 1;
     char *lastp = NULL;
 /* () around assigment used for result. */
     while((locp = strstr(locp+1, pattern))) lastp = locp;
-    return (lastp)? (lastp - origp + 1): 0;
+    int res;
+    if (!lastp) res = 0;  /* Not found */
+/* For a non-zero result, convert to graphemes */
+    else res = glyphcount_utf8_array(source, lastp - source) + 1;
+    return res;
 }
 
 /* FreeBSD doesn't have strndupa(), so make our own....
@@ -567,7 +574,7 @@ static char *gtfun(char *fname) {
     if (fnum == ARRAY_SIZE(funcs)) return errorm;
 
     arg1[0] = arg2[0] = arg3[0] = '\0'; /* Keep gcc analyzer happy */
-    
+
 /* Retrieve the required arguments */
     do {
         int ft = funcs[fnum].f_type;
@@ -656,35 +663,66 @@ static char *gtfun(char *fname) {
         strcpy(result, arg1);
         return strcat(result, arg2);
 
-/* These two start the same - and now have range checking. on the
- * first three.
+/* There is some similarity between the beginning and ending of
+ * &lef, &rig and &mid, so code for that.
+ * The count is now in graphemes, not bytes.
  */
     case UFLEFT:
-    case UFRIGHT: {
-        int inlen = strlen(arg1);
-        int reslen = atoi(arg2);
-        if (reslen > inlen) reslen = inlen;
-        if (tag == UFLEFT) {
-            strncpy(result, arg1, reslen);
-            result[reslen] = '\0';
-        }
-        else {
-            strcpy(result, arg1 + (inlen - reslen));
-        }
-        return result;
-    }
+    case UFRIGHT:
     case UFMID: {
-        int inlen = strlen(arg1);
-        int from = atoi(arg2);
-        int reslen;
-        if (from > inlen) reslen = 0;
-        else {
-            from--;     /* Easier for indexing and checks... */
-            reslen = atoi(arg3);
-            if (reslen > (inlen - from)) reslen = (inlen - from);
-            strncpy(result, arg1+from, reslen);
+        char *rp;       /* Where the return value starts */
+        int offs;       /* Eventually, how much to return */
+        int inbytes = strlen(arg1);
+        int gph_count = atoi(arg2);
+        if (gph_count <= 0) return "";
+
+/* Now the call-specific bits
+ * For UFLEFT and UFMID we need to count from start of the string.
+ * UFLEFT needs us to go just beyond the last char, but UFMID needs us
+ * end up just before it.
+ */
+        if (tag != UFRIGHT) {   /* So it's UFLEFT or UFMID */
+            int reloop = FALSE;
+            if (tag == UFMID) {
+                gph_count--;    /* So we get start pos... */
+                reloop = TRUE;  /* ...and run through loop twice */
+            }
+
+/* Now we step over the chars.
+ * For UFMID we then set things up to run again the scan again
+ * continuing from, and remembering, where we reached on the first pass.
+ */
+            rp = arg1;
+            offs = 0;
+            while (1) {
+                while (gph_count--) {
+                    int next_offs = next_utf8_offset(rp, offs, inbytes, TRUE);
+                    if (next_offs == offs) break;   /* No bytes left */
+                    offs = next_offs;
+                }
+                if (!reloop) break;
+/* Set things up for UFMID's second pass through the loop */
+                reloop = FALSE;     /* Only reloop once */
+                rp = arg1 + offs;   /* What we have left */
+                offs = 0;
+                gph_count = atoi(arg3); /* How much to get */
+                if (gph_count <= 0) return "";
+            }
         }
-        *(result + reslen) = '\0';
+/* The UFRIGHT scan runs backwards....
+ */
+        else {                  /* So is UFRIGHT */
+            offs = inbytes;     /* Start at other end */
+            while (gph_count--) {
+                int next_offs = prev_utf8_offset(arg1, offs, TRUE);
+                offs = next_offs;
+                if (next_offs == 0) break;  /* No bytes left */
+            }
+            rp = arg1+offs;
+            offs = inbytes - offs;
+        }
+        memcpy(result, rp, offs);
+        result[offs] = '\0';
         return result;
     }
     case UFSEQUAL:      return ltos(strcmp(arg1, arg2) == 0);
