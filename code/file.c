@@ -23,13 +23,29 @@ static int resetkey(void) { /* Reset the encryption key if needed */
 
     cryptflag = FALSE;  /* Turn off the encryption flag */
 
-    if (curbp->b_mode & MDCRYPT) {  /* If we are in crypt mode */
-        if (curbp->b_keylen == 0) {
-            s = set_encryption_key(FALSE, 0);
-            if (s != TRUE) return s;
-        }
-        cryptflag = TRUE;           /* let others know... */
+    if (!(curbp->b_mode & MDCRYPT)) return TRUE;
+
+/* So we are in CRYPT mode */
+
+    if (curbp->b_keylen == 0) { /* but no key sey - so get one */
+        s = set_encryption_key(FALSE, 0);
+/* if this succeeded, things will be fully set */
+        if (s == TRUE) cryptflag = TRUE;    /* let others know... */
+        return s;
     }
+    cryptflag = TRUE;           /* let others know... */
+
+/* We get here when we already have a key, but do need to reset the
+ * initial calls to myencrypt().
+ * For that we need the raw encryption key, but we store this
+ * encrypted. But the encryption is symmetric, so we can retrieve it by
+ * encrypting it again - then use that to initalize things again.
+ * Hence the odd double-set of calls.
+ */
+    myencrypt(NULL, 0);
+    myencrypt(curbp->b_key, curbp->b_keylen);
+    myencrypt(NULL, 0);
+    myencrypt(curbp->b_key, curbp->b_keylen);
     return TRUE;
 }
 
