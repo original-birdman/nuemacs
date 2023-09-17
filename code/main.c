@@ -1734,18 +1734,11 @@ void extend_keytab(int n_ents) {
 int main(int argc, char **argv) {
     int c;                  /* command character */
     struct buffer *bp;      /* temp buffer pointer */
-    int firstfile;          /* first file flag */
     struct buffer *firstbp = NULL;  /* ptr to first buffer in cmd line */
-    int viewflag;           /* are we starting in view mode? */
-    int gotoflag;           /* do we need to goto a line at start? */
     int gline = 0;          /* if so, what line? */
-    int searchflag;         /* Do we need to search at start? */
     int saveflag;           /* temp store for lastflag */
-    int errflag;            /* C error processing? */
     char bname[NBUFN];      /* buffer name of file to read */
-    int cryptflag;          /* encrypting on the way in? */
     char ekey[NPAT];        /* startup encryption key */
-    int verflag = 0;        /* GGR Flags -v/-V presence on command line */
     char *rcextra[10];      /* GGR additional rc files */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
 
@@ -1769,14 +1762,16 @@ int main(int argc, char **argv) {
     sigaction(SIGHUP, &sigact, NULL);
 
 /* GGR The rest of initialization is done after processing optional args */
+
     varinit();              /* initialise user variables */
 
-    viewflag = FALSE;       /* view mode defaults off in command line */
-    gotoflag = FALSE;       /* set to off to begin with */
-    searchflag = FALSE;     /* set to off to begin with */
-    firstfile = TRUE;       /* no file to edit yet */
-    errflag = FALSE;        /* not doing C error parsing */
-    cryptflag = FALSE;      /* no encryption by default */
+    int viewflag = FALSE;   /* view mode defaults off in command line */
+    int gotoflag = FALSE;   /* set to off to begin with */
+    int searchflag = FALSE; /* set to off to begin with */
+    int firstfile = TRUE;   /* no file to edit yet */
+    int errflag = FALSE;    /* not doing C error parsing */
+    int cryptflag = FALSE;  /* no encryption by default */
+    int verflag = 0;        /* GGR Flags -v/-V presence on command line */
 
 /* Set up the initial keybindings.  Must be done early, before any
  * command line processing.
@@ -1885,15 +1880,14 @@ int main(int argc, char **argv) {
             case 'I':       /* -i for insecure mode */
                 allow_current = 1;
                 break;
-            case 'K':       /* -k<key> for code key */
+            case 'K': {     /* -k<key> for code key */
                 /* GGR only if given a key.. */
-                /* The leading ; *is* needed! */
-                ;int olen = strlen(opt);
+                int olen = strlen(opt);
                 if (olen > 0 && olen < NPAT) {
                     cryptflag = TRUE;
-                     strcpy(ekey, opt);
+                    strcpy(ekey, opt);
                 }
-                break;
+                break; }
             case 'M':       /* -m message for mini-buffer */
                 mbuf_mess = opt;
                 break;
