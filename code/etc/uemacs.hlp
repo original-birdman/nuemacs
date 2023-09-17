@@ -592,9 +592,9 @@ Bit operations
     &bli            Convert hex ("0x"), octal (0..) or decimal to number.
 
 Substring
-    &lef s len      Leftmost len bytes from string s
-    &rig s pos      Rightmost len bytes from string s
-    &mid s pos len  Rightmost len bytes from string s staring at pos
+    &lef s len      Leftmost len graphemes from string s
+    &rig s pos      Rightmost len graphemes from string s
+    &mid s pos len  Rightmost len graphemes from string s staring at pos
         These only copy up to end-of-string if len/pos is too big.
 
 Other string operations
@@ -606,32 +606,36 @@ String comparisons
 String index
     &sin str1 str2  Index of first str2 in str1 (0 if not found).
     &rin str1 str2  Index of last str2 in str1 (0 if not found).
+(these count in graphemes, but the matching is by "raw" utf8 bytes -
+there is no Equiv-style matching).
 
 Char to Code conversion
     &asc c          Byte code of base char
     &chr d          Char for given code (U+nnn, 0xnnn or decimal)
 
 File & buffer operations
-    &exi, &exb
+    &exi, &exb      File exists, Buffer exists.
     &fin            Find a file on the uemacs PATH
 
 Miscellaneous
-    &esc s          Escape string for shell usage
+    &esc s          Escape string to make suitable for shell usage
     &ind s          Evaluate arg s and then evaluate that.
                     s may expand to a variable (e.g. $xxx, %xxx, .xxx)
                     or a function + args (e.g. &add 1 2)
     &tru s          Truth of the universe logical test
     &gtk            Get a key (from keyboard)
     &env name       Get an environment variable
-    &bin key-spec   Get a function bound to key (or ERROR)
+    &bin key-spec   Get the function bound to key (or ERROR)
     &xla s, l, t    Translation table.
                     If char in s is found in l, replace with char
                     from same offset in t.      (cf. Unix tr)
+                    This now works for graphemes.
     &rnd n          Random integer between 0 and n-1
-    &grp n          After a regex match, the text of group n
+    &grp n          After a successful regex match, the text of group n
     &ptf templ a1, a2, ...
                     printf-style formatter.
                     This does *not* allow * or $ positional arg usage.
+                    It does allow field widths.
 
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
@@ -987,8 +991,8 @@ it compatible with JASSPA uemacs.
 
 So, to get the these compatibilities set $crypt_mode as follows:
 
-original nUemacs    0x3003
-pre-GGR4.120        0x3020
+original nUemacs    0x3001
+pre-GGR4.120        0x3002
 GGR4.120            0x02
 GGR4.121            0x01
 
@@ -1002,6 +1006,9 @@ Use Mod95:          0x1000
 Only print chars:   0x2000
 No key catenating:       1
 Catenate to 63+chars:    2
+
+NOTE!
+An encryption key is required per-buffer.
 
 -------------------------------------------------------------------------------
 => Start-up file.
