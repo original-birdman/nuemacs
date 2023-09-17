@@ -20,9 +20,16 @@ for f in autotest/*${patt}*.sh; do
     count=`expr $count + 1`
 done
 
-echo "$count tests run"
+if [ $count -eq 1 ]; then
+    plu=""
+else
+    plu="s"
+fi
+echo "$count test$plu run"
 
 if /bin/ls FAIL-* >/dev/null 2>&1; then
     echo "Failed test results:"
     /bin/ls -1 FAIL-*
+else
+    echo "All passed"
 fi

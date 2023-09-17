@@ -19,21 +19,22 @@ EOD
 
 # The commadn we will use to check results (hence the ./)
 #
-TF_NAME="./comp-file.sh"
-export TF_NAME
-cat > $TF_NAME <<'EOD'
+SCR_NAME="./comp-file.sh"
+export SCR_NAME
+cat > $SCR_NAME <<'EOD'
 #/bin/sh
 #
 file="$1"
 if cmp -s "$file" "${file}-NOW"; then
     rm -f "$file" "${file}-NOW"
-    echo PASSED
+    res=0
 else
     echo FAILED     # And leave files there
+    res=1
 fi
-exit 0
+exit $res
 EOD
-chmod +x $TF_NAME
+chmod +x $SCR_NAME
 
 # What we expect from  encrypting that file, by-hand, using
 # ATestEncryptionString as the key with $crypt_mode set to various
@@ -158,16 +159,14 @@ store-procedure compare-buffers
 !endm
 
 store-procedure check-encrypt
-  select-buffer TEST
-  filter-buffer &ptf "%s %s" &env TF_NAME %test_name
-  !if &seq PASSED $line
+  shell-command &ptf "%s %s" &env SCR_NAME %test_name
+  !if &equ $rval 0
       set %test-report &cat %test_name ": OK"
       set %ok &add %ok 1
   !else
       set %test-report &cat %test_name ": FAILED"
       set %fail &add %fail 1
   !endif
-  unmark-buffer
   execute-procedure report-status
 !endm
 
@@ -269,3 +268,4 @@ if [ "$1" = FULL-RUN ]; then
         rm -f Encrypt-IN
     fi
 fi
+rm -f $SCR_NAME
