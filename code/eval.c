@@ -1508,7 +1508,30 @@ static int svar(struct variable_description *var, char *value) {
                mlforce("0x%x is an invalid $crypt-mode setting", new_mode);
                status = FALSE;
             }
-            else crypt_mode = new_mode;
+            else {
+/* If we a have an encryption key set we have to handle this by
+ * encrypt it under the old key (which is a decrypt, as it's symmetric.
+ * and enrcrpyt it again under the new mode.
+ * For all buffers that have a key.
+ * NOTE that in order to set an encryption key you must have first set
+ * crypt_mode, so if crypt_mode is still unset there is no encryption key.
+ */
+                if (crypt_mode != 0) {
+                    int old_mode = crypt_mode;
+                    for (struct buffer *bp = bheadp;
+                         bp != NULL; bp = bp->b_bufp) {
+                        if (bp->b_keylen > 0) {
+                            crypt_mode = old_mode;
+                            myencrypt((char *) NULL, 0);
+                            myencrypt(bp->b_key, bp->b_keylen);
+                            crypt_mode = new_mode;
+                            myencrypt((char *) NULL, 0);
+                            myencrypt(bp->b_key, bp->b_keylen);
+                        }
+                    }
+                }
+                crypt_mode = new_mode;
+            }
             break;
         }
         }
