@@ -1891,8 +1891,7 @@ int main(int argc, char **argv) {
             case 'M':       /* -m message for mini-buffer */
                 mbuf_mess = opt;
                 break;
-            case 'N':       /* -n accept null chars */
-                nullflag = TRUE;
+            case 'N':       /* -n accept null chars  - now just ignored */
                 break;
             case 'R':       /* -r restrictive use */
                 restflag = TRUE;
@@ -2030,7 +2029,7 @@ int main(int argc, char **argv) {
 /* If there are any files to read, read the first one! */
     int display_readin_msg = 0;
     bp = bfind("main", FALSE, 0);
-    if (firstfile == FALSE && (gflags & GFREAD)) {
+    if (firstfile == FALSE) {
         swbuffer(firstbp, 0);   /* Assume it succeeds */
         zotbuf(bp);
         display_readin_msg = 1;

@@ -498,13 +498,11 @@ Others (omitting system-use only ones)...
     $pagelen .............. number of lines used by editor
     $curcol ............... current column pos of cursor
     $curline .............. current line in file
-    $flicker .............. flicker suppression
     $curwidth ............. current screen width
     $cbufname ............. current buffer name
     $cfname ............... current file name
     $debug ................ macro debugging
     $status ............... returns the status of the last command
-    $palette .............. current palette string
     $asave ................ # of chars between auto-saves
     $acount ............... # of chars until next auto-save
     $lastkey .............. last keyboard char struck
@@ -527,7 +525,6 @@ Others (omitting system-use only ones)...
     $pending .............. type ahead pending flag
     $lwidth ............... width of current line
     $line ................. text of current line
-    $gflags ............... global internal emacs flags
     $rval ................. child process return value
     $tab .................. tab 4 or 8
     $scroll ............... scroll enabled
@@ -541,7 +538,7 @@ Others (omitting system-use only ones)...
     $regionlist_number .... numberlist_region() indent
     $autodos .............. Check for DOS on read-in?
     $showdir_tokskip ...... Tokens to skip in showdir
-    $force_status ......... Actual status when forced to OK
+    $force_status ......... Actual status when forced to OK ("PASSED"/"FAILED")
     $equiv_type ........... Function to use for Equiv mode
                              (NFC, NFD, NFKD or NFKC [default])
     $srch_can_hunt ........ To allow forw/backhunt to work in test macros

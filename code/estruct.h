@@ -12,9 +12,6 @@
 
 #include "utf8.h"
 
-#define MAXCOL  600
-#define MAXROW  300
-
 /* Various bits of code use chars as indices.
  * Ensure these are treated as unsigned.
  * Could use a compile option (-funsigned-char for gcc) but
@@ -38,16 +35,11 @@
 
 /*      Configuration options   */
 
-#define CLRMSG  0  /* space clears the message line with no insert */
 #define REVSTA  1  /* Status line appears in reverse video         */
 
 #define COLOR   1
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
-
-/* Define some ability flags. */
-
-#define MEMMAP  0
 
 /* GGR - whether we want PATH to be searched before table lookup */
 #if GGR_MODE
@@ -56,10 +48,6 @@
 #define TABLE_THEN_PATH 0
 #endif
 #define PATH_THEN_TABLE !TABLE_THEN_PATH
-
-/* Emacs global flag bit definitions (for gflags). */
-
-#define GFREAD  1
 
 /* GGR global option flag bits for ggr_opts */
 
@@ -106,7 +94,6 @@
 #define FALSE   0               /* False, no, bad, etc.         */
 #define TRUE    1               /* True, yes, good, etc.        */
 #define ABORT   2               /* Death, ^G, abort, etc.       */
-#define FAILED  3               /* not-quite fatal false return */
 
 #define STOP    0               /* keyboard macro not in use    */
 #define PLAY    1               /*                playing       */
@@ -166,8 +153,6 @@ enum cmplt_type {   /* What is looked up and complete */
 #define TAB     0x09            /* a tab character              */
 
 #define PATHCHR ':'
-
-#define INTWIDTH        sizeof(int) * 3
 
 /*      Macro argument token types                                      */
 
@@ -357,7 +342,8 @@ struct buffer {
 #define NUMMODES    12          /* # of defined modes           */
 
 /* The starting position of a region, and the size of the region in
- * characters, is kept in a region structure.  Used by the region commands.
+ * bytes, is kept in a region structure. As is the final line.
+ * Used by the region commands.
  */
 struct region {
     struct line *r_linep;       /* Origin struct line address.  */
@@ -536,14 +522,13 @@ struct rx_mask {
  * here.
  */
 enum ev_val {
-    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVFLICKER,
-    EVCURWIDTH, EVCBUFNAME, EVCFNAME,   EVSRES,     EVDEBUG,
-    EVSTATUS,   EVPALETTE,  EVASAVE,    EVACOUNT,   EVLASTKEY,
-    EVCURCHAR,  EVDISCMD,   EVVERSION,  EVPROGNAME, EVSEED,
-    EVDISINP,   EVWLINE,    EVCWLINE,   EVTARGET,   EVSEARCH,
-    EVREPLACE,  EVMATCH,    EVKILL,     EVCMODE,    EVGMODE,
-    EVTPAUSE,   EVPENDING,  EVLWIDTH,   EVLINE,     EVGFLAGS,
-    EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
+    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVCURWIDTH,
+    EVCBUFNAME, EVCFNAME,   EVDEBUG,    EVSTATUS,   EVASAVE,
+    EVACOUNT,   EVLASTKEY,  EVCURCHAR,  EVDISCMD,   EVVERSION,
+    EVPROGNAME, EVSEED,     EVDISINP,   EVWLINE,    EVCWLINE,
+    EVTARGET,   EVSEARCH,   EVREPLACE,  EVMATCH,    EVKILL,
+    EVCMODE,    EVGMODE,    EVTPAUSE,   EVPENDING,  EVLWIDTH,
+    EVLINE,     EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
     EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,

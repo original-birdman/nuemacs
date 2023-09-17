@@ -15,14 +15,11 @@ struct evlist evl[] = {
  { "pagelen",   EVPAGELEN },    /* number of lines used by editor */
  { "curcol",    EVCURCOL },     /* current column pos of cursor */
  { "curline",   EVCURLINE },    /* current line in file */
- { "flicker",   EVFLICKER },    /* flicker supression */
  { "curwidth",  EVCURWIDTH },   /* current screen width */
  { "cbufname",  EVCBUFNAME },   /* current buffer name */
  { "cfname",    EVCFNAME },     /* current file name */
- { "sres",      EVSRES },       /* current screen resolution */
  { "debug",     EVDEBUG },      /* macro debugging */
  { "status",    EVSTATUS },     /* returns the status of the last command */
- { "palette",   EVPALETTE },    /* current palette string */
  { "asave",     EVASAVE },      /* # of chars between auto-saves */
  { "acount",    EVACOUNT },     /* # of chars until next auto-save */
  { "lastkey",   EVLASTKEY },    /* last keyboard char struck */
@@ -45,7 +42,6 @@ struct evlist evl[] = {
  { "pending",   EVPENDING },    /* type ahead pending flag */
  { "lwidth",    EVLWIDTH },     /* width of current line */
  { "line",      EVLINE },       /* text of current line */
- { "gflags",    EVGFLAGS },     /* global internal emacs flags */
  { "rval",      EVRVAL },       /* child process return value */
  { "tab",       EVTAB },        /* tab 4 or 8 */
  { "overlap",   EVOVERLAP },    /* Overlap on next/prev page */

@@ -541,8 +541,9 @@ static int ue_atoi(char *ustr) {
  *
  * int i;               integer to translate to a string
  */
+#define INTWIDTH        sizeof(int) * 3
 char *ue_itoa(int i) {
-    static char result[INTWIDTH + 1];       /* resulting string */
+    static char result[INTWIDTH+1];     /* Enough for resulting string */
 
     sprintf(result, "%d", i);
     return result;
@@ -925,14 +926,11 @@ static char *gtenv(char *vname) {
     case EVPAGELEN:         return ue_itoa(term.t_nrow);
     case EVCURCOL:          return ue_itoa(getccol() + 1);
     case EVCURLINE:         return ue_itoa(getcline());
-    case EVFLICKER:         return ltos(flickcode);
     case EVCURWIDTH:        return ue_itoa(term.t_ncol);
     case EVCBUFNAME:        return curbp->b_bname;
     case EVCFNAME:          return curbp->b_fname;
-    case EVSRES:            return sres;
     case EVDEBUG:           return ue_itoa(macbug);
     case EVSTATUS:          return ltos(cmdstatus);
-    case EVPALETTE:         return palstr;
     case EVASAVE:           return ue_itoa(gasave);
     case EVACOUNT:          return ue_itoa(gacount);
     case EVLASTKEY:         return ue_itoa(lastkey);
@@ -962,7 +960,6 @@ static char *gtenv(char *vname) {
     case EVPENDING:         return ltos(typahead());
     case EVLWIDTH:          return ue_itoa(llength(curwp->w.dotp));
     case EVLINE:            return getctext();
-    case EVGFLAGS:          return ue_itoa(gflags);
     case EVRVAL:            return ue_itoa(rval);
     case EVTAB:             return ue_itoa(tabmask + 1);
     case EVOVERLAP:         return ue_itoa(overlap);
@@ -1278,9 +1275,6 @@ static int svar(struct variable_description *var, char *value) {
             srch_can_hunt = 0;
             status = gotoline(TRUE, atoi(value));
             break;
-        case EVFLICKER:
-            flickcode = stol(value);
-            break;
         case EVCURWIDTH:
             status = newwidth(atoi(value));
             break;
@@ -1291,9 +1285,6 @@ static int svar(struct variable_description *var, char *value) {
         case EVCFNAME:
             strcpy(curbp->b_fname, value);
             curwp->w_flag |= WFMODE;
-            break;
-        case EVSRES:
-            status = TTrez(value);
             break;
         case EVDEBUG:
             macbug = ue_atoi(value);
@@ -1375,9 +1366,6 @@ static int svar(struct variable_description *var, char *value) {
             strcpy(tlp->l_text, value);
             tlp->l_used = need;
             curwp->w.doto = 0;      /* Has to go somewhere */
-            break;
-        case EVGFLAGS:
-            gflags = ue_atoi(value);
             break;
         case EVRVAL:
             break;

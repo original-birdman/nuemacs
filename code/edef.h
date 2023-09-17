@@ -31,7 +31,6 @@ extern struct name_bind names[];/* name to function table */
 extern int gmode;               /* global editor mode           */
 extern int force_mode_on;       /* modes forced to be on        */
 extern int force_mode_off;      /* modes forced to be off       */
-extern int gflags;              /* global control flag          */
 extern int gfcolor;             /* global forgrnd color (white) */
 extern int gbcolor;             /* global backgrnd color (black) */
 extern int gasave;              /* global ASAVE size            */
@@ -79,7 +78,6 @@ extern char palstr[];           /* palette string               */
 extern int saveflag;            /* Flags, saved with the $target var */
 extern struct line *fline;      /* dynamic return line */
 extern int rval;                /* return value of a subprocess */
-extern int nullflag;
 extern int overlap;             /* line overlap in forw/back page */
 extern int scrolljump;          /* number of lines to jump on scroll */
 
@@ -97,7 +95,6 @@ extern struct buffer *bheadp;   /* Head of list of buffers      */
 extern struct buffer *blistp;   /* Buffer for C-X C-B           */
 extern struct buffer *bdbgp;    /* Buffer for macro debug info  */
 
-extern char sres[NBUFN];        /* Current screen resolution.   */
 extern char pat[];              /* Search pattern.              */
 extern char tap[];              /* Reversed pattern array.      */
 extern char rpat[];             /* Replacement pattern.         */

@@ -15,8 +15,6 @@
 #include "edef.h"
 #include "efunc.h"
 
-static int dnc __attribute__ ((unused));   /* GGR - a throwaway */
-
 /* If the screen size has changed whilst we were away on the command line
  * force a redraw to the new size.
  * Requires setting the new values (lwidth and lheight) and restoring
@@ -70,16 +68,16 @@ int spawncli(int f, int n) {
     TTclose();                      /* stty to old settings */
     TTkclose();                     /* Close "keyboard" */
     if ((cp = getenv("SHELL")) != NULL && *cp != '\0')
-        dnc = system(cp);
+        rval = system(cp);
     else
 #ifdef SYSSHELL
 /* Stringify macros... */
 #define xstr(s) str(s)
 #define str(s) #s
 
-        dnc = system("exec " xstr(SYSSHELL));
+        rval = system("exec " xstr(SYSSHELL));
 #else
-        dnc = system("exec /bin/sh");
+        rval = system("exec /bin/sh");
 #endif
     sgarbf = TRUE;
     sleep(2);
@@ -154,7 +152,7 @@ static int run_one_liner(int rxcopy, int wait, char *prompt) {
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
-    dnc = system(line);
+    rval = system(line);
     fflush(stdout);         /* to be sure P.K.      */
     TTopen();
 
@@ -220,7 +218,7 @@ int pipecmd(int f, int n) {
     TTkclose();
     strcat(line, ">");
     strcat(line, comfile);
-    dnc = system(line);
+    rval = system(line);
     TTopen();
     TTkopen();
     TTflush();
@@ -296,7 +294,7 @@ int filter_buffer(int f, int n) {
     strcat(line, fltin);
     strcat(line, ">");
     strcat(line, fltout);
-    dnc = system(line);
+    rval = system(line);
     TTopen();
     TTkopen();
     TTflush();

@@ -143,7 +143,7 @@ static void tcapopen(void) {
     UP = tgetstr("up", &p);
     SE = tgetstr("se", &p);
     SO = tgetstr("so", &p);
-    if (SO != NULL) revexist = TRUE;
+    revexist = (SO != NULL);
     if (tgetnum("sg") > 0) {    /* can reverse be used? P.K. */
         revexist = FALSE;
         SE = NULL;
@@ -157,8 +157,8 @@ static void tcapopen(void) {
         exit(1);
     }
 
-    if (CE == NULL) /* will we be able to use clear to EOL? */
-        eolexist = FALSE;
+/* will we be able to use clear to EOL? */
+    eolexist = (CE != NULL);
     _CS = tgetstr("cs", &p);
     SF = tgetstr("sf", &p);
     SR = tgetstr("sr", &p);
@@ -201,7 +201,6 @@ static void tcapkopen(void) {
     ttrow = -1;
     ttcol = -1;
     sgarbf = TRUE;
-    strcpy(sres, "NORMAL");
 }
 
 static void tcapkclose(void) {

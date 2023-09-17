@@ -6,11 +6,7 @@
 /* initialized global definitions */
 
 int fillcol = 72;               /* Current fill column          */
-int kbdm[NKBDM];                /* Macro                        */
 char *execstr = NULL;           /* pointer to string to execute */
-int eolexist = TRUE;            /* does clear to EOL exist      */
-int revexist = FALSE;           /* does reverse video exist?    */
-int flickcode = FALSE;          /* do flicker supression?       */
 char *mode2name[] = {           /* Display name of modes        */
                                 /* Also text when checking them */
         "Wrap",  "Cmode", "Phon",  "Exact", "View", "Over",
@@ -20,7 +16,6 @@ char modecode[] = "WCPEVOMYAQDR";   /* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int force_mode_on = 0;          /* modes forced on              */
 int force_mode_off = 0;         /* modes forced off             */
-int gflags = GFREAD;            /* global control flag          */
 int gfcolor = 7;                /* global forgrnd color (white) */
 int gbcolor = 0;                /* global backgrnd color (black) */
 int gasave = 256;               /* global ASAVE size            */
@@ -52,7 +47,7 @@ char *cname[] = {               /* names of colors              */
 struct kill *kbufp = NULL;      /* current kill buffer chunk pointer    */
 struct kill *kbufh[] = {[0 ... KRING_SIZE-1] = NULL};
                                 /* kill buffer header pointers          */
-int kused[] = {[0 ... KRING_SIZE-1] = KBLOCK};
+int kused[KRING_SIZE] = {[0 ... KRING_SIZE-1] = KBLOCK};
                                 /* # of bytes used in kill buffer       */
 struct window *swindow = NULL;  /* saved window pointer                 */
 int cryptflag = FALSE;          /* currently encrypting?                */
@@ -68,16 +63,19 @@ char errorm[] = "ERROR";        /* error literal                */
 char truem[] = "TRUE";          /* true literal                 */
 char falsem[] = "FALSE";        /* false litereal               */
 int cmdstatus = TRUE;           /* last command status          */
-char palstr[49] = "";           /* palette string               */
 int saveflag = 0;               /* Flags, saved with the $target var */
 int rval = 0;                   /* return value of a subprocess */
-int nullflag = FALSE;           /* accept null characters */
 int overlap = 0;                /* line overlap in forw/back page */
 int scrolljump = 0;             /* no. lines to scroll (0 == centre screen) */
 
 struct window *wheadp = NULL;   /* vtinit() needs to check this */
 
 /* uninitialized global definitions */
+
+int kbdm[NKBDM];                /* Macro                        */
+
+int eolexist;                   /* does clear to EOL exist      */
+int revexist;                   /* does reverse video exist?    */
 
 int currow;                     /* Cursor row                   */
 int curcol;                     /* Cursor column                */
@@ -90,7 +88,6 @@ struct buffer *bheadp;          /* Head of list of buffers      */
 struct buffer *blistp;          /* Buffer for C-X C-B           */
 struct buffer *bdbgp;           /* Buffer for macro debug info  */
 
-char sres[NBUFN];               /* current screen resolution    */
 /* GGR - Add one to these three to allow for trailing NULs      */
 char pat[NPAT+1];               /* Search pattern               */
 char tap[NPAT+1];               /* Reversed pattern array.      */
@@ -224,7 +221,7 @@ meta_spec_flags_t meta_spec_active = { 0, 0, 0, 0 };
 
 int ggr_opts = 0;
 
-/* A system-wide mark for temporarily saving the current locaiton.
+/* A system-wide mark for temporarily saving the current location.
  * p MUST be reset to NULL after every restore!!!
  */
 sysmark_t sysmark = { NULL, 0 };
