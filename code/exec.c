@@ -19,6 +19,8 @@
 
 #include "utf8proc.h"
 
+static int execlevel = 0;
+
 static char *prev_line_seen = NULL;
 #ifdef DO_FREE
 static char *pending_line_seen = NULL;

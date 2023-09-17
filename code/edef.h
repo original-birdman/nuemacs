@@ -20,7 +20,6 @@
 extern int fillcol;             /* Fill column                  */
 extern int kbdm[];              /* Holds kayboard macro data    */
 extern char *execstr;           /* pointer to string to execute */
-extern int execlevel;           /* execution IF level           */
 extern int eolexist;            /* does clear to EOL exist?     */
 extern int revexist;            /* does reverse video exist?    */
 extern int flickcode;           /* do flicker supression?       */
