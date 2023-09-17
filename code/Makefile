@@ -292,8 +292,9 @@ clean: test-clean
 
 test-clean:
 	$(Q) rm -f *.tfile uetest.rc FAIL-*
-	$(Q) rm -f Expected-Decrypt Decrypt-IN Decrypt-OUT
-	$(Q) rm -f Encrypt-IN Encrypt-OUT Expected-Encrypt
+	$(Q) rm -f Expected-Decrypt Decrypt-*
+	$(Q) rm -f Expected-Encrypt Encrypt-*
+	$(Q) rm -f comp-file.sh
 	$(Q) rm -f VG*.log VG*.log.orig
 	$(Q) rm -rf uemacs-dumps
 
