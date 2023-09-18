@@ -11,6 +11,7 @@
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
+#include "util.h"
 
 struct name_bind names[] = {
     {"abort-command", ctrlg, {0, 0, 0, 0, 0, 0}},
@@ -227,7 +228,7 @@ struct name_bind names[] = {
 #include "idxsorter.h"
 
 /* We can ignore the final NULL entry for the index searching */
-static int needed = sizeof(names)/sizeof(struct name_bind) - 1;
+static int needed = ARRAY_SIZE(names) - 1;
 static int *func_index = NULL;
 static int *name_index = NULL;
 static int *next_name_index = NULL;

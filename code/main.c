@@ -66,6 +66,7 @@
 #include "edef.h"    /* Global definitions. */
 #include "efunc.h"   /* Function declarations and name table. */
 #include "line.h"
+#include "util.h"
 #include "version.h"
 
 #include <signal.h>
@@ -1710,7 +1711,7 @@ void extend_keytab(int n_ents) {
     }
     keytab = Xrealloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
     if (init_from == 0) {           /* Add in starting data */
-        int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
+        int n_init_keys = ARRAY_SIZE(init_keytab);
         struct key_tab *ktp = keytab;
         for (int n = 0; n < n_init_keys; n++, ktp++) {
             ktp->k_type = FUNC_KMAP;    /* All init ones are this */
@@ -1754,7 +1755,7 @@ int main(int argc, char **argv) {
     sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
 /* The SIGTERM is there so you can trace a loop by sending one */
     int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM, SIGABRT };
-    for (unsigned int si = 0; si < sizeof(siglist)/sizeof(siglist[0]); si++)
+    for (unsigned int si = 0; si < ARRAY_SIZE(siglist); si++)
         sigaction(siglist[si], &sigact, NULL);
     called_as = argv[0];
 /* The old one to get you out... */
@@ -1782,7 +1783,7 @@ int main(int argc, char **argv) {
  * next KEYTAB_INCR boundary.
  */
     init_namelookup();
-    int n_init_keys = sizeof(init_keytab)/sizeof(typeof(init_keytab[0]));
+    int n_init_keys = ARRAY_SIZE(init_keytab);
     int init_ents = n_init_keys + 2 + KEYTAB_INCR;
     init_ents /= KEYTAB_INCR;
     init_ents *= KEYTAB_INCR;
@@ -1908,14 +1909,15 @@ int main(int argc, char **argv) {
                 viewflag = TRUE;    /* view request */
                 break;
             case 'X':       /* GGR: -x for eXtra rc file */
-                if (rcnum < sizeof(rcextra)/sizeof(rcextra[0]))
+                if (rcnum < ARRAY_SIZE(rcextra)) {
 /* ffropen() will expand any relative/~ pathname *IN PLACE* so
  * we need a copy of the command line option that is sufficiently long!
  * Do NOT use strdup here!.
  */
-                rcextra[rcnum] = Xmalloc(NFILEN);
-                strcpy(rcextra[rcnum], opt);
-                rcnum++;
+                    rcextra[rcnum] = Xmalloc(NFILEN);
+                    strcpy(rcextra[rcnum], opt);
+                    rcnum++;
+                }
                 break;
             default:        /* unknown switch - ignore this for now */
                 break;

@@ -109,7 +109,10 @@ int showcpos(int f, int n) {
     ratio = 0;              /* Ratio before dot. */
     if (numchars != 0) ratio = (100L * predchars)/numchars;
 
-/* summarize and report the info */
+/* summarize and report the info.
+ * NOTE that this reports the current base character *only*, but the byte
+ * count is for the full grapheme.
+ */
     char descr[40];
     if (curchar == UEM_NOCHAR) strcpy(descr, "at end of buffer");
     else {
