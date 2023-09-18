@@ -33,14 +33,11 @@ static struct {
     int len;                /* Valid tot chars (write) or past rst (read) */
 } cache;
 
-/* Save the first FILE_START_LEN bytes of each file written for
- * binary/text checking (excludes any newlines).
+/* Check the first FILE_START_LEN bytes of each file written for
+ * binary/text checking.
  */
 #define FILE_START_LEN 100
-static struct {
-    int vlen;
-    char buf[FILE_START_LEN];
-} file_start;
+static int file_type;   /* -1 binary, 0 unknown, +1 text */
 
 /* Close the ffp file descriptor. Should look at the status in all systems.
  */
@@ -298,7 +295,7 @@ int ffwopen(char *fn) {
     }
 
     cache.rst = cache.len = 0;
-    file_start.vlen = 0;
+    file_type = 0;      /* Unkown... */
 
     return FIOSUC;
 }
@@ -329,43 +326,49 @@ int ffwopen(char *fn) {
  *
  * We can detect 2. by checking for cryptflag && curbp->b_EOLmissing.
  * We also need to code make a heuristic check between a text and binary file.
+ * file_is_binary() is only called when we are writing the first cache block,
+ * so rst is sitll 0 and len is the real valid length.
  */
 
 static int file_is_binary(void) {
 
     int bi = 0;
     int uc_total = 0, uc_text = 0;
-    while (bi < file_start.vlen) {
+/* Check up to FILE_START_LEN bytes. - but not more than is in the cache */
+    int ccount = (FILE_START_LEN > cache.len)? cache.len: FILE_START_LEN;
+    if (ccount == 0) return FALSE;  /* Prevent 0 division at end. */
+    while (bi < ccount) {
         unicode_t uc;
-        unsigned int ub =
-             utf8_to_unicode(file_start.buf, bi, file_start.vlen, &uc);
-        if (ub <= 0) break;
-        bi += ub;
-        const utf8proc_property_t *utf8prpty = utf8proc_get_property(uc);
-        uc_total++;
-/* Count the "text" characters */
-        switch(utf8prpty->category) {
-        case UTF8PROC_CATEGORY_LU:      /* Letter, uppercase */
-        case UTF8PROC_CATEGORY_LL:      /* Letter, lowercase */
-        case UTF8PROC_CATEGORY_LT:      /* Letter, titlecase */
-        case UTF8PROC_CATEGORY_LM:      /* Letter, modifier */
-        case UTF8PROC_CATEGORY_LO:      /* Letter, other */
-        case UTF8PROC_CATEGORY_ND:      /* Number, decimal digit */
-        case UTF8PROC_CATEGORY_NL:      /* Number, letter */
-        case UTF8PROC_CATEGORY_NO:      /* Number, other */
-        case UTF8PROC_CATEGORY_PC:      /* Punctuation, connector */
-        case UTF8PROC_CATEGORY_PD:      /* Punctuation, dash */
-        case UTF8PROC_CATEGORY_PS:      /* Punctuation, open */
-        case UTF8PROC_CATEGORY_PE:      /* Punctuation, close */
-        case UTF8PROC_CATEGORY_PI:      /* Punctuation, initial quote */
-        case UTF8PROC_CATEGORY_PF:      /* Punctuation, final quote */
-        case UTF8PROC_CATEGORY_PO:      /* Punctuation, other */
-        case UTF8PROC_CATEGORY_ZS:      /* Separator, space */
-            uc_text++;
+        if (*(cache.buf+bi) < 0x7f) {   /* Could be ASCII */
+            if ((*(cache.buf+bi) >= ' ') || (*(cache.buf+bi) == '\n')
+                 || (*(cache.buf+bi) == '\t')) {
+                uc_text++;              /* Printing char... */
+            }
+            bi++;
         }
+/* We have a possible Unicode character */
+        else {
+            unsigned int ub = utf8_to_unicode(cache.buf, bi, cache.len, &uc);
+            if (ub <= 0) break;
+            bi += ub;
+            uc_total++;
+            const char *cat_str = utf8proc_category_string(uc);
+/* Count the "text" characters. Get the category strings for
+ * simpler test code.
+ * We only need to check the first character.
+ */
+            switch(cat_str[0]) {
+            case 'L':       /* Letter - LU, LL, LT, LM, LO */
+            case 'N':       /* Number - ND, NL, NO */
+            case 'P':       /* Punctuation - PC, PD, PS, PE, PI, PF, PO */
+            case 'Z':       /* Separator, space */
+                uc_text++;
+            }
+        }
+        uc_total++;
     }
 /* We'll say it's binary if <80% of the unicode characters are text */
-    return (uc_text < (4*uc_total)/5);
+    return (uc_text < (4*uc_total)/5)? -1: 1;
 }
 
 /* Routine to flush the cache */
@@ -406,7 +409,13 @@ int ffputline(char *buf, int nbuf) {
         char *reason = NULL;
         if (curbp->b_EOLmissing) {
             if (cryptflag) reason = "crypt";
-            else if (file_is_binary()) reason = "binary";
+            else {
+/* For a small file we might not have triggered the test in the loop below,
+ * so check it now.
+ */
+                if (!file_type) file_type = file_is_binary();
+                if (file_type == -1) reason = "binary";
+            }
         }
         if (reason) {       /* Do we have a reason to skip the final NL? */
             mlforce("Removed \"added\" trailing newline for %s file", reason);
@@ -426,15 +435,6 @@ int ffputline(char *buf, int nbuf) {
         return flush_write_cache();
     }
 
-/* Save the first FILE_START_LEN bytes sent in */
-
-    if ((FILE_START_LEN - file_start.vlen) > 0) {
-        int cc = FILE_START_LEN - file_start.vlen;
-        if (nbuf < cc) cc = nbuf;       /* Don't copy more that we have! */
-        memcpy(file_start.buf+file_start.vlen, buf, cc);
-        file_start.vlen += cc;
-    }
-
 /* If not the first call for an output file, add a newline */
     if (cache.rst != 0 && !doing_newline) {
         doing_newline = 1;
@@ -452,6 +452,14 @@ int ffputline(char *buf, int nbuf) {
         if ((cache.len + nbuf) <= CSIZE) to_fill = nbuf;
         else to_fill = CSIZE - cache.len;
         memcpy(cache.buf+cache.len, buf, to_fill);
+
+/* Check the first FILE_START_LEN bytes once we have them.
+ * Once the chekc has run file_type will be set to non-zero.
+ */
+        if (!file_type && (cache.len >= FILE_START_LEN)) {
+            file_type = file_is_binary();
+        }
+
         nbuf -= to_fill;        /* bytes left */
         cache.len += to_fill;  /* valid in cache */
         buf += to_fill;         /* new start of input */
