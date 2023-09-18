@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       Version - GGR4.171 (requires GGR4.171+)
-;                       Last Update: 15 Sep 2023
+;                       Last Update: 18 Sep 2023
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -806,6 +806,24 @@ store-procedure clear-debug-buffer not_mb one_pass no_macbug
 buffer-to-key   set-debug           ^XM-D
 buffer-to-key   clear-debug-buffer  ^XM-C
 ;
+; Indent the rest of a paragraph from dot to the current column.
+; Leaves you where you stared.
+; Makes no sense to pass it a numeric arg.
+;
+store-procedure make-descr not_mb one_pass
+  set .ccol $curcol
+  set-mark
+  2 newline
+  set .pad &sub .ccol 1
+  .pad insert-space
+  .pad forward-character
+  justify-paragraph
+  exchange-point-and-mark
+  2 kill-to-end-of-line
+  execute-procedure del-sp-right
+!endm
+
+buffer-to-key   make-descr      ^XM-A
 
 ;
 set $discmd TRUE
