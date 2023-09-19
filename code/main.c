@@ -232,8 +232,7 @@ void addchar_kbdmacro(char addch) {
  * Needs to handle spaces, token()'s special characters and NULs.
  */
 static void flush_kbd_text(void) {
-    lnewline();
-    linstr("insert-string ");
+    linstr("\ninsert-string ");
     if (must_quote) linsert_byte(1, '"');
     kbd_text[kbd_idx] = '\0';
 /* This loop may look odd, but if we have NUL bytes to insert it means
@@ -246,10 +245,7 @@ static void flush_kbd_text(void) {
         added += strlen(kbd_text+added);
         if (added >= kbd_idx) break;
         if (must_quote) linsert_byte(1, '"');
-        lnewline();
-        linstr("macro-helper 0");
-        lnewline();
-        linstr("insert-string ");
+        linstr("\nmacro-helper 0\ninsert-string ");
         added++;
         if (must_quote) linsert_byte(1, '"');
     }
@@ -375,9 +371,12 @@ static int end_kbdmacro(void) {
  */
 int macro_helper(int f, int n) {
     UNUSED(f);
-    char tag[2];                        /* Just char + NULL needed */
-    int status = mlreply("helper:", tag, 1, CMPLT_NONE);
-    if (status != TRUE) return status;  /* Only act on +ve response */
+    char tag[2];                        /* Enough  */
+/* This is a macro helper - not need to call mlreply, just
+ * extract the next token. We expect only 1 char (+ trailing NUL).
+ * Also prevents any processing of the arg.
+ */
+    execstr = token(execstr, tag, 2);
     switch(tag[0]) {
     case '}':
     case ']':
