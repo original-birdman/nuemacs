@@ -82,10 +82,6 @@ void lfree(struct line *lp) {
             wp->w.markp = lp->l_fp;
             wp->w.marko = 0;
         }
-        if (sysmark.p == lp) {
-            sysmark.p = lp->l_fp;
-            sysmark.o = 0;
-        }
     }
     for (struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (bp->b_nwnd == 0) {
@@ -97,12 +93,13 @@ void lfree(struct line *lp) {
                 bp->b.markp = lp->l_fp;
                 bp->b.marko = 0;
             }
-            if (sysmark.p == lp) {
-                sysmark.p = lp->l_fp;
-                sysmark.o = 0;
-            }
         }
     }
+    if (sysmark.p == lp) {
+        sysmark.p = lp->l_fp;
+        sysmark.o = 0;
+    }
+
     lp->l_bp->l_fp = lp->l_fp;
     lp->l_fp->l_bp = lp->l_bp;
     Xfree(lp->l_text);
@@ -205,10 +202,9 @@ int linsert_byte(int n, unsigned char c) {
         if ((wp->w.markp == lp1) && (wp->w.marko > doto)) {
             wp->w.marko += n;
         }
-        if ((sysmark.p == lp1) && (sysmark.o > doto)) {
-            sysmark.o += n;
-        }
     }
+    if ((sysmark.p == lp1) && (sysmark.o > doto)) sysmark.o += n;
+
     return TRUE;
 }
 
@@ -395,10 +391,10 @@ int lnewline(void) {
             wp->w.markp = lp2;
             wp->w.marko -= doto;
         }
-        if ((sysmark.p == lp1) && (sysmark.o > doto)) {
-            sysmark.p = lp2;
-            sysmark.o -= doto;
-        }
+    }
+    if ((sysmark.p == lp1) && (sysmark.o > doto)) {
+        sysmark.p = lp2;
+        sysmark.o -= doto;
     }
     return TRUE;
 }
@@ -483,10 +479,10 @@ static int ldelnewline(void) {
             wp->w.markp = lp1;
             wp->w.marko += orig_lp1_len;
         }
-        if (sysmark.p == lp2) {
-            sysmark.p = lp1;
-            sysmark.o += orig_lp1_len;
-        }
+    }
+    if (sysmark.p == lp2) {
+        sysmark.p = lp1;
+        sysmark.o += orig_lp1_len;
     }
     lfree(lp2);
     return TRUE;
@@ -560,10 +556,10 @@ int ldelete(long n, int kflag) {
                 wp->w.marko -= chunk;
                 if (wp->w.marko < doto) wp->w.marko = doto;
             }
-            if (sysmark.p == dotp && sysmark.o >= doto) {
-                sysmark.o -= chunk;
-                if (sysmark.o < doto) sysmark.o = doto;
-            }
+        }
+        if (sysmark.p == dotp && sysmark.o >= doto) {
+            sysmark.o -= chunk;
+            if (sysmark.o < doto) sysmark.o = doto;
         }
         n -= chunk;
     }
