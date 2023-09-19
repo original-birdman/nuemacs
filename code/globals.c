@@ -29,6 +29,8 @@ int disinp = TRUE;              /* display input characters     */
 int vismac = FALSE;             /* update display during keyboard macros? */
 int filock = FALSE;             /* Do we want file-locking */
 int crypt_mode = 0;             /* Crypt mode - default is NONE */
+char gl_enc_key[NPAT];          /* Global encryption key */
+int gl_enc_len = 0;             /* Global encryption key length. 0 == unset */
 struct buffer *bstore = NULL;   /* buffer to store macro text to */
 int ttrow = -1;                 /* Row location of HW cursor */
 int ttcol = -1;                 /* Column location of HW cursor */

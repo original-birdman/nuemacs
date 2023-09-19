@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.171 Help Index     (15 Sep 2023)
+=>                   nuEmacs GGR4.171 Help Index     (19 Sep 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -997,15 +997,21 @@ You must now set your own setting for $crypt_mode before CRYPT mode will
 do anything. You can set this in your uemacs.rc start-up file if you use
 it frequently.
 
-The values to set are the addition of:
+It is now possible for the enryption key to be global, rather than
+per-buffer.
+Any encryption key set when the 0x4000 bit is set in $crypt_mode will
+be a global key, for use by any buffer that has CRYPT mode enabled.
 
-Use Mod95:          0x1000
-Only print chars:   0x2000
-No key catenating:       1
-Catenate to 63+chars:    2
+The values that can be set for $crypt_mode are the addition of:
+
+Use global encryptin key    0x4000
+Only encrypt print chars:   0x2000          # Not recommended
+Use Mod95:                  0x1000
+No key catenating:               1
+Catenate to 63+chars:            2
 
 NOTE!
-An encryption key is required per-buffer.
+One of the last two values must be set.
 
 -------------------------------------------------------------------------------
 => Start-up file.

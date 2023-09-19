@@ -10,10 +10,8 @@
 #ifndef EDEF_H_
 #define EDEF_H_
 
-#include <stdlib.h>
 #include <string.h>
 #include <utf8proc.h>
-#include "utf8.h"
 
 /* Initialized global external declarations. */
 
@@ -213,7 +211,7 @@ extern utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *);
 extern struct buffer *group_match_buffer;
 
 /* Set over a mlreply() call if we don't want getstring to record
- * it's result into the keyboard macro buffer (//kbd_macro).
+ * its result into the keyboard macro buffer (//kbd_macro).
  */
 extern int no_macrobuf_record;
 
@@ -257,14 +255,21 @@ extern sysmark_t sysmark;
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */
+extern char gl_enc_key[NPAT];   /* Global key */
+extern int gl_enc_len;          /* Global key length */
 
 /* Crypt code modes */
 #define CRYPT_MOD95     0x1000  /* Use the mod95 code */
 #define CRYPT_ONLYP     0x2000  /* Only work on printing chars */
+#define CRYPT_GLOBAL    0x4000  /* Use a global encryption key */
 
 /* Key setup mode */
 #define CRYPT_RAW         1
 #define CRYPT_FILL63      2
 #define CRYPT_MODEMASK 0x03     /* Cover all bits used in *setup* modes */
+
+/* Which bits may be set in crypt_mode */
+
+#define CRYPT_VALID (CRYPT_MOD95|CRYPT_ONLYP|CRYPT_GLOBAL|CRYPT_MODEMASK)
 
 #endif  /* EDEF_H_ */

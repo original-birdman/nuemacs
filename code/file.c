@@ -25,9 +25,20 @@ static int resetkey(void) { /* Reset the encryption key if needed */
 
     if (!(curbp->b_mode & MDCRYPT)) return TRUE;
 
-/* So we are in CRYPT mode */
+/* So we are in CRYPT mode. Global or Buffer mode? */
 
-    if (curbp->b_keylen == 0) { /* but no key sey - so get one */
+    char *ukey;
+    int *klenp;
+    if (crypt_mode & CRYPT_GLOBAL) {
+        ukey = gl_enc_key;
+        klenp = &gl_enc_len;
+    }
+    else {
+        ukey = curbp->b_key;
+        klenp = &curbp->b_keylen;
+    }
+
+    if (*klenp == 0) {      /* No key set - so get one */
         s = set_encryption_key(FALSE, 0);
 /* if this succeeded, things will be fully set */
         if (s == TRUE) cryptflag = TRUE;    /* let others know... */
@@ -41,11 +52,12 @@ static int resetkey(void) { /* Reset the encryption key if needed */
  * encrypted. But the encryption is symmetric, so we can retrieve it by
  * encrypting it again - then use that to initalize things again.
  * Hence the odd double-set of calls.
+ * We also need to know whether to reset a buffer or global key.
  */
-    myencrypt(NULL, 0);
-    myencrypt(curbp->b_key, curbp->b_keylen);
-    myencrypt(NULL, 0);
-    myencrypt(curbp->b_key, curbp->b_keylen);
+    myencrypt((char *) NULL, 0);
+    myencrypt(ukey, *klenp);
+    myencrypt((char *) NULL, 0);
+    myencrypt(ukey, *klenp);
     return TRUE;
 }
 
@@ -642,7 +654,7 @@ int filesave(int f, int n) {
 
     if (curbp->b_mode & MDVIEW) /* Don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
-    if (!f && (curbp->b_flag & BFCHG) == 0) /* No changes, no force. */
+    if (!f && (curbp->b_flag & BFCHG) == 0) /* Return, no changes.  */
         return TRUE;
     if (curbp->b_fname[0] == 0) {   /* Must have a name. */
         mlwrite_one("No file name");

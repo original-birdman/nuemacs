@@ -1479,7 +1479,7 @@ static int svar(struct variable_description *var, char *value) {
 /* There must no unexpected bits set and a valid value in the bottom bits. */
 
             do {
-                if ((new_mode & ~(CRYPT_MOD95|CRYPT_ONLYP|CRYPT_MODEMASK))) {
+                if ((new_mode & ~(CRYPT_VALID))) {
                     fail = 1;
                     break;
                 }

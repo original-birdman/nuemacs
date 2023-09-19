@@ -201,7 +201,6 @@ int set_encryption_key(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* return status */
     int odisinp;            /* original value of disinp */
-    char ukey[NPAT];        /* new encryption string */
 
 /* Is it enabled at all? */
 
@@ -215,7 +214,21 @@ int set_encryption_key(int f, int n) {
     disinp = FALSE;
 
 /* Get the string to use as an encryption string */
-    status = mlreply("Encryption String: ", ukey, NPAT - 1, CMPLT_NONE);
+    char prompt[64];
+    char *type, *ukey;
+    int *klenp;
+    if (crypt_mode & CRYPT_GLOBAL) {
+        type = "Global";
+        ukey = gl_enc_key;
+        klenp = &gl_enc_len;
+    }
+    else {
+        type = "Buffer";
+        ukey = curbp->b_key;
+        klenp = &curbp->b_keylen;
+    }
+    sprintf(prompt, "%s encryption string: ", type);
+    status = mlreply(prompt, ukey, NPAT - 1, CMPLT_NONE);
     mlwrite_one(" ");       /* clear it off the bottom line */
     disinp = odisinp;
     if (status != TRUE) return status;
@@ -227,31 +240,26 @@ int set_encryption_key(int f, int n) {
  * However, we now encrypt all bytes, so the result here could contain
  * a NUL byte. Hence we need to get (and store) the length first, and
  * remember to use that in any copying (including elsewhere in uemacs).
- * Also, we repeat the string such that it fills the buffer.
+ * Also, we may repeat the string such that it fills moreof the buffer.
  * Without this !!!! 1111 AAAA QQQQ aaaa qqqq all produce the same result.
  */
     case CRYPT_RAW:     /* Do nothing */
         break;
     case CRYPT_FILL63: {
         char keycop[NPAT];      /* GGR */
-        int lcop;               /* GGR */
-
+        int lcop = strlen(ukey);
         strcpy(keycop, ukey);
-        lcop = strlen(ukey);
         while (lcop < 63) {
             strcpy(keycop, ukey);   /* Can't strcat to itself, so... */
             strcat(ukey, keycop);
             lcop += lcop;
         }
-        break;
-    }
+        break; }
     }
 
-    curbp->b_keylen = strlen(ukey);
+/* Set the length and encrypt the key on itself */
+    *klenp = strlen(ukey);
     myencrypt((char *) NULL, 0);
-    myencrypt(ukey, curbp->b_keylen);
-
-/* Now save it off */
-    memcpy(curbp->b_key, ukey, curbp->b_keylen);
+    myencrypt(ukey, *klenp);
     return TRUE;
 }
