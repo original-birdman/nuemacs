@@ -631,7 +631,7 @@ int filewrite(int f, int n) {
 
 /* Save the contents of the current buffer in its associated file.
  * Do nothing if nothing has changed (this may be a bug, not a
- * feature).
+ * feature) - unless a numeric arg was given.
  * Error if there is no remembered file name for the buffer.
  * Bound to "C-X C-S". May get called by "C-Z".
  */
@@ -642,7 +642,7 @@ int filesave(int f, int n) {
 
     if (curbp->b_mode & MDVIEW) /* Don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
-    if ((curbp->b_flag & BFCHG) == 0)   /* Return, no changes.  */
+    if (!f && (curbp->b_flag & BFCHG) == 0) /* No changes, no force. */
         return TRUE;
     if (curbp->b_fname[0] == 0) {   /* Must have a name. */
         mlwrite_one("No file name");
