@@ -133,7 +133,7 @@ store-procedure compare-buffers
     !return
   !else
     !finish
-  endif
+  !endif
 !endm
 
 store-procedure check-decrypt
