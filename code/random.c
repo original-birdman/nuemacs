@@ -1059,7 +1059,7 @@ int ovstring(int f, int n) {
 
 /* Delete all but one white around cursor */
 int leaveone(int f, int n) {
-    if (whitedelete(f, n))
+    if (whitedelete(f, n) || !(ggr_opts&GGR_LOW_LGCY))
          return(linsert_byte(1, ' '));
     return(FALSE);
 }
