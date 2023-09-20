@@ -1242,34 +1242,32 @@ int simulate(int f, int n) {
 /* Grab the next token and advance past */
     nextarg("", input, sizeof(input), CMPLT_NONE);
 
-    if (f && (uclen_utf8(input) != 1)) {
-        mlforce("simulate with a multiplier must only have 1 character.");
-        return FALSE;
-    }
-    int status;
-    int offs = 0;
-    unicode_t c;
-    int inlen = strlen(input);
-    int mask = 0;
-    while (1) {
-        offs += utf8_to_unicode(input, offs, inlen, &c);
-        switch(c) {
+    int status = FALSE;     /* In case n <= 0 */
+    while (n-- > 0) {
+        int offs = 0;
+        unicode_t c;
+        int inlen = strlen(input);
+        int mask = 0;
+        while (1) {
+            offs += utf8_to_unicode(input, offs, inlen, &c);
+            switch(c) {
 /* Handle Esc(Meta), CtlX and control chars */
-        case 0x1b:          /* Escape */
-            mask |= META;
-            continue;
-        case 0x18:          /* CtlX */
-            mask |= CTLX;
-            continue;
-        default:
-            if (c <= 0x1F) c = CONTROL | (c + '@');
-            else    /* If any mask is set, force Upper case */
-                if (mask) c = (c & ~DIFCASE);
+            case 0x1b:          /* Escape */
+                mask |= META;
+                continue;
+            case 0x18:          /* CtlX */
+                mask |= CTLX;
+                continue;
+            default:
+                if (c <= 0x1F) c = CONTROL | (c + '@');
+                else    /* If any mask is set, force Upper case */
+                    if (mask) c = (c & ~DIFCASE);
+            }
+            status = execute(c|mask, 0, 1);
+            mask = 0;
+            if (!status) break;
+            if (offs >=  inlen) break;
         }
-        status = execute(c|mask, f, n);
-        mask = 0;
-        if (!status) break;
-        if (offs >=  inlen) break;
     }
     return status;
 }
