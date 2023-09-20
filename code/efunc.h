@@ -97,7 +97,6 @@ extern void mlwrite(const char *, ...);
 extern void mlforce(const char *, ...);
 extern void mlwrite_one(const char *);
 extern void mlforce_one(const char *);
-extern void mlputs(char *);
 extern void getscreensize(int *, int *);
 extern void sizesignal(int);
 extern void set_scrarray_size(int, int);

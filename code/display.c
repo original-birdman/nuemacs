@@ -1559,22 +1559,6 @@ static void mlputf(int s) {
     TTput_1uc_lim((f % 10) + '0');
 }
 
-/* Write out a string. Update the physical cursor position. This no
- * longer assumes that the characters in the string all have width "1".
- *
- * GGR - modified to handle utf8 strings.
- */
-void mlputs(char *s) {
-    unicode_t c;
-
-    int nbytes = strlen(s);
-    int idx = 0;
-    while (idx < nbytes) {
-        idx += utf8_to_unicode(s, idx, nbytes, &c);
-        TTput_1uc_lim(c);
-    }
-}
-
 /* NOTE: that the argument templates here are NOT printf ones.
  * There are no output width/precision options.
  * Allowed templates are:
@@ -1586,11 +1570,16 @@ void mlputs(char *s) {
  *  s   string
  *  f   scaled integer (uemacs - real number to 2 dec places * 100)
  */
+static int mlw_level = 0;
+
+void mlwrite_one(const char *); /* Forward declaration */
 static void mlwrite_ap(const char *fmt, npva ap) {
     unicode_t c;            /* current char in format string */
 
 /* If we are not currently echoing on the command line, abort this */
     if (discmd == FALSE) return;
+
+    mlw_level++;            /* Remember we are here */
 
 #if COLOR
 /* Set up the proper colors for the command line */
@@ -1599,14 +1588,15 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     TTbacg(gbcolor);
 #endif
 
-/* Erase to end-of-line, quickly if we can.
+/* Erase to end-of-line, quickly if we can. But only if we aren't
+ * recursing...
  * If we're crashing out (saving files...) when the original terminal
  * window was not at the bottom line, this may leave a lot of blank lines
  * but we don't know where we were on the screen, so just let it happen.
  * Trying to remove this may (will?) just introduce the possibility of
  * something worse.
  */
-    mlerase();      /* Leaves us at col0 of mbline */
+    if (mlw_level == 1) mlerase();  /* Leaves us at col0 of mbline */
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
@@ -1635,7 +1625,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             case 's':
                {char *tp = va_arg(ap.ap, char *);
                 if (tp == NULL) tp = "(nil)";
-                mlputs(tp);
+                mlwrite_one(tp);        /* Recurse */
                 break;
                }
             default:
@@ -1645,6 +1635,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     }
     TTflush();
     mpresf = TRUE;  /* Even if it is empty */
+    mlw_level--;    /* Remember we've left */
 }
 
 void mlwrite(const char *fmt, ...) {

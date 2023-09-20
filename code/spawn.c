@@ -157,10 +157,10 @@ static int run_one_liner(int rxcopy, int wait, char *prompt) {
     TTopen();
 
     if (wait) {
-        mlputs(MLbkt("Press <return> to continue")); /* Pause */
+        mlwrite_one(MLbkt("Press <return> to continue")); /* Pause */
         TTflush();
         while ((s = tgetc()) != '\r' && s != ' ');
-        mlputs("\r\n");
+        mlwrite_one("\r\n");
     }
     TTkopen();
     sgarbf = TRUE;

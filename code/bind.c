@@ -538,8 +538,8 @@ int deskey(int f, int n) {
         mlwrite_one("Can't parse key string!");
         return FALSE;
     }
-    mlputs(cmdstr(c));
-    mlputs(" ");
+    mlwrite_one(cmdstr(c));
+    mlwrite_one(" ");
 
 /* Find the right function */
     struct key_tab *ktp = getbind(c);
@@ -550,17 +550,17 @@ int deskey(int f, int n) {
         if (ktp->bk_multiplier != 1) {
             char tbuf[16];
             sprintf(tbuf, "{%d}", ktp->bk_multiplier);
-            mlputs(tbuf);
+            mlwrite_one(tbuf);
         }
     }
 
 /* Output the function name */
-    mlputs(ptr);
+    mlwrite_one(ptr);
 
 /* Add buffer-name, if relevant */
     if (ktp && ktp->k_type == PROC_KMAP) {
-        mlputs(" ");
-        mlputs(ktp->hndlr.pbp);
+        mlwrite_one(" ");
+        mlwrite_one(ktp->hndlr.pbp);
     }
     if (inmb) TTflush();    /* Need this if we are in the minibuffer */
     mpresf = TRUE;          /* GGR */
@@ -643,7 +643,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
             mlwrite("%s is an internal binding. Use switch-internal.", cstr);
             return FALSE;
         }
-        if (!clexec) mlputs(cstr);
+        if (!clexec) mlwrite_one(cstr);
         if (kbdmode == RECORD) addto_kbdmacro(cstr, 0, 0);
     }
 
@@ -930,7 +930,7 @@ int unbindkey(int f, int n) {
     }
 
 /* Dump out a printable version */
-    if (!clexec) mlputs(cmdstr(c));
+    if (!clexec) mlwrite_one(cmdstr(c));
 
 /* If it isn't bound, bitch */
     if (unbindchar(c) == FALSE) {
