@@ -82,15 +82,15 @@ store-procedure check-full-line
 
 !endm
 
-store-procedure do-wrap one_pass
-; Word wrap occurs on the user typing a space. We cannot do that in a
-; macro.
-; But we can simulate the effect, which is this (the one_pass is needed)
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Functions to set the required $ggr_opts wrap mode on or off
+; before the simulate call.
 ;
-$uproc_lptotal wrap-word
-!if &not &equ $curcol 1
-  insert-string " "
-!endif
+store-procedure set-wrap-mode
+    set $ggr_opts &bor $ggr_opts 0x04
+!endm
+store-procedure unset-wrap-mode
+    set $ggr_opts &ban $ggr_opts &bno 0x04
 !endm
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -118,7 +118,7 @@ delete-mode Magic
 ; Set mode we are testing
 ;
 add-mode Wrap
-
+execute-procedure set-wrap-mode
 60 set-fill-column
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -127,12 +127,9 @@ execute-procedure report-status
 
 ; Insert space at end of line 7
 ;
-; We have to fudge running Wrap, as insert-space etc. don't trigger it
-; "2 wrap-word" is FullWrap mode and "wrap-word" is original mode.
-;
 7 goto-line
 end-of-line
-2 execute-procedure do-wrap
+simulate " "
   set %curtest Line7-FullWrap
   set %expline 8
   set %expcol 9
@@ -148,7 +145,8 @@ read-file autotest.tfile
 
 7 goto-line
 end-of-line
-execute-procedure do-wrap
+execute-procedure unset-wrap-mode
+simulate " "
   set %curtest Line7-OrigWrap
   set %expline 8
   set %expcol 9
@@ -167,7 +165,8 @@ read-file autotest.tfile
 
 8 goto-line
 end-of-line
-2 execute-procedure do-wrap
+execute-procedure set-wrap-mode
+simulate " "
   set %curtest Line8-FullWrap
   set %expline 9
   set %expcol 9
@@ -185,7 +184,8 @@ read-file autotest.tfile
 
 8 goto-line
 end-of-line
-execute-procedure do-wrap
+execute-procedure unset-wrap-mode
+simulate " "
   set %curtest Line8-OrigWrap
   set %expline 9
   set %expcol 9
@@ -211,7 +211,8 @@ read-file autotest.tfile
 8 goto-line
 beginning-of-line
 61 forward-character
-2 execute-procedure do-wrap
+execute-procedure set-wrap-mode
+simulate " "
   set %curtest Line8-FullWrap-MidSpace
   set %expline 9
   set %expcol 1
@@ -235,7 +236,8 @@ read-file autotest.tfile
 8 goto-line
 beginning-of-line
 61 forward-character
-execute-procedure do-wrap
+execute-procedure unset-wrap-mode
+simulate " "
 ; We expect this to have wrapped
   set %curtest Line8-OrigWrap-MidSpace
   set %expline 9
@@ -262,7 +264,8 @@ read-file autotest.tfile
 
 12 goto-line
 end-of-line
-2 execute-procedure do-wrap
+execute-procedure set-wrap-mode
+simulate " "
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-FullWrap-zwb
   set %expline 13
@@ -291,8 +294,9 @@ read-file autotest.tfile
 
 12 goto-line
 end-of-line
-; Same results as 2 execute-procedure do-wrap expected
-execute-procedure do-wrap
+; Same results as with mode set expected
+execute-procedure unset-wrap-mode
+simulate " "
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-OrigWrap-zwb
   set %expline 13
@@ -326,7 +330,8 @@ read-file autotest.tfile
 12 goto-line
 end-of-line
 insert-string " xyzzy"
-2 execute-procedure do-wrap
+execute-procedure set-wrap-mode
+simulate " "
   set %curtest Line12+-FullWrap+xyzzy
   set %expline 13
   set %expcol 15
@@ -343,7 +348,8 @@ read-file autotest.tfile
 12 goto-line
 end-of-line
 insert-string " xyzzy"
-execute-procedure do-wrap
+execute-procedure unset-wrap-mode
+simulate " "
   set %curtest Line12-OrigWrap+xyzzy
   set %expline 13
   set %expcol 7
@@ -376,17 +382,17 @@ if [ "$1" = FULL-RUN ]; then
 exit-emacs
 EOD
 # Just leave display showing if being run singly.
-else   
+else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
 fi
- 
+
 # Do it...set the default uemacs if caller hasn't set one.
 [ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
 $UE2RUN -x ./uetest.rc
-    
+
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then
         echo "$TNAME FAILed"
