@@ -24,12 +24,14 @@ static int execlevel = 0;
 static char *prev_line_seen = NULL;
 #ifdef DO_FREE
 static char *pending_line_seen = NULL;
-/* We only need this for valgrind testing, so 10 should be more than
+/* We only need these for valgrind testing, so 10 should be more than
  * sufficient.
  * pending_line_seen doesn't seem to need it an array
  */
 #define PE_ENTS 10
 static char *pending_einit[PE_ENTS] = { [0 ... PE_ENTS-1] = NULL };
+static struct while_block *pending_whlist[PE_ENTS] =
+     { [0 ... PE_ENTS-1] = NULL };
 static int pe_level = -1;
 #endif
 
@@ -978,7 +980,6 @@ int dobuf(struct buffer *bp) {
 /* Mark an executing buffer as read-only while it is being executed */
     int orig_view_bit = bp->b_mode & MDVIEW;
     bp->b_mode |= MDVIEW;
-
     bp->b_exec_level++;
 #if DO_FREE
     pe_level++;
@@ -1072,9 +1073,6 @@ int dobuf(struct buffer *bp) {
             einit = Xrealloc(einit, linlen + 1);
             eline = einit;
             eilen = linlen;
-#if DO_FREE
-            pending_einit[pe_level] = einit;
-#endif
         }
         eline = einit;
         memcpy(eline, lp->l_text, linlen);
@@ -1275,9 +1273,24 @@ int dobuf(struct buffer *bp) {
             }
         }
 
-/* Execute the statement */
+#if DO_FREE
+/* Push allocated entries for valgrind cleanup.
+ * In case we do not return from the docmd() call.
+ */
+        pending_einit[pe_level] = einit;
+        pending_whlist[pe_level] = whlist;
+#endif
 
+/* Execute the statement. */
         status = docmd(eline);
+
+#if DO_FREE
+/* Now pop any saved allocates.
+ * We should be freeing the originals ourself from here.
+ */
+        pending_whlist[pe_level] = NULL;
+        pending_einit[pe_level] = NULL;
+#endif
         if (force) {                /* Set force_status, so we can check */
             if (status == TRUE) {
                 force_status = "PASSED";
@@ -1302,7 +1315,6 @@ int dobuf(struct buffer *bp) {
             bp->b.dotp = lp;
             bp->b.doto = 0;
             execlevel = 0;
-            freewhile(whlist);
             pause_key_index_update = orig_pause_key_index_update;
             Xfree(einit);
             goto single_exit;
@@ -1328,7 +1340,7 @@ failexit2:
     status = FALSE;
 
 failexit:
-    freewhile(whlist);
+    freewhile(whlist);      /* Run this here for all exits */
     pause_key_index_update = orig_pause_key_index_update;
 
 /* If this was (meant to be) a procedure buffer, we must switch that off
@@ -1344,7 +1356,6 @@ single_exit:
     execbp = init_execbp;
     bp->b_exec_level--;
 #if DO_FREE
-    pending_einit[pe_level] = NULL; /* It's gone... */
     pe_level--;
 #endif
 
@@ -1656,7 +1667,10 @@ NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
 void free_exec(void) {
     Xfree(prev_line_seen);
     Xfree(pending_line_seen);
-    for (int i = 0; i < PE_ENTS; i++) Xfree(pending_einit[i]);
+    for (int i = 0; i <= pe_level; i++) {
+        Xfree(pending_einit[i]);
+        freewhile(pending_whlist[i]);
+    }
     return;
 }
 #endif
