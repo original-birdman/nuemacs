@@ -157,29 +157,87 @@ static int get_char(void) {
     return c;               /* Return the character                */
 }
 
-/* Functions to check and set-up incremental debug mode.
- * This is *only* intended to be used for running functional tests
- * that require "interactive" input.
+/* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * Functions to check and set-up incremental debug mode.
+ * This is *ONLY* intended to be used for running functional tests
+ * that require "interactive" input!
  * That is incremental searching and query replace.
  * These MUST save the value of discmd when they start and restore that
  * when they exit.
  * I can see no other use for this beyond the autotests....
  */
-#define IDB_BFR "//incremental-debug"
-static struct buffer *idbg_buf;
-static struct line *idbg_line, *idbg_head;
 static int (*prev_idbg_func) (void);    /* Get character routine */
-static char next_cmd[NLINE];
 static int call_time;                   /* 0 = delayed, 1 = instant */
+
+/* The structures to prime wwith the required input and check.
+ * These are freed when the seacrh finishes.
+ */
+struct pending {
+    unicode_t *input;   /* Input as a unicode_t array */
+    char *uproc;        /* Check function (user-proc) to call */
+    int ilen;           /* Entries in input */
+};
+struct incr_input {
+    int ci;             /* index of next char */
+    int np;             /* Number of valid pending entries */
+    int mp;             /* Number of allocated entries */
+    struct pending pdg[0];
+};
+
+static struct incr_input *ii = NULL;
+
+/* Push a string/function pair onto the array, allocating it as required.
+ */
+int simulate_incr(int f, int n) {
+    UNUSED(f); UNUSED(n);
+
+/* If we don't have an allocated ii, get one now */
+    if (!ii) {
+        ii = Xmalloc(sizeof(struct incr_input) + sizeof(struct pending));
+        ii->ci = 0;
+        ii->np = 0;
+        ii->mp = 1;
+    }
+/* Will we need more space? */
+    ii->np++;
+    if (ii->np > ii->mp) {
+        ii = Xrealloc(ii, sizeof(struct incr_input) + ii->np*sizeof(struct pending));
+        ii->mp = ii->np;
+    }
+
+/* Get the first token - this contains the input characters (Unicode) */
+    char ntok[NSTRING];
+    macarg(ntok);           /* This handles functions on command line */
+
+/* Allocate as many unicode_t entries as we have bytes */
+    struct pending *iip = &(ii->pdg[ii->np-1]);
+    int mlen = strlen(ntok);
+    iip->input = Xmalloc(mlen*sizeof(unicode_t));
+    int dbc = 0;
+    int offs = 0;
+    while (mlen > offs) {
+        unicode_t tc;
+        int used = utf8_to_unicode(ntok, offs, mlen, &tc);
+        iip->input[dbc++] = tc;
+        offs += used;
+    }
+    iip->ilen = dbc;
+
+/* Is there another token - the proc to run? */
+    execstr = token(execstr, ntok, NSTRING);
+    if (ntok[0] == '\0') iip->uproc = NULL; /* No */
+    else iip->uproc = strdup(ntok);         /* Yes, so remember it */
+    return TRUE;
+}
 
 /* Function to run the command, which we may wish to do either
  * as we get the char to return (query-replace), or when we get the
  * next one (incremental-search).
  */
 static void activate_cmd(void) {
-    if (next_cmd[0] == '\0') return;
+    if (!ii->pdg[0].uproc) return;  /* Run first on list - if there */
     char *prev_execstr = execstr;   /* In case we are already running */
-    execstr = next_cmd;
+    execstr = ii->pdg[0].uproc;     /* Fudge name in as command line */
     int prev_inreex = inreex;
     inreex = FALSE;
     execproc(0, 0);                 /* It must be a user proc */
@@ -192,115 +250,77 @@ static void activate_cmd(void) {
  * The rest of the line is user-proc command to be executed *after*
  * the last character in the string is enacted.
  */
-static char dbg_chars[128];
-static int dbg_chars_i = -1;
-
 static int idbg_nextchar(void) {
 
-/* Do we have any pending chars to return? */
+/* Do we need to move on to the next input buffer?. */
 
-    if (dbg_chars_i < 0) return UEM_NOCHAR;     /* Why are we here? */
-
-    if (dbg_chars_i > 0) {                      /* Valid buffer chars */
-        if (dbg_chars[dbg_chars_i] != '\0') {   /* Not run out of them */
-            return dbg_chars[dbg_chars_i++];
+    if (ii->ci >= ii->pdg[0].ilen) {            /* Valid buffer chars */
+        if (--ii->np == 0) return UEM_NOCHAR;   /* No more buffers! */
+        if (call_time == 0) activate_cmd();     /* End-of-buf proc */
+        Xfree(ii->pdg[0].input);
+        Xfree(ii->pdg[0].uproc);
+        for (int i = 1; i < ii->mp; i++) {
+            ii->pdg[i-1] = ii->pdg[i];
         }
+        ii->pdg[ii->mp-1].input  = NULL;
+        ii->pdg[ii->mp-1].uproc = NULL;
+        ii->ci = 0;
+        if (call_time == 1) activate_cmd();     /* Start-of-buf proc */
     }
-
-    if (idbg_line == idbg_head) return UEM_NOCHAR;  /* No more buffer */
-
-/* We want to get the first token.
- * However, token expects NUL-terminated strings.
- * So, ensure that this line buffer info has a NUL at the end.
- * The allocation and manipulation code in line.c ensures there is always
- * at least one "extra", "free" character at the end of l_text.
- */
-    idbg_line->l_text[idbg_line->l_used] = '\0';
-
-/* Do we have a delayed command to run? */
-
-    if (call_time == 0) activate_cmd();
-
-/* NOTE! that the use of token() overwrites the buffer data with NULs
- * but that is OK, as we destroy the buffer at the end and we never
- * re-visit any of the text.
- */
-    char ntok[128];
-    char *dlp = idbg_line->l_text;
-    dlp = token(idbg_line->l_text, ntok, 128);
-
-    int nch = strlen(ntok);
-    int dbc = 0;
-    int offs = 0;
-    while (nch > offs) {
-        int tc;
-        int used = utf8_to_unicode(ntok, offs, nch, (unicode_t*)&tc);
-        dbg_chars[dbc++] = tc;
-        offs += used;
-     }
-    dbg_chars[dbc] = '\0';
-
-/* Any rest of line is the command to run, but skip spaces before
- * checking that...
- */
-    while(*dlp == ' ') {dlp++; idbg_line->l_used--;}
-    strcpy(next_cmd, dlp);
-
-    if (call_time == 1) activate_cmd();
-
-/* Get to next line, if there is one - skip zero-length ones... */
-
-    do {
-        idbg_line = lforw(idbg_line);
-        if (idbg_line == idbg_head) break;  /* No more buffer */
-    } while (llength(idbg_line) == 0);
-
-/* Note that dbg_chars_i refers to teh line we have just parsed, *NOT*
- * what idbg_line now points at!.
- */
-    dbg_chars_i = 1;    /* Must be one, as we skip zero-length lines */
-    return dbg_chars[0];
+    return ii->pdg[0].input[ii->ci++];          /* Return the result */
 }
 
-int incremental_debug_check(int type) {
-    if (!(idbg_buf = bfind(IDB_BFR, FALSE, 0))) return FALSE;
-    idbg_buf->b_flag &= ~BFCHG;         /* No prompt when deleting */
-
-/* Ensure we start at the beginning of the buffer.
- * NOTE that we never actually switch to the buffer - we just get
- * the lines from it.
+/* Function to check whether to use this debug mechanism.
+ * If it is set-up we use it.
  */
-    idbg_head = idbg_buf->b_linep;
-    idbg_line = lforw(idbg_head);
+int incremental_debug_check(int type) {
+    if (!ii) return FALSE;      /* Not set-up */
 
 /* Now set-up the function that gets the "next character" from it. */
 
     prev_idbg_func = term.t_getchar;
     term.t_getchar = idbg_nextchar;
-    next_cmd[0] = '\0';
-    dbg_chars_i = 0;    /* Where to start */
+/* The call time type is:
+ *
+ *  0   Used by f/risearch(). Run the check proc *after* all of the
+ *      input has been used (so it is actually run at the *start* of
+ *      the next buffer read)
+ *      This allows you to check the result of the input buffer.
+ *
+ *  1   Used by qreplace(). Run the proc *before* returning the
+ *      first entry from the buffer.
+ *      This allows you to test the result of the search before
+ *      responding to what you want to do with the match.
+ */
     call_time = type;
 
 /* Whilst this is running we don't want any update() to run.
  * We've already saved the original discmd (in fisearch() or
- * replaces) just in case.
+ * replaces()) just in case.
  */
     discmd = FALSE;
     return TRUE;
 }
 
-/* NOTE that cleanup DELETES THE BUFFER!!!!
+/* Remove the incremtal input structure
  * This is to save the macro-caller having to do it, as it is
  * active if present.
- * Also, you can't remove "//..." buffers using delete-buffer.
+ * Freeing NULL is not an error....
  */
-
 void incremental_debug_cleanup(void) {
 
-    if (!idbg_buf) return;
+    if ((ii->np != 0) || (ii->ci < ii->pdg[0].ilen)) {
+        mlforce_one("Unused incremental debug!");
+        for (int i = 1; i < ii->mp; i++) {
+            Xfree(ii->pdg[i].input);
+            Xfree(ii->pdg[i].uproc);
+        }
+    }
+    Xfree(ii->pdg[0].input);
+    Xfree(ii->pdg[0].uproc);
+    Xfree(ii);
+    ii = NULL;
     term.t_getchar = prev_idbg_func;
-    zotbuf(idbg_buf);
-    dbg_chars_i = -1;
     return;
 }
 

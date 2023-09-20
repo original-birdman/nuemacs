@@ -106,15 +106,10 @@ store-procedure check3
 ; Now set up the control buffer
 ; This buffer is DELETED by the incremental search when it ends!
 ; 
-select-buffer //incremental-debug
-insert-string "s check1"
-next-line
-insert-string "i check2"
-next-line
-insert-string "m check3"
-next-line
-insert-tokens 0x07
-2 select-buffer
+simulate-incr "s" "check1"
+simulate-incr "i" "check2"
+simulate-incr "m" "check3"
+simulate-incr &chr 0x07
 
 ; Now run the search, which will produce the report.
 ;
@@ -160,15 +155,10 @@ store-procedure check3
 ; The control buffer is the same as for the forward search.
 ; This buffer is DELETED by the incremental search when it ends!
 ;
-select-buffer //incremental-debug
-insert-string "s check1"
-next-line
-insert-string "i check2"
-next-line
-insert-string "m check3"
-next-line
-insert-tokens 0x07
-2 select-buffer
+simulate-incr "s" "check1"
+simulate-incr "i" "check2"
+simulate-incr "m" "check3"
+simulate-incr 0x07
 
 end-of-file
 ; Skip back over the (added) mississippi line
@@ -214,16 +204,10 @@ store-procedure check3
 ; Then set up the control buffer for next match
 ; This buffer is DELETED by the incremental search when it ends!
 ;
-select-buffer //incremental-debug
-beginning-of-file
-insert-string "b check1"
-next-line
-insert-string "b check2"
-next-line
-insert-tokens 0x13 " check3"
-next-line
-insert-tokens 0x07
-2 select-buffer
+simulate-incr "b" "check1"
+simulate-incr "b" "check2"
+simulate-incr &chr 0x13 "check3"
+simulate-incr &chr 0x07
 
 beginning-of-file
 incremental-search
@@ -267,16 +251,10 @@ store-procedure check3
 ; Then set up the control buffer for next reverse match
 ; This buffer is DELETED by the incremental search when it ends!
 ;
-select-buffer //incremental-debug
-beginning-of-file
-insert-string "b check1"
-next-line
-insert-string "b check2"
-next-line
-insert-tokens 0x12 " check3"
-next-line
-insert-tokens 0x07
-2 select-buffer
+simulate-incr "b" "check1"
+simulate-incr "b" "check2"
+simulate-incr &chr 0x12 "check3"
+simulate-incr &chr 0x07
 
 end-of-file
 ; Skip back over the (added) mississippi line
@@ -322,15 +300,10 @@ store-procedure check3
 ; Then set up the control buffer for next reverse match
 ; This buffer is DELETED by the incremental search when it ends!
 ;
-select-buffer //incremental-debug
-insert-string "issi check1"
-next-line
-insert-tokens 0x13 " check2"
-next-line
-insert-tokens 0x13 0x13 " check3"
-next-line
-insert-tokens 0x07
-2 select-buffer
+simulate-incr "issi" "check1"
+simulate-incr &chr 0x13 "check2"
+simulate-incr &cat &chr 0x13 &chr 0x13 "check3"
+simulate-incr &chr 0x07
 
 beginning-of-file
 incremental-search
@@ -344,7 +317,7 @@ newline
 insert-string &cat %test_name " ended"
 EOD
 
-# If running them all, leave - but first write out teh buffer if there
+# If running them all, leave - but first write out the buffer if there
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then

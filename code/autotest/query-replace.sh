@@ -136,17 +136,11 @@ store-procedure check6
 
 ; Now set-up the control buffer
 ; 
-select-buffer //incremental-debug
-insert-string "Y check1"
-next-line
-insert-string "N check2"
-next-line
-insert-string "Y check3"
-next-line
-insert-string "N check4"
-next-line
-insert-string "! check5"
-2 select-buffer
+simulate-incr "Y" "check1"
+simulate-incr "N" "check2"
+simulate-incr "Y" "check3"
+simulate-incr "N" "check4"
+simulate-incr "!" "check5"
 
 ; Now run the search, which will produce the report.
 ; Not we replace with a longer string
@@ -163,7 +157,7 @@ newline
 insert-string &cat %test_name " ended"
 EOD
 
-# If running them all, leave - but first write out teh buffer if there
+# If running them all, leave - but first write out the buffer if there
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then
