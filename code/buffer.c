@@ -161,13 +161,13 @@ int swbuffer(struct buffer *bp, int macro_OK) {
     curwp->w_flag |= WFMODE | WFFORCE | WFHARD;     /* Quite nasty. */
     if (bp->b_nwnd++ == 0) {        /* First use.           */
         curwp->w = bp->b;
-        cknewwindow();
-        return TRUE;
     }
-    for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-        if (wp != curwp && wp->w_bufp == bp) {
-            curwp->w = wp->w;
-            break;
+    else {
+        for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+            if (wp != curwp && wp->w_bufp == bp) {
+                curwp->w = wp->w;
+                break;
+            }
         }
     }
     cknewwindow();
@@ -196,7 +196,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         if (strcmp(bname, bp->b_bname) == 0) {
             if (bp->b_active != TRUE) { /* buffer not active yet */
 /* silent was set to TRUE around this at one point, but it's been
- * removed as it makes sense to show teh file being read in for
+ * removed as it makes sense to show the file being read in for
  * the first time.
  */
                 make_active(bp);
@@ -313,11 +313,11 @@ int nextbuffer(int f, int n) {
 }
 
 /* Dispose of a buffer, by name.
- * Ask for the name. Look it up (don't get too
- * upset if it isn't there at all!). Get quite upset
- * if the buffer is being displayed. Clear the buffer (ask
- * if the buffer has been changed). Then free the header
- * line and the buffer header. Bound to "C-X K".
+ * Ask for the name. Look it up (don't get upset if it isn't there at all).
+ * Get quite upset if the buffer is being displayed!
+ * Clear the buffer (ask, if the buffer has been changed).
+ * Then free the header line and the buffer header.
+ * Bound to "C-X K".
  */
 int killbuffer(int f, int n) {
     UNUSED(f); UNUSED(n);
