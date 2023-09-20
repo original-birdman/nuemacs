@@ -87,13 +87,7 @@ char *flook(char *fname, int hflag, int mode) {
     if (hflag) {
         home = getenv("HOME");
         if (home != NULL) {     /* build home dir file spec */
-            strcpy(fspec, home);
-            char psbuf[2];
-            psbuf[0] = path_sep;
-            psbuf[1] = '\0';
-            strcat(fspec, psbuf);
-            strcat(fspec, fname);
-
+            snprintf(fspec, NSTRING, "%s%c%s", home, path_sep, fname);
             if (ffropen(fspec) == FIOSUC) { /* and try it out */
                 ffclose();
                 pathexpand = TRUE;  /* GGR */
@@ -142,7 +136,6 @@ int help(int f, int n) {    /* give me some help!!!!
                                bring up a fake buffer and read the help file
                                into it with view mode                 */
     UNUSED(f); UNUSED(n);
-    struct window *wp;      /* scaning pointer to windows */
     struct buffer *bp;      /* buffer pointer to help */
     char *fname = NULL;     /* ptr to file returned by flook() */
 
@@ -177,10 +170,8 @@ int help(int f, int n) {    /* give me some help!!!!
 /* Make this window in VIEW mode, update all mode lines */
     curwp->w_bufp->b_mode |= MDVIEW;
     curwp->w_bufp->b_flag |= BFINVS;
-    wp = wheadp;
-    while (wp != NULL) {
+    for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
         wp->w_flag |= WFMODE;
-        wp = wp->w_wndp;
     }
     return TRUE;
 }
@@ -272,16 +263,8 @@ static unsigned int stock(char *keyname) {
         keyname++;
     }
 
-/* If we aren't at end-of string, or a white-space, something is wrong */
-    switch(*keyname) {
-        case '\0':
-        case ' ':
-        case '\t':
-        case '\n':
-            break;
-        default:
-            return 0;
-    }
+/* If we aren't at end-of string something is wrong */
+    if (*keyname != '\0') return 0;
     return c;
 }
 
@@ -1174,11 +1157,9 @@ static int free_path_reqd = 0;
 void set_pathname(char *cl_string) {
     int slen;
     int add_sep = 0;
-    if (path_sep != '\0') {     /* Ensure it ends with it... */
-        slen = strlen(cl_string);
-        if ((slen > 0) && (cl_string[slen-1] != path_sep)) {
-            add_sep = 1;
-        }
+    slen = strlen(cl_string);
+    if ((slen > 0) && (cl_string[slen-1] != path_sep)) {
+        add_sep = 1;  /* Ensure it ends with it... */
     }
 /* Have we been here before?
  * If so, free what we got then.
