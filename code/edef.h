@@ -36,12 +36,10 @@ extern int gacount;             /* count until next ASAVE       */
 extern int sgarbf;              /* State of screen unknown      */
 extern int mpresf;              /* Stuff in message line        */
 extern int clexec;              /* command line execution flag  */
-extern int mstore;              /* storing text to macro flag   */
 extern int discmd;              /* display command flag         */
 extern int disinp;              /* display input characters     */
 extern int vismac;              /* update display during keyboard macros? */
 extern int filock;              /* Do we want file-locking */
-extern struct buffer *bstore;   /* buffer to store macro text to */
 extern int ttrow;               /* Row location of HW cursor */
 extern int ttcol;               /* Column location of HW cursor */
 extern int lbound;              /* leftmost column of current line

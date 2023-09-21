@@ -19,6 +19,9 @@
 
 #include "utf8proc.h"
 
+/* Buffer to store macro text to. Recursion is not allowed */
+struct buffer *bstore = NULL;
+
 static int execlevel = 0;
 
 static char *prev_line_seen = NULL;
@@ -397,7 +400,6 @@ int storemac(int f, int n) {
     bclear(bp);
 
 /* And set the macro store pointers to it */
-    mstore = TRUE;
     bstore = bp;
     return TRUE;
 }
@@ -631,11 +633,11 @@ int storeproc(int f, int n) {
         if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
         if (!strcmp(optstr, "one_pass"))        bp->btp_opt.one_pass = 1;
         if (!strcmp(optstr, "no_macbug"))       bp->btp_opt.no_macbug = 1;
+    }
 /* Individual commands in the procedure will determine the "search_ok"
  * status, so set it to true here.
  */
-        bp->btp_opt.search_ok = 1;
-    }
+    bp->btp_opt.search_ok = 1;
 
 /* And make sure it is empty
  * If we are redefining a procedure then we need to remove any variables
@@ -645,7 +647,6 @@ int storeproc(int f, int n) {
     bclear(bp);
 
 /* And set the macro store pointers to it */
-    mstore = TRUE;
     bp->b_type = BTPROC;    /* Mark the buffer type */
     bstore = bp;
     return TRUE;
@@ -964,7 +965,7 @@ int dobuf(struct buffer *bp) {
 #define MAX_RECURSE 10
 
     if (bp->b_exec_level > MAX_RECURSE) {
-        mlwrite("%%Maximum recursion level, %d, exceeded!", MAX_RECURSE);
+        mlwrite("Maximum recursion level, %d, exceeded!", MAX_RECURSE);
         return FALSE;
     }
 
@@ -992,9 +993,13 @@ int dobuf(struct buffer *bp) {
     whlist = NULL;
     scanner = NULL;
 
-/* Scan the buffer to execute, building WHILE header blocks */
+/* First scan of the buffer to execute, building WHILE header blocks.
+ * But DON'T add these whilst we are scanning a store-procedure etc.
+ * definition as they are nothing to do with us at the moment.
+ */
     hlp = bp->b_linep;
     lp = hlp->l_fp;
+    int in_store_mode = FALSE;
     while (lp != hlp) {
 /* Scan the current line */
         eline = lp->l_text;
@@ -1003,22 +1008,49 @@ int dobuf(struct buffer *bp) {
 /* Trim leading whitespace */
         while (i-- > 0 && (*eline == ' ' || *eline == '\t')) ++eline;
 
-/* If there's nothing here, don't bother */
+/* If there's nothing here - don't bother */
         if (i <= 0) goto nxtscan;
 
-/* If is a while directive, make a block... */
-        if (eline[0] == '!' && eline[1] == 'w' && eline[2] == 'h') {
+/* Is it store-procedure/pttable/macro? if so, ignore lines
+ * until the matching !endm
+ * This means we don't store the info for lines we won't actually
+ * execute on this call.
+ * We only have one bstore variable, so can't recurse.
+ */
+        if (!strncmp(eline, "store-", 6)) {
+            if (in_store_mode) {
+                mlforce("Nested store-* commands are not supported");
+                goto failexit2;
+            }
+            in_store_mode = TRUE;
+        }
+
+/* If there's no directive, don't bother */
+        if (eline[0] != '!') goto nxtscan;
+
+/* Which directive is it? */
+        for (dirnum = 0; dirnum < NUMDIRS; dirnum++) {
+            if (strncmp(eline+1, dname[dirnum],
+                 strlen(dname[dirnum])) == 0)   break;
+        }
+        if (dirnum == NUMDIRS) {    /* bitch if it's illegal */
+            mlwrite_one("Unknown Directive");
+            goto failexit2;
+        }
+        if (dirnum == DENDM) in_store_mode = FALSE; /* Now left the macro */
+        if (in_store_mode) goto nxtscan;            /* Still in a macro */
+        switch(dirnum) {    /* Only interested in a subset at the moment */
+        case DWHILE:        /* Make a block... */
             whtemp = Xmalloc(sizeof(struct while_block));
             whtemp->w_begin = lp;
             whtemp->w_type = BTWHILE;
             whtemp->w_next = scanner;
             scanner = whtemp;
-        }
+            break;
 
-/* If is a BREAK directive, make a block... */
-        if (eline[0] == '!' && eline[1] == 'b' && eline[2] == 'r') {
+        case DBREAK:        /* Make a block... */
             if (scanner == NULL) {
-                mlwrite_one("%!BREAK outside of any !WHILE loop");
+                mlwrite_one("!BREAK outside of any !WHILE loop");
                 goto failexit2;
             }
             whtemp = Xmalloc(sizeof(struct while_block));
@@ -1026,16 +1058,15 @@ int dobuf(struct buffer *bp) {
             whtemp->w_type = BTBREAK;
             whtemp->w_next = scanner;
             scanner = whtemp;
-        }
+            break;
 
-/* If it is an endwhile directive, record the spot... */
-        if (eline[0] == '!' && strncmp(eline+1, "endw", 4) == 0) {
+        case DENDWHILE:     /* Record the spot... */
             if (scanner == NULL) {
-                mlwrite("%%!ENDWHILE with no preceding !WHILE in '%s'",
+                mlwrite("!ENDWHILE with no preceding !WHILE in '%s'",
                      bp->b_bname);
                 goto failexit2;
             }
-/* move top records from the scanner list to the whlist until we have
+/* Move top records from the scanner list to the whlist until we have
  * moved all BREAK records and one WHILE record.
  */
             do {
@@ -1045,22 +1076,26 @@ int dobuf(struct buffer *bp) {
                 scanner = scanner->w_next;
                 whlist->w_next = whtemp;
             } while (whlist->w_type == BTBREAK);
+            break;
+        default:        /* Nothing yet for the rest...*/
+            ;
         }
-
-        nxtscan:          /* on to the next line */
+nxtscan:          /* on to the next line */
         lp = lp->l_fp;
     }
 
 /* While and endwhile should match! */
     if (scanner != NULL) {
-        mlwrite("%%!WHILE with no matching !ENDWHILE in '%s'", bp->b_bname);
+        mlwrite("!WHILE with no matching !ENDWHILE in '%s'", bp->b_bname);
         goto failexit2;
     }
 
 /* Let the first command inherit the flags from the last one.. */
     thisflag = lastflag;
 
-/* Starting at the beginning of the buffer */
+/* Starting at the beginning of the buffer again.
+ * This time we'll actually be doing things...
+ */
     hlp = bp->b_linep;
     lp = hlp->l_fp;
     einit = NULL;               /* So we alloc on first call */
@@ -1078,11 +1113,11 @@ int dobuf(struct buffer *bp) {
         memcpy(eline, lp->l_text, linlen);
         eline[linlen] = '\0';   /* make sure it ends */
 
-/* trim leading whitespace */
+/* Trim leading whitespace */
         while (*eline == ' ' || *eline == '\t') ++eline;
 
-/* dump comments and blank lines */
-        if (*eline == ';' || *eline == 0) goto onward;
+/* Dump comments and blank lines */
+        if (*eline == ';' || *eline == '\0') goto onward;
 
 /* If $debug & 0x01, every assignment will be reported in the minibuffer.
  *      The user then needs to press a key to continue.
@@ -1119,45 +1154,38 @@ int dobuf(struct buffer *bp) {
 /* Parse directives here.... */
         dirnum = -1;
         if (*eline == '!') {
-/* Find out which directive this is */
-            ++eline;
+/* Find out which directive this is...
+ * We've already checked in the first pass for legal directives, so this
+ * can't fail now.
+ */
             for (dirnum = 0; dirnum < NUMDIRS; dirnum++) {
-                if (strncmp(eline, dname[dirnum],
+                if (strncmp(eline+1, dname[dirnum],
                      strlen(dname[dirnum])) == 0)   break;
             }
-/* and bitch if it's illegal */
-            if (dirnum == NUMDIRS) {
-                mlwrite_one("%Unknown Directive");
-                goto failexit3;
-            }
 
-/* service only the !ENDM macro here */
+/* Service only the !ENDM macro here */
             if (dirnum == DENDM) {
                 if (ptt_storing) {
                     ptt_compile(bstore);
                     ptt_storing = 0;
                 }
-                mstore = FALSE;
                 bstore = NULL;
                 goto onward;
             }
-
-/* Restore the original eline.... */
-            --eline;
         }
 
 /* If macro store is on, just salt this away */
-        if (mstore) {
+        if (bstore) {
             addline_to_anyb(eline, bstore);
             goto onward;
         }
-        force = FALSE;
 
 /* Dump comments
  * Although these are actually targets for gotos!!
  * But goto just searches for the label from the start of the file each time.
  */
         if (*eline == '*') goto onward;
+        force = FALSE;
 
 /* Now, execute directives */
         if (dirnum != -1) {
@@ -1193,7 +1221,7 @@ int dobuf(struct buffer *bp) {
                     if (whtemp->w_begin == lp) break;
                 }
                 if (whtemp == NULL) {
-                    mlwrite_one("%Internal While loop error");
+                    mlwrite_one("Internal While loop error");
                     goto failexit3;
                 }
 
@@ -1249,7 +1277,7 @@ int dobuf(struct buffer *bp) {
                             whtemp->w_end == lp) break;
                     }
                     if (whtemp == NULL) {
-                        mlwrite_one("%Internal While loop error");
+                        mlwrite_one("Internal While loop error");
                         goto failexit3;
                     }
 
@@ -1493,7 +1521,7 @@ int execbuf(int f, int n) {
             return status;
 
         if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
-            mlwrite_one("%Cannot run keyboard macro when collecting it");
+            mlwrite_one("Cannot run keyboard macro when collecting it");
             return FALSE;
         }
     }
