@@ -73,7 +73,7 @@ static char pwd_var[NFILEN];
 static int have_pwd = 0;    /* 1 == have it, -1 == tried and failed */
 
 void fixup_fname(char *fn) {
-    char fn_copy[NFILEN];
+    char fn_copy[2*NFILEN]; /* Overbig, for sprint overflow warnings */
     char *p;
 
 /* Look for a ~ at the start. */
@@ -592,7 +592,7 @@ int fexist(char *fn) {
  * but for directory browsing we always need the full path.
  */
 void fixup_full(char *fn) {
-    char fn_copy[NFILEN];
+    char fn_copy[2*NFILEN]; /* Overbig, for sprint overflow warnings */
     char *p;
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".

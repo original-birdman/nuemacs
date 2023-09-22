@@ -939,8 +939,8 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     struct line *lp;        /* line to copy */
     int size;
     char *sp;               /* string pointer into line */
-    char tstring[NSTRING];
-    char choices[1000];     /* MUST be > max likely window width */
+    char tstring[2*NFILEN]; /* Overbig, for sprint overflow warnings */
+    char choices[NFILEN];   /* Limited in matcher() */
     int status;
     int do_evaluate = FALSE;
     func_arg sav;
