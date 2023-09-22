@@ -1798,13 +1798,32 @@ int main(int argc, char **argv) {
  * on a USB stick...
  */
 #ifdef STANDALONE
-{
+do {
 #include <libgen.h>
-    char *exec_file = strdup(argv[0]);
+#if defined(__linux__)
+    char exec_file[NFILEN];
+    ssize_t elen = readlink("/proc/self/exe", exec_file, NFILEN-1);
+    if (elen < 0) break;
+    exec_file[elen] = '\0';
+#elif defined (sun)
+    char exec_file[NFILEN]; /* Use for both calls */
+    sprintf(exec_file, "/proc/%d/execname", getpid());
+    int efu = open(execname, O_RDONLY);
+    if (efu < 0) break;
+    int rb = read(efu, exec_file, NFILEN-1);
+    if (rb < 0) break;
+    exec_file[rb] = '\0';   /* Although probaly alreayd NUL-terminated */
+#else
+/* Don't know how to handle any others...*/
+    break;
+#endif
     char *exec_path = dirname(exec_file);
-    set_pathname(exec_path);
-    Xfree(exec_file);
-}
+    char *cpath = Xmalloc(strlen(exec_path) + 5);
+    strcpy(cpath, exec_path);
+    strcat(cpath, "/etc/");
+    set_pathname(cpath);
+    Xfree(cpath);
+} while(0);     /* One pass loop */
 #endif
 
 /* GGR Command line parsing substantially reorganised. It now consists of two
