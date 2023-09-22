@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       Version - GGR4.171 (requires GGR4.171+)
-;                       Last Update: 18 Sep 2023
+;                       Last Update: 22 Sep 2023
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -33,7 +33,6 @@ store-procedure file-hooks
     !if &equ .rctmp 0
         !return
     !endif
-set $debug 0x02
 ; Make the max &mid return length to be more than the longest
 ; suffix we test for.
 ;
@@ -52,7 +51,6 @@ set $debug 0x02
             !endif
         !endif
     !endif
-set $debug 0
 !endm
 ;
 ; Centre the current text within $fillcol columns
@@ -807,7 +805,7 @@ buffer-to-key   set-debug           ^XM-D
 buffer-to-key   clear-debug-buffer  ^XM-C
 ;
 ; Indent the rest of a paragraph from dot to the current column.
-; Leaves you where you stared.
+; Leaves you where you started.
 ; Makes no sense to pass it a numeric arg.
 ;
 store-procedure make-descr not_mb one_pass

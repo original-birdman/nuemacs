@@ -1,4 +1,4 @@
-See GGR4.100.changes for the original changes around moving from 3.9e to
+ySee GGR4.100.changes for the original changes around moving from 3.9e to
 pK4.0.15.
 
 ========== GGR4.101 [21 Feb 2017]
@@ -4987,7 +4987,7 @@ etc/uemacs.rc
     loops requestd) variables as a user-proc is executed.
     Handle the "one_pass" option for user-procs (but still set
     $uproc_lptotal to the total requestd).
-    Allow and optional True arg to !finish (to set a TRUE exit status -
+    Allow an optional True arg to !finish (to set a TRUE exit status -
     by default it sets it to FALSE - so more of an abort..).  [exec.c]
     Various macros (centre-line, rm-dflt-repl, spell-check,
     toggle-lmode, toggle-gmode, del-sp-right) marked as one_pass.
@@ -6018,7 +6018,7 @@ etc/uemacs.hlp
 
 search.c
     Check for GGR_SRCHOLAP in scanmore() so that incremental searching
-    can match overlapping strings, if chosen. 
+    can match overlapping strings, if chosen.
 
 random.c
     Change insert-tokens in macro (non-interactive) mode to insert all
@@ -6027,7 +6027,7 @@ random.c
 
 isearch.c
     Fix the display and handling of control characters in the search
-    string. 
+    string.
 
 display.c
     Don't bother moving cursor if we aren't displaying in mlwrite_ap().
@@ -6040,7 +6040,7 @@ autotest/incremental-search.sh
     Allow strings of characters (not just one) as control input in the
     //incremental-debug buffer in idbg_nextchar().  [isearch.c]
     Extend incremental search tests. [incremental-search.sh]
-    
+
 isearch.c
 etc/uemacs.hlp
     Change get_char() to use tgetc() not get1key() and alter the code to
@@ -6057,7 +6057,7 @@ autotest/incremental-search.sh
     Clear resulting "search failed" message line.
 
 ----------
-    Minor syntax changes for clang compiler on FreeBSD, 
+    Minor syntax changes for clang compiler on FreeBSD,
 
 eval.c
     It objects to "string"+8. Needs &"string"[8].
@@ -6091,7 +6091,7 @@ autotest/search-repeats.sh
 autotest/search-u_hex.sh
 autotest/wordwrap.sh
 autotest/zero-length-magic.sh
-    Changed the use of "awk" or "gawk -b" to use perl, as that is 
+    Changed the use of "awk" or "gawk -b" to use perl, as that is
     available everywhere - and works.
 
 ----------
@@ -6213,5 +6213,781 @@ version.h
     Move xstr define in version.h and remove from version.c to avoid
     double definition on Android build.
     Update to GGR4.170
+
+========== GGR4.171
+
+Makefile
+    Build a statically-linked version if STATIC=1 is given as a
+    parameter.
+    Remove moto4g Android option.
+
+bind.c
+    Remove type arg from buildlist().
+    Always use free_path_reqd code.
+    Comments tidy-up.
+
+display.c
+input.c
+    Fix odd overwrite of "Search:" if searching for "Search:"
+    Code re-order in mlwrite_ap().  [display.c]
+    Remove mlwrite("")/mbupdate() call at start of loop:. [input.c]
+    Comments tidy-up.
+
+Makefile
+version.c
+    Assume we always have utf8proc_unicode_version() available.
+
+main.c
+random.c
+efunc.h
+    Move fmatch to main.c (only caller) and make it static.
+    Use sleep() for the delay.
+    Comments tidy-up.
+
+crypt.c
+    Remove the PARANOID optional code.
+    Using it would produce incompatible output files with builds that do
+    not use it.
+
+display.c
+efunc.h
+    Reordered code to avoid pre-declaring internal static functions.
+    Declare updpos(), upddex(), updupd() and vtmove() as static.
+    Fixed a misplaced #endif in updateline(). [display.c]
+
+buffer.c
+    Changed some "start; while(test); next" loops to for loops.
+    In namebuffer(), report when you try to use an existing name.
+
+main.c
+Makefile
+    Change the static build command option to be STANDALONE. [Makefile]
+    In STANDALONE mode, use the executable's location for start-up
+    files. [main.c]
+    This allows you to put uemacs and its start-up files in one
+    location on a USB stick...
+
+Makefile
+globals.c
+main.c
+epath.h
+version.h
+etc/uemacs.rc
+    Make the ANDROID moto8g build a general case of STANDALONE.
+    Set -DSDIR_SKIP=7 and STANDALONE for ANDROID=moto8g [Makefile]
+    Initialize showdir_tokskip to SDIR_SKIP [globals.c]
+    Change error message for a negative showdir_tokskip. [main.c]
+    No longer set a DFLT_PATH for ANDROID (as a STANDALONE build it will
+    set one dynamically at start-up). [epath.h]
+    Remove ANDROID specific PROGRAM_NAME_LONG setting. [version.h]
+    Remove the $progname check and $showdir_tokskip setting in
+    store-procedure showdir. [etc/uemacs.rc]
+
+names.c
+random.c
+efunc.h
+etc/uemacs.rc
+    Added an open-parent function and bound it to ^XU by default.
+
+eval.c
+autotest/xlate.sh
+    Rewrite of xlat to:
+        o handle graphemes, rather than bytes
+        o cater for trans being shorter than lookup (remove source)
+    Added a test file for the function.
+
+bind.c
+    Change "/Binding list" to "//Binding list" and make it invisible.
+
+buffer.c
+    Don't display any buffer modes for files not yet read in.
+
+Makefile
+usage.c
+usage.h
+wrapper.c
+    Correct the text of an error message. [wrapper.c]
+    Remove usage.c and usage.h and put a simple die() into wrapper.c
+
+buffer.c
+exec.c
+fileio.c
+line.c
+line.h
+    Make the text in struct line dynamically allocated, so that it can
+    be reallocated for extending (and merging) lines without having
+    to (re)allocate a new on and hence have to search for references to
+    it and fix up the forw/back pointers. [line.h]
+    Use lfree() to free struct line entries [buffer.c]
+    Extend l_text, not struct line. [fileio.c]
+    Xmalloc l_text (lalloc) and Xfree it (lfree). [line.c]
+    Simplify linsert_byte() by just Xreallocing l_text if required, then
+    continuing. [line.c]
+    Simplify lnewline() by splitting off the excess l_text onto a
+    new line. [line.c]
+    Simplify ldelnewline() by just extending l_text on the first line,
+    copying the second line text in and fixing up pointers and marks.
+    [line.c]
+    Use memcpy() in getctext(). [line.c]
+    Don't check return value of lalloc() for being NULL, as Xmalloc()
+    doesn't allow it. [buffer.c, exec.c, fileio.c, line.c]
+    Changed some "start; while(test); next" loops to for loops. [line.c]
+
+buffer.c
+fileio.c
+line.c
+region.c
+line.h
+    Add a ltextgrow() function [line.c, line.h]
+    Use ltextgrow() not local, hard-wired code. [fileio.c, line.c]
+    Just extend the text buffer, don't allocate a new line. [region.c]
+    Let a -ve arg to lalloc() mean that l_text is set to NULL, not
+    malloced. [line.c]
+    Call lalloc(-1) for the head ("dummy") line creation. [buffer.c]
+    Just call Xfree on the malloced part of the line pointers (not
+    lfree()) in the DO_FREE code. [buffer.c]
+
+
+bind.c
+buffer.c
+main.c
+efunc.h
+    Add addline_to_curb() to add a line to text to the end of the
+    current buffer and make addline() use it. [buffer.c, efunc.h]
+    Replace linstr() calls that insert a complete line with
+    addline_to_curb(). [bind.c, buffer.c, main.c]
+    addline_to_curb() and addline() cannot fail if they return, so make
+    them void functions. [buffer.c, efunc.h]
+    Remove returned value tests from addline_to_curb() and addline()
+    calls. [bind.c, buffer.c]
+
+eval.c
+line.c
+line.h
+    Remove putctext() [line.c, line.h]
+    Put simpler code in-line [eval.c]
+
+buffer.c
+efunc.h
+    Added addline_to_anyb() (with addline() and addline_to_curb() now
+    front-ends to this). [buffer.c, efunc.h]
+
+region.c
+    If kill-region is passed a multiplier of 2, don't put the killed
+    text onto the kill ring.
+    Needed to allow a macro to clear a buffer reasonably.
+
+eval.c
+exec.c
+globals.c
+main.c
+edef.h
+estruct.h
+    Remove DEBUGM #define and enable all code that was conditional on
+    it. [eval.c, exec.c, globals.c, edef.h, estruct.h]
+    Make outline a local variable rather than a global one. [eval.c,
+    exec.c, globals.c. edef.h]
+    Treat $debug (macbug) as a number (bit pattern) rather than a
+    logical. [eval.c]
+    Get the macro debug statements to append to the //Debug buffer if
+    bit 0x2 is set in macbug. [eval.c, exec.c]
+    Use snprintf to format the debug report, and don't limit it to 80
+    char output. [eval.c, exec.c]
+    Create the //Debug buffer at start-up. [globals.c, main.c, edef.h]
+
+eval.c
+exec.c
+globals.c
+names.c
+edef.h
+estruct.h
+    Add a no_macbug option for macros.
+    Define a global macbug_off, to stop debug messages whilst running
+    for macros when set.
+
+etc/uemacs.rc
+    Added set-debug and clear-debug-buffer macros.
+    set-debug - sets $debug to the given numeric arg
+    clear-debug-buffer - clears //Debug buffer.
+    Bound them to Ctlx-Meta-D and Ctlx-Meta-C respectively.
+
+buffer.c
+exec.c
+line.c
+line.h
+    Use addline_to_anyb() to append line to bstore buffer. [exec.c]
+    Remove lfillchars macro as it as now only used in one place.
+    [buffer.c, line.h]
+    Use addline_to_curb() in linsert_byte() if inserting while on the
+    final (dummy) line.
+
+exec.c
+    Rename cmdstr to thecmd in execcmd() to avoid confusion with the
+    function of the same name.
+
+bind.c
+main.c
+efunc.h
+    Move not_in_mb_error() from main.c to bind.c and then make
+    cmdstr a static function.
+
+bind.c
+    Changed cmdstr() to build result in an internal static buffer and
+    return its address.
+    Refactored some related "string building" code.
+
+display.c
+eval.c
+globals.c
+input.c
+edef.h
+estruct.h
+evar.h
+    Make VISMAC a run time option ($vismac variable) rather than a
+    compile time one.
+
+random.c
+    Change whitedelete() to delete all spaces in one go.
+
+bind.c
+    Tidy up for show_key_binding() and buildlist()
+
+bind.c
+input.c
+isearch.c
+lock.c
+    Simplify some prompt code.
+
+random.c
+search.c
+efunc.h
+    Relocate insbrace() and getfence() code [random.c, search.c]
+    Move expandp() and boundry() forward in file and mark as static
+    functions.  [search.c, efunc.h]
+    Change expandp() API to allow sprintf usage. [search.c]
+    Changes in new_prompt(), readpattern(), replaces()
+    Changed current_base buffer size to avoid a compilation warnings
+    about possible buffer overruns. [search.c]
+
+eval.c
+    Change an outline size declaration to avoid a compilation warning
+    about possible buffer overruns.
+
+line.c
+    Add #include alloca.h for Solaris.
+
+buffer.c
+    Remove ltoa() and code using sprintf.
+    Refactor some makelist() code.
+
+display.c
+    Add a static blank (space) grapheme structure for quick assignment.
+    Changed mlputli() to use sprintf and made mlputi a front-end to it.
+    Changed some "start; while(test); next" loops to for loops.
+
+autotest/arithmetic-tests.sh
+    Use &xla to remove any - from -NAN before checking against NAN.
+
+eval.c
+    Change sindex() to use strstr().
+    Change ue_itoa() to use sprintf().
+    Put range (sanity) checks into UFLEFT, UFRIGHT and UFMID.
+    Simplify UFESCAPE (strchr() rather than 16-case switch).test.rc
+    Change '&' handling in findvar so that any function is evaluated.
+    The following now works...
+        set &cat ".va" "r1" 777
+        2 write-message .var1
+    Change EVEQUIVTYPE code.
+    General tidy up.
+
+bind.c
+    Check for an attempt to bind the (unusable) Meta-minus keystroke.
+
+display.c
+input.c
+    Fixes for message line display.
+    Fix pointer increment location in mlputli(). [display.c]
+    Add back mbupdate() after loop: label [input.c]
+
+etc/accents.cmd
+    Correct caseset-off/caseset-on typos.
+
+exec.c
+    Simplify token().
+    Simplify ptt_compile().
+    Changed some "start; while(test); next" loops to for loops.
+
+exec.c
+random.c
+    Check that only one byte has been given by the 0xnn syntax.
+
+word.c
+    Fix the post-justify positioning in justpara().
+    Position on the next non-blank line - this may not contain
+    chars considered to be in a "paragraph".
+
+buffer.c
+    Remove setting silent around buffers being made active.
+
+file.c
+fileio.c
+wrapper.c
+    Simplify the read-in message generation in readin() and ifile().
+    [file.c]
+    Tidy up add_to_fline() and make it void, as it cannot return an
+    error. Remove FIOMEM code from add_to_fline()'s callers. [fileio.c]
+    Add a comment in wrapper.c noting that any allocation errors
+    immediately exit.
+
+eval.c
+file.c
+globals.c
+lock.c
+main.c
+pklock.c
+edef.h
+estruct.h
+evar.h
+    Make FILOCK a run-time option ($filock) rather than a compile-time
+    one.
+
+eval.c
+evar.h
+etc/uemacs.rc
+    Allow hex input when setting $debug. [eval.c, evar.h]
+    Prompt for $debug setting if no user arg in set-debug.
+    [etc/uemacs.rc]
+
+version.c
+    Reformat output to indicate what is compiled in and what is the
+    result of, possibly, dynamic libraries.
+
+fileio.c
+input.c
+pklock.c
+    For a STANDALONE (static) build, disable code related to getpwnam(),
+    setpwent(), getpwent(), endpwent() and getpwnam().
+
+utf8.c
+    Just incorporate the reverse_string() code into unicode_to_utf8() as
+    it is the only user.
+
+Makefile
+basic.c
+bind.c
+buffer.c
+crypt.c
+display.c
+eval.c
+exec.c
+file.c
+fileio.c
+input.c
+isearch.c
+lock.c
+main.c
+names.c
+pklock.c
+posix.c
+region.c
+search.c
+spawn.c
+window.c
+word.c
+ebind.h
+efunc.h
+    Don't declare functions as external in efunc.h for the source file
+    which defines them.
+    Also:
+      Define middle in getbind() to keep gcc's analyzer happy. [bind.c]
+      Remove static from new_* vars in vtinit(). [display.c]
+      Remove "#ifdef POSIX" test. Just enable the code. [posix.c]
+      Remove -DPOSIX. [Makefile]
+      Initialize arg1/2/3 in gtfun() for gcc's analyzer. [eval.c]
+
+fileio.c
+    Switch from using file stream I/O routines (fopen, fread, fwrite,
+    fclose) to using file descriptor ones (open, read, write, close)
+    as we do our own I/O buffering, and this also makes getting relevant
+    error codes simpler.
+
+display.c
+file.c
+fileio.c
+input.c
+main.c
+random.c
+    Simplify some string building (e.g. use sprintf).
+    Also:
+        Simplify readin() [file.c]
+
+main.c
+estruct.h
+    Correct filock bits in quit() and tidy up. [main.c]
+    Remove FILOCK definition. [estruct.h]
+
+region.c
+    Simplify narrow() by using r_endp to find out where the region ends.
+
+main.c
+    Fix a stack dump bug that has been there since 4.154!
+    index_fp was being used in two places and closed prematurely.
+    Tidied up the index_fp code, plus some other bits.
+
+crypt.c
+file.c
+autostart/00-decrypt-file.sh
+autostart/00-encrypt-file.sh
+    Fix week CRYPT!  NOTE!! Backwards incompatibility.
+    Always repeat user encryption key to fill the key buffer, otherwise
+    short keys may produce colliding results. [crypt.c]
+    Update autotest files for modified encryption results.
+    Remove the two myencrypt() call pairs in resetkey() as the
+    result is to go back to where you started. [file.c]
+    Simplify line count printing.   [file.c]
+
+file.c
+    Fix makename() so that it works for full paths again.
+
+efunc.h
+    Add extern free_lock() declaration for DO_FREE.
+
+posix.c
+    Use simple loop for small buffer shuffle, not memove.
+    Fix (pending < expected) loop and explicitly initialize pending.
+
+globals.c
+exec.c
+edef.h
+    Make golabel local, not global, and avoid possible overlap of args
+    in strcpy.
+    Comment updates.
+
+main.c
+    Simplify typahead() code.
+    Not all clear what the previous code actually did, so went by
+    the comments.
+    Comment updates.
+
+----------
+
+Some changes made whilst looking into the message-line/minibuffer interplay.
+
+display.c
+    Remove no_free arg from set_grapheme() and callers as it is now
+    always False.
+    Make updateline() return void rather than always returning TRUE.
+    Just call mlerase() in mlwrite_ap, as it will do all we need.
+    Always set mpresf = TRUE in mlwrite_ap().
+
+input.c
+    Remove unneeded mlerase() and mberase() calls.
+    Comment update.
+
+line.c
+    Use spos, having defined it.
+
+search.c
+estruct.h
+    Use new MD_EQVRPT define. [display.c]
+    Use new MD_MAGRPT define. [search.c]
+
+utf8.c
+ebind.h
+    Comment updates.
+
+----------
+
+Makefile
+autotest/*.sh
+tools/run_valgrind
+    Added a vgcheck option to Makefile to run the test scripts under
+    valgrind and produce per-test reports.
+
+file.c
+    Don't check for a line ending of <CR> if the line is empty.
+
+autotest/arithmetic-tests.sh
+    Set expected TOOBIG result to be 0 when using valgrind, as that
+    seems to prevent the overflow being detected.
+
+Makefile
+autotest/run_all
+    Mark clean test-clean check and vgcheck as .PHONY, so they will
+    always run when asked. [Makefile]
+    Allow individual tests to be run by specifying a LIST.
+        make check LIST=arith
+        make vgcheck LIST=arith
+    [Makefile]
+    The scripts in autotest matching *<LIST-item>*.sh will be run.
+    [run_all]
+    Make valgrind run in Verbose mode. [Makefile]
+    Set HOME to . so that it doesn't run any user-specific start-up
+    files. [Makefile]
+
+file.c
+    Correct loop limit in makename() for a pathname.
+
+exec.c
+main.c
+    Add code (for DO_FREE) so that strdup()ed local variables can be
+    freed when a script calls exit-emacs. Keeps valgrind happy. [exec.c,
+    main.c]
+    In docmd() only Xrealloc a line if extra space is needed. Turns out
+    that realloc may move things even when you request a smaller space
+    than that already allocated. [exec.c]
+
+Makefile
+tools/remove-tcap-bits.pl
+tools/run_valgrind
+    Added a script to remove the tcap-related entries from a valgrind
+    log. [remove-tcap-bits.pl]
+    Changed valgrind to add BEGIN/END markers around each block, for easy
+    block finding. [run_valgrind]
+    Added a vgstrip option for make. [Makefile]
+
+names.c
+random.c
+efunc.h
+    Added a simulate function, for use by test scripts to simulate user
+    input.
+
+exec.c
+    Made pending_einit a level-based array, for valgrind testing.
+
+eval.c
+    Add a missing bytes_to_go decrement to ue_printf().
+
+Makefile
+    Added removing uemacs-dumps to test-clean, since HOME is now
+    set to the current directory during tests.
+    Keep backups when stripping valgrind logs, and delete them in
+    test-clean.
+
+autotest/dir-browsing.sh
+    Added test file for directory-browsing.
+
+autotest/dump_mc.debug
+    Added comment about how to use it.
+    Updated CCL printing to use BMBYTES not (now gone) HIBYTE.
+
+search.c
+    Correct the loop constraint in mcclear() so that group0 entries are
+    cleared.
+    For valgrind build, call mcclear() if mc_alloc is set.
+
+eval.c
+evar.h
+    Added a &rin user function to find the last occurrence of a string
+    within a string.
+    Renamed internal sindex() function to strindex().
+
+etc/uemacs.rc
+etc/uemacs.hlp
+    Updated file-hooks to use &rin to get the suffix, so allowing for
+    filenames starting with . or ../. [uemacs.rc]
+    Add &rin and update &sin arg description. [uemacs.hlp]
+
+fileio.c
+    Add a break rather than leave an empty case at the end of a switch.
+
+utf8.c
+    Remove the (now uncalled) reverse_bytes() function.
+
+crypt.c
+eval.c
+globals.c
+edef.h
+estruct.h
+evar.h
+etc/uemacs.hlp
+    Add various options to crypt mode to cover past algorithms.
+    Add back various key_set methods (Fill63 and Raw) and running
+    encryption ones (PrintingOnly and Mod95).  [crypts.c]
+    (This undoes the earlier removal of optional PARANOID code
+    while the "completely filled" code has been removed - we don't
+    need another new option...).
+    Add code for a new $crypt_mode variable. [eval.c, globals.c,
+    edef.h, estruct.h, evar.h]
+    NOTE: that there is NO default setting for $crypt_mode. If you wish
+    to use the mode you need to set the one you want.
+
+Makefile
+    Unset HOME rather than setting it to ".".
+    If a test fails and you use ^XC (i-shell) to look at things, bash
+    will write its history file into the code directory.
+
+utf8.c
+utf8.h
+    Added a glyphcount_utf8_array() function to count the grapehemes in
+    a utf8 string.
+
+eval.c
+    Modify the &sin (strindex()), &rin (rstrindex()), &lef, &mid and
+    &rig functions to count in graphemes, not bytes.
+
+exec.c
+globals.c
+edef.h
+    execlevel only used by exec.c
+    Make static there and remove from global list.
+
+main.c
+    Set cryptflag (and nearby vars) to FALSE in their declaration.
+
+file.c
+    Add back the (required) four myencrypt() calls erroneously removed
+    earlier.
+
+eval.c
+    If $crypt_mode is changed then any encryption key set for any buffer
+    needs to be re-encrypted.
+
+autotest/00-decrypt-file.sh
+autotest/00-encrypt-file.sh
+    Set the correct value for the new $crypt_mode variable in extended
+    tests, and update the encrypted file contents to match what is now
+    produced.  [00-decrypt-file.sh, 00-encrypt-file.sh]
+
+etc/uemacs.hlp
+    Updated for recent changes.
+    Graphemes now used for &lef, &mid, &rig, &sin and &rin.
+    Correct and extend Crypt section.
+
+Makefile
+    Update the test-clean code to handle new files from 00-en/decrypt.sh
+    autotest scripts.
+
+eval.c
+globals.c
+main.c
+spawn.c
+tcap.c
+edef.h
+estruct.h
+evar.h
+etc/uemacs.hlp
+    Tidy up of some obsolete code and update help file accordingly.
+    Removed unused $flicker variable.  [eval.c, globals.c, estruct.h,
+    evar.h, uemacs.hlp]
+    Removed unused $palette variable.  [eval.c, globals.c, estruct.h,
+    evar.h, uemacs.hlp]
+    Remove long-gone MAXCOL, MAXROW, CLRMSG and MEMMAP defines. [estruct.h]
+    Actually set $rval from all system() calls. [spanw.c]
+    Don't initialize eolexist and revexist as they will be set at runtime
+    [globals.c]
+    Remove unused nullflag variable. [globals.c, main.c, edef.h]
+    Remove unused/unchanging $gflags variable and EVGFLAGS and GFREAD
+    defines. [eval.c, globals.c, main.c, edef.h, estruct.h, uemacs.hlp]
+    Remove unused FAILED define. [estruct.h]
+    Remove no-longer relevant $sres variable. [eval.c, globals.c,
+    tcap.c, edef.h, estruct.h, evar.h]
+    Move INTWIDTH to eval.c (only user). [eval.c, estruct.h]
+
+autotest/00-encrypt-file.sh
+autotest/run_all
+    Use $rval to test result of script comparison. [00-encrypt-file.sh]
+    Better reporting and tidy up.
+
+etc/uemacs.rc
+    Add make-descr procedure and binding.
+
+eval.c
+main.c
+names.c
+random.c
+    Use ARRAY_SIZE from util.h, since it is there.
+    Add missing {} around the 'X' block command-line code. [main.c]
+
+
+fileio.c
+    Don't save first 100 bytes for later binary file check. Check it
+    once we get them and just remember the result.
+
+file.c
+    Force the save of a file if numeric arg is given.
+
+line.c
+    Move sysmark fixups out of loops, as there is only one.
+
+main.c
+    Simplify macro_helper, and make it work for 0 in the process.
+    Replace lnewline() calls with "\n" in following linstr() calls.
+
+crypt.c
+eval.c
+file.c
+globals.c
+edef.h
+etc/uemacs.hlp
+    Add a global encryption key option to $crypt_mode, implement and
+    document it.
+
+random.c
+estruct.h
+    Add a GGR_LOW_LGCY bit setting to $ggr-opts. If set (default)
+    leave-one-white does nothing if it has no spaces around it.
+    If unset it will add a space.
+
+random.c
+    Allow simulate to work with a numeric arg.
+
+autotest/wordwrap.sh
+    Use simulate for space input and $ggr_opts setting, rather than
+    fudging in a hard-wired effect.
+
+bind.c
+    Tidy up some code.
+
+bind.c
+display.c
+spawn.c
+efunc.h
+    Replace mpluts calls with mlwrite_one and let mlwrite_ap check for
+    recursion.
+
+buffer.c
+    Tidy up some code.
+
+isearch.c
+names.c
+efunc.h
+autotest/incremental-search.sh
+autotest/query-replace.sh
+    Implement a simulate-incr function for the test scripts.
+    Modify incremental-search.sh and query-replace.sh to use it.
+    This replaces the kludgy //incremental-debug usage.
+
+exec.c
+    Added a pending_whlist list to dobuf() for valgrind and
+    re-organized DO_FREE code.
+
+autotest/00-decrypt-file.sh
+autotest/00-encrypt-file.sh
+    Add a missing ! in an !endif statement.
+
+exec.c
+globals.c
+edef.h
+    Remove mstore(testing bstore produces the same result).
+    Make bstore local to exec.c.
+    Skip while list processing while storing a macro. [exec.c]
+    Move the mis-placed search_ok setting in storeproc. [exec.c]
+
+main.c
+    Fix the standalone set_pathname() code to work if uemacs
+    is found along the path, and use an etc/ subdir of the
+    location, not the locaton itself.
+
+fileio.c
+input.c
+    Increase buffer sizes to stop sprintf overflow warning in gcc 8.4.0. 
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Updated help file.
+    Update to GGR4.171
 
 ==========

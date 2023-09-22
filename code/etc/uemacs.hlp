@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.171 Help Index     (19 Sep 2023)
+=>                   nuEmacs GGR4.171 Help Index     (22 Sep 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -445,12 +445,12 @@ Begin macro ...........   ^X  (
 End macro .............   ^X  )
 Execute macro .........   ^X  E         (replay keys)
 Execute macro .........   ^X  V         (replay commands - experimental)
-Store macro ........... not bound
-Execute macro nn ...... not bound
-Store procedure ....... not bound
-Execute procedure ..... Meta ^E
-Store pttable ......... not bound
-Set pttable ........... not bound
+Store macro ........... not bound       store-macro nn
+Execute macro nn ...... not bound       execute-macro-1 ... execute-macro-40
+Store procedure ....... not bound       store-procedure
+Execute procedure ..... Meta ^E         execute-procedure proc-name
+Store pttable ......... not bound       store-pttable
+Set pttable ........... not bound       set-pttable
 Toggle ptmode  ........ not bound       (but can be toggled via ^XT)
 
 You may set variables within macros.
@@ -473,7 +473,7 @@ Accessing undefined variables will return the string ERROR.
 Since the way strings are turned into integers treats this as 0 this
 code:
 
-    set .calls &add %.calls 1
+    set .calls &add .calls 1
 
 will set .calls to 1 on its first use if .calls isn't set elsewhere.
 -------------------------------------------------------------------------------
@@ -702,12 +702,38 @@ store-procedure <proc-name> [flags]
     Store a user-defined set of macro commands with the given name
     (which can be a maximum of 14 characters in length).
     You may then call this proc-name within a macro in the same way as
-    you call any builtin function.
+    you call any builtin function, but preceding it with:
+        execute-procedure
+    The macros may be boudn to a key sequence using buffer-to-key.
     The optional flag may be:
         skip_in_macro       do not log this when macro-recording
         not_mb              not allowed in the minibuffer
         not_interactive     disable via a user prompt for function name
-        one_pass            only run once even of Esc<n>/^U was given.
+        one_pass            only run once even of Esc<n>/^U was given
+        no_macbug           Don't display when running with $debug set
+
+    The directives allowed within the macro are:
+        !if <test>
+            commands...
+        !else                   Optional else branch...
+            commands...
+        !endif
+
+        !goto label
+        *label
+
+        !while <test>
+            commands...
+            !break
+        !endwhile
+
+        !force                  Continue on command error
+                                Put PASSED/FAILED into $force_status
+
+        !finish [True]          Abort with status False (or True, if given)
+        !return                 Exit with status True
+    The <test> will be the result of FUNCTIONS which return True/False
+    values.
 
 $uproc_lpcount
 $uproc_lptotal
@@ -967,6 +993,8 @@ Flag    Controls    How
 0x08    search      When ON, a repeat search will start from the
         overlap     beginning of the previous match, so searching for
                     "issi" in "mississippi" will find it twice.
+0x10    leave-white When set, leave-one-white should only remove spaces,
+                    If unset, force a space if there was none.
 
 The toggle-ggr-opts user procedure defined in the standard start-up file
 allows you to change the setting of each.
@@ -1016,7 +1044,9 @@ One of the last two values must be set.
 -------------------------------------------------------------------------------
 => Start-up file.
 
-uemacs has its own, system start-up file (usually /usr/local/bin/uemacs.rc).
+uemacs has its own, system start-up file  -  /opt/local/bin/uemacs.rc or
+/usr/local/bin/uemacs.rc (but on a STANDALONE build ths will be in a
+etc/ subdirectory of the locaton of uemacs itself).
 This is used to define some user-procedures and add to the internally
 defined standard key bindings.
 
