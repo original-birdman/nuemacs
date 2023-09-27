@@ -729,7 +729,7 @@ static char *gtfun(char *fname) {
     case UFSEQUAL:      return ltos(strcmp(arg1, arg2) == 0);
     case UFSLESS:       return ltos(strcmp(arg1, arg2) < 0);
     case UFSGREAT:      return ltos(strcmp(arg1, arg2) > 0);
-    case UFLENGTH:      return ue_itoa(strlen(arg1));
+    case UFLENGTH:      return ue_itoa(glyphcount_utf8(arg1));
     case UFUPPER:
     case UFLOWER:
         utf8_recase(tag == UFUPPER? UTF8_UPPER: UTF8_LOWER,
