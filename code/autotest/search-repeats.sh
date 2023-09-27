@@ -11,34 +11,40 @@ rm -f FAIL-$TNAME
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='next if (/^--/); chomp; print substr($_, 3);'
+if type perl >/dev/null 2>&1; then
+    prog='next if (/^--/); chomp; print substr($_, 3);'
+    cmd="perl -lne"
+else
+    prog='$1 != "--" {print substr($0, 4);}'
+    cmd=awk
+fi
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
 #
-perl -lne "$prog" > autotest.tfile <<EOD
+$cmd "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Simple testing for */+/{m,n} handling.
 02 acc, adc, a*c, a+c.
-03 
+03
 04 ac
 05 abc
 06 abbc
 07 abbbc
 08 abbbbc
-09 
+09
 10 Some whitespace tests too
-11 
+11
 12 a 	
 13 c
-14 
+14
 15 EOF
 EOD
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the uemacs start-up file, that will run the tests
-# 
+#
 cat >uetest.rc <<'EOD'
 ; Some uemacs code to run tests on testfile
 ; Put test results into a specific buffer (test-reports)...
@@ -261,17 +267,17 @@ if [ "$1" = FULL-RUN ]; then
 exit-emacs
 EOD
 # Just leave display showing if being run singly.
-else   
+else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
 fi
- 
+
 # Do it...set the default uemacs if caller hasn't set one.
 [ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
 $UE2RUN -x ./uetest.rc
-    
+
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then
         echo "$TNAME FAILed"

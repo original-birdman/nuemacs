@@ -11,12 +11,18 @@ rm -f FAIL-$TNAME
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='next if (/^--/); chomp; print substr($_, 3);'
+if type perl >/dev/null 2>&1; then
+    prog='next if (/^--/); chomp; print substr($_, 3);'
+    cmd="perl -lne"
+else
+    prog='$1 != "--" {print substr($0, 4);}'
+    cmd=awk
+fi
 #
 # Write out the test input file
 # It's written here with row and column markers.
 #
-perl -lne "$prog" > autotest.tfile <<EOD
+$cmd "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 We need some text to test wrapping.
 02 We'll set the fill-column to 60 before running things.

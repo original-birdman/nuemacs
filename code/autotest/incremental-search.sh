@@ -11,13 +11,19 @@ rm -f FAIL-$TNAME
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='next if (/^--/); chomp; print substr($_, 3);'
+if type perl >/dev/null 2>&1; then
+    prog='next if (/^--/); chomp; print substr($_, 3);'
+    cmd="perl -lne"
+else
+    prog='$1 != "--" {print substr($0, 4);}'
+    cmd=awk
+fi
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
 #
-perl -lne "$prog" > autotest.tfile <<EOD
+$cmd "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Entered some silly text which allows us to
 02 look for s then i then m meaning we need to jump
@@ -105,7 +111,7 @@ store-procedure check3
 
 ; Now set up the control buffer
 ; This buffer is DELETED by the incremental search when it ends!
-; 
+;
 simulate-incr "s" "check1"
 simulate-incr "i" "check2"
 simulate-incr "m" "check3"
@@ -331,17 +337,17 @@ if [ "$1" = FULL-RUN ]; then
 exit-emacs
 EOD
 # Just leave display showing if being run singly.
-else   
+else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
 fi
- 
+
 # Do it...set the default uemacs if caller hasn't set one.
 [ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
 $UE2RUN -x ./uetest.rc
-    
+
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then
         echo "$TNAME FAILed"

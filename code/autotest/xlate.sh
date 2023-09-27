@@ -35,7 +35,7 @@ set %ok 0
 ;
 store-procedure run-xlat
 
-  set .result &xla %input %from %to 
+  set .result &xla %input %from %to
   !if &seq %expect .result
     set %test-report &cat %test " OK"
     set %ok &add %ok 1
@@ -86,7 +86,7 @@ set %test "Add extended chars..."
 set %input  abcde
 set %from   ce
 ; The first char is 3 unicode chars
-;   U+0063  c   
+;   U+0063  c
 ;   U+0327  Combining Cedilla (so NOT U+00e7  c-cedilla)
 ;   U+20eb  Combining Long Double Solidus Overlay
 set %to     ç⃫é
@@ -115,17 +115,17 @@ if [ "$1" = FULL-RUN ]; then
 exit-emacs
 EOD
 # Just leave display showing if being run singly.
-else   
+else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
 fi
- 
+
 # Do it...set the default uemacs if caller hasn't set one.
 [ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
 $UE2RUN -x ./uetest.rc
-    
+
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then
         echo "$TNAME FAILed"

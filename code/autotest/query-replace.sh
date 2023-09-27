@@ -11,16 +11,22 @@ rm -f FAIL-$TNAME
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
-prog='next if (/^--/); chomp; print substr($_, 3);'
+if type perl >/dev/null 2>&1; then
+    prog='next if (/^--/); chomp; print substr($_, 3);'
+    cmd="perl -lne"
+else
+    prog='$1 != "--" {print substr($0, 4);}'
+    cmd=awk
+fi
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
 #
-perl -lne "$prog" > autotest.tfile <<EOD
+$cmd "$prog" > autotest.tfile <<EOD
 -- 123456789012345678901234567890123456789012345678901234567890123456789
 01 Text for replacement text - query/interactive version
-02 Text should contain a few instances of "ext" and 
+02 Text should contain a few instances of "ext" and
 03 we'll change most, but not all, of them to !!!!.
 04 So we'll end up with 7!s here ext!!!.
 EOD
@@ -135,7 +141,7 @@ store-procedure check6
 !endm
 
 ; Now set-up the control buffer
-; 
+;
 simulate-incr "Y" "check1"
 simulate-incr "N" "check2"
 simulate-incr "Y" "check3"
@@ -171,17 +177,17 @@ if [ "$1" = FULL-RUN ]; then
 exit-emacs
 EOD
 # Just leave display showing if being run singly.
-else   
+else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
 -2 redraw-display
 EOD
 fi
- 
+
 # Do it...set the default uemacs if caller hasn't set one.
 [ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
 $UE2RUN -x ./uetest.rc
-    
+
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then
         echo "$TNAME FAILed"
