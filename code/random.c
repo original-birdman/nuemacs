@@ -1064,7 +1064,7 @@ int ovstring(int f, int n) {
  */
 int leaveone(int f, int n) {
     UNUSED(f);
-    int status = whitedelete(0, 1);
+    int status = whitedelete(0, (n<0)? -1: 1);
     if (status || (n == 2) || (n == -2)) status = linsert_byte(1, ' ');
     return (n < 0)? TRUE: status;
 }
