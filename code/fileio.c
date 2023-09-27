@@ -279,7 +279,7 @@ int ffwopen(char *fn) {
 
 /* Opening for writing displays errors here */
 
-    if ((ffp = open(fn, O_WRONLY|O_CREAT, 0666)) < 0) {
+    if ((ffp = open(fn, O_WRONLY|O_TRUNC|O_CREAT, 0666)) < 0) {
         if (errno == EISDIR)    /* Can't open a dir for writing */
             mlwrite("Can't write a directory: %s", fn);
         else
