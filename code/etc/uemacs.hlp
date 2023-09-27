@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.171 Help Index     (22 Sep 2023)
+=>                   nuEmacs GGR4.172 Help Index     (27 Sep 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -175,6 +175,21 @@ Kill paragraph ........ Meta ^W         Exchange point and mark   ^X ^X
 Delete blank lines ....   ^X ^O     ::  A region is defined as the area between
 Copy region ........... Meta  W     ::  the mark and the current position.
 
+    leave-one-white and white-delete can take a numeric arg that affects
+    how they behave.
+
+  leave-one-white
+    No arg - Standard usage. Do nothing and return FALSE if no whitespace.
+    +2 arg - Force one whitespace (even if there was not one there
+             originally), return FALSE if there wasn't one previously.
+    -1 arg - Do nothing but return FALSE if no whitespace.
+    -2 arg - Force one whitespace and always return true.
+
+  white-delete
+    No arg - Standard usage. Return FALSE if no whitespace to remove.
+    -1 arg - Delete any whitespace and always return TRUE
+
+
     There are two yank-styles, "old" and "gnu". The default is "old".
     To change this use:
          set $yankmode gnu
@@ -201,6 +216,9 @@ Copy region ........... Meta  W     ::  the mark and the current position.
             kill-ring buffer entry
         Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
         replace.
+
+    If kill-region is given and arg of 2, the killed region is not
+    placed on the kill ring.
 
 Yank last minibuffer .. Meta ^Y  (10 in a ring, numeric arg allowed)
 -------------------------------------------------------------------------------
@@ -993,11 +1011,9 @@ Flag    Controls    How
 0x08    search      When ON, a repeat search will start from the
         overlap     beginning of the previous match, so searching for
                     "issi" in "mississippi" will find it twice.
-0x10    leave-white When set, leave-one-white should only remove spaces,
-                    If unset, force a space if there was none.
 
-The toggle-ggr-opts user procedure defined in the standard start-up file
-allows you to change the setting of each.
+The change-ggr-opts user procedure defined in the standard start-up file
+allows you to change the setting of each. It is bound to ^XG.
 
 -------------------------------------------------------------------------------
 => Crypt mode

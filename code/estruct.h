@@ -59,10 +59,6 @@
 #define GGR_FULLWRAP    0x0004
 /* Allow overlapping matches while searching */
 #define GGR_SRCHOLAP    0x0008
-/* leave-one-white should only remove spaces (legacy way).
- * If NOT set, it should add one if there was none.
- */
-#define GGR_LOW_LGCY    0x0010
 
 /* Internal constants. */
 

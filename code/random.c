@@ -1057,15 +1057,20 @@ int ovstring(int f, int n) {
 
 /* GGR - extras follow */
 
-/* Delete all but one white around cursor */
+/* Delete all but one white around cursor.
+ * With a -ve arg alwats return TRUE.
+ * If the abs value of the arg is 2 (so +2 or -2) always leave a space
+ * even if there was not one originally (so "forcene").
+ */
 int leaveone(int f, int n) {
-    if (whitedelete(f, n) || !(ggr_opts&GGR_LOW_LGCY))
-         return(linsert_byte(1, ' '));
-    return(FALSE);
+    UNUSED(f);
+    int status = whitedelete(0, 1);
+    if (status || (n == 2) || (n == -2)) status = linsert_byte(1, ' ');
+    return (n < 0)? TRUE: status;
 }
 
 int whitedelete(int f, int n) {
-    UNUSED(f); UNUSED(n);
+    UNUSED(f);
 
     char *lp, *rp, *stp, *etp;
     stp = curwp->w.dotp->l_text;            /* Start of line text */
@@ -1098,10 +1103,12 @@ int whitedelete(int f, int n) {
         break;          /* End loop if no match */
     }
 
-/* Delete from lp up to (but not including) rp */
-
+/* Delete from lp up to (but not including) rp.
+ * When there is nothing to remove return TRUE if we have been given an
+ * arg of -1, otherwise return FALSE.
+ */
     int to_delete = rp - lp;
-    if (to_delete <= 0) return FALSE;
+    if (to_delete <= 0) return (n == -1);
     curwp->w.doto = lp - stp;       /* Move dot to left-most space */
     ldelete(to_delete, FALSE);      /* Delete the in one go */
     return TRUE;
