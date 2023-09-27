@@ -529,7 +529,7 @@ int newsize(int n) {
 
 /* make sure it's reasonable */
     if (n < 3 ) {
-        mlwrite_one("%Screen size too small");
+        mlwrite_one("Screen size too small");
         return FALSE;
     }
 
@@ -605,7 +605,7 @@ int newwidth(int n) {
 
 /* Make sure it's in reasonable */
     if (n < 10) {
-        mlwrite_one("%Screen width too small");
+        mlwrite_one("Screen width too small");
         return FALSE;
     }
 

@@ -1047,11 +1047,11 @@ static void edinit(char *bname) {
 int ctlxlp(int f, int n) {
     UNUSED(f); UNUSED(n);
     if (kbdmode != STOP) {
-        mlwrite_one("%Macro already active");
+        mlwrite_one("Macro already active");
         return FALSE;
     }
     if (strcmp(curbp->b_bname, kbdmacro_buffer) == 0) {
-        mlwrite_one("%Cannot collect macro when in keyboard macro buffer");
+        mlwrite_one("Cannot collect macro when in keyboard macro buffer");
         return FALSE;
     }
 
@@ -1074,7 +1074,7 @@ int ctlxlp(int f, int n) {
 int ctlxe(int f, int n) {
     UNUSED(f);
     if (kbdmode != STOP) {
-        mlwrite_one("%Macro already active");
+        mlwrite_one("Macro already active");
         return FALSE;
     }
     if (n <= 0) return TRUE;
@@ -1118,7 +1118,7 @@ int reexecute(int, int);    /* Forward declaration */
 int ctlxrp(int f, int n) {
     UNUSED(f); UNUSED(n);
     if (kbdmode == STOP) {
-        mlwrite_one("%Macro not active");
+        mlwrite_one("Macro not active");
         return FALSE;
     }
     if (kbdmode == RECORD) end_kbdmacro();
