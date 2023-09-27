@@ -228,7 +228,7 @@ int linstr(char *instr) {
 
 /* Insertion error? */
             if (status != TRUE) {
-                mlwrite_one("%Out of memory while inserting");
+                mlwrite_one("Out of memory while inserting");
                 break;
             }
             instr++;
@@ -251,7 +251,7 @@ static int lins_nc(char *instr, int nb) {
             status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
 /* Insertion error? */
             if (status != TRUE) {
-                mlwrite_one("%Out of memory while inserting");
+                mlwrite_one("Out of memory while inserting");
                 break;
             }
             instr++;
@@ -279,31 +279,38 @@ int linsert_uc(int n, unicode_t c) {
     return TRUE;
 }
 
-/* Overwrite a character into the current line at the current position
- * int c;       character to overwrite on current position
- */
-static int lowrite(unicode_t c) {
-    if (curwp->w.doto < curwp->w.dotp->l_used &&
-         (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
-         ((curwp->w.doto) & tabmask) == tabmask))
-                ldelgrapheme(1, FALSE);
-    return linsert_uc(1, c);
-}
-
 /* lover -- Overwrite a string at the current point
+ *          This is a utf8 string!
  */
 int lover(char *ostr) {
     int status = TRUE;
-    char tmpc;
 
     if (ostr != NULL) {
-        while ((tmpc = *ostr) && status == TRUE) {
-            status = (tmpc == '\n' ? lnewline() : lowrite(tmpc));
+        int maxlen = strlen(ostr);
+        int offs = 0;
+        while (*ostr && status == TRUE) {
+            int bc = next_utf8_offset(ostr, offs, maxlen, TRUE);
+
+/* For an overwrite we delete the next character and insert the new one.
+ * If we are at end-of-line we don't delete (so the line is extended)
+ * and if we're at a tab-stop we may not need to do the delete.
+ */
+            if (curwp->w.doto < curwp->w.dotp->l_used &&
+                 (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
+                 ((curwp->w.doto) & tabmask) == tabmask)) {
+                status = ldelgrapheme(1, FALSE);
+                if (status != TRUE) continue;
+            }
+/* Now the insertion */
+            if ((bc == 1) && (*(ostr+offs) == '\n'))
+                 status = lnewline();
+            else status = lins_nc(ostr+offs, bc);
+/* Is it still working? */
             if (status != TRUE) {   /* Insertion error? */
-                mlwrite_one("%Out of memory while overwriting");
+                mlwrite_one("Out of memory while overwriting");
                 break;
             }
-            ostr++;
+            ostr += bc;
         }
     }
     return status;
