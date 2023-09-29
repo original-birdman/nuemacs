@@ -1061,7 +1061,7 @@ One of the last two values must be set.
 => Start-up file.
 
 uemacs has its own, system start-up file  -  /opt/local/bin/uemacs.rc or
-/usr/local/bin/uemacs.rc (but on a STANDALONE build ths will be in a
+/usr/local/bin/uemacs.rc (but on a STANDALONE build ths will be in an
 etc/ subdirectory of the locaton of uemacs itself).
 This is used to define some user-procedures and add to the internally
 defined standard key bindings.

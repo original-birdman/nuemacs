@@ -35,7 +35,11 @@ Other changes so far made are:
     size.
   o Added horizontal scrolling (from 3.10e).
   o Changed file encryption so it now encrypts all bytes, not just
-    ASCII ones.
+    ASCII ones. You can (indeed, have to) set various options for the
+    encryption algorithm to use, for compatibility with various other
+    builds.
+    You may now set a global encryption key, rather than a per-buffer
+    one.
   o Input and output now buffered into an 8kB block, significantly
     speeding up file processing,
   o Keyboard macros are also collected as commands in a buffer rather
@@ -64,6 +68,7 @@ Other changes so far made are:
     select one to open.
     Requires a user procedure (defined in the standard uemacs.rc) to
     run. This has various sorting options.
+    You can also open the parent directory of a file you are viewing.
   o Extended name-completion in prompts to work with file names, buffer
     names, user procedures, phonetic translation tables, function names
     and uemacs environment/user variables.
@@ -91,6 +96,14 @@ Other changes so far made are:
   o Allow forcing modes on/off for all buffers via a command-line
     option.
   o Handle real numbers in macros.
+  o Macro debug output can be directed to a //Debug buffer.
+  o You can build a standalone version for Linux, either "most" (libm
+    and libc are dynamic - allows expansion of ~id/) or "all" (all
+    static libraries, no expansion of ~id/ only of ~/).
+    Useful for a USB stick connected to a "bare" system.
+  o File locking and visual updates as macros run are now run-time
+    options rather than compile=time ones.
+
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in

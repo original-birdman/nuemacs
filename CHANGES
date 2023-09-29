@@ -1,4 +1,4 @@
-ySee GGR4.100.changes for the original changes around moving from 3.9e to
+See GGR4.100.changes for the original changes around moving from 3.9e to
 pK4.0.15.
 
 ========== GGR4.101 [21 Feb 2017]
@@ -6899,7 +6899,6 @@ random.c
     Use ARRAY_SIZE from util.h, since it is there.
     Add missing {} around the 'X' block command-line code. [main.c]
 
-
 fileio.c
     Don't save first 100 bytes for later binary file check. Check it
     once we get them and just remember the result.
@@ -6925,7 +6924,7 @@ etc/uemacs.hlp
 
 random.c
 estruct.h
-    Add a GGR_LOW_LGCY bit setting to $ggr-opts. If set (default)
+    Add a GGR_LOW_LGCY bit setting to $ggr_opts. If set (default)
     leave-one-white does nothing if it has no spaces around it.
     If unset it will add a space.
 
@@ -6989,5 +6988,79 @@ etc/uemacs.hlp
 etc/uemacs.rc
     Updated help file.
     Update to GGR4.171
+
+DO NOT USER GGR4.171 - it has a seriosu BUG when writing out files.
+
+========== GGR4.172
+
+fileio.c
+    Add a missed O_TRUNC when opening files for writing.
+
+random.c
+estruct.h
+etc/uemacs.hlp
+    Remove GGR_LOW_LGCY bit from $ggr_opts and use numeric args to
+    leave-one-white and white-delete instead.
+
+line.c
+    Fix lover() to work with graphemes, not bytes.
+    Removed lowrite(), as it is no longer used.
+    Remove unneeded % from start of some error messages.
+
+main.c
+window.c
+    Remove unneeded % from start of some error messages.
+
+autotest/arithmetic-tests.sh
+autotest/combi-col0.sh
+autotest/incremental-search.sh
+autotest/move-over-word.sh
+autotest/multi-ex.sh
+autotest/parafill.sh
+autotest/query-replace.sh
+autotest/search-boundaries.sh
+autotest/search-char_classes.sh
+autotest/search-classes_in_closures.sh
+autotest/search-file-start.sh
+autotest/search-groups.sh
+autotest/search-line-endings.sh
+autotest/search-magic-on_off.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-props2.sh
+autotest/search-reexec-macro.sh
+autotest/search-repeats.sh
+autotest/search-u_hex.sh
+autotest/wordwrap.sh
+autotest/xlate.sh
+autotest/zero-length-magic.sh
+    Modified to use awk if perl is not available (for busybox systems).
+
+eval.c
+    Fix the &len function to return graphemes, not bytes.
+
+random.c
+    Fix the force-True code for leave-one-white.
+
+autotest/misc-bits.sh
+    Add a new test file for simple checks of:
+        numeric args to leave-one-white and white-delete
+        file truncation on write-out
+        overwrite-string
+
+Makefile    
+main.c      
+version.c
+    Do not allow STANDALONE on FreeBSD/Sun as they have no static libs.
+    Allow STANDALONE=most (only libm and libc are dynamic, allows use of
+    ~id) and STANDALONE=all (all static libs - no use of ~id). [Makefile]
+    Only leave Linux code in the #ifdef STANDALONE code section to set
+    start-up file location to <image-dir>/etc. [main.c]
+    Handle dynamic/static for utf8proc and libc separately. [version.c]
+
+../CHANGES
+../README
+version.h
+    Update to GGR4.172
 
 ==========
