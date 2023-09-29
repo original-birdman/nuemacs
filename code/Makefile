@@ -1,23 +1,29 @@
-# Makefile for uemacs
+# (GNU)Makefile for uemacs, updated Fri 29 Sep 15:42:05 BST 2023
 
 PROGRAM=uemacs
 
-SRC=basic.c bind.c buffer.c crypt.c display.c eval.c \
-	exec.c file.c fileio.c globals.c idxsorter.c input.c \
-	isearch.c line.c lock.c main.c names.c pklock.c posix.c random.c \
-	region.c search.c spawn.c tcap.c utf8.c \
-	version.c window.c word.c wrapper.c
-OBJ=basic.o bind.o buffer.o crypt.o display.o eval.o \
-	exec.o file.o fileio.o globals.o idxsorter.o input.o \
-	isearch.o line.o lock.o main.o names.o pklock.o posix.o \
-	random.o region.o search.o spawn.o tcap.o \
-	utf8.o version.o window.o word.o wrapper.o
-HDR=charset.h ebind.h edef.h efunc.h epath.h estruct.h evar.h \
+SRC=basic.c bind.c buffer.c crypt.c display.c eval.c exec.c file.c \
+	fileio.c globals.c idxsorter.c input.c isearch.c line.c lock.c \
+	main.c names.c pklock.c posix.c random.c region.c search.c \
+	spawn.c tcap.c utf8.c version.c window.c word.c wrapper.c
+
+OBJ=basic.o bind.o buffer.o crypt.o display.o eval.o exec.o file.o \
+	fileio.o globals.o idxsorter.o input.o isearch.o line.o lock.o \
+	main.o names.o pklock.o posix.o random.o region.o search.o \
+	spawn.o tcap.o utf8.o version.o window.o word.o wrapper.o
+
+HDR=charset.h combi.h ebind.h edef.h efunc.h epath.h estruct.h evar.h \
 	idxsorter.h line.h utf8.h util.h version.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
 
 # (GNU)Makefile for uemacs
+
+# Who are we? Set up some values...
+#
+uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo unknown')
+uname_N := $(shell sh -c 'uname -n 2>/dev/null || echo unknown')
+uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo unknown')
 
 # Make the build silent by default
 #
@@ -40,7 +46,7 @@ else
     DBG_OPTS = -O0 -g
 endif
 
-# Don't bother with free's on xit by default (need them for valgrind).
+# Don't bother with free's on exit by default (but need them for valgrind).
 #
 FREE =
 ifneq ($(strip $(FREE)),)
@@ -54,24 +60,41 @@ ifneq ($(strip $(ANALYZE)),)
     DBG_OPTS += -fanalyzer
 endif
 
-STANDALONE =
-# Are we building an ARM version for an Android 'phone?
+STANDALONE = none
+# Are we building an ARM version for my Android 'phone?
 #
 ifeq ($(strip $(ANDROID)),moto8g)
-    uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
     ifneq ($(uname_M),aarch64)
         .DEFAULT_GOAL := notarm64_error
     else
-        STANDALONE = 1
+        STANDALONE = all
         DBG_OPTS += -DSDIR_SKIP=7   # Not the GNU/Linux 8
     endif
 endif
 
 # Does the user want a static build?
+# This only works for Linux systemss and Solaris/FreeBSD don't have
+# static libs.
+# It has 2 possible settings: most (shared libm and libc) and all
+#   most just uses some static libraries
+#   all  uses a static build and sets STANDALONE=1 to skip come code
 #
-ifneq ($(strip $(STANDALONE)),)
-    STATIC_OPT = -static -ltinfo
-    DBG_OPTS += -DSTANDALONE
+edit_LIBS =
+ifneq ($(strip $(STANDALONE)),none)
+    ifneq ($(uname_S),Linux)
+        .DEFAULT_GOAL := no_STANDALONE
+    else
+# Check the setting...
+        ifeq ($(strip $(STANDALONE)),most)
+            edit_LIBS = 1
+        else ifeq ($(strip $(STANDALONE)),all)
+            STATIC_OPTS = -static
+            DBG_OPTS += -DSTANDALONE
+        else
+            .DEFAULT_GOAL := not_a_STANDALONE_option
+        endif
+        LIBS = -ltinfo
+    endif
 endif
 
 # A function to echo a filename if it exists
@@ -122,8 +145,9 @@ ifeq ($(strip $(UTF8)),)
         UTF8LOC = $(dir $(strip $(ures)))
         UTF8INCL = -I$(UTF8LOC)
         UTF8LIB = $(UTF8LOC)/libutf8proc.a
-endif
+    endif
 # If the user gave a specifc UTF8 option, use that
+#
 else ifeq ($(strip $(UTF8)),sys)
     UTF8INCL =
     UTF8LIB  = -lutf8proc
@@ -151,7 +175,6 @@ endif
 #
 NOTRACE =
 ifeq ($(strip $(NOTRACE)),)
-    uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
     ifeq ($(uname_M), x86_64)
     else ifeq ($(uname_M), i86pc)        # Solaris11
     else
@@ -159,6 +182,8 @@ ifeq ($(strip $(NOTRACE)),)
     endif
 endif
 
+# Do we need to go looking?
+#
 ifeq ($(strip $(NOTRACE)),)
 
 # Where is the libbacktrace library?
@@ -238,21 +263,39 @@ ifeq ($(strip $(NOTRACE)),)
     endif
 endif
 
-# Who are we?
+# The arch-specific options..
 #
-uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
-
 MYCC = gcc
+
+# Linux
+#
 ifeq ($(uname_S),Linux)
  DEFINES=-D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
+
+# FreeBSD
+#
 else ifeq ($(uname_S),FreeBSD)
  MYCC = cc
+ ifneq ($(strip $(STANDALONE)),)
+    .DEFAULT_GOAL := no_STANDALONE
+ endif
  DEFINES=-D_FREEBSD_C_SOURCE -DSYSSHELL=/bin/csh
+
+# MacOS (untested...)
+#
 else ifeq ($(uname_S),Darwin)
  DEFINES=-D_DARWIN_C_SOURCE  -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
+
+# Solaris
+#
 else ifeq ($(uname_S),SunOS)
  DEFINES=-D__EXTENSIONS__ -DSYS_TERMIOS_H
-# CygWin is just like Linux....
+ ifneq ($(strip $(STANDALONE)),)
+    .DEFAULT_GOAL := no_STANDALONE
+ endif
+
+# CygWin is just like Linux....probably
+#
 else ifeq ($(firstword $(subst -, ,$(uname_S))),CYGWIN_NT)
  DEFINES=-D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -D_GNU_SOURCE
 endif
@@ -262,12 +305,24 @@ endif
 CC = $(MYCC)
 WARNINGS = -Wall -Wstrict-prototypes -Wextra
 CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
-    $(UTF8INCL) $(BCKTINCL) $(STATIC_XDEFS)
+    $(UTF8INCL) $(BCKTINCL)
 
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1
 
-LIBS = -lm -lncurses    # All now have ncurses (curses just links to it)
+# All systems now have ncurses (curses just links to it)
+#
+LIBS := $(LIBS) $(UTF8LIB) $(BCKTLIB) -lncurses
+
+# For a mostly-static build we need to edit all of the -l options
+# -lname => -l:libname.a
+#
+ifneq ($(edit_LIBS),)
+    LIBS := $(patsubst -l%, -l:lib%.a, $(LIBS))
+endif
+
+# We need this too
+LIBS += -lm
 
 # Let's try to find libcurses/libncurses etc.
 # Start by finding term.h (for Oleg's router distros)
@@ -282,8 +337,8 @@ endif
 #
 $(PROGRAM): $(OBJ)
 	$(E) "  LINK    " $@
-	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_OPT) \
-	$(STATIC_ARM) $(LIBS) $(STATIC_XLIBS) $(UTF8LIB) $(BCKTLIB) $(RPATH)
+	$(Q) $(CC) $(LDFLAGS) $(DEFINES) -o $@ $(OBJ) $(STATIC_OPTS) \
+	$(STATIC_XLIBS) $(LIBS) $(RPATH)
 
 .PHONY: clean test-clean check vgcheck vgstrip
 clean: test-clean
@@ -315,12 +370,57 @@ vgstrip:
 	$(E) "	Strip valgrind logs"
 	$(Q) perl -i.orig ../tools/remove-tcap-bits.pl VG*.log
 
+.c.o:
+	$(E) "  CC      " $@
+	$(Q) ${CC} ${CFLAGS} ${DEFINES} -c $*.c
+
+# Add STAT_LIB and BUILDER definitions for version.c
+# For STANDALONE == all we are going to load the static lib, so
+# need to get the version now.
+#
+ifeq ($(STANDALONE),none)
+    LT = -DSTAT_LIB=1
+else ifeq ($(STANDALONE),most)
+    LT = -DSTAT_LIB=-1
+else
+    LCV = $(shell sh -c '(ldd --version | head -1) 2>/dev/null || echo unknown')
+    LT = -DSTAT_LIB=0 -DLCV="$(LCV)"
+endif
+version.o: version.c
+	$(E) "  CC      " $@
+	$(Q) ${CC} ${CFLAGS} ${DEFINES} $(LT) -DBUILDER=$(uname_N) -c $*.c
+
+.PHONY: bt_error utf8_error notarm64_error no_STANDALONE
+bt_error:
+	@echo "ERROR: Unable to find libbacktrace"
+	@echo "  This is a pre-requisite for TRACE!"
+	@echo "  See https://github.com/ianlancetaylor/libbacktrace"
+
+
+utf8_error:
+	@echo "ERROR: Unable to find the Julia Lang utf8lib"
+	@echo "       This is a pre-requisite!"
+	@echo "  See https://julialang.org/utf8proc"
+
+notarm64_error:
+	@echo "ERROR: You may only use the ANDROID=moto8g option on an ARM64 (aarch64) system"
+
+no_STANDALONE:
+	@echo "You cannot build a STANDALONE version here"
+
+not_a_STANDALONE_option:
+	@echo "$(STANDALONE) is not a STANDALONE option"
+
 # These use makefile rather than Makefile so that you don't run them by
 # mistake.
+# These do NOT build all of the login above, but can be used to
+# produce an up-to-date SRC/OBJ/HDR start and dependency end, which you
+# cna edit into the real Makefile.
 #
+.PHONY: source depend
 source:
-	-@mv -f makefile makefile.bak
-	@echo "# (GNU)Makefile for emacs, updated `date`" >makefile
+	-@[ -f makefile ] && mv -f makefile makefile.bak
+	@echo "# (GNU)Makefile for uemacs, updated `date`" >makefile
 	@echo '' >>makefile
 	@echo PROGRAM=uemacs >>makefile
 	@echo SRC=`ls *.c` >>makefile
@@ -329,11 +429,11 @@ source:
 	@echo '' >>makefile
 	@echo '# DO NOT DELETE THIS LINE' >>makefile
 	@echo '# make depend bits will be added after this' >>makefile
-	@echo '# when make depensd is run' >>makefile
-	@sed -n -e '/^# DO NOT ADD OR MODIFY/,$$p' <makefile.bak >>makefile
+	@echo '# when make depend is run' >>makefile
+	-@[ -f makefile.bak ] && sed -n -e '/^# DO NOT ADD OR MODIFY/,$$p' <makefile.bak >>makefile
 
-depend: ${SRC}
-	@for i in ${SRC}; do\
+depend:
+	@for i in *.c; do\
 	    cc ${DEFINES} -MM $$i ; done >makedep
 	@echo '/^# DO NOT DELETE THIS LINE/+2,$$d' >eddep
 	@echo '$$r ./makedep' >>eddep
@@ -346,36 +446,8 @@ depend: ${SRC}
 	@echo '# IF YOU PUT STUFF HERE IT WILL GO AWAY' >>makefile
 	@echo '# see make depend above' >>makefile
 
-.c.o:
-	$(E) "  CC      " $@
-	$(Q) ${CC} ${CFLAGS} ${DEFINES} -c $*.c
-
-# Add BUILDER definition for version.c
-#
-uname_N := $(shell sh -c 'uname -n 2>/dev/null || echo unknown')
-version.o: version.c
-	$(E) "  CC      " $@
-	$(Q) ${CC} ${CFLAGS} ${DEFINES} -DBUILDER=$(uname_N) -c $*.c
-
-bt_error:
-	@echo "ERROR: Unable to find libbacktrace"
-	@echo "  This is a pre-requisite for TRACE!"
-	@echo "  See https://github.com/ianlancetaylor/libbacktrace"
-
-
-utf8_error:
-	@echo "ERROR: Unable to find the Julia Lang utf8lib"
-	@echo "       This is a pre-requisite!"
-	@echo "  See https://julialang.org/utf8proc"
-
-notarm_error:
-	@echo "ERROR: You may only use the ANDROID=moto4g option on an ARM (armv7l) system"
-
-notarm64_error:
-	@echo "ERROR: You may only use the ANDROID=moto8g option on an ARM64 (aarch64) system"
-
-# DO NOT DELETE THIS LINE -- make depend uses it
-
+# DO NOT DELETE THIS LINE
+# make depend bits will be added after this
 basic.o: basic.c estruct.h utf8.h edef.h efunc.h line.h
 bind.o: bind.c estruct.h utf8.h edef.h efunc.h epath.h line.h util.h \
  idxsorter.h
@@ -393,8 +465,10 @@ input.o: input.c estruct.h utf8.h edef.h efunc.h line.h
 isearch.o: isearch.c estruct.h utf8.h edef.h efunc.h line.h
 line.o: line.c line.h utf8.h estruct.h edef.h efunc.h
 lock.o: lock.c estruct.h utf8.h edef.h efunc.h
-main.o: main.c estruct.h utf8.h edef.h efunc.h ebind.h line.h version.h
-names.o: names.c estruct.h utf8.h edef.h efunc.h line.h idxsorter.h
+main.o: main.c estruct.h utf8.h edef.h efunc.h line.h util.h version.h \
+ ebind.h
+names.o: names.c estruct.h utf8.h edef.h efunc.h line.h util.h \
+ idxsorter.h
 pklock.o: pklock.c estruct.h utf8.h edef.h efunc.h
 posix.o: posix.c estruct.h utf8.h edef.h efunc.h
 random.o: random.c estruct.h utf8.h edef.h efunc.h line.h charset.h

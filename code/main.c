@@ -1796,27 +1796,15 @@ int main(int argc, char **argv) {
  * location to be the directory containing the executable.
  * This allows us to put uemacs and its start-up files in one location
  * on a USB stick...
+ * It will only be set for a Linux system, so Linux-specific code is OK
  */
 #ifdef STANDALONE
-do {
 #include <libgen.h>
-#if defined(__linux__)
+do {
     char exec_file[NFILEN];
     ssize_t elen = readlink("/proc/self/exe", exec_file, NFILEN-1);
     if (elen < 0) break;
     exec_file[elen] = '\0';
-#elif defined (sun)
-    char exec_file[NFILEN]; /* Use for both calls */
-    sprintf(exec_file, "/proc/%d/execname", getpid());
-    int efu = open(execname, O_RDONLY);
-    if (efu < 0) break;
-    int rb = read(efu, exec_file, NFILEN-1);
-    if (rb < 0) break;
-    exec_file[rb] = '\0';   /* Although probaly alreayd NUL-terminated */
-#else
-/* Don't know how to handle any others...*/
-    break;
-#endif
     char *exec_path = dirname(exec_file);
     char *cpath = Xmalloc(strlen(exec_path) + 5);
     strcpy(cpath, exec_path);

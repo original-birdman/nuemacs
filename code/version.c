@@ -21,13 +21,14 @@ void version(void) {
     printf(" Stack dumping available\n");
 #endif
 
-#ifdef STANDALONE
-#define LIB_LOAD "static"
+/* STATLIB is 1 for all dynamic, -1 for libc/m only and 0 for all static */
+#if STAT_LIB > 0
+#define UTF8LIB "dynamic"
 #else
-#define LIB_LOAD "dynamic"
+#define UTF8LIB "static"
 #endif
     const char *utf8vp = utf8proc_version();
-    printf("Running with (" LIB_LOAD "))\n utf8proc version %s", utf8vp);
+    printf("Running with\n (" UTF8LIB ") utf8proc version %s", utf8vp);
 /* Assume we have utf8proc_unicode_version() */
 // This is the code if we want handle really old libs without it.
 // Needs -ldl
@@ -37,8 +38,14 @@ void version(void) {
     printf(", supports Unicode %s", utf8proc_unicode_version());
     printf("\n");
 
-/* Try to get the libc version...ripped from BOINC code. */
+/* Try to get the libc version...ripped from BOINC code.
+ * But if this build is using a static libc, we'll have been sent
+ * the version as an option.
+ */
 
+#if STAT_LIB == 0
+    printf(" (static) libc version " xstr(LCV) "\n");
+#else
     FILE* f = popen("ldd --version 2>/dev/null", "r");
     if (f) {
         char buf[128];
@@ -47,8 +54,11 @@ void version(void) {
 /* Consume output to allow command to exit gracefully */
         while (fgets(xbuf, sizeof(xbuf), f));
         (void)pclose(f);    /* Ignore the status, though */
-/* Now print the info - just remove the leading "ldd " quickly */
+/* Now print the info - just remove the leading "ldd " quickly and
+ * use the trailing newline we knwo is there
+ */
         if (retval && strlen(retval) > 4)
-              printf(" libc version %s", retval+4);
+              printf(" (dynamic) libc version %s", retval+4);
     }
+#endif
 }
