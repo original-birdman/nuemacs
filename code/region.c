@@ -34,6 +34,9 @@ int getregion(struct region *rp) {
         mlwrite_one("No mark set in this window");
         return FALSE;
     }
+/* Handle the case of mark and dot being on the same line, as
+ * the loop below does not.
+ */
     if (curwp->w.dotp == curwp->w.markp) {
         rp->r_linep = curwp->w.dotp;
         if (curwp->w.doto < curwp->w.marko) {
@@ -44,8 +47,10 @@ int getregion(struct region *rp) {
             rp->r_offset = curwp->w.marko;
             rp->r_bytes = (long) (curwp->w.doto - curwp->w.marko);
         }
+        rp->r_endp = curwp->w.dotp;
         return TRUE;
     }
+
     blp = curwp->w.dotp;
     bsize = (long) curwp->w.doto;
     flp = curwp->w.dotp;
@@ -275,6 +280,10 @@ int narrow(int f, int n) {
         *curwp = orig_wp;       /* restore original struct */
         return(status);
     }
+    if ((creg.r_bytes == 0) && (lforw(creg.r_linep) == bp->b_linep)) {
+        mlwrite_one("You cannot narrow an empty buffer");
+        return(FALSE);
+    }
 
 /* We now have a region, but take it to be "whole lines" (so ignoring
  * doto and marko).
@@ -287,7 +296,7 @@ int narrow(int f, int n) {
  * Otherwise, save the first line of the top fragment, make the top of the
  * narrowed region the new top and fix up pointers.
  */
-     if (bp->b_linep->l_fp != creg.r_linep) {   /* Not on line 1 */
+    if (bp->b_linep->l_fp != creg.r_linep) {    /* Not on line 1 */
         bp->b_topline = bp->b_linep->l_fp;      /* Save start of top */
         creg.r_linep->l_bp->l_fp = NULL;        /* Mark end of top */
         bp->b_linep->l_fp = creg.r_linep;       /* Region top -> top */
@@ -296,9 +305,11 @@ int narrow(int f, int n) {
 
 /* A region knows its last line, so just set the curwp to this
  * with a 0 offset. Must cater for being on the final line.
+ * This bit must come after the saving the top section.
  */
     curwp->w.dotp = (creg.r_endp == bp->b_linep)?
          creg.r_endp: lforw(creg.r_endp);
+    curwp-> w.doto = 0;
 
 /* Archive the bottom fragment - marking its end (for widen) with a NULL l_fp.
  * If this starts at the "dummy" last line there is nothing to do (b_botline
