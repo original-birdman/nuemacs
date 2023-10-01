@@ -3,6 +3,7 @@
 #include "edef.h"
 #include "efunc.h"
 #include "utf8.h"
+#include "util.h"
 
 #include "utf8proc.h"
 
@@ -267,18 +268,32 @@ int build_prev_grapheme(char *buf, int offs, int max, struct grapheme *gc,
  * grapheme handling in display.c
  * The combi_range array is largish for a check-per-character but
  * since most expected characters are below the first entry it
- * will actually be quick.
- * A better(?) test would just be to get the utf8proc_category_string()
+ * will actually be quick - provided we make teh quick check first.
+ * A better(?) test might just be to get the utf8proc_category_string()
  * for the character and see whether it starts with "M" (Mn, Mc, Me).
- * But still include a lower range chekc at least....
+ * But still include a lower range check at least....
  */
 #include "combi.h"
+#define CR_MAX (ARRAY_SIZE(combi_range) - 1)
+
 int combining_type(unicode_t uc) {
-    for (int rc = 0; combi_range[rc].start != UEM_NOCHAR; rc++) {
-        if (uc < combi_range[rc].start) return 0;
-        if (uc <= combi_range[rc].end)  return 1;
+
+    if ((uc < combi_range[0].start) || (uc > combi_range[CR_MAX].start))
+        return FALSE;
+
+/* Binary chop version */
+    int first = 0;
+    int last = CR_MAX;
+
+    while (first <= last) {
+        int middle = (first + last)/2;
+        if (uc < combi_range[middle].start) {       /* look lower */
+            last = middle - 1;
+        } else if (uc > combi_range[middle].end) {  /* look higher */
+            first = middle + 1;
+        } else return TRUE;
     }
-    return 0;
+    return FALSE;
 }
 
 /* Handler for the char-replace function.

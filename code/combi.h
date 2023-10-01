@@ -1,6 +1,6 @@
 /* combi.h
  * utf8proc Combining Class ranges for version 2.8.0.
- * Generated at Fri Jul  7 11:47:10 2023.
+ * Generated at Sun Oct  1 22:27:33 2023.
  *
  * ANNOTATE any hand-made alterations!!
  */
@@ -356,6 +356,5 @@ static struct range_t {
     {0x1e8d0, 0x1e8d6},
     {0x1e944, 0x1e94a},
     {0xe0100, 0xe01ef},
-    {UEM_NOCHAR, UEM_NOCHAR}    /* End of list marker */
 };
 #endif

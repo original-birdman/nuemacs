@@ -96,14 +96,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-/* Now add the endings...must put the UEM_NOCHAR endof list markers
- * in the header file
- */
+/* Now add the endings...must put the #endif into the header file */
 
-    fprintf(headfh,
-"    {UEM_NOCHAR, UEM_NOCHAR}    /* End of list marker */\n"
-"};\n"
-"#endif\n");
+    fprintf(headfh, "};\n#endif\n");
 
     fclose(headfh);
     fclose(infofh);
