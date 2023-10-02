@@ -13,12 +13,14 @@
  *
  */
 
-#include "line.h"
 #include <stdio.h>
 #if __sun
 #include <alloca.h>
 #endif
 
+#define LINE_C
+
+#include "line.h"
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
@@ -134,17 +136,6 @@ void lchange(int flag) {
     if ((curbp->b_type == BTPHON) && curbp->ptt_headp) ptt_free(curbp);
 }
 
-/* insert spaces forward into text
- *
- * int f, n;            default flag and numeric argument
- */
-int insspace(int f, int n) {
-    UNUSED(f);
-    if (!linsert_byte(n, ' ')) return FALSE;
-    back_grapheme(n);
-    return TRUE;
-}
-
 /* Insert "n" copies of the character "c" at the current location of dot. In
  * the easy case all that happens is the text is stored in the line. In the
  * hard case, the line has to be Xreallocated. When the window list is updated,
@@ -208,112 +199,15 @@ int linsert_byte(int n, unsigned char c) {
     return TRUE;
 }
 
-/* linstr -- Insert a string at the current point
+/* insert spaces forward into text
+ *
+ * int f, n;            default flag and numeric argument
  */
-
-int linstr(char *instr) {
-    int status = TRUE;
-    char tmpc;
-
-/* We have to check this here to avoid the "Out of memory" message
- * on failure when linsert_byte() gripes about it.
- */
-    if (curbp->b_mode & MDVIEW) /* don't allow this command if */
-        return rdonly();        /* we are in read only mode    */
-
-    if (instr != NULL)
-        while ((tmpc = *instr)) {
-/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
-            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
-
-/* Insertion error? */
-            if (status != TRUE) {
-                mlwrite_one("Out of memory while inserting");
-                break;
-            }
-            instr++;
-        }
-    return status;
-}
-
-/* lins_nc -- Insert bytes given a pointer and count
- * Currently only used from this file.
- */
-
-static int lins_nc(char *instr, int nb) {
-    int status = TRUE;
-    char tmpc;
-
-    if (instr != NULL)
-        while (nb--) {
-            tmpc = *instr;
-/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
-            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
-/* Insertion error? */
-            if (status != TRUE) {
-                mlwrite_one("Out of memory while inserting");
-                break;
-            }
-            instr++;
-        }
-    return status;
-}
-
-/* Insert n copies of unicode char c
- */
-int linsert_uc(int n, unicode_t c) {
-    char utf8[6];
-
-/* Short-cut the most-likely case - an ASCII char */
-
-    if (c <= 0x7f) return linsert_byte(n, c);
-
-    int bytes = unicode_to_utf8(c, utf8);
-    if (bytes == 1)     /* Extended Latin1... */
-        return linsert_byte(n, ch_as_uc(utf8[0]));
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < bytes; j++) {
-            if (!linsert_byte(1, ch_as_uc(utf8[j]))) return FALSE;
-        }
-    }
+int insspace(int f, int n) {
+    UNUSED(f);
+    if (!linsert_byte(n, ' ')) return FALSE;
+    back_grapheme(n);
     return TRUE;
-}
-
-/* lover -- Overwrite a string at the current point
- *          This is a utf8 string!
- */
-int lover(char *ostr) {
-    int status = TRUE;
-
-    if (ostr != NULL) {
-        int maxlen = strlen(ostr);
-        int offs = 0;
-        while (*ostr && status == TRUE) {
-            int bc = next_utf8_offset(ostr, offs, maxlen, TRUE);
-
-/* For an overwrite we delete the next character and insert the new one.
- * If we are at end-of-line we don't delete (so the line is extended)
- * and if we're at a tab-stop we may not need to do the delete.
- */
-            if (curwp->w.doto < curwp->w.dotp->l_used &&
-                 (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
-                 ((curwp->w.doto) & tabmask) == tabmask)) {
-                status = ldelgrapheme(1, FALSE);
-                if (status != TRUE) continue;
-            }
-/* Now the insertion */
-            if ((bc == 1) && (*(ostr+offs) == '\n'))
-                 status = lnewline();
-            else status = lins_nc(ostr+offs, bc);
-/* Is it still working? */
-            if (status != TRUE) {   /* Insertion error? */
-                mlwrite_one("Out of memory while overwriting");
-                break;
-            }
-            ostr += bc;
-        }
-    }
-    return status;
 }
 
 /* Insert a newline into the buffer at the current location of dot in the
@@ -406,6 +300,77 @@ int lnewline(void) {
     return TRUE;
 }
 
+/* linstr -- Insert a string at the current point
+ */
+
+int linstr(char *instr) {
+    int status = TRUE;
+    char tmpc;
+
+/* We have to check this here to avoid the "Out of memory" message
+ * on failure when linsert_byte() gripes about it.
+ */
+    if (curbp->b_mode & MDVIEW) /* don't allow this command if */
+        return rdonly();        /* we are in read only mode    */
+
+    if (instr != NULL)
+        while ((tmpc = *instr)) {
+/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
+            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
+
+/* Insertion error? */
+            if (status != TRUE) {
+                mlwrite_one("Out of memory while inserting");
+                break;
+            }
+            instr++;
+        }
+    return status;
+}
+
+/* lins_nc -- Insert bytes given a pointer and count
+ * Currently only used from this file.
+ */
+
+static int lins_nc(char *instr, int nb) {
+    int status = TRUE;
+    char tmpc;
+
+    if (instr != NULL)
+        while (nb--) {
+            tmpc = *instr;
+/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
+            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
+/* Insertion error? */
+            if (status != TRUE) {
+                mlwrite_one("Out of memory while inserting");
+                break;
+            }
+            instr++;
+        }
+    return status;
+}
+
+/* Insert n copies of unicode char c
+ */
+int linsert_uc(int n, unicode_t c) {
+    char utf8[6];
+
+/* Short-cut the most-likely case - an ASCII char */
+
+    if (c <= 0x7f) return linsert_byte(n, c);
+
+    int bytes = unicode_to_utf8(c, utf8);
+    if (bytes == 1)     /* Extended Latin1... */
+        return linsert_byte(n, ch_as_uc(utf8[0]));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < bytes; j++) {
+            if (!linsert_byte(1, ch_as_uc(utf8[j]))) return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 /* Get the grapheme structure for what point is looking at.
  * Returns the number of bytes used up by the utf8 string.
  * If no_ex_alloc is TRUE, don't alloc() any ex parts - just count them.
@@ -435,6 +400,21 @@ int lputgrapheme(struct grapheme *gp) {
         if (!status) return status;
     }
     return status;
+}
+
+int ldelete(long, int);     /* Forward declaration */
+/* ldelete() really fundamentally works on bytes, not characters.
+ * It is used for things like "scan 5 words forwards, and remove
+ * the bytes we scanned".
+ * GGR - cater for combining characters...with lgetgrapheme.
+ * If you want to delete character-places<, use ldelgrapheme().
+ */
+int ldelgrapheme(long n, int kflag) {
+    while (n-- > 0) {
+        struct grapheme gc;
+        if (!ldelete(lgetgrapheme(&gc, TRUE), kflag)) return FALSE;
+    }
+    return TRUE;
 }
 
 /* Delete a newline. Join the current line with the next line.
@@ -495,17 +475,65 @@ static int ldelnewline(void) {
     return TRUE;
 }
 
-/* ldelete() really fundamentally works on bytes, not characters.
- * It is used for things like "scan 5 words forwards, and remove
- * the bytes we scanned".
- * GGR - cater for combining characters...with lgetgrapheme.
- * If you want to delete character-places<, use ldelgrapheme().
+/* lover -- Overwrite a string at the current point
+ *          This is a utf8 string!
  */
-int ldelgrapheme(long n, int kflag) {
-    while (n-- > 0) {
-        struct grapheme gc;
-        if (!ldelete(lgetgrapheme(&gc, TRUE), kflag)) return FALSE;
+int lover(char *ostr) {
+    int status = TRUE;
+
+    if (ostr != NULL) {
+        int maxlen = strlen(ostr);
+        int offs = 0;
+        while (*ostr && status == TRUE) {
+            int bc = next_utf8_offset(ostr, offs, maxlen, TRUE);
+
+/* For an overwrite we delete the next character and insert the new one.
+ * If we are at end-of-line we don't delete (so the line is extended)
+ * and if we're at a tab-stop we may not need to do the delete.
+ */
+            if (curwp->w.doto < curwp->w.dotp->l_used &&
+                 (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
+                 ((curwp->w.doto) & tabmask) == tabmask)) {
+                status = ldelgrapheme(1, FALSE);
+                if (status != TRUE) continue;
+            }
+/* Now the insertion */
+            if ((bc == 1) && (*(ostr+offs) == '\n'))
+                 status = lnewline();
+            else status = lins_nc(ostr+offs, bc);
+/* Is it still working? */
+            if (status != TRUE) {   /* Insertion error? */
+                mlwrite_one("Out of memory while overwriting");
+                break;
+            }
+            ostr += bc;
+        }
     }
+    return status;
+}
+
+/* Insert a character to the kill buffer, allocating new chunks as needed.
+ * Return TRUE if all is well, and FALSE on errors.
+ *
+ * int c;                       character to insert in the kill buffer
+ */
+int kinsert(int c) {
+    struct kill *nchunk;    /* ptr to newly Xmalloced chunk */
+
+/* Check to see if we need a new chunk */
+    if (kused[0] >= KBLOCK) {
+        nchunk = (struct kill *)Xmalloc(sizeof(struct kill));
+        if (kbufh[0] == NULL)  /* set head ptr if first time */
+            kbufh[0] = nchunk;
+        if (kbufp != NULL)  /* point the current to this new one */
+            kbufp->d_next = nchunk;
+        kbufp = nchunk;
+        kbufp->d_next = NULL;
+        kused[0] = 0;
+    }
+
+/* And now insert the character */
+    kbufp->d_chunk[kused[0]++] = c;
     return TRUE;
 }
 
@@ -683,31 +711,6 @@ static void rotate_kill_ring(int n) {
     }
     kbufp = kbufh[0];
     return;
-}
-
-/* Insert a character to the kill buffer, allocating new chunks as needed.
- * Return TRUE if all is well, and FALSE on errors.
- *
- * int c;                       character to insert in the kill buffer
- */
-int kinsert(int c) {
-    struct kill *nchunk;    /* ptr to newly Xmalloced chunk */
-
-/* Check to see if we need a new chunk */
-    if (kused[0] >= KBLOCK) {
-        nchunk = (struct kill *)Xmalloc(sizeof(struct kill));
-        if (kbufh[0] == NULL)  /* set head ptr if first time */
-            kbufh[0] = nchunk;
-        if (kbufp != NULL)  /* point the current to this new one */
-            kbufp->d_next = nchunk;
-        kbufp = nchunk;
-        kbufp->d_next = NULL;
-        kused[0] = 0;
-    }
-
-/* And now insert the character */
-    kbufp->d_chunk[kused[0]++] = c;
-    return TRUE;
 }
 
 /* Yank text back from the kill buffer. This is really easy. All of the work

@@ -23,30 +23,10 @@ struct grapheme {
     unicode_t *ex;          /* A possible list of further cdm */
 };
 
-int next_utf8_offset(char *, int, int, int);
-int prev_utf8_offset(char *, int, int);
-
-int build_next_grapheme(char *, int, int, struct grapheme *, int);
-int build_prev_grapheme(char *, int, int, struct grapheme *, int);
-
 /* Flags for same_grapheme */
 #define USE_WPBMODE 0x00000001
-int same_grapheme(struct grapheme *, struct grapheme *, int);
 
-#define COM_DIA 1
-#define ZW_JOIN 2
-#define SPMOD_L 3
-#define DIR_MRK 4
-int combining_type(unicode_t);
-int char_replace(int, int);
-unicode_t display_for(unicode_t);
-
-unsigned int uclen_utf8(char *);
-unsigned int glyphcount_utf8(char *);
-unsigned int glyphcount_utf8_array(char *, int);
-int nocasecmp_utf8(char *, int, int, char *, int, int);
-int unicode_back_utf8(int, char *, int);
-int utf8char_width(unicode_t c);
+/* Flags and structures for utf8_recase */
 
 #define UTF8_CKEEP 0    /* So we can init a var to 0 and do nothing */
 #define UTF8_UPPER 1
@@ -62,7 +42,32 @@ struct mstr {
     int grphc;          /* grapheme count */
 };
 
+/* Externally visible calls */
+
+#ifndef UTF8_C
+
+int next_utf8_offset(char *, int, int, int);
+int prev_utf8_offset(char *, int, int);
+
+int build_next_grapheme(char *, int, int, struct grapheme *, int);
+int build_prev_grapheme(char *, int, int, struct grapheme *, int);
+
+int same_grapheme(struct grapheme *, struct grapheme *, int);
+
+int combining_type(unicode_t);
+int char_replace(int, int);
+unicode_t display_for(unicode_t);
+
+unsigned int uclen_utf8(char *);
+unsigned int glyphcount_utf8(char *);
+unsigned int glyphcount_utf8_array(char *, int);
+int nocasecmp_utf8(char *, int, int, char *, int, int);
+int unicode_back_utf8(int, char *, int);
+int utf8char_width(unicode_t c);
+
 void utf8_recase(int , char *, int, struct mstr*);
 char *tolower_utf8(char *, int, int *, int *);
+
+#endif
 
 #endif

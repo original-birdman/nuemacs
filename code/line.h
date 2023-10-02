@@ -31,6 +31,10 @@ struct line {
 #define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))
 #define llength(lp)     ((lp)->l_used)
 
+/* Externally visible calls */
+
+#ifndef LINE_C
+
 extern struct line *lalloc(int);            /* Allocate a line. */
 extern void ltextgrow(struct line *, int);  /* Extend line buffer */
 extern void lfree(struct line *lp);
@@ -53,6 +57,8 @@ extern int kinsert(int c);
 extern int yank(int f, int n);
 extern int yank_replace(int, int);
 extern int yankmb(int f, int n);
+
+#endif
 
 /* A macro to determine the effect on the "display column" of adding a
  * given character.
