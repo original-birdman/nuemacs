@@ -213,6 +213,7 @@ static int ernd(void) {
  * char *pattern;       string to look for
  */
 static int strindex(char *source, char *pattern) {
+    if (pattern[0] == '\0') return 0;
     char *locp = strstr(source, pattern);
     int res;
     if (!locp) res = 0;  /* Not found */
@@ -228,6 +229,8 @@ static int strindex(char *source, char *pattern) {
  * char *pattern;       string to look for
  */
 static int rstrindex(char *source, char *pattern) {
+    if (pattern[0] == '\0') return 0;
+
 /* We keep trying from one past where the last match matched
  * until we fail.
  */
