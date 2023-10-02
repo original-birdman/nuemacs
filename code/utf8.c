@@ -124,19 +124,20 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8) {
  *    Class too.
  */
 int
- next_utf8_offset(char *buf, int offset, int max_offset, int grapheme_start) {
+ next_utf8_offset(char *buf, int offs, int max_offset, int grapheme_start) {
 
+    if (offs >= max_offset) return -1;
     unicode_t c;
 
 /* Just use utf8_to_unicode */
 
-    int offs = offset;
     offs += utf8_to_unicode(buf, offs, max_offset, &c);
     if (grapheme_start) {
         while(1) {      /* Look for any attached Combining modifiers */
             int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
             if (!combining_type(c)) break;
             offs += next_incr;
+            if (offs >= max_offset) return -1;
         }
     }
     return offs;
