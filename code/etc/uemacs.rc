@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       Version - GGR4.171 (requires GGR4.171+)
-;                       Last Update: 22 Sep 2023
+;                       Last Update: 02 Oct 2023
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -43,7 +43,7 @@ store-procedure file-hooks
         add-mode "cmode"
         delete-mode "wrap"
     !else
-        !if &les 0 &sin "ftn f77 for cpl spl rc cmd fex com"
+        !if &les 0 &sin "ftn f77 for cpl spl rc cmd fex com" .rctmp
             delete-mode "wrap"
         !else
             !if &seq .rctmp "asave"
