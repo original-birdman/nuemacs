@@ -174,9 +174,8 @@ static int
     return TRUE;
 }
 
-static int is_space(struct grapheme *gp) {
-    return ((gp->uc == ' ') && (gp->cdm == 0));
-}
+/* #define to check whether we have a space */
+#define is_space(gp) (((gp)->uc == ' ') && ((gp)->cdm == 0))
 
 /* Output a grapheme - which is in one column.
  * Handle remapping on the main character.
@@ -332,11 +331,9 @@ void vttidy(void) {
 /* Set the virtual cursor to the specified row and column on the virtual
  * screen. There is no checking for nonsense values; this might be a good
  * idea during the early stages.
+ * Now just a simple #define.
  */
-static void vtmove(int row, int col) {
-    vtrow = row;
-    vtcol = col;
-}
+#define vtmove(row, col) {vtrow = row; vtcol = col;}
 
 /* Write a character to the virtual screen. The virtual row and
  * column are updated. If we are not yet on left edge, don't print
@@ -1506,14 +1503,11 @@ typedef union {
     va_list ap;
 } npva;
 
-/* Routine for use by mlwrite*+mlput* routines so that nothing
+/* #define for use by mlwrite*+mlput* routines so that nothing
  * is printed beyond the last column, to prevent mini-buffer wrapping
  * messing up the display.
  */
-static int TTput_1uc_lim(unicode_t uc) {
-    if (ttcol < term.t_ncol) return TTput_1uc(uc);
-    return FALSE;
-}
+#define TTput_1uc_lim(uc) ((ttcol < term.t_ncol)? TTput_1uc(uc): FALSE)
 
 /* Write out a long integer, in the specified radix (8, 10, 16).
  * Update the physical cursor position.
@@ -1536,9 +1530,7 @@ static void mlputli(long l, int r) {
 /* Do the same except with an integer.
  * So we just pass it on to its longer brother.
  */
-static void mlputi(int i, int r) {
-    mlputli((long) i, r);
-}
+#define mlputi(i, r) mlputli((long) i, r)
 
 /* write out a scaled integer with two decimal places
  *
