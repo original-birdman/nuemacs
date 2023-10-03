@@ -245,6 +245,7 @@ extern int addto_kbdmacro(char *, int, int);
 extern int macro_helper(int, int);
 extern void dumpdir_tidy(void);
 extern com_arg *multiplier_check(int);
+extern int getfence(int, int);
 extern int not_interactive(int, int);
 extern int execute(int c, int, int);
 extern int quickexit(int, int);
@@ -303,7 +304,6 @@ extern int entab(int, int);
 extern int trim(int, int);
 extern int openline(int, int);
 extern int insert_newline(int, int);
-extern int insbrace(int, int);
 extern int inspound(void);
 extern int deblank(int, int);
 extern int indent(int, int);
@@ -316,7 +316,6 @@ extern int setgmode(int, int);
 extern int delgmode(int, int);
 extern int clrmes(int, int);
 extern int writemsg(int, int);
-extern int getfence(int, int);
 extern int itokens(int, int);
 extern int istring(int, int);
 extern int ovstring(int, int);
@@ -421,13 +420,11 @@ extern int makelist_region(int, int);
 extern int numberlist_region(int, int);
 #endif
 
-#if defined(WORD_C) || defined (EXEC_C)
 #define inword_classes "LN"  
 #define at_wspace_classes "ZC"
 #define inword(wp) class_check(wp, inword_classes, FALSE)
 #define at_abreak(wp) class_check(wp, at_wspace_classes, TRUE)
 #define at_wspace(wp) class_check(wp, at_wspace_classes, FALSE)
-#endif
 
 /* wrapper.c */
 #ifndef WRAPPER_C

@@ -365,34 +365,9 @@ static int end_kbdmacro(void) {
     return kbdmac_buffer_toggle(OutOf_KBDM, "end");
 }
 
-/* ======================================================================
- * Used to get the action for certain active characters into macros,
- * rather than just getting the raw character inserted.
- */
-int macro_helper(int f, int n) {
-    UNUSED(f);
-    char tag[2];                        /* Enough  */
-/* This is a macro helper - not need to call mlreply, just
- * extract the next token. We expect only 1 char (+ trailing NUL).
- * Also prevents any processing of the arg.
- */
-    execstr = token(execstr, tag, 2);
-    switch(tag[0]) {
-    case '}':
-    case ']':
-    case ')':
-        return insbrace(n, tag[0]);
-    case '#':   return inspound();
-    case '0':   return linsert_byte(n, 0);  /* Insert a NUL */
-    }
-    return FALSE;
-}
-
-/* ====================================================================== */
-static char* called_as;
-
-
 /* ===================== START OF BUFFER SAVING CODE ==================== */
+
+static char* called_as;
 
 #define Dumpdir_Name "uemacs-dumps"
 #define Dump_Index "INDEX"
@@ -946,18 +921,187 @@ static int set_rcfile(char *fname) {
     return TRUE;
 }
 
+/* These three (fmatch, insbrace and getfence) all share the same
+ * simple search algorithm for a matching bracket.
+ * This has very basic quoted string/char handling.
+ */
+static int brkt_search(char this, char other, int (*mover)(int)) {
+
+/* Look for bracket using mover() to move. */
+
+    int count = 1;
+    int in_quote = 0;   /* May not be true, though best guess */
+    while (1) {
+        if (!(curwp->w.doto == llength(curwp->w.dotp))) {   /* Not e-o-l */
+            int c = lgetc(curwp->w.dotp, curwp->w.doto);
+            if ((c == '"') || (c == '\'')) in_quote = 1 - in_quote;
+            else if (!in_quote) {
+                if (c == this) ++count;
+                else if (c == other) --count;
+            }
+        }
+        if (count == 0) return 0;       /* Found the corresponding one */
+        if (mover(1) != 1) return -1;   /* Kepe searching? */
+    }
+}
+
+/* Insert a brace into the text here...we are in CMODE
+ * This only handles setting the indentation. Any visual indication
+ * of the matching opening bracket is done by fmatch.
+ *
+ * If we are asked to insert something other than a right-bracket of
+ * semo sort we do nothing at all.
+ *
+ * int n        repeat count
+ * int brace    brace to insert (always '}' for now)
+ *
+ * NOTE: that if the repeat count is >1, it still only looks for one
+ * matching reverse-brace.
+ */
+static int insbrace(int n, int brkt) {
+    int ch;                 /* Last character before input */
+    int ob;                 /* The reverse-facing brkt */
+    int i, count;
+    int target;             /* Column brkt should go after */
+    struct line *oldlp;
+    int oldoff;
+
+/* If we aren't at the beginning of the line scan to see if all
+ * chars before this are white space
+ * We can just check the bytes here as it will produce the same result
+ * more easily/quickly than handling it as Unicode.
+ */
+    if (curwp->w.doto != 0) {
+        for (i = curwp->w.doto - 1; i >= 0; --i) {
+            ch = lgetc(curwp->w.dotp, i);
+            if (ch != ' ' && ch != '\t') return linsert_uc(n, brkt);
+        }
+    }
+
+/* Determine the other-facing bracket */
+
+    switch (brkt) {
+    case '}':   ob = '{';   break;
+    case ']':   ob = '[';   break;
+    case ')':   ob = '(';   break;
+    default: return FALSE;
+    }
+
+/* Remember where we started */
+
+    oldlp = curwp->w.dotp;
+    oldoff = curwp->w.doto;
+
+/* Look backwards for a matching opening bracket */
+
+    count = brkt_search(brkt, ob, back_grapheme);
+
+    if (count == 0) {       /* We have a match, so indent if posible */
+/* Go to the start of the line then advance to the first non-whitespace  */
+        curwp->w.doto = 0;
+        while (at_wspace(NULL)) forw_grapheme(1);
+        target = getccol();    /* This is the indentation we want */
+    }
+    else target = -1;       /* No target */
+
+/* Back to where we started */
+    curwp->w.dotp = oldlp;
+    curwp->w.doto = oldoff;
+
+/* If we have a target column then get to it.
+ * We know from the check when we arrived that anything preceding us
+ * on the line is whitespace.
+ * So,
+ *  o if we are too far in, delete the excess graphemes.
+ *  o if we are insufficiently in, insert additional spaces.
+ */
+    if (target >= 0) {
+        int need = target - getccol();
+        if (need > 0)       linsert_byte(need, ' ');
+        else if (need < 0)  backdel(FALSE, -need);
+    }
+
+/* Now insert the required brkt(s) */
+    return linsert_uc(n, brkt);
+}
+
+/* The cursor is moved to a matching fence (and stays there)
+ * Based on the character currently at dot.
+ *
+ * int f, n;            not used
+ */
+int getfence(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    struct line *oldlp;     /* original line pointer */
+    int oldoff;             /* and offset */
+    int count;              /* current fence level count */
+    char ch;                /* fence type to match against */
+    char ofence;            /* open fence */
+
+/* Save the original cursor position - for failure to find */
+    oldlp = curwp->w.dotp;
+    oldoff = curwp->w.doto;
+
+/* Get the current character.
+ * We only have ASCII braces, so no need to handle Unicode here.
+ * A combining-char on a brace is meaningless.
+ */
+    if (oldoff == llength(oldlp)) ch = '\n';
+    else                          ch = lgetc(oldlp, oldoff);
+
+/* Setup proper matching fence */
+    int (*move)(int);
+    switch (ch) {
+    case '(':   ofence = ')';   move = forw_grapheme; break;
+    case '{':   ofence = '}';   move = forw_grapheme; break;
+    case '[':   ofence = ']';   move = forw_grapheme; break;
+    case ')':   ofence = '(';   move = back_grapheme; break;
+    case '}':   ofence = '{';   move = back_grapheme; break;
+    case ']':   ofence = '[';   move = back_grapheme; break;
+    default:
+        TTbeep();
+        return FALSE;
+    }
+
+/* Set up for scan */
+    move(1);            /* So we don't match ourself */
+    count = brkt_search(ch, ofence, move);
+
+/* If count is zero, we have a match, move the sucker */
+    if (count == 0) {
+        curwp->w_flag |= WFMOVE;
+        return TRUE;
+    }
+
+/* Restore the current position on no match */
+    curwp->w.dotp = oldlp;
+    curwp->w.doto = oldoff;
+    TTbeep();
+    return FALSE;
+}
+
+/* fmatch needs a private "mover" routine as it only check what is visible
+ * on screen, so we need to add that test each time it moves.
+ */
+struct line *toplp;     /* Top line in current window - SET before using */
+static int backgr_on_screen(int n) {
+    if (back_grapheme(n) != n) return -1;   /* Can't move */
+    if (curwp->w.dotp == toplp) return -1;  /* Moved onto off-screen line */
+    return n;
+}
+
 /* Close fences are matched against their partners, and if
- * on screen the cursor briefly lights there
+ * on screen the cursor briefly lights there.
+ * This is called AFTER the character has been inserted.
  *
  * char ch;                     fence type to match against
  */
+struct timespec short_time = { 0, 200000000 };  /* A brief time */
 static int fmatch(int ch) {
     struct line *oldlp;     /* original line pointer */
     int oldoff;             /* and offset */
-    struct line *toplp;     /* top line in current window */
     int count;              /* current fence level count */
     char opench;            /* open fence */
-    char c;                 /* current character in scan */
 
 /* First get the display update out there */
     update(FALSE);
@@ -966,39 +1110,51 @@ static int fmatch(int ch) {
     oldlp = curwp->w.dotp;
     oldoff = curwp->w.doto;
 
-/* Setup proper open fence for passed close fence */
+/* Setup proper open fence for passed close fence.
+ */
     if (ch == ')')      opench = '(';
     else if (ch == '}') opench = '{';
     else                opench = '[';
 
-/* Find the top line and set up for scan */
-    toplp = curwp->w_linep->l_bp;
-    count = 1;
-    back_grapheme(2);
-
-/* Scan back until we find it, or reach past the top of the window */
-    while (count > 0 && curwp->w.dotp != toplp) {
-        if (curwp->w.doto == llength(curwp->w.dotp)) c = '\n';
-        else          c = lgetc(curwp->w.dotp, curwp->w.doto);
-        if (c == ch) ++count;
-        if (c == opench) --count;
-        back_grapheme(1);
-        if (curwp->w.dotp == curwp->w_bufp->b_linep->l_fp && curwp->w.doto == 0)
-            break;
-    }
+/* Find the line before the top line to set up the scan limit */
+    toplp = curwp->w_linep->l_bp;   /* REQUIRED !! */
+    backgr_on_screen(2);        /* Skip ourself */
+    count = brkt_search(ch, opench, backgr_on_screen);
 
 /* If count is zero, we have a match, display the sucker then pause briefly.
  */
     if (count == 0) {
-        forw_grapheme(1);
         update(FALSE);
-        sleep(1);
+        nanosleep(&short_time, NULL);
     }
 
-/* Restore the current position */
+/* Restore the original position */
     curwp->w.dotp = oldlp;
     curwp->w.doto = oldoff;
     return TRUE;
+}
+
+/* ======================================================================
+ * Used to get the action for certain active characters into macros,
+ * rather than just getting the raw character inserted.
+ */
+int macro_helper(int f, int n) {
+    UNUSED(f);
+    char tag[2];                        /* Enough  */
+/* This is a macro helper - not need to call mlreply, just
+ * extract the next token. We expect only 1 char (+ trailing NUL).
+ * Also prevents any processing of the arg.
+ */
+    execstr = token(execstr, tag, 2);
+    switch(tag[0]) {
+    case '}':
+    case ']':
+    case ')':
+        return insbrace(n, tag[0]);
+    case '#':   return inspound();
+    case '0':   return linsert_byte(n, 0);  /* Insert a NUL */
+    }
+    return FALSE;
 }
 
 /* ======================================================================
