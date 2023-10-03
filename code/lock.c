@@ -22,10 +22,9 @@ static int numlocks;                    /* # of current locks active */
 /* report a lock error
  *
  * char *errstr;        lock error string to print out
+ * Now a #define
  */
-static void lckerror(char *errstr) {
-    mlwrite("%s - %s", errstr, strerror(errno));
-}
+#define lckerror(errstr) (mlwrite("%s - %s", errstr, strerror(errno)))
 
 /* unlock:
  *      Unlock a file
