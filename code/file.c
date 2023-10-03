@@ -408,7 +408,7 @@ void makename(char *bname, char *fname, int ensure_unique) {
 
 /* First we have to step over any directory part in the name */
 
-    unsigned int maxlen = strlen(fname);
+    int maxlen = strlen(fname);
 
 /* We wish to copy as much of the fname into bname as we can such that
  * we have 4 free bytes (besides the terminating NUL) for unqname
@@ -423,11 +423,11 @@ void makename(char *bname, char *fname, int ensure_unique) {
     }
     else      cp = fname;
     ocp = cp;
-    unsigned int bn_len = 0;
-    unsigned int newlen = 0;
+    int bn_len = 0;
+    int newlen = 0;
     while(newlen < maxlen) {
         newlen = next_utf8_offset(cp, bn_len, maxlen, 1);
-        if (newlen == bn_len) break;        /* End of string */
+        if (newlen < 0) break;              /* End of string */
         if (newlen > (NBUFN - 5)) break;    /* Out of space */
         bn_len = newlen;
     }
@@ -454,7 +454,7 @@ void makename(char *bname, char *fname, int ensure_unique) {
  * the code above has already left 4 bytes free for us so append !nnn
  * with nnn starting at 000 and increasing until unique.
  * If we still fail, well...
- * 999 rather than 1000 as otherwise gcc 8.4.0 on Arm64 complians
+ * 999 rather than 1000 as otherwise gcc 8.4.0 on Arm64 complains
  * about possible excessive field-width.
  */
     char *tagp = bname + strlen(bname);

@@ -701,7 +701,7 @@ static char *gtfun(char *fname) {
             while (1) {
                 while (gph_count--) {
                     int next_offs = next_utf8_offset(rp, offs, inbytes, TRUE);
-                    if (next_offs == offs) break;   /* No bytes left */
+                    if (next_offs < 0) break;   /* No bytes left */
                     offs = next_offs;
                 }
                 if (!reloop) break;
@@ -718,9 +718,8 @@ static char *gtfun(char *fname) {
         else {                  /* So is UFRIGHT */
             offs = inbytes;     /* Start at other end */
             while (gph_count--) {
-                int next_offs = prev_utf8_offset(arg1, offs, TRUE);
-                offs = next_offs;
-                if (next_offs == 0) break;  /* No bytes left */
+                offs = prev_utf8_offset(arg1, offs, TRUE);
+                if (offs == 0) break;   /* No bytes left */
             }
             rp = arg1+offs;
             offs = inbytes - offs;
