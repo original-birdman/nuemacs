@@ -44,6 +44,10 @@ struct mstr {
 
 /* Externally visible calls */
 
+#define uclen_utf8(str) utf8_to_uclen(str, FALSE, -1)
+#define glyphcount_utf8(str) utf8_to_uclen(str, TRUE, -1)
+#define glyphcount_utf8_array(str, max) utf8_to_uclen(str, TRUE, max)
+
 #ifndef UTF8_C
 
 int next_utf8_offset(char *, int, int, int);
@@ -58,9 +62,8 @@ int combining_type(unicode_t);
 int char_replace(int, int);
 unicode_t display_for(unicode_t);
 
-unsigned int uclen_utf8(char *);
-unsigned int glyphcount_utf8(char *);
-unsigned int glyphcount_utf8_array(char *, int);
+int utf8_to_uclen(char *, int, int);
+
 int nocasecmp_utf8(char *, int, int, char *, int, int);
 int unicode_back_utf8(int, char *, int);
 int utf8char_width(unicode_t c);
