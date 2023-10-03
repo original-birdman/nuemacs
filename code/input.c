@@ -265,11 +265,9 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
     else
         return NULL;
 }
-
-static char *getfbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
-    expandbp = bheadp;
-    return getnbuffer(bpic, bpiclen, mtype);
-}
+/* getfbuffer is now a #define */
+#define getfbuffer(bpic, len, mtype) \
+    (expandbp = bheadp, getnbuffer(bpic, len, mtype))
 
 /* getnname() and getfname()
  * Handle internal command name completions.
@@ -290,11 +288,8 @@ static char *getnname(char *name, int namelen) {
     }
     return NULL;
 }
-static char *getfname(char *name, int namelen) {
-    n_nidx = -1;                    /* First call has to find first match */
-    char *res = getnname(name, namelen);
-    return res;
-}
+/* First call has to find first match */
+#define getfname(name, len) (n_nidx = -1, getnname(name, len))
 
 /* getnvar() and getfvar()
  * Handle internal env/user variable completions.
@@ -657,7 +652,6 @@ int mlyesno(char *prompt) {
  * So macro-file args need to be quoted...
  * We pass on any expansion-type requested (for, eventually, getstring()).
  */
-
 int mlreply(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     return nextarg(prompt, buf, nbuf, ctype);
 }
