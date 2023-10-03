@@ -181,10 +181,10 @@ int stol(char *val) {
 /* Numeric logical to string logical
  *
  * int val;             value to translate
+ *
+ * Replaced with a simple #define macro
  */
-static char *ltos(int val) {
-    return (val)? truem: falsem;
-}
+#define ltos(v) ((v)? truem: falsem)
 
 /* Make a string lower case
  * Internal to this routine - only needs to handle ASCII as it is only
@@ -197,13 +197,6 @@ static char *mklower(char *str) {
         if ('A' <= *sp && *sp <= 'Z') *sp += 'a' - 'A';
     }
     return str;
-}
-
-/* Returns a random integer
- */
-static int ernd(void) {
-    seed = abs(seed * 1721 + 10007);
-    return seed;
 }
 
 /* Find pattern within source.
@@ -245,7 +238,7 @@ static int rstrindex(char *source, char *pattern) {
     return res;
 }
 
-/* FreeBSD doesn't have strndupa(), so make our own....
+/* FreeBSD (cclang) doesn't have strndupa(), so make our own....
  * ...or rather copy the GCC definition from string.h.
  * If anything has strndupa as something other than a #define
  * this logic will need to be changed.
@@ -532,10 +525,9 @@ finalize:
 /* ue_atoi
  * This allows the integer to be expressed in hex ("0x"), octal (0..)
  * or decimal.
+ * Replaced with a simple #define macro.
  */
-static int ue_atoi(char *ustr) {
-    return (int)strtol(ustr, NULL, 0);
-}
+#define ue_atoi(ustr) ((int)strtol(ustr, NULL, 0))
 
 /* ue_itoa:
  *      integer to ascii string.......... This is too
@@ -788,7 +780,10 @@ static char *gtfun(char *fname) {
         nb = unicode_to_utf8(tgetc(), result);
         result[nb] = 0;
         return result;
-    case UFRND:         return ue_itoa((ernd() % abs(atoi(arg1))) + 1);
+    case UFRND: {
+            seed = abs(seed * 1721 + 10007);
+            return ue_itoa(seed % abs(atoi(arg1)) + 1);
+    }
     case UFENV:
         tsp = getenv(arg1);
         return (tsp == NULL)? "" : tsp;
