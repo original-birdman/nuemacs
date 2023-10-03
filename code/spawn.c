@@ -24,10 +24,14 @@
  * Call this at the end of any function that calls system().
  */
 static int orig_width, orig_height;
+#if 0
 static void get_orig_size(void) {
     getscreensize(&orig_width, &orig_height);
     return;
 }
+#endif
+#define get_orig_size() (getscreensize(&orig_width, &orig_height))
+
 static void check_for_resize(void) {
     int lwidth, lheight;
     getscreensize(&lwidth, &lheight);
@@ -38,12 +42,6 @@ static void check_for_resize(void) {
         term.t_ncol = orig_width;
     }
     return;
-}
-
-void rtfrmshell(void) {
-    TTopen();
-    curwp->w_flag = WFHARD;
-    sgarbf = TRUE;
 }
 
 /* Create a subjob with a copy of the command interpreter in it. When the
@@ -99,7 +97,12 @@ int bktoshell(int f, int n) {   /* suspend MicroEMACS and wait to wake up */
     kill(pid,SIGTSTP);
 ******************************/
     kill(0, SIGTSTP);
-    rtfrmshell();               /* fg seems to get us back to here... */
+
+/* fg seems to get us back to here... */
+    TTopen();
+    curwp->w_flag = WFHARD;
+    sgarbf = TRUE;
+
     return TRUE;
 }
 
