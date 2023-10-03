@@ -539,12 +539,13 @@ Others (omitting system-use only ones)...
     $kill ................. kill buffer (read only)
     $cmode ................ mode of current buffer
     $gmode ................ global modes
-    $tpause ............... length to pause for paren matching
     $pending .............. type ahead pending flag
     $lwidth ............... width of current line
     $line ................. text of current line
     $rval ................. child process return value
     $tab .................. tab 4 or 8
+    $overlap" ............. Overlap on next/prev page
+    $jump ................. Number of lines to jump on scroll
     $scroll ............... scroll enabled
     $inmb ................. In mini-buffer (read only)
     $fcol ................. first displayed column in current window (1-based)
@@ -556,6 +557,7 @@ Others (omitting system-use only ones)...
     $regionlist_number .... numberlist_region() indent
     $autodos .............. Check for DOS on read-in?
     $showdir_tokskip ...... Tokens to skip in showdir
+    $uproc_opts ............Flags when processing &arg
     $force_status ......... Actual status when forced to OK ("PASSED"/"FAILED")
     $equiv_type ........... Function to use for Equiv mode
                              (NFC, NFD, NFKD or NFKC [default])
@@ -568,8 +570,13 @@ Others (omitting system-use only ones)...
     $ggr_opts ............. A set of bit flags which control various
                             optional style differences.
     $sys_type ............. System type (uname -s)
-    $force_mode_on ........ Buffer modes being forced on
-    $force_mode_off ....... Buffer modes being forced off
+    $force_mode_on ........ Buffer modes being forced on (read-only)
+    $force_mode_off ....... Buffer modes being forced off (read-only)
+    $pttmode .............. Current ptt mode, or "" (read-only)
+    $vismac ............... Update display during keyboard macros?
+    $filock ............... Do we want file locking?
+    $crypt_mode ........... Crypt mode to use (default NONE)
+    $brkt_ms .............. Pause time (ms) for bracket matching
 
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS
@@ -591,7 +598,7 @@ Real arithmetic (uses doubles internally)
 
 NOTE: There is no &i2r as all integer (strings) are valid real number
       (strings).
-      These functions may return ZDIV, NAN, INF, +INF or TOOBIG (&r2i).
+      These functions may return ZDIV, NAN, INF, -INF or TOOBIG (&r2i).
 
 Arithmetic comparisons
     &rlt, &rgt (no equals, as you shouldn't compare reals for equality)
@@ -696,7 +703,7 @@ the other and reverse the sort order if you are already in it.
 -------------------------------------------------------------------------------
 =>                MACRO functions and environment variables
 
-eos-chars <string of characters>
+$eos-chars <string of characters>
     This defines which characters to treat as an end of sentence so
     that they have an extra space appended when justifying paragraphs.
     The internal default is none, but the default uemacs.rc sets it
@@ -713,6 +720,7 @@ char-replace
     char-replace "U+xxxx | U+xxxx-U+xxxx"
         sets the given character (range) to be replaced
 
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure <proc-name> [flags]
     cmd1
     cmd2
@@ -768,6 +776,7 @@ $uproc_lptotal
 buffer-to-key <proc-name> <key-spec>
     Bind the user-defined procedure <proc-name> to the given key.
 
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-pttable <ptt-name>
     from1  to1
     from2  to2
@@ -816,6 +825,10 @@ toggle-ptmode
 set-pttable <ptt-name>
     Make <ptt-name> the currently-active pttable.
 
+$pttmode
+    Contains the current ptt mode (or "" if the mode is not on)
+
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 $regionlist_text and $regionlist_number
     These are uemacs environment variables that are used by the
     makelist-region and numberlist-region functions respectively to
@@ -825,9 +838,6 @@ $regionlist_text and $regionlist_number
     printf format string that may contain AT MOST one numeric field
     descriptor.
     The default settings are " o " and " %2d. ".
-
-$autodos
-    Whether to check for DOS line ending when reading in a file.
 
 $showdir_tokskip
     The number of tokens to skip in ls output to get to the file-name
@@ -850,9 +860,16 @@ $showdir_opts
     The default setting is "", which produces:
     Sorted by name, no hidden files, dirs before files
 
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+$autodos
+    Whether to check for DOS line ending when reading in a file.
+
 $ggr_opts
     This controls some "operational" differences in the way some
     command can work. See the GGR style section.
+
+$vismac
+    Whether to update display during keyboard macros. Off by default,
 
 -------------------------------------------------------------------------------
 => Interactive prompts vs. macro-file commands
@@ -1048,7 +1065,7 @@ be a global key, for use by any buffer that has CRYPT mode enabled.
 
 The values that can be set for $crypt_mode are the addition of:
 
-Use global encryptin key    0x4000
+Use global encryption key   0x4000
 Only encrypt print chars:   0x2000          # Not recommended
 Use Mod95:                  0x1000
 No key catenating:               1

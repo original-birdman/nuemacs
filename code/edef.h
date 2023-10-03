@@ -243,6 +243,8 @@ extern meta_spec_flags_t meta_spec_active;
 /* GGR option flag bits */
 extern int ggr_opts;
 
+extern struct timespec pause_time;  /* Bracket match pause time */
+
 /* A system-wide mark for temporarily saving the current locaiton. */
 typedef struct {
     struct line *p;

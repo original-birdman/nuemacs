@@ -38,7 +38,6 @@ struct evlist evl[] = {
  { "kill",      EVKILL },       /* kill buffer (read only) */
  { "cmode",     EVCMODE },      /* mode of current buffer */
  { "gmode",     EVGMODE },      /* global modes */
- { "tpause",    EVTPAUSE },     /* length to pause for paren matching */
  { "pending",   EVPENDING },    /* type ahead pending flag */
  { "lwidth",    EVLWIDTH },     /* width of current line */
  { "line",      EVLINE },       /* text of current line */
@@ -75,6 +74,7 @@ struct evlist evl[] = {
  { "vismac", EVVISMAC },        /* update display during keyboard macros? */
  { "filock", EVFILOCK },        /* Do we want file locking? */
  { "crypt_mode", EVCRYPT },     /* Crypt mode to use (default NONE) */
+ { "brkt_ms", EVBRKTMS },       /* Pause time (ms) for bracket matching */
 };
 
 /* The tags for user functions - used in struct evlist */

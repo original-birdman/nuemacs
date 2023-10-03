@@ -24,7 +24,6 @@
 
 #define MARGIN  8
 #define SCRSIZ  64
-#define NPAUSE  10    /* # times thru update to pause. */
 #define BEL     0x07
 #define ESC     0x1B
 
@@ -90,8 +89,6 @@ struct terminal term = {
     0,
     MARGIN,
     SCRSIZ,
-/* */
-    NPAUSE,
 };
 
 static void tcapopen(void) {

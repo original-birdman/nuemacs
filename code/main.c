@@ -1096,7 +1096,6 @@ static int backgr_on_screen(int n) {
  *
  * char ch;                     fence type to match against
  */
-struct timespec short_time = { 0, 200000000 };  /* A brief time */
 static int fmatch(int ch) {
     struct line *oldlp;     /* original line pointer */
     int oldoff;             /* and offset */
@@ -1125,7 +1124,7 @@ static int fmatch(int ch) {
  */
     if (count == 0) {
         update(FALSE);
-        nanosleep(&short_time, NULL);
+        nanosleep(&pause_time, NULL);
     }
 
 /* Restore the original position */

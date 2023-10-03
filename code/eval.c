@@ -958,7 +958,6 @@ static char *gtenv(char *vname) {
     case EVKILL:            return getkill();
     case EVCMODE:           return ue_itoa(curbp->b_mode);
     case EVGMODE:           return ue_itoa(gmode);
-    case EVTPAUSE:          return ue_itoa(term.t_pause);
     case EVPENDING:         return ltos(typahead());
     case EVLWIDTH:          return ue_itoa(llength(curwp->w.dotp));
     case EVLINE:            return getctext();
@@ -1013,6 +1012,13 @@ static char *gtenv(char *vname) {
     case EVVISMAC:          return ltos(vismac);
     case EVFILOCK:          return ltos(filock);
     case EVCRYPT:           return ue_itoa(crypt_mode);
+    case EVBRKTMS: {
+/* We deal in ms, so need to convert from the s + ns of timespec */
+
+        time_t wt = (pause_time.tv_sec * 1000000000) + pause_time.tv_nsec;
+        wt = wt/1000000;    /* ns -> ms */
+        return ue_itoa(wt);
+    }
     }
 
     exit(-12);              /* again, we should never get here */
@@ -1351,9 +1357,6 @@ static int svar(struct variable_description *var, char *value) {
         case EVGMODE:
             gmode = ue_atoi(value);
             break;
-        case EVTPAUSE:
-            term.t_pause = atoi(value);
-            break;
         case EVPENDING:
             break;
         case EVLWIDTH:
@@ -1522,6 +1525,17 @@ static int svar(struct variable_description *var, char *value) {
                 }
                 crypt_mode = new_mode;
             }
+            break;
+        }
+        case EVBRKTMS: {
+/* We deal in ms, so need to convert to the s + ns of timespec */
+            int bracket_ms = atoi(value);
+            if (bracket_ms >= 1000) {
+                pause_time.tv_sec = bracket_ms/1000;
+                bracket_ms -= pause_time.tv_sec*1000;
+            }
+            else pause_time.tv_sec = 0;
+            pause_time.tv_nsec = bracket_ms*1000000;
             break;
         }
         }

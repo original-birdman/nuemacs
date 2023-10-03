@@ -398,7 +398,6 @@ struct terminal {
     int t_ncol;                 /* current Number of columns.    */
     int t_margin;               /* min margin for extended lines */
     int t_scrsiz;               /* size of scroll region "       */
-    int t_pause;                /* # times thru update to pause  */
 };
 
 /* TEMPORARY macros for terminal I/O  (to be placed in a machine
@@ -522,21 +521,21 @@ struct rx_mask {
  * here.
  */
 enum ev_val {
-    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,  EVCURWIDTH,
-    EVCBUFNAME, EVCFNAME,   EVDEBUG,    EVSTATUS,   EVASAVE,
-    EVACOUNT,   EVLASTKEY,  EVCURCHAR,  EVDISCMD,   EVVERSION,
-    EVPROGNAME, EVSEED,     EVDISINP,   EVWLINE,    EVCWLINE,
-    EVTARGET,   EVSEARCH,   EVREPLACE,  EVMATCH,    EVKILL,
-    EVCMODE,    EVGMODE,    EVTPAUSE,   EVPENDING,  EVLWIDTH,
-    EVLINE,     EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,
-    EVSCROLL,   EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
+    EVFILLCOL,  EVPAGELEN,  EVCURCOL,   EVCURLINE,      EVCURWIDTH,
+    EVCBUFNAME, EVCFNAME,   EVDEBUG,    EVSTATUS,       EVASAVE,
+    EVACOUNT,   EVLASTKEY,  EVCURCHAR,  EVDISCMD,       EVVERSION,
+    EVPROGNAME, EVSEED,     EVDISINP,   EVWLINE,        EVCWLINE,
+    EVTARGET,   EVSEARCH,   EVREPLACE,  EVMATCH,        EVKILL,
+    EVCMODE,    EVGMODE,    EVPENDING,  EVLWIDTH,       EVLINE,
+    EVRVAL,     EVTAB,      EVOVERLAP,  EVSCROLLJUMP,   EVSCROLL,
+    EVINMB,     EVFCOL,     EVHJUMP,    EVHSCROLL,
 /* GGR */
     EVYANKMODE, EVAUTOCLEAN, EVREGLTEXT, EVREGLNUM, EVAUTODOS,
     EVSDTKSKIP, EVUPROCOPTS, EVFORCESTAT, EVEQUIVTYPE, EVSRCHCANHUNT,
     EVULPCOUNT, EVULPTOTAL, EVULPFORCED,
     EVSDOPTS,   EVGGROPTS,  EVSYSTYPE,
     EVFORCEMODEON,  EVFORCEMODEOFF,     EVPTTMODE,  EVVISMAC,
-    EVFILOCK,   EVCRYPT,
+    EVFILOCK,   EVCRYPT,    EVBRKTMS,
 };
 
 struct evlist {
