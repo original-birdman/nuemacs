@@ -425,11 +425,9 @@ void ptt_free(struct buffer *bp) {
 
 /* GGR
  * Sets the pttable to use if PHON mode is on, and flags to redisplay it.
+ * Now just a quick #define.
  */
-static inline void use_pttable(struct buffer *bp) {
-    ptt = bp;
-    curwp->w_flag |= WFMODE;
-}
+#define use_pttable(bp) {ptt = (bp); curwp->w_flag |= WFMODE;}
 
 /* Get the 2 grapheme display code for modeline display when this PTT
  * is active.
