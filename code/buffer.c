@@ -395,19 +395,8 @@ void addline_to_anyb(char *text, struct buffer *bp) {
         bp->b.dotp = lp;                /* move it to new line  */
     return;
 }
-
-/* Front-end to append to current buffer */
-void addline_to_curb(char *text) {
-    addline_to_anyb(text, curbp);
-    return;
-}
-
-/* Internal front-end to add to the //List buffer.
- */
-static void addline(char *text) {
-    addline_to_anyb(text, blistp);
-    return;
-}
+/* This is for internal use to add to the //List buffer. */
+#define addline(text) addline_to_anyb(text, blistp)
 
 /* This routine rebuilds the text in the special secret buffer
  * that holds the buffer list.
