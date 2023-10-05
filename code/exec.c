@@ -24,18 +24,54 @@ struct buffer *bstore = NULL;
 
 static int execlevel = 0;
 
-static char *prev_line_seen = NULL;
-#ifdef DO_FREE
-static char *pending_line_seen = NULL;
-/* We only need these for valgrind testing, so 10 should be more than
- * sufficient.
- * pending_line_seen doesn't seem to need it an array
+/* We only need one of these, as it is only set as we leave,
+ * and there is only one "previous Line".
  */
-#define PE_ENTS 10
-static char *pending_einit[PE_ENTS] = { [0 ... PE_ENTS-1] = NULL };
-static struct while_block *pending_whlist[PE_ENTS] =
-     { [0 ... PE_ENTS-1] = NULL };
-static int pe_level = -1;
+static char *prev_line_seen = NULL;
+
+/* For einit and whlist data stashed away around docmd() calls we need
+ * to allow for the fact the the command might execute a buffer and hence
+ * come back here.
+ * So we need to save these items in a linked list and allocate/free it
+ * as we go.
+ */
+struct _li {
+    struct _li *next;
+    void *item;
+};
+typedef struct _li linked_items;
+
+#ifdef DO_FREE
+/* We only need these for valgrind testing */
+
+/** pending_line_seen doesn't seem to need it an array*/
+static char *pending_line_seen = NULL;
+
+static linked_items *pending_einit_headp = NULL;
+static linked_items *pending_whlist_headp = NULL;
+
+/* The next two functions have a **arg1 so that they can update the
+ * headp themselves.
+ */
+
+/* add_to_head
+ * Put the item in at the head of a linked_items list
+ */
+static void add_to_head(linked_items **headp, void *item) {
+    linked_items *np = Xmalloc(sizeof(linked_items));   /* Get new one */
+    np->next = *headp;                                  /* Link orig first */
+    *headp = np;                                        /* Make new first */
+    np->item = item;                                    /* Add data */
+}
+/* pop_head
+ * Remove the head item from a linked_items list
+ * This does NOT free any item data!
+ */
+static void pop_head(linked_items **headp) {
+    linked_items *op = *headp;              /* Remember first */
+    *headp = op->next;                      /* Make second the new first */
+    Xfree(op);                              /* Free old first */
+}
 #endif
 
 /* token:
@@ -980,9 +1016,7 @@ int dobuf(struct buffer *bp) {
     int orig_view_bit = bp->b_mode & MDVIEW;
     bp->b_mode |= MDVIEW;
     bp->b_exec_level++;
-#if DO_FREE
-    pe_level++;
-#endif
+
     orig_pause_key_index_update = pause_key_index_update;
     pause_key_index_update = 1;
 
@@ -1303,8 +1337,8 @@ nxtscan:          /* on to the next line */
 /* Push allocated entries for valgrind cleanup.
  * In case we do not return from the docmd() call.
  */
-        pending_einit[pe_level] = einit;
-        pending_whlist[pe_level] = whlist;
+        add_to_head(&pending_einit_headp, einit);
+        add_to_head(&pending_whlist_headp, whlist);
 #endif
 
 /* Execute the statement. */
@@ -1314,8 +1348,8 @@ nxtscan:          /* on to the next line */
 /* Now pop any saved allocates.
  * We should be freeing the originals ourself from here.
  */
-        pending_whlist[pe_level] = NULL;
-        pending_einit[pe_level] = NULL;
+        pop_head(&pending_einit_headp);
+        pop_head(&pending_whlist_headp);
 #endif
         if (force) {                /* Set force_status, so we can check */
             if (status == TRUE) {
@@ -1381,9 +1415,6 @@ single_exit:
     inreex = init_inreex;
     execbp = init_execbp;
     bp->b_exec_level--;
-#if DO_FREE
-    pe_level--;
-#endif
 
 /* Revert to the original read-only status if it wasn't originally set
  * i.e. restore any writeability!
@@ -1693,9 +1724,14 @@ NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
 void free_exec(void) {
     Xfree(prev_line_seen);
     Xfree(pending_line_seen);
-    for (int i = 0; i <= pe_level; i++) {
-        Xfree(pending_einit[i]);
-        freewhile(pending_whlist[i]);
+    linked_items *lp;
+    while ((lp = pending_einit_headp)) {
+        Xfree(lp->item);
+        pop_head(&pending_einit_headp);
+    }
+    while ((lp = pending_whlist_headp)) {
+        freewhile(lp->item);
+        pop_head(&pending_whlist_headp);
     }
     return;
 }
