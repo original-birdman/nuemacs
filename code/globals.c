@@ -228,3 +228,7 @@ sysmark_t sysmark = { NULL, 0 };
 
 /* Stored as s + ns, but $brkt_ms works in ms */
 struct timespec pause_time = { 0, 200000000 };
+
+/* Where macro pins hang out */
+
+linked_items *macro_pin_headp = NULL;

@@ -137,6 +137,9 @@ extern int toggle_ptmode(int, int);
 extern int ptt_handler(int);
 extern int storeproc(int, int);
 extern int run_user_proc(char *, int, int);
+extern int drop_pin(int, int);
+extern int back_to_pin(int, int);
+extern int switch_with_pin(int, int);
 extern int execproc(int, int);
 extern int execbuf(int, int);
 extern int dobuf(struct buffer *);
@@ -421,7 +424,7 @@ extern int makelist_region(int, int);
 extern int numberlist_region(int, int);
 #endif
 
-#define inword_classes "LN"  
+#define inword_classes "LN"
 #define at_wspace_classes "ZC"
 #define inword(wp) class_check(wp, inword_classes, FALSE)
 #define at_abreak(wp) class_check(wp, at_wspace_classes, TRUE)

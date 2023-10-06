@@ -272,4 +272,35 @@ extern int gl_enc_len;          /* Global key length */
 
 #define CRYPT_VALID (CRYPT_MOD95|CRYPT_ONLYP|CRYPT_GLOBAL|CRYPT_MODEMASK)
 
+/* For einit and whlist data stashed away around docmd() calls we need
+ * to allow for the fact the the command might execute a buffer and hence
+ * come back here.
+ * So we need to save these items in a linked list and allocate/free it
+ * as we go.
+ * We use the same linked_items structure for the macro pins, so
+ * define it all here.
+ */
+struct _li {
+    struct _li *next;
+    void *item;
+};
+typedef struct _li linked_items;
+
+/* We keep a linked list of per-macro-level pins and also
+ * need to keep a level marker for them.
+ */
+struct mac_pin {
+    struct buffer *bp;
+    struct line *lp;
+    int offset;
+    int mac_level;
+    int col_offset;     /* Temporary use by p-m-l_get_columns/set_offsets */
+};
+
+extern linked_items *macro_pin_headp;
+
+/* This make the macro pin code easier to follow */
+
+#define mmi(lip, what) (((struct mac_pin *)((lip)->item))->what)
+
 #endif  /* EDEF_H_ */

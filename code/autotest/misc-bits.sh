@@ -156,7 +156,7 @@ set %test-report "overwrite-string"
 1 goto-line
 end-of-line
 3 backward-character
-set-mark                    ; So we can test what is there later
+drop-pin                ; So we can test what is there later
 set .orig_col $curcol
 set .ov_text "∮ E⋅da = Q,  n → ∞, ∑ f(i) = ∏ g(i)"
 set .ov_text_len &len .ov_text
@@ -172,7 +172,7 @@ execute-procedure check-position
 
 ; Check the character at the makr is what we expect.
 ;
-exchange-point-and-mark
+back-to-pin
 ; Do we return the correct column, and see the correct char?
 ;
   set %curtest "Check start of overwritten string"

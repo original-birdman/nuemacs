@@ -78,6 +78,23 @@ int bclear(struct buffer *bp) {
     return TRUE;
 }
 
+/* Remove any entries from the list referring to buffer */
+
+static void per_macro_level_remove(struct buffer *btogo) {
+    if (!macro_pin_headp) return;  /* None there */
+    linked_items **prev_p = &macro_pin_headp;
+    linked_items *mp = macro_pin_headp;
+    while (mp) {
+        linked_items *next_p = mp->next;
+        if (mmi(mp, bp) == btogo) {
+            Xfree(mp);
+            (*prev_p)->next = next_p;
+        }
+        mp = next_p;
+        *prev_p = (*prev_p)->next;
+    }
+}
+
 /* kill the buffer pointed to by bp
  */
 int zotbuf(struct buffer *bp) {
@@ -104,6 +121,8 @@ int zotbuf(struct buffer *bp) {
     else
         bp1->b_bufp = bp2;
     Xfree((char *) bp);              /* Release buffer block */
+/* Remove any per-macro-level marks */
+    per_macro_level_remove(bp);
     return TRUE;
 }
 

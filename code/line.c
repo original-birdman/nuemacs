@@ -58,6 +58,54 @@ struct line *lalloc(int used) {
     return lp;
 }
 
+/* The next four are a series of functions to fix-up macro pins that may
+ * be pointing into data we manipulate.
+ */
+
+/* Edit any entries in the list referring to line
+ */
+static void onmodify_line_check(struct line *lp) {
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if (mmi(mp, lp) == lp) {
+            mmi(mp, lp) = mmi(mp, lp)->l_fp;
+            mmi(mp, offset) = 0;
+        }
+    }
+}
+
+/* Edit any offsets for entries in the list referring to line.
+ * One for inserts and another for deletes.
+ */
+static void onmodify_insert_check(struct line *lp, int doto, int move) {
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if (mmi(mp, lp) == lp) {
+            if (mmi(mp, offset) > doto) mmi(mp, offset) += move;
+         }
+    }
+}
+static void onmodify_delete_check(struct line *lp, int doto, int move) {
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if (mmi(mp, lp) == lp) {
+            if (mmi(mp, offset) > doto) {
+                mmi(mp, offset) -= move;
+/* It can't move left of the deletion point */
+                if (mmi(mp, offset) < doto) mmi(mp, offset) = doto;
+            }
+         }
+    }
+}
+
+/* Edit any offsets for entries in the lines being split.
+ */
+static void onmodify_line_split(struct line *lp, int doto) {
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if ((mmi(mp, lp) == lp) && (mmi(mp, offset) > doto)) {
+            mmi(mp, lp) = mmi(mp, lp)->l_fp;
+            mmi(mp, offset) -= doto;
+        }
+    }
+}
+
 /* Routine to grow l_text to accomodate xtra more bytes */
 void ltextgrow(struct line *lp, int xtra) {
 
@@ -101,6 +149,7 @@ void lfree(struct line *lp) {
         sysmark.p = lp->l_fp;
         sysmark.o = 0;
     }
+    onmodify_line_check(lp);
 
     lp->l_bp->l_fp = lp->l_fp;
     lp->l_fp->l_bp = lp->l_bp;
@@ -195,7 +244,7 @@ int linsert_byte(int n, unsigned char c) {
         }
     }
     if ((sysmark.p == lp1) && (sysmark.o > doto)) sysmark.o += n;
-
+    onmodify_insert_check(lp1, doto, n);
     return TRUE;
 }
 
@@ -297,6 +346,7 @@ int lnewline(void) {
         sysmark.p = lp2;
         sysmark.o -= doto;
     }
+    onmodify_line_split(lp1, doto);
     return TRUE;
 }
 
@@ -596,6 +646,7 @@ int ldelete(long n, int kflag) {
             sysmark.o -= chunk;
             if (sysmark.o < doto) sysmark.o = doto;
         }
+        onmodify_delete_check(dotp, doto, chunk);
         n -= chunk;
     }
     return TRUE;

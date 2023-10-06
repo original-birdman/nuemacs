@@ -29,6 +29,7 @@ struct line {
 #define lback(lp)       ((lp)->l_bp)
 #define lgetc(lp, n)    ((lp)->l_text[(n)]&0xFF)
 #define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))
+#define ltext(lp)       ((lp)->l_text)
 #define llength(lp)     ((lp)->l_used)
 
 /* Externally visible calls */
@@ -62,7 +63,8 @@ extern int yankmb(int f, int n);
 
 /* A macro to determine the effect on the "display column" of adding a
  * given character.
- * Used by getgoal(basic.c), setccol/getccol(random.c) and updpos(display.c).
+ * Used by offset_for_curgoal(basic.c), setccol/getccol(random.c)
+ * and updpos(display.c).
  * These need to have a common view of this.
  * NOTE that we can't just rely on utf8proc_charwidth() here as it gives a
  * zero width for, e.g., control chars but we need to use 2 for them.

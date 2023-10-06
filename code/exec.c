@@ -23,23 +23,12 @@
 struct buffer *bstore = NULL;
 
 static int execlevel = 0;
+static int macro_level = 0;
 
 /* We only need one of these, as it is only set as we leave,
  * and there is only one "previous Line".
  */
 static char *prev_line_seen = NULL;
-
-/* For einit and whlist data stashed away around docmd() calls we need
- * to allow for the fact the the command might execute a buffer and hence
- * come back here.
- * So we need to save these items in a linked list and allocate/free it
- * as we go.
- */
-struct _li {
-    struct _li *next;
-    void *item;
-};
-typedef struct _li linked_items;
 
 #ifdef DO_FREE
 /* We only need these for valgrind testing */
@@ -49,6 +38,8 @@ static char *pending_line_seen = NULL;
 
 static linked_items *pending_einit_headp = NULL;
 static linked_items *pending_whlist_headp = NULL;
+
+#endif
 
 /* The next two functions have a **arg1 so that they can update the
  * headp themselves.
@@ -72,7 +63,6 @@ static void pop_head(linked_items **headp) {
     *headp = op->next;                      /* Make second the new first */
     Xfree(op);                              /* Free old first */
 }
-#endif
 
 /* token:
  *      chop a token off a string
@@ -974,6 +964,7 @@ static void freewhile(struct while_block *wp) {
  *
  * struct buffer *bp;           buffer to execute
  */
+
 int dobuf(struct buffer *bp) {
     int status;             /* status return */
     struct line *lp;        /* pointer to line to execute */
@@ -1002,6 +993,8 @@ int dobuf(struct buffer *bp) {
         mlwrite("Maximum recursion level, %d, exceeded!", MAX_RECURSE);
         return FALSE;
     }
+
+    macro_level++;
 
 /* We may be reexecing the buffer, but we aren't reexecing individual
  * commands within it!
@@ -1387,6 +1380,7 @@ onward:                 /* On to the next line */
 eexec:                  /* Exit the current function */
     Xfree(einit);
     execlevel = 0;
+
     status = return_stat;
     goto failexit;
 
@@ -1414,6 +1408,13 @@ single_exit:
 /* Restore the original inreex value before leaving */
     inreex = init_inreex;
     execbp = init_execbp;
+
+/* Decrement the macro level counter but first, if we allocated a
+ * per-macro-level pin at this level, remove it.
+ */
+    if (macro_pin_headp && (mmi(macro_pin_headp, mac_level) == macro_level))
+        pop_head(&macro_pin_headp);
+    macro_level--;
     bp->b_exec_level--;
 
 /* Revert to the original read-only status if it wasn't originally set
@@ -1465,21 +1466,96 @@ int run_user_proc(char *procname, int forced, int rpts) {
 /* Since one user-proc can call another we have to remember the current
  * setting, install our current ones, then restore the originals
  * after we're done.
+ * Same for which buffer is being used....
  */
-        int save_count = uproc_lpcount;
-        int save_total = uproc_lptotal;
-        int save_forced = uproc_lpforced;
+        int saved_count = uproc_lpcount;
+        int saved_total = uproc_lptotal;
+        int saved_forced = uproc_lpforced;
         uproc_lpcount = ++this_count;
         uproc_lptotal = this_total;
         uproc_lpforced = forced;
         status = dobuf(bp);
-        uproc_lpcount = save_count;
-        uproc_lptotal = save_total;
-        uproc_lpforced = save_forced;
+        uproc_lpcount = saved_count;
+        uproc_lptotal = saved_total;
+        uproc_lpforced = saved_forced;
         if (!status) break;
     }
     macbug_off = orig_macbug_off;
     return status;
+}
+
+/* User-accessible functions to save/restore/maintain the pins in a macro */
+
+int drop_pin(int f, int n) {
+    UNUSED(f); UNUSED(n);
+
+/* Are we running buffer code? */
+    if (!macro_level) return FALSE;
+
+    struct mac_pin *sp = Xmalloc(sizeof(struct mac_pin));
+    sp->bp = curbp;
+    sp->lp = curwp->w.dotp;
+    sp->offset = curwp->w.doto;
+    sp->mac_level = macro_level;
+    add_to_head(&macro_pin_headp, sp);
+
+    return TRUE;
+}
+
+static int goto_pin(int do_switch) {
+
+/* Are we running buffer code? */
+    if (!macro_level) return FALSE;
+
+/* Was a pin saved at this level */
+    if (!macro_pin_headp || (mmi(macro_pin_headp, mac_level) != macro_level))
+         return FALSE;
+
+/* We might be outside the visible range of a narrowed buffer (which
+ * can't happen to a mark, as that is used to define the narrowed region).
+ * Need to make this check before possibly switching buffer.
+ */
+    if (mmi(macro_pin_headp, bp)->b_flag & BFNAROW) {
+        int ok = 0;
+        struct line *tlp = mmi(macro_pin_headp, bp)->b_linep;
+        for (struct line *lp = lforw(tlp); lp != tlp; lp = lforw(lp)) {
+            if (lp == mmi(macro_pin_headp, lp)) {
+                ok = 1;
+                break;
+            }
+        }
+        if (!ok) return FALSE;
+    }
+
+/* If we've been asked to switch position, remember where we are
+ * so we can update the pin after the move.
+ */
+    struct mac_pin old_pos;
+    if (do_switch) {
+        old_pos.bp = curbp;
+        old_pos.lp = curwp->w.dotp;
+        old_pos.offset = curwp->w.doto;
+        old_pos.mac_level = mmi(macro_pin_headp, mac_level);
+    }
+
+/* The general dot/mark code ensures the values we have are still valid.
+ * The pin is removed from the list if the buffer is deleted.
+ */
+    if (curbp != mmi(macro_pin_headp, bp))
+         swbuffer(mmi(macro_pin_headp, bp), TRUE);
+    curwp->w.dotp = mmi(macro_pin_headp, lp);
+    curwp->w.doto = mmi(macro_pin_headp, offset);
+    if (do_switch) *((struct mac_pin *)(macro_pin_headp->item)) = old_pos;
+    return TRUE;
+}
+
+int back_to_pin(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    return goto_pin(FALSE);
+}
+int switch_with_pin(int f, int n) {
+    UNUSED(f); UNUSED(n);
+    return goto_pin(TRUE);
 }
 
 /* Buffer name for reexecute - shared by all buffer-callers */
@@ -1732,6 +1808,10 @@ void free_exec(void) {
     while ((lp = pending_whlist_headp)) {
         freewhile(lp->item);
         pop_head(&pending_whlist_headp);
+    }
+    while ((lp = macro_pin_headp)) {
+        Xfree(lp->item);
+        pop_head(&macro_pin_headp);
     }
     return;
 }

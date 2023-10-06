@@ -169,25 +169,46 @@ int copyregion(int f, int n) {
             llength(linep)-b_end); \
     }
 
-/* If mark or dot are on this line then we might need to update
- * their offset after the move.
- * They can only be at the start or end of the moved chars (as the
- * region we are case-changing is that between dot and mark!) so
- * we only have to consider those case, not anything in between.
- * If at the start there is nothing to do, as that hasn't moved.
- * Turns out a macro is more efficient (in terms of executable size)
- * than a function...
+/* These work as a pair.
+ * get_marker_columns runs through the entries and
+ * sets col_offset to the grapheme count of the position.
+ * This is called before casechanging.
+ * set_marker_offsets runs through the entries and
+ * sets offset based on the col_offset count of the position.
+ * This is called after casechanging and will deal with any byte-length
+ * changing done by the casechange.
  */
-#define MarkDotFixup(amount) \
-    if ((sysmark.p == linep) && \
-        (sysmark.o == (b_offs + this_blen))) \
-          sysmark.o += amount; \
-    if ((curwp->w.markp == linep) && \
-        (curwp->w.marko == (b_offs + this_blen))) \
-          curwp->w.marko += amount; \
-    if ((curwp->w.dotp == linep) && \
-        (curwp->w.doto == (b_offs + this_blen))) \
-          curwp->w.doto += amount
+static int sysmark_col_offset, mark_col_offset, dot_col_offset;
+static void get_marker_columns(void) {
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        mmi(mp, col_offset) = glyphcount_utf8_array(mmi(mp, lp)->l_text,
+             mmi(mp, offset));
+    }
+    sysmark_col_offset = glyphcount_utf8_array(ltext(sysmark.p), sysmark.o);
+    mark_col_offset = glyphcount_utf8_array(ltext(curwp->w.markp),
+         curwp->w.marko);
+    dot_col_offset = glyphcount_utf8_array(ltext(curwp->w.dotp), curwp->w.doto);
+}
+static int offset_for_col(char *text, int col, int maxlen) {
+    int offs = 0;
+    while(col--) offs = next_utf8_offset(text, offs, maxlen, TRUE);
+    return offs;
+}
+static void set_marker_offsets(void) {
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        mmi(mp, offset) = offset_for_col(ltext(mmi(mp, lp)),
+             mmi(mp, col_offset), llength(mmi(mp, lp)));
+    }
+
+    sysmark.o = offset_for_col(ltext(sysmark.p), llength(sysmark.p),
+     sysmark_col_offset);
+
+    curwp->w.marko = offset_for_col(ltext(curwp->w.markp),
+     llength(curwp->w.markp), mark_col_offset);
+
+    curwp->w.doto = offset_for_col(ltext(curwp->w.dotp),
+     llength(curwp->w.dotp), dot_col_offset);
+}
 
 static int casechange_region(int newcase) { /* The handling function */
     struct region region;
@@ -205,6 +226,17 @@ static int casechange_region(int newcase) { /* The handling function */
  */
     struct line *linep = region.r_linep;
     struct mstr mstr;
+
+/* For dot and marks we know that they cannot be within the region so
+ * they either stay still, or move by the full amount.
+ * Pins are not the same, as they can be anywhere
+ * So we need to get them to determine their *column* offset and
+ * restore it after the change has been done.
+ * We just get the columns for all at the start, then reset the columns
+ * for all at the end, regardless of which buffer/line they are in.
+ */
+    get_marker_columns();
+
     for (int b_offs = region.r_offset; region.r_bytes > 0;
              linep = lforw(linep)) {
         int b_end = region.r_bytes + b_offs;
@@ -213,13 +245,13 @@ static int casechange_region(int newcase) { /* The handling function */
         utf8_recase(newcase, linep->l_text+b_offs, this_blen, &mstr);
         int replen = mstr.utf8c;            /* Less code when copied.. */
         char *repstr = mstr.str;            /* ...to simple local vars */
+
         if (replen <= this_blen) {          /* Guaranteed the space */
             memcpy(linep->l_text+b_offs, repstr, replen);
             if (replen < this_blen) {       /* Fix up the shortening */
                 ccr_Tail_Copy;
                 int b_less = this_blen - replen;
                 llength(linep) -= b_less;   /* Fix-up length */
-                MarkDotFixup(-b_less);
             }
         }
         else {              /* replen > this_blen  Potentially trickier */
@@ -231,12 +263,14 @@ static int casechange_region(int newcase) { /* The handling function */
             ccr_Tail_Copy;  /* Must move the tail out-of-the-way first!! */
             memcpy(linep->l_text+b_offs, repstr, replen);
             llength(linep) += b_more;   /* Fix-up length */
-            MarkDotFixup(b_more);
         }
         Xfree(repstr);      /* Used this now (== mstr.str), so free */
         region.r_bytes -= this_blen + 1;
         b_offs = 0;
     }
+
+    set_marker_offsets();
+
     return TRUE;
 }
 

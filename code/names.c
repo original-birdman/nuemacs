@@ -19,6 +19,7 @@ struct name_bind names[] = {
     {"add-global-mode", setgmode, {0, 0, 0, 1, 0, 0}},
     {"apropos", apro, {0, 1, 0, 0, 0, 0}},
     {"args-in-reexec", re_args_exec, {0, 0, 0, 1, 0, 0}},
+    {"back-to-pin", back_to_pin, {0, 1, 1, 0, 0, 0}},
     {"backward-character", backchar, {0, 0, 0, 0, 0, 0}},
     {"begin-macro", ctlxlp, {0, 0, 0, 0, 0, 0}},
     {"beginning-of-file", gotobob, {0, 0, 0, 0, 0, 0}},
@@ -52,6 +53,7 @@ struct name_bind names[] = {
     {"describe-bindings", desbind, {0, 1, 0, 0, 0, 0}},
     {"describe-key", deskey, {0, 0, 0, 1, 0, 0}},
     {"detab-line", detab, {0, 0, 0, 0, 0, 0}},
+    {"drop-pin", drop_pin, {0, 1, 1, 0, 0, 0}},
     {"end-macro", ctlxrp, {1, 0, 0, 0, 0, 0}},
     {"end-of-file", gotoeob, {0, 0, 0, 0, 0, 0}},
     {"end-of-line", gotoeol, {0, 0, 0, 0, 0, 0}},
@@ -196,6 +198,7 @@ struct name_bind names[] = {
     {"store-pttable", storepttable, {0, 0, 0, 1, 0, 0}},      /* GGR */
     {"suspend-emacs", bktoshell, {0, 0, 0, 1, 0, 0}},
     {"switch-internal", switch_internal,  {0, 0, 0, 0, 0, 0}},/* GGR */
+    {"switch-with-pin", switch_with_pin, {0, 1, 1, 0, 0, 0}},
     {"toggle-ptmode", toggle_ptmode, {0, 0, 0, 1, 0, 0}},     /* GGR */
     {"transpose-characters", twiddle, {0, 0, 0, 0, 0, 0}},
     {"trim-line", trim, {0, 0, 0, 0, 0, 0}},
