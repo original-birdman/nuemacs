@@ -1598,12 +1598,12 @@ int setvar(int f, int n) {
         }
 /* Write out the debug line to the message line? */
         if (macbug & 0x1) {
-            mlforce(outline);
+            mlforce_one(outline);
             update(TRUE);
 
 /* And get the keystroke */
             if (get1key() == abortc) {
-                mlforce(MLbkt("Macro aborted"));
+                mlforce_one(MLbkt("Macro aborted"));
                 status = FALSE;
             }
         }

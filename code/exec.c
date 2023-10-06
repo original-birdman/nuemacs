@@ -1171,12 +1171,12 @@ nxtscan:          /* on to the next line */
             }
 /* Write out the debug line to the message line? */
             if (macbug & 0x1) {
-                mlforce(outline);
+                mlforce_one(outline);
                 update(TRUE);
 
 /* And get the keystroke */
                 if ((c = get1key()) == abortc) {
-                    mlforce(MLbkt("Macro aborted"));
+                    mlforce_one(MLbkt("Macro aborted"));
                     goto failexit3;
                 }
                 if (c == metac) macbug = 0;
