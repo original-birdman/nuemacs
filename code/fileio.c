@@ -490,22 +490,22 @@ static void add_to_fline(int len) {
     if (fline == NULL) {
         need = NEW;
     }
-    else if (len >= (fline->l_size - fline->l_used)) {
+    else if (len >= (lsize(fline) - lused(fline))) {
         need = MORE;
     }
     switch(need) {
     case NEW:
         fline = lalloc(len);
-        fline->l_used = 0;  /* Set what is actually there NOW!! */
+        lused(fline) = 0;   /* Set what is actually there NOW!! */
         break;
     case MORE:
-        ltextgrow(fline, len + fline->l_used);
+        ltextgrow(fline, len + lused(fline));
         break;
     case NONE:
         break;
     }
-    memcpy(fline->l_text+fline->l_used, cache.buf+cache.rst, len);
-    fline->l_used += len;   /* Record the real size of the line */
+    memcpy(ltext(fline)+lused(fline), cache.buf+cache.rst, len);
+    lused(fline) += len;    /* Record the real size of the line */
     cache.rst += len;       /* Advance cache read-pointer */
     cache.len -= len;       /* Decrement left-to-read counter */
     return;
@@ -554,12 +554,12 @@ int ffgetline(void) {
  * So just return that we are at EOF.
  */
                 if (!fline) return FIOEOF;
-                if (fline->l_used) {
+                if (lused(fline)) {
                     curbp->b_EOLmissing = 1;
                     mlforce("Newline absent at end of file. Added....");
                     sleep(1);
                 }
-                return fline->l_used? FIOSUC: FIOEOF;
+                return lused(fline)? FIOSUC: FIOEOF;
             }
             if (cryptflag) myencrypt(cache.buf, cache.len);
         }

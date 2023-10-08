@@ -44,16 +44,16 @@ struct line *lalloc(int used) {
  * This enables other code to easily NUL-terminate the data if required.
  */
     if (used < 0) {
-        lp->l_text = NULL;
-        lp->l_size = lp->l_used = 0;
+        ltext(lp) = NULL;
+        lsize(lp) = lused(lp) = 0;
     }
     else {
         size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
         if ((used > 0) && (size == BLOCK_SIZE))
              size = 2*BLOCK_SIZE;   /* Min size */
-        lp->l_text = Xmalloc(size);
-        lp->l_size = size;
-        lp->l_used = used;
+        ltext(lp) = Xmalloc(size);
+        lsize(lp) = size;
+        lused(lp) = used;
     }
     return lp;
 }
@@ -109,10 +109,10 @@ static void onmodify_line_split(struct line *lp, int doto) {
 /* Routine to grow l_text to accomodate xtra more bytes */
 void ltextgrow(struct line *lp, int xtra) {
 
-    int size = lp->l_size + xtra;
+    int size = lsize(lp) + xtra;
     size = (size + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
-    lp->l_text = Xrealloc(lp->l_text, size);
-    lp->l_size = size;
+    ltext(lp) = Xrealloc(lp->l_text, size);
+    lsize(lp) = size;
 }
 
 /* Delete line "lp". Fix all of the links that might point at it (they are
@@ -153,7 +153,7 @@ void lfree(struct line *lp) {
 
     lp->l_bp->l_fp = lp->l_fp;
     lp->l_fp->l_bp = lp->l_bp;
-    Xfree(lp->l_text);
+    Xfree(ltext(lp));
     Xfree(lp);
 }
 
@@ -224,16 +224,16 @@ int linsert_byte(int n, unsigned char c) {
  * not actually used.
  * This enables other code to easily NUL-terminate the data if required.
  */
-    if (lp1->l_used + n >= lp1->l_size) {   /* Need to reallocate */
+    if (lused(lp1) + n >= lsize(lp1)) {     /* Need to reallocate */
         ltextgrow(lp1, n);
     }
 /* All we now need to do is move the bytes beyond the insert point along
  * by n bytes, then insert our n chars.
  */
-    memmove(lp1->l_text+doto+n, lp1->l_text+doto, lp1->l_used - doto);
+    memmove(ltext(lp1)+doto+n, ltext(lp1)+doto, lused(lp1) - doto);
     for (i = 0; i < n; ++i)         /* Add the new characters */
-        lp1->l_text[doto + i] = c;
-    lp1->l_used += n;
+        ltext(lp1)[doto + i] = c;
+    lused(lp1) += n;
 /* Update windows */
     for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
@@ -283,8 +283,8 @@ int lnewline(void) {
         force_newline = 0;          /* Reset the force */
     }
 /* Are we at the end of the text on the last "real" line? */
-    else if (curwp->w.dotp->l_used
-             && curwp->w.doto == curwp->w.dotp->l_used
+    else if (lused(curwp->w.dotp)
+             && curwp->w.doto == lused(curwp->w.dotp)
              && lforw(curwp->w.dotp) == curbp->b_linep) {
         curwp->w.dotp = lforw(curwp->w.dotp);
         curwp->w.doto = 0;
@@ -311,12 +311,12 @@ int lnewline(void) {
  */
     lp1 = curwp->w.dotp;        /* Get the address and  */
     int doto = curwp->w.doto;   /*   offset of "."      */
-    int xs = lp1->l_used - doto;
+    int xs = lused(lp1) - doto;
 
 /* Create a new line for the second part and copy the "trailing" text in */
     lp2 = lalloc(xs);
-    memcpy(lp2->l_text, lp1->l_text+doto, xs);
-    lp1->l_used = doto;     /* valid text left in lp1 */
+    memcpy(ltext(lp2), ltext(lp1)+doto, xs);
+    lused(lp1) = doto;          /* valid text left in lp1 */
 
 /* Fix up back/forw pointers for the two lines */
 
@@ -427,10 +427,10 @@ int linsert_uc(int n, unicode_t c) {
  * Now just a front-end to build_next_grapheme.
  */
 int lgetgrapheme(struct grapheme *gp, int no_ex_alloc) {
-    int len = llength(curwp->w.dotp);
+    int len = lused(curwp->w.dotp);
 
     int spos = curwp->w.doto;
-    int epos = build_next_grapheme(curwp->w.dotp->l_text, spos, len, gp,
+    int epos = build_next_grapheme(ltext(curwp->w.dotp), spos, len, gp,
          no_ex_alloc);
     return (epos - spos);
 }
@@ -488,7 +488,7 @@ static int ldelnewline(void) {
  * lp1.
  * However, there are some special cases.
  */
-    if (lp1->l_used == 0) {         /* Blank line? Just remove it   */
+    if (lused(lp1) == 0) {          /* Blank line? Just remove it   */
         lfree(lp1);
         return TRUE;
     }
@@ -498,10 +498,10 @@ static int ldelnewline(void) {
 
 /* Add the lp2 text to lp1 */
 
-    int orig_lp1_len = lp1->l_used; /* Might be needed */
-    ltextgrow(lp1, lp2->l_used);
-    memcpy(lp1->l_text+orig_lp1_len, lp2->l_text, lp2->l_used);
-    lp1->l_used += lp2->l_used;
+    int orig_lp1_len = lused(lp1);  /* Might be needed */
+    ltextgrow(lp1, lused(lp2));
+    memcpy(ltext(lp1)+orig_lp1_len, ltext(lp2), lused(lp2));
+    lused(lp1) += lused(lp2);
 
 /* Now fix up lp1 forward pointer and lp2 back pointer */
 
@@ -541,7 +541,7 @@ int lover(char *ostr) {
  * If we are at end-of-line we don't delete (so the line is extended)
  * and if we're at a tab-stop we may not need to do the delete.
  */
-            if (curwp->w.doto < curwp->w.dotp->l_used &&
+            if (curwp->w.doto < lused(curwp->w.dotp) &&
                  (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
                  ((curwp->w.doto) & tabmask) == tabmask)) {
                 status = ldelgrapheme(1, FALSE);
@@ -608,7 +608,7 @@ int ldelete(long n, int kflag) {
         doto = curwp->w.doto;
         if (dotp == curbp->b_linep)     /* Hit end of buffer.   */
             return FALSE;
-        chunk = dotp->l_used - doto;    /* Size of chunk.       */
+        chunk = lused(dotp) - doto;     /* Size of chunk.       */
         if (chunk > n) chunk = n;
         if (chunk == 0) {       /* End of line, merge.  */
             lchange(WFHARD | WFKILLS);
@@ -619,17 +619,17 @@ int ldelete(long n, int kflag) {
             continue;
         }
         lchange(WFEDIT);
-        cp1 = &dotp->l_text[doto];      /* Scrunch text.        */
+        cp1 = ltext(dotp) + doto;       /* Scrunch text.        */
         cp2 = cp1 + chunk;
         if (kflag != FALSE) {           /* Kill?                */
             while (cp1 != cp2) {
                 if (kinsert(*cp1) == FALSE) return FALSE;
                 ++cp1;
             }
-            cp1 = &dotp->l_text[doto];
+            cp1 = ltext(dotp) + doto;
         }
-        while (cp2 != &dotp->l_text[dotp->l_used]) *cp1++ = *cp2++;
-        dotp->l_used -= chunk;
+        while (cp2 != ltext(dotp) + lused(dotp)) *cp1++ = *cp2++;
+        lused(dotp) -= chunk;
 
 /* Fix-up windows */
         for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
@@ -663,8 +663,8 @@ char *getctext(void) {
 
 /* Find the contents of the current line and its length */
     lp = curwp->w.dotp;
-    sp = lp->l_text;
-    size = lp->l_used;
+    sp = ltext(lp);
+    size = lused(lp);
     if (size >= NSTRING) size = NSTRING - 1;
 
 /* Copy it across */

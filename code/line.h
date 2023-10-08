@@ -29,8 +29,9 @@ struct line {
 #define lback(lp)       ((lp)->l_bp)
 #define lgetc(lp, n)    ((lp)->l_text[(n)]&0xFF)
 #define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))
+#define lused(lp)       ((lp)->l_used)
+#define lsize(lp)       ((lp)->l_size)
 #define ltext(lp)       ((lp)->l_text)
-#define llength(lp)     ((lp)->l_used)
 
 /* Externally visible calls */
 

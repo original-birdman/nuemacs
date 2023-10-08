@@ -54,7 +54,7 @@ int getregion(struct region *rp) {
     blp = curwp->w.dotp;
     bsize = (long) curwp->w.doto;
     flp = curwp->w.dotp;
-    fsize = (long) (llength(flp) - curwp->w.doto + 1);
+    fsize = (long) (lused(flp) - curwp->w.doto + 1);
 /* We start at dot and look for the mark, spreading out... */
     while (flp != curbp->b_linep || lback(blp) != curbp->b_linep) {
         if (flp != curbp->b_linep) {
@@ -66,11 +66,11 @@ int getregion(struct region *rp) {
                 rp->r_endp = curwp->w.markp;
                 return TRUE;
              }
-             fsize += llength(flp) + 1;
+             fsize += lused(flp) + 1;
          }
          if (lback(blp) != curbp->b_linep) {
             blp = lback(blp);   /* Look for mark before dot */
-            bsize += llength(blp) + 1;
+            bsize += lused(blp) + 1;
             if (blp == curwp->w.markp) {
                 rp->r_linep = blp;
                 rp->r_offset = curwp->w.marko;
@@ -135,7 +135,7 @@ int copyregion(int f, int n) {
     loffs = region.r_offset;        /* Current offset.      */
 /* This copies bytes - doesn't need to know about graphemes. */
     while (region.r_bytes--) {
-        if (loffs == llength(linep)) {  /* End of line. */
+        if (loffs == lused(linep)) {  /* End of line. */
             if ((s = kinsert('\n')) != TRUE) return s;
             linep = lforw(linep);
             loffs = 0;
@@ -163,10 +163,10 @@ int copyregion(int f, int n) {
  * of executable size than a function...
  */
 #define ccr_Tail_Copy \
-    if (b_end < llength(linep)) {   /* Shuffle chars along... */ \
-        memmove(linep->l_text+b_offs+replen, \
-            linep->l_text+b_end, \
-            llength(linep)-b_end); \
+    if (b_end < lused(linep)) {   /* Shuffle chars along... */ \
+        memmove(ltext(linep)+b_offs+replen, \
+            ltext(linep)+b_end, \
+            lused(linep)-b_end); \
     }
 
 /* These work as a pair.
@@ -181,7 +181,7 @@ int copyregion(int f, int n) {
 static int sysmark_col_offset, mark_col_offset, dot_col_offset;
 static void get_marker_columns(void) {
     for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        mmi(mp, col_offset) = glyphcount_utf8_array(mmi(mp, lp)->l_text,
+        mmi(mp, col_offset) = glyphcount_utf8_array(ltext(mmi(mp, lp)),
              mmi(mp, offset));
     }
     sysmark_col_offset = glyphcount_utf8_array(ltext(sysmark.p), sysmark.o);
@@ -197,17 +197,17 @@ static int offset_for_col(char *text, int col, int maxlen) {
 static void set_marker_offsets(void) {
     for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
         mmi(mp, offset) = offset_for_col(ltext(mmi(mp, lp)),
-             mmi(mp, col_offset), llength(mmi(mp, lp)));
+             mmi(mp, col_offset), lused(mmi(mp, lp)));
     }
 
-    sysmark.o = offset_for_col(ltext(sysmark.p), llength(sysmark.p),
+    sysmark.o = offset_for_col(ltext(sysmark.p), lused(sysmark.p),
      sysmark_col_offset);
 
     curwp->w.marko = offset_for_col(ltext(curwp->w.markp),
-     llength(curwp->w.markp), mark_col_offset);
+     lused(curwp->w.markp), mark_col_offset);
 
     curwp->w.doto = offset_for_col(ltext(curwp->w.dotp),
-     llength(curwp->w.dotp), dot_col_offset);
+     lused(curwp->w.dotp), dot_col_offset);
 }
 
 static int casechange_region(int newcase) { /* The handling function */
@@ -240,29 +240,29 @@ static int casechange_region(int newcase) { /* The handling function */
     for (int b_offs = region.r_offset; region.r_bytes > 0;
              linep = lforw(linep)) {
         int b_end = region.r_bytes + b_offs;
-        if (b_end > llength(linep)) b_end = llength(linep);
+        if (b_end > lused(linep)) b_end = lused(linep);
         int this_blen = b_end - b_offs;
-        utf8_recase(newcase, linep->l_text+b_offs, this_blen, &mstr);
+        utf8_recase(newcase, ltext(linep)+b_offs, this_blen, &mstr);
         int replen = mstr.utf8c;            /* Less code when copied.. */
         char *repstr = mstr.str;            /* ...to simple local vars */
 
         if (replen <= this_blen) {          /* Guaranteed the space */
-            memcpy(linep->l_text+b_offs, repstr, replen);
+            memcpy(ltext(linep)+b_offs, repstr, replen);
             if (replen < this_blen) {       /* Fix up the shortening */
                 ccr_Tail_Copy;
                 int b_less = this_blen - replen;
-                llength(linep) -= b_less;   /* Fix-up length */
+                lused(linep) -= b_less;     /* Fix-up length */
             }
         }
         else {              /* replen > this_blen  Potentially trickier */
             int b_more = replen - this_blen;
 /* If we don't have the space, get some more */
-            if ((linep->l_size - linep->l_used) < b_more) { /* Need more */
+            if ((lsize(linep) - lused(linep)) < b_more) {   /* Need more */
                 ltextgrow(linep, b_more);
             }
             ccr_Tail_Copy;  /* Must move the tail out-of-the-way first!! */
-            memcpy(linep->l_text+b_offs, repstr, replen);
-            llength(linep) += b_more;   /* Fix-up length */
+            memcpy(ltext(linep)+b_offs, repstr, replen);
+            lused(linep) += b_more;     /* Fix-up length */
         }
         Xfree(repstr);      /* Used this now (== mstr.str), so free */
         region.r_bytes -= this_blen + 1;

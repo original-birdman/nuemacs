@@ -491,9 +491,9 @@ static int ptt_compile(struct buffer *bp) {
     for (struct line *lp = hlp->l_fp; lp != hlp; lp = lp->l_fp) {
         char to_string[NLINE] = "";
         int to_len = 0;
-        memcpy(lbuf, lp->l_text, lp->l_used);
+        memcpy(lbuf, ltext(lp), lused(lp));
         char *rp = lbuf;
-        lbuf[lp->l_used] = '\0';
+        lbuf[lused(lp)] = '\0';
         rp = token(rp, tok, NLINE);
         char from_string[NLINE];
         int bow;
@@ -807,7 +807,7 @@ int ptt_handler(int c) {
 
 /* We need to know where <n> unicode chars back starts */
         int start_at = unicode_back_utf8(ptr->from_len_uc,
-             curwp->w.dotp->l_text, curwp->w.doto);
+             ltext(curwp->w.dotp), curwp->w.doto);
         if (ptr->caseset != CASESET_OFF) {
 /* Need a unicode-case insensitive strncmp!!!
  * Also, since we can't guarantee that a case-changed string will be
@@ -815,8 +815,8 @@ int ptt_handler(int c) {
  * chars first.
  */
             if (start_at < 0) continue; /* Insufficient chars */
-            if (nocasecmp_utf8(curwp->w.dotp->l_text,
-                 start_at, curwp->w.dotp->l_used,
+            if (nocasecmp_utf8(ltext(curwp->w.dotp),
+                 start_at, lused(curwp->w.dotp),
                  ptr->from, 0, ptr->from_len)) continue;
         }
         else {
@@ -824,18 +824,18 @@ int ptt_handler(int c) {
  * just compare the bytes.
  */
             if (curwp->w.doto < ptr->from_len) continue;
-            if (strncmp(curwp->w.dotp->l_text+start_at,
+            if (strncmp(ltext(curwp->w.dotp)+start_at,
                  ptr->from, ptr->from_len)) continue;
         }
         if (ptr->bow_only && (curwp->w.doto > ptr->from_len)) { /* Not BOL */
 /* Need to step back to the start of the preceding grapheme and get the
  * base Unicode char from there.
  */
-            int offs = prev_utf8_offset(curwp->w.dotp->l_text,
+            int offs = prev_utf8_offset(ltext(curwp->w.dotp),
                  start_at, TRUE);
             unicode_t prev_uc;
-            (void)utf8_to_unicode(curwp->w.dotp->l_text,
-                 offs, curwp->w.dotp->l_used, &prev_uc);
+            (void)utf8_to_unicode(ltext(curwp->w.dotp),
+                 offs, lused(curwp->w.dotp), &prev_uc);
 
             const char *uc_class =
                  utf8proc_category_string((utf8proc_int32_t)prev_uc);
@@ -851,8 +851,8 @@ int ptt_handler(int c) {
         int set_case = UTF8_CKEEP;
         if (ptr->caseset != CASESET_OFF) {
             unicode_t fc;
-            (void)utf8_to_unicode(curwp->w.dotp->l_text, start_at,
-                 curwp->w.dotp->l_used, &fc);
+            (void)utf8_to_unicode(ltext(curwp->w.dotp), start_at,
+                 lused(curwp->w.dotp), &fc);
             utf8proc_category_t  need_edit_type;
             if (ptr->caseset == CASESET_LOWI_ALL ||
                 ptr->caseset == CASESET_LOWI_ONE) {
@@ -1027,8 +1027,8 @@ int dobuf(struct buffer *bp) {
     int in_store_mode = FALSE;
     while (lp != hlp) {
 /* Scan the current line */
-        eline = lp->l_text;
-        i = lp->l_used;
+        eline = ltext(lp);
+        i = lused(lp);
 
 /* Trim leading whitespace */
         while (i-- > 0 && (*eline == ' ' || *eline == '\t')) ++eline;
@@ -1127,7 +1127,7 @@ nxtscan:          /* on to the next line */
     int eilen = 0;
     while (lp != hlp) {
 /* Allocate eline and copy macro line to it */
-        linlen = lp->l_used;
+        linlen = lused(lp);
         if (linlen == 0) goto onward;
         if (linlen > eilen) {
             einit = Xrealloc(einit, linlen + 1);
@@ -1135,7 +1135,7 @@ nxtscan:          /* on to the next line */
             eilen = linlen;
         }
         eline = einit;
-        memcpy(eline, lp->l_text, linlen);
+        memcpy(eline, ltext(lp), linlen);
         eline[linlen] = '\0';   /* make sure it ends */
 
 /* Trim leading whitespace */
@@ -1274,9 +1274,9 @@ nxtscan:          /* on to the next line */
                     linlen = strlen(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
 /* We need at least 2 chars on the line for a label... */
-                        if (glp->l_used < 2) continue;
-                        if (*glp->l_text == '*' &&
-                            (strncmp(glp->l_text+1, golabel, linlen) == 0)) {
+                        if (lused(glp) < 2) continue;
+                        if (*ltext(glp) == '*' &&
+                            (strncmp(ltext(glp)+1, golabel, linlen) == 0)) {
                             lp = glp;
                             goto onward;
                         }

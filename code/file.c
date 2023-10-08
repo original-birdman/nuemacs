@@ -96,11 +96,11 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
  * if this is marked as a DOS file.
  * NOTE, if the line is empty it cannot contain a CR!
  */
-        if ((nlines == 0) && check_dos && (llength(lp1) > 0) &&
-             (lp1->l_text[lp1->l_used-1] == '\r')) dos_file = TRUE;
-        if (dos_file && (llength(lp1) > 0) &&
-             (lp1->l_text[lp1->l_used-1] == '\r'))
-             lp1->l_used--;                 /* Remove the trailing CR */
+        if ((nlines == 0) && check_dos && (lused(lp1) > 0) &&
+             (ltext(lp1)[lused(lp1)-1] == '\r')) dos_file = TRUE;
+        if (dos_file && (lused(lp1) > 0) &&
+             (ltext(lp1)[lused(lp1)-1] == '\r'))
+             lused(lp1)--;                  /* Remove the trailing CR */
         if (!(++nlines % 300) && !silent)   /* GGR */
              mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
     }
@@ -594,7 +594,7 @@ int writeout(char *fn) {
     lp = lforw(curbp->b_linep);             /* First line.          */
     nline = 0;                              /* Number of lines.     */
     while (lp != curbp->b_linep) {
-        if ((s = ffputline(lp->l_text, llength(lp))) != FIOSUC) break;
+        if ((s = ffputline(ltext(lp), lused(lp))) != FIOSUC) break;
         ++nline;
         if (!(nline % 300) && !silent)      /* GGR */
             mlwrite(MLbkt("Writing...") " : %d lines",nline);

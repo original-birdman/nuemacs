@@ -405,7 +405,7 @@ void addline_to_anyb(char *text, struct buffer *bp) {
 
     ntext = strlen(text);
     lp = lalloc(ntext);
-    memcpy(lp->l_text, text, ntext);
+    memcpy(ltext(lp), text, ntext);
     bp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
     lp->l_bp = bp->b_linep->l_bp;
     bp->b_linep->l_bp = lp;
@@ -527,7 +527,7 @@ static int makelist(int iflag) {
         nbytes = 0L;                    /* Count bytes in buf.  */
         long nlc = (bp->b_mode & MDDOSLE)? 2: 1;
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = lforw(lp)) {
-            nbytes += (long) llength(lp) + nlc;
+            nbytes += (long) lused(lp) + nlc;
         }
         char nb[21];                    /* To handle longest long + NULL */
         sprintf(nb, "%20ld", nbytes);
@@ -712,7 +712,7 @@ void free_buffer(void) {
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = nextlp) {
             nextlp = lforw(lp);
 /* Just free the text and struct. No point fixing up pointers, etc... */
-            Xfree(lp->l_text);
+            Xfree(ltext(lp));
             Xfree(lp);
         }
         Xfree(bp->b_linep); /* No text in this one */

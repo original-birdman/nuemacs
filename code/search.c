@@ -499,6 +499,7 @@ void rotate_sstr(int n) {
 /* Setting prmpt_buf.preload makes getstring() add it into the result buffer
  * at the start of its next get-character loop.
  * It will be inserted into any current search string at the current point.
+ * Here as it needs to test this_rt.
  */
 void select_sstr(void) {
     prmpt_buf.preload = (this_rt == Search)? srch_txt[0]: repl_txt[0];
@@ -1957,7 +1958,7 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
     curline = *pcurline;
     curoff = *pcuroff;
 
-    offs_4_nl = (dir == FORWARD)? llength(curline): 0;
+    offs_4_nl = (dir == FORWARD)? lused(curline): 0;
     if (curoff == offs_4_nl) {      /* Need to change lines */
         if (dir == FORWARD) {
             nextline = lforw(curline);
@@ -1965,7 +1966,7 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
         }
         else {
             nextline = lback(curline);
-            nextoff = llength(nextline);
+            nextoff = lused(nextline);
         }
         if (bytes_used) *bytes_used = 1;
 /* Fudge in a newline char. HOWEVER, if we are at the end of buffer (in
@@ -1985,10 +1986,10 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
     else {
         if (pos_only) { /* Just get the position in the current line */
             if (dir == FORWARD)
-                nextoff = next_utf8_offset(curline->l_text, curoff,
-                     llength(curline), TRUE);
+                nextoff = next_utf8_offset(ltext(curline), curoff,
+                     lused(curline), TRUE);
             else
-                nextoff = prev_utf8_offset(curline->l_text, curoff, TRUE);
+                nextoff = prev_utf8_offset(ltext(curline), curoff, TRUE);
 
         }
         else {          /* Get the grapheme from the current line */
@@ -2007,7 +2008,7 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
             if (dir == FORWARD) get_graph = build_next_grapheme;
             else                get_graph = build_prev_grapheme;
             nextoff =
-                 get_graph(curline->l_text, curoff, llength(curline), &gc, 0);
+                 get_graph(ltext(curline), curoff, lused(curline), &gc, 0);
         }
         nextline = curline;
         if (bytes_used) *bytes_used = abs(nextoff - curoff);
@@ -2240,7 +2241,7 @@ try_next_choice:;
         switch(mcptr->mc.type) {
         case BOL:
         case EOL:
-            if (curoff == ((mcptr->mc.type == BOL)? 0: llength(curline))) {
+            if (curoff == ((mcptr->mc.type == BOL)? 0: lused(curline))) {
                 goto next_entry;
             }
             else
@@ -2410,13 +2411,13 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
     if (dir == FORWARD) {
         while (jump != 0) {
             curoff += jump;
-            spare = curoff - llength(curline);
+            spare = curoff - lused(curline);
             while (spare > 0) {
                 curline = lforw(curline);   /* skip to next line */
                 if (curline == curbp->b_linep)
                     return TRUE;            /* hit end of buffer */
                 curoff = spare - 1;
-                spare = curoff - llength(curline);
+                spare = curoff - lused(curline);
             }
             if (spare == 0) {
                 jump = deltaf[(int) '\n'];
@@ -2430,7 +2431,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
         curoff -= patlenadd;
         while (curoff < 0) {
             curline = lback(curline);/* skip back a line */
-            curoff += llength(curline) + 1;
+            curoff += lused(curline) + 1;
         }
     }
     else {                  /* Reverse.*/
@@ -2439,11 +2440,11 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
             curoff -= jump;
             while (curoff < 0) {
                 curline = lback(curline);       /* skip back a line */
-                curoff += llength(curline) + 1;
+                curoff += lused(curline) + 1;
                 if (curline == curbp->b_linep)
                     return TRUE;    /* hit end of buffer */
             }
-            if (curoff == llength(curline)) {
+            if (curoff == lused(curline)) {
                 jump = deltab[(int) '\n'];
             }
             else {
@@ -2453,11 +2454,11 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
 /* the last character matches, so back up to start of possible match */
 
         curoff += srch_patlen;
-        spare = curoff - llength(curline);
+        spare = curoff - lused(curline);
         while (spare > 0) {
             curline = lforw(curline);/* skip back a line */
             curoff = spare - 1;
-            spare = curoff - llength(curline);
+            spare = curoff - lused(curline);
         }
     }
 
@@ -2483,7 +2484,7 @@ static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
     curoff = *pcuroff;
 
     if (dir == FORWARD) {
-        if (curoff == llength(curline)) {   /* if at EOL */
+        if (curoff == lused(curline)) {     /* if at EOL */
             curline = lforw(curline);       /* skip to next line */
             curoff = 0;
             c = '\n';                       /* and return a <NL> */
@@ -2493,7 +2494,7 @@ static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
     else {                                  /* Reverse. */
         if (curoff == 0) {
             curline = lback(curline);
-            curoff = llength(curline);
+            curoff = lused(curline);
             c = '\n';
         }
         else c = lgetc(curline, --curoff);
@@ -2563,7 +2564,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
  * it is being compared with.
  */
  fprintf(stderr, "fast1: moved to %c(%02x) at %d in %.*s\n", c, c, scanoff,
-    scanline->l_used, scanline->l_text);
+    lused(scanline), ltext(scanline));
 #endif
             if (!asceq(c, *patptr++)) {
                 jump = (direct == FORWARD)? lastchfjump: lastchbjump;
@@ -2586,7 +2587,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
  */
             int togo = strlen(patrn);
             while(togo > 0) {
-                int on_tline = llength(tline) - toff;
+                int on_tline = lused(tline) - toff;
                 if (on_tline > togo) on_tline = togo;
                 togo -= on_tline;
                 if (togo > 0) {     /* So on to next line */
@@ -2600,7 +2601,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
         }
         struct grapheme gct;
 /* Don't build any ex... */
-        (void)build_next_grapheme(tline->l_text, toff, llength(tline), &gct, 1);
+        (void)build_next_grapheme(ltext(tline), toff, lused(tline), &gct, 1);
         if (combining_type(gct.uc)) {
             jump = (direct == FORWARD)? lastchfjump: lastchbjump;
             goto fail;
@@ -2665,9 +2666,9 @@ char *group_match(int grp) {
         struct line *cline = match_grp_info[grp].mline;
         int coff = match_grp_info[grp].start;
         while(togo > 0) {
-            int on_cline = llength(cline) - coff;
+            int on_cline = lused(cline) - coff;
             if (on_cline > togo) on_cline = togo;
-            memcpy(dp, (cline->l_text)+coff, on_cline);
+            memcpy(dp, ltext(cline)+coff, on_cline);
             dp += on_cline;
             togo -= on_cline;
 

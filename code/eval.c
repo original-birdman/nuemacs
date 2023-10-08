@@ -932,10 +932,10 @@ static char *gtenv(char *vname) {
     case EVACOUNT:          return ue_itoa(gacount);
     case EVLASTKEY:         return ue_itoa(lastkey);
     case EVCURCHAR:     /* Make this return the current Unicode base char */
-        if (curwp->w.dotp->l_used == curwp->w.doto) return ue_itoa('\n');
+        if (lused(curwp->w.dotp) == curwp->w.doto) return ue_itoa('\n');
         unicode_t uc_res;
-        (void)utf8_to_unicode(curwp->w.dotp->l_text, curwp->w.doto,
-             curwp->w.dotp->l_used, &uc_res);
+        (void)utf8_to_unicode(ltext(curwp->w.dotp), curwp->w.doto,
+             lused(curwp->w.dotp), &uc_res);
         return ue_itoa(uc_res);
     case EVDISCMD:          return ltos(discmd);
     case EVVERSION:         return VERSION;
@@ -954,7 +954,7 @@ static char *gtenv(char *vname) {
     case EVCMODE:           return ue_itoa(curbp->b_mode);
     case EVGMODE:           return ue_itoa(gmode);
     case EVPENDING:         return ltos(typahead());
-    case EVLWIDTH:          return ue_itoa(llength(curwp->w.dotp));
+    case EVLWIDTH:          return ue_itoa(lused(curwp->w.dotp));
     case EVLINE:            return getctext();
     case EVRVAL:            return ue_itoa(rval);
     case EVTAB:             return ue_itoa(tabmask + 1);
@@ -1110,10 +1110,10 @@ char *getval(char *token) {
         if (bp->b_linep == bp->b.dotp) return errorm;
 
 /* Grab the line as an argument */
-        blen = bp->b.dotp->l_used - bp->b.doto;
+        blen = lused(bp->b.dotp) - bp->b.doto;
         if (blen >= NSTRING)        /* GGR >= to allow for NUL */
             blen = NSTRING - 1;
-        memcpy(buf, bp->b.dotp->l_text + bp->b.doto, blen);
+        memcpy(buf, ltext(bp->b.dotp) + bp->b.doto, blen);
         buf[blen] = 0;
 
 /* And step the buffer's line ptr ahead a line */
@@ -1360,11 +1360,11 @@ static int svar(struct variable_description *var, char *value) {
             srch_can_hunt = 0;
 /* Just replace the current line's text with this text, and put dot at 0 */
             struct line *tlp = curwp->w.dotp;
-            int can_hold = tlp->l_size;
+            int can_hold = lsize(tlp);
             int need = strlen(value);
             if (need >= can_hold) ltextgrow(tlp, need - can_hold);
-            strcpy(tlp->l_text, value);
-            tlp->l_used = need;
+            strcpy(ltext(tlp), value);
+            lused(tlp) = need;
             curwp->w.doto = 0;      /* Has to go somewhere */
             break;
         case EVRVAL:

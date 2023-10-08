@@ -1137,12 +1137,12 @@ loop:
             goto loop;
         }
         lp = curwp->w.dotp;
-        sp = lp->l_text;
+        sp = ltext(lp);
 /* NSTRING-1, as we need to add a trailing NUL */
-        if (lp->l_used < NSTRING-1) {
+        if (lused(lp) < NSTRING-1) {
             int expanded;
-            memcpy(tstring, sp, lp->l_used);
-            tstring[lp->l_used] = '\0';
+            memcpy(tstring, sp, lused(lp));
+            tstring[lused(lp)] = '\0';
             switch(ctype) {
             case CMPLT_FILE:
                 expanded = comp_file(tstring, choices);
@@ -1164,7 +1164,7 @@ loop:
             if (expanded) {
                 savdoto = curwp->w.doto;
                 curwp->w.doto = 0;
-                ldelete((long) lp->l_used, FALSE);
+                ldelete((long) lused(lp), FALSE);
                 linstr(tstring);
 /* Don't bother with this when playing a macro - that just results
  * in an unnecessary pause from the sleep().
@@ -1240,9 +1240,9 @@ submit:     /* Tidy up */
     int maxadd = nbuf - 1;
     while (mblp != bp->b_linep && sofar < maxadd) {
         if (sofar != 0) buf[sofar++] = '\n';    /* Add NL if not first */
-        int add = llength(mblp);
+        int add = lused(mblp);
         if ((sofar + add) > maxadd) add = maxadd - sofar;
-        memcpy(buf+sofar, mblp->l_text, add);
+        memcpy(buf+sofar, ltext(mblp), add);
         sofar += add;
         mblp = lforw(mblp);
     }

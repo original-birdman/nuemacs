@@ -580,10 +580,10 @@ static int reframe(struct window *wp) {
 }
 
 static void show_line(struct line *lp) {
-    int i = 0, len = llength(lp);
+    int i = 0, len = lused(lp);
     while (i < len) {
         unicode_t c;
-        i += utf8_to_unicode(lp->l_text, i, len, &c);
+        i += utf8_to_unicode(ltext(lp), i, len, &c);
         vtputc(c);
     }
 }
@@ -1026,7 +1026,7 @@ static void updpos(void) {
     i = 0;
     while (i < curwp->w.doto) {
         unicode_t c;
-        int bytes = utf8_to_unicode(lp->l_text, i, curwp->w.doto, &c);
+        int bytes = utf8_to_unicode(ltext(lp), i, curwp->w.doto, &c);
         i += bytes;
         update_screenpos_for_char(curcol, c);
     }

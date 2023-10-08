@@ -932,7 +932,7 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
     int count = 1;
     int in_quote = 0;   /* May not be true, though best guess */
     while (1) {
-        if (!(curwp->w.doto == llength(curwp->w.dotp))) {   /* Not e-o-l */
+        if (!(curwp->w.doto == lused(curwp->w.dotp))) { /* Not e-o-l */
             int c = lgetc(curwp->w.dotp, curwp->w.doto);
             if ((c == '"') || (c == '\'')) in_quote = 1 - in_quote;
             else if (!in_quote) {
@@ -1046,7 +1046,7 @@ int getfence(int f, int n) {
  * We only have ASCII braces, so no need to handle Unicode here.
  * A combining-char on a brace is meaningless.
  */
-    if (oldoff == llength(oldlp)) ch = '\n';
+    if (oldoff == lused(oldlp)) ch = '\n';
     else                          ch = lgetc(oldlp, oldoff);
 
 /* Setup proper matching fence */
@@ -1482,7 +1482,7 @@ int execute(int c, int f, int n) {
  * Then advance a space and take the rest of the line as the entry name
  * since we're only looking for space we can just use ASCII.
  */
-           {char *lp = curwp->w.dotp->l_text;
+           {char *lp = ltext(curwp->w.dotp);
 /* Check that we can handle this type of entry.
  * The showdir command will have followed all symlinks, so
  * we're only interested in directories and files.
@@ -1491,7 +1491,7 @@ int execute(int c, int f, int n) {
                 mlwrite_one("Error: showdir only views directories and files");
                 break;
             }
-            int max = llength(curwp->w.dotp);
+            int max = lused(curwp->w.dotp);
             int tok = showdir_tokskip;
             if (tok < 0) {
                 mlwrite_one("Error: $showdir_tokskip is negative!");
@@ -1518,7 +1518,7 @@ int execute(int c, int f, int n) {
             }
 /* Move to start of name, and get the length to end-of-data (no NUL here) */
             lp++;   /* Step over next space */
-            fnlen = curwp->w.dotp->l_text+llength(curwp->w.dotp) - lp;
+            fnlen = curwp->w.dotp->l_text+lused(curwp->w.dotp) - lp;
 
 /* Now build up the full pathname
  * Start with the current buffer filename, and append "/", unless we
@@ -1607,7 +1607,7 @@ int execute(int c, int f, int n) {
  * or we are at a tab stop, delete a char forward
  */
         if (curwp->w_bufp->b_mode & MDOVER &&
-            curwp->w.doto < curwp->w.dotp->l_used &&
+            curwp->w.doto < lused(curwp->w.dotp) &&
             (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
             (curwp->w.doto) % 8 == 7))
                 ldelgrapheme(1, FALSE);

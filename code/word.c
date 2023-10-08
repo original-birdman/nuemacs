@@ -57,7 +57,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
     }
 
     zw_break = 0;
-    if (myoffs == llength(mylp)) {  /* Handle end of line */
+    if (myoffs == lused(mylp)) {    /* Handle end of line */
         gc.uc = '\n';
         if (inwp) {                 /* Switch caller to next one */
             inwp->offs = 0;
@@ -67,7 +67,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
     else {
 /* Don't build any ex... */
         myoffs =
-             build_next_grapheme(mylp->l_text, myoffs, llength(mylp), &gc, 1);
+             build_next_grapheme(ltext(mylp), myoffs, lused(mylp), &gc, 1);
         if (inwp) inwp->offs = myoffs;
         if (gc.uc == 0x200B && gc.cdm == 0) {   /* NOT a combining char */
             zw_break = 1;
@@ -341,7 +341,7 @@ int delfword(int f, int n) {
         while (n--) {
 
 /* If we are at EOL; skip to the beginning of the next */
-            while (curwp->w.doto == llength(curwp->w.dotp)) {
+            while (curwp->w.doto == lused(curwp->w.dotp)) {
                 moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 ++size;     /* Will move one to next line */
@@ -524,7 +524,7 @@ int wordcount(int f, int n) {
         saved.marko = curwp->w.marko;
 /* Set the current position to BOF and mark to EOF */
         curwp->w.markp = curwp->w_bufp->b_linep;
-        curwp->w.marko = llength(curwp->w.markp);
+        curwp->w.marko = lused(curwp->w.markp);
         curwp->w.dotp = lforw(curwp->w_bufp->b_linep);
         curwp->w.doto = 0;
     }
@@ -623,7 +623,7 @@ static int filler_bword(void) {
  * The callable routine follows.
  */
 static int do_actual_wrap(int wdel) {
-    if (llength(curwp->w.dotp) == 0) return FALSE;  /* Empty line */
+    if (lused(curwp->w.dotp) == 0) return FALSE;    /* Empty line */
 
 /* Remember where we are and get to the start of the current/previous word.
  * If we are not at whitespace, go forw 1 first, just in case we are at
@@ -697,7 +697,7 @@ int wrapword(int f, int n) {
  * This handles "mid-line" wraps and inability to wrap
  */
                 whitedelete(0, 0);
-                if ((curwp->w.doto != llength(curwp->w.dotp)) &&
+                if ((curwp->w.doto != lused(curwp->w.dotp)) &&
                     (curwp->w.doto != 0)) linsert_byte(1, ' ');
             }
 /* Back to where we were (which will have moved and been updated).
@@ -816,7 +816,7 @@ static int filler(int indent, int width, int justify) {
         if (!filler_fword()) return FALSE;          /* Next word */
         words_to_wrap++;
         whitedelete(0, 0);                          /* -> 0 spaces */
-        if (curwp->w.doto == llength(curwp->w.dotp)) {  /* E-o-line */
+        if (curwp->w.doto == lused(curwp->w.dotp)) {    /* E-o-line */
             if (lforw(curwp->w.dotp) == end_line) {     /* At end of para? */
                 all_done = 1;       /* Time to wrap up - no more spaces... */
             }
@@ -885,8 +885,8 @@ static int filler(int indent, int width, int justify) {
             if (eos_list) {     /* Some eos defined */
                 struct grapheme gi;
 /* Don't build any ex... */
-                (void)build_prev_grapheme(curwp->w.dotp->l_text,
-                 curwp->w.doto, llength(curwp->w.dotp), &gi, 1);
+                (void)build_prev_grapheme(ltext(curwp->w.dotp),
+                 curwp->w.doto, lused(curwp->w.dotp), &gi, 1);
                 for (unicode_t *eosch = eos_list;
                      *eosch != UEM_NOCHAR; eosch++) {
                     if (gi.cdm == 0 && gi.uc == *eosch) {
@@ -961,7 +961,7 @@ int justpara(int f, int n) {
         status = filler(leftmarg, fillcol, justify);
         if (status != TRUE) break;
 /* Position cursor at indent column in next non-blank line */
-        while(forwline(0, 1)) if (llength(curbp->b_linep) == 0) break;
+        while(forwline(0, 1)) if (lused(curbp->b_linep) == 0) break;
         setccol(leftmarg);
     }
 
@@ -1012,7 +1012,7 @@ static int region_listmaker(const char *lbl_fmt, int n) {
     struct line *flp = f_region.r_linep;
     long togo = f_region.r_bytes + f_region.r_offset;
     while (1) {
-        long left = togo - (llength(flp) + 1);   /* Incl newline */
+        long left = togo - (lused(flp) + 1);    /* Incl newline */
         if (left < 0) break;
         togo = left;
         flp = lforw(flp);

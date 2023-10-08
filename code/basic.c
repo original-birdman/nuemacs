@@ -27,8 +27,8 @@
  * It's not empty if we have any *byte* other than a space or tab
  */
 static int curline_empty(void) {
-    char *cp = &curwp->w.dotp->l_text[0];
-    char *ep = &curwp->w.dotp->l_text[llength(curwp->w.dotp)];
+    char *cp = ltext(curwp->w.dotp);
+    char *ep = cp + lused(curwp->w.dotp);
     while (cp < ep) {
         if ((*cp != ' ') && (*cp != '\t')) return FALSE;
         cp++;
@@ -43,11 +43,11 @@ static int curline_empty(void) {
 static int offset_for_curgoal(struct line *dlp) {
     int col = 0;        /* Cursor display column */
     int dbo = 0;        /* Byte offset within dlp */
-    int len = llength(dlp);
+    int len = lused(dlp);
 
     while (dbo < len) {
         unicode_t c;
-        int bytes_used = utf8_to_unicode(dlp->l_text, dbo, len, &c);
+        int bytes_used = utf8_to_unicode(ltext(dlp), dbo, len, &c);
         update_screenpos_for_char(col, c);
         if (col > curgoal) break;
         dbo += bytes_used;
@@ -70,7 +70,7 @@ int gotobol(int f, int n) {
  * the way results in it returning minus the actual move (NEW!).
  * If "n" is less than zero call "back_grapheme" to actually do the move.
  * Otherwise compute the new cursor location, and move ".".
- * Error if you try and move off the end of the buffer.
+ * Error if you try to move off the end of the buffer.
  * Set the flag if the line pointer for dot changes.
  * The macro-callable forwchar() (as macros need something that returns
  * TRUE/FALSE) is a write-through to this, with the "f" arg ignored (it
@@ -82,7 +82,7 @@ int forw_grapheme(int n) {
     if (n < 0) return back_grapheme(-n);
     int moved = 0;
     while (n--) {
-        int len = llength(curwp->w.dotp);
+        int len = lused(curwp->w.dotp);
         if (curwp->w.doto == len) {
             if (curwp->w.dotp == curbp->b_linep) return -moved;
             curwp->w.dotp = lforw(curwp->w.dotp);
@@ -96,8 +96,8 @@ int forw_grapheme(int n) {
  */
             int saved_doto = curwp->w.doto;
             curwp->w.doto =
-                 next_utf8_offset(curwp->w.dotp->l_text, curwp->w.doto,
-                                  llength(curwp->w.dotp), TRUE);
+                 next_utf8_offset(ltext(curwp->w.dotp), curwp->w.doto,
+                                  lused(curwp->w.dotp), TRUE);
             moved += curwp->w.doto - saved_doto;
         }
     }
@@ -118,7 +118,6 @@ int forw_grapheme(int n) {
  * has never done anything).
  * Internal calls should be to back_grapheme() *not* backchar().
  */
-
 int back_grapheme(int n) {
     struct line *lp;
 
@@ -128,7 +127,7 @@ int back_grapheme(int n) {
         if (curwp->w.doto == 0) {
             if ((lp = lback(curwp->w.dotp)) == curbp->b_linep) return -moved;
             curwp->w.dotp = lp;
-            curwp->w.doto = llength(lp);
+            curwp->w.doto = lused(lp);
             curwp->w_flag |= WFMOVE;
             moved++;
         }
@@ -138,7 +137,7 @@ int back_grapheme(int n) {
  */
             int saved_doto = curwp->w.doto;
             curwp->w.doto =
-                 prev_utf8_offset(curwp->w.dotp->l_text, curwp->w.doto, TRUE);
+                 prev_utf8_offset(ltext(curwp->w.dotp), curwp->w.doto, TRUE);
             moved += saved_doto - curwp->w.doto;
         }
     }
@@ -155,7 +154,7 @@ int backchar(int f, int n) {
  */
 int gotoeol(int f, int n) {
     UNUSED(f); UNUSED(n);
-    curwp->w.doto = llength(curwp->w.dotp);
+    curwp->w.doto = lused(curwp->w.dotp);
     return TRUE;
 }
 
@@ -278,17 +277,17 @@ int gotoline(int f, int n) {
         n = atoi(arg);
     }
 /* Handle the case where the user may be passed something like this:
- * em filename +
+ * uemacs filename +
  * In this case we just go to the end of the buffer.
  */
     if (n == 0) return gotoeob(f, n);
 
-/* If a bogus argument was passed, then returns false. */
+/* If a bogus argument was passed, then return False. */
     if (n < 0) return FALSE;
 
 /* First, we go to the begin of the buffer. */
-    gotobob(f, n);
-    return forwline(f, n - 1);
+    gotobob(0, 0);
+    return forwline(0, n - 1);
 }
 
 /* The inword() test has been replaced with this, as we really want to
@@ -374,7 +373,7 @@ int gotoeop(int f, int n) {
 /* ...and then backward until we are in a word */
         suc = back_grapheme(1);
         while ((suc > 0) && at_whitespace()) suc = back_grapheme(1);
-        curwp->w.doto = llength(curwp->w.dotp); /* and to the EOL */
+        curwp->w.doto = lused(curwp->w.dotp);    /* and to the EOL */
     }
     curwp->w_flag |= WFMOVE;  /* force screen update */
     return TRUE;
