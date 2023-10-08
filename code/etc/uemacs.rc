@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.171 (requires GGR4.171+)
-;                       Last Update: 02 Oct 2023
+;                       Version - GGR4.173 (requires GGR4.173+)
+;                       Last Update: 08 Oct 2023
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -323,8 +323,18 @@ store-procedure del-sp-right one_pass
 
 ; Take text between point and any preceding $ as an environment variable
 ; name and replace that $text with the variable's contents
+; Use a pin to preserve any user mark.
 ;
 store-procedure expand-envvar
+
+    set .have_mark 0
+    !force exchange-point-and-mark  ; Preserve any user mark
+    !if &seq $force_status "PASSED"
+        set .have_mark 1
+        drop-pin                    ; Remember where
+        exchange-point-and-mark     ; Back to start
+    !endif
+
     set-mark
     !while TRUE
         !if &equal $curchar 36  ; i.e. "$"
@@ -341,6 +351,12 @@ store-procedure expand-envvar
 ; Remove the $varname text, then look-up that (minus the $) as an envvar
     kill-region
     insert-string &env &mid $kill 2 &len $kill
+
+    !if &equ .have_mark 1           ; Restore any original mark
+        switch-with-pin
+        set-mark
+        switch-with-pin
+    !endif
 !endm
 
 ; Toggle ggr_opts settings
@@ -803,22 +819,87 @@ store-procedure clear-debug-buffer not_mb one_pass no_macbug
 
 buffer-to-key   set-debug           ^XM-D
 buffer-to-key   clear-debug-buffer  ^XM-C
+
 ;
-; Indent the rest of a paragraph from dot to the current column.
-; Leaves you where you started.
-; Makes no sense to pass it a numeric arg.
+; Indent the rest of a paragraph from dot to the current column
+; This removes leading whitespace by default
+; Leaves you where you started, so makes no sense to use a numeric arg
+; as a repeat counter. So:
+;   -var arg        => Justify
+;   abs(arg == 2)   => Remove any leading whitspace
+;
+; We need a pin to remember where we are (even if we used a mark, we'd
+; need a pin to preserve any user mark) and a pin to preserve a
+; user-mark around defining a region to preserve leading whitespace.
 ;
 store-procedure make-descr not_mb one_pass
   set .ccol $curcol
-  set-mark
-  2 newline
+  drop-pin                      ; Remember where we are
+  2 newline                     ; Separate rest of paragraph
   set .pad &sub .ccol 1
   .pad insert-space
   .pad forward-character
-  justify-paragraph
-  exchange-point-and-mark
+
+; If we want to preserve leading space then we have to do some work to
+; allow this, as justify-paragraph removes them by default.
+; We use another procedure so that it can use another pin
+;
+  set .remove_xs 0
+  !if &not &equ &abs $uproc_lptotal 2
+    set .remove_xs 1
+    execute-procedure _wsp2xs   ; Leading spaces => "x"s
+  !endif
+
+  !if &les $uproc_lptotal 0     ; Justify?
+    set .mdc -1
+  !else
+    set .mdc 1
+  !endif
+  .mdc justify-paragraph
+  back-to-pin                   ; Back to start to remove added newlines.
   2 kill-to-end-of-line
   execute-procedure del-sp-right
+
+  !if &equ .remove_xs 1         ; Change xs to what was there originally
+    %old-wspcols delete-next-character
+    insert-string %old-wsptext
+    delete-var %old-wspcols
+    delete-var %old-wsptext
+  !endif
+!endm
+
+; The _wsp2xs helper routine
+; NOTE that "leading whitespace" may include tabs, so the length of
+; %old-wsptext may differ from %old-wspcols
+
+store-procedure _wsp2xs not_mb not_interactive
+; First we save any user mark
+;
+    set .have_mark 0
+    !force exchange-point-and-mark  ; Preserve any user mark
+    !if &seq $force_status "PASSED"
+        set .have_mark 1
+        drop-pin                    ; Remember where
+        exchange-point-and-mark     ; Back to start
+    !endif
+    set .spos $curcol
+    set .omode $cmode
+    add-mode "Magic"
+    set-mark                        ; So we can get a region
+    search-forward "\S|\n"          ; Non-wsp or e-o-l
+    backward-character              ; Back over the match
+    set $cmode .omode
+    set %old-wspcols &sub $curcol .spos ; No. of xs to insert
+    kill-region                     ; Remove white-space
+    set %old-wsptext $kill          ; For caller to restore
+    set-mark
+    %old-wspcols insert-string "x"
+    exchange-point-and-mark
+    !if &equ .have_mark 1           ; Restore any original mark
+        switch-with-pin
+        set-mark
+        switch-with-pin
+    !endif
 !endm
 
 buffer-to-key   make-descr      ^XM-A
