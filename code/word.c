@@ -957,7 +957,7 @@ int justpara(int f, int n) {
         gotobop(FALSE, 1);
         (void)whitedelete(1, 1);    /* Don't care whether there was any */
         curwp->w.doto = 0;          /* Should be 0 anyway... */
-        for (int i = 0; i < leftmarg; i++) linsert_byte(1, ' ');
+        linsert_byte(leftmarg, ' ');
         status = filler(leftmarg, fillcol, justify);
         if (status != TRUE) break;
 /* Position cursor at indent column in next non-blank line */
