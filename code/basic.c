@@ -188,33 +188,32 @@ int gotoeob(int f, int n) {
     return TRUE;
 }
 
-/* Move forward by full lines. If the number of lines to move is less than
- * zero, call the backward line function to actually do it. The last command
- * controls how the goal column is set. Bound to "C-N". No errors are
- * possible.
+/* Internal routine to move by n full lines.
+ * boundary conditions vary slightly according to the direction.
+ * We remember that the last command was a lien move so that we may
+ * preserve the cursor in the starting column of consecutive line-move
+ * command even if we pass through a short one on the way.
  */
-int backline(int, int);     /* Forward declaration */
-int forwline(int f, int n) {
+static int move_n_lines(int n) {
     struct line *dlp;
 
-    if (n < 0) return backline(f, -n);
+/* If we are on the first(back) or last(forw) line as we start,
+ * fail the command.
+ */
+    dlp = (n < 0)? lback(curwp->w.dotp): curwp->w.dotp;
+    if (dlp == curbp->b_linep) return FALSE;
 
-/* If we are on the last line as we start....fail the command */
-
-    if (curwp->w.dotp == curbp->b_linep) return FALSE;
-
-/* If the last command was not a line move, reset the goal column */
-
+/* If the last command was not a line move, reset the goal column.
+ * Always flag this command as a line move.
+ */
     if ((lastflag & CFCPCN) == 0) curgoal = getccol();
-
-/* Flag this command as a line move */
-
     thisflag |= CFCPCN;
 
-/* And move the point down */
+/* Move the point up/down */
 
     dlp = curwp->w.dotp;
-    while (n-- && dlp != curbp->b_linep) dlp = lforw(dlp);
+    if (n < 0) while (n++ && lback(dlp) != curbp->b_linep) dlp = lback(dlp);
+    else       while (n-- && dlp != curbp->b_linep) dlp = lforw(dlp);
 
 /* Resetting the current position */
 
@@ -224,39 +223,18 @@ int forwline(int f, int n) {
     return TRUE;
 }
 
-/* This function is like "forwline", but goes backwards. The scheme is exactly
- * the same. Check for arguments that are less than zero and call your
- * alternate. Figure out the new line and call "movedot" to perform the
- * motion. No errors are possible. Bound to "C-P".
+/* The user-callable functions, bound to ctlP/Z (backline) and ctlN
+ * (forwline) as well as the relevant cursor keys.
+ * Just pass-on the numeric arg, negating it for backline().
  */
+
+int forwline(int f, int n) {
+    UNUSED(f);
+    return move_n_lines(n);
+}
 int backline(int f, int n) {
-    struct line *dlp;
-
-    if (n < 0) return forwline(f, -n);
-
-/* If we are on the first line as we start....fail the command */
-
-    if (lback(curwp->w.dotp) == curbp->b_linep) return FALSE;
-
-/* If the last command was not a line move, reset the goal column */
-
-    if ((lastflag & CFCPCN) == 0) curgoal = getccol();
-
-/* Flag this command as a line move */
-
-    thisflag |= CFCPCN;
-
-/* And move the point up */
-
-    dlp = curwp->w.dotp;
-    while (n-- && lback(dlp) != curbp->b_linep) dlp = lback(dlp);
-
-/* Resetting the current position */
-
-    curwp->w.dotp = dlp;
-    curwp->w.doto = offset_for_curgoal(dlp);
-    curwp->w_flag |= WFMOVE;
-    return TRUE;
+    UNUSED(f);
+    return move_n_lines(-n);
 }
 
 /* Move to a particular line.
