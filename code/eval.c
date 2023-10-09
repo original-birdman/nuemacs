@@ -944,9 +944,7 @@ static char *gtenv(char *vname) {
     case EVDISINP:          return ltos(disinp);
     case EVWLINE:           return ue_itoa(curwp->w_ntrows);
     case EVCWLINE:          return ue_itoa(getwpos());
-    case EVTARGET:
-        saveflag = lastflag;
-        return ue_itoa(curgoal);
+    case EVTARGET:          return ue_itoa(curgoal);
     case EVSEARCH:          return pat;
     case EVREPLACE:         return rpat;
     case EVMATCH:           return group_match(0);
@@ -1334,7 +1332,7 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVTARGET:
             curgoal = atoi(value);
-            thisflag = saveflag;
+            thisflag |= CFCPCN; /* Set this flag */
             break;
         case EVREPLACE:
             strcpy(rpat, value);

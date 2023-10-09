@@ -1891,7 +1891,6 @@ int main(int argc, char **argv) {
     struct buffer *bp;      /* temp buffer pointer */
     struct buffer *firstbp = NULL;  /* ptr to first buffer in cmd line */
     int gline = 0;          /* if so, what line? */
-    int saveflag;           /* temp store for lastflag */
     char bname[NBUFN];      /* buffer name of file to read */
     char ekey[NPAT];        /* startup encryption key */
     char *rcextra[10];      /* GGR additional rc files */
@@ -2220,7 +2219,7 @@ do {
 
 loop:
 /* Execute the "command" macro...normally null. */
-    saveflag = lastflag;  /* Preserve lastflag through this. */
+    int saveflag = lastflag;    /* Preserve lastflag through this. */
 /* Don't start the handler when it is already running as that might
  * just get into a loop...
  */

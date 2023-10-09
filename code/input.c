@@ -1058,7 +1058,7 @@ loop:
     mbupdate();
 
 /* Execute the "command" macro...normally null */
-    saveflag = lastflag;        /* preserve lastflag through this */
+    int saveflag = lastflag;    /* preserve lastflag through this */
 /* Don't start the handler when it is already running as that might
  * just get into a loop...
  */

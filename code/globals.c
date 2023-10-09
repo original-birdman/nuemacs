@@ -63,7 +63,6 @@ char errorm[] = "ERROR";        /* error literal                */
 char truem[] = "TRUE";          /* true literal                 */
 char falsem[] = "FALSE";        /* false litereal               */
 int cmdstatus = TRUE;           /* last command status          */
-int saveflag = 0;               /* Flags, saved with the $target var */
 int rval = 0;                   /* return value of a subprocess */
 int overlap = 0;                /* line overlap in forw/back page */
 int scrolljump = 0;             /* no. lines to scroll (0 == centre screen) */

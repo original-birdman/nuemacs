@@ -177,7 +177,7 @@ int readin(char *fname, int lockfl) {
     if (s != TRUE) return s;
 
 /* let a user macro get hold of things...if he wants */
-    saveflag = lastflag;        /* preserve lastflag through this */
+    int saveflag = lastflag;    /* preserve lastflag through this */
 /* Don't start the handler when it is already running as that might
  * just get into a loop...
  */
@@ -351,10 +351,10 @@ int insfile(int f, int n) {
             curwp->w.marko = curwp->w.doto;
             gotoeob(0, 0);
 /* We do not want this to save the kill, so fudge in such a condition */
-            int save_lastflag = lastflag;
+            int saveflag = lastflag;
             lastflag |= CFYANK;
             killregion(0, 0);
-            lastflag = save_lastflag;
+            lastflag = saveflag;
         }
         else if ((s = bclear(curbp)) != TRUE) return s; /* Might be old.  */
     }
