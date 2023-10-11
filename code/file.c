@@ -350,11 +350,8 @@ int insfile(int f, int n) {
             curwp->w.markp = curwp->w.dotp;
             curwp->w.marko = curwp->w.doto;
             gotoeob(0, 0);
-/* We do not want this to save the kill, so fudge in such a condition */
-            int saveflag = lastflag;
-            lastflag |= CFYANK;
-            killregion(0, 0);
-            lastflag = saveflag;
+/* We do not want to save this kill, so tell killregion not to. */
+            killregion(0, 2);
         }
         else if ((s = bclear(curbp)) != TRUE) return s; /* Might be old.  */
     }
