@@ -40,25 +40,25 @@ OmF1LjQ+Z10kdUtNLjI9c0IqCg==
 EOD
 
 # The result of encrypting that file, by-hand, using
-# ATestEncryptionString as the key with $crypt_mode set to 0x02
+# SecondTestEncryptionString as the key with $crypt_mode set to 0x02
 #
 base64 -d > Decrypt-GGR4.120 <<'EOD'
-kn/RD7g4eh6s2jeDJY8Rg9NCYqUzriRMtWBJk/dt/hmLLbggb+RLyWVY2lSrf6s4sGSNhPNSuT/F
-kDK9V9WsQY8Cbgt0AZUL8Bm2ozLKR+CkSLqrVPCNV51a8aFgeT/X4hnALuZ5Ki/0rDsDhwUI14Ur
-uoMc0sl76rLNNuEBflJy5XxJFdq1vsOadCtd+L6RwB792sbDLem9mHRnQCj0EyPoCRLiBPfy897M
-GTQxEfn+/AAwVk8reRIFB/H6UgfmDCc3P1Of7dxD0uneQN3sDS5bd5cAGUNVok8bRNoGMkZZ2tiy
-zt1gTnWNPAt3i9ROe6RYjVOGUQ==
+Gy921YLpH98DQJ4O0+1+nhmX9GcMjRRv7bxx31/pjhyhVofXW9xm7qEhqRWAUHIAbCTiIqYDgBut
+nGrpdwnlEpQ935Mx1X4dHvaZmGUPoEEbAYlxu4MaHQO8axQGv5k5TKtK3apSBhcAzG8s14qojDwT
+xoMv2/fgLhJBpkWBEur+nXleRiQMGywh66DRZx8KUOOnfHi117vDemptZmY6gIBXrdK2DCQVJgLV
+KDdMLkBILSZrGi8foKvA1vQRfVpxyXOQqaTdvOA6i8fbUicZTYOvvu99ZYOq/2J4cny8DCBHvFJE
+WJQrw/47+12BQYr9W5hptHzZWQ==
 EOD
 
 # The result of encrypting that file, by-hand, using
-# ATestEncryptionString as the key with $crypt_mode set to 0x01
+# ThirdTestEncryptionString as the key with $crypt_mode set to 0x01
 #
 base64 -d > Decrypt-GGR4.121 <<'EOD'
-E8KrkON5e+F3iKOoFF26ABJBHkOX2g8MN6baAwcdj8z9gbbTBixkmRVpr9Tsel2myjO72CcwWJ7j
-c1un4fum/kV6xxhfsAUdy6sNmhdvrRbFrOh6guQquEKo3lT0+H/ZmT+yAGCzFNHbaLk/vCv2I2nH
-D3wGUAn6KLCNNqSN1FY4+ob2exapZHUIfgj1QJkwIcIyzFQs6mr+mzrohTDPpVwG5yutkmL/w07f
-7zgImVIImV9y3KUsORPHjzsLBuN5jGg/GubRRvsl+NqxwB/tz7KKRwcyMh0PEJ/NHqZyVy0AIS7u
-xIOeCWwzkBljDxhUXUpHOrYx3w==
+GNfw80ju4jqEeJiwEFat2/80P2i4AzA7YM+bycziLWuoDl+Qw+URRJTqNHeXH5DN9GxpZ57bGmik
+MpzoJkfGYXTM/V60B2SAGp3/sB6JyzDa7zPr21O8a1/iD2n8E47MmEKCtSN8+cKxLYLvUKyFFIb0
+XOxZ046HE49Pf//8JatxqBWqPNZuMeF5FpV5z0a/v6ATsmEeA3gvsD/6nl8V+l0M8EvQ2Tv8vHUU
+FvG1WBPLZhAnAJZHWHQy+8JykYgyP0Uc9r/ecDxmwJZ5nLd5X0cr66/uajguNchOoTstMQfeIjUW
+ALv64s+eFarYaHO5SROH/gaFFw==
 EOD
 
 # Command to get uemacs to read in the encrypted file and write it out,
@@ -152,53 +152,53 @@ store-procedure check-decrypt
 ; Get the expected results into buffers now...before CRYPT is on
 find-file Expected-Decrypt
 set %tbuf1 Expected-Decrypt
+
+; Read in the first test, setting a global encryption key
 ;
 set %test_name Decrypt-nUemacs
 select-buffer TEST
-set $crypt_mode 0x3001
+set $crypt_mode 0x7001
 add-mode Crypt
 set-encryption-key ATestEncryptionString
 read-file %test_name
 set %tbuf2 TEST
 select-buffer test-reports
 execute-procedure check-decrypt
-;
+
 ; We'll do this one by re-using the same buffer.
-; This will test re-encrypting the key under the new mode.
-; We have to remove the previous contents of TEST first
+; This will test the global encryption key under the new mode.
+; We have to remove the previous TEST buffer first
 ;
 set %test_name Decrypt-pre-GGR4.120
+delete-buffer TEST
 select-buffer TEST
-beginning-of-file
-set-mark
-end-of-file
-2 kill-region
-set $crypt_mode 0x3002
-unmark-buffer
+set $crypt_mode 0x7002
+add-mode Crypt
 read-file %test_name
 set %tbuf2 TEST
 select-buffer test-reports
 execute-procedure check-decrypt
-;
-; Read this one into its own new buffer, giving the encryption
-; key as part of the read-file command
+
+; Read this one into its own new buffer, with crypt_mode set to use a
+; per-buffer key, but giving that as part of the read-file command
 ;
 set %test_name Decrypt-GGR4.120
 select-buffer %test_name
 set $crypt_mode 0x2
 add-mode Crypt
-read-file %test_name ATestEncryptionString
+read-file %test_name SecondTestEncryptionString
 set %tbuf2 %test_name
 select-buffer test-reports
 execute-procedure check-decrypt
-;
-; For this one we'll set the encryption key separately
+
+; For this one we'll set the (per-buffer) encryption key separately
+; before reading in the file.
 ;
 set %test_name Decrypt-GGR4.121
 select-buffer %test_name
 set $crypt_mode 0x1
 add-mode Crypt
-set-encryption-key ATestEncryptionString
+set-encryption-key ThirdTestEncryptionString
 read-file %test_name
 set %tbuf2 %test_name
 select-buffer test-reports
