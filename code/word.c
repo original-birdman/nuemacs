@@ -311,8 +311,10 @@ int delfword(int f, int n) {
     if (n < 0) return(delbword(f, -n));
 
 /* Clear the kill buffer if last command wasn't a kill */
-    if ((lastflag & CFKILL) == 0) kdelete();
-    thisflag |= CFKILL;     /* this command is a kill */
+    if ((com_flag & CFKILL) == 0) {
+        kdelete();
+        com_flag |= CFKILL; /* this command is a kill */
+    }
 
 /* Save the current cursor position */
     dotp = curwp->w.dotp;
@@ -392,8 +394,10 @@ int delbword(int f, int n) {
     if (n <= 0) return(delfword(f, -n));
 
 /* Clear the kill buffer if last command wasn't a kill */
-    if ((lastflag & CFKILL) == 0) kdelete();
-    thisflag |= CFKILL;     /* this command is a kill */
+    if ((com_flag & CFKILL) == 0) {
+        kdelete();
+        com_flag |= CFKILL; /* this command is a kill */
+    }
 
     int moved;
     moved = back_grapheme(1);

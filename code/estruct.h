@@ -145,9 +145,21 @@ enum cmplt_type {   /* What is looked up and complete */
 #define FIOMEM  4               /* File I/O, out of memory      */
 #define FIOFUN  5               /* File I/O, eod of file/bad line */
 
-#define CFCPCN  0x0001          /* Last command was C-P, C-N    */
-#define CFKILL  0x0002          /* Last command was a kill      */
-#define CFYANK  0x0004          /* Last command was a yank      */
+/* Flags for commands which can "continue". Used in com_flag.
+ * keep_flags (in name_bind) determines which bits will be allowed to
+ * remain on after a command runs (where it would not affect the result).
+ * The reset occurs in the 3 places where generic command may be run:
+ *      exec.c      docmd()   [nbp->n_func]
+ *                  namdcmd() [kfunc]
+ *      main.c      execute() [execfunc]
+ * Functions that use them must still set them!
+ * They must also be turned off if any mini-buffer prompt is done.
+ */
+#define CFCPCN  0x0001          /* "Last" command was C-P, C-N  */
+#define CFKILL  0x0002          /* "Last" command was a kill    */
+#define CFYANK  0x0004          /* "Last" command was a yank    */
+#define CFNONE  0x0000
+#define CFALL   0xFFFF
 
 #define BELL    0x07            /* a bell character             */
 #define TAB     0x09            /* a tab character              */
@@ -447,9 +459,10 @@ struct key_tab_init {       /* Initializing data */
 
 /* Structure for the name binding table. */
 struct name_bind {
-    char *n_name;            /* name of function */
-    fn_t n_func;             /* function the name is bound to */
-    struct func_opts opt;
+    char *n_name;           /* name of function */
+    fn_t n_func;            /* function the name is bound to */
+    struct func_opts opt;   /* Function options */
+    int keep_flags;         /* Control flags to keep after command */
 };
 
 /* The editor holds deleted text chunks in the struct kill buffer. The

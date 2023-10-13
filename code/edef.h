@@ -80,8 +80,7 @@ extern int scrolljump;          /* number of lines to jump on scroll */
 
 extern int currow;              /* Cursor row                   */
 extern int curcol;              /* Cursor column                */
-extern int thisflag;            /* Flags, this command          */
-extern int lastflag;            /* Flags, last command          */
+extern int com_flag;            /* Command flags                */
 extern int curgoal;             /* Goal for C-P, C-N            */
 extern struct window *curwp;    /* Current window               */
 extern struct buffer *curbp;    /* Current buffer               */

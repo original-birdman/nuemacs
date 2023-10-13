@@ -1309,9 +1309,8 @@ int ctlxrp(int f, int n) {
 
 /* ======================================================================
  * This is the general command execution routine. It handles the fake binding
- * of all the keys to "self-insert". It also clears out the "thisflag" word,
- * and arranges to move it to the "lastflag", so that the next command can
- * look at it. Return the status of command.
+ * of all the keys to "self-insert".
+ * Return the status of command.
  */
 int execute(int c, int f, int n) {
     int status;
@@ -1414,7 +1413,6 @@ int execute(int c, int f, int n) {
         if (run_not_interactive) {
             execfunc = not_interactive;
         }
-        thisflag = 0;
 /* GGR - implement re-execute */
         if ((execfunc != reexecute) && (execfunc != nullproc) &&
             (execfunc != ctlxrp)) {     /* Remember current set */
@@ -1454,7 +1452,7 @@ int execute(int c, int f, int n) {
         if (!ktp->fi->opt.search_ok) srch_can_hunt = 0;
         running_function = 0;
         input_waiting = NULL;
-        if (execfunc != showcpos) lastflag = thisflag;
+        com_flag &= ktp->fi->keep_flags;
 /* GGR - abort running/collecting keyboard macro at point of error */
         if ((kbdmode != STOP) & !status) end_kbdmacro();
         return status;
@@ -1558,7 +1556,6 @@ int execute(int c, int f, int n) {
             break;
            }
         }
-        lastflag = 0;       /* Fake last flags.     */
         return TRUE;
     }
 
@@ -1598,10 +1595,8 @@ int execute(int c, int f, int n) {
         }
 
         if (n <= 0) {   /* Fenceposts.          */
-            lastflag = 0;
             return n < 0 ? FALSE : TRUE;
         }
-        thisflag = 0;   /* For the future.      */
 
 /* If we are in overwrite mode, not at eol, and next char is not a tab
  * or we are at a tab stop, delete a char forward
@@ -1650,13 +1645,10 @@ int execute(int c, int f, int n) {
                 filesave(FALSE, 0);
                 gacount = gasave;
             }
-
-        lastflag = thisflag;
         return status;
     }
     TTbeep();
     mlwrite_one(MLbkt("Key not bound"));  /* complain             */
-    lastflag = 0;                           /* Fake last flags.     */
     return FALSE;
 }
 
@@ -2215,12 +2207,10 @@ do {
     }
 
 /* Setup to process commands. */
-    lastflag = 0;  /* Fake last flags. */
 
 loop:
-/* Execute the "command" macro...normally null. */
-    int saveflag = lastflag;    /* Preserve lastflag through this. */
-/* Don't start the handler when it is already running as that might
+/* Execute the "command" macro...normally null.
+ * Don't start the handler when it is already running as that might
  * just get into a loop...
  */
     if (!meta_spec_active.C) {
@@ -2228,7 +2218,6 @@ loop:
         execute(META|SPEC|'C', FALSE, 1);
         meta_spec_active.C = 0;
     }
-    lastflag = saveflag;
 
     if (!typahead())  update(FALSE);
     if (display_readin_msg ||   /* First one gets removed by update() */

@@ -177,7 +177,7 @@ int macarg(char *tok) {
  *      take a passed string as a command line and translate
  *      it to be executed as a command. This function will be
  *      used by execute-command-line and by all source and
- *      startup files. Lastflag/thisflag is also updated.
+ *      startup files.
  *
  *      format of the command line is:
  *
@@ -210,8 +210,6 @@ static int docmd(char *cline) {
 /* First set up the default command values */
     f = FALSE;
     n = 1;
-    lastflag = thisflag;
-    thisflag = 0;
 
     if ((status = macarg(tkn)) != TRUE) {   /* and grab the first token */
         goto final_exit;
@@ -290,6 +288,7 @@ static int docmd(char *cline) {
     pending_line_seen = NULL;
 #endif
     if (!nbp->opt.search_ok) srch_can_hunt = 0;
+    com_flag &= nbp->keep_flags;
     cmdstatus = status;     /* save the status */
     clexec = oldcle;        /* restore clexec flag */
 
@@ -319,6 +318,7 @@ final_exit:
  */
 static fn_t last_ncfunc = NULL;
 static int this_can_hunt = 0;
+static int this_keep_flags = CFNONE;
 int namedcmd(int f, int n) {
     fn_t kfunc;     /* ptr to the requested function to bind to */
 
@@ -348,10 +348,12 @@ int namedcmd(int f, int n) {
             }
         }
         if (!nm_info->opt.search_ok) srch_can_hunt = 0;
+        this_keep_flags = nm_info->keep_flags;
     }
 
 /* ...and then execute the command */
     int status = kfunc(f, n);
+    com_flag &= this_keep_flags;
     if (!this_can_hunt) srch_can_hunt = 0;
     last_ncfunc = kfunc;        /* Now we remember this... */
     return status;
@@ -1114,9 +1116,6 @@ nxtscan:          /* on to the next line */
         mlwrite("!WHILE with no matching !ENDWHILE in '%s'", bp->b_bname);
         goto failexit2;
     }
-
-/* Let the first command inherit the flags from the last one.. */
-    thisflag = lastflag;
 
 /* Starting at the beginning of the buffer again.
  * This time we'll actually be doing things...

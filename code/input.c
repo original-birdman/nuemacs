@@ -943,6 +943,11 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     int prolen;
     char procopy[NSTRING];
 
+/* We are about to enter the minibuffer, so all com_flags must
+ * be turned off.
+ */
+    com_flag = CFNONE;
+
 /* gcc 4.4.7 is happy to report "may be used initialized" for wsave
  * (which is wrong) even though it doesn't have a -Wmaybe-uninitialized
  * option.
@@ -1057,9 +1062,8 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
 loop:
     mbupdate();
 
-/* Execute the "command" macro...normally null */
-    int saveflag = lastflag;    /* preserve lastflag through this */
-/* Don't start the handler when it is already running as that might
+/* Execute the "command" macro...normally null
+ * Don't start the handler when it is already running as that might
  * just get into a loop...
  */
     if (!meta_spec_active.C) {
@@ -1067,7 +1071,6 @@ loop:
         execute(META|SPEC|'C', FALSE, 1);
         meta_spec_active.C = 0;
     }
-    lastflag = saveflag;
 
 /* Have we been asked to update the prompt? */
 

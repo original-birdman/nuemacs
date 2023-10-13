@@ -176,9 +176,8 @@ int readin(char *fname, int lockfl) {
     s = resetkey();
     if (s != TRUE) return s;
 
-/* let a user macro get hold of things...if he wants */
-    int saveflag = lastflag;    /* preserve lastflag through this */
-/* Don't start the handler when it is already running as that might
+/* let a user macro get hold of things...if he wants
+ * Don't start the handler when it is already running as that might
  * just get into a loop...
  */
     if (!meta_spec_active.R) {
@@ -186,7 +185,6 @@ int readin(char *fname, int lockfl) {
         execute(META|SPEC|'R', FALSE, 1);
         meta_spec_active.R = 0;
     }
-    lastflag = saveflag;
 
 /* NOTE! that all of the above (in particular) filehooks and Esc-Spec-R
  * are run *before* the file is read into the buffer.

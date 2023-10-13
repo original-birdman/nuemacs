@@ -103,12 +103,15 @@ int killregion(int f, int n) {
  * (the text is what is already on the top, or the last minibuffer).
  */
     int save_to_kill_ring;
-    if (n == 2) save_to_kill_ring = FALSE;
-    else save_to_kill_ring = (lastflag & CFYANK)? FALSE: TRUE;
-    if ((lastflag & CFKILL) == 0) {         /* This is a kill type  */
-        if (save_to_kill_ring) kdelete();   /* command, so do magic */
+    if (n == 2) {
+        save_to_kill_ring = FALSE;
+        com_flag = CFNONE;  /* This is NOT a kill */
     }
-    thisflag |= CFKILL;     /* kill buffer stuff.   */
+    else {
+        save_to_kill_ring = (com_flag & CFYANK)? FALSE: TRUE;
+        com_flag = CFKILL;  /* This is a kill */
+    }
+    if (save_to_kill_ring) kdelete();   /* kill-type command, so do magic */
     curwp->w.dotp = region.r_linep;
     curwp->w.doto = region.r_offset;
     return ldelete(region.r_bytes, save_to_kill_ring);
@@ -128,9 +131,10 @@ int copyregion(int f, int n) {
 
     if ((s = getregion(&region)) != TRUE)
         return s;
-    if ((lastflag & CFKILL) == 0)   /* Kill type command.   */
+    if ((com_flag & CFKILL) == 0) { /* Kill type command.   */
         kdelete();
-    thisflag |= CFKILL;
+        com_flag |= CFKILL;
+    }
     linep = region.r_linep;         /* Current line.        */
     loffs = region.r_offset;        /* Current offset.      */
 /* This copies bytes - doesn't need to know about graphemes. */

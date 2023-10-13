@@ -206,8 +206,10 @@ static int move_n_lines(int n) {
 /* If the last command was not a line move, reset the goal column.
  * Always flag this command as a line move.
  */
-    if ((lastflag & CFCPCN) == 0) curgoal = getccol();
-    thisflag |= CFCPCN;
+    if ((com_flag & CFCPCN) == 0) {
+        curgoal = getccol();
+        com_flag |= CFCPCN;
+    }
 
 /* Move the point up/down */
 

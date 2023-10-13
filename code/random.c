@@ -379,7 +379,6 @@ int detab(int f, int n) {
         n -= inc;
     }
     curwp->w.doto = 0;      /* to the begining of the line */
-    thisflag &= ~CFCPCN;    /* flag that this resets the goal column */
     lchange(WFEDIT);        /* yes, we have made at least an edit */
     return TRUE;
 }
@@ -448,7 +447,6 @@ int entab(int f, int n) {
         n -= inc;
     }
     curwp->w.doto = 0;      /* to the begining of the line */
-    thisflag &= ~CFCPCN;    /* flag that this resets the goal column */
     lchange(WFEDIT);        /* yes, we have made at least an edit */
     return TRUE;
 }
@@ -488,7 +486,6 @@ int trim(int f, int n) {
         n -= inc;
     }
     lchange(WFEDIT);
-    thisflag &= ~CFCPCN;    /* flag that this resets the goal column */
     return TRUE;
 }
 
@@ -701,8 +698,10 @@ int forwdel(int f, int n) {
           return rdonly();          /* we are in read only mode    */
     if (n < 0) return backdel(f, -n);
     if (f != FALSE) {               /* Really a kill.       */
-        if ((lastflag & CFKILL) == 0) kdelete();
-        thisflag |= CFKILL;
+        if ((com_flag & CFKILL) == 0) {
+            kdelete();
+            com_flag |= CFKILL;
+        }
     }
     return ldelgrapheme((long) n, f);
 }
@@ -721,8 +720,10 @@ int backdel(int f, int n) {
     s = (back_grapheme(n) > 0);
     if (s == TRUE) {                /* Don't kdelete if we can't move! */
         if (f != FALSE) {           /* Really a kill.                  */
-            if ((lastflag & CFKILL) == 0) kdelete();
-            thisflag |= CFKILL;
+            if ((com_flag & CFKILL) == 0) {
+                kdelete();
+                com_flag |= CFKILL;
+            }
         }
         s = ldelgrapheme(n, f);
     }
@@ -742,9 +743,10 @@ int killtext(int f, int n) {
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
-    if ((lastflag & CFKILL) == 0)   /* Clear kill buffer if */
+    if ((com_flag & CFKILL) == 0) { /* Clear kill buffer if */
           kdelete();                /* last wasn't a kill.  */
-    thisflag |= CFKILL;
+          com_flag |= CFKILL;
+    }
     if (f == FALSE) {
         chunk = lused(curwp->w.dotp) - curwp->w.doto;
         if (chunk == 0) chunk = 1;

@@ -673,7 +673,7 @@ char *getctext(void) {
     return rline;
 }
 
-/* Free up the first kill buffer ring entry for nex text by pushing all
+/* Free up the first kill buffer ring entry for new text by pushing all
  * of the others down by 1.
  * If the ring was already all in use then free the last entry (which will
  * be pushed off the list) first.
@@ -797,7 +797,7 @@ int yank(int f, int n) {
 
 /* Make sure there is something to yank */
     if (kbufh[0] == NULL) {
-        thisflag |= CFYANK;         /* It's still a yank... */
+        com_flag |= CFYANK;         /* It's still a yank... */
         last_yank = NormalYank;     /* Save the type */
         return TRUE;                /* not an error, just nothing */
     }
@@ -850,7 +850,7 @@ int yank(int f, int n) {
         curwp->w.markp = lforw(fixup_line);
         curwp->w.marko = 0;
     }
-    thisflag |= CFYANK;         /* This is a yank */
+    com_flag |= CFYANK;         /* This is a yank */
     last_yank = NormalYank;     /* Save the type */
     return TRUE;
 }
@@ -883,7 +883,7 @@ int yankmb(int f, int n) {
 
 /* Make sure there is something to yank */
     if (lastmb[0] && strlen(lastmb[0]) == 0) {
-        thisflag |= CFYANK;             /* It's still a yank... */
+        com_flag |= CFYANK;             /* It's still a yank... */
         last_yank = MiniBufferYank;     /* Save the type */
         return TRUE;                    /* not an error, just nothing */
     }
@@ -928,7 +928,7 @@ int yankmb(int f, int n) {
         curwp->w.markp = lforw(fixup_line);
         curwp->w.marko = 0;
     }
-    thisflag |= CFYANK;         /* This is a yank */
+    com_flag |= CFYANK;         /* This is a yank */
     last_yank = MiniBufferYank; /* Save the type */
     return (TRUE);
 }
@@ -946,7 +946,7 @@ int yank_replace(int f, int n) {
     if (curbp->b_mode & MDVIEW) return rdonly();
 
     int do_kill = 1;
-    if (!(lastflag & CFYANK)) {
+    if (!(com_flag & CFYANK)) {
         if (yank_mode == GNU) {
            mlwrite_one("Last command was not a yank!");
            return FALSE;
@@ -973,7 +973,7 @@ int yank_replace(int f, int n) {
  * to yank() as we've done all the required rotating.
  * NOTE: that we make this call even if there is nothing to yank. This
  *       allows yank*() to set any required bits, e.g. the yank region
- *       and setting CFYANK in thisflag
+ *       and setting CFYANK in com_flag
  */
     if (last_yank == NormalYank) {
         rotate_kill_ring(n);

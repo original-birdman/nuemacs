@@ -34,7 +34,7 @@
 #endif
 static int seed;
 
-/* Return some of the contents of the kill buffer
+/* Return the contents of the first item in the kill buffer
  */
 static char *getkill(void) {
     int size;                       /* max number of chars to return */
@@ -1332,7 +1332,7 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVTARGET:
             curgoal = atoi(value);
-            thisflag |= CFCPCN; /* Set this flag */
+            com_flag |= CFCPCN; /* Set this flag */
             break;
         case EVREPLACE:
             strcpy(rpat, value);
