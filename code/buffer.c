@@ -398,6 +398,7 @@ ask:
  * Handcraft the EOL on the end.
  * It is the CALLER'S responsibility to know that bp is a valid
  * buffer pointer.
+ * ALSO the caller MUST NOT PUT ANY NEWLINE IN THE TEXT!!
  */
 void addline_to_anyb(char *text, struct buffer *bp) {
     struct line *lp;
@@ -410,8 +411,8 @@ void addline_to_anyb(char *text, struct buffer *bp) {
     lp->l_bp = bp->b_linep->l_bp;
     bp->b_linep->l_bp = lp;
     lp->l_fp = bp->b_linep;
-    if (bp->b.dotp == bp->b_linep)      /* If "." is at the end */
-        bp->b.dotp = lp;                /* move it to new line  */
+    if (bp->b.dotp == bp->b_linep)      /* If "." is at the end, move it */
+        bp->b.dotp = lp;                /* to new line (doto will be 0)  */
     return;
 }
 /* This is for internal use to add to the //List buffer. */
