@@ -1749,6 +1749,10 @@ int execfile(int f, int n) {
     return TRUE;
 }
 
+/* We no longer need these, now yuo can use storeproc to
+ * give a name to a procedure, and bind it with buffer-to-key
+ */
+#ifdef NUMBERED_MACROS
 /* cbuf:
  *      Execute the contents of a numbered buffer
  *
@@ -1790,6 +1794,7 @@ NMAC(21)    NMAC(22)    NMAC(23)    NMAC(24)    NMAC(25)
 NMAC(26)    NMAC(27)    NMAC(28)    NMAC(29)    NMAC(30)
 NMAC(31)    NMAC(32)    NMAC(33)    NMAC(34)    NMAC(35)
 NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
+#endif
 
 #ifdef DO_FREE
 /* Add a call to allow free() of normally-unfreed items here for, e.g,

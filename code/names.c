@@ -64,6 +64,10 @@ struct name_bind names[] = {
     {"execute-command-line", execcmd, {0, 0, 0, 0, 0, 0}, CFALL},
     {"execute-file", execfile, {0, 0, 0, 0, 0, 0}, CFALL},
     {"execute-macro", ctlxe, {1, 0, 0, 0, 0, 0}, CFALL},
+/* We no longer need these, now yuo can use storeproc to
+ * give a name to a procedure, and bind it with buffer-to-key
+ */
+#ifdef NUMBERED_MACROS
     {"execute-macro-1", cbuf1, {0, 0, 0, 0, 0, 0}, CFALL},
     {"execute-macro-2", cbuf2, {0, 0, 0, 0, 0, 0}, CFALL},
     {"execute-macro-3", cbuf3, {0, 0, 0, 0, 0, 0}, CFALL},
@@ -104,6 +108,7 @@ struct name_bind names[] = {
     {"execute-macro-38", cbuf38, {0, 0, 0, 0, 0, 0}, CFALL},
     {"execute-macro-39", cbuf39, {0, 0, 0, 0, 0, 0}, CFALL},
     {"execute-macro-40", cbuf40, {0, 0, 0, 0, 0, 0}, CFALL},
+#endif
     {"execute-named-command", namedcmd, {1, 0, 0, 1, 0, 0}, CFALL},
     {"execute-procedure", execproc, {0, 0, 0, 0, 0, 0}, CFALL},
     {"execute-program", execprg, {0, 1, 0, 0, 0, 0}, CFNONE},
