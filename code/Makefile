@@ -41,35 +41,23 @@ export E Q
 #
 DBG =
 ifeq ($(strip $(DBG)),)
-    DBG_OPTS = -O3
+    DBG_OPTS += -O3
 else
-    DBG_OPTS = -O0 -g
+    DBG_OPTS += -O0 -g
 endif
 
 # Don't bother with free's on exit by default (but need them for valgrind).
 #
 FREE =
 ifneq ($(strip $(FREE)),)
-    DBG_OPTS += -DDO_FREE
+    INT_OPTS += -DDO_FREE
 endif
 
 # Use the gcc analyzer?
 #
 ANALYZE =
 ifneq ($(strip $(ANALYZE)),)
-    DBG_OPTS += -fanalyzer
-endif
-
-STANDALONE = none
-# Are we building an ARM version for my Android 'phone?
-#
-ifeq ($(strip $(ANDROID)),moto8g)
-    ifneq ($(uname_M),aarch64)
-        .DEFAULT_GOAL := notarm64_error
-    else
-        STANDALONE = all
-        DBG_OPTS += -DSDIR_SKIP=7   # Not the GNU/Linux 8
-    endif
+    INT_OPTS += -fanalyzer
 endif
 
 # Does the user want a static build?
@@ -80,6 +68,7 @@ endif
 #   all  uses a static build and sets STANDALONE=1 to skip come code
 #
 edit_LIBS =
+STANDALONE = none
 ifneq ($(strip $(STANDALONE)),none)
     ifneq ($(uname_S),Linux)
         .DEFAULT_GOAL := no_STANDALONE
@@ -89,7 +78,7 @@ ifneq ($(strip $(STANDALONE)),none)
             edit_LIBS = 1
         else ifeq ($(strip $(STANDALONE)),all)
             STATIC_OPTS = -static
-            DBG_OPTS += -DSTANDALONE
+            INT_OPTS += -DSTANDALONE
         else
             .DEFAULT_GOAL := not_a_STANDALONE_option
         endif
@@ -304,8 +293,8 @@ endif
 #
 CC = $(MYCC)
 WARNINGS = -Wall -Wstrict-prototypes -Wextra
-CFLAGS = $(DBG_OPTS) $(TRACE_OPTS) $(WARNINGS) -std=gnu99 -DGGR_MODE \
-    $(UTF8INCL) $(BCKTINCL)
+CFLAGS = $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) $(WARNINGS) \
+    -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL)
 
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1
