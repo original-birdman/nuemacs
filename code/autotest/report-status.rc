@@ -1,7 +1,8 @@
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure report-status
+  drop-pin
   select-buffer test-reports
   insert-string %test-report
   newline
-  1 select-buffer     ; Back to whence we came
+  back-to-pin
 !endm
