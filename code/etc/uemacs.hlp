@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.172 Help Index     (27 Sep 2023)
+=>                   nuEmacs GGR4.173 Help Index     (15 Oct 2023)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -6,6 +6,7 @@
 .. Buffer mode commands
 .. Keys and commands
 .. Deleting and inserting
+.. Marks and Pins
 .. Formatting
 .. Window commands
 .. Buffer commands
@@ -63,7 +64,7 @@ Typing      Result
  d or o     Dive into/Open entry on current line.
   or Return
  v          View entry on current line.
- u          Up to parent.
+ u          Up to parent.  (^X U will also do this from any file)
  a          Switch to sort-by-name mode if in time mode.
             If already in name mode, toggle between A->z and z->A sorting.
  t          Switch to sort-by-time mode if in name mode.
@@ -117,8 +118,21 @@ Q   equiv       Use equivalence mode when searching (see below).
 D   dos         Write out file with DOS line endings.
 
 In VIEW mode the following ASCII keys are active:
-Space or Return     Go forward one page
-b B                 Go back one page
+    Space or Return     Go forward one page
+    b B                 Go back one page
+    n N                 Go forward one line
+    p P                 Go back one line
+
+In C mode
+ o  The next line will auto-indent when you insert a newline
+ o  Any ), } or ] you type will result in the cursor being briefly
+    displayed at the matching (, { or [.
+    The time for this display is set by the $brkt_ms variable. The
+    default is 200ms.
+ o  Any # typed as the first non-whitespace character on a line will
+    result in any whitespace being deleted and the # put in column 1,
+    in anticipation of you wanting #if, #define, etc.
+
 -------------------------------------------------------------------------------
 =>                      KEYS AND COMMANDS
 Bind to key ........... Meta  K         Help ..................   ^X  ?
@@ -221,6 +235,48 @@ Copy region ........... Meta  W     ::  the mark and the current position.
     placed on the kill ring.
 
 Yank last minibuffer .. Meta ^Y  (10 in a ring, numeric arg allowed)
+-------------------------------------------------------------------------------
+=>                      MARKS AND PINS
+
+A mark can be used to denote a location in a buffer and the region is
+the text between it and the current location (dot). You can have one
+mark per-buffer.
+
+The commands to set and use a mark are:
+    set-mark
+    exchange-point-and-mark
+
+Pins are a mean of remembering a location while running non-interactive
+code in a buffer. You can only have one pin per level of executing
+buffer. So if a store-procedure functions call another, each will be
+able to have its own separate pin. Once a buffer level has finished (but
+not when it calls another function) any pin that it had is removed.
+So pins do not persist across successive calls to the same user function.
+
+The commands to set and use a pin are:
+    drop-pin
+    back-to-pin                 Keeps pin the same
+    switch-with-pin             Updates pin with current location
+
+One use of pins is to allow user functions to preserve any original user
+mark even if they need to define a region.
+This can be done by:
+
+    set .have_mark 0
+    !force exchange-point-and-mark  ; Preserve any user mark
+    !if &seq $force_status "PASSED"
+        set .have_mark 1
+        drop-pin                    ; Remember where
+        exchange-point-and-mark     ; Back to where we started
+    !endif
+...
+...
+    !if &equ .have_mark 1           ; Restore any original mark
+        switch-with-pin
+        set-mark
+        switch-with-pin
+    !endif
+
 -------------------------------------------------------------------------------
 =>                      FORMATTING
 Case word upper ....... Meta  U         Case word lower ....... Meta  L
@@ -429,7 +485,7 @@ The hard-wired key-bindings for it are:
         for Incremental search
     ctl-S, ctl-R
         Look for the next occurrence forwards (ctl-S) or backwards
-        (ctl-R) of the current search string. This can chnage the
+        (ctl-R) of the current search string. This can change the
         direction of the search.
     Esc
         Stop the search and remain at the current location.
@@ -463,8 +519,6 @@ Begin macro ...........   ^X  (
 End macro .............   ^X  )
 Execute macro .........   ^X  E         (replay keys)
 Execute macro .........   ^X  V         (replay commands - experimental)
-Store macro ........... not bound       store-macro nn
-Execute macro nn ...... not bound       execute-macro-1 ... execute-macro-40
 Store procedure ....... not bound       store-procedure
 Execute procedure ..... Meta ^E         execute-procedure proc-name
 Store pttable ......... not bound       store-pttable
@@ -494,6 +548,12 @@ code:
     set .calls &add .calls 1
 
 will set .calls to 1 on its first use if .calls isn't set elsewhere.
+
+[ Numbered macros are no longer added by default, as store-procedure,
+  execute-procedure, and buffer-to-key provides a better way.
+Store macro ........... not bound       store-macro nn
+Execute macro nn ...... not bound       execute-macro-1 ... execute-macro-40]
+
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS
 Clear and redraw ......      ^L         Set mark .............. Meta Space
@@ -527,7 +587,7 @@ Others (omitting system-use only ones)...
     $curchar .............. current character under the cursor
     $discmd ............... display commands on command line
     $version .............. current version number
-    $progname ............. returns current prog name - "MicroEMACS"
+    $progname ............. returns current prog name - "nuEmacs"
     $seed ................. current random number seed
     $disinp ............... display command line input characters
     $wline ................ # of lines in current window
@@ -621,6 +681,7 @@ Substring
 
 Other string operations
     &cat, &len, &upp, &low
+        (&len returns the length in graphemes)
 
 String comparisons
    &seq, &sle, &sgr
@@ -628,8 +689,9 @@ String comparisons
 String index
     &sin str1 str2  Index of first str2 in str1 (0 if not found).
     &rin str1 str2  Index of last str2 in str1 (0 if not found).
-(these count in graphemes, but the matching is by "raw" utf8 bytes -
-there is no Equiv-style matching).
+        (these count in graphemes, but the matching is by "raw" utf8
+         bytes - there is no Equiv-style matching).
+        (if str2 is the empty string, these functions return 0)
 
 Char to Code conversion
     &asc c          Byte code of base char
@@ -730,7 +792,7 @@ store-procedure <proc-name> [flags]
     You may then call this proc-name within a macro in the same way as
     you call any builtin function, but preceding it with:
         execute-procedure
-    The macros may be boudn to a key sequence using buffer-to-key.
+    The macros may be bound to a key sequence using buffer-to-key.
     The optional flag may be:
         skip_in_macro       do not log this when macro-recording
         not_mb              not allowed in the minibuffer
@@ -933,15 +995,16 @@ where ^X is Control-X
       M- is Escape
       FN is a Function Key
       k is the "actual" character.
-The final k can be a single character (unicode is allowed), ^c (Control-c)
-or one of two special tokens, SP (space) or ^? (Delete).
+The final k can be a single character (Unicode is allowed), a control
+caharacter (e.g. ^C for Control-C) or one of two special tokens,
+SP (space) or ^? (Delete).
 Not all of ^X, M- or FN has to be present, but you would expect at least
 one of them to be there if k is not a control character (and you cannot
 use just M-FN).
 This sequence is that which will be show by the describe-bindings function.
 
-When running these commands in a minibuffer you need to type the actual
-key-sequence you wish to use.
+If you run these commands in a minibuffer you will need to type the actual
+key-sequence you wish to use, rather than this visual notation.
 
 You can display the current keybindings with the describe-bindings
 function (bound to F2 in the standard bindings).
@@ -1058,7 +1121,7 @@ You must now set your own setting for $crypt_mode before CRYPT mode will
 do anything. You can set this in your uemacs.rc start-up file if you use
 it frequently.
 
-It is now possible for the enryption key to be global, rather than
+It is now possible for the encryption key to be global, rather than
 per-buffer.
 Any encryption key set when the 0x4000 bit is set in $crypt_mode will
 be a global key, for use by any buffer that has CRYPT mode enabled.
@@ -1079,7 +1142,7 @@ One of the last two values must be set.
 
 uemacs has its own, system start-up file  -  /opt/local/bin/uemacs.rc or
 /usr/local/bin/uemacs.rc (but on a STANDALONE build ths will be in an
-etc/ subdirectory of the locaton of uemacs itself).
+etc/ subdirectory of the location of uemacs itself).
 This is used to define some user-procedures and add to the internally
 defined standard key bindings.
 
