@@ -55,7 +55,7 @@ void version(void) {
         while (fgets(xbuf, sizeof(xbuf), f));
         (void)pclose(f);    /* Ignore the status, though */
 /* Now print the info - just remove the leading "ldd " quickly and
- * use the trailing newline we knwo is there
+ * use the trailing newline we know is there
  */
         if (retval && strlen(retval) > 4)
               printf(" (dynamic) libc version %s", retval+4);

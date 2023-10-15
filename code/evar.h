@@ -26,7 +26,7 @@ struct evlist evl[] = {
  { "curchar",   EVCURCHAR },    /* current character under the cursor */
  { "discmd",    EVDISCMD },     /* display commands on command line */
  { "version",   EVVERSION },    /* current version number */
- { "progname",  EVPROGNAME },   /* returns current prog name - "MicroEMACS" */
+ { "progname",  EVPROGNAME },   /* returns current prog name - "nuEmacs" */
  { "seed",      EVSEED },       /* current random number seed */
  { "disinp",    EVDISINP },     /* display command line input characters */
  { "wline",     EVWLINE },      /* # of lines in current window */
