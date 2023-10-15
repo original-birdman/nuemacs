@@ -688,46 +688,43 @@ int indent(int f, int n) {
     return TRUE;
 }
 
-/* Delete forward. This is real easy, because the basic delete routine does
- * all of the work. Watches for negative arguments, and does the right thing.
- * If any argument is present, it kills rather than deletes, to prevent loss
- * of text if typed with a big argument. Normally bound to "C-D".
+/* Character deleting backend for forwdel anf backdel.
+ * This is real easy, because the basic delete routine does all of the work.
+ * For a negative argument it moves back that number of graphemes first.
+ * If any non-default argument is present, it kills rather than deletes,
+ * to prevent loss of text if typed with a big argument.
+ * Normally bound to ctlD and ctlH (BackSpace).
  */
-int forwdel(int f, int n) {
+static int chardel(int f, int n) {
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
-    if (n < 0) return backdel(f, -n);
+    if (n < 0) {
+        n = abs(back_grapheme(-n)); /* How many *did* we go back? */
+    }
     if (f != FALSE) {               /* Really a kill.       */
         if ((com_flag & CFKILL) == 0) {
             kdelete();
             com_flag |= CFKILL;
         }
     }
+/* Since we have a default (not user-given) count ensure KILL flag is unset */
+    else com_flag &= ~CFKILL;
     return ldelgrapheme((long) n, f);
 }
 
-/* Delete backwards. This is quite easy too, because it's all done with other
- * functions. Just move the cursor back, and delete forwards. Like delete
- * forward, this actually does a kill if presented with an argument. Bound to
- * both "RUBOUT" and "C-H".
+/* Delete forward. This is real easy, because the basic delete routine does
+ * all of the work. Watches for negative arguments, and does the right thing.
+ * If any argument is present, it kills rather than deletes, to prevent loss
+ * of text if typed with a big argument. Normally bound to "C-D".
+ */
+int forwdel(int f, int n) {
+    return chardel(f, n);
+}
+/* Delete backwards. This just sends the negated count to chardel.
+ * which know to move backward befoire doing a forward delete.
  */
 int backdel(int f, int n) {
-    int s;
-
-    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
-        return rdonly();            /* We are in read only mode    */
-    if (n < 0) return forwdel(f, -n);
-    s = (back_grapheme(n) > 0);
-    if (s == TRUE) {                /* Don't kdelete if we can't move! */
-        if (f != FALSE) {           /* Really a kill.                  */
-            if ((com_flag & CFKILL) == 0) {
-                kdelete();
-                com_flag |= CFKILL;
-            }
-        }
-        s = ldelgrapheme(n, f);
-    }
-    return s;
+    return chardel(f, -n);
 }
 
 /* Kill text. If called without an argument, it kills from dot to the end of
