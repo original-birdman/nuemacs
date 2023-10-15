@@ -12,6 +12,7 @@
 
 #include <string.h>
 #include <utf8proc.h>
+#include <time.h>
 
 /* Initialized global external declarations. */
 
