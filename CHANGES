@@ -6980,7 +6980,7 @@ main.c
 
 fileio.c
 input.c
-    Increase buffer sizes to stop sprintf overflow warning in gcc 8.4.0. 
+    Increase buffer sizes to stop sprintf overflow warning in gcc 8.4.0.
 
 ../CHANGES
 version.h
@@ -7048,8 +7048,8 @@ autotest/misc-bits.sh
         file truncation on write-out
         overwrite-string
 
-Makefile    
-main.c      
+Makefile
+main.c
 version.c
     Do not allow STANDALONE on FreeBSD/Sun as they have no static libs.
     Allow STANDALONE=most (only libm and libc are dynamic, allows use of
@@ -7062,5 +7062,258 @@ version.c
 ../README
 version.h
     Update to GGR4.172
+
+========== GGR4.173
+
+region.c
+    Set the end pointer when making a region with dot and mark on the
+    same line.
+    Prevent narrowing of an empty buffer.
+
+utf8.c
+combi.h
+tools/combi-class.c
+tools/combi.h
+tools/combi.info
+    Change combining_type() to do a quick range test first, then a
+    binary chop on the list if required.
+    Modify combi-class.c to not append the no longer required
+    UEM_NOCHAR entry and regenerate its files.
+
+eval.c
+    Make &sin and &rin return 0 when asked to look for an empty string.
+
+utf8.c
+    Check for offset getting too big in next_utf8_offset().
+
+etc/uemacs.rc
+    Add a .rctmp omitted in the last change to file-hooks.
+
+line.c
+utf8.c
+line.h
+utf8.h
+    Don't declare functions as external in *.h for the source file
+    which defines them.
+
+main.c
+search.c
+efunc.h
+    Move getfence() and insbrace() to main.c, so they can share their
+    search algorithm with fmatch().
+    Mark insbrace() as static. [main.c]
+    Add brkt_search() as the common search code for insbrace(),
+    getfence() and fmatch(). [main.c]
+    Use nanosleep() to get a sub-second match time. [main.c]
+
+eval.c
+file.c
+    Change code to reflect next_utf8_offset() now returns -1 when offset
+    is too large.
+
+eval.c
+globals.c
+main.c
+tcap.c
+edef.h
+estruct.h
+evar.h
+etc/uemacs.hlp
+    Add $brkt_ms as a configurable delay (in ms) for the bracket
+    matching highlight delay. Default is 200ms.
+    Removed tpause/EVTPAUSE/term.t_pause (which did nothing).
+
+----------
+Some small function-to-#define or inline code changes that make the
+executable smaller.
+
+eval.c
+    Change ltos() and ue_atoi() into #defines.
+    Expand ernd code inline at its only use location.
+
+utf8.c
+utf8.c
+    Change some utf8 length functions into #defines.
+
+buffer.c
+efunc.h
+    Change addline_to_curb() and addline(() into #defines.
+
+display.c
+    Change is_space(), vtmove(), TTput_1uc_lim() and mlputi() into
+    #defines.
+
+exec.c
+    Change use_pttable() into a #define.
+
+input.c
+    Change getfbuffer() and getfname() to #defines.
+
+lock.c
+    Change lckerror() to be a #define.
+
+spawn.c
+    Change get_orig_size() to a #define and inline rtfrmshell().
+
+exec.c
+    Make the pending_einit and pending_whlist arrays into linked lists
+    so we no longer need to limit their length.
+
+eval.c
+exec.c
+    Use mlforce_one() for some macro debug output so that % isn't
+    wrongly evaluated.
+
+----------
+Initial code to add per-macro (actually per-executable buffer) pins.
+These are marks that only exist for, and only are visible to, a level
+of executing buffer. They cease to exist when the buffer finally ends
+execution.
+pins can refer to any buffer.
+
+buffer.c
+exec.c
+globals.c
+line.c
+names.c
+region.c
+edef.h
+efunc.h
+line.h
+autotest/misc-bits.sh
+    Move linked_items definition and add macro pin structures,
+    [exec.c, edef.h]
+    Remove any pins in a buffer if it is deleted. [buffer.c]
+    Add drop_pin(), back_to_pin() and switch_with_pin() code and DO_FREE
+    handling code for the pin linked list. [exec.c, efunc.h]
+    Define/declare macro_pin_headp. [globals.c,
+    Add routines to edit pin values as characters are inserted/deleted.
+    [line.c]
+    Add back-to-pin, drop-pin and switch-with-pin calls. [names.c]
+    Add code to edit pin values on casechange, Moved the mark/dot fixing
+    logic into this. [region.c]
+    Added an ltext #define for short (text) code to access l_text.
+    [line.h]
+    Change set-mark/exchange-point-and-mark to drop-pin/back-to-pin.
+    [autotest/misc-bits.sh]
+
+basic.c
+buffer.c
+display.c
+eval.c
+exec.c
+file.c
+fileio.c
+input.c
+line.c
+main.c
+random.c
+region.c
+search.c
+word.c
+line.h
+    Added an lsize #define for short (text) code to access l_size.
+    and renamed llength to lused. [line.h]
+    Change all code to use ltext/lused/lsize #defines [*.c]
+
+word.c
+    linsert_byte(1, c) in loop changed to linsert_byte(n, c) call.
+
+etc/uemacs.rc
+    Allow make-descr (optionally) to justify and preserve leading
+    white-space.
+    Change expand-envvar to use drop-pin to preserve mark.
+
+basic.c
+    Combine the forwline() and backline() code into an internal
+    move_n_lines() function with front-ends.
+
+eval.c
+file.c
+globals.c
+input.c
+main.c
+edef.h
+    Remove saveflag setting for EVTARGET ($curgoal) reading and set
+    CFCPCN bit in thisflag on setting EVTARGET. [eval.c]
+    Removed global saveflag. It is only meant for temporary local
+    saving. [globals.c, input.c, main.c, edef.h]
+    Rename save_lastflag to saveflag for consistency [file.c]
+
+file.c
+    Use arg of 2 to tell kill-region call not to save text to the kill
+    ring, rather than temporarily having to fudge in CFYANK to lastflag.
+
+buffer.c
+    Improve comments in addline_to_anyb().
+
+basic.c
+eval.c
+exec.c
+file.c
+globals.c
+input.c
+line.c
+main.c
+names.c
+random.c
+region.c
+word.c
+edef.h
+estruct.h
+    Generalize the test as to the nature of the previous command for
+    up/down moves, yanks and kills.  Replaced thisflag and lastflag with
+    the single comflag and a set of per-command mask to denote which
+    settings may remain after each command.
+    CFCPCN setting in move_n_lines(). [basic.c]
+    CFCPCN setting when $curgoal set. [eval.c]
+    com_flag masking in docmd(), namedcmd(). [exec.c]
+    Remove flag saving. [file.c]
+    Replace thisflag and lastflag with comflag. [globals.c, edef.h]
+    Remove flag saving. Clear com_flag on minibuffer prompt. [input.c]
+    thisflag changed to com_flag. [input.c, random.c]
+    Remove thisflag and lastflag. com_flag masking in execute(). [main.c]
+    Add the keep_flags initializers. [names.c]
+    this/lastflag to com_flag. [region.c, word.c]
+    Add keep_flags to struct name_bind and extend CF* #defines. [estruct.h]
+
+exec.c
+names.c
+    Make the inclusion of the no-longer needed numbered macro buffer
+    dependent on defining NUMBERED_MACROS (off by default).
+
+autotest/00-decrypt-file.sh
+    Use different encryption keys for the different parts, and
+    delete the TEST buffer, rather than just emptying it.
+
+autotest/report-status.rc
+    Use drop-pin/back-to-pin to save/return to test buffer.
+
+Makefile
+    Reworked to allow removal of the me-specific ANDROID option.
+    make STANDALONE=all X_OPTS="-DSDIR_SKIP=7" now works for this.
+
+random.c
+    Combine forwdel() and backdel() code.
+    Unset the kill flag for a default argument.
+    Make backdel() work if it would got back before the start of file
+    (in the way that forwdel() works if it would go beyond end-of-file).
+
+etc/uemacs.hlp
+    Updated to mention pins, to note that numbered macros no longer
+    exist by default and other minor changes.
+
+utf8.c
+    Correct the end range in combining_type() to be the last end not the
+    last start.
+
+evar.h
+version.c
+    Corrections to comments.
+
+../CHANGES
+../README
+version.h
+    Update to GGR4.173
 
 ==========

@@ -102,8 +102,8 @@ Other changes so far made are:
     static libraries, no expansion of ~id/ only of ~/).
     Useful for a USB stick connected to a "bare" system.
   o File locking and visual updates as macros run are now run-time
-    options rather than compile=time ones.
-
+    options rather than compile-time ones.
+  o Add the concept of pins, which allow user macros to preserve marks.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in
