@@ -87,7 +87,7 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
 
 int combining_type(unicode_t uc) {
 
-    if ((uc < combi_range[0].start) || (uc > combi_range[CR_MAX].start))
+    if ((uc < combi_range[0].start) || (uc > combi_range[CR_MAX].end))
         return FALSE;
 
 /* Binary chop version */
