@@ -81,13 +81,14 @@ int back_grapheme(int);     /* Forward declaration */
 int forw_grapheme(int n) {
     if (n < 0) return back_grapheme(-n);
     int moved = 0;
+    int clen = lused(curwp->w.dotp);
     while (n--) {
-        int len = lused(curwp->w.dotp);
-        if (curwp->w.doto == len) {
+        if (curwp->w.doto == clen) {
             if (curwp->w.dotp == curbp->b_linep) return -moved;
             curwp->w.dotp = lforw(curwp->w.dotp);
             curwp->w.doto = 0;
             curwp->w_flag |= WFMOVE;
+            clen = lused(curwp->w.dotp);
             moved++;
         }
         else {
@@ -97,7 +98,7 @@ int forw_grapheme(int n) {
             int saved_doto = curwp->w.doto;
             curwp->w.doto =
                  next_utf8_offset(ltext(curwp->w.dotp), curwp->w.doto,
-                                  lused(curwp->w.dotp), TRUE);
+                                  clen, TRUE);
             moved += curwp->w.doto - saved_doto;
         }
     }

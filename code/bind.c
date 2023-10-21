@@ -140,7 +140,7 @@ int help(int f, int n) {    /* give me some help!!!!
     char *fname = NULL;     /* ptr to file returned by flook() */
 
 /* First check if we are already here */
-    bp = bfind(HELP_BUF, FALSE, BFINVS); /* GGR - epath.h setting */
+    bp = bfind(HELP_BUF, FALSE, 0);     /* GGR - epath.h setting */
 
     if (bp == NULL) {
         fname = flook(init_files.help, FALSE, INTABLE);
@@ -988,8 +988,11 @@ static int buildlist(char *mstring) {
 /* Let us know this is in progress */
     mlwrite_one(MLbkt("Building binding list"));
 
-/* Disconnect the current buffer */
-    if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Last use */
+/* Disconnect the current buffer.
+ * Since splitwind() incremented curbp->b_nwnd, we can't be decrementing
+ * this to zero, so it can't reach last-use.
+ */
+    --curbp->b_nwnd;
 
 /* Connect the current window to this buffer */
     curbp = bp;             /* make this buffer current in current window */
