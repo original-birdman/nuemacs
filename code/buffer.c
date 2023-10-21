@@ -193,6 +193,16 @@ int swbuffer(struct buffer *bp, int macro_OK) {
     return TRUE;
 }
 
+/* A template struct buffer for new buffers */
+
+static struct buffer buf_templ = {
+    NULL, NULL, NULL, NULL, NULL, NULL,
+    { NULL, NULL, 0, 0, 0 },    /* struct locs */
+    { 0, 0, 0, 0, 0, 0 },       /* struct func_opts */
+    BTNORM, 0, 0, 0, 0,
+    TRUE, 0, 0, "", "", ""
+};
+
 /* Find a buffer, by name. Return a pointer to the buffer structure
  * associated with it.
  * If the buffer is not found and the "cflag" is TRUE, create it.
@@ -225,7 +235,8 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
     }
     if (cflag != FALSE) {
         bp = (struct buffer *)Xmalloc(sizeof(struct buffer));
-        lp = lalloc(-1);                /* No text buffer for head record */
+        *bp = buf_templ;
+
 /* Find the place in the list to insert this buffer */
         if (bheadp == NULL) {           /* Insert at the beginning */
             bp->b_bufp = bheadp;
@@ -239,33 +250,21 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
             sb->b_bufp = bp;
         }
 
-/* And set up the other buffer fields */
-        bp->b_topline = NULL;   /* GGR - for widen and  */
-        bp->b_botline = NULL;   /* GGR - shrink windows */
-        bp->bv = NULL;          /* No vars */
-        bp->b_active = TRUE;
+/* Now override the "default" values in the template*/
+
+        lp = lalloc(-1);                /* Head record has no text buffer */
         bp->b.dotp = lp;
-        bp->b.doto = 0;
-        bp->b.markp = NULL;
-        bp->b.marko = 0;
-        bp->b.fcol = 0;
+        bp->b_linep = lp;
+        lp->l_fp = lp;
+        lp->l_bp = lp;
+
+        bp->b_nwnd = 0;
         bp->b_flag = bflag;
         bp->b_mode = gmode;
 /* Set any forced buffer modes at create time - after global mode set */
         if (force_mode_on) bp->b_mode |= force_mode_on;
         if (force_mode_off) bp->b_mode &= ~force_mode_off;
-        bp->b_nwnd = 0;
-        bp->b_linep = lp;
-        strcpy(bp->b_fname, "");
         strcpy(bp->b_bname, bname);
-        bp->b_key[0] = 0;
-        bp->b_keylen = 0;
-        bp->b_EOLmissing = 0;
-        bp->ptt_headp = NULL;
-        bp->b_type = BTNORM;
-        bp->b_exec_level = 0;
-        lp->l_fp = lp;
-        lp->l_bp = lp;
     }
     return bp;
 }
@@ -509,7 +508,7 @@ static int makelist(int iflag) {
         *cp1++ = ((bp->b_flag & BFTRUNC) != 0)? '#': ' ';
         *cp1++ = ' ';                   /* space */
 
-/* Output the mode codes - unknonw for not-yet-active buffers */
+/* Output the mode codes - unknown for not-yet-active buffers */
 
         mcheck = 1;
         char mc = '-';  /* Will stay as this for not-yet-active) */
@@ -528,7 +527,7 @@ static int makelist(int iflag) {
         nbytes = 0L;                    /* Count bytes in buf.  */
         long nlc = (bp->b_mode & MDDOSLE)? 2: 1;
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = lforw(lp)) {
-            nbytes += (long) lused(lp) + nlc;
+            nbytes += (long)lused(lp) + nlc;
         }
         char nb[21];                    /* To handle longest long + NULL */
         sprintf(nb, "%20ld", nbytes);
@@ -623,7 +622,7 @@ int anycb(void) {
     return FALSE;
 }
 
-/* unmark the current buffers change flag
+/* unmark the current buffer's change flag
  *
  * int f, n;            unused command arguments
  */
