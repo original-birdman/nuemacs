@@ -257,7 +257,10 @@ int set_encryption_key(int f, int n) {
         break; }
     }
 
-/* Set the length and encrypt the key on itself */
+/* Set the length (this will update either the global or the buffer
+ * value, according to the *klenp setting above) and encrypt the key
+ * on itself.
+ */
     *klenp = strlen(ukey);
     myencrypt((char *) NULL, 0);
     myencrypt(ukey, *klenp);

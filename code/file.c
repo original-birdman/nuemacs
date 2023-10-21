@@ -28,17 +28,17 @@ static int resetkey(void) { /* Reset the encryption key if needed */
 /* So we are in CRYPT mode. Global or Buffer mode? */
 
     char *ukey;
-    int *klenp;
+    int klen;
     if (crypt_mode & CRYPT_GLOBAL) {
         ukey = gl_enc_key;
-        klenp = &gl_enc_len;
+        klen = gl_enc_len;
     }
     else {
         ukey = curbp->b_key;
-        klenp = &curbp->b_keylen;
+        klen = curbp->b_keylen;
     }
 
-    if (*klenp == 0) {      /* No key set - so get one */
+    if (klen == 0) {        /* No key set - so get one */
         s = set_encryption_key(FALSE, 0);
 /* if this succeeded, things will be fully set */
         if (s == TRUE) cryptflag = TRUE;    /* let others know... */
@@ -52,12 +52,15 @@ static int resetkey(void) { /* Reset the encryption key if needed */
  * encrypted. But the encryption is symmetric, so we can retrieve it by
  * encrypting it again - then use that to initalize things again.
  * Hence the odd double-set of calls.
- * We also need to know whether to reset a buffer or global key.
+ * We also need to know whether to reset with a buffer or global key,
+ * and that is covered by the ukey/klen fetch above.
+ * Since we aren't setting the length here, we don't need the indirection
+ * of *klenp used in set_encryption_key() itself.
  */
     myencrypt((char *) NULL, 0);
-    myencrypt(ukey, *klenp);
+    myencrypt(ukey, klen);
     myencrypt((char *) NULL, 0);
-    myencrypt(ukey, *klenp);
+    myencrypt(ukey, klen);
     return TRUE;
 }
 
