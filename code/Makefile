@@ -165,7 +165,8 @@ endif
 NOTRACE =
 ifeq ($(strip $(NOTRACE)),)
     ifeq ($(uname_M), x86_64)
-    else ifeq ($(uname_M), i86pc)        # Solaris11
+    else ifeq ($(uname_M), i86pc)       # Solaris11
+    else ifeq ($(uname_M), aarch64)     # Arm64
     else
         NOTRACE = 1
     endif
@@ -209,7 +210,7 @@ ifeq ($(strip $(NOTRACE)),)
             BCKTLIB = -L/usr/local/lib -lbacktrace
         else ifeq ($(strip $(bres)),/opt/local/include/backtrace.h)
             BCKTINCL = -I/opt/local/include
-            BCKTLIB = -L/opt/local/lib -backtrace
+            BCKTLIB = -L/opt/local/lib -lbacktrace
         else ifeq ($(notdir $(strip $(bres))),backtrace.h)
 # Parallel local build - use static lib
 #
