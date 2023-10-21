@@ -117,7 +117,7 @@ void mlerase(void) {
 
 /* Set the entry to an Unicode character.
  * Checks for previous extended cdm usage and frees any such found
- * (no longer has a "no_free" flag, as such callers remain).
+ * (no longer has a "no_free" flag, as no such callers remain).
  * Internal to this file.
  */
 static void set_grapheme(struct grapheme *gp, unicode_t uc) {
@@ -154,16 +154,20 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
  * NEED to allocate any ex section in the target, as we never free
  * anything from pscreen - it will be freed (by set_grapheme) when the
  * vscreen is set! We just copy the pointer, so copy the whole structure.
- * Could just be defined as:
+ * Is now just be defined as:
  *      #define clone_grapheme(to, from)   *to = *from
- * but we'll just inline it instead.
- * Just in case we ever need to do something different...
+ * but we could inline it instead.
+ * The code is left here just in case we ever need to do something different...
  */
+#if 0
 static inline void
   clone_grapheme(struct grapheme *gtarget, struct grapheme *gsource) {
     *gtarget = *gsource;
     return;
 }
+#else
+#define clone_grapheme(to, from)   *to = *from
+#endif
 
 /* This now does a case-sensitive check in same_grapheme() */
 static int
@@ -297,7 +301,7 @@ void vtinit(void) {
     vdata = new_vdata;
     vscreen = new_vscreen;
     pscreen = new_pscreen;
-/* The current set will be the previosu values if we return here. */
+/* The current set will be the previous values if we return here. */
     prev_mrow = term.t_mrow;
     prev_mcol = term.t_mcol;
     prev_size = row_size;
@@ -689,9 +693,8 @@ static int texttest(int vrow, int prow) {
 /* return the index of the first blank of trailing whitespace
  */
 static int endofline(struct grapheme *s, int n) {
-    int i;
-    for (i = n - 1; i >= 0; i--)
-        if (!is_space(s+i)) return i + 1;
+    for (int i = n - 1; i >= 0; i--)
+         if (!is_space(s+i)) return i + 1;
     return 0;
 }
 
@@ -719,7 +722,6 @@ static int scrolls(int inserts) {   /* returns true if it does something */
             break;
         }
     }
-
     if (first < 0) return FALSE;    /* No text changes */
 
     vpv = vscreen[first];
@@ -1209,20 +1211,14 @@ static void modeline(struct window *wp) {
         vtputc(' ');
     }
     else {      /* A "normal" buffer */
-        if ((bp->b_flag & BFTRUNC) != 0)
-            vtputc('#');
-        else
-            vtputc(lchar);
+        if ((bp->b_flag & BFTRUNC) != 0)    vtputc('#');
+        else                                vtputc(lchar);
 
-        if ((bp->b_flag & BFCHG) != 0)  /* "*" if changed. */
-            vtputc('*');
-        else
-            vtputc(lchar);
+        if ((bp->b_flag & BFCHG) != 0)      vtputc('*');
+        else                                vtputc(lchar);
 
-        if ((bp->b_flag&BFNAROW) != 0)  /* GGR "<" if narrowed */
-            vtputc('<');
-        else
-            vtputc(lchar);
+        if ((bp->b_flag & BFNAROW) != 0)    vtputc('<');
+        else                                vtputc(lchar);
 
         strcpy(tline, " " PROGRAM_NAME_LONG);
 
@@ -1349,9 +1345,7 @@ next_mode:
                 msg = tline;
             }
     }
-
-    cp = msg;
-    while ((c = *cp++) != 0) vtputc(c);
+    show_utf8(msg);
 }
 
 void upmode(void) {             /* Update all the mode lines */
