@@ -312,21 +312,23 @@ int narrow(int f, int n) {
         return(FALSE);
     }
 
+/* Avoid complications later by checking for an buffer empty now. */
+    if (bp->b_linep->l_fp == bp->b_linep) {
+        mlwrite_one("You cannot narrow an empty buffer");
+        return(FALSE);
+    }
+
 /* Find the boundaries of the current region */
     struct window orig_wp = *curwp;         /* Copy original struct */
     if ((status = getregion(&creg)) != TRUE) {
         *curwp = orig_wp;       /* restore original struct */
         return(status);
     }
-    if ((creg.r_bytes == 0) && (lforw(creg.r_linep) == bp->b_linep)) {
-        mlwrite_one("You cannot narrow an empty buffer");
-        return(FALSE);
-    }
 
 /* We now have a region, but take it to be "whole lines" (so ignoring
  * doto and marko).
  * Top fragment is up to r_linep.
- * Bottom fragment starts at lforw(r_endp) (or r_endp if at eob).
+ * Bottom fragment starts at lforw(r_endp) (or possibly r_endp).
  */
 
 /* Archive the top fragment - marking its end (for widen) with a NULL l_fp.
@@ -341,13 +343,20 @@ int narrow(int f, int n) {
         creg.r_linep->l_bp = bp->b_linep;       /* Back ptr to head */
     }
 
-/* A region knows its last line, so just set the curwp to this
- * with a 0 offset. Must cater for being on the final line.
- * This bit must come after the saving the top section.
+/* We now want to set curwp->w.dotp to be the first line of the bottom
+ * section to hive off.
+ * A region knows its last line, so just set the dotp to the start of
+ * the next line - *unless* we are at the start of a line which is *not*
+ * the top line of what is left - in which case use the current line
+ * (this also caters for being on the final line).
  */
-    curwp->w.dotp = (creg.r_endp == bp->b_linep)?
-         creg.r_endp: lforw(creg.r_endp);
-    curwp-> w.doto = 0;
+    if ((curwp->w.doto == 0) && (bp->b_linep->l_fp != creg.r_endp)) {
+         curwp->w.dotp = creg.r_endp;
+    }
+    else {
+        curwp->w.dotp = lforw(creg.r_endp);
+        curwp->w.doto = 0;
+    }
 
 /* Archive the bottom fragment - marking its end (for widen) with a NULL l_fp.
  * If this starts at the "dummy" last line there is nothing to do (b_botline
@@ -358,7 +367,6 @@ int narrow(int f, int n) {
  * line qwe will *not* show) so bp->b_botline->l_bp is the last line which
  * we will show.
  */
-
     if (bp->b_linep != curwp->w.dotp) {         /* Not on last line */
         bp->b_botline = curwp->w.dotp;          /* Save start of bottom */
         bp->b_botline->l_bp->l_fp = bp->b_linep;    /* Mark end of region */
