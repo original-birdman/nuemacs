@@ -226,7 +226,7 @@ int simulate_incr(int f, int n) {
 /* Is there another token - the proc to run? */
     execstr = token(execstr, ntok, NSTRING);
     if (ntok[0] == '\0') iip->uproc = NULL; /* No */
-    else iip->uproc = strdup(ntok);         /* Yes, so remember it */
+    else iip->uproc = Xstrdup(ntok);        /* Yes, so remember it */
     return TRUE;
 }
 
