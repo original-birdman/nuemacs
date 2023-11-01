@@ -1411,8 +1411,10 @@ single_exit:
 /* Decrement the macro level counter but first, if we allocated a
  * per-macro-level pin at this level, remove it.
  */
-    if (macro_pin_headp && (mmi(macro_pin_headp, mac_level) == macro_level))
+    if (macro_pin_headp && (mmi(macro_pin_headp, mac_level) == macro_level)) {
+        Xfree(macro_pin_headp->item);
         pop_head(&macro_pin_headp);
+    }
     macro_level--;
     bp->b_exec_level--;
 
