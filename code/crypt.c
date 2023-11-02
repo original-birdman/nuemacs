@@ -224,6 +224,7 @@ int set_encryption_key(int f, int n) {
     }
     else {
         type = "Buffer";
+        if (!curbp->b_key) curbp->b_key = Xmalloc(NPAT);
         ukey = curbp->b_key;
         klenp = &curbp->b_keylen;
     }

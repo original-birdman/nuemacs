@@ -120,9 +120,10 @@ int zotbuf(struct buffer *bp) {
     else
         bp1->b_bufp = bp2;
 
-/* Free allocated names */
+/* Free allocated fields */
     Xfree(bp->b_bname);
     Xfree(bp->b_fname);
+    Xfree(bp->b_key);
 
 /* Release buffer block */
     Xfree((char *) bp);
@@ -203,11 +204,11 @@ int swbuffer(struct buffer *bp, int macro_OK) {
 
 static struct buffer buf_templ = {
     NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL,
+    NULL, NULL, NULL,
     { NULL, NULL, 0, 0, 0 },    /* struct locs */
     { 0, 0, 0, 0, 0, 0 },       /* struct func_opts */
     BTNORM, 0, 0, 0, 0,
-    TRUE, 0, 0, ""
+    TRUE, 0, 0
 };
 
 /* Find a buffer, by name. Return a pointer to the buffer structure
@@ -734,6 +735,7 @@ void free_buffer(void) {
         if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
         Xfree(bp->b_bname);
         Xfree(bp->b_fname);
+        Xfree(bp->b_key);
         Xfree(bp);
     }
     return;

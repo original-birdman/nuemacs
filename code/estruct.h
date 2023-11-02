@@ -310,6 +310,7 @@ struct buffer {
 
     char *b_fname;          /* File name                    */
     char *b_bname;          /* Buffer name                  */
+    char *b_key;            /* current encrypted key        */
 
     struct locs b;
     struct func_opts btp_opt;   /* Only for b_type = BTPROC */
@@ -321,7 +322,6 @@ struct buffer {
     char b_active;          /* window activated flag        */
     char b_nwnd;            /* Count of windows on buffer   */
     char b_flag;            /* Flags                        */
-    char b_key[NPAT];       /* current encrypted key        */
 };
 
 #define BTNORM  0               /* A "normal" buffer            */
