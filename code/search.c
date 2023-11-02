@@ -716,7 +716,7 @@ handle_prev:
     case MC_ESC:
         if ((gc.uc > MAXASCII) || (gc.cdm)) {
             parse_error(patptr, "Attempt to quote non-ASCII");
-            if (gc.ex) Xfree(gc.ex);
+            Xfree(gc.ex);
             return FALSE;
         }
 /* So from here on we know there is no gc.ex to free */
@@ -909,9 +909,7 @@ error_exit:
 /* Must also free any extended grapheme parts in any UCGRAPH entries. */
     struct xccl *xp = mcptr->x.xt_cclmap;
     if (xp) while (xp->xc.type != EGRP) {
-        if (xp->xc.type == UCGRAPH) {
-            if (xp->xval.gc.ex) Xfree(xp->xval.gc.ex);
-        }
+        if (xp->xc.type == UCGRAPH) Xfree(xp->xval.gc.ex);
         xp++;
     }
     return FALSE;
@@ -968,16 +966,13 @@ static void mcclear(void) {
                 struct xccl *xp = mcptr->x.xt_cclmap;
 /* Free any extended gc allocs within the xccl alloc */
                 while(xp->xc.type != EGRP) {
-                    if (xp->xc.type == UCGRAPH) {
-                        if (xp->xval.gc.ex) Xfree(xp->xval.gc.ex);
-                    }
-                xp++;
+                    if (xp->xc.type == UCGRAPH) Xfree(xp->xval.gc.ex);
+                    xp++;
                 }
                 Xfree(mcptr->x.xt_cclmap);
             }
 	}
-        if ((mcptr->mc.type) == UCGRAPH)
-            if (mcptr->val.gc.ex) Xfree(mcptr->val.gc.ex);
+        if ((mcptr->mc.type) == UCGRAPH) Xfree(mcptr->val.gc.ex);
         mcptr++;
     }
 /* We need to reset type and flags here */
@@ -995,7 +990,7 @@ static void rmcclear(void) {
     while (rmcptr->mc.type != EGRP) {
         switch(rmcptr->mc.type) {
         case UCGRAPH:
-            if (rmcptr->val.gc.ex) Xfree (rmcptr->val.gc.ex);
+            Xfree (rmcptr->val.gc.ex);
             break;
         case REPL_VAR:
             Xfree(rmcptr->val.varname);
@@ -3438,12 +3433,10 @@ int qreplace(int f, int n) {
  * valgrind usage.
  */
 void free_search(void) {
-    if (repl.buf) Xfree(repl.buf);
-    if (last_match.match) Xfree(last_match.match);
-    if (last_match.replace) Xfree(last_match.replace);
-    for (int gi = 0; gi < NGRP; gi++) {
-        if (grp_text[gi]) Xfree(grp_text[gi]);
-    }
+    Xfree(repl.buf);
+    Xfree(last_match.match);
+    Xfree(last_match.replace);
+    for (int gi = 0; gi < NGRP; gi++) Xfree(grp_text[gi]);
     for (int ix = 0; ix < RING_SIZE; ix++) {
         Xfree(srch_txt[ix]);
         Xfree(repl_txt[ix]);

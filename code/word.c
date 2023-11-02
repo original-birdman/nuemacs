@@ -214,7 +214,7 @@ void ensure_case(int want_case) {
     curwp->w.doto = saved_doto + doto_adj;          /* Restore position */
     lchange(WFHARD);
 ensure_ex_free:
-    if (gc.ex) Xfree(gc.ex);
+    Xfree(gc.ex);
     return;
 }
 
@@ -750,7 +750,7 @@ int eos_chars(int f, int n) {
 
     status = mlreply(prompt, buf, NLINE - 1, CMPLT_NONE);
     if (status == FALSE) {      /* Empty response - remove item */
-        if (eos_list) Xfree_setnull(eos_list);
+        Xfree_setnull(eos_list);
         n_eos = 0;
     }
     else if (status == TRUE) {  /* Some response - set item */

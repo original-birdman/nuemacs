@@ -1334,7 +1334,7 @@ abort:
  * valgrind usage.
  */
 void free_input(void) {
-    if (mb_winp) Xfree(mb_winp);
+    Xfree(mb_winp);
     return;
 }
 #endif

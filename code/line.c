@@ -734,7 +734,7 @@ static void rotate_lastmb_ring(int n) {
  */
 void addto_lastmb_ring(char *mb_text) {
     rotate_lastmb_ring(-1);
-    if (lastmb[0]) Xfree(lastmb[0]);
+    Xfree(lastmb[0]);
     lastmb[0] = Xstrdup(mb_text);
     return;
 }

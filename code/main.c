@@ -757,7 +757,7 @@ void dumpdir_tidy(void) {
               Dump_Index " rewrite error: %s", strerror(errno));
         addline_to_curb(info_message);
     }
-    if (lp) Xfree(lp);
+    Xfree(lp);
 
 revert_to_start_fd:
     status = fchdir(start_fd);
@@ -1788,7 +1788,7 @@ int quit(int f, int n) {
             nextwp = wp->w_wndp;
             Xfree(wp);
         }
-        if (eos_list) Xfree(eos_list);
+        Xfree(eos_list);
         Xfree(pending_rcextra);
 #endif
 
@@ -2102,7 +2102,7 @@ do {
 /* GGR - Now process initialisation files before processing rest of comline */
     silent = TRUE;
     if (!rcfile || !startup(rcfile)) startup("");
-    if (rcfile) Xfree_setnull(rcfile);
+    Xfree_setnull(rcfile);
     if (rcnum) {
         for (unsigned int n = 0; n < rcnum; n++) {
 #ifdef DO_FREE

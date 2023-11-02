@@ -327,9 +327,9 @@ int nxti_name_info(int ci) {
  * valgrind usage.
  */
 void free_names(void) {
-    if (func_index) Xfree(func_index);
-    if (name_index) Xfree(name_index);
-    if (next_name_index) Xfree(next_name_index);
+    Xfree(func_index);
+    Xfree(name_index);
+    Xfree(next_name_index);
     return;
 }
 #endif

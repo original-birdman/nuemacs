@@ -23,6 +23,10 @@ void *Xrealloc(void *optr, size_t size) {
     return ret;
 }
 
+/* free() on Linux can be sent NULL and it will just do nothing.
+ * So we can call Xfree/Xfree_and_set without first testing.
+ * If some other system is different then a test can be added here.
+ */
 void Xfree(void *ptr) {
     free(ptr);
     return;

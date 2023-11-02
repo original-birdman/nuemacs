@@ -1202,10 +1202,10 @@ void free_bind(void) {
     for (struct key_tab *ktp = keytab; ktp->k_type != ENDL_KMAP; ++ktp) {
         if (ktp->k_type == PROC_KMAP) Xfree(ktp->hndlr.pbp);
     }
-    if (keytab_alloc_ents) Xfree(keytab);
-    if (key_index) Xfree(key_index);
-    if (keystr_index) Xfree(keystr_index);
-    if (next_keystr_index) Xfree(next_keystr_index);
+    Xfree(keytab);
+    Xfree(key_index);
+    Xfree(keystr_index);
+    Xfree(next_keystr_index);
     if (free_path_reqd) Xfree(pathname[0]);
     return;
 }

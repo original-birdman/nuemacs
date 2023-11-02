@@ -742,9 +742,9 @@ check_equiv:
  * valgrind usage.
  */
 void free_utf8(void) {
-    if (remap) Xfree(remap);
-    if (gr1.bytes) Xfree(gr1.bytes);
-    if (gr2.bytes) Xfree(gr2.bytes);
+    Xfree(remap);
+    Xfree(gr1.bytes);
+    Xfree(gr2.bytes);
     return;
 }
 #endif

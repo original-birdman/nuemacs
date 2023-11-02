@@ -271,7 +271,7 @@ void vtinit(void) {
     for (i = 0; i < prev_mrow; i++) {
         vp = vscreen[i];
         for (xi = 0; xi < prev_mcol; xi++) {
-            if (vp->v_text[xi].ex) Xfree(vp->v_text[xi].ex);
+            Xfree(vp->v_text[xi].ex);
         }
     }
 /* Set new_vscreen to space graphemes by creating the first line then
@@ -1739,7 +1739,7 @@ void free_display(void) {
     for (int ri = 0; ri < term.t_mrow; ri++) {
         struct video *vp = vscreen[ri];
         for (int ci = 0; ci < term.t_mcol; ci++) {
-            if (vp->v_text[ci].ex) Xfree(vp->v_text[ci].ex);
+            Xfree(vp->v_text[ci].ex);
         }
     }
     Xfree(vscreen);

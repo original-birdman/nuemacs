@@ -1685,8 +1685,8 @@ void free_eval(void) {
 /* Just the variable indexes.
  * Buffer vars are freed in free_buffer.
  */
-    if (envvar_index) Xfree(envvar_index);
-    if (next_envvar_index) Xfree(next_envvar_index);
+    Xfree(envvar_index);
+    Xfree(next_envvar_index);
     for (int i = 0; i < MAXVARS; i++) {
         if (uv[i].name[0] == '\0') break;  /* End of list */
         Xfree(uv[i].value);
