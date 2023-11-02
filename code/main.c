@@ -2102,10 +2102,7 @@ do {
 /* GGR - Now process initialisation files before processing rest of comline */
     silent = TRUE;
     if (!rcfile || !startup(rcfile)) startup("");
-    if (rcfile) {
-        Xfree(rcfile);
-        rcfile = NULL;
-    }
+    if (rcfile) Xfree_setnull(rcfile);
     if (rcnum) {
         for (unsigned int n = 0; n < rcnum; n++) {
 #ifdef DO_FREE

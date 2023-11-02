@@ -330,8 +330,7 @@ int char_replace(int f, int n) {
         if (tok[0] == '\0') break;
         if (!strcmp(tok, "reset")) {
             if (remap != NULL) {
-                Xfree(remap);
-                remap = NULL;
+                Xfree_setnull(remap);
                 repchar = DFLT_REPCHAR;
             }
         }

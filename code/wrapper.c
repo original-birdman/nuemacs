@@ -28,6 +28,13 @@ void Xfree(void *ptr) {
     return;
 }
 
+/* Will be used via the Xfree_setnull #define */
+void Xfree_and_set(void **ptr) {
+    free(*ptr);
+    *ptr = NULL;
+    return;
+}
+
 char *Xstrdup (const char *ostr) {
     char *nstr = strdup(ostr);
     if (!nstr) die("strdup: Out of memory");

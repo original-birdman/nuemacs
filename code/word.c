@@ -750,8 +750,7 @@ int eos_chars(int f, int n) {
 
     status = mlreply(prompt, buf, NLINE - 1, CMPLT_NONE);
     if (status == FALSE) {      /* Empty response - remove item */
-        if (eos_list) Xfree(eos_list);
-        eos_list = NULL;
+        if (eos_list) Xfree_setnull(eos_list);
         n_eos = 0;
     }
     else if (status == TRUE) {  /* Some response - set item */

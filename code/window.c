@@ -191,13 +191,13 @@ int onlywind(int f, int n) {
         wp = wheadp;
         wheadp = wp->w_wndp;
         if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
-        Xfree((char *) wp);
+        Xfree(wp);
     }
     while (curwp->w_wndp != NULL) {
         wp = curwp->w_wndp;
         curwp->w_wndp = wp->w_wndp;
         if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
-        Xfree((char *) wp);
+        Xfree(wp);
     }
     lp = curwp->w_linep;
     i = curwp->w_toprow;
@@ -265,7 +265,7 @@ int delwind(int f, int n) {
     if (--curwp->w_bufp->b_nwnd == 0) curwp->w_bufp->b = curwp->w;
     if (lwp == NULL) wheadp = curwp->w_wndp;
     else             lwp->w_wndp = curwp->w_wndp;
-    Xfree((char *) curwp);
+    Xfree(curwp);
     curwp = wp;
     wp->w_flag |= WFHARD;
     curbp = wp->w_bufp;
@@ -573,9 +573,7 @@ int newsize(int n) {
                 if (lastwp != NULL) lastwp->w_wndp = NULL;
 
 /* Free the structure */
-                Xfree((char *) wp);
-                wp = NULL;
-
+                Xfree_setnull(wp);
             } else {
 /* Need to change this window size? */
                 lastline = wp->w_toprow + wp->w_ntrows - 1;

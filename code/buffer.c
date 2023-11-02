@@ -67,8 +67,7 @@ int bclear(struct buffer *bp) {
             if (bp->bv[vnum].name[0] == '\0') break;
             Xfree(bp->bv[vnum].value);
         }
-        Xfree(bp->bv);
-        bp->bv = NULL;
+        Xfree_setnull(bp->bv);
     }
 
 /* If it's a Phonetic Translation table, remove that too. */

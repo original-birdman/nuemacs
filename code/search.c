@@ -655,12 +655,10 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     if (gc.cdm || prev_gc.cdm) {
         parse_error(patptr, "Cannot use combined chars in ranges");
         if (gc.ex) {            /* Our responsibility! */
-            Xfree(gc.ex);
-            gc.ex = NULL;
+            Xfree_setnull(gc.ex);
         }
         if (prev_gc.ex) {   /* Our responsibility! */
-            Xfree(prev_gc.ex);
-            prev_gc.ex = NULL;
+            Xfree_setnull(prev_gc.ex);
         }
         goto error_exit;
     }
@@ -1749,8 +1747,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
 
 /* ODD to free it here, but once we've tested it we've done with it. */
     if (gc->ex) {           /* Our responsibility! */
-        Xfree(gc->ex);
-        gc->ex = NULL;
+        Xfree_setnull(gc->ex);
     }
     if (mt->mc.negate_test) res = !res;
     return res;
@@ -2300,8 +2297,7 @@ static void init_dyn_group_status(void) {
 /* If we allocated any result strings, free them now... */
     for (int gi = 0; gi < NGRP; gi++) {
         if (grp_text[gi]) {
-            Xfree(grp_text[gi]);
-            grp_text[gi] = NULL;
+            Xfree_setnull(grp_text[gi]);
         }
     }
 /* ...and also initialize dynamic group matching info */

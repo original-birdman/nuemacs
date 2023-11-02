@@ -433,6 +433,8 @@ extern int numberlist_region(int, int);
 /* wrapper.c */
 #ifndef WRAPPER_C
 extern void *Xfree(void *);
+extern void *Xfree_and_set(void **);
+#define Xfree_setnull(a) Xfree_and_set((void **)&(a))
 
 #if __GCC__ >= 11
 #define MALLOC_ATTR __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull))

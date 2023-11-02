@@ -656,9 +656,8 @@ static int update_keybind(int c, int ntimes, int internal_OK,
                 ktp->hndlr.pbp = Xmalloc(NBUFN);
         }
         else {              /* function install */
-            if (ktp->k_type == PROC_KMAP) { /* Need to free the name */
-                Xfree(ktp->hndlr.pbp);      /* Free the name */
-                ktp->hndlr.pbp = NULL;
+            if (ktp->k_type == PROC_KMAP) { /* So need to free the name */
+                Xfree_setnull(ktp->hndlr.pbp);
             }
         }
         destp = ktp;
