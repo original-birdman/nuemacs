@@ -40,3 +40,11 @@ char *Xstrdup (const char *ostr) {
     if (!nstr) die("strdup: Out of memory");
     return nstr;
 }
+
+/* Update a malloc()ed string value
+ * Will be used via the update_val #define
+ */
+void update_val_func(char **val, const char *newval) {
+    *val = Xrealloc(*val, strlen(newval)+1);
+    strcpy(*val, newval);
+}

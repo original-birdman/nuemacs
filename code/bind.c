@@ -162,7 +162,7 @@ int help(int f, int n) {    /* give me some help!!!!
         int res = readin(fname, FALSE);
         pathexpand = TRUE;
         if (res == FALSE) return(FALSE);
-        bp->b_fname[0] = '\0';  /* remove filename */
+        *(bp->b_fname) = '\0';  /* Remove filename */
     }
     else
         if (!swbuffer(bp, 0)) return FALSE;

@@ -1280,11 +1280,11 @@ static int svar(struct variable_description *var, char *value) {
             status = newwidth(atoi(value));
             break;
         case EVCBUFNAME:
-            strcpy(curbp->b_bname, value);
+            update_val(curbp->b_bname, value);
             curwp->w_flag |= WFMODE;
             break;
         case EVCFNAME:
-            strcpy(curbp->b_fname, value);
+            update_val(curbp->b_fname, value);
             curwp->w_flag |= WFMODE;
             break;
         case EVDEBUG:

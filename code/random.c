@@ -1222,7 +1222,7 @@ int re_args_exec(int f, int n) {
 int open_parent(int f, int n) {
     UNUSED(f); UNUSED(n);
 
-    if (curbp->b_fname[0] == '\0') {
+    if (*(curbp->b_fname) == '\0') {
         mlforce("This buffer has no filename");
         return FALSE;
     }

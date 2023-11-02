@@ -554,13 +554,13 @@ static void dump_modified_buffers(void) {
         if ((bp->b_flag & BFCHG) == 0     /* Not changed...*/
          || (bp->b_flag & BFINVS) != 0    /* ...not real... */
          || (bp->b_mode & MDVIEW) != 0    /* ...read-only... */
-         || (bp->b_fname[0] == '\0')) {   /* ...has no filename */
+         || (*(bp->b_fname) == '\0')) {   /* ...has no filename */
 
 /* Not interested ... but we *do* want to save any keyboard-macro.
  * which is marked as invisible.
  */
             if (bp == kbdmac_bp && (bp->b_flag & BFCHG) != 0) {
-                strcpy(bp->b_fname, kbdmacro_buffer); /* Give it a value */
+                update_val(bp->b_fname, kbdmacro_buffer);   /* Set a value */
             }
             else {
                 continue;
@@ -602,7 +602,7 @@ static void dump_modified_buffers(void) {
  * name clash.
  */
         if (curbp == kbdmac_bp) tagged_name[ts_len-1] = '!';
-        strcpy(bp->b_fname, tagged_name);
+        update_val(bp->b_fname, tagged_name);
         if ((status = filesave(0, 0)) != TRUE) {
             printf("  failed - skipping\n");
             continue;
@@ -2147,7 +2147,7 @@ do {
 /* Set-up a (unique) buffer for this file */
             makename(bname, *argv, TRUE);
             bp = bfind(bname, TRUE, 0);     /* set this to inactive */
-            strcpy(bp->b_fname, *argv);
+            update_val(bp->b_fname, *argv);
             bp->b_active = FALSE;
             if (firstfile) {
                 firstbp = bp;

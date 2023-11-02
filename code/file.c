@@ -149,7 +149,7 @@ int readin(char *fname, int lockfl) {
     if (filock && lockfl && lockchk(fname) == ABORT) {
         s = FIOFNF;
         bp = curbp;
-        bp->b_fname[0] = '\0';
+        *(bp->b_fname) = '\0';
         goto out;
     }
 
@@ -170,7 +170,7 @@ int readin(char *fname, int lockfl) {
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
  */
-    if (bp->b_fname != fname) strcpy(bp->b_fname, fname);
+    if (bp->b_fname != fname) update_val(bp->b_fname, fname);
 
 /* GGR - run filehooks on this iff the caller sets the flag */
     if (run_filehooks) handle_filehooks(fname);
@@ -251,7 +251,7 @@ int fileread(int f, int n) {
     s = mlreply("Read file: ", fname, NFILEN, CMPLT_FILE);
     if (s == ABORT) return(s);
     else if (s == FALSE) {
-        if (strlen(curbp->b_fname) == 0) return(s);
+        if (*(curbp->b_fname) == 0) return(s);
         else strcpy(fname, curbp->b_fname);
     }
     return readin(fname, TRUE);
@@ -628,7 +628,7 @@ int filewrite(int f, int n) {
     if ((s = mlreply("Write file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
         return s;
     if ((s = writeout(fname)) == TRUE) {
-        strcpy(curbp->b_fname, fname);
+        update_val(curbp->b_fname, fname);
         curbp->b_flag &= ~BFCHG;
         wp = wheadp;        /* Update mode lines.   */
         while (wp != NULL) {
@@ -654,7 +654,7 @@ int filesave(int f, int n) {
         return rdonly();        /* we are in read only mode     */
     if (!f && (curbp->b_flag & BFCHG) == 0) /* Return, no changes.  */
         return TRUE;
-    if (curbp->b_fname[0] == 0) {   /* Must have a name. */
+    if (*(curbp->b_fname) == 0) {   /* Must have a name. */
         mlwrite_one("No file name");
         return FALSE;
     }
@@ -703,7 +703,7 @@ int filename(int f, int n) {
         return resterr();
     if ((s = mlreply("Name: ", fname, NFILEN, CMPLT_FILE)) == ABORT)
         return s;
-    strcpy(curbp->b_fname, (s == FALSE)? "": fname);
+    update_val(curbp->b_fname, (s == FALSE)? "": fname);
     wp = wheadp;            /* Update mode lines.   */
     while (wp != NULL) {
         if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;

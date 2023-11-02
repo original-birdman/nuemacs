@@ -307,6 +307,10 @@ struct buffer {
     struct line *b_botline; /* Link to narrowed bottom text */
     struct ptt_ent *ptt_headp;
     struct simple_variable *bv; /* Only for b_type = BTPROC */
+
+    char *b_fname;          /* File name                    */
+    char *b_bname;          /* Buffer name                  */
+
     struct locs b;
     struct func_opts btp_opt;   /* Only for b_type = BTPROC */
     int b_type;             /* Type of buffer */
@@ -317,8 +321,6 @@ struct buffer {
     char b_active;          /* window activated flag        */
     char b_nwnd;            /* Count of windows on buffer   */
     char b_flag;            /* Flags                        */
-    char b_fname[NFILEN];   /* File name                    */
-    char b_bname[NBUFN];    /* Buffer name                  */
     char b_key[NPAT];       /* current encrypted key        */
 };
 

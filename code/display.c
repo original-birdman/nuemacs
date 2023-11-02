@@ -1223,7 +1223,7 @@ static void modeline(struct window *wp) {
         strcpy(tline, " " PROGRAM_NAME_LONG);
 
 /* GGR - only if no filename (space issue) */
-        if (bp->b_fname[0] == 0) strcat(tline, " " VERSION);
+        if (*(bp->b_fname) == 0) strcat(tline, " " VERSION);
         strcat(tline, ": ");
         cp = tline;
         while ((c = *cp++) != 0) vtputc(c);
@@ -1289,7 +1289,7 @@ next_mode:
  * This can contain utf8...
  * For the minibuffer this will be the main buffer name .
  */
-    if (bp->b_fname[0] != 0 && strcmp(bp->b_bname, bp->b_fname) != 0) {
+    if (*(bp->b_fname) != 0 && strcmp(bp->b_bname, bp->b_fname) != 0) {
         show_utf8(bp->b_fname);
         vtputc(' ');
     }

@@ -463,6 +463,11 @@ extern void *Xrealloc(void *, size_t) REALLOC_ATTR;
 #endif
 extern char *Xstrdup (const char *) STRDUP_ATTR;
 #undef STRDUP_ATTR
+
+extern void update_val_func(char **, const char *);
+#define update_val(var, val) \
+    update_val_func((char **)&(var), (const char *)(val))
+
 #endif
 
 #ifdef DO_FREE

@@ -260,7 +260,7 @@ int ffropen(char *fn) {
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
  */
-        if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
+        if (curbp->b_fname != fn) update_val(curbp->b_fname, fn);
     }
 
 /* Unset these on open */
@@ -291,7 +291,7 @@ int ffwopen(char *fn) {
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
  */
-        if (curbp->b_fname != fn) strcpy(curbp->b_fname, fn);
+        if (curbp->b_fname != fn) update_val(curbp->b_fname, fn);
     }
 
     cache.rst = cache.len = 0;

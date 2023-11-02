@@ -119,7 +119,14 @@ int zotbuf(struct buffer *bp) {
         bheadp = bp2;
     else
         bp1->b_bufp = bp2;
-    Xfree((char *) bp);              /* Release buffer block */
+
+/* Free allocated names */
+    Xfree(bp->b_bname);
+    Xfree(bp->b_fname);
+
+/* Release buffer block */
+    Xfree((char *) bp);
+
 /* Remove any per-macro-level marks */
     per_macro_level_remove(bp);
     return TRUE;
@@ -196,10 +203,11 @@ int swbuffer(struct buffer *bp, int macro_OK) {
 
 static struct buffer buf_templ = {
     NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL,
     { NULL, NULL, 0, 0, 0 },    /* struct locs */
     { 0, 0, 0, 0, 0, 0 },       /* struct func_opts */
     BTNORM, 0, 0, 0, 0,
-    TRUE, 0, 0, "", "", ""
+    TRUE, 0, 0, ""
 };
 
 /* Find a buffer, by name. Return a pointer to the buffer structure
@@ -263,7 +271,8 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
 /* Set any forced buffer modes at create time - after global mode set */
         if (force_mode_on) bp->b_mode |= force_mode_on;
         if (force_mode_off) bp->b_mode &= ~force_mode_off;
-        strcpy(bp->b_bname, bname);
+        update_val(bp->b_bname, bname);
+        update_val(bp->b_fname, "");
     }
     return bp;
 }
@@ -385,8 +394,8 @@ ask:
         }
     }
 
-    strcpy(curbp->b_bname, bufn);   /* copy buffer name to structure */
-    curwp->w_flag |= WFMODE;        /* make mode line replot */
+    update_val(curbp->b_bname, bufn);   /* copy buffer name to structure */
+    curwp->w_flag |= WFMODE;            /* make mode line replot */
     mlerase();
     return TRUE;
 }
@@ -441,7 +450,7 @@ static int makelist(int iflag) {
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
         return s;
-    strcpy(blistp->b_fname, "");
+    *(blistp->b_fname) = '\0';
 
     addline("ACT MODES   Type↴      Size Buffer        File");
     addline("--- ------------.      ---- ------        ----");
@@ -723,6 +732,8 @@ void free_buffer(void) {
         }
         Xfree(bp->bv);
         if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
+        Xfree(bp->b_bname);
+        Xfree(bp->b_fname);
         Xfree(bp);
     }
     return;
