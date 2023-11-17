@@ -568,7 +568,7 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
 /* The case-mapper changed it, so copy the new unicode char to the
  * output as a utf8 sequence.
  */
-        char tbuf[4];   /* Maxlen utf8 mapping */
+        char tbuf[32];  /* Avoid spurious compiler warning */
         int newlen = unicode_to_utf8(nuc, tbuf);
         add_to_res(mstr, tbuf, newlen, rec_incr);
     } while ((offset += used) < len);
@@ -629,12 +629,11 @@ int utf8char_width(unicode_t c) {
  */
 static int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen,
      int nocase) {
-    char ub[6];
+    char ub[32];    /* Avoid spurious compiler warning */
     int ulen;
     int reslen;
 
-    if (nocase) ulen = unicode_to_utf8(utf8proc_toupper(gc->uc), ub);
-    else        ulen = unicode_to_utf8(gc->uc, ub);
+    ulen = unicode_to_utf8(nocase? (unicode_t)utf8proc_toupper(gc->uc): gc->uc, ub);
 
     if (ulen+1 > alen) {    /* Round up new allocation to multiple of 16 */
         alen = 16*(((ulen+1)/16)+1);
