@@ -1582,6 +1582,11 @@ int execute(int c, int f, int n) {
         }
     }
 
+/* At this point we have to unset all of teh keep_flags, as non
+ * can be true.
+ */
+    com_flag = 0;
+
     if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
         || (c >= 0xA0 && c <= MAX_UTF8_CHAR)) {
 
