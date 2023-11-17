@@ -104,6 +104,8 @@ Other changes so far made are:
   o File locking and visual updates as macros run are now run-time
     options rather than compile-time ones.
   o Add the concept of pins, which allow user macros to preserve marks.
+  o Save any modified buffers on a crash and, on x64 and arm64,
+    optionally (at compile time) produce a stack trace.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in

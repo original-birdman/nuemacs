@@ -7296,7 +7296,7 @@ Makefile
 random.c
     Combine forwdel() and backdel() code.
     Unset the kill flag for a default argument.
-    Make backdel() work if it would got back before the start of file
+    Make backdel() work if it would go back before the start of file
     (in the way that forwdel() works if it would go beyond end-of-file).
 
 etc/uemacs.hlp
@@ -7315,5 +7315,115 @@ version.c
 ../README
 version.h
     Update to GGR4.173
+
+========== GGR4.174
+
+region.c
+    Fixes for region ending at start of line and also for mark and dot
+    being in the same place.
+
+Makefile
+    Let Arm64 use backtrace code and correct a typo in the /opt/ setting.
+
+basic.c
+bind.c
+    Minor simplification.
+
+buffer.c
+    Create new struct buffer by copying from a template.
+
+crypt.c
+file.c
+    Change code to use klen not *klenp. [file.c]
+    Update comments to indicate *klenp/klen difference. [crypt.c, file.c]
+
+display.c
+    Change clone_grapheme to be a #define.
+    Use show_utf8() not a loop to display msg.
+
+isearch.c
+    Change strdup to Xstrdup.
+
+exec.c
+    Free the item data when removing a pin.
+
+bind.c
+buffer.c
+main.c
+search.c
+utf8.c
+window.c
+word.c
+wrapper.c
+efunc.h
+    Add Xfree_setnull(), a define to call a function that frees, then
+    sets the variable to NULL.
+
+bind.c
+buffer.c
+display.c
+eval.c
+file.c
+fileio.c
+main.c
+random.c
+wrapper.c
+efunc.h
+estruct.h
+    Make the b_fname and b_bname files in struct buffer dynamically
+    allocated.  [buffer.c, estruct.h]
+    Added update_val_func() [wrapper.c, efunc,h]
+    Added update_val(), a define to call a function (that reallocs and
+    updates a dynamic variable. [efunc.h]
+    Replace strcpy() with update_val() [buffer.c, eval.c, file.c,
+    fileio.c, main.c]
+
+buffer.c
+crypt.c
+estruct.h
+    Make b_key in struct buffer dynamically allocated.
+
+bind.c
+display.c
+eval.c
+input.c
+line.c
+main.c
+names.c
+search.c
+utf8.c
+word.c
+wrapper.c
+    Remove (unneeded) test for NULL ptr before calling Xfree*.
+
+bind.c
+buffer.c
+eval.c
+exec.c
+file.c
+fileio.c
+input.c
+isearch.c
+line.c
+main.c
+random.c
+search.c
+spawn.c
+utf8.c
+estruct.h
+    Added a terminate_str macro to replace "str = '\0'" constructs.
+
+utf8.c
+    Enlarge some temporary buffers to avoid spurious gcc 12.2.0 warnings
+    on Arm64.
+
+main.c
+    Unset com_flag if we are about to self-insert, as none of the bits
+    remain valid for that.
+
+../CHANGES
+../README
+version.h
+    Update to GGR4.174
 
 ==========
