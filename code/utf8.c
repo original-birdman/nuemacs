@@ -524,7 +524,7 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
 
     if (len == 0) {
         mstr->str = Xmalloc(1);
-        *(mstr->str) = '\0';
+        terminate_str(mstr->str);
         mstr->alloc = 1;
         return;
     }
@@ -572,7 +572,7 @@ void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
         int newlen = unicode_to_utf8(nuc, tbuf);
         add_to_res(mstr, tbuf, newlen, rec_incr);
     } while ((offset += used) < len);
-    *(mstr->str+mstr->utf8c) = '\0';    /* NUL terminate it */
+    terminate_str(mstr->str+mstr->utf8c);   /* NUL terminate it */
     return;     /* Success */
 }
 
@@ -662,7 +662,7 @@ static int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen,
         reslen += ulen;
     }
 done:
-    *(*rp+reslen) = '\0';
+    terminate_str(*rp+reslen);
     return alen;
 }
 /* Only interested in same/not same here

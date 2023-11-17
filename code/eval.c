@@ -47,7 +47,7 @@ static char *getkill(void) {
         if (kused[0] < NSTRING) size = kused[0];
         else                    size = NSTRING - 1;
         memcpy(value, kbufh[0]->d_chunk, size);
-        *(value+size) = '\0';
+        terminate_str(value+size);
     }
     return value;       /* Return the constructed value */
 }
@@ -386,7 +386,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
             *rp++ = *sp++;
     }
 
-    *rp = '\0';
+    terminate_str(rp);
     return result;
 }
 
@@ -475,7 +475,7 @@ static char *ue_printf(char *fmt) {
         }
         --bytes_togo;   /* We're about to use it... */
         char conv_char = *tp++ = *fmt++;
-        *tp = '\0';
+        terminate_str(tp);
 
 /* Get what to format. */
         if (macarg(nexttok) != TRUE) break;
@@ -517,7 +517,7 @@ static char *ue_printf(char *fmt) {
  * so we can return a pointer to it.
  */
 finalize:
-    *op = '\0';
+    terminate_str(op);
     strcpy(ue_buf, local_buf);
     return ue_buf;
 }
@@ -738,7 +738,7 @@ static char *gtfun(char *fname) {
             if (strchr(" \"$&'()*;<>?\\`{|", *ip)) *op++ = '\\';
             *op++ = *ip++;
         }
-        *op = '\0';
+        terminate_str(op);
         return result;
        }
     case UFSINDEX:      return ue_itoa(strindex(arg1, arg2));
@@ -1196,7 +1196,7 @@ fvar:
             struct simple_variable *tp = execbp->bv;
             int count = BVALLOC;
             while(count--) {
-                tp->name[0] = '\0';
+                terminate_str(tp->name);    /* Makes it empty */
                 tp->value = NULL;
                 tp++;
             }
@@ -1631,7 +1631,7 @@ static void del_simple_var(struct variable_description *vd,
         op->value = np->value;
         if (op->name[0] == '\0') break;     /* All done */
     }
-    np->name[0] = '\0';
+    terminate_str(np->name);                /* Makes it empty */
     np->value = NULL;
 }
 

@@ -149,7 +149,7 @@ int readin(char *fname, int lockfl) {
     if (filock && lockfl && lockchk(fname) == ABORT) {
         s = FIOFNF;
         bp = curbp;
-        *(bp->b_fname) = '\0';
+        terminate_str(bp->b_fname);     /* Makes it empty */
         goto out;
     }
 
@@ -436,7 +436,7 @@ void makename(char *bname, char *fname, int ensure_unique) {
  */
     if (bn_len > 0) {
         memcpy(bname, ocp, bn_len);
-        *(bname+bn_len) = '\0' ;
+        terminate_str(bname+bn_len);
     }
     else strcpy(bname, " 0");
 

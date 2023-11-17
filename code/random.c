@@ -119,14 +119,14 @@ int showcpos(int f, int n) {
         char temp[8];
         if (curchar > 127) {        /* utf8!? */
             int blen = unicode_to_utf8(display_for(curchar), temp);
-            temp[blen] = '\0';
+            terminate_str(temp + blen);
         }
         else if (curchar <= ' ') {  /* non-printing - lookup descr */
                 strcpy(temp, charset[curchar]);
             }
             else {                      /* printable ASCII */
                 temp[0] = curchar;
-                temp[1] = '\0';
+                terminate_str(temp + 1);
             }
         snprintf(descr, 40 ,"char = U+%04x (%s)", curchar, temp);
     }
@@ -983,7 +983,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
                 strcat(nstring, vp);
                 nlen += strlen(vp);
             }
-            nstring[nlen] = '\0';
+            terminate_str(nstring + nlen);
         }
         istrp = nstring;
     }

@@ -217,7 +217,7 @@ void fixup_fname(char *fn) {
         }
     }
     if (to <= fn) to = fn+1;    /* Just have '/' or '.' left...keep it */
-    *to = '\0';
+    terminate_str(to);
 
     return;
 }

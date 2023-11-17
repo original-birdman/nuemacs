@@ -161,9 +161,9 @@ static char *getffile(char *fspec) {
  * fixup_fname().
  */
     if ((*fspec == '~') && (!strchr(fspec, '/'))) {
-        directory[0] = '\0';        /* Forget any previous one */
+        terminate_str(directory);           /* Forget any previous one */
         strncpy(id_to_find, fspec+1, 39);
-        id_to_find[39] = '\0';      /* Ensure NUL terminated */
+        terminate_str(id_to_find+39);       /* Ensure NUL terminated */
         id_to_find_len = strlen(id_to_find);
         run_id_finder = 1;
         setpwent();                 /* Start it off */
@@ -187,7 +187,7 @@ static char *getffile(char *fspec) {
  */
     int fspec_eoff = strlen(fspec) - 1;
     if (fspec_eoff && (fspec[fspec_eoff] == '/'))
-        fspec[fspec_eoff] = '\0';
+        terminate_str(fspec + fspec_eoff);
     else
         fspec_eoff = 0;         /* Just forget it... */
     fixup_fname(fspec);
@@ -386,7 +386,7 @@ static int matcher(char *name, int namelen, char *choices,
  * destination buffer, and we have to allow for the final NUL
  */
     if (l >= NFILEN) l = NFILEN - 1;
-    so_far[l] = '\0';           /* Ensure this will fit into choices */
+    terminate_str(so_far + l);      /* Ensure this will fit into choices */
     strcpy(choices, so_far);
     max -= l;
     unique = TRUE;
@@ -1000,7 +1000,7 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
     strcpy(procopy, prompt);
     prolen = strlen(procopy);
     prmpt_buf.update = 0;
-    *buf = '\0';            /* Ensure we never return garbage */
+    terminate_str(buf);         /* Ensure we never return garbage */
 
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
@@ -1145,7 +1145,7 @@ loop:
         if (lused(lp) < NSTRING-1) {
             int expanded;
             memcpy(tstring, sp, lused(lp));
-            tstring[lused(lp)] = '\0';
+            terminate_str(tstring + lused(lp));
             switch(ctype) {
             case CMPLT_FILE:
                 expanded = comp_file(tstring, choices);
@@ -1249,7 +1249,7 @@ submit:     /* Tidy up */
         sofar += add;
         mblp = lforw(mblp);
     }
-    buf[sofar] = '\0';          /* Add the NUL */
+    terminate_str(buf + sofar);     /* Add the NUL */
 
 /* Need to copy to return buffer and, if not empty,
  * to save as last minibuffer.

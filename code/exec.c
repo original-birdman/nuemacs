@@ -467,7 +467,7 @@ static char* get_display_code(char *buf) {
     int offs = next_utf8_offset(buf, 0, mlen, 1);
     offs = next_utf8_offset(buf, offs, mlen, 1);
     strncpy(ml_display_code, buf, offs);
-    ml_display_code[offs] = '\0';
+    terminate_str(ml_display_code+offs);
     return ml_display_code;
 }
 
@@ -495,7 +495,7 @@ static int ptt_compile(struct buffer *bp) {
         int to_len = 0;
         memcpy(lbuf, ltext(lp), lused(lp));
         char *rp = lbuf;
-        lbuf[lused(lp)] = '\0';
+        terminate_str(lbuf+lused(lp));
         rp = token(rp, tok, NLINE);
         char from_string[NLINE];
         int bow;
@@ -602,7 +602,7 @@ static int ptt_compile(struct buffer *bp) {
               &(new->final_uc));
         new->to = Xmalloc(to_len+1);
         strncpy(new->to, to_string, to_len);
-        new->to[to_len] = '\0';
+        terminate_str(new->to + to_len);
         new->to_len_uc = uclen_utf8(new->to);
         new->bow_only = bow;
         new->caseset = caseset;
@@ -1135,7 +1135,7 @@ nxtscan:          /* on to the next line */
         }
         eline = einit;
         memcpy(eline, ltext(lp), linlen);
-        eline[linlen] = '\0';   /* make sure it ends */
+        terminate_str(eline+linlen);    /* Make sure it ends */
 
 /* Trim leading whitespace */
         while (*eline == ' ' || *eline == '\t') ++eline;

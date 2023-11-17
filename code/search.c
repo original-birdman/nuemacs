@@ -313,9 +313,9 @@ static enum call_type this_rt;
 void init_search_ringbuffers(void) {
     for (int ix = 0; ix < RING_SIZE; ix++) {
         srch_txt[ix] = Xmalloc(1);
-        *(srch_txt[ix]) = '\0';
+        terminate_str(srch_txt[ix]);
         repl_txt[ix] = Xmalloc(1);
-        *(repl_txt[ix]) = '\0';
+        terminate_str(repl_txt[ix]);
     }
 /* Initialize the group text pointers - these are only
  * allocated on request, and freed/reset on each ne pattern
@@ -404,7 +404,7 @@ static char *expandp(const char *srcstr, char *deststr) {
             *dp++ = c;
         }
     }
-    *dp = '\0';
+    terminate_str(dp);
     return rp;
 }
 
@@ -531,7 +531,7 @@ static char *brace_text(char *fp) {
         if (!*fp) break;
         *tp++ = *fp++;
         if (*fp == '}') {
-            *tp = '\0';
+            terminate_str(tp);
             return btxt;
         }
     }
@@ -564,7 +564,7 @@ static void setbit(int bc, char *cclmap) {
  */
 static void parse_error(char *pptr, char *message) {    /* Helper routine */
     char byte_saved = *pptr;
-    *pptr = '\0';   /* Temporarily fudge in end-of-string */
+    terminate_str(pptr);    /* Temporarily fudge in end-of-string */
     mlwrite("%s<-: %s!", pat, message);
     *pptr = byte_saved;
     return;
@@ -787,10 +787,10 @@ handle_prev:
  * result of a utf8proc_category_string() call.
  */
             xp->xval.prop[0] = '?';     /* Unknown default */
-            xp->xval.prop[1] = '\0';    /* terminate sring */
+            terminate_str(xp->xval.prop + 1);
             if (btext[0]) xp->xval.prop[0] = btext[0] & (~DIFCASE);
             if (btext[1]) xp->xval.prop[1] = btext[1] | DIFCASE;
-            xp->xval.prop[2] = '\0';    /* Ensure NUL terminated */
+            terminate_str(xp->xval.prop + 2);   /* Ensure NUL terminated */
             patptr += strlen(btext);
             goto invalidate_current;
 	}
@@ -800,7 +800,7 @@ handle_prev:
             xp->xc.negate_test = (gc.uc == 'D');
             xp->xval.prop[0] = 'N';     /* Numeric... */
             xp->xval.prop[1] = 'd';     /* ...digit */
-            xp->xval.prop[2] = '\0';    /* Ensure NUL terminated */
+            terminate_str(xp->xval.prop + 2);   /* Ensure NUL terminated */
             goto invalidate_current;
         }
         case 'w':                       /* Letter, _, 0-9 */
@@ -809,7 +809,7 @@ handle_prev:
             struct xccl *xp = add2_xt_cclmap(mcptr, UCPROP);
             xp->xc.negate_test = negate_it;
             xp->xval.prop[0] = 'L';     /* Letter... */
-            xp->xval.prop[1] = '\0';    /* Ensure NUL terminated */
+            terminate_str(xp->xval.prop + 1);   /* Ensure NUL terminated */
 /* We can't really (un)set a bit pattern here for the negative case,
  * So set up some UCLITL tests instead.
  */
@@ -1338,10 +1338,10 @@ static int mcstr(void) {
  * result of a utf8proc_category_string() call.
  */
                 mcptr->val.prop[0] = '?';     /* Fail by default */
-                mcptr->val.prop[1] = '\0';    /* terminate sring */
+                terminate_str(mcptr->val.prop + 1);
                 if (btext[0]) mcptr->val.prop[0] = btext[0] & (~DIFCASE);
                 if (btext[1]) mcptr->val.prop[1] = btext[1] | DIFCASE;
-                mcptr->val.prop[2] = '\0';    /* Ensure NUL terminated */
+                terminate_str(mcptr->val.prop + 2); /* Ensure NUL terminated */
                 mcptr->mc.negate_test = (pchr == 'P');
                 can_repeat = TRUE;
                 patptr += strlen(btext);
@@ -1351,7 +1351,7 @@ static int mcstr(void) {
                 mcptr->mc.type = UCPROP;
                 mcptr->val.prop[0] = 'N';     /* Numeric... */
                 mcptr->val.prop[1] = 'd';     /* ...digit */
-                mcptr->val.prop[2] = '\0';    /* Ensure NUL terminated */
+                terminate_str(mcptr->val.prop + 2); /* Ensure NUL terminated */
                 mcptr->mc.negate_test = (pchr == 'D');
                 can_repeat = TRUE;
                 goto pchr_done;
@@ -1755,7 +1755,7 @@ void rvstrcpy(char *rvstr, char *str) {
 
     str += (i = strlen(str));
     while (i-- > 0) *rvstr++ = *--str;
-    *rvstr = '\0';
+    terminate_str(rvstr);
 }
 
 /*      Setting up search jump tables.
@@ -2672,7 +2672,7 @@ char *group_match(int grp) {
                 coff = 0;
             }
         }
-        *dp = '\0';     /* Terminate the text */
+        terminate_str(dp);
     }
     return grp_text[grp];
 }
@@ -3078,7 +3078,7 @@ static char *getrepl(void) {
         }
     rmcptr++;
     }
-    repl.buf[repl.len] = '\0';
+    terminate_str(repl.buf + repl.len);
     return repl.buf;
 }
 
@@ -3131,7 +3131,7 @@ static int delins(char *repstr) {
     char *mptr = last_match.match;
     for (int j = 0; j < match_grp_info[0].len; j++)
         *mptr++ = nextbyte(&sline, &soff, FORWARD);
-    *mptr = '\0';
+    terminate_str(mptr);
 
     last_match.moff = curwp->w.doto;
     last_match.mlen = match_grp_info[0].len;

@@ -153,7 +153,7 @@ static int get_char(void) {
     }
     c = tgetc();            /* Get the next literal character      */
     cmd_buff[cmd_offset++] = c;     /* Save the char for next time */
-    cmd_buff[cmd_offset] = '\0';    /* And terminate the buffer    */
+    terminate_str(cmd_buff + cmd_offset);
     return c;               /* Return the character                */
 }
 
@@ -390,13 +390,13 @@ static int isearch(int f, int n) {
 
 /* Initialize starting conditions */
 
-    cmd_reexecute = -1;     /* We're not re-executing (yet?)      */
-    cmd_offset = 0;         /* Start at the beginning of the buff */
-    cmd_buff[0] = '\0';     /* Init the command buffer            */
-    strcpy(pat_save, pat);  /* Save the old pattern string        */
-    curline = curwp->w.dotp; /* Save the current line pointer     */
-    curoff = curwp->w.doto; /* Save the current offset            */
-    init_direction = n;     /* Save the initial search direction  */
+    cmd_reexecute = -1;         /* We're not re-executing (yet?)      */
+    cmd_offset = 0;             /* Start at the beginning of the buff */
+    terminate_str(cmd_buff);    /* Init the command buffer            */
+    strcpy(pat_save, pat);      /* Save the old pattern string        */
+    curline = curwp->w.dotp;    /* Save the current line pointer      */
+    curoff = curwp->w.doto;     /* Save the current offset            */
+    init_direction = n;         /* Save the initial search direction  */
 
 /* Check for in "incremental-debug" mode? */
 
@@ -490,7 +490,7 @@ start_over:
                 goto end_isearch;
             }
             --cmd_offset;           /* Back up over Rubout  */
-            cmd_buff[--cmd_offset] = '\0';  /* Yes, delete last char */
+            terminate_str(cmd_buff + --cmd_offset); /* Yes, delete last char */
             curwp->w.dotp = curline;        /* Reset the line pointer */
             curwp->w.doto = curoff; /*  and the offset       */
             n = init_direction;     /* Reset search direction */

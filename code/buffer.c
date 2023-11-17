@@ -451,7 +451,7 @@ static int makelist(int iflag) {
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
         return s;
-    *(blistp->b_fname) = '\0';
+    terminate_str(blistp->b_fname);     /* Makes it empty */
 
     addline("ACT MODES   Type↴      Size Buffer        File");
     addline("--- ------------.      ---- ------        ----");

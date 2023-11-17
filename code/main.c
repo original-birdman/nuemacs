@@ -234,7 +234,7 @@ void addchar_kbdmacro(char addch) {
 static void flush_kbd_text(void) {
     linstr("\ninsert-string ");
     if (must_quote) linsert_byte(1, '"');
-    kbd_text[kbd_idx] = '\0';
+    terminate_str(kbd_text+ kbd_idx);   /* Terminate current text */
 /* This loop may look odd, but if we have NUL bytes to insert it means
  * that it works as if we haven't yet added enough it must be because
  * we've hit a NUL, so process that and continue on from there.
@@ -595,7 +595,7 @@ static void dump_modified_buffers(void) {
         }
         strcpy(tagged_name, time_stamp);
         strncpy(tagged_name+ts_len, fn, NFILEN-ts_len-1);
-        tagged_name[NFILEN-1] = '\0';   /* Ensure a terminating NUL */
+        terminate_str(tagged_name + NFILEN-1);
         strcpy(orig_name, bp->b_fname); /* For INDEX */
 /* Just in case the user has opened a file "kbd_macro", we alter the
  * tagged name to have a ! for this special case, to avoid any
@@ -705,7 +705,7 @@ void dumpdir_tidy(void) {
             char *orig_fn = strstr(lp, " <= ");
             if (!orig_fn) continue;     /* Just in case... */
             int dfn_len = orig_fn - lp; /* Length of filename */
-            *(lp+dfn_len) = '\0';       /* Null terminate it */
+            terminate_str(lp+dfn_len);  /* Null terminate it */
             orig_fn += 4;               /* Step over " <= " for original */
             status = unlink(lp);
             if (status) {
@@ -1529,7 +1529,7 @@ int execute(int c, int f, int n) {
  */
             strncat(fname, lp, fnlen);
             int full_len = strlen(curwp->w_bufp->b_fname) + 1 + fnlen;
-            fname[full_len] = '\0';
+            terminate_str(fname + full_len);
 
 /* May be file or dir - getfile() sorts it out */
             getfile(fname, test_char != 'v', TRUE); /* c.f. filefind/viewfile */
@@ -1549,7 +1549,7 @@ int execute(int c, int f, int n) {
             strcpy(fname, curwp->w_bufp->b_fname);
             char *upp = strrchr(fname, '/');
             if (upp == fname) upp++;
-            *upp = '\0';
+            terminate_str(upp);
             userproc_arg = fname;
             (void)run_user_proc("showdir", 0, 1);
             userproc_arg = NULL;
@@ -1950,7 +1950,7 @@ do {
     char exec_file[NFILEN];
     ssize_t elen = readlink("/proc/self/exe", exec_file, NFILEN-1);
     if (elen < 0) break;
-    exec_file[elen] = '\0';
+    terminate_str(exec_file + elen);
     char *exec_path = dirname(exec_file);
     char *cpath = Xmalloc(strlen(exec_path) + 5);
     strcpy(cpath, exec_path);

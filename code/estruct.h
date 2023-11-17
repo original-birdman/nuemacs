@@ -33,6 +33,15 @@
 /* Define an invalid unicode character to mark the end of lists */
 #define UEM_NOCHAR 0x0FFFFFFF       /* GGR - NoChar. Top 4 bits special */
 
+/* A simple macro to terminate a string (char array).
+ * NOTE that:
+ *  char str[32];
+ *  terminate_str(str)
+ * will make the string empty.
+ */
+
+#define terminate_str(a) (*(a) = '\0')
+
 /*      Configuration options   */
 
 #define REVSTA  1  /* Status line appears in reverse video         */

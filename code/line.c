@@ -210,7 +210,7 @@ int linsert_byte(int n, unsigned char c) {
 /* We have a function to add a line at the end of a buffer */
         char *tbuf = alloca(n+1);
         memset(tbuf, c, n);
-        tbuf[n] = '\0';
+        terminate_str(tbuf + n);
         addline_to_curb(tbuf);
 /* addline_to_curb will put dot on the dummy end line, effectively
  * adding a newline at the end of it.

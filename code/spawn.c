@@ -237,7 +237,7 @@ int pipecmd(int f, int n) {
 
 /* And read the stuff in */
     if (readin(comfile, FALSE) != TRUE) return FALSE;
-    bp->b_fname[0] = '\0';      /* Zap temporary filename */
+    terminate_str(bp->b_fname);     /* Zap temporary filename */
 
 /* Put this window into VIEW mode.*/
     curwp->w_bufp->b_mode |= MDVIEW;
