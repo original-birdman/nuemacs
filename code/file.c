@@ -121,7 +121,9 @@ static void handle_filehooks(char *fname) {
     run_filehooks = 0;                  /* reset flag */
     if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
     char *sfx = strrchr(fname, '.');
-    if (sfx && strlen(sfx) <= 19) {     /* Max bufname is 32, incl NUL */
+/* Check we haven't found ../xxx or ./xxx */
+    if (sfx && (*(sfx+1) != '/')
+            && strlen(sfx) <= 19) {     /* Max bufname is 32, incl NUL */
         sfx++;                          /* Skip over '.' */
         char sfx_bname[NBUFN];
         sprintf(sfx_bname, "/file-hooks-%s", sfx);
