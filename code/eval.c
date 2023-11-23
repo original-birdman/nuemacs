@@ -788,7 +788,10 @@ static char *gtfun(char *fname) {
         tsp = getenv(arg1);
         return (tsp == NULL)? "" : tsp;
     case UFBIND:        return transbind(arg1);
-    case UFEXIST:       return ltos(fexist(arg1));
+    case UFEXIST:   /* Need to "fixup" the arg */
+        strcpy(result, arg1);
+        fixup_fname(result);
+        return ltos(fexist(result));
     case UFBXIST:       return ltos(bfind(arg1, 0, 0) != NULL);
     case UFFIND:
         tsp = flook(arg1, TRUE, ONPATH);

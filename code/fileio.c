@@ -245,7 +245,6 @@ static int check_for_file(char *fn) {
  */
 int ffropen(char *fn) {
 
-    fixup_fname(fn);
     ffp_mode = O_RDONLY;
 
 /* Opening for reading lets the caller display relevant message on not found.
@@ -274,7 +273,6 @@ int ffropen(char *fn) {
  */
 int ffwopen(char *fn) {
 
-    fixup_fname(fn);
     ffp_mode = O_WRONLY;
 
 /* Opening for writing displays errors here */
@@ -577,8 +575,6 @@ int ffgetline(void) {
  */
 int fexist(char *fn) {
     struct stat statbuf;
-
-    fixup_fname(fn);
 
     int status = stat(fn, &statbuf);
     if (status != 0) return FALSE;
