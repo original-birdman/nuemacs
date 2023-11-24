@@ -7426,4 +7426,33 @@ main.c
 version.h
     Update to GGR4.174
 
+========== GGR4.174
+
+file.c
+    In handle_filehooks() don't run a suffix-specific file if we've
+    actually found ./xxx.
+
+buffer.c
+eval.c
+fileio.c
+
+Fixes for fixup_* routines expanding the called path arg "in place",
+which causes a problem for the malloc'ed b_fname, which is now only as
+large as it needs to be.
+
+    In make_active(), copy buffer's filename to a maxlen temp var for
+    readin(), as it may get expanded. [buffer.c]
+    fixup the arg before calling fexist() for UFEXIST. [eval.c]
+    Remove the fixup_fname() calls from ffropen(), ffwopen() and
+    fexist(). [fileio.c]
+
+.gitignore
+    Added VG-*, autotest.tfile, uetest.rc.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Update to GGR4.175
+
 ==========
