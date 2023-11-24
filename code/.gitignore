@@ -1,3 +1,6 @@
 uemacs
 *.o
 core
+VG-*
+autotest.tfile
+uetest.rc
