@@ -857,6 +857,9 @@ static char *gtfun(char *fname) {
     }
     }
     exit(-11);              /* never should get here */
+#ifdef __TINYC__
+    return "";              /* Avoid "function might return no value" */
+#endif
 }
 
 /* Look up a user var's value (%xxx)
@@ -1018,6 +1021,9 @@ static char *gtenv(char *vname) {
     }
 
     exit(-12);              /* again, we should never get here */
+#ifdef __TINYC__
+    return "";              /* Avoid "function might return no value" */
+#endif
 }
 
 /* find the type of a passed token
@@ -1288,6 +1294,7 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVCFNAME:
             update_val(curbp->b_fname, value);
+            update_val(curbp->b_rpname, "");
             curwp->w_flag |= WFMODE;
             break;
         case EVDEBUG:

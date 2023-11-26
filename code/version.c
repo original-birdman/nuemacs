@@ -13,6 +13,13 @@ void version(void) {
 #elif defined(__GNUC__)
     printf("Compiled on %s, by GCC %s, on %s at %s\n",
         xstr(BUILDER), __VERSION__, __DATE__, __TIME__);
+#elif defined(__TINYC__)
+    {int maj = __TINYC__ / 1000;
+     int min = (__TINYC__ % 1000) / 100;
+     int sub = __TINYC__ % 100;
+     printf("Compiled on %s, by TinyCC %d.%d.%02d, on %s at %s\n",
+        xstr(BUILDER), maj, min, sub, __DATE__, __TIME__);
+    }
 #else
     printf(" Compiled on %s\n", xstr(BUILDER));
 #endif
