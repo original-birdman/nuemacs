@@ -1,5 +1,7 @@
 #include <utf8proc.h>
 
+#define GLOBALS_C
+
 #include "estruct.h"
 #include "edef.h"
 
@@ -52,7 +54,6 @@ int kused[KRING_SIZE] = {[0 ... KRING_SIZE-1] = KBLOCK};
 struct window *swindow = NULL;  /* saved window pointer                 */
 int cryptflag = FALSE;          /* currently encrypting?                */
 int *kbdptr;                    /* current position in keyboard buf */
-int *kbdend = kbdm;             /* ptr to end of the keyboard */
 int kbdmode = STOP;             /* current keyboard macro mode  */
 int kbdrep = 0;                 /* number of repetitions        */
 int restflag = FALSE;           /* restricted use?              */
@@ -72,6 +73,7 @@ struct window *wheadp = NULL;   /* vtinit() needs to check this */
 /* uninitialized global definitions */
 
 int kbdm[NKBDM];                /* Macro                        */
+int *kbdend = kbdm;             /* ptr to end of the keyboard */
 
 int eolexist;                   /* does clear to EOL exist      */
 int revexist;                   /* does reverse video exist?    */
@@ -161,10 +163,10 @@ enum yank_style yank_mode = Old;
 
 int autoclean = 7;
 
-char regionlist_text[] = " o ";
-char regionlist_number[] = " %2d. ";
+char regionlist_text[MAX_REGL_LEN] = " o ";
+char regionlist_number[MAX_REGL_LEN] = " %2d. ";
 
-char readin_mesg[];
+char readin_mesg[NSTRING];
 
 int running_function = 0;
 char *current_command = NULL;

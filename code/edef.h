@@ -14,6 +14,89 @@
 #include <utf8proc.h>
 #include <time.h>
 
+/* Define allocation sizes and types here, so that globals.c gets them */
+
+#define KRING_SIZE 10
+#define MAX_REGL_LEN 16
+
+typedef struct {
+    struct buffer *main_bp;     /* curbp of arriving window */
+    struct window *main_wp;     /* curwp of arriving window */
+    struct window *wheadp;      /* wheadp of arriving window */
+    int mbdepth;                /* Current depth of minibuffer */
+} mb_info_st;
+
+typedef struct {
+    char *funcname;             /* Name of function */
+    int keystroke;              /* Keystroke(s) use to reach it */
+}  not_in_mb_st;
+
+typedef struct {
+    char *preload;              /* text to preload into getstring() result */
+    int update;                 /* Set to make getstring() update its prompt */
+    char prompt[NSTRING];       /* The new prompt to use */
+} prmpt_buf_st;
+
+typedef struct {
+    int c;              /* Last command char (reexecute) */
+    int f;              /* Last flag (-> n valid) */
+    int n;              /* Last n */
+} com_arg;
+
+typedef struct {
+    fn_t func;          /* Function that would be called */
+    com_arg ca;
+} func_arg;
+
+typedef struct {
+    int C;
+    int R;
+    int W;
+    int X;
+} meta_spec_flags_t;
+
+typedef struct {
+    struct line *p;
+    int o;
+} sysmark_t;
+
+
+/* For einit and whlist data stashed away around docmd() calls we need
+ * to allow for the fact the the command might execute a buffer and hence
+ * come back here.
+ * So we need to save these items in a linked list and allocate/free it
+ * as we go.
+ * We use the same linked_items structure for the macro pins, so
+ * define it all here.
+ */
+struct _li {
+    struct _li *next;
+    void *item;
+};
+typedef struct _li linked_items;
+
+/* We keep a linked list of per-macro-level pins and also
+ * need to keep a level marker for them.
+ */
+struct mac_pin {
+    struct buffer *bp;
+    struct line *lp;
+    int offset;
+    int mac_level;
+    int col_offset;     /* Temporary use by p-m-l_get_columns/set_offsets */
+};
+
+/* This make the macro pin code easier to follow */
+
+#define mmi(lip, what) (((struct mac_pin *)((lip)->item))->what)
+
+enum yank_type { None, NormalYank, MiniBufferYank };
+enum yank_style { Old, GNU };
+
+#ifndef GLOBALS_C
+
+extern linked_items *macro_pin_headp;
+
 /* Initialized global external declarations. */
 
 extern int fillcol;             /* Fill column                  */
@@ -53,7 +136,6 @@ extern int abortc;              /* current abort command char   */
 extern int tabmask;
 extern char *cname[];           /* names of colors              */
 extern struct kill *kbufp;      /* current kill buffer chunk pointer */
-#define KRING_SIZE 10
 extern struct kill *kbufh[KRING_SIZE];
                                 /* kill buffer header pointers  */
 extern int kused[KRING_SIZE];   /* # of bytes used in this kill buffer */
@@ -136,39 +218,19 @@ extern struct buffer *kbdmac_bp;    /* keyboard macro buffer */
 
 extern int run_filehooks;       /* Set when we want them run */
 
-typedef struct {
-    struct buffer *main_bp;     /* curbp of arriving window */
-    struct window *main_wp;     /* curwp of arriving window */
-    struct window *wheadp;      /* wheadp of arriving window */
-    int mbdepth;                /* Current depth of minibuffer */
-} mb_info_st;
 extern mb_info_st mb_info;
-
-typedef struct {
-    char *funcname;             /* Name of function */
-    int keystroke;              /* Keystroke(s) use to reach it */
-}  not_in_mb_st;
 extern not_in_mb_st not_in_mb;
 extern char *not_interactive_fname;
 
 extern int pause_key_index_update;  /* If set, don't update keytab index */
 
-typedef struct {
-    char *preload;              /* text to preload into getstring() result */
-    int update;                 /* Set to make getstring() update its prompt */
-    char prompt[NSTRING];       /* The new prompt to use */
-} prmpt_buf_st;
 extern prmpt_buf_st prmpt_buf;
 
-enum yank_type { None, NormalYank, MiniBufferYank };
 extern enum yank_type last_yank;
-
-enum yank_style { Old, GNU };
 extern enum yank_style yank_mode;
 
 extern int autoclean;
 
-#define MAX_REGL_LEN 16
 extern char regionlist_text[MAX_REGL_LEN];
 extern char regionlist_number[MAX_REGL_LEN];
 
@@ -177,15 +239,6 @@ extern char readin_mesg[NSTRING];
 extern int running_function;
 extern char *current_command;
 
-typedef struct {
-    int c;              /* Last command char (reexecute) */
-    int f;              /* Last flag (-> n valid) */
-    int n;              /* Last n */
-} com_arg;
-typedef struct {
-    fn_t func;          /* Function that would be called */
-    com_arg ca;
-} func_arg;
 extern func_arg f_arg, p_arg;
 extern struct rx_mask rx_mask[];
 extern int rxargs;
@@ -231,12 +284,6 @@ extern int uproc_lpcount, uproc_lptotal, uproc_lpforced;
 
 /* Markers for META|SPEC handler being active. */
 
-typedef struct {
-    int C;
-    int R;
-    int W;
-    int X;
-} meta_spec_flags_t;
 extern meta_spec_flags_t meta_spec_active;
 
 /* GGR option flag bits */
@@ -245,10 +292,7 @@ extern int ggr_opts;
 extern struct timespec pause_time;  /* Bracket match pause time */
 
 /* A system-wide mark for temporarily saving the current locaiton. */
-typedef struct {
-    struct line *p;
-    int o;
-} sysmark_t;
+
 extern sysmark_t sysmark;
 
 /* Crypt bits */
@@ -271,35 +315,6 @@ extern int gl_enc_len;          /* Global key length */
 
 #define CRYPT_VALID (CRYPT_MOD95|CRYPT_ONLYP|CRYPT_GLOBAL|CRYPT_MODEMASK)
 
-/* For einit and whlist data stashed away around docmd() calls we need
- * to allow for the fact the the command might execute a buffer and hence
- * come back here.
- * So we need to save these items in a linked list and allocate/free it
- * as we go.
- * We use the same linked_items structure for the macro pins, so
- * define it all here.
- */
-struct _li {
-    struct _li *next;
-    void *item;
-};
-typedef struct _li linked_items;
-
-/* We keep a linked list of per-macro-level pins and also
- * need to keep a level marker for them.
- */
-struct mac_pin {
-    struct buffer *bp;
-    struct line *lp;
-    int offset;
-    int mac_level;
-    int col_offset;     /* Temporary use by p-m-l_get_columns/set_offsets */
-};
-
-extern linked_items *macro_pin_headp;
-
-/* This make the macro pin code easier to follow */
-
-#define mmi(lip, what) (((struct mac_pin *)((lip)->item))->what)
+#endif  /* GLOBALS_C */
 
 #endif  /* EDEF_H_ */
