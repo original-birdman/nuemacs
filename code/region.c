@@ -64,6 +64,7 @@ int getregion(struct region *rp) {
                 rp->r_offset = curwp->w.doto;
                 rp->r_bytes = fsize + curwp->w.marko;
                 rp->r_endp = curwp->w.markp;
+                rp->r_foffset = curwp->w.marko;
                 return TRUE;
              }
              fsize += lused(flp) + 1;
@@ -76,6 +77,7 @@ int getregion(struct region *rp) {
                 rp->r_offset = curwp->w.marko;
                 rp->r_bytes = bsize - curwp->w.marko;
                 rp->r_endp = curwp->w.dotp;
+                rp->r_foffset = curwp->w.doto;
                 return TRUE;
             }
         }
@@ -346,11 +348,11 @@ int narrow(int f, int n) {
 /* We now want to set curwp->w.dotp to be the first line of the bottom
  * section to hive off.
  * A region knows its last line, so just set the dotp to the start of
- * the next line - *unless* we are at the start of a line which is *not*
+ * the next line - *unless* we that is the start of a line which is *not*
  * the top line of what is left - in which case use the current line
  * (this also caters for being on the final line).
  */
-    if ((curwp->w.doto == 0) && (bp->b_linep->l_fp != creg.r_endp)) {
+    if ((creg.r_foffset == 0) && (bp->b_linep->l_fp != creg.r_endp)) {
          curwp->w.dotp = creg.r_endp;
     }
     else {

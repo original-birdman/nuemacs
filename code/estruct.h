@@ -370,9 +370,10 @@ struct buffer {
  */
 struct region {
     struct line *r_linep;       /* Origin struct line address.  */
-    int r_offset;               /* Origin struct line offset.   */
-    long r_bytes;               /* Length in bytes.             */
     struct line *r_endp;        /* line address at end.         */
+    long r_bytes;               /* Length in bytes.             */
+    int r_offset;               /* Origin line offset.          */
+    int r_foffset;              /* End line offset.             */
 };
 
 /* Used by inword() to override current point usage. */
