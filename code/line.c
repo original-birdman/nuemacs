@@ -293,6 +293,8 @@ int lnewline(void) {
 /* Are we are already on the dummy last line?
  * If so, we need to put a new empty line in place before it (and stay
  * where we are - on the dummy end line).
+ * NOTE: that if the mark or a pin is on teh klast line, it
+ *       will also move with it.
  */
     else if (curwp->w.dotp == curbp->b_linep) {
         lp1 = lalloc(0);
@@ -302,6 +304,12 @@ int lnewline(void) {
         lp1->l_bp = lp2->l_bp;
         lp1->l_fp = lp2;
         lp2->l_bp = lp1;
+
+/* If this also the top line of the window (i.e., the buffer was empty)
+ * we need to update that to be the newly-allocated line.
+ */
+        if (curwp->w_linep == curwp->w.dotp) curwp->w_linep = lp1;
+
         return TRUE;
     }
 
