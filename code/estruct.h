@@ -10,6 +10,8 @@
 #ifndef ESTRUCT_H_
 #define ESTRUCT_H_
 
+#include <limits.h>
+
 #include "utf8.h"
 
 /* Various bits of code use chars as indices.
@@ -78,10 +80,10 @@
  * NSTRING should be at least as large as NFILEN.
  */
 #define NBINDS  256             /* max # of bound keys          */
-#define NFILEN  513             /* # of bytes, file name        */
+#define NFILEN  PATH_MAX+1      /* # of bytes, file name        */
 #define NBUFN   32              /* # of bytes, buffer name      */
 #define NLINE   513             /* # of bytes, input line       */
-#define NSTRING 513             /* # of bytes, string buffers   */
+#define NSTRING NFILEN          /* # of bytes, string buffers   */
 #define NKBDM   256             /* # of strokes, keyboard macro */
 #define NPAT    128             /* # of bytes, pattern          */
 #define NLOCKS  100             /* max # of file locks active   */
@@ -317,7 +319,8 @@ struct buffer {
     struct ptt_ent *ptt_headp;
     struct simple_variable *bv; /* Only for b_type = BTPROC */
 
-    char *b_fname;          /* File name                    */
+    char *b_fname;          /* File name (as user gave)     */
+    char *b_rpname;         /* Real pathname                */
     char *b_bname;          /* Buffer name                  */
     char *b_key;            /* current encrypted key        */
 

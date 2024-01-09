@@ -123,6 +123,7 @@ int zotbuf(struct buffer *bp) {
 /* Free allocated fields */
     Xfree(bp->b_bname);
     Xfree(bp->b_fname);
+    Xfree(bp->b_rpname);
     Xfree(bp->b_key);
 
 /* Release buffer block */
@@ -207,7 +208,7 @@ int swbuffer(struct buffer *bp, int macro_OK) {
 
 static struct buffer buf_templ = {
     NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL,
     { NULL, NULL, 0, 0, 0 },    /* struct locs */
     { 0, 0, 0, 0, 0, 0 },       /* struct func_opts */
     BTNORM, 0, 0, 0, 0,
@@ -277,6 +278,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         if (force_mode_off) bp->b_mode &= ~force_mode_off;
         update_val(bp->b_bname, bname);
         update_val(bp->b_fname, "");
+        update_val(bp->b_rpname, "");
     }
     return bp;
 }
@@ -738,6 +740,7 @@ void free_buffer(void) {
         if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
         Xfree(bp->b_bname);
         Xfree(bp->b_fname);
+        Xfree(bp->b_rpname);
         Xfree(bp->b_key);
         Xfree(bp);
     }
