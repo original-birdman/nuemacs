@@ -68,8 +68,8 @@ endif
 #   all  uses a static build and sets STANDALONE=1 to skip come code
 #
 edit_LIBS =
-STANDALONE = none
-ifneq ($(strip $(STANDALONE)),none)
+STANDALONE =
+ifneq ($(strip $(STANDALONE)),)
     ifneq ($(uname_S),Linux)
         .DEFAULT_GOAL := no_STANDALONE
     else
@@ -368,7 +368,7 @@ vgstrip:
 # For STANDALONE == all we are going to load the static lib, so
 # need to get the version now.
 #
-ifeq ($(STANDALONE),none)
+ifeq ($(STANDALONE),)
     LT = -DSTAT_LIB=1
 else ifeq ($(STANDALONE),most)
     LT = -DSTAT_LIB=-1
