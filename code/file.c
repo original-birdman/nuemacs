@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <libgen.h>
 
 #define FILE_C
 
@@ -17,6 +19,41 @@
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
+
+
+/* FreeBSD (cclang) doesn't have strdupa(), so make our own....
+ * ...or rather copy the GCC definition from string.h.
+ * If anything has strndupa as something other than a #define
+ * this logic will need to be changed.
+ */
+#ifndef strdupa
+# define strdupa(s)                                     \
+  (__extension__                                        \
+    ({                                                  \
+      const char *__old = (s);                          \
+      size_t __len = strlen (__old) + 1;                \
+      char *__new = (char *) __builtin_alloca (__len);  \
+      (char *) memcpy (__new, __old, __len);            \
+    }))
+#endif
+
+static char *get_realpath(char *fn) {
+
+    static char rp_res[NFILEN];
+
+/* Get the full pathname...(malloc'ed)
+ * Have to cater for file not existing (but the dir has to...).
+ */
+    char *dir = dirname(strdupa(fn));
+    char *ent = basename(strdupa(fn));
+
+    char *rp = realpath(dir, NULL);
+    if (!rp) return NULL;
+    sprintf(rp_res, "%s/%s", rp, ent);
+    free(rp);
+
+    return rp_res;
+}
 
 static int resetkey(void) { /* Reset the encryption key if needed */
     int s;              /* return status */
@@ -173,6 +210,18 @@ int readin(char *fname, int lockfl) {
  * On a Mac it will crash...
  */
     if (bp->b_fname != fname) update_val(bp->b_fname, fname);
+
+/* Always set the real pathname now, so getfile() can check it.
+ * NOTE that if we cannot get a real pathname (e.g trying to
+ * open a new file in a non-existant directory) that we just warn
+ * about it...
+ */
+    char *rp = get_realpath(fname);
+    if (!rp) {
+        mlwrite_one("Parent directory absent for new file");
+        sleep(1);
+    }
+    else update_val(bp->b_rpname, rp);
 
 /* GGR - run filehooks on this iff the caller sets the flag */
     if (run_filehooks) handle_filehooks(fname);
@@ -490,17 +539,24 @@ int getfile(char *fname, int lockfl, int check_dir) {
  */
     if ((check_dir == TRUE) && (showdir_handled(fname) == TRUE)) return TRUE;
 
-    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-        if ((bp->b_flag & BFINVS) == 0 && strcmp(bp->b_fname, fname) == 0) {
-            if (!swbuffer(bp, 0)) return FALSE;
-            lp = curwp->w.dotp;
-            i = curwp->w_ntrows / 2;
-            while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
-            curwp->w_linep = lp;
-            curwp->w_flag |= WFMODE | WFHARD;
-            cknewwindow();
-            mlwrite_one(MLbkt("Old buffer"));
-            return TRUE;
+/* Look for a buffer holding the same realpath, regardless of how the user
+ * specified it.
+ */
+    char *testp = get_realpath(fname);
+    if (testp) {    /* Only of we have a filename to test */
+        for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+            if (((bp->b_flag & BFINVS) == 0) &&
+                 (strcmp(bp->b_rpname, testp) == 0)) {
+                if (!swbuffer(bp, 0)) return FALSE;
+                lp = curwp->w.dotp;
+                i = curwp->w_ntrows / 2;
+                while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
+                curwp->w_linep = lp;
+                curwp->w_flag |= WFMODE | WFHARD;
+                cknewwindow();
+                mlwrite_one(MLbkt("Old buffer"));
+                return TRUE;
+            }
         }
     }
     makename(bname, fname, FALSE); /* New buffer name. No unique check. */
