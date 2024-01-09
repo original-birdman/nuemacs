@@ -159,10 +159,12 @@ int help(int f, int n) {    /* give me some help!!!!
         bp = bfind(HELP_BUF, TRUE, BFINVS);
         if (!swbuffer(bp, 0)) return FALSE;
         pathexpand = FALSE; /* GGR - unset pathexpand around call */
+/* No point using fixup_fname(fname) as we set the paths to "" */
         int res = readin(fname, FALSE);
         pathexpand = TRUE;
         if (res == FALSE) return(FALSE);
         terminate_str(bp->b_fname); /* Remove filename */
+        terminate_str(bp->b_rpname);
     }
     else
         if (!swbuffer(bp, 0)) return FALSE;
