@@ -295,6 +295,15 @@ extern struct timespec pause_time;  /* Bracket match pause time */
 
 extern sysmark_t sysmark;
 
+/* Three locations worked out once at the start/
+ * All malloc'ed.
+ */
+extern struct {
+    char *current;
+    char *parent;
+    char *home;
+} udir;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

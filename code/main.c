@@ -1796,6 +1796,9 @@ int quit(int f, int n) {
         }
         Xfree(eos_list);
         Xfree(pending_rcextra);
+        Xfree(udir.current);
+        Xfree(udir.parent);
+        Xfree(udir.home);
 #endif
 
         if (f) exit(n);
@@ -1884,6 +1887,19 @@ void extend_keytab(int n_ents) {
     return;
 }
 
+/* It's simpler for us to ensure that we have a trailing / on the udirs */
+
+static char *ensure_trailing_slash(char *inp) {
+    if (inp) {
+        int slen = strlen(inp);
+        if (*(inp+slen-1) != '/') {
+            inp = Xrealloc(inp, slen+2);
+            strcat(inp, "/");
+        }
+    }
+    return inp;
+}
+
 int main(int argc, char **argv) {
     int c;                  /* command character */
     struct buffer *bp;      /* temp buffer pointer */
@@ -1916,6 +1932,25 @@ int main(int argc, char **argv) {
 /* GGR The rest of initialization is done after processing optional args */
 
     varinit();              /* initialise user variables */
+
+/* Get these directory locations. */
+
+    udir.current = ensure_trailing_slash(realpath(".", NULL));
+    udir.parent = ensure_trailing_slash(realpath("..", NULL));
+    udir.home = NULL;
+    char *p;
+    if ((p = getenv("HOME")) != NULL) {
+        udir.home = strdup(p);
+    }
+#ifndef STANDALONE
+    else {
+        struct passwd *pwptr;
+        if ((pwptr = getpwuid(geteuid())) != NULL) {
+            udir.home = strdup(pwptr->pw_dir);
+        }
+    }
+#endif
+    if (udir.home) udir.home = ensure_trailing_slash(udir.home);
 
     int viewflag = FALSE;   /* view mode defaults off in command line */
     int gotoflag = FALSE;   /* set to off to begin with */

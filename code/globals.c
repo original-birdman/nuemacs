@@ -232,3 +232,13 @@ struct timespec pause_time = { 0, 200000000 };
 /* Where macro pins hang out */
 
 linked_items *macro_pin_headp = NULL;
+
+/* Three locations worked out once at the start/
+ * All malloc'ed.
+ */
+
+struct {
+    char *current;
+    char *parent;
+    char *home;
+} udir;
