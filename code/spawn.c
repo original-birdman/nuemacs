@@ -213,8 +213,7 @@ int pipecmd(int f, int n) {
     if (swbuffer(bp, 0) != TRUE) return FALSE;
     if (bclear(bp) != TRUE) return FALSE;
 
-    char *hp = getenv("HOME");
-    if (!hp || (*hp == '\0')) hp = "."; /* Default if absent */
+    char *hp = udir.home? udir.home: ".";   /* Default if absent */
     sprintf(comfile, "%s/.ue_%08x", hp, getpid());
     TTflush();
     TTclose();              /* stty to old modes    */
