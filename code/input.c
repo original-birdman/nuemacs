@@ -190,7 +190,7 @@ static char *getffile(char *fspec) {
         terminate_str(fspec + fspec_eoff);
     else
         fspec_eoff = 0;         /* Just forget it... */
-    fixup_fname(fspec);
+    fspec = fixup_fname(fspec);
 /* fspec may have been expanded in situ by fixup_fname, so we can't just
  * use fspec_eoff as the place to put put back a '/'!
  */
@@ -475,7 +475,7 @@ static int comp_file(char *name, char *choices) {
  */
     if (unique) {
         if ((name[0] == '~') && (!strchr(name, '/'))) {
-            fixup_fname(name);
+            name = fixup_fname(name);
             if (name[0] != '~') strcat(name, "/");
         }
     }

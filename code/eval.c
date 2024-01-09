@@ -789,9 +789,7 @@ static char *gtfun(char *fname) {
         return (tsp == NULL)? "" : tsp;
     case UFBIND:        return transbind(arg1);
     case UFEXIST:   /* Need to "fixup" the arg */
-        strcpy(result, arg1);
-        fixup_fname(result);
-        return ltos(fexist(result));
+        return ltos(fexist(fixup_fname(arg1)));
     case UFBXIST:       return ltos(bfind(arg1, 0, 0) != NULL);
     case UFFIND:
         tsp = flook(arg1, TRUE, ONPATH);
@@ -1094,7 +1092,7 @@ char *getval(char *token) {
             discmd = distmp;
             if (status == ABORT) return errorm;
         }
-        if (do_fixup) fixup_full(buf);
+        if (do_fixup) strcpy(buf, fixup_full(buf));
         return buf;
     }
     case TKBUF:                 /* buffer contents fetch */

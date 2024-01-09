@@ -65,6 +65,8 @@ int ffclose(void) {
  * ".." and "." entries.
  * fixup_full() expands any leading "." to an absolute name (which we
  * don't always wish to do) then calls fixup_fname() with what it has.
+ * THIS NOW RETURNS A POINTER TO AN INTERNAL static char ARRAY.
+ * The CALLER must handle appropriately.
  */
 #include <libgen.h>
 #include <pwd.h>
@@ -72,8 +74,8 @@ int ffclose(void) {
 static char pwd_var[NFILEN];
 static int have_pwd = 0;    /* 1 == have it, -1 == tried and failed */
 
-void fixup_fname(char *fn) {
-    char fn_copy[2*NFILEN]; /* Overbig, for sprint overflow warnings */
+char *fixup_fname(char *fn) {
+    static char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
     char *p;
 
 /* Look for a ~ at the start. */
@@ -81,13 +83,12 @@ void fixup_fname(char *fn) {
     if (fn[0]=='~') {          /* HOME dir wanted... */
         if (fn[1]=='/' || fn[1]==0) {
             if ((p = getenv("HOME")) != NULL) {
-                strcpy(fn_copy, fn);
-                strcpy(fn , p);
+                strcpy(fn_expd, p);
                 int i = 1;
 /* Special case for root (i.e just "/")! */
-                if (fn[0]=='/' && fn[1]==0 && fn_copy[1] != 0)
+                if (fn[0]=='/' && fn[1]==0 && fn_expd[1] != 0)
                     i++;
-                strcat(fn, fn_copy+i);
+                strcat(fn_expd, fn+i);
             }
         }
 #ifndef STANDALONE
@@ -95,14 +96,12 @@ void fixup_fname(char *fn) {
            struct passwd *pwptr;
            char *q;
             p = fn + 1;
-            q = fn_copy;
+            q = fn_expd;
             while (*p != 0 && *p != '/')
                 *q++ = *p++;
             *q = 0;
-            if ((pwptr = getpwnam(fn_copy)) != NULL) {
-                sprintf(fn_copy, "%s%s", pwptr->pw_dir, p);
-                strcpy(fn, fn_copy);
-
+            if ((pwptr = getpwnam(fn_expd)) != NULL) {
+                sprintf(fn_expd, "%s%s", pwptr->pw_dir, p);
             }
         }
 #endif
@@ -123,10 +122,10 @@ void fixup_fname(char *fn) {
             }
         }
         if (have_pwd == 1) {
-            sprintf(fn_copy, "%s/%s", pwd_var, fn);
-            strcpy(fn, fn_copy);
+            sprintf(fn_expd, "%s/%s", pwd_var, fn);
         }
     }
+    else strcpy(fn_expd, fn);
 
 /* Convert any multiple consecutive "/" to "/" and strip any
  * trailing "/"...
@@ -146,14 +145,14 @@ void fixup_fname(char *fn) {
  * resettable only gets incremented when we find somewhere we can reset to,
  * which means that leading ".." entries don't get removed.
  */
-    if (fn[0] != '/') {
-        resets[0] = fn;
+    if (fn_expd[0] != '/') {
+        resets[0] = fn_expd;
         rsi = 1;
         resettable = 1;
     }
     else resettable = 0;
 
-    for (from = fn, to = fn; *from; from++) {
+    for (from = fn_expd, to = fn_expd; *from; from++) {
 /* Ignore a repeat '/' */
         if (prev_was_slash && (*from == '/')) continue;
 /* Reset states on no '/' */
@@ -167,7 +166,7 @@ void fixup_fname(char *fn) {
                 resettable--;
             }
             else if (slash_d_d_state == 3) {
-                if ((fn[0] == '/') || (resettable >= 2)) {
+                if ((fn_expd[0] == '/') || (resettable >= 2)) {
                     rsi -= 2;
                     if (rsi < 0) rsi = 0;
                     resettable -= 2;
@@ -203,12 +202,12 @@ void fixup_fname(char *fn) {
         }
     }
 /* For "./" this next line goes to before start of buffer, but we
- * fix that with the to <= fn check.
+ * fix that with the to <= fn_expd check.
  */
     if (prev_was_slash) to--;
     if (slash_dot_state == 2) to -= 2;
     if (slash_d_d_state == 3) {
-        if ((fn[0] == '/') || (resettable >= 2)) {
+        if ((fn_expd[0] == '/') || (resettable >= 2)) {
             rsi -= 2;
             if (rsi < 0) rsi = 0;
             resettable -= 2;
@@ -216,10 +215,11 @@ void fixup_fname(char *fn) {
             to = resets[rsi] - 1;   /* Remove trailing / */
         }
     }
-    if (to <= fn) to = fn+1;    /* Just have '/' or '.' left...keep it */
+/* Just have '/' or '.' left...keep it */
+    if (to <= fn_expd) to = fn_expd+1;
     terminate_str(to);
 
-    return;
+    return fn_expd;
 }
 
 /* Check that whatever is open on ffp is a regular file.
@@ -245,6 +245,7 @@ static int check_for_file(char *fn) {
  */
 int ffropen(char *fn) {
 
+//    fn = fixup_fname(fn);
     ffp_mode = O_RDONLY;
 
 /* Opening for reading lets the caller display relevant message on not found.
@@ -273,6 +274,7 @@ int ffropen(char *fn) {
  */
 int ffwopen(char *fn) {
 
+//    fn = fixup_fname(fn);
     ffp_mode = O_WRONLY;
 
 /* Opening for writing displays errors here */
@@ -576,6 +578,7 @@ int ffgetline(void) {
 int fexist(char *fn) {
     struct stat statbuf;
 
+//    fn = fixup_fname(fn);
     int status = stat(fn, &statbuf);
     if (status != 0) return FALSE;
     if ((statbuf.st_mode & S_IFMT) != S_IFREG) return FALSE;
@@ -586,15 +589,19 @@ int fexist(char *fn) {
  * It also handles anything not starting with a / or ~/ the same way.
  * We don't usually want this, as we want "code.c" to stay as "code.c"
  * but for directory browsing we always need the full path.
+ * THIS NOW RETURNS A POINTER TO THE static char ARRAY IN fixup_fname.
+ * The CALLER must handle appropriately.
  */
-void fixup_full(char *fn) {
-    char fn_copy[2*NFILEN]; /* Overbig, for sprint overflow warnings */
+char *fixup_full(char *fn) {
+    char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
     char *p;
+    char *exp_base;
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
  * Then we call fixup_fname() to do what it can do, which includes
  * stripping out redundant '.'s and handling ".."s.
  */
+    exp_base = fn;
     if (have_pwd >= 0 && (fn[0] != '/' && fn[0] != '~')) {
         if (have_pwd == 0) {
             if ((p = getenv("PWD")) == NULL) have_pwd = -1;
@@ -608,11 +615,10 @@ void fixup_full(char *fn) {
             }
         }
         if (have_pwd == 1) {
-            sprintf(fn_copy, "%s/%s", pwd_var, fn);
-            strcpy(fn, fn_copy);
+            sprintf(fn_expd, "%s/%s", pwd_var, fn);
+            exp_base = fn_expd;
         }
     }
 
-    fixup_fname(fn);    /* For '/', '.' and ".."  handling */
-    return;
+    return fixup_fname(exp_base);   /* For '/', '.' and ".."  handling */
 }

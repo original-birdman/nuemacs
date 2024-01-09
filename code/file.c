@@ -375,8 +375,7 @@ int showdir_handled(char *pname) {
 
 /* Have to expand it *now* to allow for ~ usage in dir-check */
 
-    strcpy(exp_pname, pname);
-    fixup_full(exp_pname);     /* Make absolute pathname */
+    strcpy(exp_pname, fixup_full(pname));   /* Make absolute pathname */
     int status = stat(exp_pname, &statbuf);
     if ((status == 0) && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
 /* We can only call showdir if it exists as a userproc.
@@ -481,6 +480,8 @@ int getfile(char *fname, int lockfl, int check_dir) {
     int i;
     int s;
     char bname[NBUFN];      /* buffer name to put file */
+
+    fname = fixup_fname(fname);
 
 /* Check *now* if this is a directory and we've been asked to check.
  * This prevents setting up an incomplete buffer that isn't used by

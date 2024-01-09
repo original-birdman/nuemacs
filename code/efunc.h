@@ -211,8 +211,8 @@ extern int ffclose(void);
 extern int ffputline(char *, int);
 extern int ffgetline(void);
 extern int fexist(char *);
-extern void fixup_fname(char *);
-extern void fixup_full(char *);
+extern char *fixup_fname(char *);
+extern char *fixup_full(char *);
 #endif
 
 /* input.c */

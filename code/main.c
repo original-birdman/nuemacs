@@ -59,6 +59,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <pwd.h>
 
 #define MAIN_C
 
@@ -917,7 +918,7 @@ static int set_rcfile(char *fname) {
  * Do NOT use strdup here!.
  */
     rcfile = Xmalloc(NFILEN);
-    strcpy(rcfile, fname);
+    strcpy(rcfile, fixup_fname(fname));
     return TRUE;
 }
 
@@ -2072,7 +2073,7 @@ do {
  * Do NOT use strdup here!.
  */
                     rcextra[rcnum] = Xmalloc(NFILEN);
-                    strcpy(rcextra[rcnum], opt);
+                    strcpy(rcextra[rcnum], fixup_fname(opt));
                     rcnum++;
                 }
                 break;
@@ -2152,7 +2153,7 @@ do {
 /* Set-up a (unique) buffer for this file */
             makename(bname, *argv, TRUE);
             bp = bfind(bname, TRUE, 0);     /* set this to inactive */
-            update_val(bp->b_fname, *argv);
+            update_val(bp->b_fname, fixup_fname(*argv));
             bp->b_active = FALSE;
             if (firstfile) {
                 firstbp = bp;

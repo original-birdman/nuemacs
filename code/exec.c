@@ -1671,7 +1671,7 @@ int dofile(char *fname) {
         pathexpand = FALSE;
 
 /* And try to read in the file to execute */
-    if ((status = readin(fname, FALSE)) != TRUE) {
+    if ((status = readin(fixup_fname(fname), FALSE)) != TRUE) {
         curbp = cb;     /* restore the current buffer */
         pathexpand = TRUE;  /* GGR */
         return status;
