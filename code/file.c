@@ -48,7 +48,7 @@ static char *get_realpath(char *fn) {
     char *ent = basename(strdupa(fn));
 
     char *rp = realpath(dir, NULL);
-    if (!rp) return NULL;
+    if (!rp) return fn;     /* Return input... */
     sprintf(rp_res, "%s/%s", rp, ent);
     free(rp);
 
@@ -217,7 +217,7 @@ int readin(char *fname, int lockfl) {
  * about it...
  */
     char *rp = get_realpath(fname);
-    if (!rp) {
+    if (rp == fname) {  /* Unable to get real path */
         mlwrite_one("Parent directory absent for new file");
         sleep(1);
     }
@@ -688,6 +688,7 @@ int filewrite(int f, int n) {
         return s;
     if ((s = writeout(fname)) == TRUE) {
         update_val(curbp->b_fname, fname);
+        update_val(curbp->b_rpname, get_realpath(fname));
         curbp->b_flag &= ~BFCHG;
         wp = wheadp;        /* Update mode lines.   */
         while (wp != NULL) {
