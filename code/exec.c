@@ -1537,6 +1537,7 @@ static int goto_pin(int do_switch) {
         old_pos.lp = curwp->w.dotp;
         old_pos.offset = curwp->w.doto;
         old_pos.mac_level = mmi(macro_pin_headp, mac_level);
+        old_pos.col_offset = 0;     /* Not used for pins */
     }
 
 /* The general dot/mark code ensures the values we have are still valid.
