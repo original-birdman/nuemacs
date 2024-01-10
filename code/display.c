@@ -1222,7 +1222,7 @@ static void modeline(struct window *wp) {
 
         strcpy(tline, " " PROGRAM_NAME_LONG);
 
-/* GGR - only if no filename (space issue) */
+/* GGR - only if no user-given filename (space issue) */
         if (*(bp->b_fname) == 0) strcat(tline, " " VERSION);
         strcat(tline, ": ");
         cp = tline;

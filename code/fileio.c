@@ -71,19 +71,15 @@ int ffclose(void) {
 #include <libgen.h>
 #include <pwd.h>
 
-static char pwd_var[NFILEN];
-static int have_pwd = 0;    /* 1 == have it, -1 == tried and failed */
-
 char *fixup_fname(char *fn) {
     static char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
-    char *p;
 
 /* Look for a ~ at the start. */
 
     if (fn[0]=='~') {          /* HOME dir wanted... */
         if (fn[1]=='/' || fn[1]==0) {
-            if ((p = getenv("HOME")) != NULL) {
-                strcpy(fn_expd, p);
+            if (udir.home) {
+                strcpy(fn_expd, udir.home);
                 int i = 1;
 /* Special case for root (i.e just "/")! */
                 if (fn[0]=='/' && fn[1]==0 && fn_expd[1] != 0)
@@ -94,7 +90,7 @@ char *fixup_fname(char *fn) {
 #ifndef STANDALONE
         else {
            struct passwd *pwptr;
-           char *q;
+           char *p, *q;
             p = fn + 1;
             q = fn_expd;
             while (*p != 0 && *p != '/')
@@ -106,24 +102,11 @@ char *fixup_fname(char *fn) {
         }
 #endif
     }
-    else if ((have_pwd >= 0) &&
-  ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
-   (fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')))) {
+    else if (udir.current &&
+        ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
+         (fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')))) {
 /* Just prepend $PWD - the slash_* loop at the end will fix up '.' and ".." */
-        if (have_pwd == 0) {
-            if ((p = getenv("PWD")) == NULL) have_pwd = -1;
-            else {
-                if (*p == '/') {    /* Only if valid path.. */
-                    strcpy(pwd_var, p);
-                    have_pwd = 1;
-                }
-                else
-                    have_pwd = -1;
-            }
-        }
-        if (have_pwd == 1) {
-            sprintf(fn_expd, "%s/%s", pwd_var, fn);
-        }
+            sprintf(fn_expd, "%s/%s", udir.current, fn);
     }
     else strcpy(fn_expd, fn);
 
@@ -594,7 +577,6 @@ int fexist(char *fn) {
  */
 char *fixup_full(char *fn) {
     char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
-    char *p;
     char *exp_base;
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
@@ -602,22 +584,9 @@ char *fixup_full(char *fn) {
  * stripping out redundant '.'s and handling ".."s.
  */
     exp_base = fn;
-    if (have_pwd >= 0 && (fn[0] != '/' && fn[0] != '~')) {
-        if (have_pwd == 0) {
-            if ((p = getenv("PWD")) == NULL) have_pwd = -1;
-            else {
-                if (*p == '/') {    /* Only if valid path.. */
-                    strcpy(pwd_var, p);
-                    have_pwd = 1;
-                }
-                else
-                    have_pwd = -1;
-            }
-        }
-        if (have_pwd == 1) {
-            sprintf(fn_expd, "%s/%s", pwd_var, fn);
-            exp_base = fn_expd;
-        }
+    if (udir.current && (fn[0] != '/' && fn[0] != '~')) {
+        sprintf(fn_expd, "%s/%s", udir.current, fn);
+        exp_base = fn_expd;
     }
 
     return fixup_fname(exp_base);   /* For '/', '.' and ".."  handling */

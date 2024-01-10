@@ -504,12 +504,11 @@ static int get_to_dumpdir(void) {
 
 /* Get to the dump directory */
 
-    char *p;
-    if ((p = getenv("HOME")) == NULL) {
+    if (!udir.home) {
         perror("Can't find HOME - no buffer saving:");
         return 0;
     }
-    int status = chdir(p);
+    int status = chdir(udir.home);
     if (status !=0) {
         perror("Can't get to HOME - no buffer saving:");
         return 0;
@@ -666,14 +665,14 @@ void dumpdir_tidy(void) {
     }
 
 /* Now get HOME and go to the dumpdir there */
-    char *p;
-    if ((p = getenv("HOME")) == NULL) {
+
+    if (!udir.home) {
         addline_to_curb("Can't find HOME - no auto-tidy.");
         goto revert_buffer;
     }
 
     char dd_name[2048]; /* Hopefully large enough */
-    sprintf(dd_name, "%s" "/" Dumpdir_Name, p);
+    sprintf(dd_name, "%s" "/" Dumpdir_Name, udir.home);
     if (chdir(dd_name) < 0) {
         snprintf(info_message, 4096,
               "Can't get to ~/%s: %s", Dumpdir_Name, strerror(errno));

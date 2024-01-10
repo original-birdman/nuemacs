@@ -66,7 +66,6 @@ static int along_path(char *fname, char *fspec) {
  * int hflag;           Look in the HOME environment variable first?
  */
 char *flook(char *fname, int hflag, int mode) {
-    char *home;                     /* path to home directory */
     int i;                          /* index */
     static char fspec[NSTRING];     /* full path spec to search */
 
@@ -85,9 +84,8 @@ char *flook(char *fname, int hflag, int mode) {
     }
 
     if (hflag) {
-        home = getenv("HOME");
-        if (home != NULL) {     /* build home dir file spec */
-            snprintf(fspec, NSTRING, "%s%c%s", home, path_sep, fname);
+        if (udir.home) {    /* build home dir file spec */
+            snprintf(fspec, NSTRING, "%s%c%s", udir.home, path_sep, fname);
             if (ffropen(fspec) == FIOSUC) { /* and try it out */
                 ffclose();
                 pathexpand = TRUE;  /* GGR */

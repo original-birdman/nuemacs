@@ -275,9 +275,9 @@ int filter_buffer(int f, int n) {
 
 /* Setup the proper file names */
     bp = curbp;
-    strcpy(tmpnam, bp->b_fname);    /* save the original name */
-    char *hp = getenv("HOME");
-    if (!hp || (*hp == '\0')) hp = "."; /* Default if absent */
+    strcpy(tmpnam, bp->b_fname);    /* Save the original name */
+    char *hp = udir.home;
+    if (!hp) hp = ".";              /* Default if absent */
     sprintf(fltin, "%s/.ue_fin_%08x", hp, getpid());
     sprintf(fltout, "%s/.ue_fout_%08x", hp, getpid());
     strcpy(bp->b_fname, fltin);    /* set it to our new one */
