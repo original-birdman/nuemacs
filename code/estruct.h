@@ -74,11 +74,15 @@
 /* Internal constants. */
 
 /* GGR - Increase
- * NFILEN(80), NLINE(256) and NSTRING(128) to 513 each
+ * NFILEN(80), NLINE(256) and NSTRING(128) to at least PATH_MAX
  * NBUFN(16) to 32
  * Also, since result[NSTRING] in eval.c is used to get pathnames
  * NSTRING should be at least as large as NFILEN.
  */
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+ 
 #define NBINDS  256             /* max # of bound keys          */
 #define NFILEN  PATH_MAX+1      /* # of bytes, file name        */
 #define NBUFN   32              /* # of bytes, buffer name      */
