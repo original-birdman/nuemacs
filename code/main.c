@@ -1935,7 +1935,9 @@ int main(int argc, char **argv) {
 /* Get these directory locations. */
 
     udir.current = ensure_trailing_slash(realpath(".", NULL));
+    udir.clen = strlen(udir.current);
     udir.parent = ensure_trailing_slash(realpath("..", NULL));
+    udir.plen = strlen(udir.parent);
     udir.home = NULL;
     char *p;
     if ((p = getenv("HOME")) != NULL) {
@@ -1949,7 +1951,10 @@ int main(int argc, char **argv) {
         }
     }
 #endif
-    if (udir.home) udir.home = ensure_trailing_slash(udir.home);
+    if (udir.home) {
+        udir.home = ensure_trailing_slash(udir.home);
+        udir.hlen = strlen(udir.home);
+    }
 
     int viewflag = FALSE;   /* view mode defaults off in command line */
     int gotoflag = FALSE;   /* set to off to begin with */

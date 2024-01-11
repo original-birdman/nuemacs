@@ -237,8 +237,4 @@ linked_items *macro_pin_headp = NULL;
  * All malloc'ed.
  */
 
-struct {
-    char *current;
-    char *parent;
-    char *home;
-} udir;
+udir_t udir;

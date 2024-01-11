@@ -60,6 +60,14 @@ typedef struct {
     int o;
 } sysmark_t;
 
+typedef struct {
+    char *current;
+    char *parent;
+    char *home;
+    int clen;
+    int plen;
+    int hlen;
+} udir_t;
 
 /* For einit and whlist data stashed away around docmd() calls we need
  * to allow for the fact the the command might execute a buffer and hence
@@ -298,11 +306,7 @@ extern sysmark_t sysmark;
 /* Three locations worked out once at the start/
  * All malloc'ed.
  */
-extern struct {
-    char *current;
-    char *parent;
-    char *home;
-} udir;
+extern udir_t udir;
 
 /* Crypt bits */
 
