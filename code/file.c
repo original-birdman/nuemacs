@@ -225,6 +225,30 @@ static char *get_realpath(char *fn) {
     sprintf(rp_res, "%s/%s", rp, ent);
     free(rp);
 
+/* See whether we can use ., .. or ~ to shorten this */
+
+    char *cfp = NULL;
+    char *ctp;
+    if (strncmp(rp_res, udir.current, udir.clen) == 0) {
+        strcpy(rp_res, "./");
+        ctp = rp_res + 2;
+        cfp = rp_res + udir.clen;
+    }
+    else if (strncmp(rp_res, udir.parent, udir.plen) == 0) {
+        strcpy(rp_res, "../");
+        ctp = rp_res + 3;
+        cfp = rp_res + udir.plen;
+    } else if (udir.home && (strncmp(rp_res, udir.home, udir.hlen) == 0)) {
+/* NOTE: that any fn input of ~/file as a real file in a dir called "~"
+ * will have already been expanded to a full path, so ~/ really will be
+ * unique as being under HOME.
+ */
+        strcpy(rp_res, "~/");
+        ctp = rp_res + 2;
+        cfp = rp_res + udir.hlen;
+    }
+    if (cfp) do { *ctp++ = *cfp; } while (*cfp++);
+
     return rp_res;
 }
 
