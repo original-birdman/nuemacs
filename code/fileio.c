@@ -90,13 +90,7 @@ int ffropen(char *fn) {
     int status = check_for_file(fn);    /* Checks ffp - fn is for messages */
     if (status != FIOSUC) return status;
 
-    if (pathexpand) {       /* GGR */
-/* If activating an inactive buffer, these may be the same and the
- * action of strcpy() is undefined for overlapping strings.
- * On a Mac it will crash...
- */
-        if (curbp->b_fname != fn) update_val(curbp->b_fname, fn);
-    }
+    if (pathexpand) set_buffer_filenames(curbp, fn);
 
 /* Unset these on open */
     cache.rst = cache.len = 0;
@@ -120,13 +114,7 @@ int ffwopen(char *fn) {
             mlwrite("Cannot open %s for writing - %s", fn, strerror(errno));
         return FIOERR;
     }
-    if (pathexpand) {       /* GGR */
-/* If activating an inactive buffer, these may be the same and the
- * action of strcpy() is undefined for overlapping strings.
- * On a Mac it will crash...
- */
-        if (curbp->b_fname != fn) update_val(curbp->b_fname, fn);
-    }
+    if (pathexpand) set_buffer_filenames(curbp, fn);
 
     cache.rst = cache.len = 0;
     file_type = 0;      /* Unkown... */

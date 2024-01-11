@@ -561,6 +561,7 @@ static void dump_modified_buffers(void) {
  */
             if (bp == kbdmac_bp && (bp->b_flag & BFCHG) != 0) {
                 update_val(bp->b_fname, kbdmacro_buffer);   /* Set a value */
+                update_val(bp->b_rpname, kbdmacro_buffer);  /* Set a value */
             }
             else {
                 continue;
@@ -2192,7 +2193,7 @@ do {
 /* Set-up a (unique) buffer for this file */
             makename(bname, *argv, TRUE);
             bp = bfind(bname, TRUE, 0);     /* set this to inactive */
-            update_val(bp->b_fname, fixup_fname(*argv));
+            set_buffer_filenames(bp, fixup_fname(*argv));
             bp->b_active = FALSE;
             if (firstfile) {
                 firstbp = bp;

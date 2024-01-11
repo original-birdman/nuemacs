@@ -1291,8 +1291,7 @@ static int svar(struct variable_description *var, char *value) {
             curwp->w_flag |= WFMODE;
             break;
         case EVCFNAME:
-            update_val(curbp->b_fname, value);
-            update_val(curbp->b_rpname, "");
+            set_buffer_filenames(curbp, value);
             curwp->w_flag |= WFMODE;
             break;
         case EVDEBUG:

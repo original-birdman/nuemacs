@@ -37,21 +37,31 @@
     }))
 #endif
 
-/* Routines to deal with standardizing filenames */
-
-/* Routines to "fix-up" a filename.
- * fixup_fname() will replace any ~id at the start with its absolute path
- * replacement, and prepend $PWD to any leading ".." or ".".
- * It then strips out multiple consecutive "/"s and handles internal
- * ".." and "." entries.
- * fixup_full() expands any leading "." to an absolute name (which we
- * don't always wish to do) then calls fixup_fname() with what it has.
- * THIS NOW RETURNS A POINTER TO AN INTERNAL static char ARRAY.
+/* Routines to deal with standardizing filenames
+ * fixup_fname:
+ *  replaces any ~id at the start with its absolute path replacement,
+ *  and prepends $PWD to any leading ".." or ".".
+ *  It then strips out multiple consecutive "/"s and handles internal
+ *  ".." and "." entries.
+ *
+ * fixup_full:
+ *  expands any leading "." to an absolute name (something we don't always
+ *  wish to do) then calls fixup_fname() with what it has.
+ *
+ * get_realpath:
+ *  get the full physical path (symlinks resolved) of a filename.
+ *  So this is a unique path for a file.
+ *  The result is then shortened to start with ./, ../ or ~., if appropriate.
+ *
+ * THESE ALL RETURN A POINTER TO AN INTERNAL static char ARRAY.
  * The CALLER must handle appropriately.
  */
 #include <libgen.h>
 #include <pwd.h>
 
+/*
+ * fixup_fname
+ */
 char *fixup_fname(char *fn) {
     static char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
 
@@ -186,12 +196,8 @@ char *fixup_fname(char *fn) {
     return fn_expd;
 }
 
-/* This one expands a leading "." (for current dir) as well.
- * It also handles anything not starting with a / or ~/ the same way.
- * We don't usually want this, as we want "code.c" to stay as "code.c"
- * but for directory browsing we always need the full path.
- * THIS NOW RETURNS A POINTER TO THE static char ARRAY IN fixup_fname.
- * The CALLER must handle appropriately.
+/*
+ * fixup_full
  */
 char *fixup_full(char *fn) {
     char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
@@ -210,6 +216,9 @@ char *fixup_full(char *fn) {
     return fixup_fname(exp_base);   /* For '/', '.' and ".."  handling */
 }
 
+/*
+ * get_realpath
+ */
 static char *get_realpath(char *fn) {
 
     static char rp_res[NFILEN];
@@ -250,6 +259,19 @@ static char *get_realpath(char *fn) {
     if (cfp) do { *ctp++ = *cfp; } while (*cfp++);
 
     return rp_res;
+}
+
+/* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
+
+void set_buffer_filenames(struct buffer *bp, char *fname) {
+
+/* If activating an inactive buffer, these may be the same and the
+ * action of strcpy() is undefined for overlapping strings.
+ * On a Mac it will crash...
+ */
+    if (bp->b_fname != fname) update_val(bp->b_fname, fname);
+    update_val(bp->b_rpname, get_realpath(fname));
+    return;
 }
 
 /* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
@@ -404,11 +426,9 @@ int readin(char *fname, int lockfl) {
 
     if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
 
-/* If activating an inactive buffer, these may be the same and the
- * action of strcpy() is undefined for overlapping strings.
- * On a Mac it will crash...
- */
-    if (bp->b_fname != fname) update_val(bp->b_fname, fname);
+/* Set the filenames */
+
+    set_buffer_filenames(bp, fname);
 
 /* Always set the real pathname now, so getfile() can check it.
  * NOTE that if we cannot get a real pathname (e.g trying to
@@ -886,8 +906,7 @@ int filewrite(int f, int n) {
     if ((s = mlreply("Write file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
         return s;
     if ((s = writeout(fname)) == TRUE) {
-        update_val(curbp->b_fname, fname);
-        update_val(curbp->b_rpname, get_realpath(fname));
+        set_buffer_filenames(curbp, fname);
         curbp->b_flag &= ~BFCHG;
         wp = wheadp;        /* Update mode lines.   */
         while (wp != NULL) {
@@ -962,7 +981,7 @@ int filename(int f, int n) {
         return resterr();
     if ((s = mlreply("Name: ", fname, NFILEN, CMPLT_FILE)) == ABORT)
         return s;
-    update_val(curbp->b_fname, (s == FALSE)? "": fname);
+    set_buffer_filenames(curbp, (s == FALSE)? "": fname);
     wp = wheadp;            /* Update mode lines.   */
     while (wp != NULL) {
         if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;
