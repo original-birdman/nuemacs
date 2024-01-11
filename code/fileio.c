@@ -58,153 +58,6 @@ int ffclose(void) {
     return FIOSUC;
 }
 
-/* Routines to "fix-up" a filename.
- * fixup_fname() will replace any ~id at the start with its absolute path
- * replacement, and prepend $PWD to any leading ".." or ".".
- * It then strips out multiple consecutive "/"s and handles internal
- * ".." and "." entries.
- * fixup_full() expands any leading "." to an absolute name (which we
- * don't always wish to do) then calls fixup_fname() with what it has.
- * THIS NOW RETURNS A POINTER TO AN INTERNAL static char ARRAY.
- * The CALLER must handle appropriately.
- */
-#include <libgen.h>
-#include <pwd.h>
-
-char *fixup_fname(char *fn) {
-    static char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
-
-/* Look for a ~ at the start. */
-
-    if (fn[0]=='~') {          /* HOME dir wanted... */
-        if (fn[1]=='/' || fn[1]==0) {
-            if (udir.home) {
-                strcpy(fn_expd, udir.home);
-                int i = 1;
-/* Special case for root (i.e just "/")! */
-                if (fn[0]=='/' && fn[1]==0 && fn_expd[1] != 0)
-                    i++;
-                strcat(fn_expd, fn+i);
-            }
-        }
-#ifndef STANDALONE
-        else {
-           struct passwd *pwptr;
-           char *p, *q;
-            p = fn + 1;
-            q = fn_expd;
-            while (*p != 0 && *p != '/')
-                *q++ = *p++;
-            *q = 0;
-            if ((pwptr = getpwnam(fn_expd)) != NULL) {
-                sprintf(fn_expd, "%s%s", pwptr->pw_dir, p);
-            }
-        }
-#endif
-    }
-    else if (udir.current &&
-        ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
-         (fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')))) {
-/* Just prepend $PWD - the slash_* loop at the end will fix up '.' and ".." */
-            sprintf(fn_expd, "%s/%s", udir.current, fn);
-    }
-    else strcpy(fn_expd, fn);
-
-/* Convert any multiple consecutive "/" to "/" and strip any
- * trailing "/"...
- * Change any "/./" entries to "/".
- * Strip out ".." entries and their parent  (xxx/../yyy -> yyy)
- */
-    char *from, *to;
-    int prev_was_slash = 0;
-    int slash_dot_state = 1;    /* 1 seen '/', 2 seen '.' */
-    int slash_d_d_state = 1;    /* 1 seen '/', 2 seen '.' , 3 see '..' */
-    char *resets[512];          /* location of slashes+1 */
-    int rsi = 0;                /* Index into resets - points at "next" one */
-    int resettable;             /* Count increments on not . or .. */
-
-/* Work out the first reset - this should never get reset by the
- * rest of the algorithm.
- * resettable only gets incremented when we find somewhere we can reset to,
- * which means that leading ".." entries don't get removed.
- */
-    if (fn_expd[0] != '/') {
-        resets[0] = fn_expd;
-        rsi = 1;
-        resettable = 1;
-    }
-    else resettable = 0;
-
-    for (from = fn_expd, to = fn_expd; *from; from++) {
-/* Ignore a repeat '/' */
-        if (prev_was_slash && (*from == '/')) continue;
-/* Reset states on no '/' */
-        if ((slash_dot_state == 2) && (*from != '/')) slash_dot_state = 0;
-        if ((slash_d_d_state == 3) && (*from != '/')) slash_d_d_state = 0;
-/* If at '/' do we need to "go back"? */
-        if (*from == '/') {
-            prev_was_slash = 1;
-            if (slash_dot_state == 2) {
-                to = resets[--rsi];
-                resettable--;
-            }
-            else if (slash_d_d_state == 3) {
-                if ((fn_expd[0] == '/') || (resettable >= 2)) {
-                    rsi -= 2;
-                    if (rsi < 0) rsi = 0;
-                    resettable -= 2;
-                    if (resettable < 1) resettable = 1;
-                    to = resets[rsi];
-                }
-                else {
-                    *to++ = '/';
-                }
-            }
-            else {
-                resettable++;
-                *to++ = '/';
-            }
-            slash_dot_state = 1;            /* We have the / */
-            slash_d_d_state = 1;            /* We have the / */
-            resets[rsi++] = to;             /* Will be ... */
-        }
-        else {
-/* Copy the character we've been processing */
-            prev_was_slash = 0;
-            *to++ = *from;
-/* Advance states on '.', clear on not '.' */
-            if (*from == '.') {
-               if (slash_dot_state == 1) slash_dot_state = 2;
-               if (slash_d_d_state == 2) slash_d_d_state = 3;
-               if (slash_d_d_state == 1) slash_d_d_state = 2;
-            }
-            else {
-                slash_dot_state = 0;
-                slash_d_d_state = 0;
-            }
-        }
-    }
-/* For "./" this next line goes to before start of buffer, but we
- * fix that with the to <= fn_expd check.
- */
-    if (prev_was_slash) to--;
-    if (slash_dot_state == 2) to -= 2;
-    if (slash_d_d_state == 3) {
-        if ((fn_expd[0] == '/') || (resettable >= 2)) {
-            rsi -= 2;
-            if (rsi < 0) rsi = 0;
-            resettable -= 2;
-            if (resettable < 1) resettable = 1;
-            to = resets[rsi] - 1;   /* Remove trailing / */
-        }
-    }
-/* Just have '/' or '.' left...keep it */
-    if (to <= fn_expd) to = fn_expd+1;
-    terminate_str(to);
-
-    return fn_expd;
-}
-
 /* Check that whatever is open on ffp is a regular file.
  * uemacs *only* deals with files.
  */
@@ -228,7 +81,6 @@ static int check_for_file(char *fn) {
  */
 int ffropen(char *fn) {
 
-//    fn = fixup_fname(fn);
     ffp_mode = O_RDONLY;
 
 /* Opening for reading lets the caller display relevant message on not found.
@@ -257,7 +109,6 @@ int ffropen(char *fn) {
  */
 int ffwopen(char *fn) {
 
-//    fn = fixup_fname(fn);
     ffp_mode = O_WRONLY;
 
 /* Opening for writing displays errors here */
@@ -561,33 +412,8 @@ int ffgetline(void) {
 int fexist(char *fn) {
     struct stat statbuf;
 
-//    fn = fixup_fname(fn);
     int status = stat(fn, &statbuf);
     if (status != 0) return FALSE;
     if ((statbuf.st_mode & S_IFMT) != S_IFREG) return FALSE;
     return TRUE;
-}
-
-/* This one expands a leading "." (for current dir) as well.
- * It also handles anything not starting with a / or ~/ the same way.
- * We don't usually want this, as we want "code.c" to stay as "code.c"
- * but for directory browsing we always need the full path.
- * THIS NOW RETURNS A POINTER TO THE static char ARRAY IN fixup_fname.
- * The CALLER must handle appropriately.
- */
-char *fixup_full(char *fn) {
-    char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
-    char *exp_base;
-
-/* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
- * Then we call fixup_fname() to do what it can do, which includes
- * stripping out redundant '.'s and handling ".."s.
- */
-    exp_base = fn;
-    if (udir.current && (fn[0] != '/' && fn[0] != '~')) {
-        sprintf(fn_expd, "%s/%s", udir.current, fn);
-        exp_base = fn_expd;
-    }
-
-    return fixup_fname(exp_base);   /* For '/', '.' and ".."  handling */
 }
