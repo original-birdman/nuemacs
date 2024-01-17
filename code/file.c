@@ -219,7 +219,7 @@ char *fixup_full(char *fn) {
 /*
  * get_realpath
  */
-static char *get_realpath(char *fn) {
+char *get_realpath(char *fn) {
 
     static char rp_res[NFILEN];
 
@@ -762,20 +762,18 @@ int getfile(char *fname, int lockfl, int check_dir) {
  * specified it.
  */
     char *testp = get_realpath(fname);
-    if (testp) {    /* Only of we have a filename to test */
-        for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-            if (((bp->b_flag & BFINVS) == 0) &&
-                 (strcmp(bp->b_rpname, testp) == 0)) {
-                if (!swbuffer(bp, 0)) return FALSE;
-                lp = curwp->w.dotp;
-                i = curwp->w_ntrows / 2;
-                while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
-                curwp->w_linep = lp;
-                curwp->w_flag |= WFMODE | WFHARD;
-                cknewwindow();
-                mlwrite_one(MLbkt("Old buffer"));
-                return TRUE;
-            }
+    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+        if (((bp->b_flag & BFINVS) == 0) &&
+             (strcmp(bp->b_rpname, testp) == 0)) {
+            if (!swbuffer(bp, 0)) return FALSE;
+            lp = curwp->w.dotp;
+            i = curwp->w_ntrows / 2;
+            while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
+            curwp->w_linep = lp;
+            curwp->w_flag |= WFMODE | WFHARD;
+            cknewwindow();
+            mlwrite_one(MLbkt("Old buffer"));
+            return TRUE;
         }
     }
     makename(bname, fname, FALSE); /* New buffer name. No unique check. */
