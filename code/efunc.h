@@ -66,7 +66,7 @@ extern int swbuffer(struct buffer *, int);
 extern int killbuffer(int, int);
 extern int zotbuf(struct buffer *);
 extern int namebuffer(int, int);
-extern void addline_to_anyb(char *, struct buffer *bp);
+extern void addline_to_anyb(char *, struct buffer *);
 extern int listbuffers(int, int);
 extern int anycb(void);
 /* Lookup a buffer by name. */
@@ -90,7 +90,7 @@ extern void vtinit(void);
 extern void vttidy(void);
 extern int upscreen(int, int);
 extern void update(int);
-extern void upmode(void);
+extern void upmode(struct buffer *);
 extern void movecursor(int, int);
 extern void force_movecursor(int, int);
 extern void mlerase(void);

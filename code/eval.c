@@ -1288,11 +1288,11 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVCBUFNAME:
             update_val(curbp->b_bname, value);
-            curwp->w_flag |= WFMODE;
+            upmode(curbp);
             break;
         case EVCFNAME:
             set_buffer_filenames(curbp, value);
-            curwp->w_flag |= WFMODE;
+            upmode(curbp);
             break;
         case EVDEBUG:
             macbug = ue_atoi(value);
@@ -1352,7 +1352,7 @@ static int svar(struct variable_description *var, char *value) {
         case EVCMODE:
             srch_can_hunt = 0;
             curbp->b_mode = ue_atoi(value);
-            curwp->w_flag |= WFMODE;
+            upmode(curbp);
             break;
         case EVGMODE:
             gmode = ue_atoi(value);

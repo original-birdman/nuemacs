@@ -100,7 +100,7 @@ int nextwind(int f, int n) {
     curwp = wp;
     curbp = wp->w_bufp;
     cknewwindow();
-    upmode();
+    upmode(NULL);
     return TRUE;
 }
 
@@ -123,7 +123,7 @@ int prevwind(int f, int n) {
     curwp = wp1;
     curbp = wp1->w_bufp;
     cknewwindow();
-    upmode();
+    upmode(NULL);
     return TRUE;
 }
 
@@ -270,7 +270,7 @@ int delwind(int f, int n) {
     wp->w_flag |= WFHARD;
     curbp = wp->w_bufp;
     cknewwindow();
-    upmode();
+    upmode(NULL);
     return TRUE;
 }
 
@@ -507,7 +507,7 @@ int restwnd(int f, int n) {
         if (wp == swindow) {
             curwp = wp;
             curbp = wp->w_bufp;
-            upmode();
+            upmode(NULL);
             return TRUE;
         }
         wp = wp->w_wndp;

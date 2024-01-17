@@ -840,7 +840,7 @@ static int adjustmode(int kind, int global) {
                 else        curbp->b_mode &= ~(1 << i);
             }
 /* Display new mode line */
-            if (global == 0) upmode();
+            if (global == 0) upmode(NULL);
             mlerase();      /* erase the junk */
             return TRUE;
         }

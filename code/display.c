@@ -1348,10 +1348,12 @@ next_mode:
     show_utf8(msg);
 }
 
-void upmode(void) {             /* Update all the mode lines */
-
+/* If cbp is non-NULL only set the flag for windows containing
+ * that buffer.
+ */
+void upmode(struct buffer *cbp) {   /* Update mode lines */
     for (struct window *wp = wheadp; wp; wp = wp->w_wndp) {
-        wp->w_flag |= WFMODE;
+        if (!cbp || (wp->w_bufp == cbp)) wp->w_flag |= WFMODE;
     }
 }
 
