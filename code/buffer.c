@@ -577,6 +577,25 @@ static int makelist(int iflag) {
         }
         *cp1 = 0;       /* Add to the buffer.   */
         addline(line);
+
+/* This next section (SHOW_RPNAMES) is only for checking
+ * what has been set by get_realpath.
+ * It is not meant to be activated in normal use.
+ */
+
+#if SHOW_RPNAMES
+        sprintf(line, "  rpname: ");
+        cp2 = bp->b_rpname;             /* Resolved pathname */
+        cp1 = line+strlen(line);
+        if (*cp2 != 0) {
+            while ((c = *cp2++) != 0) {
+                if (cp1 < line+term.t_mcol) *cp1++ = c;
+            }
+        }
+        *cp1 = 0;       /* Add to the buffer.   */
+        addline(line);
+#endif
+
         bp = bp->b_bufp;
     }
     Xfree(line);
