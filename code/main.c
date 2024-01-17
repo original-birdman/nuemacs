@@ -2190,6 +2190,21 @@ do {
  */
         if (showdir_handled(*argv) == FALSE) {
 
+/* Check whether we have already been passed this filename, possibly
+ * under a different path (e.g. full vs relative).
+ */
+            char *testp = get_realpath(*argv);
+            int duplicate = FALSE;
+            for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+                if (strcmp(bp->b_rpname, testp) == 0) {
+                    mlwrite("Duplicated file: %s", *argv);
+                    sleep(1);
+                    duplicate = TRUE;
+                    break;
+                }
+            }
+            if (duplicate) continue;
+
 /* Set-up a (unique) buffer for this file */
             makename(bname, *argv, TRUE);
             bp = bfind(bname, TRUE, 0);     /* set this to inactive */
