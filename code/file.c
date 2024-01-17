@@ -973,7 +973,6 @@ int filesave(int f, int n) {
  */
 int filename(int f, int n) {
     UNUSED(f); UNUSED(n);
-    struct window *wp;
     int s;
     char fname[NFILEN];
 
@@ -982,10 +981,9 @@ int filename(int f, int n) {
     if ((s = mlreply("Name: ", fname, NFILEN, CMPLT_FILE)) == ABORT)
         return s;
     set_buffer_filenames(curbp, (s == FALSE)? "": fname);
-    wp = wheadp;            /* Update mode lines.   */
-    while (wp != NULL) {
+
+    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;
-        wp = wp->w_wndp;
     }
     curbp->b_mode &= ~MDVIEW;   /* no longer read only mode */
     return TRUE;
