@@ -294,8 +294,8 @@ endif
 #
 CC = $(MYCC)
 WARNINGS = -Wall -Wstrict-prototypes -Wextra
-CFLAGS = $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) $(WARNINGS) \
-    -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL)
+CFLAGS = $(XCFLAGS) $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) \
+    $(WARNINGS) -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL)
 
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1
