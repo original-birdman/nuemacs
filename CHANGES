@@ -7471,7 +7471,7 @@ estruct.h
 
 eval.c
 version.c
-    Avoid "function might return no value" with TinyCC. [eval.c] 
+    Avoid "function might return no value" with TinyCC. [eval.c]
     Cater for TinyCC compilation in version(). [version.c]
 
 line.c
@@ -7496,7 +7496,7 @@ fileio.c
 input.c
 main.c
 efunc.h
-    Change fixup_fname() and fixup_full() to return the modifed value,
+    Change fixup_fname() and fixup_full() to return the modified value,
     not change the arg in-place. [fileio.c, efunc.h]
     Change fixup_fname() and fixup_full() calls to reflect the change.
     [eval.c, exec.c, file.c, input.c, main.c]
@@ -7533,5 +7533,72 @@ version.h
 etc/uemacs.hlp
 etc/uemacs.rc
     Update to GGR4.176
+
+========== GGR4.177
+
+file.c
+fileio.c
+efunc.h
+    Move the fixup_* functions from fileio.c to file.c.
+
+globals.c
+main.c
+edef.h
+    Save the string lengths once, in udir.
+
+file.c
+    Try to use ., .. or ~ to shorten get_realpath result.
+
+eval.c
+file.c
+fileio.c
+main.c
+efunc.h
+    Add a set_buffer_filenames() function [file.c, efunc.h]
+    Use set_buffer_filenames() to set both b_fname and b_rpname.
+    [eval.c, file.c, fileio.c, main.c]
+
+file.c
+    Changed a "start; while(test); next" loop to a for loop [file.c]
+
+display.c
+eval.c
+random.c
+window.c
+efunc.h
+    Change upmode() to take a parameter. If defined, only update
+    modelines on windows containing that buffer. [display.c, efunc.h]
+    Use upmode() to set WFMODE on relevant variable changes. [eval.c]
+    Add NULL arg to existing upmode() calls. [random.c, window.c]
+
+buffer.c
+    Added conditional (SHOW_RPNAMES) code to display the b_rpname of
+    buffers - ONLY for debug/test usage.
+
+file.c
+efunc.h
+    Made get_realpath() non-static and removed (no longer relevant)
+    check for testp in getfile().
+
+main.c
+    Check for a unique b_rpname when setting up files from the command
+    line.
+---
+    Recent changes means that the b_rpname is a unique identifier for
+    the file contained in a buffer. It can be "foiled" by renaming
+    things after they've been read in, but it is correct for every file
+    write.
+---
+
+tools/read-speed.sh
+    A simple script to determine the reading speed of uemacs in
+    lines/sec. Very basic....
+
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Update to GGR4.177
 
 ==========
