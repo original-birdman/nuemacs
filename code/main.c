@@ -1956,6 +1956,7 @@ int main(int argc, char **argv) {
         udir.home = ensure_trailing_slash(udir.home);
         udir.hlen = strlen(udir.home);
     }
+    else udir.hlen = 0;
 
     int viewflag = FALSE;   /* view mode defaults off in command line */
     int gotoflag = FALSE;   /* set to off to begin with */
