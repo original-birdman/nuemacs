@@ -294,8 +294,8 @@ endif
 #
 CC = $(MYCC)
 WARNINGS = -Wall -Wstrict-prototypes -Wextra
-CFLAGS = $(XCFLAGS) $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) \
-    $(WARNINGS) -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL)
+CFLAGS = $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) $(WARNINGS) \
+    -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL)
 
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1
@@ -322,6 +322,12 @@ tres := $(firstword $(foreach arg, $(tlist), $(call filex, $(arg) ) ) )
 ifeq ($(strip $(tres)),/opt/include/ncurses/term.h)
    CFLAGS += -I/opt/include/ncurses
 endif
+
+# Add in any command-line changes to CFLAGS
+#
+CFLAGS += $(XCFLAGS)
+LDFLAGS += $(XLDFLAGS)
+DEFINES += $(XDEFINES)
 
 # The Rules
 #
