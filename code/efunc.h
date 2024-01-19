@@ -60,6 +60,7 @@ extern char *transbind(char *);
 #define addline_to_curb(text) addline_to_anyb(text, curbp)
 
 #ifndef BUFFER_C
+extern int set_buffer_name(char *);
 extern int usebuffer(int, int);
 extern int nextbuffer(int, int);
 extern int swbuffer(struct buffer *, int);

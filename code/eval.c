@@ -1287,8 +1287,10 @@ static int svar(struct variable_description *var, char *value) {
             status = newwidth(atoi(value));
             break;
         case EVCBUFNAME:
-            update_val(curbp->b_bname, value);
-            upmode(curbp);
+            if (set_buffer_name(value))
+                upmode(curbp);
+            else
+                status = FALSE;
             break;
         case EVCFNAME:
             set_buffer_filenames(curbp, value);

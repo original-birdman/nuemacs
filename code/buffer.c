@@ -19,6 +19,28 @@
 #include "efunc.h"
 #include "line.h"
 
+/* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
+
+int set_buffer_name(char *bufn) {
+
+/* Provided no buffer other than curbp has this name, set it for curbp.
+ * Return whether the name was set.
+ */
+    int status = TRUE;
+    for (struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+        if (bp != curbp) {
+            if (strcmp(bufn, bp->b_bname) == 0) { /* Names the same? */
+                status = FALSE;
+                break;
+            }
+        }
+    }
+    if (status) update_val(curbp->b_bname, bufn);
+    return status;
+}
+
+/* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
+
 /* This routine blows away all of the text in a buffer.
  * If the buffer is marked as changed then we ask if it is OK to blow it away;
  * this is to save the user the grief of losing text.
@@ -381,7 +403,6 @@ int killbuffer(int f, int n) {
  */
 int namebuffer(int f, int n) {
     UNUSED(f); UNUSED(n);
-    struct buffer *bp;      /* pointer to scan through all buffers */
     char bufn[NBUFN];       /* buffer to hold buffer name */
 
 /* Prompt for and get the new buffer name */
@@ -390,14 +411,10 @@ ask:
         return FALSE;
 
 /* And check for duplicates */
-    for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-        if (bp != curbp) {
-            if (strcmp(bufn, bp->b_bname) == 0) { /* Names the same? */
-                mlforce("%s already exists!", bufn);
-                sleep(1);
-                goto ask;       /* try again */
-            }
-        }
+    if (!set_buffer_name(bufn)) {
+        mlforce("%s already exists!", bufn);
+        sleep(1);
+        goto ask;       /* try again */
     }
 
     update_val(curbp->b_bname, bufn);   /* copy buffer name to structure */
