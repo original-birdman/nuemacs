@@ -965,8 +965,8 @@ static char *gtenv(char *vname) {
     case EVSCROLL:          return ltos(term.t_scroll != NULL);
     case EVINMB:            return ue_itoa(inmb);
     case EVFCOL:            return(ue_itoa(curwp->w.fcol) + 1);
-    case EVHSCROLL:         return(ltos(hscroll));
     case EVHJUMP:           return(ue_itoa(hjump));
+    case EVHSCROLL:         return(ltos(hscroll));
     case EVYANKMODE:        switch (yank_mode) {
                             case Old:   return "old";   break;
                             case GNU:   return "gnu";   break;
@@ -1269,6 +1269,26 @@ static int svar(struct variable_description *var, char *value) {
     case TKENV:             /* set an environment variable */
         status = TRUE;  /* by default */
         switch (vnum) {
+
+/* All of these are read-only */
+        case EVVERSION:
+        case EVPROGNAME:
+        case EVSEARCH:
+        case EVMATCH:
+        case EVKILL:
+        case EVPENDING:
+        case EVLWIDTH:
+        case EVRVAL:
+        case EVINMB:
+        case EVULPCOUNT:
+        case EVULPTOTAL:
+        case EVULPFORCED:
+        case EVSYSTYPE:
+        case EVFORCEMODEON:
+        case EVFORCEMODEOFF:
+            status = FALSE;
+            break;
+
         case EVFILLCOL:
             fillcol = atoi(value);
             break;
@@ -1322,10 +1342,6 @@ static int svar(struct variable_description *var, char *value) {
         case EVDISCMD:
             discmd = stol(value);
             break;
-        case EVVERSION:
-            break;
-        case EVPROGNAME:
-            break;
         case EVSEED:
             seed = atoi(value);
             break;
@@ -1347,10 +1363,6 @@ static int svar(struct variable_description *var, char *value) {
             strcpy(rpat, value);
             new_prompt(value);  /* Let gestring() know, via the search code */
             break;
-        case EVMATCH:
-            break;
-        case EVKILL:
-            break;
         case EVCMODE:
             srch_can_hunt = 0;
             curbp->b_mode = ue_atoi(value);
@@ -1358,10 +1370,6 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVGMODE:
             gmode = ue_atoi(value);
-            break;
-        case EVPENDING:
-            break;
-        case EVLWIDTH:
             break;
         case EVLINE:
             srch_can_hunt = 0;
@@ -1373,8 +1381,6 @@ static int svar(struct variable_description *var, char *value) {
             strcpy(ltext(tlp), value);
             lused(tlp) = need;
             curwp->w.doto = 0;      /* Has to go somewhere */
-            break;
-        case EVRVAL:
             break;
         case EVTAB:
             tabmask = atoi(value) - 1;
@@ -1391,21 +1397,19 @@ static int svar(struct variable_description *var, char *value) {
         case EVSCROLL:
             if (!stol(value)) term.t_scroll = NULL;
             break;
-        case EVINMB:
-            break;
         case EVFCOL:
             curwp->w.fcol = atoi(value) - 1;
             if (curwp->w.fcol < 0) curwp->w.fcol = 0;
             curwp->w_flag |= WFHARD | WFMODE;
             break;
-        case EVHSCROLL:
-            hscroll = stol(value);
-            lbound = 0;
-            break;
         case EVHJUMP:
             hjump = atoi(value);
             if (hjump < 1) hjump = 1;
             if (hjump > term.t_ncol - 1) hjump = term.t_ncol - 1;
+            break;
+        case EVHSCROLL:
+            hscroll = stol(value);
+            lbound = 0;
             break;
         case EVYANKMODE:
             if (strcmp("old", value) == 0)
@@ -1457,13 +1461,6 @@ static int svar(struct variable_description *var, char *value) {
         case EVSRCHCANHUNT:
             srch_can_hunt = atoi(value);
             break;
-        case EVULPCOUNT:        /* All read-only */
-        case EVULPTOTAL:
-        case EVULPFORCED:
-        case EVSYSTYPE:
-            status = FALSE;
-            break;
-
 /* There are only 5 (MAX_SD_OPTS) options, so any attempt to set more
  * is an error.
  */
