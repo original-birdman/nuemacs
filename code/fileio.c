@@ -58,11 +58,21 @@ int ffclose(void) {
     return FIOSUC;
 }
 
+/* Open file <fn> for reading on global file-unit ffp
+ */
+int ffropen(char *fn) {
+    struct stat statbuf;
+
+    ffp_mode = O_RDONLY;
+
+/* Opening for reading lets the caller display relevant message on not found.
+ * This may be an error (insert file) or just mean you are opening a new file.
+ */
+    if ((ffp = open(fn, O_RDONLY)) < 0) return FIOFNF;
+
 /* Check that whatever is open on ffp is a regular file.
  * uemacs *only* deals with files.
  */
-static int check_for_file(char *fn) {
-    struct stat statbuf;
 
     int status = fstat(ffp, &statbuf);
     if (status != 0)
@@ -73,22 +83,10 @@ static int check_for_file(char *fn) {
             status = FIOERR;        /* So we close&exit... */
         }
     }
-    if (status != 0) ffclose();
-    return status;
-}
-
-/* Open file <fn> for reading on global file-unit ffp
- */
-int ffropen(char *fn) {
-
-    ffp_mode = O_RDONLY;
-
-/* Opening for reading lets the caller display relevant message on not found.
- * This may be an error (insert file) or just mean you are opening a new file.
- */
-    if ((ffp = open(fn, O_RDONLY)) < 0) return FIOFNF;
-    int status = check_for_file(fn);    /* Checks ffp - fn is for messages */
-    if (status != FIOSUC) return status;
+    if (status != FIOSUC) {
+        ffclose();
+        return status;
+    }
 
     if (pathexpand) set_buffer_filenames(curbp, fn);
 
