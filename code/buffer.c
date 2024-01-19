@@ -167,10 +167,7 @@ static void make_active(struct buffer *nbp) {
     run_filehooks = 1;          /* set flag */
     struct buffer *real_curbp = curbp;
     curbp = nbp;
-/* readin may expand the filename...so give it space to do so */
-    char tfname[NFILEN];
-    strcpy(tfname, nbp->b_fname);
-    readin(tfname, TRUE);
+    readin(nbp->b_fname, TRUE);
 /* Set any buffer modes that are forced.
  * This comes *after* file-hooks.
  */
