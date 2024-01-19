@@ -237,7 +237,7 @@ char *get_realpath(char *fn) {
 
 /* See whether we can use ., .. or ~ to shorten this.
  * We have to cater for (and ignore) an udir entry being just "/"
- * as matching that would mean lengthening, not shortening, and the 
+ * as matching that would mean lengthening, not shortening, and the
  * code here assumes it can copy strings "leftwards" char by char.
  */
     char *cfp = NULL;
@@ -765,22 +765,35 @@ int getfile(char *fname, int lockfl, int check_dir) {
 
 /* Look for a buffer holding the same realpath, regardless of how the user
  * specified it.
+ * NOTE!!! It is possible for >1 buffer to have the same b_rpname.
+ *  e.g.,   open the file
+ *          create a new, empty buffer.
+ *          read the file into that buffer
+ * We just use the first we come to....
  */
     char *testp = get_realpath(fname);
+    int found = 0;
+    int moved_to = 0;
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (((bp->b_flag & BFINVS) == 0) &&
              (strcmp(bp->b_rpname, testp) == 0)) {
-            if (!swbuffer(bp, 0)) return FALSE;
+            found++;
+            if (!moved_to && !swbuffer(bp, 0)) continue;
+            moved_to = 1;
             lp = curwp->w.dotp;
             i = curwp->w_ntrows / 2;
             while (i-- && lback(lp) != curbp->b_linep) lp = lback(lp);
             curwp->w_linep = lp;
             curwp->w_flag |= WFMODE | WFHARD;
             cknewwindow();
-            mlwrite_one(MLbkt("Old buffer"));
-            return TRUE;
         }
     }
+    if (moved_to) {
+        mlwrite_one((found == 1)? MLbkt("Old buffer"):
+             MLbkt("Old buffer (from multiple choices"));
+        return TRUE;
+    }
+
     makename(bname, fname, FALSE); /* New buffer name. No unique check. */
     while ((bp = bfind(bname, FALSE, 0)) != NULL) {
 /* Old buffer name conflict code */
