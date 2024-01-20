@@ -7601,4 +7601,56 @@ etc/uemacs.hlp
 etc/uemacs.rc
     Update to GGR4.177
 
+========== GGR4.178
+
+Makefile
+    Added XCFLAGS to CFLAGS, for adding compiler options on the
+    make command-line.
+
+file.c
+main.c
+    Handle bare "/" in udir entries in get_realpath(). [file.c]
+    Initialize udir.hlen if no HOME found. [main.c]
+
+
+buffer.c
+eval.c
+efunc.h
+    Don't rename a buffer to an existing name.
+    Add a set_buffer_name() function. [efunc.h, buffer.c]
+    Use set_buffer_name() to change b_bname. [buffer.c, eval.c]
+
+fileio.c
+    Move the check_for_file() code into ffropen() - the only user.
+
+
+file.c
+    In getfile(), report if >1 buffer with the same path is found and go
+    to the first.
+
+buffer.c
+    In make_active() remove local copy of b_fname, as readin() will no
+    longer change it.
+
+Makefile
+    Change XCFLAGS to be added to the end of CFLAGS.
+    Added XLDFLAGS (for LDFLAGS) and XDEFINES (for DEFINES) augmenting.
+
+eval.c
+    Ensure that trying to set any read-only system variables returns an
+    error.
+
+input.c
+    Use mberase() not mlerase() after displaying choices.
+    Otherwise we get leading blanks in the prompt on redraw after
+    choices.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Updated system variables descriptions for read-only status. [uemacs.hlp]
+    Update to GGR4.178
+
 ==========
+

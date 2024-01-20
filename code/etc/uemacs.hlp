@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.177 Help Index     (17 Jan 2024)
+=>                   nuEmacs GGR4.178 Help Index     (20 Jan 2024)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -565,11 +565,8 @@ Count words ........... Meta ^C         Update screen ......... not bound
 -------------------------------------------------------------------------------
 =>                      SYSTEM VARIABLES
 Set ................... ^X A
-Scrolling enabled ..... $scroll     ::  TRUE, FALSE, can only be unset
-Scrolling movement .... $jump       ::  # lines, default 0, 0 = 1/2 page
-Page overlap .......... $overlap    ::  # lines, default 0, 0 = 1/3 page
 
-Others (omitting system-use only ones)...
+Unless noted as (read-only), these may be set as well as read.
 
     $fillcol .............. the maximum column (1-based) to fill text to
                             when wrapping text
@@ -578,6 +575,8 @@ Others (omitting system-use only ones)...
     $curline .............. current line in file
     $curwidth ............. current screen width
     $cbufname ............. current buffer name
+        (NOTE: It is an error to try to set a buffer name to an
+               already existing buffer name).
     $cfname ............... current file name
     $debug ................ macro debugging
     $status ............... returns the status of the last command
@@ -586,28 +585,28 @@ Others (omitting system-use only ones)...
     $lastkey .............. last keyboard char struck
     $curchar .............. current character under the cursor
     $discmd ............... display commands on command line
-    $version .............. current version number
-    $progname ............. returns current prog name - "nuEmacs"
+    $version .............. current version number (read-only)
+    $progname ............. returns current prog name - "nuEmacs" (read-only)
     $seed ................. current random number seed
     $disinp ............... display command line input characters
     $wline ................ # of lines in current window
     $cwline ............... current screen line in window
     $target ............... target for line moves
     $search ............... search pattern (read-only)
-    $replace .............. replacement pattern (read_only)
-    $match ................ last matched magic pattern
+    $replace .............. replacement pattern
+    $match ................ last matched magic pattern (read-only)
     $kill ................. kill buffer (read only)
     $cmode ................ mode of current buffer
     $gmode ................ global modes
-    $pending .............. type ahead pending flag
-    $lwidth ............... width of current line
+    $pending .............. type ahead pending flag (read-only)
+    $lwidth ............... width of current line (read-only)
     $line ................. text of current line
-    $rval ................. child process return value
+    $rval ................. child process return value (read-only)
     $tab .................. tab 4 or 8
-    $overlap" ............. Overlap on next/prev page
+    $overlap .............. Overlap on next/prev page
     $jump ................. Number of lines to jump on scroll
     $scroll ............... scroll enabled
-    $inmb ................. In mini-buffer (read only)
+    $inmb ................. In mini-buffer (read-only)
     $fcol ................. first displayed column in current window (1-based)
     $hjump ................ horizontal screen jump size
     $hscroll .............. horizontal scrolling flag
@@ -622,14 +621,14 @@ Others (omitting system-use only ones)...
     $equiv_type ........... Function to use for Equiv mode
                              (NFC, NFD, NFKD or NFKC [default])
     $srch_can_hunt ........ To allow forw/backhunt to work in test macros
-    $uproc_lpcount ........ Current loop for Esc<n>user-proc
-    $uproc_lptotal ........ Requested <n> for Esc<n>user-proc
-    $uproc_lpforced ....... Was the <n> given explicitly>?
+    $uproc_lpcount ........ Current loop for Esc<n>user-proc (read-only)
+    $uproc_lptotal ........ Requested <n> for Esc<n>user-proc (read-only)
+    $uproc_lpforced ....... Was the <n> given explicitly>? (read-only)
     $showdir_opts ......... Start-up state (for user to set)
                              (A subset of "TRHFM" - default is "")
     $ggr_opts ............. A set of bit flags which control various
                             optional style differences.
-    $sys_type ............. System type (uname -s)
+    $sys_type ............. System type (uname -s) (read-only)
     $force_mode_on ........ Buffer modes being forced on (read-only)
     $force_mode_off ....... Buffer modes being forced off (read-only)
     $pttmode .............. Current ptt mode, or "" (read-only)
