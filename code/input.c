@@ -1176,7 +1176,7 @@ loop:
                     mlwrite_one(choices);
                     size = (strlen(choices) < 42) ? 1 : 2;
                     sleep(size);
-                    mlerase();
+                    mberase();
                 }
             }
             else
