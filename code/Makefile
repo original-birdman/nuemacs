@@ -141,7 +141,7 @@ else ifeq ($(strip $(UTF8)),sys)
     UTF8INCL =
     UTF8LIB  = -lutf8proc
 else ifeq ($(strip $(UTF8)),syslocal)
-    UTF8INCL =
+    UTF8INCL = -I/usr/local/include
     UTF8LIB  = -lutf8proc
     RPATH    =  -Wl,-rpath=/usr/local/lib
 else
@@ -299,6 +299,16 @@ CFLAGS = $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) $(WARNINGS) \
 
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1
+
+# Are we on a 32-bit system?
+# We are OK if LP64 (long and pointers == 64bit) is set by the compiler.
+# (It's actually __LP64__ and/or _LP64)
+#
+APISZ := $(shell sh -c "$(MYCC) -dM -E - < /dev/null | grep -q LP64 && echo 64 || echo 32" )
+
+ifeq ($(APISZ), 32)
+    CFLAGS += -D_LARGEFILE_SOURCE  -D_FILE_OFFSET_BITS=64
+endif
 
 # All systems now have ncurses (curses just links to it)
 #
