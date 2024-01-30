@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.178 (requires GGR4.173+)
-;                       Last Update: 08 Oct 2023
+;                       Version - GGR4.179 (requires GGR4.173+)
+;                       Last Update: 30 Jan 2024
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -39,7 +39,7 @@ store-procedure file-hooks
     set .rctmp &mid $cfname &add .rctmp 1 5
     set .rctmp &lower .rctmp
 ; A quick "is it in list" check.  Assumes no-one uses "c cc" as a suffix..
-    !if &les 0 &sin "c cc h pl" .rctmp
+    !if &les 0 &sin "c cc cpp c++ h pl" .rctmp
         add-mode "cmode"
         delete-mode "wrap"
     !else
