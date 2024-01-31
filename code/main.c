@@ -699,7 +699,7 @@ void dumpdir_tidy(void) {
     char *lp = NULL;
     size_t blen = 0;
     ts_len = set_time_stamp(autoclean);
-    long rewrite_from = 0;             /* Only if there is a deletion */
+    off_t rewrite_from = 0;             /* Only if there is a deletion */
     while (getline(&lp, &blen, index_tidy_fp) >= 0) {
         if (strncmp(lp, time_stamp, ts_len - 1) < 0) { /* Too old... */
 /* Original filename is for reporting ONLY */
@@ -720,7 +720,7 @@ void dumpdir_tidy(void) {
                       "Deleted %s (<= %s)", lp, orig_fn);
                 addline_to_curb(info_message);
             }
-            rewrite_from = ftell(index_tidy_fp);
+            rewrite_from = ftello(index_tidy_fp);
         }
         else
             break;
@@ -728,9 +728,9 @@ void dumpdir_tidy(void) {
 
 /* We need to copy the unused end of the INDEX to the start */
     if (rewrite_from) {
-        long new_offs = 0;
+        off_t new_offs = 0;
         int done = 0;
-        while (!done && (fseek(index_tidy_fp, rewrite_from, SEEK_SET) == 0)) {
+        while (!done && (fseeko(index_tidy_fp, rewrite_from, SEEK_SET) == 0)) {
             char cbuf[4096];
             size_t rc = fread(cbuf, sizeof(char), sizeof(cbuf), index_tidy_fp);
             if (feof(index_tidy_fp)) {
@@ -738,10 +738,10 @@ void dumpdir_tidy(void) {
                 clearerr(index_tidy_fp);
             }
             else {                  /* Update where we read from */
-                rewrite_from = ftell(index_tidy_fp);
+                rewrite_from = ftello(index_tidy_fp);
             }
             if (rc) {
-                status = fseek(index_tidy_fp, new_offs, SEEK_SET);
+                status = fseeko(index_tidy_fp, new_offs, SEEK_SET);
                 size_t wc = fwrite(cbuf, sizeof(char), rc, index_tidy_fp);
                 new_offs += wc;
                 if (wc != rc) break;    /* We have a problem... */
