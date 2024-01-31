@@ -1505,17 +1505,18 @@ typedef union {
  */
 #define TTput_1uc_lim(uc) ((ttcol < term.t_ncol)? TTput_1uc(uc): FALSE)
 
-/* Write out a long integer, in the specified radix (8, 10, 16).
+/* Write out a 8-byte integer, in the specified radix (8, 10, 16).
+ * We'll be running with uelen_t as 8-bytes, and need a "ll" formatter.
  * Update the physical cursor position.
  */
-static void mlputli(long l, int r) {
+static void mlputli(uelen_t l, int r) {
     char tbuf[32];
     char *fmt;
 
     switch(r) {
-    case  8: fmt = "%lo"; break;
-    case 16: fmt = "%lX"; break;
-    default: fmt = "%ld"; break;
+    case  8: fmt = "%llo"; break;
+    case 16: fmt = "%llX"; break;
+    default: fmt = "%lld"; break;
     }
     sprintf(tbuf, fmt, l);
     char *op = tbuf;
@@ -1526,7 +1527,7 @@ static void mlputli(long l, int r) {
 /* Do the same except with an integer.
  * So we just pass it on to its longer brother.
  */
-#define mlputi(i, r) mlputli((long) i, r)
+#define mlputi(i, r) mlputli((uelen_t) i, r)
 
 /* write out a scaled integer with two decimal places
  *
@@ -1553,7 +1554,7 @@ static void mlputf(int s) {
  *  d   integer (decimal)
  *  o   integer (octal)
  *  x   integer (hex)
- *  D   integer (long)
+ *  D   integer (8-byte integer - long long)
  *  c   character
  *  s   string
  *  f   scaled integer (uemacs - real number to 2 dec places * 100)

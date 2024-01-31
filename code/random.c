@@ -39,9 +39,9 @@ int setfillcol(int f, int n) {
 int showcpos(int f, int n) {
     UNUSED(f); UNUSED(n);
     struct line *lp;        /* current line */
-    long numchars;          /* # of chars in file */
+    uelen_t numchars;       /* # of chars in file */
+    uelen_t predchars;      /* # chars preceding point */
     int numlines;           /* # of lines in file */
-    long predchars;         /* # chars preceding point */
     int predlines;          /* # lines preceding point */
     unicode_t curchar;      /* char under cursor (GGR unicode) */
     int ratio;
@@ -415,7 +415,7 @@ int entab(int f, int n) {
  * it will get fixed.  (when?)
  */
                     back_grapheme(ccol - fspace);
-                    ldelete((long) (ccol - fspace), FALSE);
+                    ldelete((uelen_t) (ccol - fspace), FALSE);
                     linsert_byte(1, '\t');
                     fspace = -1;
                 }
@@ -639,7 +639,7 @@ int deblank(int f, int n) {
     UNUSED(f); UNUSED(n);
     struct line *lp1;
     struct line *lp2;
-    long nld;
+    uelen_t nld;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
@@ -709,7 +709,7 @@ static int chardel(int f, int n) {
     }
 /* Since we have a default (not user-given) count ensure KILL flag is unset */
     else com_flag &= ~CFKILL;
-    return ldelgrapheme((long) n, f);
+    return ldelgrapheme((uelen_t) n, f);
 }
 
 /* Delete forward. This is real easy, because the basic delete routine does
@@ -736,7 +736,7 @@ int backdel(int f, int n) {
  */
 int killtext(int f, int n) {
     struct line *nextp;
-    long chunk;
+    uelen_t chunk;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */

@@ -1,6 +1,17 @@
 #ifndef UTF8_H
 #define UTF8_H
 
+/* Let's define an 8-byte integer type for use as a string/buffer/region
+ * length.
+ * long may be 4- or 8-bytes
+ * off_t should be 8-bytes, but there is no 8-byte specific printf
+ * formatter, so we might as well define our own and use %ll.
+ * long long is 8-bytes on 64-bit Kubuntu and 32-bit mips (OpenVix)
+ *
+ * This is here, as this file is included everywhere that matters.
+ */
+typedef long long uelen_t;
+
 /* The maximum number of bytes in a utf8 sequence (since 2003) */
 #define MAX_UTF8_LEN  4
 #define MAX_UTF8_CHAR 0x0010FFFF
