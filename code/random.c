@@ -688,19 +688,37 @@ int indent(int f, int n) {
     return TRUE;
 }
 
-/* Character deleting backend for forwdel anf backdel.
- * This is real easy, because the basic delete routine does all of the work.
+/* Character deleting backend for forwdel and backdel.
+ * This is really easy, because the basic delete routine does all of the work.
  * For a negative argument it moves back that number of graphemes first.
+ * For a positive one it moves forwards that number of graphemes, then
+ * returns to the start position.
+ * In both cases we are left at the "start" of the text we wish to delete
+ * and the grapheme move returns the number of bytes moved (-ve if the
+ * complete move request failed - e.g. at start/end of buffer) so that
+ * number of bytes is then removed.
  * If any non-default argument is present, it kills rather than deletes,
  * to prevent loss of text if typed with a big argument.
- * Normally bound to ctlD and ctlH (BackSpace).
+ * Normally bound to ctlD (forwdel) and ctlH [BackSpace (backdel).
+ * NOTE!!!
+ * We can't just call ldelgrapheme() as that only deletes forwards and
+ * also wouldn't update the com_flag.
  */
 static int chardel(int f, int n) {
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
-    if (n < 0) {
-        n = abs(back_grapheme(-n)); /* How many *did* we go back? */
+/* Work out how many bytes to delete for n graphemes */
+    if (n < 0) {    /* Go back requested amount */
+        n = abs(back_grapheme(-n)); /* How many *do* we go back? */
     }
+    else {          /* Go forwards requested amount then back to start */
+        struct line *saved_dotp = curwp->w.dotp;    /* Save line */
+        int saved_doto = curwp->w.doto;             /* Save offset */
+        n = abs(forw_grapheme(n));  /* How many *d0* we go forwards? */
+        curwp->w.dotp = saved_dotp;                 /* Restore line */
+        curwp->w.doto = saved_doto;                 /* Restore offset */
+    }
+
     if (f != FALSE) {               /* Really a kill.       */
         if ((com_flag & CFKILL) == 0) {
             kdelete();
@@ -709,7 +727,7 @@ static int chardel(int f, int n) {
     }
 /* Since we have a default (not user-given) count ensure KILL flag is unset */
     else com_flag &= ~CFKILL;
-    return ldelgrapheme((uelen_t) n, f);
+    return ldelete((uelen_t) n, f);
 }
 
 /* Delete forward. This is real easy, because the basic delete routine does
