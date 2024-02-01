@@ -13,10 +13,12 @@ fi
 count=0
 
 # If we have any command line left, use it as a filter pattern.
+# If there is none, chnage it to FULL-RUN
 #
-patt="$1"       # May be empty....
-for f in autotest/*${patt}*.sh; do
-    $f FULL-RUN
+patt=${1:-FULL-RUN}
+
+for f in autotest/*$1*.sh; do
+    $f $patt
     count=`expr $count + 1`
 done
 
