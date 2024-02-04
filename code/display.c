@@ -1608,7 +1608,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             case 'd':   mlputi(va_arg(ap.ap, int), 10);     break;
             case 'o':   mlputi(va_arg(ap.ap, int), 8);      break;
             case 'x':   mlputi(va_arg(ap.ap, int), 16);     break;
-            case 'D':   mlputli(va_arg(ap.ap, long), 10);   break;
+            case 'D':   mlputli(va_arg(ap.ap, uelen_t), 10); break;
             case 'f':   mlputf(va_arg(ap.ap, int));         break;
             case 'c':   TTput_1uc(va_arg(ap.ap, int));      break;
             case 's':
