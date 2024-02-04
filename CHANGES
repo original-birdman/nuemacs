@@ -7652,5 +7652,55 @@ etc/uemacs.rc
     Updated system variables descriptions for read-only status. [uemacs.hlp]
     Update to GGR4.178
 
-==========
+========== GGR4.179
 
+etc/uemacs.rc
+    Add cpp and c++ to C-Mode file-hooks.
+
+Makefile
+    Add -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 to options for
+    compilation on 32-bit systems.
+    Set UTF8INCL for UTF8=syslocal.
+
+buffer.c
+display.c
+input.c
+line.c
+random.c
+region.c
+word.c
+estruct.h
+line.h
+utf8.h
+    Define a uemacs-specifc 8-byte integer type (uelen_t). [utf8.h]
+    Use uelen_t to count bytes in file. [buffer.c]
+    Use uelen_t in struct region. [region.c, word.c, estruct.h]
+    Use uelen_t in ldelete() and ldelgrapheme() [input.c, line.c,
+    random.c, line.h]
+    Change mlputli to use %ll as the formnat (needed for the "long long"
+    type used in uelen_t). [display.c]
+
+main.c
+    Change the stack-dump code to use ftello/fseeko and off_t (not
+    ftell/fseek and long).
+
+random.c
+    Fix chardel() to delete the correct amount for backward deletion of
+    multi-byte characters.
+    [Bug introduced in GGR4.173]
+
+autotest/run_all
+    Correct passing on of any pattern argument.
+
+autotest/char-deletion.sh
+    Add test to check for multi-byte backwards/fowards character deletion.
+
+display.c
+    Change %D arg type to uelen_t in mlwrite_ap()
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to GGR4.179
+
+==========
