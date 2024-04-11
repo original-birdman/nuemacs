@@ -458,6 +458,16 @@ ${$var}, ${%var}, ${.var}
     which will be replaced with the value of the relevant system, user
     or buffer variable.
 
+${@}
+    which will be replaced by the numeric value of a counter.
+    By default this starts at 1, is incremented by 1 on each use and is
+    formatted using %d.
+    You can change these by using (any or all) of:
+        ${@:start=m,incr=n,fmt=%..d}
+    The counter is an int, so any fmt option MUST use either u or d!
+    The counter resets on each replace command.
+    You may have more that one counter in a replace string.
+
 ${n}    (n == a number)
      will be replaced with the text of the group match from the matching
      string,

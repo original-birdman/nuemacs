@@ -146,6 +146,7 @@
 #define CHOICE          13
 #define REPL_VAR        14
 #define REPL_GRP        15
+#define REPL_CNT        16
 
 /* Defines for the metacharacters in the regular expression patterns. */
 
@@ -229,6 +230,12 @@ struct magic {
     } x;
 };
 
+struct magic_counter {
+    int curval;
+    int incr;
+    char *fmt;
+};
+
 struct magic_replacement {
     struct mg_info mc;
     union {                     /* Can only be one at a time */
@@ -236,6 +243,7 @@ struct magic_replacement {
         unicode_t uchar;        /* A Unicode character point */
         struct grapheme gc;     /* A Unicode grapheme */
         char *varname;          /* malloc()ed varname */
+        struct magic_counter x; /* A counter */
     } val;
 };
 
@@ -995,6 +1003,9 @@ static void rmcclear(void) {
         case REPL_VAR:
             Xfree(rmcptr->val.varname);
             break;
+        case REPL_CNT:
+            Xfree(rmcptr->val.x.fmt);
+            break;
         default:
             ;
         }
@@ -1498,8 +1509,10 @@ static int rmcstr(void) {
                 parse_error(patptr, "${} not ended");
                 return FALSE;
             }
+            int patptr_advance = strlen(btext);
+
 /* What do we have?
- * Can be $var, %var. .var or number... */
+ * Can be $var/%var/.var, @ (for a counter) or number... */
             switch(btext[0]) {
             case '$':
             case '%':
@@ -1509,13 +1522,41 @@ static int rmcstr(void) {
                 rmcptr->val.varname = Xmalloc(strlen(btext)+1);
                 strcpy(rmcptr->val.varname, btext);
                 break;
+            case '@':   /* Replace with a counter - optional formatting */
+                rmcptr->mc.type = REPL_CNT;
+/* Defaults... */
+                rmcptr->val.x.curval = 1;
+                rmcptr->val.x.incr = 1;
+                rmcptr->val.x.fmt = strdup("%d");
+/* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
+ * NOTE that the format spec MUST be for a d (or u) item!!!
+ * We've already got the length of btext for advancing, so the fact that
+ * strtok will write NULs into it doesn't worry us.
+ */
+                if (btext[1] == ':') {
+                    char *tokp = strdupa(btext+2);
+                    char *ntp;
+                    while ((ntp = strtok(tokp, ","))) {
+                        tokp = NULL;
+                        if (0 == strncmp("start=", ntp, 6)) {
+                            rmcptr->val.x.curval = atoi(ntp+6);
+                        }
+                        else if (0 == strncmp("incr=", ntp, 5)) {
+                            rmcptr->val.x.incr = atoi(ntp+5);
+                        }
+                        else if (0 == strncmp("fmt=", ntp, 4)) {
+                            rmcptr->val.x.fmt = strdup(ntp+4);
+                        }
+                    }
+                }
+                break;
             default:    /* Assume a group number... */
                 rmcptr->mc.type = REPL_GRP;
                 rmcptr->mc.group_num = atoi(btext);
                 break;
             }
             rmagical = TRUE;
-            patptr += strlen(btext);
+            patptr += patptr_advance;
             break;
         case MC_ESC:        /* Just insert the next grapheme! */
             if (!*(++patptr)) {     /* Can't be last char */
@@ -3074,6 +3115,15 @@ static char *getrepl(void) {
             char *gval = group_match(rmcptr->mc.group_num);
             append_to_repl_buf(gval, -1);
             break;
+        }
+        case REPL_CNT: {
+#define MAX_COUNTER_LEN 128
+            char mc_text[MAX_COUNTER_LEN];
+            int nlen = snprintf(mc_text, MAX_COUNTER_LEN, rmcptr->val.x.fmt,
+                 rmcptr->val.x.curval);
+            if (nlen >= MAX_COUNTER_LEN) nlen = MAX_COUNTER_LEN - 1;
+            rmcptr->val.x.curval += rmcptr->val.x.incr;
+            append_to_repl_buf(mc_text, nlen);
         }
         default:;
         }
