@@ -1499,10 +1499,11 @@ static int rmcstr(void) {
                 return FALSE;
             }
 /* What do we have?
- * Can be $var, %var or number... */
+ * Can be $var, %var. .var or number... */
             switch(btext[0]) {
             case '$':
             case '%':
+            case '.':
                 rmcptr->mc.type = REPL_VAR;
 /* Adding 1 for NUL */
                 rmcptr->val.varname = Xmalloc(strlen(btext)+1);
@@ -2464,7 +2465,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
  *      upon the direction of the search.  Forward searches look at
  *      the current character and move, reverse searches move and
  *      look at the character.
- *  Used by fast_scanner
+ *  Used by fast_scanner() and delins()
  */
 static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
     struct line *curline;
@@ -3101,9 +3102,10 @@ static struct {
 
 /* delins -- delete the match and insert the replacement
  * We need to end up at the end of the replacement string.
+ * The replacement string is the actual text to insert - our caller
+ * will have done any replacement magic already.
  */
 static int delins(char *repstr) {
-    int status;
 
 /* Remember what the replacement was */
 
@@ -3133,43 +3135,27 @@ static int delins(char *repstr) {
         *mptr++ = nextbyte(&sline, &soff, FORWARD);
     terminate_str(mptr);
 
+/* Now that the text of a line is reallocated without reallocating the
+ * line structure itself, we can save the line pointer here.
+ * Previously we needed to save the previous line, do the delete/insert,
+ * then save the forward line from the one we had saved.
+ */
     last_match.moff = curwp->w.doto;
     last_match.mlen = match_grp_info[0].len;
-
-/* Remember where we are - carefully...
- * When we insert text the line may need to be reallocated, so we
- * can't save its current value and expect that to persist.
- * But we can save the previous line, and later use that one's next.
- */
-    struct line *pline = lback(curwp->w.dotp);
+    last_match.mline = curwp->w.dotp;
 
 /* We end up positioned at the *start* of a match, so we can just delete
  * what we found (by byte count) then insert the new text.
  */
-    status = ldelete(match_grp_info[0].len, FALSE);
+    int status = ldelete(match_grp_info[0].len, FALSE);
 
 /* Add what we need to add. We will end up at the end of it, which
  * is where we wish to be.
  */
     if (status) {
-        int added;
-        if (!rmagical) {
-            added = strlen(rpat);
-            status = linstr(rpat);
-        }
-        else {
-            char *repl_text = getrepl();
-            added = strlen(repl_text);
-            status = linstr(repl_text);
-        }
-        last_match.rlen = added;
+        status = linstr(repstr);
+        last_match.rlen = strlen(repstr);
     }
-
-/* Now work out which line is the start of the match we replaced by
- * by going forward from the original previous line.
- */
-    last_match.mline = lforw(pline);    /* Now known */
-
     return status;
 }
 
