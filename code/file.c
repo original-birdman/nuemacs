@@ -20,23 +20,6 @@
 #include "efunc.h"
 #include "line.h"
 
-
-/* FreeBSD (cclang) doesn't have strdupa(), so make our own....
- * ...or rather copy the GCC definition from string.h.
- * If anything has strndupa as something other than a #define
- * this logic will need to be changed.
- */
-#ifndef strdupa
-# define strdupa(s)                                     \
-  (__extension__                                        \
-    ({                                                  \
-      const char *__old = (s);                          \
-      size_t __len = strlen (__old) + 1;                \
-      char *__new = (char *) __builtin_alloca (__len);  \
-      (char *) memcpy (__new, __old, __len);            \
-    }))
-#endif
-
 /* Routines to deal with standardizing filenames
  * fixup_fname:
  *  replaces any ~id at the start with its absolute path replacement,
