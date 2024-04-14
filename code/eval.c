@@ -995,11 +995,12 @@ static char *gtenv(char *vname) {
     case EVULPFORCED:       return ue_itoa(uproc_lpforced);
     case EVSDOPTS:          return showdir_opts;
     case EVGGROPTS:         return ue_itoa(ggr_opts);
-    case EVSYSTYPE:         {
-                                static struct utsname tuname;
-                                uname(&tuname);
-                                return tuname.sysname;
-                            }
+    case EVSYSTYPE:
+    case EVPROCTYPE: {
+        static struct utsname tuname;
+        uname(&tuname);
+        return (evl[vnum].tag == EVSYSTYPE)? tuname.sysname: tuname.machine;
+    }
     case EVFORCEMODEON:     return ue_itoa(force_mode_on);
     case EVFORCEMODEOFF:    return ue_itoa(force_mode_off);
     case EVPTTMODE:         if (curbp->b_mode & MDPHON)

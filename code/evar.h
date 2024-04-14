@@ -68,6 +68,7 @@ struct evlist evl[] = {
  { "showdir_opts", EVSDOPTS },  /* Start-up state (for user to set) */
  { "ggr_opts",  EVGGROPTS },    /* Optional-style difference */
  { "sys_type",  EVSYSTYPE },    /* System type (== uname -s) */
+ { "proc_type",  EVPROCTYPE },  /* Processor type (== uname -m) */
  { "force_mode_on", EVFORCEMODEON },    /* Modes to force on (read-only) */
  { "force_mode_off", EVFORCEMODEOFF },  /* Modes to force off (read-only) */
  { "pttmode",   EVPTTMODE },    /* Current ptt mode, or "" (read-only)  */
