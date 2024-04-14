@@ -460,14 +460,14 @@ int lputgrapheme(struct grapheme *gp) {
     return status;
 }
 
-int ldelete(uelen_t, int);     /* Forward declaration */
+int ldelete(ue64I_t, int);     /* Forward declaration */
 /* ldelete() really fundamentally works on bytes, not characters.
  * It is used for things like "scan 5 words forwards, and remove
  * the bytes we scanned".
  * GGR - cater for combining characters...with lgetgrapheme.
  * If you want to delete character-places<, use ldelgrapheme().
  */
-int ldelgrapheme(uelen_t n, int kflag) {
+int ldelgrapheme(ue64I_t n, int kflag) {
     while (n-- > 0) {
         struct grapheme gc;
         if (!ldelete(lgetgrapheme(&gc, TRUE), kflag)) return FALSE;
@@ -599,10 +599,10 @@ int kinsert(int c) {
  * with end of lines, etc. It returns TRUE if all of the characters were
  * deleted, and FALSE if they were not (because dot ran into the end of the
  * buffer. The "kflag" is TRUE if the text should be put in the kill buffer.
- * uelen_t n;            # of chars to delete
+ * ue64I_t n;            # of chars to delete
  * int kflag;            put killed text in kill buffer flag
  */
-int ldelete(uelen_t n, int kflag) {
+int ldelete(ue64I_t n, int kflag) {
     char *cp1;
     char *cp2;
     struct line *dotp;

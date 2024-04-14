@@ -462,7 +462,7 @@ static int makelist(int iflag) {
     struct line *lp;
     int s;
     int i;
-    uelen_t nbytes;                     /* # of bytes in current buffer */
+    ue64I_t nbytes;                     /* # of bytes in current buffer */
     int mcheck;
 
     char *line = Xmalloc(term.t_mcol);
@@ -553,11 +553,11 @@ static int makelist(int iflag) {
 
         *cp1++ = ' ';                   /* Gap.                 */
         nbytes = 0L;                    /* Count bytes in buf.  */
-        uelen_t nlc = (bp->b_mode & MDDOSLE)? 2: 1;
+        ue64I_t nlc = (bp->b_mode & MDDOSLE)? 2: 1;
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = lforw(lp)) {
-            nbytes += (uelen_t)lused(lp) + nlc;
+            nbytes += (ue64I_t)lused(lp) + nlc;
         }
-        char nb[21];                    /* To handle longest uelen_t + NULL */
+        char nb[21];                    /* To handle longest ue64I_t + NULL */
         sprintf(nb, "%20lld", nbytes);  /* Need 8 byte formatter */
         if (nb[11] != ' ') nb[11] = '+';    /* The last 9 chars */
         cp2 = nb + 11;

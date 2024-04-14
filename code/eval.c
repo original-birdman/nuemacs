@@ -34,6 +34,31 @@
 #endif
 static int seed;
 
+/* We now want all uemacs "macro integers" to be 64-bit. */
+
+/* ue_atoi
+ * This allows the integer to be expressed in hex ("0x"), octal (0..)
+ * or decimal.
+ * Replaced with a simple #define macro.
+ */
+#define ue_atoi(ustr) (strtoll(ustr, NULL, 0))
+
+/* ue_itoa:
+ *      integer to ascii string.......... This is too
+ *      inconsistent to use the system's
+ *      Actually, this is no longer true...
+ *
+ * int i;               integer to translate to a string
+ */
+#define INTWIDTH        sizeof(ue64I_t) * 3
+char *ue_itoa(ue64I_t i) {
+    static char result[INTWIDTH+1];     /* Enough for resulting string */
+
+    sprintf(result, "%lld", i);
+    return result;
+}
+
+
 /* Return the contents of the first item in the kill buffer
  */
 static char *getkill(void) {
@@ -175,7 +200,7 @@ int stol(char *val) {
     if (val[0] == 'T') return TRUE;
 
 /* check for numeric truth (!= 0) */
-    return (atoi(val) != 0);
+    return (ue_atoi(val) != 0);
 }
 
 /* Numeric logical to string logical
@@ -474,6 +499,14 @@ static char *ue_printf(char *fmt) {
             goto finalize;
         }
         --bytes_togo;   /* We're about to use it... */
+
+/* We have to specify the precision. Since we use 64-bits for integer
+ * variables we have to use that precision here.
+ */
+        if (strchr("diouxX", *fmt)) {
+            strcpy(tp, "ll");
+            tp += 2;
+        }
         char conv_char = *tp++ = *fmt++;
         terminate_str(tp);
 
@@ -502,11 +535,11 @@ static char *ue_printf(char *fmt) {
                 slen = sprintf(op, t_fmt, dv);
             }
             else if (t_pos >= &TMPL_CHAR[3]) {  /* Unsigned */
-                unsigned long uv = strtoul(nexttok, NULL, 10);
+                unsigned long long uv = strtoull(nexttok, NULL, 10);
                 slen = sprintf(op, t_fmt, uv);
             }
             else {                              /* Must be signed */
-                long lv = strtol(nexttok, NULL, 10);
+                long long lv = strtoll(nexttok, NULL, 10);
                 slen = sprintf(op, t_fmt, lv);
             }
         }
@@ -520,28 +553,6 @@ finalize:
     terminate_str(op);
     strcpy(ue_buf, local_buf);
     return ue_buf;
-}
-
-/* ue_atoi
- * This allows the integer to be expressed in hex ("0x"), octal (0..)
- * or decimal.
- * Replaced with a simple #define macro.
- */
-#define ue_atoi(ustr) ((int)strtol(ustr, NULL, 0))
-
-/* ue_itoa:
- *      integer to ascii string.......... This is too
- *      inconsistent to use the system's
- *      Actually, this is no longer true...
- *
- * int i;               integer to translate to a string
- */
-#define INTWIDTH        sizeof(int) * 3
-char *ue_itoa(int i) {
-    static char result[INTWIDTH+1];     /* Enough for resulting string */
-
-    sprintf(result, "%d", i);
-    return result;
 }
 
 /* Evaluate a function.
@@ -558,7 +569,7 @@ static char *gtfun(char *fname) {
     static char result[2 * NSTRING];        /* string result */
     int nb;                 /* Number of bytes in string */
     struct mstr csinfo;     /* Casing info structure */
-    int int1, int2 = 0;
+    ue64I_t int1, int2 = 0;
 
 /* Look the function up in the function table */
     fname[3] = 0;           /* only first 3 chars significant */
@@ -595,7 +606,7 @@ static char *gtfun(char *fname) {
     case UFTIMES:
     case UFDIV:
     case UFMOD: {
-        int2 = atoi(arg2);
+        int2 = ue_atoi(arg2);
         if ((tag == UFDIV) || (tag == UFMOD)) {
             if (int2 == 0)  /* The only "illegal" case for integer maths */
                 return "ZDIV";
@@ -603,7 +614,7 @@ static char *gtfun(char *fname) {
     }   /* Falls through */
     case UFNEG:
     case UFABS: {
-        int1 = atoi(arg1);
+        int1 = ue_atoi(arg1);
         switch(tag) {
         case UFADD:   return ue_itoa(int1 + int2);
         case UFSUB:   return ue_itoa(int1 - int2);
@@ -611,7 +622,7 @@ static char *gtfun(char *fname) {
         case UFDIV:   return ue_itoa(int1 / int2);
         case UFMOD:   return ue_itoa(int1 % int2);
         case UFNEG:   return ue_itoa(-int1);
-        default: /* UFABS */    return ue_itoa(abs(int1));
+        default: /* UFABS */    return ue_itoa(llabs(int1));
         }
     }
 
@@ -619,8 +630,8 @@ static char *gtfun(char *fname) {
     case UFEQUAL:
     case UFLESS:
     case UFGREATER: {
-        int1 = atoi(arg1);
-        int2 = atoi(arg2);
+        int1 = ue_atoi(arg1);
+        int2 = ue_atoi(arg2);
         switch(tag) {
         case UFEQUAL:                return ltos(int1 == int2);
         case UFLESS:                 return ltos(int1 < int2);
@@ -669,7 +680,7 @@ static char *gtfun(char *fname) {
         char *rp;       /* Where the return value starts */
         int offs;       /* Eventually, how much to return */
         int inbytes = strlen(arg1);
-        int gph_count = atoi(arg2);
+        int gph_count = ue_atoi(arg2);
         if (gph_count <= 0) return "";
 
 /* Now the call-specific bits
@@ -701,7 +712,7 @@ static char *gtfun(char *fname) {
                 reloop = FALSE;     /* Only reloop once */
                 rp = arg1 + offs;   /* What we have left */
                 offs = 0;
-                gph_count = atoi(arg3); /* How much to get */
+                gph_count = ue_atoi(arg3); /* How much to get */
                 if (gph_count <= 0) return "";
             }
         }
@@ -753,7 +764,7 @@ static char *gtfun(char *fname) {
         return result;
     }
 
-    case UFTRUTH:       return ltos(atoi(arg1) == 42);
+    case UFTRUTH:       return ltos(ue_atoi(arg1) == 42);
     case UFASCII: {     /* Returns base unicode char - but keep old name... */
         unicode_t uc_res;
         (void)utf8_to_unicode(arg1, 0, strlen(arg1), &uc_res);
@@ -782,7 +793,7 @@ static char *gtfun(char *fname) {
         return result;
     case UFRND: {
             seed = abs(seed * 1721 + 10007);
-            return ue_itoa(seed % abs(atoi(arg1)) + 1);
+            return ue_itoa(seed % llabs(ue_atoi(arg1)) + 1);
     }
     case UFENV:
         tsp = getenv(arg1);
@@ -795,7 +806,7 @@ static char *gtfun(char *fname) {
         tsp = flook(arg1, TRUE, ONPATH);
         return (tsp == NULL)? "" : tsp;
     case UFXLATE:       return xlat(arg1, arg2, arg3);
-    case UFGRPTEXT:     return group_match(atoi(arg1));
+    case UFGRPTEXT:     return group_match(ue_atoi(arg1));
     case UFPRINTF:      return ue_printf(arg1);
 
 /* Real arithmetic is to precision 12 in G-style strings.
@@ -847,7 +858,7 @@ static char *gtfun(char *fname) {
     case UFR2I: {       /* Add checks for overflow on conversion */
         errno = 0;
         feclearexcept(FE_ALL_EXCEPT);
-        int1 = lround(strtod(arg1, NULL));
+        int1 = lroundl(strtod(arg1, NULL));
         if ((errno != 0) || (fetestexcept(FE_INVALID|FE_OVERFLOW) != 0)) {
             return "TOOBIG";
         }
@@ -1335,7 +1346,7 @@ static int svar(struct variable_description *var, char *value) {
         case EVCURCHAR:
             srch_can_hunt = 0;
             ldelgrapheme(1, FALSE);     /* delete 1 char-place */
-            c = ue_atoi(value);
+            c = atoi(value);
             if (c == '\n') lnewline();
             else           linsert_uc(1, c);
             back_grapheme(1);
@@ -1366,11 +1377,11 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVCMODE:
             srch_can_hunt = 0;
-            curbp->b_mode = ue_atoi(value);
+            curbp->b_mode = (int)ue_atoi(value);
             upmode(curbp);
             break;
         case EVGMODE:
-            gmode = ue_atoi(value);
+            gmode = (int)ue_atoi(value);
             break;
         case EVLINE:
             srch_can_hunt = 0;

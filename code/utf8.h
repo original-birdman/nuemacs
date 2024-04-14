@@ -2,7 +2,7 @@
 #define UTF8_H
 
 /* Let's define an 8-byte integer type for use as a string/buffer/region
- * length.
+ * length. Now also for macro variable integers.
  * long may be 4- or 8-bytes
  * off_t should be 8-bytes, but there is no 8-byte specific printf
  * formatter, so we might as well define our own and use %ll.
@@ -10,7 +10,7 @@
  *
  * This is here, as this file is included everywhere that matters.
  */
-typedef long long uelen_t;
+typedef long long ue64I_t;
 
 /* The maximum number of bytes in a utf8 sequence (since 2003) */
 #define MAX_UTF8_LEN  4

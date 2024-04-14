@@ -302,7 +302,7 @@ int delbword(int, int);     /* Forward declaration */
 int delfword(int f, int n) {
     struct line *dotp;      /* original cursor line */
     int doto;               /*      and row */
-    uelen_t size;           /* # of chars to delete */
+    ue64I_t size;           /* # of chars to delete */
 
 /* Don't allow this command if we are in read only mode */
     if (curbp->b_mode & MDVIEW) return rdonly();
@@ -379,7 +379,7 @@ int delfword(int f, int n) {
  *       to track the byte count (which they now return).
  */
 int delbword(int f, int n) {
-    uelen_t size;
+    ue64I_t size;
 
 /* GGR - variables for kill-ring fix-up */
     int    i, status, ku;
@@ -502,11 +502,11 @@ int killpara(int f, int n) {
 int wordcount(int f, int n) {
     UNUSED(f);
     int orig_offset;        /* offset in line at start */
-    uelen_t size;           /* size of region left to count */
+    ue64I_t size;           /* size of region left to count */
     int wordflag;           /* are we in a word now? */
     int lastword;           /* were we just in a word? */
-    uelen_t nwords;         /* total # of words */
-    uelen_t nchars;         /* total number of chars */
+    ue64I_t nwords;         /* total # of words */
+    ue64I_t nchars;         /* total number of chars */
     int nlines;             /* total number of lines in region */
     int avgch;              /* average number of chars/word */
     int status;             /* status return code */
@@ -1013,9 +1013,9 @@ static int region_listmaker(const char *lbl_fmt, int n) {
  * the region.
  */
     struct line *flp = f_region.r_linep;
-    uelen_t togo = f_region.r_bytes + f_region.r_offset;
+    ue64I_t togo = f_region.r_bytes + f_region.r_offset;
     while (1) {
-        uelen_t left = togo - (lused(flp) + 1); /* Incl newline */
+        ue64I_t left = togo - (lused(flp) + 1); /* Incl newline */
         if (left < 0) break;
         togo = left;
         flp = lforw(flp);

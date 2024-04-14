@@ -1506,10 +1506,10 @@ typedef union {
 #define TTput_1uc_lim(uc) ((ttcol < term.t_ncol)? TTput_1uc(uc): FALSE)
 
 /* Write out a 8-byte integer, in the specified radix (8, 10, 16).
- * We'll be running with uelen_t as 8-bytes, and need a "ll" formatter.
+ * We'll be running with ue64I_t as 8-bytes, and need a "ll" formatter.
  * Update the physical cursor position.
  */
-static void mlputli(uelen_t l, int r) {
+static void mlputli(ue64I_t l, int r) {
     char tbuf[32];
     char *fmt;
 
@@ -1527,7 +1527,7 @@ static void mlputli(uelen_t l, int r) {
 /* Do the same except with an integer.
  * So we just pass it on to its longer brother.
  */
-#define mlputi(i, r) mlputli((uelen_t) i, r)
+#define mlputi(i, r) mlputli((ue64I_t) i, r)
 
 /* write out a scaled integer with two decimal places
  *
@@ -1608,7 +1608,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             case 'd':   mlputi(va_arg(ap.ap, int), 10);     break;
             case 'o':   mlputi(va_arg(ap.ap, int), 8);      break;
             case 'x':   mlputi(va_arg(ap.ap, int), 16);     break;
-            case 'D':   mlputli(va_arg(ap.ap, uelen_t), 10); break;
+            case 'D':   mlputli(va_arg(ap.ap, ue64I_t), 10); break;
             case 'f':   mlputf(va_arg(ap.ap, int));         break;
             case 'c':   TTput_1uc(va_arg(ap.ap, int));      break;
             case 's':

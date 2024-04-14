@@ -128,13 +128,19 @@ set %test "&r2i 12.493672"
 set %expect 12
 execute-procedure run-test
 
-; When running under valgrind the TOBBIG result is always 0.
-; I suspect this is a valgrind "feature".
+; When running under valgrind the TOBBIG result was always 0.
+; But With the switch 64-bit ints for macro variables, they now
+; get MIN-64BITINT (x64) or MAX-64BITINT (arm64)
+;; I suspect this is a valgrind "feature".
 ; So check whethet UE2RUN is set and mentions valgrind...
 ;
 set .TOOBIG "TOOBIG"
 !if &gre &sin &env UE2RUN "valgrind" 0
-    set .TOOBIG 0
+    !if &seq $proc_type x86_64
+        set .TOOBIG "-9223372036854775808"
+    !else
+        set .TOOBIG "9223372036854775807"
+    !endif
 !endif
 
 set %test "&r2i 12.493672E123"

@@ -1110,7 +1110,7 @@ loop:
  * This is so that the buffer contents at the end contain just the response.
  */
     curwp->w.doto = 0;
-    ldelete((uelen_t)prolen, FALSE);
+    ldelete((ue64I_t)prolen, FALSE);
     curwp->w.doto = savdoto;
 
 /* Get the next command (character) from the keyboard */
@@ -1167,7 +1167,7 @@ loop:
             if (expanded) {
                 savdoto = curwp->w.doto;
                 curwp->w.doto = 0;
-                ldelete((uelen_t) lused(lp), FALSE);
+                ldelete((ue64I_t) lused(lp), FALSE);
                 linstr(tstring);
 /* Don't bother with this when playing a macro - that just results
  * in an unnecessary pause from the sleep().

@@ -27,8 +27,8 @@
 int getregion(struct region *rp) {
     struct line *flp;
     struct line *blp;
-    uelen_t fsize;
-    uelen_t bsize;
+    ue64I_t fsize;
+    ue64I_t bsize;
 
     if (curwp->w.markp == NULL) {
         mlwrite_one("No mark set in this window");
@@ -41,20 +41,20 @@ int getregion(struct region *rp) {
         rp->r_linep = curwp->w.dotp;
         if (curwp->w.doto < curwp->w.marko) {
             rp->r_offset = curwp->w.doto;
-            rp->r_bytes = (uelen_t) (curwp->w.marko - curwp->w.doto);
+            rp->r_bytes = (ue64I_t) (curwp->w.marko - curwp->w.doto);
         }
         else {
             rp->r_offset = curwp->w.marko;
-            rp->r_bytes = (uelen_t) (curwp->w.doto - curwp->w.marko);
+            rp->r_bytes = (ue64I_t) (curwp->w.doto - curwp->w.marko);
         }
         rp->r_endp = curwp->w.dotp;
         return TRUE;
     }
 
     blp = curwp->w.dotp;
-    bsize = (uelen_t) curwp->w.doto;
+    bsize = (ue64I_t) curwp->w.doto;
     flp = curwp->w.dotp;
-    fsize = (uelen_t) (lused(flp) - curwp->w.doto + 1);
+    fsize = (ue64I_t) (lused(flp) - curwp->w.doto + 1);
 /* We start at dot and look for the mark, spreading out... */
     while (flp != curbp->b_linep || lback(blp) != curbp->b_linep) {
         if (flp != curbp->b_linep) {

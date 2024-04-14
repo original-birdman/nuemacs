@@ -187,7 +187,7 @@ int macarg(char *tok) {
  */
 static int docmd(char *cline) {
     int f;                  /* default argument flag */
-    int n;                  /* numeric repeat value */
+    ue64I_t n;              /* numeric repeat value */
     int status;             /* return status of function */
     int oldcle;             /* old contents of clexec flag */
     char *oldestr;          /* original exec string */
@@ -235,7 +235,7 @@ static int docmd(char *cline) {
 /* Process leading argument */
     if (ttype == TKLIT) {
         f = TRUE;
-        n = atoi(tkn);
+        n = strtoll(tkn, NULL, 10);
 
 /* and now get the command to execute */
         if ((status = macarg(tkn)) != TRUE) {

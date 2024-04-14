@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.180 Help Index     (11 Apr 2024)
+=>                   nuEmacs GGR4.180 Help Index     (14 Apr 2024)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -740,6 +740,9 @@ Miscellaneous
                     printf-style formatter.
                     This does *not* allow * or $ positional arg usage.
                     It does allow field widths.
+                    For integers, do not specify a precision (just one
+                    of "diouxX"). uemacs knows its internal precision
+                    (64-bit).
 
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
