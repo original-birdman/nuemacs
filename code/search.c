@@ -343,9 +343,12 @@ void init_search_ringbuffers(void) {
  */
     for (int gi = 0; gi < NGRP; gi++) grp_text[gi] = NULL;
 
-/* Ensure that the first mcpat entry is "empty" (it's used as a flag) */
+/* Ensure that the first mcpat and rmcpat entries are "empty"
+ * (it's used as a flag)
+ */
 
     mcpat[0].mc = null_mg;
+    rmcpat[0].mc = null_mg;
     return;
 }
 
@@ -1044,9 +1047,10 @@ static void rmcclear(void) {
                 default:
                     ;
                 }
-                fcp = fcp->next;
+                struct func_call *next_fcp = fcp->next;
+                Xfree(fcp);
+                fcp = next_fcp;
             }
-            Xfree(rmcptr->val.fc);
             break;
         }
         default:
