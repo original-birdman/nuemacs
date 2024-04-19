@@ -1497,6 +1497,14 @@ pchr_done_noincr:
     return status;
 }
 
+/* An internal function to create a new ("NULL") func_call item */
+static struct func_call *new_fc(void) {
+    struct func_call *retval = Xmalloc(sizeof(struct func_call));
+    retval->type = EOL;
+    retval->next = NULL;
+    return retval;
+}
+
 /* rmcstr -- Set up the replacement 'magic' array.  Note that if there
  *      are no meta-characters encountered in the replacement string,
  *      the array is never actually created - we will just use the
@@ -1604,10 +1612,8 @@ static int rmcstr(void) {
  * We do not need to handle variables, as evaluating the function will
  * do that.
  */
-                rmcptr->val.fc = Xmalloc(sizeof(struct func_call));
+                rmcptr->val.fc = new_fc();
                 struct func_call *wkfcp = rmcptr->val.fc;
-                wkfcp->type = EOL;
-                wkfcp->next = NULL;
                 char *bp = btext;
                 char *tr_start = btext;
                 char *ep = btext + strlen(btext);
@@ -1617,10 +1623,8 @@ static int rmcstr(void) {
                     if (nxt - bp) { /* Save previous text, if any */
                         wkfcp->type = LITCHAR;      /* Change type */
                         wkfcp->val.ltext = strndup(bp, (nxt - bp));
-                        wkfcp->next = Xmalloc(sizeof(struct func_call));
+                        wkfcp->next = new_fc();
                         wkfcp = wkfcp->next;
-                        wkfcp->type = EOL;
-                        wkfcp->next = NULL;
                     }
                     char ctext[NPAT+1];
                     char *cnt = brace_text(nxt+2, ctext);
@@ -1656,10 +1660,8 @@ static int rmcstr(void) {
                         wkfcp->type = REPL_GRP;
                         wkfcp->val.group_num = atoi(cnt);
                     }
-                    wkfcp->next = Xmalloc(sizeof(struct func_call));
+                    wkfcp->next = new_fc();
                     wkfcp = wkfcp->next;
-                    wkfcp->type = EOL;
-                    wkfcp->next = NULL;
                     bp = nxt + strlen(cnt) + 3;
                     tr_start = bp;
                 }
@@ -1667,10 +1669,8 @@ static int rmcstr(void) {
                 if (ep - tr_start) {    /* Save trailing text, if any */
                     wkfcp->type = LITCHAR;      /* Change type */
                     wkfcp->val.ltext = strndup(tr_start, (ep - tr_start));
-                    wkfcp->next = Xmalloc(sizeof(struct func_call));
+                    wkfcp->next = new_fc();
                     wkfcp = wkfcp->next;
-                    wkfcp->type = EOL;
-                    wkfcp->next = NULL;
                  }
                  break;
             default:    /* Assume a group number... */
