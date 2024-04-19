@@ -147,6 +147,7 @@
 #define REPL_VAR        14
 #define REPL_GRP        15
 #define REPL_CNT        16
+#define REPL_FNC        17
 
 /* Defines for the metacharacters in the regular expression patterns. */
 
@@ -164,7 +165,8 @@
 #define MC_RANGE        '{'     /* Ranged Closure. */
 #define MC_OR           '|'     /* OR choice */
 #define MC_MINIMAL      '?'     /* Shortest Closure OR 0/1 match. */
-#define MC_REPL         '$'     /* Use matching group/var in replacement. */
+#define MC_REPL         '$'     /* Use matching group/var in replacement.
+                                   MUST be followed by a {...} group. */
 #define MC_ESC          '\\'    /* Escape - suppress meta-meaning. */
 
 #define BIT(n)          (1 << (n))      /* An integer with one bit set. */
@@ -236,6 +238,15 @@ struct magic_counter {
     char *fmt;
 };
 
+struct func_call {
+    int type;
+    struct func_call *next;
+    union {                     /* Can only be one at a time */
+        char *ltext;            /* malloc()ed literla text */
+        int group_num;          /* Group replacement */
+        struct magic_counter x; /* A counter */
+    } val;
+};
 struct magic_replacement {
     struct mg_info mc;
     union {                     /* Can only be one at a time */
@@ -244,6 +255,7 @@ struct magic_replacement {
         struct grapheme gc;     /* A Unicode grapheme */
         char *varname;          /* malloc()ed varname */
         struct magic_counter x; /* A counter */
+        struct func_call *fc;   /* Function call info */
     } val;
 };
 
@@ -527,18 +539,30 @@ static char *clearbits(void) {
 }
 
 /* Function to get text between {} braces.
- * The returned string is the text (without the braces), stored in a
- * static buffer. So the caller must handle it before calling here again.
+ * It expects to be called with the first char *after* a brace, so
+ * collects up to the next "}"
+ * It does allow for internal {} groups.
+ * The caller must supply a buffer for the result.
  * It does not process the text in any way, so can do a byte-scan.
  */
-static char btxt[512];
-static char *brace_text(char *fp) {
+static char *brace_text(char *fp, char *btxt) {
     char *tp = btxt;
     int max = 511;
+    int escaping = 0;
+    int level = 0;
     while (max--) {
         if (!*fp) break;
-        *tp++ = *fp++;
-        if (*fp == '}') {
+        if (!escaping && (*fp == '\\')) {
+            escaping = 1;
+        }
+        else {
+            escaping = 0;
+            *tp++ = *fp;
+            if (*fp == '{') level++;
+        }
+        fp++;
+        if (!escaping && (*fp == '}')) {
+            if (level-- > 0) continue;
             terminate_str(tp);
             return btxt;
         }
@@ -607,6 +631,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     char *bmap;
     char *patptr;
     char *btext;
+    char btbuf[NPAT+1];
 
 /* We always set up the bitmap structure */
 
@@ -730,11 +755,11 @@ handle_prev:
 /* So from here on we know there is no gc.ex to free */
         switch (gc.uc) {     /* All MUST finish with goto!! */
         case 'u': {
-            if (*patptr != '{') {       /* balancer: } */
+            if (*patptr != '{') {
                 parse_error(patptr, "\\u{} not started");
                 return FALSE;
             }
-            btext = brace_text(++patptr);
+            btext = brace_text(++patptr, btbuf);
             if (!btext) {
                 parse_error(patptr, "\\u{} not ended");
                 return FALSE;
@@ -752,7 +777,7 @@ handle_prev:
                 parse_error(patptr, "\\k/K{} not started");
                 return FALSE;
             }
-            btext = brace_text(++patptr);
+            btext = brace_text(++patptr, btbuf);
             if (!btext) {
                 parse_error(patptr, "\\k/K{} not ended");
                 return FALSE;
@@ -782,7 +807,7 @@ handle_prev:
                 parse_error(patptr, "\\p/P{} not started");
                 return FALSE;
             }
-            btext = brace_text(++patptr);
+            btext = brace_text(++patptr, btbuf);
             if (!btext) {
                 parse_error(patptr, "\\p/P{} not ended");
                 return FALSE;
@@ -1006,6 +1031,24 @@ static void rmcclear(void) {
         case REPL_CNT:
             Xfree(rmcptr->val.x.fmt);
             break;
+        case REPL_FNC: {
+            struct func_call *fcp = rmcptr->val.fc;
+            while (fcp) {
+                switch(fcp->type) {
+                case LITCHAR:
+                    Xfree(fcp->val.ltext);
+                    break;
+                case REPL_CNT:
+                    Xfree(fcp->val.x.fmt);
+                    break;
+                default:
+                    ;
+                }
+                fcp = fcp->next;
+            }
+            Xfree(rmcptr->val.fc);
+            break;
+        }
         default:
             ;
         }
@@ -1045,6 +1088,7 @@ static int mcstr(void) {
     int status = TRUE;
     int can_repeat = FALSE;
     char *btext;
+    char btbuf[NPAT+1];
 
 /* If we allocated anything in the previous mcpat, free it now.
  */
@@ -1287,7 +1331,7 @@ static int mcstr(void) {
                     parse_error(patptr, "opening { expected");
                     return FALSE;
                 }
-                btext = brace_text(++patptr);
+                btext = brace_text(++patptr, btbuf);
                 if (!btext) {
                     parse_error(patptr, "found no closing }");
                     return FALSE;
@@ -1305,7 +1349,7 @@ static int mcstr(void) {
                     parse_error(patptr, "opening { expected");
                     return FALSE;
                 }
-                btext = brace_text(++patptr);
+                btext = brace_text(++patptr, btbuf);
                 if (!btext) {
                     parse_error(patptr, "found no closing }");
                     return FALSE;
@@ -1337,7 +1381,7 @@ static int mcstr(void) {
                     parse_error(patptr, "opening { expected");
                     return FALSE;
                 }
-                btext = brace_text(++patptr);
+                btext = brace_text(++patptr, btbuf);
                 if (!btext) {
                     parse_error(patptr, "found no closing }");
                     return FALSE;
@@ -1462,10 +1506,12 @@ static int rmcstr(void) {
     struct magic_replacement *rmcptr = rmcpat;
     char *patptr = rpat;
     char *btext;
+    char btbuf[NPAT+1];
 
 /* If we had metacharacters in the struct magic_replacement array previously,
- * free up any parts that may have been allocated (before we
- * reset slow_scan).
+ * free up any parts that may have been allocated (before we reset slow_scan).
+ * NOTE: That we only free things befoe we create the next one.
+ * So we have to call here from valgrind's DO_FREE section at the end.
  */
     if (rmagical) rmcclear();
     rmagical = FALSE;
@@ -1504,7 +1550,7 @@ static int rmcstr(void) {
                 parse_error(patptr, "$ without {...}");
                 return FALSE;
             }
-            btext = brace_text(++patptr);
+            btext = brace_text(++patptr, btbuf);
             if (!btext) {
                 parse_error(patptr, "${} not ended");
                 return FALSE;
@@ -1512,7 +1558,8 @@ static int rmcstr(void) {
             int patptr_advance = strlen(btext);
 
 /* What do we have?
- * Can be $var/%var/.var, @ (for a counter) or number... */
+ * Can be $var/%var/.var, @ (for a counter) or number...
+ */
             switch(btext[0]) {
             case '$':
             case '%':
@@ -1550,6 +1597,82 @@ static int rmcstr(void) {
                     }
                 }
                 break;
+            case '&':   /* Evaluate a function. May contain ${n} and ${@}. */
+                rmcptr->mc.type = REPL_FNC;
+
+/* Need to parse the btext looking for groups and counters.
+ * We do not need to handle variables, as evaluating the function will
+ * do that.
+ */
+                rmcptr->val.fc = Xmalloc(sizeof(struct func_call));
+                struct func_call *wkfcp = rmcptr->val.fc;
+                wkfcp->type = EOL;
+                wkfcp->next = NULL;
+                char *bp = btext;
+                char *tr_start = btext;
+                char *ep = btext + strlen(btext);
+                while (*bp) {
+                    char *nxt = strstr(bp, "${");
+                    if (!nxt) break;
+                    if (nxt - bp) { /* Save previous text, if any */
+                        wkfcp->type = LITCHAR;      /* Change type */
+                        wkfcp->val.ltext = strndup(bp, (nxt - bp));
+                        wkfcp->next = Xmalloc(sizeof(struct func_call));
+                        wkfcp = wkfcp->next;
+                        wkfcp->type = EOL;
+                        wkfcp->next = NULL;
+                    }
+                    char ctext[NPAT+1];
+                    char *cnt = brace_text(nxt+2, ctext);
+                    if (*cnt == '@') {      /* A counter */
+/* Defaults... */
+                        wkfcp->type = REPL_CNT;
+                        wkfcp->val.x.curval = 1;
+                        wkfcp->val.x.incr = 1;
+                        wkfcp->val.x.fmt = strdup("%d");
+/* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
+ * NOTE that the format spec MUST be for a d (or u) item!!!
+ * We've already got the length of btext for advancing, so the fact that
+ * strtok will write NULs into it doesn't worry us.
+ */
+                        if (*(cnt+1) == ':') {
+                            char *tokp = strdupa(cnt+2);
+                            char *ntp;
+                            while ((ntp = strtok(tokp, ","))) {
+                                tokp = NULL;
+                                if (0 == strncmp("start=", ntp, 6)) {
+                                    wkfcp->val.x.curval = atoi(ntp+6);
+                                }
+                                else if (0 == strncmp("incr=", ntp, 5)) {
+                                    wkfcp->val.x.incr = atoi(ntp+5);
+                                }
+                                else if (0 == strncmp("fmt=", ntp, 4)) {
+                                    wkfcp->val.x.fmt = strdup(ntp+4);
+                                }
+                            }
+                        }
+                    }
+                    else {                  /* group */
+                        wkfcp->type = REPL_GRP;
+                        wkfcp->val.group_num = atoi(cnt);
+                    }
+                    wkfcp->next = Xmalloc(sizeof(struct func_call));
+                    wkfcp = wkfcp->next;
+                    wkfcp->type = EOL;
+                    wkfcp->next = NULL;
+                    bp = nxt + strlen(cnt) + 3;
+                    tr_start = bp;
+                }
+/* Copy any trailing text */
+                if (ep - tr_start) {    /* Save trailing text, if any */
+                    wkfcp->type = LITCHAR;      /* Change type */
+                    wkfcp->val.ltext = strndup(tr_start, (ep - tr_start));
+                    wkfcp->next = Xmalloc(sizeof(struct func_call));
+                    wkfcp = wkfcp->next;
+                    wkfcp->type = EOL;
+                    wkfcp->next = NULL;
+                 }
+                 break;
             default:    /* Assume a group number... */
                 rmcptr->mc.type = REPL_GRP;
                 rmcptr->mc.group_num = atoi(btext);
@@ -3124,6 +3247,44 @@ static char *getrepl(void) {
             if (nlen >= MAX_COUNTER_LEN) nlen = MAX_COUNTER_LEN - 1;
             rmcptr->val.x.curval += rmcptr->val.x.incr;
             append_to_repl_buf(mc_text, nlen);
+            break;
+        }
+        case REPL_FNC: {
+            char fnc_buf[NSTRING];
+            *fnc_buf = '\0';
+            for (struct func_call *fcp = rmcptr->val.fc; fcp->type != EOL;
+                    fcp = fcp->next) {
+                switch (fcp->type) {
+                case LITCHAR:
+                    strcat(fnc_buf, fcp->val.ltext);
+                    break;
+                case REPL_GRP:
+                    strcat(fnc_buf, group_match(fcp->val.group_num));
+                    break;
+                case REPL_CNT: {
+                    char mc_text[MAX_COUNTER_LEN];
+                    (void)snprintf(mc_text, MAX_COUNTER_LEN, fcp->val.x.fmt,
+                         fcp->val.x.curval);
+                    fcp->val.x.curval += fcp->val.x.incr;
+                    strcat(fnc_buf, mc_text);
+                    break;
+                }
+                default:
+                }
+            }
+/* We need to fudge things here to get nextarg() to evaulate a
+ * command-line text and return the resultign string
+ */
+            char result[NSTRING];
+            char *real_execstr = execstr;
+            int real_clexec = clexec;
+            clexec = TRUE;
+            execstr = fnc_buf;
+            (void)nextarg("", result, NSTRING, 0);
+            append_to_repl_buf(result, -1);
+            execstr = real_execstr;
+            clexec = real_clexec;
+            break;
         }
         default:;
         }
@@ -3478,6 +3639,7 @@ void free_search(void) {
         Xfree(repl_txt[ix]);
     }
     if (mc_alloc) mcclear();
+    rmcclear();
     return;
 }
 #endif

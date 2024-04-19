@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.180 Help Index     (14 Apr 2024)
+=>                   nuEmacs GGR4.180 Help Index     (19 Apr 2024)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -471,6 +471,13 @@ ${@}
 ${n}    (n == a number)
      will be replaced with the text of the group match from the matching
      string,
+
+${&...}
+    allows you to call a function and its return value will be used.
+    You may use group matches (${n}) and counters (${@}) within the
+    ${...} text as parameters to the function.
+    You cannot use the variable syntax - just use the variable directly
+     and it will be evaluated by the function call itself.
 
 NOTE
 When re-execing a search the start point for the search is one character
