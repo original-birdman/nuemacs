@@ -184,19 +184,19 @@ char *fixup_fname(char *fn) {
  */
 char *fixup_full(char *fn) {
     char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
-    char *exp_base;
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
  * Then we call fixup_fname() to do what it can do, which includes
  * stripping out redundant '.'s and handling ".."s.
+ * Either way we copy the name into our buffer, just in case it is
+ * currently already in fixup_fname()'s buffer.
  */
-    exp_base = fn;
     if (udir.current && (fn[0] != '/' && fn[0] != '~')) {
         sprintf(fn_expd, "%s/%s", udir.current, fn);
-        exp_base = fn_expd;
     }
+    else strcpy(fn_expd, fn);
 
-    return fixup_fname(exp_base);   /* For '/', '.' and ".."  handling */
+    return fixup_fname(fn_expd);    /* For '/', '.' and ".."  handling */
 }
 
 /*

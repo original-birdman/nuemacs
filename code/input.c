@@ -190,10 +190,12 @@ static char *getffile(char *fspec) {
         terminate_str(fspec + fspec_eoff);
     else
         fspec_eoff = 0;         /* Just forget it... */
-    fspec = fixup_fname(fspec);
-/* fspec may have been expanded in situ by fixup_fname, so we can't just
- * use fspec_eoff as the place to put put back a '/'!
+/* fixup_fname now expands into an internal buffer.
+ * Which is fine for us - all we do is (perhaps) append "/" and move one...
+ * We can't just use fspec_eoff as the place to put put back a '/' as
+ * the length may have changed!
  */
+    fspec = fixup_fname(fspec);
     if (fspec_eoff) strcat(fspec, "/");
     strcpy(directory, fspec);
 
@@ -475,7 +477,10 @@ static int comp_file(char *name, char *choices) {
  */
     if (unique) {
         if ((name[0] == '~') && (!strchr(name, '/'))) {
-            name = fixup_fname(name);
+/* Make copy from fixup_fname()'s internal buffer back to the incoming
+ * buffer.
+ */
+            strcpy(name, fixup_fname(name));
             if (name[0] != '~') strcat(name, "/");
         }
     }

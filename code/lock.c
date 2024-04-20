@@ -100,8 +100,7 @@ int lockchk(char *fname) {
  * Remember to free it in errors!
  */
     char *tmpname = (char *)Xmalloc(NFILEN);
-    strcpy(tmpname, fname);
-    fixup_fname(tmpname);
+    strcpy(tmpname, fixup_fname(fname));
 
 /* Check to see whether that file is already locked here */
 
