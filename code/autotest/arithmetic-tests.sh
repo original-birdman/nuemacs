@@ -128,18 +128,21 @@ set %test "&r2i 12.493672"
 set %expect 12
 run run-test
 
-; When running under valgrind the TOBBIG result was always 0.
+; When running under valgrind the TOOBIG result was always 0.
 ; But With the switch 64-bit ints for macro variables, they now
-; get MIN-64BITINT (x64) or MAX-64BITINT (arm64)
+; get MAX-64BITINT (arm64) or MIN-64BITINT (x64)
 ;; I suspect this is a valgrind "feature".
-; So check whethet UE2RUN is set and mentions valgrind...
+; So check whether we are running under valgrind
+; UE2RUN contains what we will run
 ;
 set .TOOBIG "TOOBIG"
 !if &gre &sin &env UE2RUN "valgrind" 0
+    set .TOOBIG &bli 0x7fffffffffffffff     ; Max 64-bit +ve
+; Using 0x8000000000000000 actually sets 0x7fffffffffffffff (strtoll
+; feature), so just use integer overflow...
+;
     !if &seq $proc_type x86_64
-        set .TOOBIG "-9223372036854775808"
-    !else
-        set .TOOBIG "9223372036854775807"
+        set .TOOBIG &add .TOOBIG 1
     !endif
 !endif
 

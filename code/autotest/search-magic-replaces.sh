@@ -59,14 +59,14 @@ set %ok 0
 store-procedure check-line
 ;   Expects these to have been set, since this tests them all.
 ; %expline      the expected text of the current line
-; 
+;
   !if &seq $line %expline
     set %test-report &cat %curtest &cat " - line OK: " $curline
     set %ok &add %ok 1
   !else
     set %test-report &cat %curtest &cat " - WRONG line, got: " $line
     set %test-report &cat %test-report &cat " - expected: " %expline
-    set %fail &add %fail 1  
+    set %fail &add %fail 1
   !endif
   run report-status
 
