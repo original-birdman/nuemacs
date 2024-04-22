@@ -192,7 +192,7 @@ extern int cbuf40(int, int);
 #ifndef FILE_C
 extern char *fixup_fname(char *);
 extern char *fixup_full(char *);
-extern char *get_realpath(char *);    
+extern char *get_realpath(char *);
 extern void set_buffer_filenames(struct buffer *, char *);
 extern int fileread(int, int);
 extern int insfile(int, int);
@@ -226,6 +226,7 @@ extern struct name_bind *getname(char *, int);
 extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);
+extern void evaluate_cmdstr(char *, char *);
 extern int getstring(char *, char *, int , enum cmplt_type);
 #endif
 

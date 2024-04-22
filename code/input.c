@@ -928,6 +928,37 @@ static void sigwinch_handler(int signr) {
     return;
 }
 
+/* Evaluate a string as a command.
+ * Done by saving the current command buffer, replacing it with what
+ * we have then running token() before replacing things.
+ * We (now) loop over all of the command string.
+ */
+void evaluate_cmdstr(char *input, char *result) {
+    char tres[NSTRING] = "";
+    char *orig_execstr = execstr;   /* Just in case... */
+    int orig_clexec = clexec;
+    char *sep = "";
+
+/* We take a copy of the input, allowing the call:
+ *  evaluate_cmdstr(buf, buf);
+ * to expand a buffer "in place".
+ */
+    execstr = strdupa(input);
+    clexec = TRUE;
+    *result = '\0';
+    while(1) {
+        if (!*execstr) break;
+        (void)nextarg("", tres, NSTRING, 0);
+        strcat(result, sep);
+        sep = " ";
+        strcat(result, tres);
+    }
+    execstr = orig_execstr;
+    clexec = orig_clexec;
+}
+
+
+
 /* The actual getstring() starts now... */
 
 int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
@@ -1275,21 +1306,11 @@ submit:     /* Tidy up */
          addto_kbdmacro(buf, 0, !do_evaluate);
 
 /* If we have to evaluate, do it now.
- * Note that this is *AFTER* we've any logging to the macro.
+ * Note that this is *AFTER* we've done any logging to the macro.
  * We have to fudge buf into execstr for function evaluating to work.
  */
-    if (do_evaluate) {
-        char *orig_execstr = execstr;   /* Just in case... */
-        char tok1[NLINE], tres[NLINE];
-        execstr = buf;
-        execstr = token(execstr, tok1, NLINE);
-/* GGR - There is the possibility of an illegal overlap of args here.
- *       So it must be done via a temporary buffer.
- */
-           strcpy(tres, getval(tok1));
-           strcpy(buf, tres);
-           execstr = orig_execstr;
-    }
+    if (do_evaluate) evaluate_cmdstr(buf, buf);
+
 abort:
 
 /* If we get here "normally" SIGWINCH will still be enabled, so we need

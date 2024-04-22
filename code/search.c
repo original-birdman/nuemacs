@@ -3274,20 +3274,16 @@ static char *getrepl(void) {
                     break;
                 }
                 default:
+                    ;       /* So not empty - to make old gcc happy */
                 }
             }
-/* We need to fudge things here to get nextarg() to evaulate a
- * command-line text and return the resultign string
+/* We need to fudge things here to get nextarg() to evaluate a
+ * command-line text and return the resulting string
+ * We have a function to do that...
  */
             char result[NSTRING];
-            char *real_execstr = execstr;
-            int real_clexec = clexec;
-            clexec = TRUE;
-            execstr = fnc_buf;
-            (void)nextarg("", result, NSTRING, 0);
+            evaluate_cmdstr(fnc_buf, result);
             append_to_repl_buf(result, -1);
-            execstr = real_execstr;
-            clexec = real_clexec;
             break;
         }
         default:;
