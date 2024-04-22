@@ -13,7 +13,7 @@ store-procedure check-position-matchlen
     set %test-report &cat %curtest &cat " - WRONG line, got: " $curline
     set %fail &add %fail 1  
   !endif
-  execute-procedure report-status
+  run report-status
   
   !if &equ $curcol %expcol
     set %test-report &cat %curtest &cat " - column OK: " $curcol
@@ -23,7 +23,7 @@ store-procedure check-position-matchlen
     set %test-report &cat %test-report &cat " - expected: " %expcol
     set %fail &add %fail 1
   !endif   
-  execute-procedure report-status
+  run report-status
 
   !if &equ $curchar 10
     set %pchar "\n"
@@ -38,7 +38,7 @@ store-procedure check-position-matchlen
     set %test-report &cat %test-report &cat " expected: " %expchar
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
   
 ; NOTE!!! We just check the length here as we expect multi-line matches!
 ; 
@@ -50,5 +50,5 @@ store-procedure check-position-matchlen
     set %test-report &cat %test-report &cat " expected: " %expmatchlen
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 !endm

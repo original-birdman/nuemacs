@@ -167,7 +167,7 @@ store-procedure check-encrypt
       set %test-report &cat %test_name ": FAILED"
       set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 !endm
 
 ; Read in the original file
@@ -181,7 +181,7 @@ add-mode Crypt
 set-encryption-key ATestEncryptionString
 write-file &cat %test_name "-NOW"
 ; Run a filter to comapare what we wrote vs what we expext
-execute-procedure check-encrypt
+run check-encrypt
 !force kill-buffer %test_name
 
 ; Now Encrypt-pre-GGR4.120
@@ -194,7 +194,7 @@ set %test_name Encrypt-pre-GGR4.120
 select-buffer ORIG
 set $crypt_mode 0x3002
 write-file &cat %test_name "-NOW"
-execute-procedure check-encrypt
+run check-encrypt
 !force kill-buffer %test_name
 
 ; Read this one from a new buffer, giving the encryption
@@ -209,7 +209,7 @@ read-file Encrypt-IN
 set $crypt_mode 0x2
 add-mode Crypt
 write-file &cat %test_name "-NOW" ATestEncryptionString
-execute-procedure check-encrypt
+run check-encrypt
 !force kill-buffer %test_name
 set $debug 0
 
@@ -224,7 +224,7 @@ set $crypt_mode 0x1
 add-mode Crypt
 set-encryption-key ATestEncryptionString
 write-file &cat %test_name "-NOW"
-execute-procedure check-encrypt
+run check-encrypt
 !force kill-buffer %test_name
 
 select-buffer test-reports

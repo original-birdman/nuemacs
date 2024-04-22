@@ -74,7 +74,7 @@ execute-file autotest/check-position-match.rc
 find-file autotest.tfile
 
 set %test-report "START: Various word mode tests"
-execute-procedure report-status
+run report-status
 
 ; First check the zero-width char is there. In case it was
 ; accidentally removed in an edit....
@@ -83,7 +83,7 @@ add-mode Magic
 !force search-forward \u{200b}
 !if &equ 0 &len &grp 0
     set %test-report "The zero-width char is missing. Cannot continue"
-    execute-procedure report-status
+    run report-status
     select-buffer test-reports
     unmark-buffer
     !finish
@@ -92,7 +92,7 @@ delete-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "Backwards tests"
-execute-procedure report-status
+run report-status
 
 ; These are independent of Forwword mode
 ;
@@ -102,7 +102,7 @@ end-of-file
   set %expline 9
   set %expcol 4
   set %expchar &asc m
-execute-procedure check-position-match
+run check-position-match
 
 ; This should stop at the zero-width break in Shoulder.
 25 previous-word
@@ -110,7 +110,7 @@ execute-procedure check-position-match
   set %expline 3
   set %expcol 58
   set %expchar &asc o
-execute-procedure check-position-match
+run check-position-match
 
 
 ; Forward with ggr_opts Forwword OFF
@@ -124,7 +124,7 @@ beginning-of-file
   set %expcol 18
 ; 34 = "
   set %expchar 34
-execute-procedure check-position-match
+run check-position-match
 
 ; Get to the space after сейчас
 35 next-word
@@ -132,7 +132,7 @@ execute-procedure check-position-match
   set %expline 14
   set %expcol 26
   set %expchar &asc " "
-execute-procedure check-position-match
+run check-position-match
 
 ; Forward with ggr_opts Forwword OFF
 ;
@@ -144,7 +144,7 @@ beginning-of-file
   set %expline 5
   set %expcol 20
   set %expchar &asc l
-execute-procedure check-position-match
+run check-position-match
 
 ; Get to the н in на
 35 next-word
@@ -152,7 +152,7 @@ execute-procedure check-position-match
   set %expline 14
   set %expcol 27
   set %expchar &asc н
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports

@@ -66,7 +66,7 @@ execute-file autotest/check-position-matchlen.rc
 find-file autotest.tfile
 
 set %test-report "START: Zero length magic repeat matches"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
@@ -76,7 +76,7 @@ add-mode Magic
 ; Should get a zero-length match at the start of line 1
 ;
 set %test-report "  ^[^#]* - search 1"
-execute-procedure report-status
+run report-status
 
 search-forward ^[^#]*
   set %curtest Search1
@@ -84,13 +84,13 @@ search-forward ^[^#]*
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 0
-execute-procedure check-position-matchlen
+run check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a 2-line + newline at the start of line 2
 ;
 set %test-report "  ^[^#]* - re-search 2"
-execute-procedure report-status
+run report-status
 
 set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
@@ -99,13 +99,13 @@ hunt-forward
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 36
-execute-procedure check-position-matchlen
+run check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a 1-line + newline at the start of line 3
 ;
 set %test-report "  ^[^#]* - re-search 3"
-execute-procedure report-status
+run report-status
 
 set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
@@ -114,13 +114,13 @@ hunt-forward
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 13
-execute-procedure check-position-matchlen
+run check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a zero-length match at the start of line 4
 ;
 set %test-report "  ^[^#]* - re-search 4"
-execute-procedure report-status
+run report-status
 
 set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
@@ -129,13 +129,13 @@ hunt-forward
   set %expcol 1
   set %expchar &asc "#"
   set %expmatchlen 0
-execute-procedure check-position-matchlen
+run check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should get a 1-line + newline match at the start of line 5
 ;
 set %test-report "  ^[^#]* - re-search 5"
-execute-procedure report-status
+run report-status
 
 set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 hunt-forward
@@ -144,11 +144,11 @@ hunt-forward
   set %expcol 1
   set %expchar 10
   set %expmatchlen 27
-execute-procedure check-position-matchlen
+run check-position-matchlen
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  ^[^#]* - re-search 5"
-execute-procedure report-status
+run report-status
 
 ; This should not pass!!!
 set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
@@ -162,7 +162,7 @@ set $srch_can_hunt 1    ; OK, even though we have switched buffer and back
 !endif
 
 set %test-report &cat "Expected FAILing search " .res
-execute-procedure report-status
+run report-status
 
 ;
 select-buffer test-reports

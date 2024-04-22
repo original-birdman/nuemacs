@@ -84,7 +84,7 @@ store-procedure check-full-line
     set %test-report &cat %test-report $line
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 
 !endm
 
@@ -105,7 +105,7 @@ store-procedure unset-wrap-mode
 find-file autotest.tfile
 
 set %test-report "START: Various Wrap mode tests"
-execute-procedure report-status
+run report-status
 
 ; First check the zero-width char is there. In case it was
 ; accidentally removed in an edit....
@@ -114,7 +114,7 @@ add-mode Magic
 !force search-forward \u{200b}
 !if &equ 0 &len &grp 0
     set %test-report "The zero-width char in Shoulder is missing. Cannot continue"
-    execute-procedure report-status
+    run report-status
     select-buffer test-reports
     unmark-buffer
     !finish
@@ -124,12 +124,12 @@ delete-mode Magic
 ; Set mode we are testing
 ;
 add-mode Wrap
-execute-procedure set-wrap-mode
+run set-wrap-mode
 60 set-fill-column
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Line7 tests"
-execute-procedure report-status
+run report-status
 
 ; Insert space at end of line 7
 ;
@@ -140,10 +140,10 @@ simulate " "
   set %expline 8
   set %expcol 9
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
 
   set %expltext "column. "
-execute-procedure check-full-line
+run check-full-line
 
 ; Re-read file...
 unmark-buffer
@@ -151,16 +151,16 @@ read-file autotest.tfile
 
 7 goto-line
 end-of-line
-execute-procedure unset-wrap-mode
+run unset-wrap-mode
 simulate " "
   set %curtest Line7-OrigWrap
   set %expline 8
   set %expcol 9
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
 
   set %expltext "column. "
-execute-procedure check-full-line
+run check-full-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Insert space at end of line 8
@@ -171,18 +171,18 @@ read-file autotest.tfile
 
 8 goto-line
 end-of-line
-execute-procedure set-wrap-mode
+run set-wrap-mode
 simulate " "
   set %curtest Line8-FullWrap
   set %expline 9
   set %expcol 9
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
 
 previous-line
 ; Expect line to have spaces removed
   set %expltext "And another, where spaces follow the text beyond the fill"
-execute-procedure check-full-line
+run check-full-line
 
 ; Re-read file...
 unmark-buffer
@@ -190,18 +190,18 @@ read-file autotest.tfile
 
 8 goto-line
 end-of-line
-execute-procedure unset-wrap-mode
+run unset-wrap-mode
 simulate " "
   set %curtest Line8-OrigWrap
   set %expline 9
   set %expcol 9
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
 
 previous-line
 ; Expect line to have trailing spaces
   set %expltext "And another, where spaces follow the text beyond the fill    "
-execute-procedure check-full-line
+run check-full-line
 
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -217,23 +217,23 @@ read-file autotest.tfile
 8 goto-line
 beginning-of-line
 61 forward-character
-execute-procedure set-wrap-mode
+run set-wrap-mode
 simulate " "
   set %curtest Line8-FullWrap-MidSpace
   set %expline 9
   set %expcol 1
   set %expchar &asc c
-execute-procedure check-position-match
+run check-position-match
 
 ; We expect this line to be the wrapped "column."
   set %expltext "column."
-execute-procedure check-full-line
+run check-full-line
 
 previous-line
 ; We expect this line to have no trailing spaces
   set %curtest Line8-FullWrap-MSprevline
   set %expltext "And another, where spaces follow the text beyond the fill"
-execute-procedure check-full-line
+run check-full-line
 
 ; Re-read file...
 unmark-buffer
@@ -242,24 +242,24 @@ read-file autotest.tfile
 8 goto-line
 beginning-of-line
 61 forward-character
-execute-procedure unset-wrap-mode
+run unset-wrap-mode
 simulate " "
 ; We expect this to have wrapped
   set %curtest Line8-OrigWrap-MidSpace
   set %expline 9
   set %expcol 1
   set %expchar &asc c
-execute-procedure check-position-match
+run check-position-match
 
 ; We expect this line to be the wrapped "column."
   set %expltext "column."
-execute-procedure check-full-line
+run check-full-line
 
 previous-line
 ; We expect this line to have the trailing spaces left in place
   set %curtest Line8-OrigWrap-MSprevline
   set %expltext "And another, where spaces follow the text beyond the fill    "
-execute-procedure check-full-line
+run check-full-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Wrap on a zero-width break
@@ -270,18 +270,18 @@ read-file autotest.tfile
 
 12 goto-line
 end-of-line
-execute-procedure set-wrap-mode
+run set-wrap-mode
 simulate " "
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-FullWrap-zwb
   set %expline 13
   set %expcol 9
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
 
 ; The line is expected to contain oulder
   set %expltext "oulder. "
-execute-procedure check-full-line
+run check-full-line
 
 ; The previous line is expected to end with the zero-width break.
 previous-line
@@ -291,7 +291,7 @@ backward-character
   set %expline 12
   set %expcol 58
   set %expchar &blit 0x200b
-execute-procedure check-position-match
+run check-position-match
 
 ;
 ; Re-read file...
@@ -301,18 +301,18 @@ read-file autotest.tfile
 12 goto-line
 end-of-line
 ; Same results as with mode set expected
-execute-procedure unset-wrap-mode
+run unset-wrap-mode
 simulate " "
 ; Expect to be at end of the wrapped text - looking at the zwb.
   set %curtest Line12-OrigWrap-zwb
   set %expline 13
   set %expcol 9
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
 
 ; The line is expected to contain oulder
   set %expltext "oulder. "
-execute-procedure check-full-line
+run check-full-line
 
 ; The previous line is expected to end with the zero-width break.
 previous-line
@@ -322,7 +322,7 @@ backward-character
   set %expline 12
   set %expcol 58
   set %expchar &blit 0x200b
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Repeat with extra txt at the end.
@@ -336,15 +336,15 @@ read-file autotest.tfile
 12 goto-line
 end-of-line
 insert-string " xyzzy"
-execute-procedure set-wrap-mode
+run set-wrap-mode
 simulate " "
   set %curtest Line12+-FullWrap+xyzzy
   set %expline 13
   set %expcol 15
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
   set %expltext "oulder. xyzzy "
-execute-procedure check-full-line
+run check-full-line
 
 ;
 ; Re-read file...
@@ -354,15 +354,15 @@ read-file autotest.tfile
 12 goto-line
 end-of-line
 insert-string " xyzzy"
-execute-procedure unset-wrap-mode
+run unset-wrap-mode
 simulate " "
   set %curtest Line12-OrigWrap+xyzzy
   set %expline 13
   set %expcol 7
   set %expchar 10
-execute-procedure check-position-match
+run check-position-match
   set %expltext "xyzzy "
-execute-procedure check-full-line
+run check-full-line
 
 unmark-buffer
 

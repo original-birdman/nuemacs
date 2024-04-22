@@ -42,91 +42,91 @@ store-procedure run-test
 
 set %test "&neg 99"
 set %expect -99
-execute-procedure run-test
+run run-test
 
 set %test "&abs -123"
 set %expect 123
-execute-procedure run-test
+run run-test
 
 set %test "&add 1 2"
 set %expect 3
-execute-procedure run-test
+run run-test
 
 set %test "&sub 123 99"
 set %expect 24
-execute-procedure run-test
+run run-test
 
 set %test "&tim 99 11"
 set %expect 1089
-execute-procedure run-test
+run run-test
 
 set %test "&div 10 3"
 set %expect 3
-execute-procedure run-test
+run run-test
 
 set %test "&div 30 0"
 set %expect ZDIV
-execute-procedure run-test
+run run-test
 
 set %test "&mod 55 7"
 set %expect 6
-execute-procedure run-test
+run run-test
 
 set %test "&mod 55 0"
 set %expect ZDIV
-execute-procedure run-test
+run run-test
 
 set %test "&equ 7 7"
 set %expect TRUE
-execute-procedure run-test
+run run-test
 
 set %test "&les 5 6"
 set %expect TRUE
-execute-procedure run-test
+run run-test
 
 set %test "&gre 5 6"
 set %expect FALSE
-execute-procedure run-test
+run run-test
 
 set %test "&rad 12.6 18.3"
 set %expect 30.9
-execute-procedure run-test
+run run-test
 
 set %test "&rsu 0.3 12.7"
 set %expect -12.4
-execute-procedure run-test
+run run-test
 
 set %test "&rti 3.3 7.2"
 set %expect 23.76
-execute-procedure run-test
+run run-test
 
 set %test "&rti 3.3E333 7.2E333"
 set %expect INF
-execute-procedure run-test
+run run-test
 
 set %test "&rti -3.3E333 7.2E333"
 set %expect -INF
-execute-procedure run-test
+run run-test
 
 set %test "&rti -3.3E333 -7.2E333"
 set %expect INF
-execute-procedure run-test
+run run-test
 
 set %test "&rdv 346.71 12.7"
 set %expect 27.3
-execute-procedure run-test
+run run-test
 
 set %test "&rdv 346.71 0"
 set %expect INF
-execute-procedure run-test
+run run-test
 
 set %test "&rpw 12.3 4"
 set %expect 22888.6641
-execute-procedure run-test
+run run-test
 
 set %test "&r2i 12.493672"
 set %expect 12
-execute-procedure run-test
+run run-test
 
 ; When running under valgrind the TOBBIG result was always 0.
 ; But With the switch 64-bit ints for macro variables, they now
@@ -145,17 +145,17 @@ set .TOOBIG "TOOBIG"
 
 set %test "&r2i 12.493672E123"
 set %expect .TOOBIG
-execute-procedure run-test
+run run-test
 
 ; Test that -INF can be used as an input number
 ;
 set %test "&rti -3.3E333 -INF"
 set %expect INF
-execute-procedure run-test
+run run-test
 
 set %test "&r2i INF"
 set %expect .TOOBIG
-execute-procedure run-test
+run run-test
 
 ; Test for NAN or -NAN.
 ; FreeBSD gives NAN, but Linux gives NAN or -NAN!
@@ -163,7 +163,7 @@ execute-procedure run-test
 ;
 set %test "&seq NAN &xla - ~"~" &rti INF 0"
 set %expect FALSE
-execute-procedure run-test
+run run-test
 
 newline
 insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail

@@ -75,11 +75,11 @@ find-file autotest.tfile
 add-mode Magic
 
 set %test-report "START: Various property tests (part 2)"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   \p{Nd}\p{Po} searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
@@ -88,17 +88,17 @@ search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %expcol 12
   set %expchar &asc 3
   set %expmatch 0,1.2;
-execute-procedure check-position-match
+run check-position-match
 search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest Search2
   set %expline 5
   set %expcol 20
   set %expchar &asc 7
   set %expmatch 3:4'5!6*
-execute-procedure check-position-match
+run check-position-match
 
 set %test-report "  \P searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward 789\n
@@ -107,7 +107,7 @@ search-forward 789\n
   set %expcol 1
   set %expchar &asc H
   set %expmatch 789~n
-execute-procedure check-position-match
+run check-position-match
 ; ====
 search-forward \P{L}
   set %curtest Search not Letter
@@ -115,10 +115,10 @@ search-forward \P{L}
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ,
-execute-procedure check-position-match
+run check-position-match
 
 set %test-report "  \p{SM}{5} search"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward \p{SM}{5}
@@ -127,10 +127,10 @@ search-forward \p{SM}{5}
   set %expcol 7
   set %expchar &asc ~~
   set %expmatch +<=>|
-execute-procedure check-position-match
+run check-position-match
 
 set %test-report "  6-class search"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward \p{Lm}\p{Sm}\p{Ps}\p{Pe}\p{Nd}\p{Po}
@@ -139,7 +139,7 @@ search-forward \p{Lm}\p{Sm}\p{Ps}\p{Pe}\p{Nd}\p{Po}
   set %expcol 12
   set %expchar &asc z
   set %expmatch ˊ±{]3@
-execute-procedure check-position-match
+run check-position-match
 end-of-file
 ; ====
 search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
@@ -148,10 +148,10 @@ search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
   set %expcol 6
   set %expchar &asc T
   set %expmatch Td:8)[
-execute-procedure check-position-match
+run check-position-match
 
 set %test-report "  negative reverse search"
-execute-procedure report-status
+run report-status
 ; ====
 !force search-reverse \p{M}
   set %curtest "Reverse search for Mark (none there)"
@@ -159,7 +159,7 @@ execute-procedure report-status
   set %expcol 6
   set %expchar &asc T
   set %expmatch ""
-execute-procedure check-position-match
+run check-position-match
 
 ;
 select-buffer test-reports

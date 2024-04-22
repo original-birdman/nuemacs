@@ -14,7 +14,7 @@ store-procedure check-position-match
     set %test-report &cat %test-report &cat " - expected: " %expline
     set %fail &add %fail 1  
   !endif 
-  execute-procedure report-status
+  run report-status
 
   !if &equ $curcol %expcol
     set %test-report &cat %curtest &cat " - column OK: " $curcol
@@ -24,7 +24,7 @@ store-procedure check-position-match
     set %test-report &cat %test-report &cat " - expected: " %expcol
     set %fail &add %fail 1
   !endif 
-  execute-procedure report-status
+  run report-status
 
   !if &equ $curchar 10
     set %pchar "\n"
@@ -39,6 +39,6 @@ store-procedure check-position-match
     set %test-report &cat %test-report &cat " expected: " %expchar
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
   
 !endm

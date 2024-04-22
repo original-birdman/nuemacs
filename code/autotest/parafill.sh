@@ -88,7 +88,7 @@ store-procedure check-full-line
     set %test-report &cat %test-report $line
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 
 !endm
 
@@ -98,7 +98,7 @@ store-procedure check-full-line
 find-file autotest.tfile
 
 set %test-report "START: Various paragraph filling tests"
-execute-procedure report-status
+run report-status
 
 ; First check the zero-width char is there. In case it was
 ; accidentally removed in an edit....
@@ -107,7 +107,7 @@ add-mode Magic
 !force search-forward \u{200b}
 !if &equ 0 &len &grp 0
     set %test-report "The zero-width char in Russian is missing. Cannot continue"
-    execute-procedure report-status
+    run report-status
     select-buffer test-reports
     unmark-buffer
     !finish
@@ -116,7 +116,7 @@ delete-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Para1 tests"
-execute-procedure report-status
+run report-status
 
 1 goto-line
 60 set-fill-column
@@ -125,7 +125,7 @@ fill-paragraph
   set %expline 6
   set %expcol 1
   set %expchar 10
-execute-procedure check-position
+run check-position
 
 ; expect line 4 to end with "there"
 4 goto-line
@@ -135,7 +135,7 @@ previous-word
   set %expline 4
   set %expcol 55
   set %expchar &asc t
-execute-procedure check-position
+run check-position
 
 ; Paragraph2 tests
 ; next-paragraph is actually end of current one
@@ -150,7 +150,7 @@ previous-word       ; Now at b-o-l in para2
   set %expline 17
   set %expcol 11
   set %expchar &asc e
-execute-procedure check-position
+run check-position
 
 ; The "spin". at the end should be on its own
 2 previous-line
@@ -158,11 +158,11 @@ execute-procedure check-position
   set %expline 15
   set %expcol 11
   set %expchar 34  ; "
-execute-procedure check-position
+run check-position
 
   set %curtest Para2-justify-paragraph-linetext
   set %expltext "          ~"spin~"."
-execute-procedure check-full-line
+run check-full-line
 
 ; The text should have wrapped on a zero-width break between the ss in Russian
 ; Check that it did.
@@ -170,13 +170,13 @@ execute-procedure check-full-line
 3 previous-line
   set %curtest Para2-justify-paragraph-zwb1
   set %expltext "          sian, Матрица спинового гамильтониана, and the same in  Greek,"
-execute-procedure check-full-line
+run check-full-line
 
 ; This line should end with the zero-width break
 previous-line
   set %curtest Para2-justify-paragraph-zwb2
   set %expltext "          latter uses combining diacriticals.  Then we can have some Rus​"
-execute-procedure check-full-line
+run check-full-line
 
 ; Now on to para3, which has an over-long line
 ;
@@ -190,7 +190,7 @@ fill-paragraph
   set %expline 23
   set %expcol 1
   set %expchar 10
-execute-procedure check-position
+run check-position
 
 ; Line 19 should be a single word (as) with no spaces
 ; Line 20 should be overlong
@@ -201,7 +201,7 @@ execute-procedure check-position
   set %expline 19
   set %expcol 1
   set %expchar &asc a
-execute-procedure check-position
+run check-position
 20 goto-line
 end-of-line
 backward-character
@@ -209,13 +209,13 @@ backward-character
   set %expline 20
   set %expcol 60
   set %expchar &asc )
-execute-procedure check-position
+run check-position
 21 goto-line
   set %curtest Para3-fill-longline-paragraphD
   set %expline 21
   set %expcol 1
   set %expchar &asc o
-execute-procedure check-position
+run check-position
 
 ; Re-read file...
 unmark-buffer
@@ -230,18 +230,18 @@ end-of-file
 2 goto-line
   set %curtest WholeFile-numberlist-A
   set %expltext "     needs to contain a ~"selection~" of end-of-sentence characters.  Like"
-execute-procedure check-full-line
+run check-full-line
 
 6 goto-line
   set %curtest WholeFile-numberlist-B
   set %expltext "  2. This second paragraph will have some unicode characters in it, with"
-execute-procedure check-full-line
+run check-full-line
 
 17 goto-line
 beginning-of-line
   set %curtest WholeFile-numberlist-C
   set %expltext "     2,4-bis(tetra-phenyl-arsonium)-penta-thiocyonata-rhenium(VI)     or"
-execute-procedure check-full-line
+run check-full-line
 
 unmark-buffer
 

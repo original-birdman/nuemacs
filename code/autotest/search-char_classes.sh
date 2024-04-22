@@ -62,11 +62,11 @@ find-file autotest.tfile
 add-mode Magic
 
 set %test-report "START: Various Character Class tests"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ] in position 1 (start of range)"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward []-c]
@@ -75,18 +75,18 @@ search-forward []-c]
   set %expcol 3
   set %expchar &asc t
   set %expmatch a
-execute-procedure check-position-match
+run check-position-match
 search-forward []-c]+
   set %curtest Search2
   set %expline 1
   set %expcol 5
   set %expchar &asc h
   set %expmatch c
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ] in position 1 (literal)"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward []nq]
@@ -95,11 +95,11 @@ search-forward []nq]
   set %expcol 10
   set %expchar &asc x
   set %expmatch ]
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   - in position 1 (literal)"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward [-xyz]
@@ -108,20 +108,20 @@ search-forward [-xyz]
   set %expcol 8
   set %expchar &asc " "
   set %expmatch -
-execute-procedure check-position-match
+run check-position-match
 search-forward [-xyz]+
   set %curtest Search2
   set %expline 1
   set %expcol 15
   set %expchar &asc [
   set %expmatch xyzzy
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; This should do the same as the above - the "-" has moved, but the
 ; effect should be indentical.
 set %test-report "   - in final position (literal)"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward [xyz-]
@@ -130,18 +130,18 @@ search-forward [xyz-]
   set %expcol 8
   set %expchar &asc " "
   set %expmatch -
-execute-procedure check-position-match
+run check-position-match
 search-forward [xyz-]+
   set %curtest Search2
   set %expline 1
   set %expcol 15
   set %expchar &asc [
   set %expmatch xyzzy
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   - as range"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward [x-z]
@@ -150,18 +150,18 @@ search-forward [x-z]
   set %expcol 11
   set %expchar &asc y
   set %expmatch x
-execute-procedure check-position-match
+run check-position-match
 search-forward [x-z]+
   set %curtest Search2
   set %expline 1
   set %expcol 15
   set %expchar &asc [
   set %expmatch yzzy
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   - as range - inverted"
-execute-procedure report-status
+run report-status
 beginning-of-file
 ; ====
 search-forward [^x-z]
@@ -170,14 +170,14 @@ search-forward [^x-z]
   set %expcol 2
   set %expchar &asc a
   set %expmatch m
-execute-procedure check-position-match
+run check-position-match
 search-forward [^x-z]+
   set %curtest Search2
   set %expline 1
   set %expcol 10
   set %expchar &asc x
   set %expmatch "atch - ]"
-execute-procedure check-position-match
+run check-position-match
 
 ;
 select-buffer test-reports

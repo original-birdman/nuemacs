@@ -72,12 +72,12 @@ execute-file autotest/check-position-match.rc
 find-file autotest.tfile
 
 set %test-report "START: Magic On then Off tests"
-execute-procedure report-status
+run report-status
 
 ; ==== Run in Magic, non-Exact
 ;
 set %test-report "   сейчас searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 delete-mode Exact
 add-mode Magic
@@ -89,12 +89,12 @@ add-mode Magic
   set %expcol 16
   set %expchar 10
   set %expmatch "СЕЙЧАС"
-execute-procedure check-position-match
+run check-position-match
 
 ; Now switch Magic off and Exact on. Search for ASCII
 ;
 set %test-report "   stop searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 delete-mode Magic
@@ -105,7 +105,7 @@ search-forward stop
   set %expcol 11
   set %expchar &asc " "
   set %expmatch "stop"
-execute-procedure check-position-match
+run check-position-match
 
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-

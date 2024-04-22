@@ -43,7 +43,7 @@ store-procedure run-xlat
     set %test-report &ptf "%s FAILED. %s not %s" %test .result %expect
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 
 !endm
 
@@ -52,35 +52,35 @@ set %input  abcde
 set %from   ae
 set %to     xz
 set %expect xbcdz
-execute-procedure run-xlat
+run run-xlat
 
 set %test "Simple truncate"
 set %input  abcde
 set %from   ae
 set %to     x
 set %expect xbcd
-execute-procedure run-xlat
+run run-xlat
 
 set %test "Simple omit"
 set %input  abcde
 set %from   cdeab
 set %to     x
 set %expect x
-execute-procedure run-xlat
+run run-xlat
 
 set %test "Add accents"
 set %input  abcde
 set %from   ce
 set %to     çé
 set %expect abçdé
-execute-procedure run-xlat
+run run-xlat
 
 set %test "Remove accents"
 set %input  abçdé
 set %from   çé
 set %to     ce
 set %expect abcde
-execute-procedure run-xlat
+run run-xlat
 
 set %test "Add extended chars..."
 set %input  abcde
@@ -91,7 +91,7 @@ set %from   ce
 ;   U+20eb  Combining Long Double Solidus Overlay
 set %to     ç⃫é
 set %expect abç⃫dé
-execute-procedure run-xlat
+run run-xlat
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports

@@ -64,7 +64,7 @@ execute-file autotest/check-position.rc
 find-file autotest.tfile
 
 set %test-report "START: Miscellaneuos tests"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 
@@ -72,7 +72,7 @@ beginning-of-file
 ; Should collapse multiple-spaces to one
 ;
 set %test-report "leave-one-white"
-execute-procedure report-status
+run report-status
 
 4 next-word             ; reach the multi-space part
 leave-one-white
@@ -80,13 +80,13 @@ leave-one-white
   set %expline 1
   set %expcol 23
   set %expchar &asc "w"
-execute-procedure check-position
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Should collapse multiple-spaces to none
 ;
 set %test-report "white-delete"
-execute-procedure report-status
+run report-status
 
 2 goto-line
 4 next-word             ; reach the multi-space part
@@ -95,13 +95,13 @@ white-delete
   set %expline 2
   set %expcol 22
   set %expchar &asc "w"
-execute-procedure check-position
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; This should ADD a space where there was not one.
 ;
 set %test-report "leave-one-white"
-execute-procedure report-status
+run report-status
 
 3 goto-line
 -2 leave-one-white
@@ -109,21 +109,21 @@ execute-procedure report-status
   set %expline 3
   set %expcol 2
   set %expchar &asc "S"
-execute-procedure check-position
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Try to delete spaces when there are none.
 ; Shodul return False (so have ot force it).
 ;
 set %test-report "white-delete"
-execute-procedure report-status
+run report-status
 4 goto-line
 !force white-delete
   set %curtest " no spaces to remove"
   set %expline 4
   set %expcol 1
   set %expchar &asc "S"
-execute-procedure check-position
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; This buffer is now shorter than it was.
@@ -143,7 +143,7 @@ pipe-command "md5sum autotest.tfile"
     set %test-report &cat %test-report &cat " - expected: " .expect
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 select-buffer "autotest.tfile"
 delete-other-windows
 
@@ -168,7 +168,7 @@ overwrite-string .ov_text
   set %expline 1
   set %expcol &add .orig_col .ov_text_len
   set %expchar 10
-execute-procedure check-position
+run check-position
 
 ; Check the character at the makr is what we expect.
 ;
@@ -179,7 +179,7 @@ back-to-pin
   set %expline 1
   set %expcol .orig_col
   set %expchar &asc &lef .ov_text 1
-execute-procedure check-position
+run check-position
 
 unmark-buffer
 

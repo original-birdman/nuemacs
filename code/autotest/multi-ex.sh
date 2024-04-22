@@ -72,14 +72,14 @@ execute-file autotest/check-position-match.rc
 find-file autotest.tfile
 
 set %test-report "START: Multi-unicode char grapheme"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  search"
-execute-procedure report-status
+run report-status
 
 6 goto-line
 end-of-line
@@ -89,7 +89,7 @@ search-reverse "x"
   set %expcol 5
   set %expchar &asc x
   set %expmatch "x"
-execute-procedure check-position-match
+run check-position-match
 ; Back 2 chars should step over the 9-byte grapheme to the other x).
 2 backward-character
   set %curtest Search2
@@ -97,7 +97,7 @@ execute-procedure check-position-match
   set %expcol 3
   set %expchar &asc x
   set %expmatch "x"
-execute-procedure check-position-match
+run check-position-match
 
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-

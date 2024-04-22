@@ -78,7 +78,7 @@ execute-file autotest/check-matchcount.rc
 find-file autotest.tfile
 
 set %test-report "START: Various Magic property tests"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
@@ -86,7 +86,7 @@ add-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Upper, punctuation - \p{Lu}{3}\p{P}"
-execute-procedure report-status
+run report-status
 ; ====
 search-forward \p{Lu}{3}\p{P}   ; should match ΔΈΝ. ...
   set %curtest Search1
@@ -94,7 +94,7 @@ search-forward \p{Lu}{3}\p{P}   ; should match ΔΈΝ. ...
   set %expcol 16
   set %expchar 10
   set %expmatch ΔΈΝ.
-execute-procedure check-position-match
+run check-position-match
 
 ; ====
 search-forward \p{Lu}{3}\p{P}   ; ...now TCH!
@@ -103,11 +103,11 @@ search-forward \p{Lu}{3}\p{P}   ; ...now TCH!
   set %expcol 63
   set %expchar &asc )
   set %expmatch TCH!
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  !upper, space, 3 numbers - \P{Lu} \p{N}{3}"
-execute-procedure report-status
+run report-status
 beginning-of-file
 
 set %mcount 0
@@ -123,9 +123,9 @@ set %mcount 0
   set %expcol 39
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 4
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse "\P{Lu} \p{N}{3}"
@@ -134,11 +134,11 @@ execute-procedure check-matchcount
   set %expcol 34
   set %expchar &asc t
   set %expmatch "t 912"
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  lower, anything, Upper - \p{Ll}\X\p{LU}
-execute-procedure report-status
+run report-status
 beginning-of-file
 
 set %mcount 0
@@ -154,9 +154,9 @@ set %mcount 0
   set %expcol 24
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 10      ; 10 since GGR4.162 - with 1 overlapping
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search (x2) and check match
 2 search-reverse "\p{Ll}\X\p{LU}"
@@ -165,7 +165,7 @@ execute-procedure check-matchcount
   set %expcol 2
   set %expchar &asc ὐ
   set %expmatch ὐΔΈ
-execute-procedure check-position-match
+run check-position-match
 
 select-buffer test-reports
 newline

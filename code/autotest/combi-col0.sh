@@ -63,21 +63,21 @@ execute-file autotest/check-position.rc
 find-file autotest.tfile
 
 set %test-report "START: Perverse combining char at start-of-line"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  search"
-execute-procedure report-status
+run report-status
 
 6 goto-line
   set %curtest Pos1
   set %expline 6
   set %expcol 1
   set %expchar &blit 0x0303
-execute-procedure check-position
+run check-position
 
 ; Forward one char should take us to "a" in the next column
 forward-character
@@ -85,7 +85,7 @@ forward-character
   set %expline 6
   set %expcol 2
   set %expchar &asc a
-execute-procedure check-position
+run check-position
 
 ; Forward 2 words takes as past "a", then "b"
 ; then backward-character twice should be at the ~ at start if line
@@ -96,7 +96,7 @@ execute-procedure check-position
   set %expline 7
   set %expcol 1
   set %expchar &blit 0x0303
-execute-procedure check-position
+run check-position
 
 ; Forward one char should take us to "b" in the next column
 forward-character
@@ -104,7 +104,7 @@ forward-character
   set %expline 7
   set %expcol 2
   set %expchar &asc b
-execute-procedure check-position
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports

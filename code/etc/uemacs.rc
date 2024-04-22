@@ -302,7 +302,7 @@ store-procedure toggle-lmode one_pass   ; toggle local mode
     set %type-mode local
     set %add-func add-mode
     set %del-func delete-mode
-    execute-procedure _mytoggle-mode
+    run _mytoggle-mode
 !endm
 
 store-procedure toggle-gmode one_pass   ; toggle global mode
@@ -310,7 +310,7 @@ store-procedure toggle-gmode one_pass   ; toggle global mode
     set %type-mode global
     set %add-func add-global-mode
     set %del-func delete-global-mode
-    execute-procedure _mytoggle-mode
+    run _mytoggle-mode
 !endm
 ;
 ; delete spaces right until next non-space char
@@ -572,7 +572,7 @@ store-procedure showdir
 ; Get the full pathname...expected to be supplied internally by C-code
 ; (via userproc_arg in @"...) and that will have been expanded to a
 ; full-pathname.
-; If the user calls this "manually" (Esc-x execute-procedure showdir)
+; If the user calls this "manually" (Esc-x run showdir)
 ; and gets prompted we will *still* expand it.
 ;
 ; We must set $uproc_opts just before getting .udir as it is reset on fetch.
@@ -847,7 +847,7 @@ store-procedure make-descr not_mb one_pass
   set .remove_xs 0
   !if &not &equ &abs $uproc_lptotal 2
     set .remove_xs 1
-    execute-procedure _wsp2xs   ; Leading spaces => "x"s
+    run _wsp2xs   ; Leading spaces => "x"s
   !endif
 
   !if &les $uproc_lptotal 0     ; Justify?
@@ -858,7 +858,7 @@ store-procedure make-descr not_mb one_pass
   .mdc justify-paragraph
   back-to-pin                   ; Back to start to remove added newlines.
   2 kill-to-end-of-line
-  execute-procedure del-sp-right
+  run del-sp-right
 
   !if &equ .remove_xs 1         ; Change xs to what was there originally
     %old-wspcols delete-next-character

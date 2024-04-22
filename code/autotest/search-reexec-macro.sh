@@ -72,7 +72,7 @@ store-procedure check-count
     set %test-report &cat %test-report &cat " - expected: " %expcalls
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 !endm
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -81,54 +81,54 @@ find-file autotest.tfile
 add-mode Exact
 
 set %test-report "START: Various Character Class tests"
-execute-procedure report-status
+run report-status
 
 set %calls 0
 store-procedure tester
     set %test-report "Entering tester"
-    execute-procedure report-status
+    run report-status
     search-forward xyzzy
     search-reverse atc
     set %calls &add %calls 1
     set %test-report "Leaving tester"
-    execute-procedure report-status
+    run report-status
 !endm
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   search in reexec macro"
-execute-procedure report-status
+run report-status
 beginning-of-file
 
-execute-procedure tester
+run tester
   set %curtest "Run tester"
   set %expline 1
   set %expcol 2
   set %expchar &asc a
   set %expmatch atc
-execute-procedure check-position-match
+run check-position-match
   set %expcalls 1
-execute-procedure check-count
+run check-count
 
-execute-procedure tester
+run tester
   set %curtest "Run tester again"
   set %expline 1
   set %expcol 2
   set %expchar &asc a
   set %expmatch atc
-execute-procedure check-position-match
+run check-position-match
   set %expcalls 2
-execute-procedure check-count
+run check-count
 
-execute-procedure tester    ; Must run it again to be able rexecute it!
+run tester    ; Must run it again to be able rexecute it!
 2 reexecute
   set %curtest "Run tester again"
   set %expline 1
   set %expcol 2
   set %expchar &asc a
   set %expmatch atc
-execute-procedure check-position-match
+run check-position-match
   set %expcalls 5
-execute-procedure check-count
+run check-count
 
 
 select-buffer test-reports

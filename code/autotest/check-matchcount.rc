@@ -10,5 +10,5 @@ store-procedure check-matchcount
     set %test-report &cat %test-report &cat " - expected: " %expcount
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 !endm

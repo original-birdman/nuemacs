@@ -66,11 +66,11 @@ find-file autotest.tfile
 add-mode Exact
 
 set %test-report "START: Various Character Class tests"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   reverse search to start of file"
-execute-procedure report-status
+run report-status
 end-of-file
 ; ====
 search-reverse match
@@ -79,7 +79,7 @@ search-reverse match
   set %expcol 1
   set %expchar &asc m
   set %expmatch match
-execute-procedure check-position-match
+run check-position-match
 
 end-of-file
 add-mode Magic
@@ -90,7 +90,7 @@ search-reverse match
   set %expcol 1
   set %expchar &asc m
   set %expmatch match
-execute-procedure check-position-match
+run check-position-match
 
 end-of-file
 ; ====
@@ -100,14 +100,14 @@ search-reverse (\X*)(match)
   set %expcol 1
   set %expchar &asc m
   set %expmatch match
-execute-procedure check-position-match
+run check-position-match
 
   set %grpno 1
   set %expmatch ""
-execute-procedure check-group
+run check-group
   set %grpno 2
   set %expmatch match
-execute-procedure check-group
+run check-group
 
 ;
 select-buffer test-reports

@@ -69,11 +69,11 @@ add-mode Exact
 add-mode Magic
 
 set %test-report "START: Start/end line tests for Magic"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   Case sensitive"
-execute-procedure report-status
+run report-status
 
 ; ====
 beginning-of-file
@@ -83,7 +83,7 @@ search-forward ^Start
   set %expcol 6
   set %expchar &asc " "
   set %expmatch Start
-execute-procedure check-position-match
+run check-position-match
 
 end-of-file
 search-reverse ^Start
@@ -92,7 +92,7 @@ search-reverse ^Start
   set %expcol 1
   set %expchar &asc S
   set %expmatch Start
-execute-procedure check-position-match
+run check-position-match
 
 ; ====
 beginning-of-file
@@ -109,9 +109,9 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 1
-execute-procedure check-matchcount
+run check-matchcount
 
 ; ====
 beginning-of-file
@@ -129,9 +129,9 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 3
-execute-procedure check-matchcount
+run check-matchcount
 
 ; ====
 ; Now search back for them all
@@ -148,9 +148,9 @@ set %mcount 0
   set %expcol 1
   set %expchar &asc S
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 3
-execute-procedure check-matchcount
+run check-matchcount
 
 ;   Now the End ones...
 ; ====
@@ -162,7 +162,7 @@ search-forward End$
   set %expcol 35
   set %expchar 10
   set %expmatch End
-execute-procedure check-position-match
+run check-position-match
 
 end-of-file
 search-reverse End$
@@ -171,7 +171,7 @@ search-reverse End$
   set %expcol 32
   set %expchar &asc E
   set %expmatch End
-execute-procedure check-position-match
+run check-position-match
 
 ; ====
 beginning-of-file
@@ -188,9 +188,9 @@ set %mcount 0
   set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 1
-execute-procedure check-matchcount
+run check-matchcount
 
 ; ====
 beginning-of-file
@@ -208,9 +208,9 @@ set %mcount 0
   set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 3
-execute-procedure check-matchcount
+run check-matchcount
 
 ; ====
 ; Now search back for them all
@@ -227,9 +227,9 @@ set %mcount 0
   set %expcol 32
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 3
-execute-procedure check-matchcount
+run check-matchcount
 
 
 ;

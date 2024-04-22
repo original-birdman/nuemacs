@@ -93,12 +93,12 @@ execute-file autotest/check-matchcount.rc
 find-file autotest.tfile
 
 set %test-report "START: Various search tests"
-execute-procedure report-status
+run report-status
 
 ; ==== Run in EXACT mode
 ;
 set %test-report "   δένmañanaСЕ searches - EXACT"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 delete-mode Magic
@@ -116,9 +116,9 @@ set %mcount 0
   set %expcol 14
   set %expchar &asc Й
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 1
-execute-procedure check-matchcount
+run check-matchcount
 ; Reverse search and check match
   search-reverse δένmañanaСЕ
   set %curtest Search1-reversed
@@ -126,12 +126,12 @@ execute-procedure check-matchcount
   set %expcol 3
   set %expchar &asc δ
   set %expmatch δένmañanaСЕ
-execute-procedure check-position-match
+run check-position-match
 
 ; ==== Re-run in non-EXACT mode
 ;
 set %test-report "   δένmañanaСЕ searches - no EXACT"
-execute-procedure report-status
+run report-status
 beginning-of-file
 delete-mode Exact
 delete-mode Magic
@@ -149,9 +149,9 @@ set %mcount 0
   set %expcol 14
   set %expchar &asc Й
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 3
-execute-procedure check-matchcount
+run check-matchcount
 ; Reverse search and check match
   search-reverse δένmañanaСЕ
   set %curtest Search2-reversed
@@ -159,12 +159,12 @@ execute-procedure check-matchcount
   set %expcol 3
   set %expchar &asc Δ
   set %expmatch ΔΈΝMAÑANAСЕ
-execute-procedure check-position-match
+run check-position-match
 
 ; ==== Check that Magic active characters are taken literally
 ;
 set %test-report "   Magic active characters are taken literally"
-execute-procedure report-status
+run report-status
 beginning-of-file
 search-forward (a|b)*\s\p{L}[]??E
 ; Where did we end up, and wat did we match?
@@ -173,7 +173,7 @@ search-forward (a|b)*\s\p{L}[]??E
   set %expcol 19
   set %expchar &asc N
   set %expmatch (a|b)*\s\p{L}[]??E
-execute-procedure check-position-match
+run check-position-match
 
 ; Show the report...
 ;

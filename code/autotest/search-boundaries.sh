@@ -66,12 +66,12 @@ execute-file autotest/check-matchcount.rc
 find-file autotest.tfile
 
 set %test-report "START: Various boundary searches"
-execute-procedure report-status
+run report-status
 
 ; ==== Run in EXACT mode
 ;
 set %test-report " forward Elba search"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 delete-mode Magic
@@ -89,9 +89,9 @@ set %mcount 0
   set %expcol 26
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 2
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Now run a reverse search for Able
 set %mcount 0
@@ -107,9 +107,9 @@ set %mcount 0
   set %expcol 1
   set %expchar &asc A
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 2
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Now repeat the above in Magic mode with a magic string that
 ; will match the same things.
@@ -128,9 +128,9 @@ set %mcount 0
   set %expcol 26
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 2
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Now run a reverse search for Able
 set %mcount 0
@@ -146,9 +146,9 @@ set %mcount 0
   set %expcol 1
   set %expchar &asc A
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 2
-execute-procedure check-matchcount
+run check-matchcount
 
 
 ; Show the report...

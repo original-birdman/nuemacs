@@ -548,7 +548,7 @@ End macro .............   ^X  )
 Execute macro .........   ^X  E         (replay keys)
 Execute macro .........   ^X  V         (replay commands - experimental)
 Store procedure ....... not bound       store-procedure
-Execute procedure ..... Meta ^E         execute-procedure proc-name
+Execute procedure ..... Meta ^E         execute-procedure/run proc-name
 Store pttable ......... not bound       store-pttable
 Set pttable ........... not bound       set-pttable
 Toggle ptmode  ........ not bound       (but can be toggled via ^XT)
@@ -578,7 +578,7 @@ code:
 will set .calls to 1 on its first use if .calls isn't set elsewhere.
 
 [ Numbered macros are no longer added by default, as store-procedure,
-  execute-procedure, and buffer-to-key provides a better way.
+  execute-procedure (run), and buffer-to-key provides a better way.
 Store macro ........... not bound       store-macro nn
 Execute macro nn ...... not bound       execute-macro-1 ... execute-macro-40]
 
@@ -821,7 +821,7 @@ store-procedure <proc-name> [flags]
     (which can be a maximum of 14 characters in length).
     You may then call this proc-name within a macro in the same way as
     you call any builtin function, but preceding it with:
-        execute-procedure
+        execute-procedure (or run)
     The macros may be bound to a key sequence using buffer-to-key.
     The optional flag may be:
         skip_in_macro       do not log this when macro-recording

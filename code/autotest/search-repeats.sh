@@ -77,11 +77,11 @@ execute-file autotest/check-matchcount.rc
 find-file autotest.tfile
 
 set %test-report "START: Various magic repeating tests"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab*c searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 add-mode Magic
@@ -99,9 +99,9 @@ set %mcount 0
   set %expcol 15
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 7
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse ab*c
@@ -110,11 +110,11 @@ execute-procedure check-matchcount
   set %expcol 13
   set %expchar &asc a
   set %expmatch ac
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab*?c searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 add-mode Magic
@@ -133,9 +133,9 @@ set %mcount 0
   set %expcol 15
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 7
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse ab*?c
@@ -144,11 +144,11 @@ execute-procedure check-matchcount
   set %expcol 13
   set %expchar &asc a
   set %expmatch ac
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab{2,4}c searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 add-mode Magic
@@ -166,9 +166,9 @@ set %mcount 0
   set %expcol 7
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 3
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse ab{2,4}c
@@ -177,11 +177,11 @@ execute-procedure check-matchcount
   set %expcol 1
   set %expchar &asc a
   set %expmatch abbbbc
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab+ searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 add-mode Magic
@@ -199,9 +199,9 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc c
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 4
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse ab+
@@ -210,11 +210,11 @@ execute-procedure check-matchcount
   set %expcol 1
   set %expchar &asc a
   set %expmatch abbbb
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab+? searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 add-mode Magic
@@ -232,9 +232,9 @@ set %mcount 0
   set %expcol 3
   set %expchar &asc b
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 4
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse ab+?
@@ -243,7 +243,7 @@ execute-procedure check-matchcount
   set %expcol 1
   set %expchar &asc a
   set %expmatch ab
-execute-procedure check-position-match
+run check-position-match
 
 ;
 select-buffer test-reports

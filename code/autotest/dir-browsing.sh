@@ -45,7 +45,7 @@ store-procedure run-test
     set %test-report &ptf "FAIL: %s - gave %s (exp: %s)" %test .res %expect
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 !endm
 
 ; Open the current directory
@@ -55,7 +55,7 @@ find-file "."
 set $discmd True
 set %test "&seq $cbufname ~"//directory~""
 set %expect TRUE
-execute-procedure run-test
+run run-test
 
 ; Find a file we know is there and open it (dive in)
 ;
@@ -63,7 +63,7 @@ search-forward main.c
 simulate d
 set %test "&seq $cbufname main.c"
 set %expect TRUE
-execute-procedure run-test
+run run-test
 
 ; Now open the parent (back to where we started)
 ;
@@ -72,7 +72,7 @@ open-parent
 set $discmd True
 set %test "&seq $cbufname ~"//directory~""
 set %expect TRUE
-execute-procedure run-test
+run run-test
 
 ; Go up from this directory and "check" we went up
 ;
@@ -83,7 +83,7 @@ set $discmd True
 set %ncpath $cfname
 set %test "&les &len %ncpath &len %ocpath"
 set %expect TRUE
-execute-procedure run-test
+run run-test
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports

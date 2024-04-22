@@ -65,7 +65,7 @@ execute-file autotest/check-position-matchlen.rc
 find-file autotest.tfile
 
 set %test-report "START: Query replace testing"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
@@ -79,65 +79,65 @@ add-mode Exact
 ;
 store-procedure check1
   set %test-report "  replace 1"
-  execute-procedure report-status
+  run report-status
   set %curtest Replace-Yes
   set %expline 1
   set %expcol 2
   set %expchar &asc "e"
   set %expmatchlen 3
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  replace 2"
-  execute-procedure report-status
+  run report-status
   set %curtest Replace-No
   set %expline 1
   set %expcol 24
   set %expchar &asc "e"
   set %expmatchlen 3
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  replace 3"
-  execute-procedure report-status
+  run report-status
   set %curtest replace-Yes
   set %expline 2
   set %expcol 2
   set %expchar &asc "e"
   set %expmatchlen 3
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check4
   set %test-report "  replace 4"
-  execute-procedure report-status
+  run report-status
   set %curtest Replace-No
   set %expline 2
   set %expcol 42
   set %expchar &asc "e"
   set %expmatchlen 3
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check5
   set %test-report "  replace 5"
-  execute-procedure report-status
+  run report-status
   set %curtest Replace-ALL
   set %expline 4
   set %expcol 31
   set %expchar &asc "e"
   set %expmatchlen 3
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 ; After it completes we will be after the last replaced string
 ; but the match will be invalidated.
 store-procedure check6
   set %test-report "  replace 6"
-  execute-procedure report-status
+  run report-status
   set %curtest Replace-ALL
   set %expline 4
   set %expcol 35
   set %expchar &asc "!"
   set %expmatchlen 0
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 
 ; Now set-up the control buffer
@@ -153,7 +153,7 @@ simulate-incr "!" "check5"
 ;
 query-replace-string "ext" "!!!!"
 ; Run the final test - query replace has exited....
-execute-procedure check6
+run check6
 unmark-buffer
 ;
 select-buffer test-reports

@@ -75,11 +75,11 @@ execute-file autotest/check-position-match.rc
 find-file autotest.tfile
 
 set %test-report "START: Various Character Class/Closure tests"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   [\p{Nd}\p{Po}]* searches"
-execute-procedure report-status
+run report-status
 beginning-of-file
 add-mode Exact
 add-mode Magic
@@ -91,7 +91,7 @@ search-forward [\p{Nd}\p{Po}]*\X\n
   set %expcol 1
   set %expchar &asc o
   set %expmatch s~n
-execute-procedure check-position-match
+run check-position-match
 ; ====
 search-forward [\p{Nd}\p{Po}]+\X\n      ; Don't test this one...
 ; Wipe out memory of this search so we don't find the overlapping ones
@@ -103,7 +103,7 @@ search-forward [\p{Nd}\p{Po}]+\X\n
   set %expcol 1
   set %expchar &asc N
   set %expmatch 0,1.2;3:4'5!6*7@8?9~n
-execute-procedure check-position-match
+run check-position-match
 ; ====
 search-reverse \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest "Search back for NPNPNPNP"
@@ -111,7 +111,7 @@ search-reverse \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %expcol 16
   set %expchar &asc 5
   set %expmatch 5!6*7@8?
-execute-procedure check-position-match
+run check-position-match
 
 ;
 select-buffer test-reports

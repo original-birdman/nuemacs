@@ -68,7 +68,7 @@ store-procedure check-line
     set %test-report &cat %test-report &cat " - expected: " %expline
     set %fail &add %fail 1  
   !endif
-  execute-procedure report-status
+  run report-status
 
 !endm
 
@@ -79,7 +79,7 @@ store-procedure check-line
 find-file autotest.tfile
 
 set %test-report "START: Various Magic replacment tests"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
@@ -87,7 +87,7 @@ add-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Append counter"
-execute-procedure report-status
+run report-status
 
 ; Do the work
 beginning-of-file
@@ -98,20 +98,20 @@ replace-string "^(...)" "${1}-${@}"
 beginning-of-file
 set %curtest "Counter replace"
 set %expline "ABC-1"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "XYZ-2"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "GML-3"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "7UP-4"
-execute-procedure check-line
+run check-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Reorder groups"
-execute-procedure report-status
+run report-status
 
 ; Do the work
 ;
@@ -125,20 +125,20 @@ replace-string "^(.)(.)(.)" "BOL ${2}${3}${1} EOL"
 beginning-of-file
 set %curtest "Reorder match groups"
 set %expline "BOL BCA EOL"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "BOL YZX EOL"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "BOL MLG EOL"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "BOL UP7 EOL"
-execute-procedure check-line
+run check-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Function calls and groups"
-execute-procedure report-status
+run report-status
 
 ; Do the work
 ;
@@ -154,20 +154,20 @@ replace-string "^(...)" "${&tim ${1} 6}"
 beginning-of-file
 set %curtest "number multiplication"
 set %expline "0"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "0"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "0"
-execute-procedure check-line
+run check-line
 next-line
 set %expline "42"
-execute-procedure check-line
+run check-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Function calls groups and counters"
-execute-procedure report-status
+run report-status
 
 ; Do the work
 ;
@@ -183,16 +183,16 @@ replace-string "^.(.)." "${&tim &asc ${1} ${@:start=2,incr=3}}"
 beginning-of-file
 set %curtest "number multiplication"
 set %expline "132"              ; 66 * 2
-execute-procedure check-line
+run check-line
 next-line
 set %expline "445"              ; 89 * 5
-execute-procedure check-line
+run check-line
 next-line
 set %expline "616"              ; 77 * 8
-execute-procedure check-line
+run check-line
 next-line
 set %expline "935"              ; 85 * 11
-execute-procedure check-line
+run check-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Unmark (modified) autotest.tfile at end of tests...

@@ -66,7 +66,7 @@ execute-file autotest/check-position-matchlen.rc
 find-file autotest.tfile
 
 set %test-report "START: Incremental search testing"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
@@ -80,33 +80,33 @@ add-mode Exact
 ;
 store-procedure check1
   set %test-report "  search for s"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-s
   set %expline 1
   set %expcol 10
   set %expchar &asc "o"
   set %expmatchlen 1
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for i"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-i
   set %expline 1
   set %expcol 16
   set %expchar &asc "l"
   set %expmatchlen 2
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  search for m"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-m
   set %expline 4
   set %expcol 15
   set %expchar &asc "p"
   set %expmatchlen 3
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 
 ; Now set up the control buffer
@@ -129,33 +129,33 @@ incremental-search
 ; Replace the forward test results
 store-procedure check1
   set %test-report "  search for s"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-s
   set %expline 4
   set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 1
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for i"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-i
   set %expline 4
   set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 2
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  search for m"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-m
   set %expline 4
   set %expcol 12
   set %expchar &asc "s"
   set %expmatchlen 3
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 
 ; The control buffer is the same as for the forward search.
@@ -178,33 +178,33 @@ reverse-incremental-search
 
 store-procedure check1
   set %test-report "  search for b"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-b
   set %expline 5
   set %expcol 3
   set %expchar &asc "b"
   set %expmatchlen 1
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for next b"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-b
   set %expline 5
   set %expcol 4
   set %expchar &asc "b"
   set %expmatchlen 2
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  Re-search for next bb (overlap)"
-  execute-procedure report-status
+  run report-status
   set %curtest Research-bb
   set %expline 5
   set %expcol 5
   set %expchar &asc "b"
   set %expmatchlen 2
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 
 ; Then set up the control buffer for next match
@@ -225,33 +225,33 @@ incremental-search
 
 store-procedure check1
   set %test-report "  rev search for b"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-b
   set %expline 5
   set %expcol 8
   set %expchar &asc "b"
   set %expmatchlen 1
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  rev search for next b"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-b
   set %expline 5
   set %expcol 7
   set %expchar &asc "b"
   set %expmatchlen 2
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  Re-rev search for next bb"
-  execute-procedure report-status
+  run report-status
   set %curtest Research-bb
   set %expline 5
   set %expcol 4
   set %expchar &asc b
   set %expmatchlen 2
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 
 ; Then set up the control buffer for next reverse match
@@ -274,33 +274,33 @@ reverse-incremental-search
 
 store-procedure check1
   set %test-report "  search for first issi"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-issi
   set %expline 6
   set %expcol 6
   set %expchar &asc "s"
   set %expmatchlen 4
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check2
   set %test-report "  search for next issi"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-issi-again
   set %expline 6
   set %expcol 9
   set %expchar &asc "p"
   set %expmatchlen 4
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 store-procedure check3
   set %test-report "  search for second next issi"
-  execute-procedure report-status
+  run report-status
   set %curtest Search-issi-againx2
   set %expline 6
   set %expcol 21
   set %expchar &asc "p"
   set %expmatchlen 4
-  execute-procedure check-position-matchlen
+  run check-position-matchlen
 !endm
 
 ; Then set up the control buffer for next reverse match

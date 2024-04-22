@@ -55,7 +55,7 @@ store-procedure check-kill
     set %test-report &cat %test-report &cat " - expected: " %expkill
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 !endm
 
 set %test_name &env TNAME
@@ -72,11 +72,11 @@ set %ok 0
 find-file autotest.tfile
 
 set %test-report "START: Character deletion tests"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "Backwards tests"
-execute-procedure report-status
+run report-status
 
 ; We should always be on line 1
 ;
@@ -87,9 +87,9 @@ set $curcol 3
   set %curtest "Delete forwards 1"
   set %expcol 3
   set %expchar &asc „
-execute-procedure check-position
+run check-position
   set %expkill "‘“”"
-execute-procedure check-kill
+run check-kill
 unmark-buffer
 
 ; Read the file anew each time
@@ -101,9 +101,9 @@ set $curcol 24
   set %curtest "Delete forwards 2"
   set %expcol 24
   set %expchar &asc б
-execute-procedure check-position
+run check-position
   set %expkill "βγδω АБВГДа"
-execute-procedure check-kill
+run check-kill
 unmark-buffer
 
 ; Read the file anew each time
@@ -116,9 +116,9 @@ set $curcol 38
   set %curtest "Delete forwards 3"
   set %expcol 38
   set %expchar &asc ‘
-execute-procedure check-position
+run check-position
   set %expkill &ptf "%s%s%s" "д" ~n "–—"
-execute-procedure check-kill
+run check-kill
 unmark-buffer
 
 ; Read the file anew each time
@@ -130,9 +130,9 @@ set $curcol 16
   set %curtest "Delete backwards 1"
   set %expcol 10
   set %expchar &asc €
-execute-procedure check-position
+run check-position
   set %expkill "‰™œŠŸž"
-execute-procedure check-kill
+run check-kill
 unmark-buffer
 
 ; Read the file anew each time
@@ -144,9 +144,9 @@ set $curcol 39
   set %curtest "Delete backwards 2"
   set %expcol 29
   set %expchar &asc ~n
-execute-procedure check-position
+run check-position
   set %expkill "АБВГДабвгд"
-execute-procedure check-kill
+run check-kill
 unmark-buffer
 
 ; Read the file anew each time
@@ -159,9 +159,9 @@ set $curcol 16
   set %curtest "Delete backwards 3"
   set %expcol 33
   set %expchar &asc €
-execute-procedure check-position
+run check-position
   set %expkill &ptf "%s%s%s" "Дабвгд" ~n "–—‘“”„†•…‰™œŠŸž"
-execute-procedure check-kill
+run check-kill
 unmark-buffer
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-

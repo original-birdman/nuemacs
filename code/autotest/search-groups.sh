@@ -80,7 +80,7 @@ execute-file autotest/check-group.rc
 find-file autotest.tfile
 
 set %test-report "START: Various Magic group tests"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
@@ -88,7 +88,7 @@ add-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  (Upper) followed by (lower)"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %mcount 0
@@ -104,9 +104,9 @@ set %mcount 0
   set %expcol 15
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 11
-execute-procedure check-matchcount
+run check-matchcount
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Reverse search and check match
@@ -116,18 +116,18 @@ execute-procedure check-matchcount
   set %expcol 11
   set %expchar &asc S
   set %expmatch "Some"
-execute-procedure check-position-match
+run check-position-match
 
   set %grpno 1
   set %expmatch S
-execute-procedure check-group
+run check-group
   set %grpno 2
   set %expmatch ome
-execute-procedure check-group
+run check-group
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  Some CHOICEs-in-group checks"
-execute-procedure report-status
+run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 beginning-of-file
@@ -137,10 +137,10 @@ beginning-of-file
   set %expcol 25
   set %expchar &asc r
   set %expmatch "uppe"
-execute-procedure check-position-match
+run check-position-match
   set %grpno 1
   set %expmatch pp
-execute-procedure check-group
+run check-group
 
   search-forward ".(pp|s)."
   set %curtest SearchChoiceRpt
@@ -148,10 +148,10 @@ execute-procedure check-group
   set %expcol 31
   set %expchar &asc " "
   set %expmatch "ase"
-execute-procedure check-position-match
+run check-position-match
   set %grpno 1
   set %expmatch s
-execute-procedure check-group
+run check-group
 
 beginning-of-file
   search-forward ".(pp|s)\p{L}"
@@ -161,11 +161,11 @@ beginning-of-file
   set %expcol 31
   set %expchar &asc " "
   set %expmatch "ase"
-execute-procedure check-position-match
+run check-position-match
 
   set %grpno 1
   set %expmatch s
-execute-procedure check-group
+run check-group
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports

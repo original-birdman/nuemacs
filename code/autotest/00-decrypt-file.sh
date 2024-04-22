@@ -137,7 +137,7 @@ store-procedure compare-buffers
 !endm
 
 store-procedure check-decrypt
-  !force execute-procedure compare-buffers
+  !force run compare-buffers
   !if &seq PASSED $force_status
     set %test-report &cat %test_name ": OK"
     set %ok &add %ok 1
@@ -146,7 +146,7 @@ store-procedure check-decrypt
     set %test-report &cat %test_name ": FAILED"
     set %fail &add %fail 1
   !endif
-  execute-procedure report-status
+  run report-status
 !endm
 
 ; Get the expected results into buffers now...before CRYPT is on
@@ -163,7 +163,7 @@ set-encryption-key ATestEncryptionString
 read-file %test_name
 set %tbuf2 TEST
 select-buffer test-reports
-execute-procedure check-decrypt
+run check-decrypt
 
 ; We'll do this one by re-using the same buffer.
 ; This will test the global encryption key under the new mode.
@@ -177,7 +177,7 @@ add-mode Crypt
 read-file %test_name
 set %tbuf2 TEST
 select-buffer test-reports
-execute-procedure check-decrypt
+run check-decrypt
 
 ; Read this one into its own new buffer, with crypt_mode set to use a
 ; per-buffer key, but giving that as part of the read-file command
@@ -189,7 +189,7 @@ add-mode Crypt
 read-file %test_name SecondTestEncryptionString
 set %tbuf2 %test_name
 select-buffer test-reports
-execute-procedure check-decrypt
+run check-decrypt
 
 ; For this one we'll set the (per-buffer) encryption key separately
 ; before reading in the file.
@@ -202,7 +202,7 @@ set-encryption-key ThirdTestEncryptionString
 read-file %test_name
 set %tbuf2 %test_name
 select-buffer test-reports
-execute-procedure check-decrypt
+run check-decrypt
 ;
 select-buffer test-reports
 newline

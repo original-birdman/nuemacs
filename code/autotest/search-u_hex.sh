@@ -78,7 +78,7 @@ execute-file autotest/check-matchcount.rc
 find-file autotest.tfile
 
 set %test-report "START: Various Magic property tests"
-execute-procedure report-status
+run report-status
 
 beginning-of-file
 add-mode Exact
@@ -86,7 +86,7 @@ add-mode Magic
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  \u{03b4}"
-execute-procedure report-status
+run report-status
 
 set %mcount 0
 *again1
@@ -101,9 +101,9 @@ set %mcount 0
   set %expcol 4
   set %expchar &asc έ
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 3
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse "\u{03b4}"
@@ -112,13 +112,13 @@ execute-procedure check-matchcount
   set %expcol 3
   set %expchar &asc δ
   set %expmatch δ
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  \u{03b4} - non-Exact mode"
 beginning-of-file
 delete-mode Exact
-execute-procedure report-status
+run report-status
 
 set %mcount 0
 *again2
@@ -133,9 +133,9 @@ set %mcount 0
   set %expcol 4
   set %expchar &asc Έ
   set %expmatch ""      ; We'll have failed, so no match
-execute-procedure check-position-match
+run check-position-match
   set %expcount 5
-execute-procedure check-matchcount
+run check-matchcount
 
 ; Reverse search and check match
   search-reverse "\u{03b4}"
@@ -144,7 +144,7 @@ execute-procedure check-matchcount
   set %expcol 3
   set %expchar &asc Δ
   set %expmatch Δ
-execute-procedure check-position-match
+run check-position-match
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports
