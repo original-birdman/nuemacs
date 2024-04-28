@@ -1,22 +1,23 @@
 #!/usr/bin/perl
 #
-# Simple script to remove any GEGIN/END sections that mention tcapopen
-# or tcapmove from valgrind logs, as we can't do anythin about them.
+# Simple script to remove any BEGIN/END sections that mention tcapopen
+# or tcapmove from valgrind logs, as we can't do anything about them.
+# Also now clears valgridn bits (for FreeBSD).
 #
-# Run this with pwrl's -i command-line arguemnt to do the edit in-place.
+# Run this with perl's -i command-line arguemnt to do the edit in-place.
 #
 use strict;
 use warnings;
 
 my $in_block = 0;
 my @this_block;
-my $tcap_seen;
+my $lowlevel;
 
 while(<>) {
     if (/^==\d+== BEGIN/) {
         $in_block = 1;
         @this_block = ($_);
-        $tcap_seen = 0;
+        $lowlevel = 0;
         next;
     }
 
@@ -31,7 +32,7 @@ while(<>) {
 #
     if (/^==\d+== END/) {
         $in_block = 0;
-        if (not $tcap_seen) {
+        if (not $lowlevel) {
             print @this_block;
             print;      # This line
         }
@@ -39,7 +40,10 @@ while(<>) {
         next;
     }
 
-    $tcap_seen = 1 if (/by 0x[0-9A-F]+: tcap(?:open|move)/);
+# Remove tcap and valgrind bits that are nothing to do with uemacs
+#
+    $lowlevel = 1 if (/by 0x[0-9A-F]+: tcap(?:open|move)/);
+    $lowlevel = 1 if (/at 0x[0-9A-F]+: (?:malloc|realloc) \(vg_replace_malloc/);
     push @this_block, $_;
 }
 

@@ -374,7 +374,7 @@ vgcheck: uemacs
 
 vgstrip:
 	$(E) "	Strip valgrind logs"
-	$(Q) perl -i.orig ../tools/remove-tcap-bits.pl VG*.log
+	$(Q) perl -i.orig ../tools/remove-lowlevel-bits.pl VG*.log
 
 .c.o:
 	$(E) "  CC      " $@
