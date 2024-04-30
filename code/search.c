@@ -402,7 +402,7 @@ static void update_ring(const char *str) {
  *  returns the expanded text.
  */
 static char *expandp(const char *srcstr, char *deststr) {
-    static char ibuf[NPAT/2];
+    static char ibuf[NPAT*2];   /* More than needed? */
     unsigned char c;        /* current char to translate */
     char *dp;               /* Destination buffer pointer */
     char *rp;               /* Final result */
@@ -1980,7 +1980,7 @@ void setpattern(const char apat[], const char tap[]) {
  */
 static int readpattern(char *prompt, char *apat, int srch) {
     int status;
-    char tpat[NPAT + 20];
+    char tpat[NPAT*2 + 20];     /* More than needed? */
 
     char saved_base[NSTRING];
 
