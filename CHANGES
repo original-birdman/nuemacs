@@ -7703,4 +7703,153 @@ version.h
 etc/uemacs.hlp
     Update to GGR4.179
 
+========== GGR4.180
+
+search.c
+etc/uemacs.hlp
+    Fix delins() to insert the text it is passed, not try to run through
+    any magical replace code again (which will fail for group matches as
+    we've deleted text in the buffer).
+    Save last_match.mline directly, since we no longer reallocate line
+    structures. [search.c]
+    Allow buffer variables (.xxx) in replace strings.
+    Document the MAGIC mode replacement string interpolators (${$var},
+    ${%var}, ${.var} and ${n}). [uemacs.hlp]
+
+search.c
+etc/uemacs.hlp
+    Add an auto-incrementing counter for the replace string in Magic
+    mode (${@:start=m,incr=n,fmt=%..d}). [search.c]
+    Document the counter in help. [uemacs.hlp]
+
+eval.c
+estruct.h
+evar.h
+    Add $proc_type, to allow scripts to test for processor type.
+
+file.c
+edef.h
+    Move the strdupa definition (for FreeBSD) from file.c to edef.h.
+    (Also now needed by search.c.)
+
+buffer.c
+display.c
+eval.c
+input.c
+line.c
+region.c
+word.c
+estruct.h
+line.h
+utf8.h
+autotest/arithmetic-tests.sh
+etc/uemacs.hlp
+    Use 64-bit integers internally for integers used by macros.
+    Change defining uelen_t to defining ue64I_t [utf8.h]
+    Change uelen_t to ue64I_t [buffer.c, display.c, eval.c, exec.c,
+    input.c, line.c, random.c, region.c, word.c, estruct.h, line.h]
+    Use ue_atoi() (which now uses strtoll()) for ASCII to number
+    conversion. ue_itoa() now uses 64-bit integers. [eval.c]
+    Update &ptf documentation about integer precision [uemacs.hlp]
+    Change TOOBIG handling under valgrind [arithmetic-tests.sh]
+
+search.c
+etc/uemacs.hlp
+    Allow function calls in magic replacement patterns (${&...}).
+    brace_text() is now given the buffer to fill.
+    Call rmcclear() in free_search(). [search.c]
+    Document this. [uemacs.hlp]
+
+search.c
+    Add an internal function to create a new, empty func_call item in
+    one place.
+
+autotest/search-magic-replaces.sh
+    Add a test script for magic replacements (groups, counters and
+    function calls).
+
+search.c
+    Initialize rmcpat[0] in init_search_ringbuffers() (now that
+    free_search() calls rmcclear().
+    Free all allocated func_call items (correctly) in rmcclear().
+
+exec.c
+file.c
+input.c
+lock.c
+    Some tidy up around fixup_fname() based on the arm64 valgrind
+    report.
+    Add comment about OK to use fixup_fname() in readin() call in
+    dofile(). [exec.c]
+    In fixup_full() always copy the incoming name to the internal
+    buffer, as it might actually be in fixup_fname()'s buffer and
+    calling it means strcpy() will be copying to itself. [file.c]
+    Add comment that getffile() using the fixup_fname() result directly
+    is OK, but use strcpy() to put the fixup_fname() result back into
+    callers buffer in comp_file(). [input.c]
+    Actually copy fixup_fname() result into tmpname. [lock.c]
+
+autotest/00-decrypt-file.sh
+autotest/00-encrypt-file.sh
+autotest/arithmetic-tests.sh
+autotest/char-deletion.sh
+autotest/check-group.rc
+autotest/check-matchcount.rc
+autotest/check-position-match.rc
+autotest/check-position-matchlen.rc
+autotest/check-position.rc
+autotest/combi-col0.sh
+autotest/dir-browsing.sh
+autotest/incremental-search.sh
+autotest/misc-bits.sh
+autotest/move-over-word.sh
+autotest/multi-ex.sh
+autotest/parafill.sh
+autotest/query-replace.sh
+autotest/search-boundaries.sh
+autotest/search-char_classes.sh
+autotest/search-classes_in_closures.sh
+autotest/search-file-start.sh
+autotest/search-groups.sh
+autotest/search-line-endings.sh
+autotest/search-magic-on_off.sh
+autotest/search-magic-replaces.sh
+autotest/search-no_magic.sh
+autotest/search-props.sh
+autotest/search-props2.sh
+autotest/search-reexec-macro.sh
+autotest/search-repeats.sh
+autotest/search-u_hex.sh
+autotest/wordwrap.sh
+autotest/xlate.sh
+autotest/zero-length-magic.sh
+etc/uemacs.rc
+etc/uemacs.hlp
+    Replace execute-procedure with the equivalent run.
+    Add run as synonym for execute-procedure [uemacs.hlp]
+
+input.c
+search.c
+efunc.h
+    Add, and use, evaluate_cmdstr() to evaluate a string as a command.
+    NOTE that we now loop over ALL of the command line.
+
+autotest/arithmetic-tests.sh
+    Use hex (and &bli) for MAX and MIN 64-bit integer values.
+    With a workaround....
+
+tools/remove-lowlevel-bits.pl
+Makefile
+    Rename remove-tcap-bits.pl to remove-lowlevel-bits.pl and change
+    it to remove low-level valgrind blocks (for Freebsd).
+
+search.c
+    Increase size of internal buffers in expandp() and readpattern()
+    to avoid overwrites.
+
+../CHANGES
+version.h
+etc/uemacs.hlp
+    Update to GGR4.180
+
 ==========
