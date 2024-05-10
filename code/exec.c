@@ -509,7 +509,7 @@ static int ptt_compile(struct buffer *bp) {
             from_start = tok;
         }
         strcpy(from_string, from_start);
-        if (!strcmp("caseset-", from_string)) {
+        if (!strncmp("caseset-", from_string, 8)) {
             char *test_opt = from_string + strlen("caseset-");
             if (!strcmp("on", test_opt)) {
                 caseset = CASESET_ON;
