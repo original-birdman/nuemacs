@@ -68,7 +68,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 execute-file autotest/check-matchcount.rc
 
@@ -94,7 +94,7 @@ search-forward \p{Lu}{3}\p{P}   ; should match ΔΈΝ. ...
   set %expcol 16
   set %expchar 10
   set %expmatch ΔΈΝ.
-run check-position-char
+run check-position
 
 ; ====
 search-forward \p{Lu}{3}\p{P}   ; ...now TCH!
@@ -103,7 +103,7 @@ search-forward \p{Lu}{3}\p{P}   ; ...now TCH!
   set %expcol 63
   set %expchar &asc )
   set %expmatch TCH!
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  !upper, space, 3 numbers - \P{Lu} \p{N}{3}"
@@ -123,7 +123,7 @@ set %mcount 0
   set %expcol 39
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 4
 run check-matchcount
 
@@ -134,7 +134,7 @@ run check-matchcount
   set %expcol 34
   set %expchar &asc t
   set %expmatch "t 912"
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  lower, anything, Upper - \p{Ll}\X\p{LU}
@@ -154,7 +154,7 @@ set %mcount 0
   set %expcol 24
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 10      ; 10 since GGR4.162 - with 1 overlapping
 run check-matchcount
 
@@ -165,7 +165,7 @@ run check-matchcount
   set %expcol 2
   set %expchar &asc ὐ
   set %expmatch ὐΔΈ
-run check-position-char
+run check-position
 
 select-buffer test-reports
 newline

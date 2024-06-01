@@ -54,7 +54,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -75,14 +75,14 @@ search-forward []-c]
   set %expcol 3
   set %expchar &asc t
   set %expmatch a
-run check-position-char
+run check-position
 search-forward []-c]+
   set %curtest Search2
   set %expline 1
   set %expcol 5
   set %expchar &asc h
   set %expmatch c
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ] in position 1 (literal)"
@@ -95,7 +95,7 @@ search-forward []nq]
   set %expcol 10
   set %expchar &asc x
   set %expmatch ]
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   - in position 1 (literal)"
@@ -108,14 +108,14 @@ search-forward [-xyz]
   set %expcol 8
   set %expchar &asc " "
   set %expmatch -
-run check-position-char
+run check-position
 search-forward [-xyz]+
   set %curtest Search2
   set %expline 1
   set %expcol 15
   set %expchar &asc [
   set %expmatch xyzzy
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; This should do the same as the above - the "-" has moved, but the
@@ -130,14 +130,14 @@ search-forward [xyz-]
   set %expcol 8
   set %expchar &asc " "
   set %expmatch -
-run check-position-char
+run check-position
 search-forward [xyz-]+
   set %curtest Search2
   set %expline 1
   set %expcol 15
   set %expchar &asc [
   set %expmatch xyzzy
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   - as range"
@@ -150,14 +150,14 @@ search-forward [x-z]
   set %expcol 11
   set %expchar &asc y
   set %expmatch x
-run check-position-char
+run check-position
 search-forward [x-z]+
   set %curtest Search2
   set %expline 1
   set %expcol 15
   set %expchar &asc [
   set %expmatch yzzy
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   - as range - inverted"
@@ -170,14 +170,14 @@ search-forward [^x-z]
   set %expcol 2
   set %expchar &asc a
   set %expmatch m
-run check-position-char
+run check-position
 search-forward [^x-z]+
   set %curtest Search2
   set %expline 1
   set %expcol 10
   set %expchar &asc x
   set %expmatch "atch - ]"
-run check-position-char
+run check-position
 
 ;
 select-buffer test-reports

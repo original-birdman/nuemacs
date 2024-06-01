@@ -56,7 +56,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 execute-file autotest/check-matchcount.rc
 
@@ -89,7 +89,7 @@ set %mcount 0
   set %expcol 26
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 2
 run check-matchcount
 
@@ -107,7 +107,7 @@ set %mcount 0
   set %expcol 1
   set %expchar &asc A
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 2
 run check-matchcount
 
@@ -128,7 +128,7 @@ set %mcount 0
   set %expcol 26
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 2
 run check-matchcount
 
@@ -146,7 +146,7 @@ set %mcount 0
   set %expcol 1
   set %expchar &asc A
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 2
 run check-matchcount
 

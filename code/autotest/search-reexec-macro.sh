@@ -56,7 +56,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 execute-file autotest/check-group.rc
 
@@ -105,7 +105,7 @@ run tester
   set %expcol 2
   set %expchar &asc a
   set %expmatch atc
-run check-position-char
+run check-position
   set %expcalls 1
 run check-count
 
@@ -115,7 +115,7 @@ run tester
   set %expcol 2
   set %expchar &asc a
   set %expmatch atc
-run check-position-char
+run check-position
   set %expcalls 2
 run check-count
 
@@ -126,7 +126,7 @@ run tester    ; Must run it again to be able rexecute it!
   set %expcol 2
   set %expchar &asc a
   set %expmatch atc
-run check-position-char
+run check-position
   set %expcalls 5
 run check-count
 

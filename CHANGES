@@ -7852,4 +7852,25 @@ version.h
 etc/uemacs.hlp
     Update to GGR4.180
 
-==========
+========== GGR4.180
+
+exec.c
+    Correct a strcmp() call to strncmp() in the PTT caseset code.
+
+line.c
+region.c
+word.c
+    Fix upper/lowercase-region, which would always crash because of
+    incorrectly trying to update sysmark.
+    Inline onmodify_*() routines - each was only ever used once [line.c]
+    For casechange_region() just loop through the  region calling
+    ensure_case() [region.c]
+    Update pins if required in ensure_case(). [word.c]
+
+autotest/check-position-match.rc
+    Renamed to check-position-char.rc (it does no matching) and updated
+    users of it accordingly.
+
+autotest/check-position-char.rc
+    Deleted, on realizing it is exactly the same as check-position.rc,
+    and updated callers.

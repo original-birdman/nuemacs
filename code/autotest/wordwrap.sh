@@ -66,7 +66,7 @@ delete-mode wrap
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 store-procedure check-full-line
@@ -140,7 +140,7 @@ simulate " "
   set %expline 8
   set %expcol 9
   set %expchar 10
-run check-position-char
+run check-position
 
   set %expltext "column. "
 run check-full-line
@@ -157,7 +157,7 @@ simulate " "
   set %expline 8
   set %expcol 9
   set %expchar 10
-run check-position-char
+run check-position
 
   set %expltext "column. "
 run check-full-line
@@ -177,7 +177,7 @@ simulate " "
   set %expline 9
   set %expcol 9
   set %expchar 10
-run check-position-char
+run check-position
 
 previous-line
 ; Expect line to have spaces removed
@@ -196,7 +196,7 @@ simulate " "
   set %expline 9
   set %expcol 9
   set %expchar 10
-run check-position-char
+run check-position
 
 previous-line
 ; Expect line to have trailing spaces
@@ -223,7 +223,7 @@ simulate " "
   set %expline 9
   set %expcol 1
   set %expchar &asc c
-run check-position-char
+run check-position
 
 ; We expect this line to be the wrapped "column."
   set %expltext "column."
@@ -249,7 +249,7 @@ simulate " "
   set %expline 9
   set %expcol 1
   set %expchar &asc c
-run check-position-char
+run check-position
 
 ; We expect this line to be the wrapped "column."
   set %expltext "column."
@@ -277,7 +277,7 @@ simulate " "
   set %expline 13
   set %expcol 9
   set %expchar 10
-run check-position-char
+run check-position
 
 ; The line is expected to contain oulder
   set %expltext "oulder. "
@@ -291,7 +291,7 @@ backward-character
   set %expline 12
   set %expcol 58
   set %expchar &blit 0x200b
-run check-position-char
+run check-position
 
 ;
 ; Re-read file...
@@ -308,7 +308,7 @@ simulate " "
   set %expline 13
   set %expcol 9
   set %expchar 10
-run check-position-char
+run check-position
 
 ; The line is expected to contain oulder
   set %expltext "oulder. "
@@ -322,7 +322,7 @@ backward-character
   set %expline 12
   set %expcol 58
   set %expchar &blit 0x200b
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Repeat with extra txt at the end.
@@ -342,7 +342,7 @@ simulate " "
   set %expline 13
   set %expcol 15
   set %expchar 10
-run check-position-char
+run check-position
   set %expltext "oulder. xyzzy "
 run check-full-line
 
@@ -360,7 +360,7 @@ simulate " "
   set %expline 13
   set %expcol 7
   set %expchar 10
-run check-position-char
+run check-position
   set %expltext "xyzzy "
 run check-full-line
 

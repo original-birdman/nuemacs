@@ -67,7 +67,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -88,14 +88,14 @@ search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %expcol 12
   set %expchar &asc 3
   set %expmatch 0,1.2;
-run check-position-char
+run check-position
 search-forward \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest Search2
   set %expline 5
   set %expcol 20
   set %expchar &asc 7
   set %expmatch 3:4'5!6*
-run check-position-char
+run check-position
 
 set %test-report "  \P searches"
 run report-status
@@ -107,7 +107,7 @@ search-forward 789\n
   set %expcol 1
   set %expchar &asc H
   set %expmatch 789~n
-run check-position-char
+run check-position
 ; ====
 search-forward \P{L}
   set %curtest Search not Letter
@@ -115,7 +115,7 @@ search-forward \P{L}
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ,
-run check-position-char
+run check-position
 
 set %test-report "  \p{SM}{5} search"
 run report-status
@@ -127,7 +127,7 @@ search-forward \p{SM}{5}
   set %expcol 7
   set %expchar &asc ~~
   set %expmatch +<=>|
-run check-position-char
+run check-position
 
 set %test-report "  6-class search"
 run report-status
@@ -139,7 +139,7 @@ search-forward \p{Lm}\p{Sm}\p{Ps}\p{Pe}\p{Nd}\p{Po}
   set %expcol 12
   set %expchar &asc z
   set %expmatch ˊ±{]3@
-run check-position-char
+run check-position
 end-of-file
 ; ====
 search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
@@ -148,7 +148,7 @@ search-reverse \p{Lu}\p{ll}\p{Po}\p{Nd}\p{Pe}\p{Ps}
   set %expcol 6
   set %expchar &asc T
   set %expmatch Td:8)[
-run check-position-char
+run check-position
 
 set %test-report "  negative reverse search"
 run report-status
@@ -159,7 +159,7 @@ run report-status
   set %expcol 6
   set %expchar &asc T
   set %expmatch ""
-run check-position-char
+run check-position
 
 ;
 select-buffer test-reports

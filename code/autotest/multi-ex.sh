@@ -64,7 +64,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -89,7 +89,7 @@ search-reverse "x"
   set %expcol 5
   set %expchar &asc x
   set %expmatch "x"
-run check-position-char
+run check-position
 ; Back 2 chars should step over the 9-byte grapheme to the other x).
 2 backward-character
   set %curtest Search2
@@ -97,7 +97,7 @@ run check-position-char
   set %expcol 3
   set %expchar &asc x
   set %expmatch "x"
-run check-position-char
+run check-position
 
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-

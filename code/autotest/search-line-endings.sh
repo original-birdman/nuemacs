@@ -58,7 +58,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 execute-file autotest/check-matchcount.rc
 
@@ -83,7 +83,7 @@ search-forward ^Start
   set %expcol 6
   set %expchar &asc " "
   set %expmatch Start
-run check-position-char
+run check-position
 
 end-of-file
 search-reverse ^Start
@@ -92,7 +92,7 @@ search-reverse ^Start
   set %expcol 1
   set %expchar &asc S
   set %expmatch Start
-run check-position-char
+run check-position
 
 ; ====
 beginning-of-file
@@ -109,7 +109,7 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 1
 run check-matchcount
 
@@ -129,7 +129,7 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 3
 run check-matchcount
 
@@ -148,7 +148,7 @@ set %mcount 0
   set %expcol 1
   set %expchar &asc S
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 3
 run check-matchcount
 
@@ -162,7 +162,7 @@ search-forward End$
   set %expcol 35
   set %expchar 10
   set %expmatch End
-run check-position-char
+run check-position
 
 end-of-file
 search-reverse End$
@@ -171,7 +171,7 @@ search-reverse End$
   set %expcol 32
   set %expchar &asc E
   set %expmatch End
-run check-position-char
+run check-position
 
 ; ====
 beginning-of-file
@@ -188,7 +188,7 @@ set %mcount 0
   set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 1
 run check-matchcount
 
@@ -208,7 +208,7 @@ set %mcount 0
   set %expcol 35
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 3
 run check-matchcount
 
@@ -227,7 +227,7 @@ set %mcount 0
   set %expcol 32
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 3
 run check-matchcount
 

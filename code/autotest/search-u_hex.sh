@@ -68,7 +68,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-char.rc
+execute-file autotest/check-position.rc
 
 execute-file autotest/check-matchcount.rc
 
@@ -101,7 +101,7 @@ set %mcount 0
   set %expcol 4
   set %expchar &asc έ
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 3
 run check-matchcount
 
@@ -112,7 +112,7 @@ run check-matchcount
   set %expcol 3
   set %expchar &asc δ
   set %expmatch δ
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "  \u{03b4} - non-Exact mode"
@@ -133,7 +133,7 @@ set %mcount 0
   set %expcol 4
   set %expchar &asc Έ
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-char
+run check-position
   set %expcount 5
 run check-matchcount
 
@@ -144,7 +144,7 @@ run check-matchcount
   set %expcol 3
   set %expchar &asc Δ
   set %expmatch Δ
-run check-position-char
+run check-position
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports
