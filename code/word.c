@@ -180,45 +180,21 @@ void ensure_case(int want_case) {
  * If we have something to do we insert the new character first (so
  * that any mark at the point gets updated correctly by linsert_*())
  * then delete the old char, then restore doto (possibly adjusted).
+ * lputgrapheme() and ldelete() adjust marks/pins (and dot) for us.
  */
-    int doto_adj = 0;
     if ((want_case == UTF8_UPPER) &&    /* Bare German sharp? */
         (gc.uc == 0x00df) && (gc.cdm == 0)) {
         linsert_byte(2, 'S');           /* Inserts "SS" */
-        orig_utf8_len = 2;
-        doto_adj = 1;
     }
     else {
         unicode_t nuc = caser(gc.uc);   /* Get the case-translated uc */
         if (nuc == gc.uc) goto ensure_ex_free;  /* No change */
-        int start = curwp->w.doto;
         gc.uc = nuc;
         lputgrapheme(&gc);              /* Insert the whole thing */
-        int new_utf8_len = curwp->w.doto - start;   /* Bytes added */
-
-/* If either mark is on this line we may have to update it to reflect
- * any change in byte count
- */
-        if (new_utf8_len != orig_utf8_len) {        /* Byte count changed */
-            if ((curwp->w.markp == curwp->w.dotp) &&    /* Same line... */
-                (curwp->w.marko > curwp->w.doto)) {     /* and beyond dot? */
-                 curwp->w.markp += (new_utf8_len - orig_utf8_len);
-            }
-            if ((sysmark.p == curwp->w.dotp) &&     /* Same line... */
-                (sysmark.o > curwp->w.doto)) {      /* and beyond dot? */
-                 sysmark.o += (new_utf8_len - orig_utf8_len);
-            }
-            for(linked_items *lip = macro_pin_headp; lip; lip = lip->next) {
-		struct mac_pin *mp = lip->item;
-                if ((mp->bp == curbp) && (mp->lp == curwp->w.dotp) &&
-                    (mp->offset > curwp->w.doto)) {
-                    mp->offset += (new_utf8_len - orig_utf8_len);
-                    }
-            }
-        }
     }
     ldelete(orig_utf8_len, FALSE);
-    curwp->w.doto = saved_doto + doto_adj;          /* Restore position */
+
+    curwp->w.doto = saved_doto;          /* Restore position */
     lchange(WFHARD);
 ensure_ex_free:
     Xfree(gc.ex);
