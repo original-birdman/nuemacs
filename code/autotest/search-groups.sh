@@ -68,7 +68,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-match.rc
+execute-file autotest/check-position-char.rc
 
 execute-file autotest/check-matchcount.rc
 
@@ -104,7 +104,7 @@ set %mcount 0
   set %expcol 15
   set %expchar &asc " "
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 11
 run check-matchcount
 
@@ -116,7 +116,7 @@ run check-matchcount
   set %expcol 11
   set %expchar &asc S
   set %expmatch "Some"
-run check-position-match
+run check-position-char
 
   set %grpno 1
   set %expmatch S
@@ -137,7 +137,7 @@ beginning-of-file
   set %expcol 25
   set %expchar &asc r
   set %expmatch "uppe"
-run check-position-match
+run check-position-char
   set %grpno 1
   set %expmatch pp
 run check-group
@@ -148,7 +148,7 @@ run check-group
   set %expcol 31
   set %expchar &asc " "
   set %expmatch "ase"
-run check-position-match
+run check-position-char
   set %grpno 1
   set %expmatch s
 run check-group
@@ -161,7 +161,7 @@ beginning-of-file
   set %expcol 31
   set %expchar &asc " "
   set %expmatch "ase"
-run check-position-match
+run check-position-char
 
   set %grpno 1
   set %expmatch s

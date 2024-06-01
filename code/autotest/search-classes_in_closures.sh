@@ -67,7 +67,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-match.rc
+execute-file autotest/check-position-char.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -91,7 +91,7 @@ search-forward [\p{Nd}\p{Po}]*\X\n
   set %expcol 1
   set %expchar &asc o
   set %expmatch s~n
-run check-position-match
+run check-position-char
 ; ====
 search-forward [\p{Nd}\p{Po}]+\X\n      ; Don't test this one...
 ; Wipe out memory of this search so we don't find the overlapping ones
@@ -103,7 +103,7 @@ search-forward [\p{Nd}\p{Po}]+\X\n
   set %expcol 1
   set %expchar &asc N
   set %expmatch 0,1.2;3:4'5!6*7@8?9~n
-run check-position-match
+run check-position-char
 ; ====
 search-reverse \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %curtest "Search back for NPNPNPNP"
@@ -111,7 +111,7 @@ search-reverse \p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}\p{Nd}\p{Po}
   set %expcol 16
   set %expchar &asc 5
   set %expmatch 5!6*7@8?
-run check-position-match
+run check-position-char
 
 ;
 select-buffer test-reports

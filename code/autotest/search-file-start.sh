@@ -56,7 +56,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-match.rc
+execute-file autotest/check-position-char.rc
 
 execute-file autotest/check-group.rc
 
@@ -79,7 +79,7 @@ search-reverse match
   set %expcol 1
   set %expchar &asc m
   set %expmatch match
-run check-position-match
+run check-position-char
 
 end-of-file
 add-mode Magic
@@ -90,7 +90,7 @@ search-reverse match
   set %expcol 1
   set %expchar &asc m
   set %expmatch match
-run check-position-match
+run check-position-char
 
 end-of-file
 ; ====
@@ -100,7 +100,7 @@ search-reverse (\X*)(match)
   set %expcol 1
   set %expchar &asc m
   set %expmatch match
-run check-position-match
+run check-position-char
 
   set %grpno 1
   set %expmatch ""

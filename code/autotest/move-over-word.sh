@@ -66,7 +66,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-match.rc
+execute-file autotest/check-position-char.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -102,7 +102,7 @@ end-of-file
   set %expline 9
   set %expcol 4
   set %expchar &asc m
-run check-position-match
+run check-position-char
 
 ; This should stop at the zero-width break in Shoulder.
 25 previous-word
@@ -110,7 +110,7 @@ run check-position-match
   set %expline 3
   set %expcol 58
   set %expchar &asc o
-run check-position-match
+run check-position-char
 
 
 ; Forward with ggr_opts Forwword OFF
@@ -124,7 +124,7 @@ beginning-of-file
   set %expcol 18
 ; 34 = "
   set %expchar 34
-run check-position-match
+run check-position-char
 
 ; Get to the space after сейчас
 35 next-word
@@ -132,7 +132,7 @@ run check-position-match
   set %expline 14
   set %expcol 26
   set %expchar &asc " "
-run check-position-match
+run check-position-char
 
 ; Forward with ggr_opts Forwword OFF
 ;
@@ -144,7 +144,7 @@ beginning-of-file
   set %expline 5
   set %expcol 20
   set %expchar &asc l
-run check-position-match
+run check-position-char
 
 ; Get to the н in на
 35 next-word
@@ -152,7 +152,7 @@ run check-position-match
   set %expline 14
   set %expcol 27
   set %expchar &asc н
-run check-position-match
+run check-position-char
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports

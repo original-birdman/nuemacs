@@ -67,7 +67,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-match.rc
+execute-file autotest/check-position-char.rc
 
 execute-file autotest/check-matchcount.rc
 
@@ -99,7 +99,7 @@ set %mcount 0
   set %expcol 15
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 7
 run check-matchcount
 
@@ -110,7 +110,7 @@ run check-matchcount
   set %expcol 13
   set %expchar &asc a
   set %expmatch ac
-run check-position-match
+run check-position-char
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab*?c searches"
@@ -133,7 +133,7 @@ set %mcount 0
   set %expcol 15
   set %expchar &asc e
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 7
 run check-matchcount
 
@@ -144,7 +144,7 @@ run check-matchcount
   set %expcol 13
   set %expchar &asc a
   set %expmatch ac
-run check-position-match
+run check-position-char
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab{2,4}c searches"
@@ -166,7 +166,7 @@ set %mcount 0
   set %expcol 7
   set %expchar 10
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 3
 run check-matchcount
 
@@ -177,7 +177,7 @@ run check-matchcount
   set %expcol 1
   set %expchar &asc a
   set %expmatch abbbbc
-run check-position-match
+run check-position-char
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab+ searches"
@@ -199,7 +199,7 @@ set %mcount 0
   set %expcol 6
   set %expchar &asc c
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 4
 run check-matchcount
 
@@ -210,7 +210,7 @@ run check-matchcount
   set %expcol 1
   set %expchar &asc a
   set %expmatch abbbb
-run check-position-match
+run check-position-char
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 set %test-report "   ab+? searches"
@@ -232,7 +232,7 @@ set %mcount 0
   set %expcol 3
   set %expchar &asc b
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 4
 run check-matchcount
 
@@ -243,7 +243,7 @@ run check-matchcount
   set %expcol 1
   set %expchar &asc a
   set %expmatch ab
-run check-position-match
+run check-position-char
 
 ;
 select-buffer test-reports

@@ -64,7 +64,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-match.rc
+execute-file autotest/check-position-char.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
@@ -89,7 +89,7 @@ add-mode Magic
   set %expcol 16
   set %expchar 10
   set %expmatch "СЕЙЧАС"
-run check-position-match
+run check-position-char
 
 ; Now switch Magic off and Exact on. Search for ASCII
 ;
@@ -105,7 +105,7 @@ search-forward stop
   set %expcol 11
   set %expchar &asc " "
   set %expmatch "stop"
-run check-position-match
+run check-position-char
 
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-

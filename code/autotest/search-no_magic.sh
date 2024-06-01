@@ -83,7 +83,7 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position-match.rc
+execute-file autotest/check-position-char.rc
 
 execute-file autotest/check-matchcount.rc
 
@@ -116,7 +116,7 @@ set %mcount 0
   set %expcol 14
   set %expchar &asc Й
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 1
 run check-matchcount
 ; Reverse search and check match
@@ -126,7 +126,7 @@ run check-matchcount
   set %expcol 3
   set %expchar &asc δ
   set %expmatch δένmañanaСЕ
-run check-position-match
+run check-position-char
 
 ; ==== Re-run in non-EXACT mode
 ;
@@ -149,7 +149,7 @@ set %mcount 0
   set %expcol 14
   set %expchar &asc Й
   set %expmatch ""      ; We'll have failed, so no match
-run check-position-match
+run check-position-char
   set %expcount 3
 run check-matchcount
 ; Reverse search and check match
@@ -159,7 +159,7 @@ run check-matchcount
   set %expcol 3
   set %expchar &asc Δ
   set %expmatch ΔΈΝMAÑANAСЕ
-run check-position-match
+run check-position-char
 
 ; ==== Check that Magic active characters are taken literally
 ;
@@ -173,7 +173,7 @@ search-forward (a|b)*\s\p{L}[]??E
   set %expcol 19
   set %expchar &asc N
   set %expmatch (a|b)*\s\p{L}[]??E
-run check-position-match
+run check-position-char
 
 ; Show the report...
 ;

@@ -1,10 +1,9 @@
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-store-procedure check-position-match
+store-procedure check-position-char
 ;   Expects these to have been set, since this tests them all.
 ; %expline      the line for the match
 ; %expcol       the column for the match   
 ; %expchar      the expected "char" at point (R/h side) at the match
-; %expmatch     the text of the match
 ;
   !if &equ $curline %expline
     set %test-report &cat %curtest &cat " - line OK: " $curline
