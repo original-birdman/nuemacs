@@ -58,54 +58,6 @@ struct line *lalloc(int used) {
     return lp;
 }
 
-/* The next four are a series of functions to fix-up macro pins that may
- * be pointing into data we manipulate.
- */
-
-/* Edit any entries in the list referring to line
- */
-static void onmodify_line_check(struct line *lp) {
-    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        if (mmi(mp, lp) == lp) {
-            mmi(mp, lp) = mmi(mp, lp)->l_fp;
-            mmi(mp, offset) = 0;
-        }
-    }
-}
-
-/* Edit any offsets for entries in the list referring to line.
- * One for inserts and another for deletes.
- */
-static void onmodify_insert_check(struct line *lp, int doto, int move) {
-    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        if (mmi(mp, lp) == lp) {
-            if (mmi(mp, offset) > doto) mmi(mp, offset) += move;
-         }
-    }
-}
-static void onmodify_delete_check(struct line *lp, int doto, int move) {
-    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        if (mmi(mp, lp) == lp) {
-            if (mmi(mp, offset) > doto) {
-                mmi(mp, offset) -= move;
-/* It can't move left of the deletion point */
-                if (mmi(mp, offset) < doto) mmi(mp, offset) = doto;
-            }
-         }
-    }
-}
-
-/* Edit any offsets for entries in the lines being split.
- */
-static void onmodify_line_split(struct line *lp, int doto) {
-    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        if ((mmi(mp, lp) == lp) && (mmi(mp, offset) > doto)) {
-            mmi(mp, lp) = mmi(mp, lp)->l_fp;
-            mmi(mp, offset) -= doto;
-        }
-    }
-}
-
 /* Routine to grow l_text to accomodate xtra more bytes */
 void ltextgrow(struct line *lp, int xtra) {
 
@@ -115,10 +67,11 @@ void ltextgrow(struct line *lp, int xtra) {
     lsize(lp) = size;
 }
 
-/* Delete line "lp". Fix all of the links that might point at it (they are
- * moved to offset 0 of the next line. Unlink the line from whatever buffer
- * it might be in. Release the memory. The buffers are updated too; the
- * magic conditions described in the above comments don't hold here.
+/* Delete line "lp".
+ * Fix all of the dot/pins/marks that might point at it (they are moved
+ * to offset 0 of the next line).
+ * Unlink the line from its line list.
+ * Release the memory.
  */
 void lfree(struct line *lp) {
 
@@ -149,10 +102,16 @@ void lfree(struct line *lp) {
         sysmark.p = lp->l_fp;
         sysmark.o = 0;
     }
-    onmodify_line_check(lp);
+    for (linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if (mmi(mp, lp) == lp) {
+            mmi(mp, lp) = mmi(mp, lp)->l_fp;
+            mmi(mp, offset) = 0;
+        }
+    }
 
     lp->l_bp->l_fp = lp->l_fp;
     lp->l_fp->l_bp = lp->l_bp;
+
     Xfree(ltext(lp));
     Xfree(lp);
 }
@@ -234,7 +193,7 @@ int linsert_byte(int n, unsigned char c) {
     for (i = 0; i < n; ++i)         /* Add the new characters */
         ltext(lp1)[doto + i] = c;
     lused(lp1) += n;
-/* Update windows */
+/* Update dot/mark/pins in windows */
     for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
             wp->w.doto += n;
@@ -244,7 +203,12 @@ int linsert_byte(int n, unsigned char c) {
         }
     }
     if ((sysmark.p == lp1) && (sysmark.o > doto)) sysmark.o += n;
-    onmodify_insert_check(lp1, doto, n);
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if (mmi(mp, lp) == lp1) {
+            if (mmi(mp, offset) > doto) mmi(mp, offset) += n;
+         }
+    }
+
     return TRUE;
 }
 
@@ -354,7 +318,12 @@ int lnewline(void) {
         sysmark.p = lp2;
         sysmark.o -= doto;
     }
-    onmodify_line_split(lp1, doto);
+    for (linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if ((mmi(mp, lp) == lp1) && (mmi(mp, offset) > doto)) {
+            mmi(mp, lp) = mmi(mp, lp)->l_fp;
+            mmi(mp, offset) -= doto;
+        }
+    }
     return TRUE;
 }
 
@@ -654,7 +623,15 @@ int ldelete(ue64I_t n, int kflag) {
             sysmark.o -= chunk;
             if (sysmark.o < doto) sysmark.o = doto;
         }
-        onmodify_delete_check(dotp, doto, chunk);
+        for (linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+            if (mmi(mp, lp) == dotp) {
+                if (mmi(mp, offset) > doto) {
+                    mmi(mp, offset) -= chunk;
+/* It can't move left of the deletion point */
+                    if (mmi(mp, offset) < doto) mmi(mp, offset) = doto;
+                }
+             }
+        }
         n -= chunk;
     }
     return TRUE;

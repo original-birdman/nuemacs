@@ -206,7 +206,14 @@ void ensure_case(int want_case) {
             }
             if ((sysmark.p == curwp->w.dotp) &&     /* Same line... */
                 (sysmark.o > curwp->w.doto)) {      /* and beyond dot? */
-                 sysmark.p += (new_utf8_len - orig_utf8_len);
+                 sysmark.o += (new_utf8_len - orig_utf8_len);
+            }
+            for(linked_items *lip = macro_pin_headp; lip; lip = lip->next) {
+		struct mac_pin *mp = lip->item;
+                if ((mp->bp == curbp) && (mp->lp == curwp->w.dotp) &&
+                    (mp->offset > curwp->w.doto)) {
+                    mp->offset += (new_utf8_len - orig_utf8_len);
+                    }
             }
         }
     }

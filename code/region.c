@@ -175,47 +175,6 @@ int copyregion(int f, int n) {
             lused(linep)-b_end); \
     }
 
-/* These work as a pair.
- * get_marker_columns runs through the entries and
- * sets col_offset to the grapheme count of the position.
- * This is called before casechanging.
- * set_marker_offsets runs through the entries and
- * sets offset based on the col_offset count of the position.
- * This is called after casechanging and will deal with any byte-length
- * changing done by the casechange.
- */
-static int sysmark_col_offset, mark_col_offset, dot_col_offset;
-static void get_marker_columns(void) {
-    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        mmi(mp, col_offset) = glyphcount_utf8_array(ltext(mmi(mp, lp)),
-             mmi(mp, offset));
-    }
-    sysmark_col_offset = glyphcount_utf8_array(ltext(sysmark.p), sysmark.o);
-    mark_col_offset = glyphcount_utf8_array(ltext(curwp->w.markp),
-         curwp->w.marko);
-    dot_col_offset = glyphcount_utf8_array(ltext(curwp->w.dotp), curwp->w.doto);
-}
-static int offset_for_col(char *text, int col, int maxlen) {
-    int offs = 0;
-    while(col--) offs = next_utf8_offset(text, offs, maxlen, TRUE);
-    return offs;
-}
-static void set_marker_offsets(void) {
-    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        mmi(mp, offset) = offset_for_col(ltext(mmi(mp, lp)),
-             mmi(mp, col_offset), lused(mmi(mp, lp)));
-    }
-
-    sysmark.o = offset_for_col(ltext(sysmark.p), lused(sysmark.p),
-     sysmark_col_offset);
-
-    curwp->w.marko = offset_for_col(ltext(curwp->w.markp),
-     lused(curwp->w.markp), mark_col_offset);
-
-    curwp->w.doto = offset_for_col(ltext(curwp->w.dotp),
-     lused(curwp->w.dotp), dot_col_offset);
-}
-
 static int casechange_region(int newcase) { /* The handling function */
     struct region region;
     int s;
@@ -226,56 +185,27 @@ static int casechange_region(int newcase) { /* The handling function */
 
     lchange(WFHARD);                /* Marks buffer as changed */
 
-/* On line 1 we start at the offset
- * On any succeeding lines we start at 0.
- * Remember to include the newline as we count down.
+/* Save where we are, then move us to the start of the region (we might
+ * be at the end).
  */
-    struct line *linep = region.r_linep;
-    struct mstr mstr;
+    sysmark.p = curwp->w.dotp;
+    sysmark.o = curwp->w.doto;
+    curwp->w.dotp = region.r_linep;
+    curwp->w.doto = region.r_offset;
 
-/* For dot and marks we know that they cannot be within the region so
- * they either stay still, or move by the full amount.
- * Pins are not the same, as they can be anywhere
- * So we need to get them to determine their *column* offset and
- * restore it after the change has been done.
- * We just get the columns for all at the start, then reset the columns
- * for all at the end, regardless of which buffer/line they are in.
+/* Now move along grapheme-by-grapheme ensuring we have the required case.
+ * ensure_case() will update pins, mark and sysmark, if needed, as we
+ * move along.
  */
-    get_marker_columns();
-
-    for (int b_offs = region.r_offset; region.r_bytes > 0;
-             linep = lforw(linep)) {
-        int b_end = region.r_bytes + b_offs;
-        if (b_end > lused(linep)) b_end = lused(linep);
-        int this_blen = b_end - b_offs;
-        utf8_recase(newcase, ltext(linep)+b_offs, this_blen, &mstr);
-        int replen = mstr.utf8c;            /* Less code when copied.. */
-        char *repstr = mstr.str;            /* ...to simple local vars */
-
-        if (replen <= this_blen) {          /* Guaranteed the space */
-            memcpy(ltext(linep)+b_offs, repstr, replen);
-            if (replen < this_blen) {       /* Fix up the shortening */
-                ccr_Tail_Copy;
-                int b_less = this_blen - replen;
-                lused(linep) -= b_less;     /* Fix-up length */
-            }
-        }
-        else {              /* replen > this_blen  Potentially trickier */
-            int b_more = replen - this_blen;
-/* If we don't have the space, get some more */
-            if ((lsize(linep) - lused(linep)) < b_more) {   /* Need more */
-                ltextgrow(linep, b_more);
-            }
-            ccr_Tail_Copy;  /* Must move the tail out-of-the-way first!! */
-            memcpy(ltext(linep)+b_offs, repstr, replen);
-            lused(linep) += b_more;     /* Fix-up length */
-        }
-        Xfree(repstr);      /* Used this now (== mstr.str), so free */
-        region.r_bytes -= this_blen + 1;
-        b_offs = 0;
+    while((curwp->w.dotp != region.r_endp) ||
+          (curwp->w.doto < region.r_foffset)) {
+        ensure_case(newcase);
+        forw_grapheme(1);
     }
 
-    set_marker_offsets();
+/* Now restore us to where we were */
+    curwp->w.dotp = sysmark.p;
+    curwp->w.doto = sysmark.o;
 
     return TRUE;
 }
