@@ -7878,3 +7878,17 @@ autotest/check-position-char.rc
 word.c
     Remove marks/pin updates from ensure_case() as lputgrapheme() and
     ldelete() do them.
+
+efunc.h
+line.c
+region.c
+word.c
+    Fix upper/lowercase-region to work with characters that have
+    differing numbers of bytes in the two cases, and correct pin and
+    mark handling.
+    ensure_case() now returns any difference in the byte-count resulting
+    from the case change. [efunc.h, word.c]
+    Only update (sys)mark if after dot in linsert_byte() [line.c]
+    Remember to set r_foffset in a region for the 1-line case.
+    Adjust r_foffset loop limit after ensure_case() call when on the
+    final line in casechange_region() [region.c]

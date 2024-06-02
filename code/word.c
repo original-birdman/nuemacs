@@ -148,8 +148,10 @@ int forwword(int f, int n) {
  * Force the case of the current character (or the main character of
  * a multi-char grapheme) to be a particular case.
  * For use by upper/lower/cap-word() and equiv.
+ * The return value is the increase in bytes used for the current
+ * characters (so mahy be -ve).
  */
-void ensure_case(int want_case) {
+int ensure_case(int want_case) {
 
     utf8proc_int32_t (*caser)(utf8proc_int32_t);
 /* Set the case-mapping handler we wish to use */
@@ -165,10 +167,11 @@ void ensure_case(int want_case) {
         caser = utf8proc_totitle;
         break;
     default:
-        return;
+        return 0;
     }
 
     int saved_doto = curwp->w.doto;     /* Save position */
+    int doto_change = 0;
     struct grapheme gc;                 /* Have to free any gc.ex we get! */
     int orig_utf8_len = lgetgrapheme(&gc, FALSE);   /* Doesn't move doto */
 /* We only look at the base character for casing.
@@ -191,6 +194,8 @@ void ensure_case(int want_case) {
         if (nuc == gc.uc) goto ensure_ex_free;  /* No change */
         gc.uc = nuc;
         lputgrapheme(&gc);              /* Insert the whole thing */
+        int new_utf8_len = curwp->w.doto - saved_doto;  /* Bytes added */
+        doto_change = new_utf8_len - orig_utf8_len;
     }
     ldelete(orig_utf8_len, FALSE);
 
@@ -198,7 +203,7 @@ void ensure_case(int want_case) {
     lchange(WFHARD);
 ensure_ex_free:
     Xfree(gc.ex);
-    return;
+    return doto_change;
 }
 
 /* Move the cursor forward by the specified number of words. As you move,

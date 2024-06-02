@@ -409,7 +409,7 @@ extern int class_check(struct inwbuf *, char *, int);
 
 extern int backword(int, int);
 extern int forwword(int, int);
-extern void ensure_case(int);
+extern int ensure_case(int);
 extern int upperword(int, int);
 extern int lowerword(int, int);
 extern int capword(int, int);

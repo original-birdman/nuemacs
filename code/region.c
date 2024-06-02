@@ -41,10 +41,12 @@ int getregion(struct region *rp) {
         rp->r_linep = curwp->w.dotp;
         if (curwp->w.doto < curwp->w.marko) {
             rp->r_offset = curwp->w.doto;
+            rp->r_foffset = curwp->w.marko;
             rp->r_bytes = (ue64I_t) (curwp->w.marko - curwp->w.doto);
         }
         else {
             rp->r_offset = curwp->w.marko;
+            rp->r_foffset = curwp->w.doto;
             rp->r_bytes = (ue64I_t) (curwp->w.doto - curwp->w.marko);
         }
         rp->r_endp = curwp->w.dotp;
@@ -196,10 +198,13 @@ static int casechange_region(int newcase) { /* The handling function */
 /* Now move along grapheme-by-grapheme ensuring we have the required case.
  * ensure_case() will update pins, mark and sysmark, if needed, as we
  * move along.
+ * We have to adjust r_foffset on the final line by any byte-length change
+ * resulting from ensure_case().
  */
     while((curwp->w.dotp != region.r_endp) ||
           (curwp->w.doto < region.r_foffset)) {
-        ensure_case(newcase);
+        int bc = ensure_case(newcase);
+        if (curwp->w.dotp == region.r_endp) region.r_foffset += bc;
         forw_grapheme(1);
     }
 

@@ -193,7 +193,11 @@ int linsert_byte(int n, unsigned char c) {
     for (i = 0; i < n; ++i)         /* Add the new characters */
         ltext(lp1)[doto + i] = c;
     lused(lp1) += n;
-/* Update dot/mark/pins in windows */
+/* Update dot/mark/pins in windows
+ * NOTE that the dot check is ">=", as we wish to move with dot as
+ * we insert, but we want to leave mark and pin where they were if they
+ * started at dot.
+ */
     for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
             wp->w.doto += n;
@@ -610,16 +614,16 @@ int ldelete(ue64I_t n, int kflag) {
 
 /* Fix-up windows */
         for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-            if (wp->w.dotp == dotp && wp->w.doto >= doto) {
+            if (wp->w.dotp == dotp && wp->w.doto > doto) {
                 wp->w.doto -= chunk;
                 if (wp->w.doto < doto) wp->w.doto = doto;
             }
-            if (wp->w.markp == dotp && wp->w.marko >= doto) {
+            if (wp->w.markp == dotp && wp->w.marko > doto) {
                 wp->w.marko -= chunk;
                 if (wp->w.marko < doto) wp->w.marko = doto;
             }
         }
-        if (sysmark.p == dotp && sysmark.o >= doto) {
+        if (sysmark.p == dotp && sysmark.o > doto) {
             sysmark.o -= chunk;
             if (sysmark.o < doto) sysmark.o = doto;
         }
