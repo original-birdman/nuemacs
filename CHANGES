@@ -7892,3 +7892,6 @@ word.c
     Remember to set r_foffset in a region for the 1-line case.
     Adjust r_foffset loop limit after ensure_case() call when on the
     final line in casechange_region() [region.c]
+
+autotest/casechange.sh
+    Add simple tests for case changing a region.
