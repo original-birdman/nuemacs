@@ -7914,3 +7914,6 @@ etc/uemacs.hlp
     Set flag in ptt_handler() to indicate whether the final newline is
     "real". [exec.c, globals.c, edef.h]
     Document this [uemacs.hlp]
+
+display.c
+    If getscreensize() can't get the screensize, just exit.
