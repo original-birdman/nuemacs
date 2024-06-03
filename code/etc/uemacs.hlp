@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.180 Help Index     (30 Apr 2024)
+=>                   nuEmacs GGR4.181 Help Index     (03 Jun 2024)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -750,6 +750,8 @@ Miscellaneous
                     For integers, do not specify a precision (just one
                     of "diouxX"). uemacs knows its internal precision
                     (64-bit).
+    &ptx str        Return the entry for str using the current phonetic
+                    translation table (if any). (As it woudl be inserted).
 
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
@@ -919,6 +921,10 @@ set-pttable <ptt-name>
 
 $pttmode
     Contains the current ptt mode (or "" if the mode is not on)
+
+&ptx str
+    Can be used to lookup the expansion of str in the current phonetic
+    translation table. Really there for testing purposes.
 
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 $regionlist_text and $regionlist_number

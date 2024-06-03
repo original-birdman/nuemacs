@@ -231,6 +231,7 @@ extern char *input_waiting;     /* Input ready (for execproc) */
 extern int keytab_alloc_ents;   /* Allocated number of keytab entries */
 
 extern struct buffer *ptt;      /* Global pt table */
+extern int no_newline_in_pttex; /* Does replacement end in newline? */
 
 extern int hscroll;             /* TRUE when we are scrolling horizontally */
 extern int hjump;               /* How much to jump on horizontal scroll */

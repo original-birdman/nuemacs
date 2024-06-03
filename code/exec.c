@@ -870,6 +870,9 @@ int ptt_handler(int c) {
         ldelete(ptr->from_len, FALSE);
         linstr(ptr->to);
 
+/* ptt_expand() (in eval.c) needs to know this */
+        no_newline_in_pttex = (*((ptr->to)+(strlen(ptr->to)-1)) != '\n');
+
 /* We might need to re-case the just-added string.
  * NOTE that we have added everything in the case that the user supplied,
  * and we only change things if the user "from" started with a capital.

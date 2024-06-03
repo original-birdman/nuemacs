@@ -7902,3 +7902,15 @@ region.c
 word.c
     Modify ensure_case() to do forw_grapheme() at its end [word.c]
     Remove forw_grapheme() from its callers. [exec.c, word.c, region.c]
+
+eval.c
+exec.c
+globals.c
+edef.h
+evar.h
+etc/uemacs.hlp
+    Add a function (&ptx) to expand a phonetic translation table entry.
+    [eval.c, evar.h]
+    Set flag in ptt_handler() to indicate whether the final newline is
+    "real". [exec.c, globals.c, edef.h]
+    Document this [uemacs.hlp]

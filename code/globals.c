@@ -130,6 +130,7 @@ char *input_waiting  = NULL;
 int keytab_alloc_ents = 0;
 
 struct buffer *ptt = NULL;
+int no_newline_in_pttex = 0;
 
 int hscroll = FALSE;
 int hjump = 1;

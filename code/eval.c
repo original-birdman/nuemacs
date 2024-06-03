@@ -415,6 +415,58 @@ static char *xlat(char *source, char *lookup, char *trans) {
     return result;
 }
 
+/* ptt_expand
+ * A function to expand the given string with ptt handling.
+ * This expects to be given a single lookup item as it ONLY
+ * expands for the final character.
+ * Meant for use by test scripts, but might have other uses as
+ * a lookup method?
+ */
+static char *ptt_expand(char *str) {
+    static char result[NSTRING];    /* temporary result */
+    struct buffer *bp;
+
+/* If there is no active PTT, return the given text */
+
+    if (!(curbp->b_mode & MDPHON)) {
+        strcpy(result, str);
+        return result;
+    }
+
+/* The work is done by creating a new temporary buffer, placing the string
+ * in it, removing the final char(grapheme), then calling ptt_handler to
+ * add the final char and returning the buffer contents as the result.
+ * ptt_handler() has to set no_newline_in_pttex to indicate whether the
+ * final newline is valid.
+ */
+    if ((bp = bfind("//ptt_expander", TRUE, BFINVS)) == NULL) {
+        return errorm;
+    }
+    bclear(bp);                 /* Ensure empty */
+    struct buffer *sbp = curbp; /* save the old buffer */
+    swbuffer(bp, 0);
+    bp->b_mode = curbp->b_mode; /* Set mode to my original mode */
+    linstr(str);                /* Add string */
+    backdel(0, 1);              /* Remove last grapheme */
+    ptt_handler(str[strlen(str)-1]);  /* Re-add via handler */
+
+/* Allow for the expansion being multi-line */
+
+    char *cp = result;
+    struct line *lp = curbp->b_linep;
+    do {
+        cp = stpncpy(cp, ltext(lp), lused(lp));
+        *cp++ = '\n';
+        lp = lforw(lp);
+    } while (lp != curbp->b_linep);
+
+/* Is the final newline really part of the expansion? */
+    if (no_newline_in_pttex) cp--;
+    *cp = '\0';
+    swbuffer(sbp, 0);
+    return result;
+}
+
 /* ue_printf
  *
  * printf-like handling for multiple args together...
@@ -808,6 +860,8 @@ static char *gtfun(char *fname) {
     case UFXLATE:       return xlat(arg1, arg2, arg3);
     case UFGRPTEXT:     return group_match(ue_atoi(arg1));
     case UFPRINTF:      return ue_printf(arg1);
+    case UFPTTEX:       return ptt_expand(arg1);
+
 
 /* Real arithmetic is to precision 12 in G-style strings.
  * Use &ptf to format the results as you wish.

@@ -89,7 +89,7 @@ enum uf_val {
     UFSINDEX,   UFRINDEX,
     UFIND,      UFTRUTH,    UFASCII,    UFCHR,      UFGTKEY,    UFRND,
     UFENV,      UFBIND,     UFEXIST,    UFBXIST,    UFFIND,     UFXLATE,
-    UFGRPTEXT,  UFPRINTF,
+    UFGRPTEXT,  UFPRINTF,   UFPTTEX,
     UFRADD,     UFRSUB,     UFRTIMES,   UFRDIV,     UFRPOW,
     UFRLESS,    UFRGREAT,   UFR2I,
 };
@@ -163,6 +163,7 @@ static struct user_function funcs[] = {
  { "xla", TRINAMIC, UFXLATE },  /* XLATE character string translation */
  { "grp", MONAMIC,  UFGRPTEXT}, /* Text in group for last match */
  { "ptf", MONAMIC,  UFPRINTF},  /* printf-style string creator */
+ { "ptx", MONAMIC,  UFPTTEX},   /* Expand in PTT mode */
 
 /* Real artihmetic */
  { "rad", DINAMIC,  UFRADD },   /* add */
