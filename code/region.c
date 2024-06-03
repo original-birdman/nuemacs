@@ -204,8 +204,8 @@ static int casechange_region(int newcase) { /* The handling function */
     while((curwp->w.dotp != region.r_endp) ||
           (curwp->w.doto < region.r_foffset)) {
         int bc = ensure_case(newcase);
+        if (bc == UEM_NOCHAR) break;
         if (curwp->w.dotp == region.r_endp) region.r_foffset += bc;
-        forw_grapheme(1);
     }
 
 /* Now restore us to where we were */

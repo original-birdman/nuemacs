@@ -203,6 +203,13 @@ int ensure_case(int want_case) {
     lchange(WFHARD);
 ensure_ex_free:
     Xfree(gc.ex);
+
+/* All callers are moving through the buffer, so we may as well do the
+ * move here.
+ */
+    if (forw_grapheme(1) <= 0) {
+        return UEM_NOCHAR;
+    }
     return doto_change;
 }
 
@@ -221,8 +228,7 @@ int upperword(int f, int n) {
         }
         int prev_zw_break = zw_break;
         while ((inword(NULL) != FALSE) || prev_zw_break) {
-            ensure_case(UTF8_UPPER);
-            if (forw_grapheme(1) <= 0) return FALSE;
+            if (ensure_case(UTF8_UPPER) == UEM_NOCHAR) return FALSE;
             prev_zw_break = zw_break;
         }
     }
@@ -244,8 +250,7 @@ int lowerword(int f, int n) {
         }
         int prev_zw_break = zw_break;
         while ((inword(NULL) != FALSE)  || prev_zw_break) {
-            ensure_case(UTF8_LOWER);
-            if (forw_grapheme(1) <= 0) return FALSE;
+            if (ensure_case(UTF8_LOWER) == UEM_NOCHAR) return FALSE;
             prev_zw_break = zw_break;
         }
     }
@@ -268,11 +273,9 @@ int capword(int f, int n) {
         }
         int prev_zw_break = zw_break;
         if (inword(NULL) != FALSE) {
-            ensure_case(UTF8_UPPER);
-            if (forw_grapheme(1) <= 0) return FALSE;
+            if (ensure_case(UTF8_UPPER) == UEM_NOCHAR) return FALSE;
             while ((inword(NULL) != FALSE) || prev_zw_break) {
-                ensure_case(UTF8_LOWER);
-                if (forw_grapheme(1) <= 0) return FALSE;
+                if (ensure_case(UTF8_LOWER) == UEM_NOCHAR) return FALSE;
             }
         }
     }

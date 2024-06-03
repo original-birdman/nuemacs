@@ -810,13 +810,13 @@ int ptt_handler(int c) {
 /* We need to know where <n> unicode chars back starts */
         int start_at = unicode_back_utf8(ptr->from_len_uc,
              ltext(curwp->w.dotp), curwp->w.doto);
+        if (start_at < 0) continue; /* Insufficient chars */
         if (ptr->caseset != CASESET_OFF) {
 /* Need a unicode-case insensitive strncmp!!!
  * Also, since we can't guarantee that a case-changed string will be
  * the same length, we need to step back the right number of unicode
  * chars first.
  */
-            if (start_at < 0) continue; /* Insufficient chars */
             if (nocasecmp_utf8(ltext(curwp->w.dotp),
                  start_at, lused(curwp->w.dotp),
                  ptr->from, 0, ptr->from_len)) continue;
@@ -825,7 +825,6 @@ int ptt_handler(int c) {
 /* We need to check there are sufficient chars to check, then
  * just compare the bytes.
  */
-            if (curwp->w.doto < ptr->from_len) continue;
             if (strncmp(ltext(curwp->w.dotp)+start_at,
                  ptr->from, ptr->from_len)) continue;
         }
@@ -880,7 +879,6 @@ int ptt_handler(int c) {
             int count = ptr->to_len_uc;
             curwp->w.doto = start_at;
             ensure_case(set_case);
-            forw_grapheme(1);
             if (ptr->caseset == CASESET_CAPI_ONE) { /* Just step over chars */
                 while (--count) {       /* First already done */
                     if (forw_grapheme(1) <= 0)      /* !?! */
@@ -890,26 +888,22 @@ int ptt_handler(int c) {
             else if (ptr->caseset == CASESET_ON) {  /* Do the lot */
 /* Like upperword(), but with known char count */
                 while (--count) {       /* First already done */
-                    if (forw_grapheme(1) <= 0)      /* !?! */
-                        break;
-                    ensure_case(set_case);
+                    if (ensure_case(set_case) == UEM_NOCHAR) break;
                 }
             }
             else if ((ptr->caseset == CASESET_CAPI_ALL) ||
                      (ptr->caseset == CASESET_LOWI_ALL)) { /* Do per-word */
 /* Like capword(), but with known char count */
                 int was_inword = inword(NULL);
-                while (--count) {       /* First already done */
-                    if (forw_grapheme(1) <= 0)      /* !?! */
-                        break;
+                if (forw_grapheme(1) > 0)
+                    while (--count) { /* First already done */
                     int now_in_word = inword(NULL);
                     if (now_in_word && !was_inword) {
-                        ensure_case(set_case);
+                        if (ensure_case(set_case) == UEM_NOCHAR) break;
                     }
                     was_inword = now_in_word;
                 }
             }
-
         }
         return TRUE;
     }
