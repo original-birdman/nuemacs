@@ -823,7 +823,7 @@ static int filler(int indent, int width, int justify) {
  * if there is one.
  */
         if (getccol() > width) {            /* Need to wrap? */
-            if (words_to_wrap == 1) {       /* Nowhere to wrap */
+            if (words_to_wrap == 1) {       /* Nowhere to wrap, so... */
                 ;                           /* Put newline "here" */
             }
             else {
@@ -864,11 +864,15 @@ static int filler(int indent, int width, int justify) {
                     curwp->w.doto = end_pad_at; /* Back to wrap point */
                 }
             }
-/* Having sorted out the text for this line, insert a newline and indent */
+/* Having sorted out the text for this line, insert a newline
+ * and indent if more text to process.
+ */
             lnewline();
-            words_to_wrap = 0;
-            if (indent) if (!linsert_byte(indent, ' ')) return FALSE;
-            start_offs = indent;        /* Spaces are 1-byte chars */
+            if (lused(curwp->w.dotp) > 0) {
+               words_to_wrap = 0;
+               if (indent) if (!linsert_byte(indent, ' ')) return FALSE;
+               start_offs = indent;        /* Spaces are 1-byte chars */
+            }
         }
         else if (!all_done) {                   /* Not wrapping */
 /* Handle any defined punctuation characters.
@@ -892,8 +896,10 @@ static int filler(int indent, int width, int justify) {
             if (!zw_break && !linsert_byte(nsp, ' ')) return FALSE;
         }
         if (all_done) {                             /* Tidy up */
-            curwp->w.dotp = lforw(curwp->w.dotp);   /* End at the start... */
-            curwp->w.doto = 0;                      /* ...of next line */
+            if (curwp->w.dotp != curbp->b_linep) {
+                curwp->w.dotp = lforw(curwp->w.dotp);   /* End at the start... */
+                curwp->w.doto = 0;                      /* ...of next line */
+            }
             break;                                  /* All done */
         }
     }

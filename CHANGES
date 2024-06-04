@@ -7917,3 +7917,8 @@ etc/uemacs.hlp
 
 display.c
     If getscreensize() can't get the screensize, just exit.
+
+word.c
+    Fixes to fillpara() to prevent wrap-around at end of file.
+    Only indent if there is more text to handle.
+    Don't move forward if we are on last line of file.
