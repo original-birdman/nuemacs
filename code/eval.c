@@ -453,12 +453,11 @@ static char *ptt_expand(char *str) {
 /* Allow for the expansion being multi-line */
 
     char *cp = result;
-    struct line *lp = curbp->b_linep;
-    do {
+    for (struct line *lp = lforw(curbp->b_linep); lp != curbp->b_linep;
+         lp = lforw(lp)) {
         cp = stpncpy(cp, ltext(lp), lused(lp));
         *cp++ = '\n';
-        lp = lforw(lp);
-    } while (lp != curbp->b_linep);
+     }
 
 /* Is the final newline really part of the expansion? */
     if (no_newline_in_pttex) cp--;

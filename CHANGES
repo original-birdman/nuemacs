@@ -7922,3 +7922,6 @@ word.c
     Fixes to fillpara() to prevent wrap-around at end of file.
     Only indent if there is more text to handle.
     Don't move forward if we are on last line of file.
+
+eval.c
+    Fix the gathering loop in ptt_expand().
