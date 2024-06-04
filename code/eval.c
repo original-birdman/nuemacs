@@ -448,7 +448,7 @@ static char *ptt_expand(char *str) {
     bp->b_mode = curbp->b_mode; /* Set mode to my original mode */
     linstr(str);                /* Add string */
     backdel(0, 1);              /* Remove last grapheme */
-    ptt_handler(str[strlen(str)-1]);  /* Re-add via handler */
+    ptt_handler(str[strlen(str)-1], FALSE); /* Re-add via handler */
 
 /* Allow for the expansion being multi-line */
 

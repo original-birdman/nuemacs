@@ -135,7 +135,7 @@ extern int storepttable(int, int);
 extern int set_pttable(int, int);
 extern int next_pttable(int, int);
 extern int toggle_ptmode(int, int);
-extern int ptt_handler(int);
+extern int ptt_handler(int, int);
 extern int storeproc(int, int);
 extern int run_user_proc(char *, int, int);
 extern int drop_pin(int, int);

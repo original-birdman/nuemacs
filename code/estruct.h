@@ -273,6 +273,7 @@ struct ptt_ent {
     int from_len;               /* in bytes */
     int from_len_uc;            /* in unicode */
     int to_len_uc;              /* in unicode */
+    int to_len_gph;             /* in graphemes */
 /* The following fields are only set for the head */
     int bow_only;               /* Only match at beginning of word */
     int caseset;                /* Casing for replacement */

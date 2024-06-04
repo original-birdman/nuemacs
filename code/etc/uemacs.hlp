@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.181 Help Index     (03 Jun 2024)
+=>                   nuEmacs GGR4.181 Help Index     (04 Jun 2024)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -879,6 +879,10 @@ store-pttable <ptt-name>
     Define a phonetic translation table.  When this is switched on any
     typing that results in the completion of from1 (from2, ...) will
     result in that text being replaced with to1 (to2, ...).
+    The replacement text can be a series of token (which are catenated)
+    and can include 0xnn (hex) and U+nnnn (Unicode codepoint) tokens.
+    You may use ~ escaping here ("~n" for newline, "~ " for space...).
+    The from text must not contain a newline.
 
     The tables can contain these commands:
         caseset-on          [which is the default setting]

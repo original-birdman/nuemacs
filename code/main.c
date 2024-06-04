@@ -1583,7 +1583,7 @@ int execute(int c, int f, int n) {
         }
     }
 
-/* At this point we have to unset all of teh keep_flags, as non
+/* At this point we have to unset all of the keep_flags, as none
  * can be true.
  */
     com_flag = 0;
@@ -1597,7 +1597,7 @@ int execute(int c, int f, int n) {
  * we do not need to insert it.
  */
         if (curbp->b_mode & MDPHON) {
-            if (ptt_handler(c)) return TRUE;
+            if (ptt_handler(c, TRUE)) return TRUE;
         }
 
         if (n <= 0) {   /* Fenceposts.          */

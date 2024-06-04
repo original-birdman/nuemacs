@@ -497,6 +497,8 @@ static int ptt_compile(struct buffer *bp) {
         char *rp = lbuf;
         terminate_str(lbuf+lused(lp));
         rp = token(rp, tok, NLINE);
+/* Ignore any entry with a newline in teh from text */
+        if (strchr(tok, '\n')) continue;
         char from_string[NLINE];
         int bow;
         char *from_start;
@@ -604,6 +606,7 @@ static int ptt_compile(struct buffer *bp) {
         strncpy(new->to, to_string, to_len);
         terminate_str(new->to + to_len);
         new->to_len_uc = uclen_utf8(new->to);
+        new->to_len_gph = glyphcount_utf8(new->to);
         new->bow_only = bow;
         new->caseset = caseset;
     }
@@ -788,8 +791,9 @@ int toggle_ptmode(int f, int n) {
 
 /* GGR
  * Handle a typed-character (unicode) when PHON mode is on
+ * Optionally remove the character if no ptt match found
  */
-int ptt_handler(int c) {
+int ptt_handler(int c, int remove_on_no_match) {
 
     if (!ptt) return FALSE;
     if (!ptt->ptt_headp && !ptt_compile(ptt))
@@ -848,6 +852,7 @@ int ptt_handler(int c) {
  * need to know the case of the first character.
  */
         curwp->w.doto = start_at;
+        struct line *start_lp = curwp->w.dotp;
         int edit_case = 0;
         int set_case = UTF8_CKEEP;
         if (ptr->caseset != CASESET_OFF) {
@@ -877,34 +882,37 @@ int ptt_handler(int c) {
  * NOTE that we have added everything in the case that the user supplied,
  * and we only change things if the user "from" started with a capital.
  */
-
-        if (edit_case && (ptr->caseset != CASESET_OFF)) {
-            int count = ptr->to_len_uc;
+        if (edit_case) {
+            int count = ptr->to_len_gph;
             curwp->w.doto = start_at;
-            ensure_case(set_case);
-            if (ptr->caseset == CASESET_CAPI_ONE) { /* Just step over chars */
-                while (--count) {       /* First already done */
-                    if (forw_grapheme(1) <= 0)      /* !?! */
-                        break;
-                }
-            }
-            else if (ptr->caseset == CASESET_ON) {  /* Do the lot */
-/* Like upperword(), but with known char count */
-                while (--count) {       /* First already done */
-                    if (ensure_case(set_case) == UEM_NOCHAR) break;
-                }
-            }
-            else if ((ptr->caseset == CASESET_CAPI_ALL) ||
-                     (ptr->caseset == CASESET_LOWI_ALL)) { /* Do per-word */
-/* Like capword(), but with known char count */
-                int was_inword = inword(NULL);
-                if (forw_grapheme(1) > 0)
-                    while (--count) { /* First already done */
-                    int now_in_word = inword(NULL);
+            curwp->w.dotp = start_lp;
+            int was_inword = 0;
+            int now_in_word;
+            int l_caseset = ptr->caseset;
+            while (count--) {
+                switch (l_caseset) {
+                case CASESET_CAPI_ALL:
+                case CASESET_LOWI_ALL:
+                    now_in_word = inword(NULL);
                     if (now_in_word && !was_inword) {
-                        if (ensure_case(set_case) == UEM_NOCHAR) break;
+                        if (ensure_case(set_case) == UEM_NOCHAR) count = 0;
+                    }
+                    else {
+                        if (forw_grapheme(1) <= 0) count = 0;
                     }
                     was_inword = now_in_word;
+                    break;
+                case CASESET_CAPI_ONE:
+                case CASESET_LOWI_ONE:
+                    if (ensure_case(set_case) == UEM_NOCHAR) count = 0;
+                    l_caseset = CASESET_OFF;    /* forw_grapheme from now on */
+                    break;
+                case CASESET_ON:
+                    if (ensure_case(set_case) == UEM_NOCHAR) count = 0;
+                    break;
+                default:
+                    if (forw_grapheme(1) <= 0) count = 0;
+                    break;
                 }
             }
         }
@@ -915,8 +923,10 @@ int ptt_handler(int c) {
  * But we've just inserted the unichar we are deleting, so it can't
  * consist of multiple unicode chars - so we'll only delete the one.
  */
-    curwp->w.doto = orig_doto;
-    ldelgrapheme(1, FALSE);
+    if (remove_on_no_match) {
+        curwp->w.doto = orig_doto;
+        ldelgrapheme(1, FALSE);
+    }
     return FALSE;
 }
 

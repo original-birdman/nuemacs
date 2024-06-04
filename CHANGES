@@ -7925,3 +7925,17 @@ word.c
 
 eval.c
     Fix the gathering loop in ptt_expand().
+
+eval.c
+exec.c
+main.c
+efunc.h
+estruct.h
+etc/uemacs.hlp
+    Fixes to caseset options.
+    Add option to retain added final char in ptt_handler and modify
+    callers. [eval.c, main.c, exec.c, efunc.h]
+    Prevent newline in the from part of a ptt entry. [exec.c]
+    Save the grapheme count of the replacement text. [exec.c]
+    Rewrite the case editing for replacement text. [exec.c]
+    Update the caseset desciption in help. [uemacs.hlp]
