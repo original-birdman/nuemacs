@@ -7939,3 +7939,6 @@ etc/uemacs.hlp
     Save the grapheme count of the replacement text. [exec.c]
     Rewrite the case editing for replacement text. [exec.c]
     Update the caseset desciption in help. [uemacs.hlp]
+
+autotest/ptt_tables.sh
+    Add tests for ptt entries.
