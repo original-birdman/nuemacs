@@ -43,6 +43,10 @@ $cmd "$prog" > autotest.tfile <<EOD
 16 it, so cannot be wrapped itself, such as
 17 2,4-bis(tetra-phenyl-arsonium)-penta-thiocyonata-rhenium(VI) or
 18 something like that.  It's (Ph₄As)₂Re(NCS)₅, which is deep purple.
+19
+20 Finally we add a paragrpah at the end of the file which finishes with
+21 an overlong line, such as a URL, in order to check that filling this
+22 does not wrap to the start of the file http://www.example.com/a_long_url_path/to_make_sure_we_are/too_long_for_the_fiil_column_setting
 EOD
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -215,6 +219,22 @@ run check-position
   set %expline 21
   set %expcol 1
   set %expchar &asc o
+run check-position
+
+; Wrap the final paragraph, ending with an overlong line.
+; Then fill again and check for no change
+;
+end-of-file
+previous-paragraph
+fill-paragraph
+  set %curtest FinalPara-CheckNoWrap
+  set %expline 29
+  set %expcol 1
+  set %expchar 10
+run check-position
+
+fill-paragraph
+  set %curtest FinalPara-CheckNoWrap2
 run check-position
 
 ; Re-read file...
