@@ -191,7 +191,7 @@ int gotoeob(int f, int n) {
 
 /* Internal routine to move by n full lines.
  * boundary conditions vary slightly according to the direction.
- * We remember that the last command was a lien move so that we may
+ * We remember that the last command was a line move so that we may
  * preserve the cursor in the starting column of consecutive line-move
  * command even if we pass through a short one on the way.
  */
