@@ -261,8 +261,8 @@ struct magic_replacement {
 
 /* Group status and information.
  * We cannot have more than NPAT/2 groups (in fact probably NPAT/3)
- * +1, since we start at 0.
  */
+#define NPAT 128                /* Max bytes in pattern */
 #define NGRP (NPAT/2 + 1)
 
 /* The group_info data contains some only used when building the
@@ -473,7 +473,7 @@ static int boundry(struct line *curline, int curoff, int dir) {
  * Also called from svar() if it sets $replace or $search
  */
 void new_prompt(char *dflt_str) {
-    sprintf(prmpt_buf.prompt, "%s " MLpre "%s" MLpost ": ",
+    db_sprintf(prmpt_buf.prompt, "%s " MLpre "%s" MLpost ": ",
         current_base, expandp(dflt_str, NULL));
     prmpt_buf.update = 1;
     return;
@@ -495,27 +495,28 @@ void rotate_sstr(int n) {
 /* Rotate by <n> by mapping into a temp array then memcpy back */
 
     char *tmp_txt[RING_SIZE];
-    char **txt, *dstr;
+    char **txt;
+    db *t_db;
     if (this_rt == Search) {
         txt = srch_txt;
-        dstr = pat;
+        t_db = &pat;
     }
     else {
         txt = repl_txt;
-        dstr = rpat;
+        t_db = &rpat;
     }
     for (int ix = 0; ix < RING_SIZE; ix++, rotator++) {
         rotator %= RING_SIZE;
         tmp_txt[rotator] = txt[ix];
     }
     memcpy(txt, tmp_txt, sizeof(tmp_txt));  /* Copy rotated array back */
-    strcpy(dstr, txt[0]);                   /* Update (r)pat */
+    dbp_set(t_db, txt[0]);                 /* Update (r)pat */
 
 /* We need to make getstring() show this new value in its prompt.
  * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
  * to tell getstring() to use it.
  */
-    new_prompt(dstr);
+    new_prompt(dbp_val(t_db));
     return;
 }
 
@@ -600,7 +601,7 @@ static void setbit(int bc, char *cclmap) {
 static void parse_error(char *pptr, char *message) {    /* Helper routine */
     char byte_saved = *pptr;
     terminate_str(pptr);    /* Temporarily fudge in end-of-string */
-    mlwrite("%s<-: %s!", pat, message);
+    mlwrite("%s<-: %s!", db_val(pat), message);
     *pptr = byte_saved;
     return;
 }
@@ -1086,7 +1087,7 @@ static int group_cntr;  /* Number of possible groups in search pattern */
 static int mc_alloc = FALSE;    /* Initial state */
 static int mcstr(void) {
     struct magic *mcptr = mcpat;
-    char *patptr = pat;
+    char *patptr = db_val(pat);
     int mj;
     int pchr;
     int status = TRUE;
@@ -1516,7 +1517,7 @@ static struct func_call *new_fc(void) {
  */
 static int rmcstr(void) {
     struct magic_replacement *rmcptr = rmcpat;
-    char *patptr = rpat;
+    char *patptr = db_val(rpat);
     char *btext;
     char btbuf[NPAT+1];
 
@@ -1586,7 +1587,7 @@ static int rmcstr(void) {
 /* Defaults... */
                 rmcptr->val.x.curval = 1;
                 rmcptr->val.x.incr = 1;
-                rmcptr->val.x.fmt = strdup("%d");
+                rmcptr->val.x.fmt = Xstrdup("%d");
 /* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
  * NOTE that the format spec MUST be for a d (or u) item!!!
  * We've already got the length of btext for advancing, so the fact that
@@ -1604,7 +1605,7 @@ static int rmcstr(void) {
                             rmcptr->val.x.incr = atoi(ntp+5);
                         }
                         else if (0 == strncmp("fmt=", ntp, 4)) {
-                            rmcptr->val.x.fmt = strdup(ntp+4);
+                            rmcptr->val.x.fmt = Xstrdup(ntp+4);
                         }
                     }
                 }
@@ -1637,7 +1638,7 @@ static int rmcstr(void) {
                         wkfcp->type = REPL_CNT;
                         wkfcp->val.x.curval = 1;
                         wkfcp->val.x.incr = 1;
-                        wkfcp->val.x.fmt = strdup("%d");
+                        wkfcp->val.x.fmt = Xstrdup("%d");
 /* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
  * NOTE that the format spec MUST be for a d (or u) item!!!
  * We've already got the length of btext for advancing, so the fact that
@@ -1655,7 +1656,7 @@ static int rmcstr(void) {
                                     wkfcp->val.x.incr = atoi(ntp+5);
                                 }
                                 else if (0 == strncmp("fmt=", ntp, 4)) {
-                                    wkfcp->val.x.fmt = strdup(ntp+4);
+                                    wkfcp->val.x.fmt = Xstrdup(ntp+4);
                                 }
                             }
                         }
@@ -1919,23 +1920,31 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
 
 /* rvstrcpy -- Reverse string copy.
  */
-void rvstrcpy(char *rvstr, char *str) {
-    int i;
+void rvstrcpy(db *rvstr, db *str) {
 
-    str += (i = strlen(str));
-    while (i-- > 0) *rvstr++ = *--str;
-    terminate_str(rvstr);
+/* Ensure rvstr has the correct length and storage */
+    dbp_set(rvstr, dbp_val(str));
+
+/* Now reverse this copy */
+
+    char *bp = dbp_val(rvstr);
+    char *ep = bp + dbp_len(rvstr) - 1;
+    do {
+        char a = *bp;   /* Original begin */
+        *bp++ = *ep;    /* Copy end to begin */
+        *ep-- = a;      /* Original begin into end */
+    } while (bp < ep);
 }
 
 /*      Setting up search jump tables.
  *      the default for any character to jump
  *      is the pattern length
  */
-void setpattern(const char apat[], const char tap[]) {
+void setpattern(db *apat, db *tap) {
     int i;
 
 /* Add pattern to search run if called during command line processing */
-    if (comline_processing) update_ring(apat);
+    if (comline_processing) update_ring(dbp_val(apat));
 
     patlenadd = srch_patlen - 1;
     for (i = 0; i < HICHAR; i++) {
@@ -1947,26 +1956,26 @@ void setpattern(const char apat[], const char tap[]) {
  */
     int nocase = !(curwp->w_bufp->b_mode & MDEXACT);
     for (i = 0; i < patlenadd; i++) {
-        deltaf[ch_as_uc(apat[i])] = patlenadd - i;
-        if (nocase && isalpha(ch_as_uc(apat[i])))
-            deltaf[ch_as_uc(apat[i] ^ DIFCASE)] = patlenadd - i;
-        deltab[ch_as_uc(tap[i])] = patlenadd - i;
-        if (nocase && isalpha(ch_as_uc(tap[i])))
-            deltab[ch_as_uc(tap[i] ^ DIFCASE)] = patlenadd - i;
+        deltaf[ch_as_uc(dbp_charat(apat, i))] = patlenadd - i;
+        if (nocase && isalpha(ch_as_uc(dbp_charat(apat, 1))))
+            deltaf[ch_as_uc(dbp_charat(apat, i) ^ DIFCASE)] = patlenadd - i;
+        deltab[ch_as_uc(dbp_charat(tap, i))] = patlenadd - i;
+        if (nocase && isalpha(ch_as_uc(dbp_charat(tap, i))))
+            deltab[ch_as_uc(dbp_charat(tap, i) ^ DIFCASE)] = patlenadd - i;
     }
 
 /* The last character will have the pattern length unless there are
  * duplicates of it. Get the number to jump from the arrays delta, and
  * overwrite with zeros in delta duplicating the CASE.
  */
-    lastchfjump = patlenadd + deltaf[ch_as_uc(apat[patlenadd])];
-    deltaf[ch_as_uc(apat[patlenadd])] = 0;
-    if (nocase && isalpha(ch_as_uc(apat[patlenadd])))
-        deltaf[ch_as_uc(apat[patlenadd] ^ DIFCASE)] = 0;
-    lastchbjump = patlenadd + deltab[ch_as_uc(apat[0])];
-    deltab[ch_as_uc(apat[0])] = 0;
-    if (nocase && isalpha(ch_as_uc(apat[0])))
-        deltab[ch_as_uc(apat[0] ^ DIFCASE)] = 0;
+    lastchfjump = patlenadd + deltaf[ch_as_uc(dbp_charat(apat, patlenadd))];
+    deltaf[ch_as_uc(dbp_charat(apat, patlenadd))] = 0;
+    if (nocase && isalpha(ch_as_uc(dbp_charat(apat, patlenadd))))
+        deltaf[ch_as_uc(dbp_charat(apat, patlenadd) ^ DIFCASE)] = 0;
+    lastchbjump = patlenadd + deltab[ch_as_uc(dbp_charat(apat, 0))];
+    deltab[ch_as_uc(dbp_charat(apat, 0))] = 0;
+    if (nocase && isalpha(ch_as_uc(dbp_charat(apat, 0))))
+        deltab[ch_as_uc(dbp_charat(apat, 0) ^ DIFCASE)] = 0;
 }
 
 /* readpattern -- Read a pattern.  Stash it in apat.
@@ -1978,11 +1987,11 @@ void setpattern(const char apat[], const char tap[]) {
  * Display the old pattern, in the style of Jeff Lomicka.
  * There is some do-it-yourself control expansion.
  */
-static int readpattern(char *prompt, char *apat, int srch) {
+static int readpattern(char *prompt, db *apat, int srch) {
     int status;
-    char tpat[NPAT*2 + 20];     /* More than needed? */
+    db_def(tpat);
 
-    char saved_base[NSTRING];
+    char saved_base[16];        /* Same size as current_base */
 
 /* We save the base of the prompt for previn_ring to use.
  * Since this code can be re-entered we have to save (and restore at
@@ -1990,7 +1999,8 @@ static int readpattern(char *prompt, char *apat, int srch) {
  */
     strcpy(saved_base, current_base);
     strcpy(current_base, prompt);
-    sprintf(tpat, "%s " MLpre "%s" MLpost ": ", prompt, expandp(apat, NULL));
+    db_sprintf(tpat, "%s " MLpre "%s" MLpost ": ", prompt,
+         expandp(dbp_val_nc(apat), NULL));
 
 /* Read a pattern.  Either we get one or we just get an empty result
  * and use the previous pattern.
@@ -1998,10 +2008,9 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * *Then*, make the meta-pattern, if we are defined that way.
  * We set this_rt before and after the mlreply() call.
  */
-
     enum call_type our_rt = (srch == TRUE)? Search: Replace;
     this_rt = our_rt;           /* Set our call type for nextin_ring() */
-    status = mlreply(tpat, tpat, NPAT, CMPLT_SRCH);
+    status = mlreply(db_val(tpat), &tpat, CMPLT_SRCH);
     this_rt = our_rt;           /* Set our call type for update_ring() */
     int do_update_ring = 1;
 
@@ -2019,14 +2028,14 @@ static int readpattern(char *prompt, char *apat, int srch) {
  */
     if (status == FALSE) {              /* Empty response */
         if (our_rt == Search) {
-            if (pat[0] != 0) {          /* Have a default to use? */
-                strcpy(tpat, pat);
+            if (db_len(pat) > 0) {   /* Have a default to use? */
+                db_set(tpat, db_val(pat));
                 do_update_ring = 0;     /* Don't save this */
                 status = TRUE;          /* So we do the next section... */
             }
         }
         else {                          /* Must be a Replace */
-            strcpy(tpat, rpat);
+            db_set(tpat, db_val(rpat));
             if (*repl_txt[0] == '\0')   /* If current top is also empty... */
                 do_update_ring = 0;     /* ...don't save ths one */
             status = TRUE;              /* So we do the next section... */
@@ -2036,12 +2045,12 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * mini-buffer).
  */
         if (kbdmode == RECORD && mb_info.mbdepth == 0)
-             addto_kbdmacro(tpat, 0, 1);
+             addto_kbdmacro(db_val(tpat), 0, 1);
     }
     if (status == TRUE) {
-        strcpy(apat, tpat);
+        dbp_set(apat, db_val(tpat));
 /* Save this latest string in the search buffer ring? */
-        if (do_update_ring) update_ring(tpat);
+        if (do_update_ring) update_ring(db_val(tpat));
 
 /* Note that we always rebuild any meta-pattern from scratch even if
  * we used the default pattern (which is reasonable, since it might not
@@ -2069,14 +2078,15 @@ static int readpattern(char *prompt, char *apat, int srch) {
  * purposes and reverse string copy. For fast scans, set jump tables.
  */
         if (srch) {
-            srch_patlen = strlen(apat);
-            rvstrcpy(tap, apat);
-            if (!slow_scan) setpattern(apat, tap);
+            srch_patlen = dbp_len(apat);
+            rvstrcpy(&tap, apat);
+            if (!slow_scan) setpattern(apat, &tap);
         }
 
     }
     strcpy(current_base, saved_base);   /* Revert any change */
 
+    db_free(tpat);
     return status;
 }
 
@@ -2884,7 +2894,7 @@ int forwhunt(int f, int n) {
 /* Make sure a pattern exists, or that we didn't switch into MAGIC mode
  * until after we entered the pattern.
  */
-    if (pat[0] == '\0') {
+    if (db_len(pat) == 0) {
         mlwrite_one("No pattern set");
         return FALSE;
     }
@@ -2922,7 +2932,7 @@ int forwhunt(int f, int n) {
             break;
         }
         status = (slow_scan)? step_scanner(mcpat, FORWARD, PTEND)
-                            : fast_scanner(pat, FORWARD, PTEND);
+                            : fast_scanner(db_val(pat), FORWARD, PTEND);
 /* We now have a valid group_match, or have failed */
         if (ggr_opts&GGR_SRCHOLAP) do_preskip = 1;
     } while ((--n > 0) && status);
@@ -2961,19 +2971,22 @@ int forwsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible) we will have a pattern to use.
  */
-        char opat[NPAT];
+        db_def(opat);
         int could_hunt = srch_can_hunt;
-        strcpy(opat, pat);
-        if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
+        db_set(opat, db_val_nc(pat));
+        if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
             srch_can_hunt = 1;
 /* A search with the same string should be the same as a reexec */
             if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
-                 strcmp(opat, pat))     do_preskip = 0;
-            else                        do_preskip = 1;
+                 db_cmp(opat, db_val(pat))) {
+                do_preskip = 0;
+            }
+            else {
+                do_preskip = 1;
+            }
         }
-        else {
-            return status;
-        }
+        db_free(opat);
+        if (status != TRUE) return status;
     }
     return forwhunt(f, n);
 }
@@ -2993,7 +3006,7 @@ int backhunt(int f, int n) {
 /* Make sure a pattern exists, or that we didn't switch into MAGIC mode
  * until after we entered the pattern.
  */
-    if (tap[0] == '\0') {
+    if (db_len(tap) == 0) {
         mlwrite_one("No pattern set");
         return FALSE;
     }
@@ -3035,7 +3048,7 @@ int backhunt(int f, int n) {
             barrier_active = 0;
         }
         else {
-            status = fast_scanner(tap, REVERSE, PTBEG);
+            status = fast_scanner(db_val(tap), REVERSE, PTBEG);
         }
 /* We now have a valid group_match, or have failed */
         if (ggr_opts&GGR_SRCHOLAP) do_preskip = 1;
@@ -3074,19 +3087,22 @@ int backsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible), we will have a pattern to use.
  */
-        char opat[NPAT];
+        db_def(opat);
         int could_hunt = srch_can_hunt;
-        strcpy(opat, pat);
-        if ((status = readpattern("Search", pat, TRUE)) == TRUE) {
+        db_set(opat, db_val_nc(pat));
+        if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
             srch_can_hunt = -1;
 /* A search with the same string should be the same as a reexec */
             if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
-                 strcmp(opat, pat))     do_preskip = 0;
-            else                        do_preskip = 1;
+                 db_cmp(opat, db_val(pat))) {
+                do_preskip = 0;
+            }
+            else {
+                do_preskip = 1;
+            }
         }
-        else {
-            return status;
-        }
+        db_free(opat);
+        if (status != TRUE) return status;
     }
     return backhunt(f, n);
 }
@@ -3096,7 +3112,7 @@ int backsearch(int f, int n) {
  */
 static struct line *sm_line = NULL;
 static int sm_off = 0;
-int scanmore(char *patrn, int dir, int next_match, int extend_match) {
+int scanmore(db *patrn, int dir, int next_match, int extend_match) {
     int sts;                /* search status              */
 
 /* If called with a NULL pattern, just remove group info. */
@@ -3153,19 +3169,19 @@ int scanmore(char *patrn, int dir, int next_match, int extend_match) {
         }
     }
     else {
-        rvstrcpy(tap, patrn);   /* Put reversed string in tap */
-        srch_patlen = strlen(patrn);
-        setpattern(patrn, tap);
+        rvstrcpy(&tap, patrn);  /* Put reversed string in tap */
+        srch_patlen = dbp_len(patrn);
+        setpattern(patrn, &tap);
         if (dir < 0) {      /* reverse search? (with possible preskip) */
 /* The +1 is to allow the new character to be found since in fast mode
  * the scan *is* done in reverse from "here".
  */
             if (extend_match) forw_grapheme(prev_match_len + 1);
-            sts = fast_scanner(tap, REVERSE, PTBEG);
+            sts = fast_scanner(db_val(tap), REVERSE, PTBEG);
         }
         else {              /* Nope. Go forward (with possible preskip) */
             if (extend_match) back_grapheme(prev_match_len);
-            sts = fast_scanner(patrn, FORWARD, PTEND);
+            sts = fast_scanner(dbp_val(patrn), FORWARD, PTEND);
         }
     }
     curwp->w_bufp->b_mode = real_mode;
@@ -3184,6 +3200,8 @@ int scanmore(char *patrn, int dir, int next_match, int extend_match) {
 /* Work out the replacement text for the current match.
  * The working buffer is never freed - only grows as needed.
  */
+//GML Could this just be made a db?
+
 static struct {
     char *buf;
     int len;
@@ -3254,23 +3272,23 @@ static char *getrepl(void) {
             break;
         }
         case REPL_FNC: {
-            char fnc_buf[NSTRING];
-            *fnc_buf = '\0';
+            db_def(fnc_buf);
+            db_set(fnc_buf, "");   /* Start with nothing */
             for (struct func_call *fcp = rmcptr->val.fc; fcp->type != EOL;
                     fcp = fcp->next) {
                 switch (fcp->type) {
                 case LITCHAR:
-                    strcat(fnc_buf, fcp->val.ltext);
+                    db_append(fnc_buf, fcp->val.ltext);
                     break;
                 case REPL_GRP:
-                    strcat(fnc_buf, group_match(fcp->val.group_num));
+                    db_append(fnc_buf, group_match(fcp->val.group_num));
                     break;
                 case REPL_CNT: {
                     char mc_text[MAX_COUNTER_LEN];
                     (void)snprintf(mc_text, MAX_COUNTER_LEN, fcp->val.x.fmt,
                          fcp->val.x.curval);
                     fcp->val.x.curval += fcp->val.x.incr;
-                    strcat(fnc_buf, mc_text);
+                    db_append(fnc_buf, mc_text);
                     break;
                 }
                 default:
@@ -3281,9 +3299,11 @@ static char *getrepl(void) {
  * command-line text and return the resulting string
  * We have a function to do that...
  */
-            char result[NSTRING];
-            evaluate_cmdstr(fnc_buf, result);
-            append_to_repl_buf(result, -1);
+            db_def(result);
+            evaluate_cmdb(db_val(fnc_buf), &result);
+            db_free(fnc_buf);
+            append_to_repl_buf(db_val(result), -1);
+            db_free(result);
             break;
         }
         default:;
@@ -3417,18 +3437,18 @@ static int replaces(int query, int f, int n) {
 /* Ask the user for the text of a pattern. */
 
     if ((status = readpattern((query? "Query replace": "Replace"),
-         pat, TRUE)) != TRUE)
+         &pat, TRUE)) != TRUE)
         goto end_replaces;
 
 /* Ask for the replacement string. */
 
-    if ((status = readpattern("with", rpat, FALSE)) == ABORT)
+    if ((status = readpattern("with", &rpat, FALSE)) == ABORT)
         goto end_replaces;
 
 /* Set up flags so we can make sure not to do a recursive replace on
  * the last line because we're replacing the final newline...
  */
-    nlflag = (pat[srch_patlen - 1] == '\n');
+    nlflag = (db_charat(pat, srch_patlen - 1) == '\n');
     nlrepl = FALSE;
 
 /* Save original dot position, init the number of matches and substitutions,
@@ -3448,11 +3468,11 @@ static int replaces(int query, int f, int n) {
 /* Search for the pattern. The true length of the matched string ends up
  * in match_grp_info[0].len
  */
-        if (slow_scan) {
+        if (slow_scan) {    /* All done? */
             if (!step_scanner(mcpat, FORWARD, PTBEG)) break;
         }
-        else {
-            if (!fast_scanner(pat, FORWARD, PTBEG)) break;  /* all done */
+        else {              /* All done? */
+            if (!fast_scanner(db_val(pat), FORWARD, PTBEG)) break;
         }
         ++nummatch;     /* Increment # of matches */
 
@@ -3464,7 +3484,7 @@ static int replaces(int query, int f, int n) {
 
         match_p = group_match(0);
         if (rmagical) repl_p = getrepl();
-        else          repl_p = rpat;
+        else          repl_p = db_val(rpat);
 
 /* Check for query mode. */
 
@@ -3480,7 +3500,7 @@ pprompt:
                 undone = 0;
                 match_p = last_match.match;
                 if (rmagical) repl_p = last_match.replace;
-                else          repl_p = rpat;
+                else          repl_p = db_val(rpat);
             }
 /* rpat can't change on an undo unless rmagical is set */
 /* We need our own temp buf for one of these expandp calls */
@@ -3640,6 +3660,11 @@ void free_search(void) {
     }
     if (mc_alloc) mcclear();
     rmcclear();
+
+    db_free(pat);
+    db_free(tap);
+    db_free(rpat);
+
     return;
 }
 #endif

@@ -644,22 +644,14 @@ int ldelete(ue64I_t n, int kflag) {
 /* getctext:    grab and return a string with the text of
  *              the current line
  */
+static db_def(rline);   /* Line to return */
 char *getctext(void) {
-    struct line *lp;            /* line to copy */
-    int size;                   /* length of line to return */
-    char *sp;                   /* string pointer into line */
-    static char rline[NSTRING]; /* line to return */
 
-/* Find the contents of the current line and its length */
-    lp = curwp->w.dotp;
-    sp = ltext(lp);
-    size = lused(lp);
-    if (size >= NSTRING) size = NSTRING - 1;
-
-/* Copy it across */
-    memcpy(rline, sp, size);
-    *(rline+size) = 0;
-    return rline;
+/* Could we just return ltext(curwp->w.dotp), having ensured it is
+ * NUL-terminated?
+ */
+    db_setn(rline, ltext(curwp->w.dotp), lused(curwp->w.dotp));
+    return db_val(rline);
 }
 
 /* Free up the first kill buffer ring entry for new text by pushing all
@@ -984,6 +976,8 @@ void free_line(void) {
             tp = np;
         }
     }
+
+    db_free(rline);
     return;
 }
 #endif

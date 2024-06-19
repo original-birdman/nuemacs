@@ -30,7 +30,7 @@ int disinp = TRUE;              /* display input characters     */
 int vismac = FALSE;             /* update display during keyboard macros? */
 int filock = FALSE;             /* Do we want file-locking */
 int crypt_mode = 0;             /* Crypt mode - default is NONE */
-char gl_enc_key[NPAT];          /* Global encryption key */
+char gl_enc_key[NKEY];          /* Global encryption key */
 int gl_enc_len = 0;             /* Global encryption key length. 0 == unset */
 int ttrow = -1;                 /* Row location of HW cursor */
 int ttcol = -1;                 /* Column location of HW cursor */
@@ -72,8 +72,9 @@ struct window *wheadp = NULL;   /* vtinit() needs to check this */
 
 /* uninitialized global definitions */
 
-int kbdm[NKBDM];                /* Macro                        */
-int *kbdend = kbdm;             /* ptr to end of the keyboard */
+int *kbdm;                      /* Macro buffer                 */
+int n_kbdm;                     /* Allocated size of kbdm       */
+int *kbdend;                    /* ptr to end of the keyboard   */
 
 int eolexist;                   /* does clear to EOL exist      */
 int revexist;                   /* does reverse video exist?    */
@@ -89,9 +90,9 @@ struct buffer *blistp;          /* Buffer for C-X C-B           */
 struct buffer *bdbgp;           /* Buffer for macro debug info  */
 
 /* GGR - Add one to these three to allow for trailing NULs      */
-char pat[NPAT+1];               /* Search pattern               */
-char tap[NPAT+1];               /* Reversed pattern array.      */
-char rpat[NPAT+1];              /* replacement pattern          */
+db_def(pat);                    /* Search pattern               */
+db_def(tap);                    /* Reversed pattern array.      */
+db_def(rpat);                   /* replacement pattern          */
 
 struct line *fline;             /* dynamic return line */
 
@@ -117,7 +118,7 @@ int  allow_current   = 0;
 unicode_t *eos_list  = NULL;
 int  inmb            = FALSE;
 int  pathexpand      = TRUE;
-char savnam[NBUFN]   = "main";
+db_def(savnam);
 int do_savnam        = 1;
 
 int  silent          = FALSE;
@@ -156,7 +157,8 @@ char *not_interactive_fname = NULL;
 
 int pause_key_index_update = 0;
 
-prmpt_buf_st prmpt_buf = { NULL, 0, "" };
+/* Contains a db struct */
+prmpt_buf_st prmpt_buf = { NULL, 0, db_initval };
 
 enum yank_type last_yank = None;
 
@@ -167,7 +169,7 @@ int autoclean = 7;
 char regionlist_text[MAX_REGL_LEN] = " o ";
 char regionlist_number[MAX_REGL_LEN] = " %2d. ";
 
-char readin_mesg[NSTRING];
+db_def(readin_mesg);
 
 int running_function = 0;
 char *current_command = NULL;
@@ -223,6 +225,12 @@ meta_spec_flags_t meta_spec_active = { 0, 0, 0, 0 };
 int ggr_opts = 0;
 
 int pretend_size = FALSE;
+
+/* A global db, for use in localized code.
+ * Must NOT be used in calls to a function which might use it itself!!!
+ * Must be db_free()d in quit() in main.c. when FREE is set.
+ */
+db_def(glb_db);
 
 /* A system-wide mark for temporarily saving the current location.
  * p MUST be reset to NULL after every restore!!!

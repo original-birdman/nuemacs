@@ -82,14 +82,8 @@
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
- 
-#define NBINDS  256             /* max # of bound keys          */
-#define NFILEN  PATH_MAX+1      /* # of bytes, file name        */
-#define NBUFN   32              /* # of bytes, buffer name      */
-#define NLINE   513             /* # of bytes, input line       */
-#define NSTRING NFILEN          /* # of bytes, string buffers   */
-#define NKBDM   256             /* # of strokes, keyboard macro */
-#define NPAT    128             /* # of bytes, pattern          */
+
+#define NKEY    128             /* Max bytes in crypt key       */
 #define NLOCKS  100             /* max # of file locks active   */
 #define NCOLORS 8               /* number of supported colors   */
 #define KBLOCK  250             /* sizeof kill buffer chunks    */

@@ -32,13 +32,14 @@ static int remap_c_on_intr = 0;
 
 #include <string.h>
 
-static char picture[NFILEN], directory[NFILEN];
+static db_def(picture);
+static db_def(directory);
 
 static struct buffer *expandbp;
 
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
-static char so_far[NFILEN];     /* Maximal match so far */
+static db_def(so_far);    /* Maximal match so far */
 
 /* getnfile() and getffile()
  * Handle file name completion
@@ -56,11 +57,8 @@ static char so_far[NFILEN];     /* Maximal match so far */
 #include <sys/stat.h>
 
 static DIR *dirptr;
-static int piclen;
-static char *nameptr;
-static char suggestion[NFILEN];
 static short allfiles;
-static char fullname[NFILEN];
+static db_def(fullname);
 
 static void close_dir(void) {
     if (dirptr != NULL) {
@@ -70,8 +68,10 @@ static void close_dir(void) {
 }
 
 #ifndef STANDALONE
-/* We need to remember these across successive calls to getnfile */
-static char exp_id[NFILEN];
+/* We need to remember these across successive calls to getnfile
+ * 40 chars should be enough for login names.
+ */
+static char exp_id[40];
 static char id_to_find[40];
 static int id_to_find_len;
 static int run_id_finder = 0;
@@ -84,7 +84,7 @@ static char *id_finder(void) {
     errno = 0;
     while ((pwe = getpwent())) {
         if (!strncmp(pwe->pw_name, id_to_find, id_to_find_len)) {
-            snprintf(exp_id, NFILEN, "~%s", pwe->pw_name);
+            snprintf(exp_id, sizeof(exp_id), "~%s", pwe->pw_name);
             return exp_id;
         }
     }
@@ -100,6 +100,7 @@ static char *id_finder(void) {
 
 /* Get the next matching file name
  */
+static db_def(suggestion);
 static char *getnfile(void) {
     unsigned short type;        /* file type */
 
@@ -113,28 +114,27 @@ static char *getnfile(void) {
 
     struct dirent *dp;
     struct stat statbuf;
-    int namelen;
 
 /* Get the next directory entry, if no more, we finish */
     if ((dp = readdir(dirptr)) == NULL) return NULL;
 
     if ((allfiles ||
-         (((namelen = strlen(dp->d_name)) >= piclen) &&
-         (!strncmp(dp->d_name, picture, piclen)))) &&
+         ((strlen(dp->d_name) >= db_len(picture)) &&
+         (!strncmp(dp->d_name, db_val(picture), db_len(picture))))) &&
          (strcmp(dp->d_name, ".")) &&
          (strcmp(dp->d_name, ".."))) {
 
-        strcpy(nameptr, dp->d_name);
-        stat(fullname, &statbuf);
+        db_append(fullname, dp->d_name);
+        stat(db_val(fullname), &statbuf);
         type = (statbuf.st_mode & S_IFMT);
         if ((type == S_IFREG)
 #ifdef S_IFLNK
              || (type == S_IFLNK)
 #endif
              || (type == S_IFDIR)) {
-            strcpy(suggestion, dp->d_name);
-            if (type == S_IFDIR) strcat(suggestion, "/");
-            return suggestion;
+            db_set(suggestion, dp->d_name);
+            if (type == S_IFDIR) db_append(suggestion, "/");
+            return db_val(suggestion);
         }
     }
     return getnfile();
@@ -161,7 +161,6 @@ static char *getffile(char *fspec) {
  * fixup_fname().
  */
     if ((*fspec == '~') && (!strchr(fspec, '/'))) {
-        terminate_str(directory);           /* Forget any previous one */
         strncpy(id_to_find, fspec+1, 39);
         terminate_str(id_to_find+39);       /* Ensure NUL terminated */
         id_to_find_len = strlen(id_to_find);
@@ -197,28 +196,25 @@ static char *getffile(char *fspec) {
  */
     fspec = fixup_fname(fspec);
     if (fspec_eoff) strcat(fspec, "/");
-    strcpy(directory, fspec);
+    db_set(directory, fspec);
 
-    if ((p = strrchr(directory, '/'))) {
+    if ((p = strrchr(db_val(directory), '/'))) {
         p++;
-        strcpy(picture, p);
+        db_set(picture, p);
         *p = 0;
-        strcpy(fullname, directory);
+        db_set(fullname, db_val(directory));
     }
     else {
-        strcpy(picture, directory);
-        directory[0] = 0;
-        fullname[0] = 0;
+        db_set(picture, db_val(directory));
+        db_set(directory, "");
+        db_set(fullname,  "");
     }
 
-    nameptr = &fullname[strlen(fullname)];
-
-    if (!directory[0]) dirptr = opendir(".");
-    else               dirptr = opendir(directory);
+    if (db_len(directory) == 0) dirptr = opendir(".");
+    else                        dirptr = opendir(db_val(directory));
     if (dirptr == NULL) return NULL;
 
-    piclen = strlen(picture);
-    allfiles = (piclen == 0);
+    allfiles = (db_len(picture) == 0);
 
 /* And return the first match (we return ONLY matches, for speed) */
     return getnfile();
@@ -369,14 +365,14 @@ static char *getfvar(char *name, int namelen) {
  * A routine to do the matching for completion code.
  * The routine to get the next item to check is determined by mtype.
  */
-static int matcher(char *name, int namelen, char *choices,
+static int matcher(char *name, int namelen, db *choices,
       enum cmplt_type mtype) {
     char *next;                 /* Next filename to look at */
     int match_length;           /* Maximal match length     */
     char *p, *q;                /* Handy pointers           */
     int max, l, unique;
 
-    match_length = strlen(so_far);
+    match_length = db_len(so_far);
 
 /* Restrict length of returned string to number of columns, so that we
  * don't end up wrapping in the minibuffer line.
@@ -384,12 +380,11 @@ static int matcher(char *name, int namelen, char *choices,
     max = term.t_ncol - 1;
 
     l = (match_length < max) ? match_length : max;
+
 /* We also need to check we are not going to overflow the
  * destination buffer, and we have to allow for the final NUL
  */
-    if (l >= NFILEN) l = NFILEN - 1;
-    terminate_str(so_far + l);      /* Ensure this will fit into choices */
-    strcpy(choices, so_far);
+    dbp_set(choices, db_val(so_far));
     max -= l;
     unique = TRUE;
     while (1) {             /* Rather than try to put the switch in there. */
@@ -417,10 +412,10 @@ static int matcher(char *name, int namelen, char *choices,
 /* This loop updates the maximum common prefix "so far" by comparing
  * it with this latest match.
  */
-        for (p = so_far, q = next, match_length = 0;
+        for (p = db_val(so_far), q = next, match_length = 0;
             (*p && *q && (*p == *q)); p++, q++)
             match_length++;
-        so_far[match_length] = 0;
+        db_setcharat(so_far, match_length, 0);
 
         l = strlen(next);
         if (max == 0) {
@@ -428,14 +423,14 @@ static int matcher(char *name, int namelen, char *choices,
                 break;
         }
         else if (l < max) {
-            strcat(choices, " ");
-            strcat(choices, next);
+            dbp_append(choices, " ");
+            dbp_append(choices, next);
             max -= (l + 1);
         }
         else {
             l = (max - 1);
-            strcat(choices, " ");
-            strncat(choices, next, l);
+            dbp_append(choices, " ");
+            dbp_appendn(choices, next, l);
             max = 0;
         }
     }
@@ -446,28 +441,29 @@ static int matcher(char *name, int namelen, char *choices,
  * Looks for things starting with name, and if there are multiple choices
  * builds a catenated string of them in choices.
  */
-static int comp_file(char *name, char *choices) {
-    char supplied[NFILEN];  /* Maximal match so far */
+static int comp_file(db *name, db *choices) {
     char *p;                /* Handy pointer */
     int unique;
 
-    *choices = 0;
+    dbp_set(choices, "");
 
-    if ((p = getffile(name)) == NULL) {
+    if ((p = getffile(dbp_val(name))) == NULL) {
         close_dir();
         mlwrite_one(NOMATCH);
         sleep(1);
         return FALSE;
     }
     else
-        strcpy(so_far, p);
+        db_set(so_far, p);
 
-    strcpy(supplied, name);
-    unique = matcher(name, 0, choices, CMPLT_FILE);
+    unique = matcher(dbp_val(name), 0, choices, CMPLT_FILE);
     close_dir();
 
-    if (directory[0])   sprintf(name, "%s%s", directory, so_far);
-    else                strcpy(name, so_far);
+    if (db_len(directory) > 0) {
+        dbp_set(name, db_val(directory));
+        dbp_append(name, db_val(so_far));
+    }
+    else dbp_set(name, db_val(so_far));
 
 /* If we found a single entry that begins with '~' and contains no '/'
  * pass it to fixup_fname() so that it can expand any login id to its
@@ -476,12 +472,12 @@ static int comp_file(char *name, char *choices) {
  * If this does happen (the leading ~ goes away) we append a '/'.
  */
     if (unique) {
-        if ((name[0] == '~') && (!strchr(name, '/'))) {
+        if ((dbp_charat(name, 0) == '~') && (!strchr(dbp_val(name), '/'))) {
 /* Make copy from fixup_fname()'s internal buffer back to the incoming
  * buffer.
  */
-            strcpy(name, fixup_fname(name));
-            if (name[0] != '~') strcat(name, "/");
+            dbp_set(name, fixup_fname(dbp_val(name)));
+            if (dbp_charat(name, 0) != '~') dbp_addch(name, '/');
         }
     }
     return TRUE;
@@ -494,24 +490,23 @@ static int comp_file(char *name, char *choices) {
  * Looks for things starting with name, and if there are multiple choices
  * builds a catenated string of them in choices.
  */
-static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
-    char supplied[NFILEN];  /* Maximal match so far */
+static int comp_gen(db *name, db *choices, enum cmplt_type mtype) {
     char *p;                /* Handy pointer */
     int namelen;
 
-    *choices = 0;
-    namelen = strlen(name);
+    dbp_set(choices, "");
+    namelen = dbp_len(name);
     switch(mtype) {
     case CMPLT_BUF:
     case CMPLT_PROC:
     case CMPLT_PHON:
-        p = getfbuffer(name, namelen, mtype);
+        p = getfbuffer(dbp_val(name), namelen, mtype);
         break;
     case CMPLT_NAME:
-        p = getfname(name, namelen);
+        p = getfname(dbp_val(name), namelen);
         break;
     case CMPLT_VAR:
-        p = getfvar(name, namelen);
+        p = getfvar(dbp_val(name), namelen);
         break;
     default:            /* If mtype arrives oddly? */
         p = NULL;
@@ -521,10 +516,9 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
         sleep(1);
         return FALSE;
     }
-    strcpy(so_far, p);
-    strcpy(supplied, name);
-    (void)matcher(name, namelen, choices, mtype);
-    strcpy(name, so_far);
+    db_set(so_far, p);
+    (void)matcher(dbp_val(name), namelen, choices, mtype);
+    dbp_set(name, db_val(so_far));
 
     return TRUE;
 }
@@ -573,11 +567,12 @@ int tgetc(void) {
 /* Save it if we need to */
         if (kbdmode == RECORD) {
             *kbdptr++ = c;
-            kbdend = kbdptr;
-            if (kbdptr == &kbdm[NKBDM - 1]) {   /* don't overrun buffer */
-                kbdmode = STOP; /* Must be collecting - leave ctlxe_togo */
-                TTbeep();
+            if (kbdptr == &kbdm[n_kbdm - 1]) {  /* Don't overrun buffer */
+                n_kbdm += 256;
+                kbdm = Xrealloc(kbdm, n_kbdm*sizeof(int));
+                kbdptr = &kbdm[n_kbdm - 1];     /* Might have moved */
             }
+            kbdend = kbdptr;
         }
 
 /* And finally give the char back */
@@ -587,21 +582,21 @@ int tgetc(void) {
 /* Entry point for buffer name completion. And userprocs.
  * Front-end to comp_gen().
  */
-static int comp_buffer(char *name, char *choices, enum cmplt_type mtype) {
+static int comp_buffer(db *name, db *choices, enum cmplt_type mtype) {
     return comp_gen(name, choices, mtype);
 }
 
 /* Entry point for internal command name completion
  * Front-end to comp_gen().
  */
-static int comp_name(char *name, char *choices) {
+static int comp_name(db *name, db *choices) {
     return comp_gen(name, choices, CMPLT_NAME);
 }
 
 /* Entry point for internal environment/user var completion
  * Front-end to comp_gen().
  */
-static int comp_var(char *name, char *choices) {
+static int comp_var(db *name, db *choices) {
     return comp_gen(name, choices, CMPLT_VAR);
 }
 
@@ -657,8 +652,8 @@ int mlyesno(char *prompt) {
  * So macro-file args need to be quoted...
  * We pass on any expansion-type requested (for, eventually, getstring()).
  */
-int mlreply(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
-    return nextarg(prompt, buf, nbuf, ctype);
+int mlreply(char *prompt, db *buf, enum cmplt_type ctype) {
+    return nextarg(prompt, buf, ctype);
 }
 
 /* get a command name from the command line. Command completion means
@@ -666,28 +661,33 @@ int mlreply(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
  * name if it is unique.
  */
 struct name_bind *getname(char *prompt, int new_command) {
-    char buf[NSTRING];      /* buffer to hold tentative command name */
+    struct name_bind *nbp = NULL;
+
+    db_def(buf);
 
 /* First get the name... */
     if (clexec == FALSE) {
         no_macrobuf_record = 1;
-        int status = mlreply(prompt, buf, NSTRING, CMPLT_NAME);
+        int status = mlreply(prompt, &buf, CMPLT_NAME);
         no_macrobuf_record = 0;
-        if (status != TRUE) return NULL;
+        if (status != TRUE) goto exit;
     }
     else {      /* macro line argument - grab token and skip it */
-        execstr = token(execstr, buf, NSTRING - 1);
+        execstr = token(execstr, &buf);
    }
 
 /* Now check it exists */
 
-    struct name_bind *nbp = name_info(buf);
+    nbp = name_info(db_val(buf));
     if (nbp) {
-        if (kbdmode == RECORD) addto_kbdmacro(buf, new_command, 0);
-        return nbp;
+        if (kbdmode == RECORD) addto_kbdmacro(db_val(buf), new_command, 0);
     }
-    mlwrite("No such function: %s", buf);
-    return NULL;
+    else {
+        mlwrite("No such function: %s", db_val(buf));
+    }
+exit:
+    db_free(buf);
+    return nbp;
 }
 
 /* Force a char to uppercase
@@ -933,51 +933,50 @@ static void sigwinch_handler(int signr) {
  * we have then running token() before replacing things.
  * We (now) loop over all of the command string.
  */
-void evaluate_cmdstr(char *input, char *result) {
-    char tres[NSTRING] = "";
+void evaluate_cmdb(char *input, db *result) {
+    dbp_set(result, "");         /* Empty it */
     char *orig_execstr = execstr;   /* Just in case... */
     int orig_clexec = clexec;
     char *sep = "";
 
-/* We take a copy of the input, allowing the call:
- *  evaluate_cmdstr(buf, buf);
- * to expand a buffer "in place".
+/* We take a copy of the input, so that we don't overwrite
+ * the user input.
  */
     execstr = strdupa(input);
     clexec = TRUE;
-    *result = '\0';
+    db_def(temp);
     while(1) {
         if (!*execstr) break;
-        (void)nextarg("", tres, NSTRING, 0);
-        strcat(result, sep);
+        (void)nextarg("", &temp, 0);
+        dbp_append(result, sep);
         sep = " ";
-        strcat(result, tres);
+        dbp_append(result, db_val(temp));
     }
+    db_free(temp);
     execstr = orig_execstr;
     clexec = orig_clexec;
 }
 
-
-
 /* The actual getstring() starts now... */
 
-int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
+int getstring(char *prompt, db *buf, enum cmplt_type ctype) {
     struct buffer *bp;
     struct buffer *cb;
-    char mbname[NBUFN];
+    char mbname[20];        /* Ample */
     int    c;               /* command character */
     struct line *lp;        /* line to copy */
     int size;
     char *sp;               /* string pointer into line */
-    char tstring[2*NFILEN]; /* Overbig, for sprint overflow warnings */
-    char choices[NFILEN];   /* Limited in matcher() */
     int status;
     int do_evaluate = FALSE;
     func_arg sav;
 
     short savdoto;
     int prolen;
-    char procopy[NSTRING];
+
+    db_def(procopy);
+    db_def(choices);
+    db_def(tstring);
 
 /* We are about to enter the minibuffer, so all com_flags must
  * be turned off.
@@ -1033,10 +1032,10 @@ int getstring(char *prompt, char *buf, int nbuf, enum cmplt_type ctype) {
  * GGR NOTE!!
  * some callers use the return buffer as a temporary buffer for the prompt!
  */
-    strcpy(procopy, prompt);
-    prolen = strlen(procopy);
+    db_set(procopy, prompt);
+    prolen = db_len(procopy);
     prmpt_buf.update = 0;
-    terminate_str(buf);         /* Ensure we never return garbage */
+    dbp_set(buf, "");          /* Ensure we never return garbage */
 
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
@@ -1111,8 +1110,8 @@ loop:
 /* Have we been asked to update the prompt? */
 
     if (prmpt_buf.update) {
-        strcpy(procopy, prmpt_buf.prompt);
-        prolen = strlen(procopy);
+        db_set(procopy, db_val(prmpt_buf.prompt));
+        prolen = db_len(procopy);
         prmpt_buf.update = 0;
     }
 
@@ -1130,7 +1129,7 @@ loop:
  */
     savdoto = curwp->w.doto;
     curwp->w.doto = 0;
-    linstr(procopy);
+    linstr(db_val(procopy));
     curwp->w.doto = savdoto + prolen;
 
 /* Fix up the screen - we do NOT want horizontal scrolling in the mb */
@@ -1178,51 +1177,43 @@ loop:
         lp = curwp->w.dotp;
         sp = ltext(lp);
 /* NSTRING-1, as we need to add a trailing NUL */
-        if (lused(lp) < NSTRING-1) {
-            int expanded;
-            memcpy(tstring, sp, lused(lp));
-            terminate_str(tstring + lused(lp));
-            switch(ctype) {
-            case CMPLT_FILE:
-                expanded = comp_file(tstring, choices);
-                break;
-            case CMPLT_BUF:
-            case CMPLT_PROC:
-            case CMPLT_PHON:
-                expanded = comp_buffer(tstring, choices, ctype);
-                break;
-            case CMPLT_NAME:
-                expanded = comp_name(tstring, choices);
-                break;
-            case CMPLT_VAR:
-                expanded = comp_var(tstring, choices);
-                break;
-            default:            /* Do nothing... */
-                expanded = 0;
-            }
-            if (expanded) {
-                savdoto = curwp->w.doto;
-                curwp->w.doto = 0;
-                ldelete((ue64I_t) lused(lp), FALSE);
-                linstr(tstring);
+        int expanded;
+        db_setn(tstring, sp, lused(lp));
+        switch(ctype) {
+        case CMPLT_FILE:
+            expanded = comp_file(&tstring, &choices);
+            break;
+        case CMPLT_BUF:
+        case CMPLT_PROC:
+        case CMPLT_PHON:
+            expanded = comp_buffer(&tstring, &choices, ctype);
+            break;
+        case CMPLT_NAME:
+            expanded = comp_name(&tstring, &choices);
+            break;
+        case CMPLT_VAR:
+            expanded = comp_var(&tstring, &choices);
+            break;
+        default:            /* Do nothing... */
+            expanded = 0;
+        }
+        if (expanded) {
+            savdoto = curwp->w.doto;
+            curwp->w.doto = 0;
+            ldelete((ue64I_t) lused(lp), FALSE);
+            linstr(db_val(tstring));
 /* Don't bother with this when playing a macro - that just results
  * in an unnecessary pause from the sleep().
  */
-                if (choices[0] && (kbdmode != PLAY)) {
-                    mlwrite_one(choices);
-                    size = (strlen(choices) < 42) ? 1 : 2;
-                    sleep(size);
-                    mberase();
-                }
+            if ((db_len(choices) > 0) && (kbdmode != PLAY)) {
+                mlwrite_one(db_val(choices));
+                size = (db_len(choices) < 42) ? 1 : 2;
+                sleep(size);
+                mberase();
             }
-            else
-                TTbeep();
-            goto loop;
         }
-        else {
-            TTbeep();
-            goto loop;
-        }
+        else TTbeep();
+        goto loop;
     }
 
 /* Some "hard-wired" key-bindings - aka minibuffer specials. */
@@ -1273,27 +1264,21 @@ submit:     /* Tidy up */
  * newlines to join lines, but excluding the final newline.
  * Only do this upto the requested return length.
  */
-
     struct line *mblp = lforw(bp->b_linep);
-    int sofar = 0;
-    int maxadd = nbuf - 1;
-    while (mblp != bp->b_linep && sofar < maxadd) {
-        if (sofar != 0) buf[sofar++] = '\n';    /* Add NL if not first */
-        int add = lused(mblp);
-        if ((sofar + add) > maxadd) add = maxadd - sofar;
-        memcpy(buf+sofar, ltext(mblp), add);
-        sofar += add;
+    dbp_set(buf, "");  /* Empty it */
+    int first = 1;
+    while (mblp != bp->b_linep) {
+        if (first) first = 0;
+        else       dbp_addch(buf, '\n');    /* Add NL if not first */
+        dbp_appendn(buf, ltext(mblp), lused(mblp));
         mblp = lforw(mblp);
     }
-    terminate_str(buf + sofar);     /* Add the NUL */
 
 /* Need to copy to return buffer and, if not empty,
  * to save as last minibuffer.
  */
-    int retlen = sofar;         /* Without terminating NUL */
-    if (retlen) {
-        if (retlen >= NSTRING) retlen = NSTRING - 1;
-        addto_lastmb_ring(buf); /* Terminating NULL is actually there */
+    if (dbp_len(buf)) {
+        addto_lastmb_ring(dbp_val(buf));    /* End NULL is actually there */
     }
     else status = FALSE;        /* Empty input... */
 
@@ -1301,15 +1286,15 @@ submit:     /* Tidy up */
  * at first level of the minibuffer (i.e. the "true" result),
  * and only if we have some text.
  */
-    if ((*buf != '\0') && (kbdmode == RECORD) &&
+    if ((dbp_len(buf) > 0) && (kbdmode == RECORD) &&
         (mb_info.mbdepth == 1) && !no_macrobuf_record)
-         addto_kbdmacro(buf, 0, !do_evaluate);
+         addto_kbdmacro(dbp_val(buf), 0, !do_evaluate);
 
 /* If we have to evaluate, do it now.
  * Note that this is *AFTER* we've done any logging to the macro.
  * We have to fudge buf into execstr for function evaluating to work.
  */
-    if (do_evaluate) evaluate_cmdstr(buf, buf);
+    if (do_evaluate) evaluate_cmdb(dbp_val(buf), buf);
 
 abort:
 
@@ -1352,6 +1337,10 @@ abort:
     sigaction(SIGWINCH, &oldact, NULL);
     sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 
+    db_free(procopy);
+    db_free(choices);
+    db_free(tstring);
+
     return status;
 }
 
@@ -1361,6 +1350,14 @@ abort:
  */
 void free_input(void) {
     Xfree(mb_winp);
+
+    db_free(directory);
+    db_free(picture);
+    db_free(so_far);
+    db_free(fullname);
+    db_free(suggestion);
+    db_free(prmpt_buf.prompt);
+
     return;
 }
 #endif

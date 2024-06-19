@@ -5,13 +5,13 @@
  *      written by Dana Hoggatt and Daniel Lawrence
  */
 
-#include        <stdio.h>
-#include        "estruct.h"
+#include <stdio.h>
+#include "estruct.h"
 
 #define CRYPT_C
 
-#include        "edef.h"
-#include        "efunc.h"
+#include "edef.h"
+#include "efunc.h"
 
 /*  Apparently "The mathematical MOD does not match the computer MOD"
  */
@@ -189,6 +189,7 @@ void myencrypt(char *bptr, unsigned len) {
         }
         *bptr++ = cc;   /* put character back into buffer */
     }
+
     return;
 }
 
@@ -224,30 +225,37 @@ int set_encryption_key(int f, int n) {
     }
     else {
         type = "Buffer";
-        if (!curbp->b_key) curbp->b_key = Xmalloc(NPAT);
+        if (!curbp->b_key) curbp->b_key = Xmalloc(NKEY);
         ukey = curbp->b_key;
         klenp = &curbp->b_keylen;
     }
     sprintf(prompt, "%s encryption string: ", type);
-    status = mlreply(prompt, ukey, NPAT - 1, CMPLT_NONE);
+    db_def(given);
+    status = mlreply(prompt, &given, CMPLT_NONE);
     mlwrite_one(" ");       /* clear it off the bottom line */
     disinp = odisinp;
     if (status != TRUE) return status;
 
-    int method = crypt_mode & ~CRYPT_MOD95;
+/* We only allow up to NKEY bytes to be used - so copy
+ * at most NKEY to ukey (including the NUL).
+ */
+    int clen = (db_len(given) >= NKEY)? NKEY -1: db_len(given);
+    strncpy(ukey, db_val(given), clen);
+    terminate_str(ukey+clen);
+    db_free(given);
 
-    switch(method) {
+    switch(crypt_mode & ~CRYPT_MOD95) {
 /* Encrypt it.
  * However, we now encrypt all bytes, so the result here could contain
  * a NUL byte. Hence we need to get (and store) the length first, and
  * remember to use that in any copying (including elsewhere in uemacs).
- * Also, we may repeat the string such that it fills moreof the buffer.
+ * Also, we may repeat the string such that it fills more of the buffer.
  * Without this !!!! 1111 AAAA QQQQ aaaa qqqq all produce the same result.
  */
     case CRYPT_RAW:     /* Do nothing */
         break;
     case CRYPT_FILL63: {
-        char keycop[NPAT];      /* GGR */
+        char keycop[NKEY];      /* GGR */
         int lcop = strlen(ukey);
         strcpy(keycop, ukey);
         while (lcop < 63) {

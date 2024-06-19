@@ -316,37 +316,36 @@ int char_replace(int f, int n) {
     UNUSED(f); UNUSED(n);
 
     int status;
-    char buf[NLINE];
+    db_def(buf);
+    db_def(tok);
 
     status = mlreply("reset | repchar [U+]xxxx | [U+]xxxx[-[U+]xxxx] ",
-          buf, NLINE - 1, CMPLT_NONE);
-    if (status != TRUE)         /* Only act on +ve response */
-        return status;
+          &buf, CMPLT_NONE);
+    if (status != TRUE) goto exit;  /* Only act on +ve response */
 
-    char *rp = buf;
-    char tok[NLINE];
+    char *rp = db_val(buf);
     while(*rp != '\0') {
-        rp = token(rp, tok, NLINE);
-        if (tok[0] == '\0') break;
-        if (!strcmp(tok, "reset")) {
+        rp = token(rp, &tok);
+        if (db_len(tok) == 0) break;
+        if (!db_cmp(tok, "reset")) {
             if (remap != NULL) {
                 Xfree_setnull(remap);
                 repchar = DFLT_REPCHAR;
             }
         }
-        else if (!strcmp(tok, "repchar")) {
-            rp = token(rp, tok, NLINE);
-            if (tok[0] == '\0') break;
+        else if (!db_cmp(tok, "repchar")) {
+            rp = token(rp, &tok);
+            if (db_len(tok) == 0) break;
             int ci;
-            if (tok[0] == 'U' && tok[1] == '+')
+            if ((db_charat(tok, 0) == 'U') && (db_charat(tok, 1) == '+'))
                 ci = 2;
             else
                 ci = 0;
-            int newval = strtol(tok+ci, NULL, 16);
+            int newval = strtol(db_val(tok)+ci, NULL, 16);
             if (newval > 0 && newval <= 0x0010FFFF) repchar = newval;
         }
         else {  /* Assume a char to map (possibly a range) */
-            char *tp = tok;
+            char *tp = db_val(tok);
             if (*tp == 'U' && *(tp+1) == '+') tp += 2;
             unsigned int lowval = strtoul(tp, &tp, 16);
             if (lowval & 0x80000000) continue;  /* Ignore any such... */
@@ -404,7 +403,11 @@ int char_replace(int f, int n) {
             }
         }
     }
-    return TRUE;
+    status = TRUE;
+exit:
+    db_free(buf);
+    db_free(tok);
+    return status;
 }
 
 /* Use the replacement char for mapped ones.

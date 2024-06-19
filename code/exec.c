@@ -35,6 +35,9 @@ static char *prev_line_seen = NULL;
 
 /** pending_line_seen doesn't seem to need it an array*/
 static char *pending_line_seen = NULL;
+static db *pending_docmd_tknp = NULL;
+static db *pending_dobuf_tknp = NULL;
+static db *pending_golabel = NULL;
 
 static linked_items *pending_einit_headp = NULL;
 static linked_items *pending_whlist_headp = NULL;
@@ -68,12 +71,14 @@ static void pop_head(linked_items **headp) {
  *      chop a token off a string
  *      return a pointer past the token
  *
- * char *src, *tok;     source string, destination token string
- * int size;            maximum size of token
+ * char *src,       source string
+ * db *tok;       destination token dynamic string
  */
-char *token(char *src, char *tok, int size) {
+char *token(char *src, db *tok) {
     int quotef;     /* is the current string quoted? */
     char c;         /* temporary character */
+
+    dbp_clear(tok); /* Start with nothing */
 
 /* First scan past any whitespace in the source string */
     while (*src == ' ' || *src == '\t') ++src;
@@ -91,7 +96,7 @@ char *token(char *src, char *tok, int size) {
     if (*src == '"') {
         quotef = TRUE;
         src++;
-        if (--size > 0) *tok++ = '"';
+        dbp_addch(tok, '"');
     }
     else quotef = FALSE;
     while (*src) {      /* process special characters */
@@ -124,11 +129,9 @@ char *token(char *src, char *tok, int size) {
 
 /* Record the character */
         }
-        if (--size > 0) *tok++ = c;
+        dbp_addch(tok, c);
     }
 
-/* Terminate the token and exit */
-    *tok = 0;
     return src;
 }
 
@@ -140,21 +143,20 @@ char *token(char *src, char *tok, int size) {
  * int size                 size of the buffer
  * int ctype                type of context completion if we prompt
  */
-int nextarg(char *prompt, char *buffer, int size, enum cmplt_type ctype) {
-    char tbuf[NSTRING];     /* string buffer for some workings */
+int nextarg(char *prompt, db *buffer, enum cmplt_type ctype) {
 
 /* If we are interactive, go get it! */
-    if (clexec == FALSE) return getstring(prompt, buffer, size, ctype);
+    if (clexec == FALSE) return getstring(prompt, buffer, ctype);
 
 /* Grab token and advance past */
-    execstr = token(execstr, buffer, size);
+    execstr = token(execstr, buffer);
 
 /* Evaluate it */
 /* GGR - There is the possibility of an illegal overlap of args here.
+ *       Or a copy to iself.
  *       So it must be done via a temporary buffer.
  */
-    strcpy(tbuf, getval(buffer));
-    strcpy(buffer, tbuf);
+    dbp_set(buffer, strdupa(getval(dbp_val(buffer))));
     return TRUE;
 }
 
@@ -162,13 +164,13 @@ int nextarg(char *prompt, char *buffer, int size, enum cmplt_type ctype) {
  *
  * char *tok;           buffer to place argument
  */
-int macarg(char *tok) {
+int macarg(db *tok) {
     int savcle;             /* buffer to store original clexec */
     int status;
 
     savcle = clexec;        /* save execution mode */
     clexec = TRUE;          /* get the argument */
-    status = nextarg("", tok, NSTRING, CMPLT_NONE);
+    status = nextarg("", tok, CMPLT_NONE);
     clexec = savcle;        /* restore execution mode */
     return status;
 }
@@ -191,8 +193,7 @@ static int docmd(char *cline) {
     int status;             /* return status of function */
     int oldcle;             /* old contents of clexec flag */
     char *oldestr;          /* original exec string */
-    char tkn[NSTRING];      /* next token off of command line */
-    char tbuf[NSTRING];     /* string buffer for some workings */
+    db_def(tkn);            /* next token off of command line */
 
 /* If we are scanning and not executing..go back here */
     if (execlevel) return TRUE;
@@ -211,7 +212,7 @@ static int docmd(char *cline) {
     f = FALSE;
     n = 1;
 
-    if ((status = macarg(tkn)) != TRUE) {   /* and grab the first token */
+    if ((status = macarg(&tkn)) != TRUE) {  /* and grab the first token */
         goto final_exit;
     }
 
@@ -220,25 +221,24 @@ static int docmd(char *cline) {
  *
  * NOTE!!! We can only pass in ONE token this way!
  */
-    int ttype = gettyp(tkn);
+    int ttype = gettyp(db_val(tkn));
     switch(ttype) {
     case TKARG:
     case TKENV:
     case TKVAR:
     case TKFUN:
     case TKBVR:
-        strcpy(tbuf, getval(tkn));
-        strcpy(tkn, tbuf);
-        ttype = gettyp(tkn);    /* What we have in tkn now... */
+        db_set(tkn, strdupa(getval(db_val(tkn))));
+        ttype = gettyp(db_val(tkn));    /* What we have in tkn now... */
     };
 
 /* Process leading argument */
     if (ttype == TKLIT) {
         f = TRUE;
-        n = strtoll(tkn, NULL, 10);
+        n = strtoll(db_val(tkn), NULL, 10);
 
 /* and now get the command to execute */
-        if ((status = macarg(tkn)) != TRUE) {
+        if ((status = macarg(&tkn)) != TRUE) {
             goto final_exit;
         }
     }
@@ -254,7 +254,7 @@ static int docmd(char *cline) {
  * We actually run with prev_line_seen rather than our this_line_seen copy
  * as that will get tokenized...
  */
-    if (strcmp(tkn, "reexecute") == 0) {
+    if (strcmp(db_val(tkn), "reexecute") == 0) {
         Xfree(this_line_seen);   /* Drop the "reexecute" */
         this_line_seen = Xstrdup(prev_line_seen);
         status = TRUE;
@@ -263,9 +263,9 @@ static int docmd(char *cline) {
     }
 
 /* And match the token to see if it exists */
-    struct name_bind *nbp = name_info(tkn);
+    struct name_bind *nbp = name_info(db_val(tkn));
     if (nbp == NULL) {
-        mlwrite("No such Function: %s", tkn);
+        mlwrite("No such Function: %s", db_val(tkn));
         status = FALSE;
         goto final_exit;
     }
@@ -282,10 +282,12 @@ static int docmd(char *cline) {
  */
 #ifdef DO_FREE
     pending_line_seen = this_line_seen;
+    pending_docmd_tknp = &tkn;
 #endif
     status = (nbp->n_func)(f, n); /* call the function */
 #ifdef DO_FREE
     pending_line_seen = NULL;
+    pending_docmd_tknp = NULL;
 #endif
     if (!nbp->opt.search_ok) srch_can_hunt = 0;
     com_flag &= nbp->keep_flags;
@@ -310,6 +312,7 @@ remember_cmd:
 /* "Just tidy up..." exit */
 final_exit:
     Xfree(this_line_seen);
+    db_free(tkn);
     execstr = oldestr;
     return status;
 }
@@ -361,7 +364,7 @@ int namedcmd(int f, int n) {
 
 /* Buffer name for reexecute - shared by all command-callers */
 
-static char prev_cmd[NSTRING] = "";
+static db_def(prev_cmd);
 
 /* execcmd:
  *      Execute a command line command to be typed in
@@ -372,21 +375,23 @@ static char prev_cmd[NSTRING] = "";
 int execcmd(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
-    char thecmd[NSTRING];   /* string holding command to execute */
+    db_def(thecmd);         /* string holding command to execute */
 
 /* Re-use last obtained command? */
-    if (inreex && (prev_cmd[0] != '\0') && RXARG(execcmd))
-        strcpy(thecmd, prev_cmd);
+    if (inreex && (db_charat(prev_cmd, 0) != '\0') && RXARG(execcmd))
+        db_set(thecmd, db_val(prev_cmd));
     else {
 /* Get the line wanted */
         if ((status =
-             mlreply("command: ", thecmd, NSTRING, CMPLT_NONE)) != TRUE)
-            return status;
+             mlreply("command: ", &thecmd, CMPLT_NONE)) != TRUE)
+            goto exit;
     }
     execlevel = 0;
-    status = docmd(thecmd);
-    strcpy(prev_cmd, thecmd);   /* Now we remember this... */
+    status = docmd(db_val(thecmd));
+    db_set(prev_cmd, db_val(thecmd)); /* Now we remember this... */
 
+exit:
+    db_free(thecmd);
     return status;
 }
 
@@ -400,7 +405,7 @@ int execcmd(int f, int n) {
 #ifdef NUMBERED_MACROS
 int storemac(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
-    char bufn[NBUFN];       /* name of buffer to use */
+    char bufn[10];          /* name of buffer to use */
 
 /* Must have a numeric argument to this function */
     if (f == FALSE) {
@@ -479,6 +484,10 @@ static char* get_display_code(char *buf) {
 static int ptt_compile(struct buffer *bp) {
     char *ml_display_code;
 
+    db_def(lbuf);
+    db_def(tok);
+    db_def(from_string);
+
 /* Free up any previously-compiled table and get a default display code */
 
     ptt_free(bp);
@@ -489,32 +498,28 @@ static int ptt_compile(struct buffer *bp) {
 
     int caseset = 1;        /* Default is on */
     struct line *hlp = bp->b_linep;
-    char lbuf[NLINE];       /* Could be dynamic... */
-    char tok[NLINE];
     struct ptt_ent *lastp = NULL;
     for (struct line *lp = hlp->l_fp; lp != hlp; lp = lp->l_fp) {
-        char to_string[NLINE] = "";
-        int to_len = 0;
-        memcpy(lbuf, ltext(lp), lused(lp));
-        char *rp = lbuf;
-        terminate_str(lbuf+lused(lp));
-        rp = token(rp, tok, NLINE);
-/* Ignore any entry with a newline in teh from text */
-        if (strchr(tok, '\n')) continue;
-        char from_string[NLINE];
+/* The rest of the handling expects text, not binary, so no bcopy here */
+        db_setn(lbuf, ltext(lp), lused(lp));
+/* Provided we don't change lbuf, we can use rp */
+        char *rp = db_val(lbuf);
+        rp = token(rp, &tok);
+/* Ignore any entry with a newline in the from text */
+        if (strchr(db_val(tok), '\n')) continue;
         int bow;
         char *from_start;
-        if (tok[0] == '^') {
+        if (db_charat(tok, 0) == '^') {
             bow = 1;
-            from_start = tok+1;
+            from_start = db_val(tok)+1;
         }
         else {
             bow = 0;
-            from_start = tok;
+            from_start = db_val(tok);
         }
-        strcpy(from_string, from_start);
-        if (!strncmp("caseset-", from_string, 8)) {
-            char *test_opt = from_string + strlen("caseset-");
+        db_set(from_string, from_start);
+        if (!db_cmpn(from_string, "caseset-", strlen("caseset-"))) {
+            char *test_opt = db_val(from_string) + strlen("caseset-");
             if (!strcmp("on", test_opt)) {
                 caseset = CASESET_ON;
                 continue;
@@ -540,34 +545,37 @@ static int ptt_compile(struct buffer *bp) {
                 continue;
             }
         }
-        if (!strcmp("display-code", from_string)) {
-            rp = token(rp, tok, NLINE);
-            if (tok[0] != '\0') ml_display_code = get_display_code(tok);
+        if (!db_cmp(from_string, "display-code")) {
+            rp = token(rp, &tok);
+            if (db_charat(tok, 0) != '\0')
+                 ml_display_code = get_display_code(db_val(tok));
             continue;
         }
+        db_clear(glb_db);
         while(*rp != '\0') {
-            rp = token(rp, tok, NLINE);
-            if (tok[0] == '\0') break;
-            if (!strncmp(tok, "0x", 2)) {
-                long add = strtol(tok+2, NULL, 16);
+            rp = token(rp, &tok);
+            if (db_charat(tok, 0) == '\0') break;
+            if (!strncmp(db_val(tok), "0x", 2)) {
+                long add = strtol(db_val(tok)+2, NULL, 16);
 /* This is only for a single byte */
                 if ((add < 0) || (add > 0xFF)) {
-                    mlwrite("Oxnn syntax is only for a single byte (%s)", tok);
+                    mlwrite("Oxnn syntax is only for a single byte (%s)", db_val(tok));
                     continue;
                 }
-                to_string[to_len++] = add;
+                db_addch(glb_db, add);
             }
-            else if (tok[0] == 'U' && tok[1] == '+') {
-                int val = strtol(tok+2, NULL, 16);
-                int incr = unicode_to_utf8(val, to_string+to_len);
-                to_len += incr;
+            else if (db_charat(tok, 0) == 'U' &&
+                     db_charat(tok, 1) == '+') {
+                int val = strtol(db_val(tok)+2, NULL, 16);
+                char abuf[8];
+                int incr = unicode_to_utf8(val, abuf);
+                db_appendn(glb_db, abuf, incr);
             }
             else {
-                strcat(to_string, tok);
-                to_len += strlen(tok);
+                db_append(glb_db, db_val(tok));
             }
         }
-        if (to_len == 0) continue;
+        if (db_len(glb_db) == 0) continue;
         struct ptt_ent *new = Xmalloc(sizeof(struct ptt_ent));
         if (lastp == NULL) {
             bp->ptt_headp = new;
@@ -583,17 +591,18 @@ static int ptt_compile(struct buffer *bp) {
  * Note that upper- and lower-case characters may have different
  * utf8 byte counts!
  */
-        new->from_len = strlen(from_string);
+        new->from_len = db_len(from_string);
         if (caseset != CASESET_OFF) {
             struct mstr ex_mstr;
-            utf8_recase(UTF8_LOWER, from_string, new->from_len, &ex_mstr);
+            utf8_recase(UTF8_LOWER, db_val(from_string), new->from_len,
+                 &ex_mstr);
             new->from = ex_mstr.str;        /* malloc()ed, so OK */
             new->from_len = ex_mstr.utf8c;
             new->from_len_uc = ex_mstr.uc;
         }
         else {
             new->from = Xmalloc(new->from_len+1);
-            strcpy(new->from, from_string);
+            strcpy(new->from, db_val(from_string));
             new->from_len_uc = uclen_utf8(new->from);
         }
 /* Input comes in as unicode chars, so we need to save the last one
@@ -604,14 +613,17 @@ static int ptt_compile(struct buffer *bp) {
         int start_at = prev_utf8_offset(new->from, new->from_len, FALSE);
         (void)utf8_to_unicode(new->from, start_at, new->from_len,
               &(new->final_uc));
-        new->to = Xmalloc(to_len+1);
-        strncpy(new->to, to_string, to_len);
-        terminate_str(new->to + to_len);
+        new->to = Xmalloc(db_len(glb_db)+1);
+        strncpy(new->to, db_val(glb_db), db_len(glb_db));
+        terminate_str(new->to + db_len(glb_db));
         new->to_len_uc = uclen_utf8(new->to);
         new->to_len_gph = glyphcount_utf8(new->to);
         new->bow_only = bow;
         new->caseset = caseset;
     }
+    db_free(from_string);
+    db_free(lbuf);
+    db_free(tok);
     if (lastp == NULL) return FALSE;
     use_pttable(bp);
     return TRUE;
@@ -630,7 +642,8 @@ struct func_opts null_func_opts = { 0, 0, 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
-    char bufn[NBUFN+1];     /* name of buffer to use */
+    db_def(bufn);           /* name of buffer to use */
+    db_def(pbufn);          /* name of proc buf to use */
 
 #ifdef NUMBERED_MACROS
 /* A numeric argument means its a numbered macro */
@@ -640,35 +653,35 @@ int storeproc(int f, int n) {
 #endif
 
 /* Append the procedure name to the buffer marker tag */
-    bufn[0] = '/';
     if ((status =
-         mlreply("Procedure name: ", bufn+1, NBUFN, CMPLT_BUF)) != TRUE)
+         mlreply("Procedure name: ", &bufn, CMPLT_BUF)) != TRUE)
         return status;
-    if (strlen(bufn) >= NBUFN) {
-        mlforce("Procedure name too long (store): %s. Ignored.", bufn);
-        sleep(1);
-        return TRUE;    /* Don't abort start-up file */
-    }
 
 /* Set up the new macro buffer */
-    if ((bp = bfind(bufn, TRUE, BFINVS)) == NULL) {
+
+    db_set(pbufn, "/");
+    db_appendn(pbufn, db_val(bufn), db_len(bufn));
+    if ((bp = bfind(db_val(pbufn), TRUE, BFINVS)) == NULL) {
         mlwrite_one("Cannot create macro");
-        return FALSE;
+        status = FALSE;
+        goto exit;
     }
 
 /* Add any options */
 
     bp->btp_opt = null_func_opts;
-    char optstr[NBUFN+1];
+    db_def(optstr);
     while (1) {
-        mlreply("opts: ", optstr, NBUFN, CMPLT_BUF);
-        if (optstr[0] == '\0') break;
-        if (!strcmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
-        if (!strcmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
-        if (!strcmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
-        if (!strcmp(optstr, "one_pass"))        bp->btp_opt.one_pass = 1;
-        if (!strcmp(optstr, "no_macbug"))       bp->btp_opt.no_macbug = 1;
+        mlreply("opts: ", &optstr, CMPLT_BUF);
+        if (db_charat(optstr, 0) == '\0') break;
+        if (!db_cmp(optstr, "skip_in_macro"))   bp->btp_opt.skip_in_macro = 1;
+        if (!db_cmp(optstr, "not_mb"))          bp->btp_opt.not_mb = 1;
+        if (!db_cmp(optstr, "not_interactive")) bp->btp_opt.not_interactive = 1;
+        if (!db_cmp(optstr, "one_pass"))        bp->btp_opt.one_pass = 1;
+        if (!db_cmp(optstr, "no_macbug"))       bp->btp_opt.no_macbug = 1;
     }
+    db_free(optstr);
+
 /* Individual commands in the procedure will determine the "search_ok"
  * status, so set it to true here.
  */
@@ -684,7 +697,11 @@ int storeproc(int f, int n) {
 /* And set the macro store pointers to it */
     bp->b_type = BTPROC;    /* Mark the buffer type */
     bstore = bp;
-    return TRUE;
+
+exit:
+    db_free(bufn);
+    db_free(pbufn);
+    return status;
 }
 
 /* GGR
@@ -714,8 +731,9 @@ int storepttable(int f, int n) {
 int set_pttable(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
-    char pttbuf[NBUFN];
     struct buffer *bp;
+    db_def(pttbuf);
+    db_def(pbufn);
 
 /* As soon as a table is defined ptt gets set, so if it isn't
  * we know that there are no translation tables.
@@ -726,26 +744,32 @@ int set_pttable(int f, int n) {
         return FALSE;
     }
 
-    status = mlreply("Translation table to use? ", pttbuf+1, NBUFN-2,
-         CMPLT_PHON);
+    status = mlreply("Translation table to use? ", &pttbuf, CMPLT_PHON);
     if (status != TRUE) return status;
 
 /* Find the ptt buffer */
-    pttbuf[0] = '/';
-    if ((bp = bfind(pttbuf, FALSE, BFINVS)) == NULL) {
-        mlforce("Table %s was not found", pttbuf);
-        return FALSE;
+
+    db_set(pbufn, "/");
+    db_appendn(pbufn, db_val(pttbuf), db_len(pttbuf));
+    if ((bp = bfind(db_val(pbufn), FALSE, BFINVS)) == NULL) {
+        mlforce("Table %s was not found", db_val(pbufn));
+        status = FALSE;
+        goto exit;
     }
 
 /* Check that it is a translation buffer */
 
     if (bp->b_type != BTPHON) {
-        mlforce("Buffer %s is not a translation buffer.", pttbuf);
+        mlforce("Buffer %s is not a translation buffer.", pbufn);
         sleep(1);
-        return TRUE;    /* Don't abort start-up file */
+        status = TRUE;  /* Don't abort start-up file */
+        goto exit;
     }
     use_pttable(bp);    /* This does not actually activate it */
-    return TRUE;
+exit:
+    db_free(pbufn);
+    db_free(pttbuf);
+    return status;
 }
 
 /* GGR
@@ -994,11 +1018,13 @@ int dobuf(struct buffer *bp) {
     struct while_block *whlist;     /* ptr to !WHILE list */
     struct while_block *scanner;    /* ptr during scan */
     struct while_block *whtemp;     /* temporary ptr to a struct while_block */
-    char *einit;            /* initial value of eline */
-    char *eline;            /* text of line to execute */
-    char tkn[NSTRING];      /* buffer to evaluate an expresion in */
+    char *einit = NULL; /* Initial val of eline - allocate on first call */
+    char *eline;        /* text of line to execute */
     int return_stat = TRUE; /* What we expect to do */
     int orig_pause_key_index_update;    /* State on entry - to be restored */
+
+    db_def(tkn);            /* buffer to evaluate an expresion in */
+    db_def(golabel);
 
 /* GGR - Only allow recursion up to a certain level... */
 
@@ -1135,7 +1161,6 @@ nxtscan:          /* on to the next line */
  */
     hlp = bp->b_linep;
     lp = hlp->l_fp;
-    einit = NULL;               /* So we alloc on first call */
     int eilen = 0;
     while (lp != hlp) {
 /* Allocate eline and copy macro line to it */
@@ -1166,17 +1191,17 @@ nxtscan:          /* on to the next line */
  *      This is used by the ones which set macbug and clear //Debug.
  */
         if (macbug && !macbug_off) {    /* More likely failure first */
-            char outline[NSTRING];
-            snprintf(outline, NSTRING, "<%s:%s:%s>", bp->b_bname,
+            db_def(outline);
+            db_sprintf(outline, "<%s:%s:%s>", bp->b_bname,
                 ue_itoa(execlevel), eline);
 
 /* Write out the debug line to //Debug? */
             if (macbug & 0x2) {
-                addline_to_anyb(outline, bdbgp);
+                addline_to_anyb(db_val(outline), bdbgp);
             }
 /* Write out the debug line to the message line? */
             if (macbug & 0x1) {
-                mlforce_one(outline);
+                mlforce_one(db_val(outline));
                 update(TRUE);
 
 /* And get the keystroke */
@@ -1186,6 +1211,7 @@ nxtscan:          /* on to the next line */
                 }
                 if (c == metac) macbug = 0;
             }
+            db_free(outline);
         }
 
 /* Parse directives here.... */
@@ -1224,6 +1250,16 @@ nxtscan:          /* on to the next line */
         if (*eline == '*') goto onward;
         force = FALSE;
 
+/* If we process exit-emacs, we won't get to free any used tkn, so
+ * mark this for handling by free_exec.
+ * We have to save a pointer to the structure, as the actual text val
+ * can be altered by a realloc.
+ */
+#ifdef DO_FREE
+    pending_dobuf_tknp = &tkn;
+    pending_golabel = &golabel;
+#endif
+
 /* Now, execute directives */
         if (dirnum != -1) {
 /* Skip past the directive */
@@ -1234,8 +1270,8 @@ nxtscan:          /* on to the next line */
             case DIF:       /* IF directive */
 /* Grab the value of the logical exp */
                 if (execlevel == 0) {
-                    if (macarg(tkn) != TRUE) goto eexec;
-                    if (stol(tkn) == FALSE) ++execlevel;
+                    if (macarg(&tkn) != TRUE) goto eexec;
+                    if (stol(db_val(tkn)) == FALSE) ++execlevel;
                 }
                 else ++execlevel;
                 goto onward;
@@ -1243,8 +1279,8 @@ nxtscan:          /* on to the next line */
             case DWHILE:    /* WHILE directive */
 /* Grab the value of the logical exp */
                 if (execlevel == 0) {
-                    if (macarg(tkn) != TRUE) goto eexec;
-                    if (stol(tkn) == TRUE) goto onward;
+                    if (macarg(&tkn) != TRUE) goto eexec;
+                    if (stol(db_val(tkn)) == TRUE) goto onward;
                 }
 /* Drop down and act just like !BREAK */
                 /* Falls through */
@@ -1279,21 +1315,20 @@ nxtscan:          /* on to the next line */
 /* .....only if we are currently executing */
                 if (execlevel == 0) {
 /* Grab label to jump to.  Allow it to be evaulated. */
-                    char golabel[NPAT], tbuf[NPAT];
-                    eline = token(eline, golabel, NPAT);
-                    strcpy(tbuf, getval(golabel));  /* So no overlap of args */
-                    strcpy(golabel, tbuf);
-                    linlen = strlen(golabel);
+                    eline = token(eline, &golabel);
+/* Via temp copy, to avoid overwrite of own value */
+                    db_set(golabel, strdupa(getval(db_val(golabel))));
+                    linlen = db_len(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
 /* We need at least 2 chars on the line for a label... */
                         if (lused(glp) < 2) continue;
                         if (*ltext(glp) == '*' &&
-                            (strncmp(ltext(glp)+1, golabel, linlen) == 0)) {
+                            (db_cmpn(golabel, ltext(glp)+1, linlen) == 0)) {
                             lp = glp;
                             goto onward;
                         }
                     }
-                    mlwrite("No such label: %s", golabel);
+                    mlwrite("No such label: %s", db_val(golabel));
                     goto failexit3;
                 }
                 goto onward;
@@ -1330,8 +1365,8 @@ nxtscan:          /* on to the next line */
             case DFINISH:   /* FINISH directive. Abort with exit FALSE. */
                 if (execlevel == 0) {
                     return_stat = FALSE;
-                    if (macarg(tkn))
-                        return_stat = (strcasecmp(tkn, "True") == 0);
+                    if (macarg(&tkn))
+                        return_stat = (db_casecmp(tkn, "True") == 0);
                     goto eexec;
                 }
                 goto onward;
@@ -1435,32 +1470,40 @@ single_exit:
  * i.e. restore any writeability!
  */
     if (!orig_view_bit) bp->b_mode &= ~MDVIEW;
+    db_free(golabel);
+    db_free(tkn);
+#ifdef DO_FREE
+    pending_dobuf_tknp = NULL;
+    pending_golabel = NULL;
+#endif
     return status;
 }
 
 /* Run (execute) a user-procedure stored in a buffer */
 
 int run_user_proc(char *procname, int forced, int rpts) {
-    char bufn[NBUFN+1];
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
+    db_def(bufn);
 
 /* Construct the buffer name */
-    bufn[0] = '/';
-    strcpy(bufn+1, procname);
+    db_set(bufn, "/");
+    db_append(bufn, procname);
 
 /* Find the pointer to that buffer */
-    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite("No such procedure: %s", bufn);
-        return FALSE;
+    if ((bp = bfind(db_val(bufn), FALSE, 0)) == NULL) {
+        mlwrite("No such procedure: %s", db_val(bufn));
+        status = FALSE;
+        goto exit;
     }
 
 /* Check that it is a procedure buffer */
 
     if (bp->b_type != BTPROC) {
-        mlforce("Buffer %s is not a procedure buffer.", bufn);
+        mlforce("Buffer %s is not a procedure buffer.", db_val(bufn));
         sleep(1);
-        return TRUE;    /* Don't abort start-up file */
+        status = TRUE;  /* Don't abort start-up file */
+        goto exit;
     }
 
 /* and now execute it as asked.
@@ -1495,6 +1538,8 @@ int run_user_proc(char *procname, int forced, int rpts) {
         if (!status) break;
     }
     macbug_off = orig_macbug_off;
+exit:
+    db_free(bufn);
     return status;
 }
 
@@ -1575,7 +1620,7 @@ int switch_with_pin(int f, int n) {
 
 /* Buffer name for reexecute - shared by all buffer-callers */
 
-static char prev_bufn[NBUFN+1] = "";
+static db_def(prev_bufn);
 
 /* execproc:
  *      Execute a procedure
@@ -1584,37 +1629,35 @@ static char prev_bufn[NBUFN+1] = "";
  */
 int execproc(int f, int n) {
     UNUSED(f);
-    char bufn[NBUFN];       /* name of buffer to execute */
+    db_def(bufn);           /* name of buffer to execute */
     int status;             /* status return */
 
 /* Handle a reexecute */
 
 /* Re-use last obtained buffer? */
-    if (inreex && (prev_bufn[0] != '\0') && RXARG(execproc))
-        strcpy(bufn, prev_bufn);
+    if (inreex && (db_len(prev_bufn) > 0) && RXARG(execproc))
+        db_set(bufn, db_val(prev_bufn));
     else {
         if (input_waiting != NULL) {
-            strcpy(bufn, input_waiting);
+            db_set(bufn, input_waiting);
             input_waiting = NULL;   /* We've used it */
         }
         else {
-            if ((status = mlreply("Execute procedure: ", bufn, NBUFN,
+            if ((status = mlreply("Execute procedure: ", &bufn,
                  CMPLT_PROC)) != TRUE)
-                return status;
-            if (strlen(bufn) >= NBUFN) {
-                mlforce("Procedure name too long (exec): %s. Ignored.", bufn);
-                sleep(1);
-                return TRUE;    /* Don't abort start-up file */
-            }
+                goto exit;
         }
     }
 
-    status = run_user_proc(bufn, f, n);
+    status = run_user_proc(db_val(bufn), f, n);
 
 /* dobuf() could contain commands that change prev_bufn, so reinstate
  * it here to allow for recursion.
  */
-    if (status == TRUE) strcpy(prev_bufn, bufn);
+    if (status == TRUE) db_set(prev_bufn, db_val(bufn));
+
+exit:
+    db_free(bufn);
     return status;
 }
 
@@ -1627,29 +1670,31 @@ int execbuf(int f, int n) {
     UNUSED(f);
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
-    char bufn[NSTRING];     /* name of buffer to execute */
+    db_def(bufn);           /* name of buffer to execute */
 
 /* Handle a reexecute */
 
 /* Re-use last obtained buffer? */
-    if (inreex && (prev_bufn[0] != '\0') && RXARG(execbuf))
-        strcpy(bufn, prev_bufn);
+    if (inreex && (db_len(prev_bufn) > 0) && RXARG(execbuf))
+        db_set(bufn, db_val(prev_bufn));
     else {
 /* Find out what buffer the user wants to execute */
-        if ((status = mlreply("Execute buffer: ", bufn, NBUFN,
+        if ((status = mlreply("Execute buffer: ", &bufn,
              CMPLT_BUF)) != TRUE)
-            return status;
+            goto exit;
 
-        if (kbdmode != STOP && (strcmp(bufn, kbdmacro_buffer) == 0)) {
-            mlwrite_one("Cannot run keyboard macro when collecting it");
-            return FALSE;
+        if (kbdmode != STOP && (db_cmp(bufn, kbdmacro_buffer) == 0)) {
+            mlwrite_one("Cannot run keyboard macro whilst collecting it");
+            status = FALSE;
+            goto exit;
         }
     }
 
 /* Find the pointer to that buffer */
-    if ((bp = bfind(bufn, FALSE, 0)) == NULL) {
-        mlwrite("No such buffer: %s", bufn);
-        return FALSE;
+    if ((bp = bfind(db_val(bufn), FALSE, 0)) == NULL) {
+        mlwrite("No such buffer: %s", db_val(bufn));
+        status = FALSE;
+        goto exit;
     }
 
 /* And now execute it as asked */
@@ -1660,7 +1705,10 @@ int execbuf(int f, int n) {
 /* dobuf() could contain commands that change prev_bufn, so reinstate
  * it here to allow for recursion.
  */
-    strcpy(prev_bufn, bufn);
+    db_set(prev_bufn, db_val(bufn));
+
+exit:
+    db_free(bufn);
     return status;
 }
 
@@ -1674,11 +1722,13 @@ int dofile(char *fname) {
     struct buffer *bp;      /* buffer to place file to exeute */
     struct buffer *cb;      /* temp to hold current buf while we read */
     int status;             /* results of various calls */
-    char bufn[NBUFN];       /* name of buffer */
 
-    makename(bufn, fname, TRUE);    /* derive unique name for buffer */
-    if ((bp = bfind(bufn, TRUE, 0)) == NULL)    /* get the needed buffer */
-        return FALSE;
+    db_def(bufn);           /* name of buffer */
+
+    makename(&bufn, fname, TRUE);       /* derive unique name for buffer */
+    bp = bfind(db_val(bufn), TRUE, 0);  /* get the needed buffer */
+    db_free(bufn);
+    if (!bp) return FALSE;
     cb = curbp;             /* save the old buffer */
     curbp = bp;             /* make this one current */
     if (silent)             /* GGR */
@@ -1706,7 +1756,7 @@ int dofile(char *fname) {
 
 /* Filename for reexecute - shared by all file-callers */
 
-static char prev_fname[NSTRING] = "";
+static db_def(prev_fname);
 
 /* execute a series of commands in a file
  * If given fname starts with "^", remove that character and don't
@@ -1718,26 +1768,28 @@ static int include_level = 0;
 int execfile(int f, int n) {
     UNUSED(f);
     int status;             /* return status of name query */
-    char fname[NSTRING];    /* name of file to execute */
     char *fspec;            /* full file spec */
     int fail_ok = 0;
     int fns = 0;
 
+    db_def(fname);          /* name of file to execute */
+
 /* Re-use last obtained filename? */
-    if (inreex && (prev_fname[0] != '\0') && RXARG(execfile))
-        strcpy(fname, prev_fname);
+    if (inreex && (db_len(prev_fname) > 0) && RXARG(execfile))
+        db_setn(fname, db_val(prev_fname), db_len(prev_fname));
     else {
         if ((status =
-          mlreply("File to execute: ", fname, NSTRING - 1, CMPLT_FILE)) != TRUE)
-            return status;
+          mlreply("File to execute: ", &fname, CMPLT_FILE)) != TRUE)
+            goto exit;
 
         if (include_level >= MAX_INCLUDE_LEVEL) {
             mlwrite("Include depth too great (%d)!",  include_level+1);
-            return FALSE;
+            status = FALSE;
+            goto exit;
         }
     }
 
-    if (fname[0] == '^') {
+    if (db_charat(fname, 0) == '^') {
         fail_ok = 1;
         fns = 1;
     }
@@ -1745,12 +1797,13 @@ int execfile(int f, int n) {
  * This allows you to have uemacs.rc in HOME that includes a system one
  * by using "execute-file uemacs.rc"
  */
-    fspec = flook(fname+fns, FALSE, INTABLE);
+    fspec = flook(db_val(fname)+fns, FALSE, INTABLE);
 
 /* If it isn't around */
     if (fspec == NULL) {
-        mlwrite("Include file %s not found!", fname+fns);
-        return fail_ok? TRUE: FALSE;
+        mlwrite("Include file %s not found!", db_val(fname)+fns);
+        status = fail_ok? TRUE: FALSE;
+        goto exit;
     }
 
 /* Otherwise, execute it */
@@ -1758,14 +1811,20 @@ int execfile(int f, int n) {
         include_level++;
         status = dofile(fspec);
         include_level--;
-        if (status != TRUE) return fail_ok? TRUE: status;
+        if (status != TRUE) {
+            if (fail_ok) status = TRUE;
+            goto exit;
+        }
     }
 
-/* dofile() could contain commands that change prev_bufn, so reinstate
+/* dofile() could contain commands that change prev_fname, so reinstate
  * it here to allow for recursion.
  */
-    strcpy(prev_fname, fname);
-    return TRUE;
+    db_set(prev_fname, db_val(fname));
+
+exit:
+    db_free(fname);
+    return status;
 }
 
 /* We no longer need these, now yuo can use storeproc to
@@ -1836,6 +1895,13 @@ void free_exec(void) {
         Xfree(lp->item);
         pop_head(&macro_pin_headp);
     }
+
+    db_free(prev_cmd);
+    db_free(prev_fname);
+    db_free(prev_bufn);
+    if (pending_docmd_tknp) dbp_free(pending_docmd_tknp);
+    if (pending_dobuf_tknp) dbp_free(pending_dobuf_tknp);
+    if (pending_golabel) dbp_free(pending_golabel);
     return;
 }
 #endif

@@ -1114,6 +1114,69 @@ static void upddex(void) {
     }
 }
 
+/* Get a display name for the current buffer */
+
+static db_def(last_name);
+static int last_width = -1;
+static struct buffer *last_bp = NULL;
+
+static char *get_buffer_display_name(int w_want) {
+
+    if (w_want < 3) w_want = 3;     /* Set a minimum (1 fr, 1 ell, 1 bk) */
+
+/* Handle the most common case quickly */
+
+    if ((curbp == last_bp) && (w_want == last_width) &&
+        (db_casecmp(last_name, curbp->b_bname) == 0)) {
+        return db_val(last_name);
+    }
+
+/* Have to work out a new one... */
+
+    int bn_glyph = glyphcount_utf8(curbp->b_bname);
+
+/* If we have enough space for the whole name, this is easy.  */
+
+    if (bn_glyph <= w_want) {
+        db_set(last_name, curbp->b_bname);
+    }
+    else {
+
+/* Trickier. Need to abbreviate the result. */
+
+        int ncut = bn_glyph - w_want + 1;   /* Glyphs to cut (+ ellipsis) */
+        int scut = 2*(w_want - 1)/3;        /* Where to start cut */
+        db_clear(last_name);
+
+/* Add up until scut */
+        char *cp = curbp->b_bname;
+        int offs = 0;
+        int max = strlen(curbp->b_bname);
+        while (scut--) {
+            offs = next_utf8_offset(cp, offs, max, TRUE);
+        }
+        db_appendn(last_name, cp, offs);
+
+/* Skip ncut - replace with MHE  */
+
+        while (ncut--) {
+            offs = next_utf8_offset(cp, offs, max, TRUE);
+        }
+        static char MHE[3] = { 0xe2, 0x8b, 0xaf };
+        db_appendn(last_name, MHE, 3);
+
+/* Add the rest */
+
+        db_append(last_name, cp+offs);
+    }
+    last_width = w_want;
+    last_bp = curbp;
+
+    return db_val(last_name);
+}
+
+
+
 /* Redisplay the mode line for the window pointed to by the "wp". This is the
  * only routine that has any idea of how the modeline is formatted. You can
  * change the modeline format by hacking at this routine. Called by "update"
@@ -1127,7 +1190,6 @@ static void modeline(struct window *wp) {
     int i;                  /* loop index */
     int lchar;              /* character to draw line in buffer with */
     int firstm;             /* is this the first mode? */
-    char tline[NLINE];      /* buffer for part of mode line */
 
 /* Determine where the modeline actually is...*/
     int n;
@@ -1220,24 +1282,30 @@ static void modeline(struct window *wp) {
         if ((bp->b_flag & BFNAROW) != 0)    vtputc('<');
         else                                vtputc(lchar);
 
-        strcpy(tline, " " PROGRAM_NAME_LONG);
+        db_set(glb_db, " " PROGRAM_NAME_LONG);
 
 /* GGR - only if no user-given filename (space issue) */
-        if (*(bp->b_fname) == 0) strcat(tline, " " VERSION);
-        strcat(tline, ": ");
-        cp = tline;
+        if (*(bp->b_fname) == 0) db_append(glb_db, " " VERSION);
+        db_append(glb_db, ": ");
+        cp = db_val(glb_db);
         while ((c = *cp++) != 0) vtputc(c);
     }
 
-/* The buffer name must be handled as unicode... */
+/* The buffer name is teh next item to display, but may now be shortened
+ * according to the the screen width (and hence the modeline length).
+ * So remember where we are now, build up the rh_side text then
+ * get a buffer name display text based on what space is left.
+ */
+    int lh_width = vtcol;
 
-    show_utf8(bp->b_bname);
-    strcpy(tline, " " MLpre);
+/* Start building the R/h side (into glb_db) */
+
+    db_set(glb_db, " " MLpre);
 
 /* Are we horizontally scrolled? */
     if (wp->w.fcol > 0) {
-        strcat(tline, ue_itoa(wp->w.fcol));
-        strcat(tline, "> ");
+        db_append(glb_db, ue_itoa(wp->w.fcol));
+        db_append(glb_db, "> ");
     }
 
 /* Display the modes */
@@ -1245,7 +1313,7 @@ static void modeline(struct window *wp) {
     firstm = TRUE;
     if ((bp->b_flag & BFTRUNC) != 0) {
         firstm = FALSE;
-        strcat(tline, "Truncated");
+        db_append(glb_db, "Truncated");
     }
     struct window *mwp;
     if (inmb) mwp = mb_info.main_wp;
@@ -1255,44 +1323,50 @@ static void modeline(struct window *wp) {
 /* MDEQUIV and MDRPTMG are never displayed alone */
         if (mode_mask & MD_EQVRPT) goto next_mode;
         if (mwp->w_bufp->b_mode & mode_mask) {
-            if (!firstm) strcat(tline, " ");
+            if (!firstm) db_append(glb_db, " ");
             firstm = FALSE;
             switch(mode_mask) {
             case MDPHON:
-                strcat(tline, ptt->ptt_headp->display_code);
+                db_append(glb_db, ptt->ptt_headp->display_code);
                 break;
             case MDMAGIC:
 /* How we display Magic depends on whether Equiv mode is on. */
                 if ((mwp->w_bufp->b_mode & MD_EQVRPT) == MD_EQVRPT) {
-                    strcat(tline, "RMgEqv");
+                    db_append(glb_db, "RMgEqv");
                     break;
                 }
                 if (mwp->w_bufp->b_mode & MDRPTMG) {
-                    strcat(tline, "RMagic");
+                    db_append(glb_db, "RMagic");
                     break;
                 }
                 if (mwp->w_bufp->b_mode & MDEQUIV) {
-                    strcat(tline, "MgEqv");
+                    db_append(glb_db, "MgEqv");
                     break;
                 }   /* Fall through */
             default:
-                strcat(tline, mode2name[i]);
+                db_append(glb_db, mode2name[i]);
             }
         }
 next_mode:
         mode_mask <<= 1;
     }
-    strcat(tline, MLpost " ");
-    show_utf8(tline);
+    db_append(glb_db, MLpost " ");
 
-/* Display the filename if set and it is different to the buffername.
+/* Add in the filename if set and it is different to the buffername.
  * This can contain utf8...
  * For the minibuffer this will be the main buffer name .
  */
     if (*(bp->b_fname) != 0 && strcmp(bp->b_bname, bp->b_fname) != 0) {
-        show_utf8(bp->b_fname);
-        vtputc(' ');
+        db_append(glb_db, bp->b_fname);
+        db_addch(glb_db, ' ');
     }
+
+/* Now get a buffer name display text and display it and (most of) the
+ * rh_side.
+ */
+    int w_avail = term.t_ncol - lh_width - db_len(glb_db) - 7;
+    show_utf8(get_buffer_display_name(w_avail));
+    show_utf8(db_val(glb_db));
 
 /* Pad to full width. */
     while (vtcol < term.t_ncol) vtputc(lchar);
@@ -1341,8 +1415,8 @@ next_mode:
                 ratio = 0;
                 if (numlines != 0) ratio = (100L * predlines) / numlines;
                 if (ratio > 99)    ratio = 99;
-                sprintf(tline, " %2d%% ", ratio);
-                msg = tline;
+                db_sprintf(glb_db, " %2d%% ", ratio);
+                msg = db_val(glb_db);
             }
     }
     show_utf8(msg);
@@ -1758,6 +1832,8 @@ void free_display(void) {
     Xfree(vscreen);
     Xfree(pscreen);
     Xfree(vdata);
+
+    db_free(last_name);
     return;
 }
 #endif

@@ -5,15 +5,17 @@ PROGRAM=uemacs
 SRC=basic.c bind.c buffer.c crypt.c display.c eval.c exec.c file.c \
 	fileio.c globals.c idxsorter.c input.c isearch.c line.c lock.c \
 	main.c names.c pklock.c posix.c random.c region.c search.c \
-	spawn.c tcap.c utf8.c version.c window.c word.c wrapper.c
+	spawn.c tcap.c utf8.c version.c window.c word.c wrapper.c \
+	dyn_buf.c
 
 OBJ=basic.o bind.o buffer.o crypt.o display.o eval.o exec.o file.o \
 	fileio.o globals.o idxsorter.o input.o isearch.o line.o lock.o \
 	main.o names.o pklock.o posix.o random.o region.o search.o \
-	spawn.o tcap.o utf8.o version.o window.o word.o wrapper.o
+	spawn.o tcap.o utf8.o version.o window.o word.o wrapper.o \
+	dyn_buf.o
 
 HDR=charset.h combi.h ebind.h edef.h efunc.h epath.h estruct.h evar.h \
-	idxsorter.h line.h utf8.h util.h version.h
+	idxsorter.h line.h utf8.h util.h version.h dyn_buf.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
 
@@ -454,38 +456,41 @@ depend:
 
 # DO NOT DELETE THIS LINE
 # make depend bits will be added after this
-basic.o: basic.c estruct.h utf8.h edef.h efunc.h line.h
-bind.o: bind.c estruct.h utf8.h edef.h efunc.h epath.h line.h util.h \
- idxsorter.h
-buffer.o: buffer.c estruct.h utf8.h edef.h efunc.h line.h
-crypt.o: crypt.c estruct.h utf8.h edef.h efunc.h
-display.o: display.c estruct.h utf8.h edef.h efunc.h line.h version.h
-eval.o: eval.c estruct.h utf8.h edef.h efunc.h evar.h line.h util.h \
- version.h idxsorter.h
-exec.o: exec.c estruct.h utf8.h edef.h efunc.h line.h
-file.o: file.c estruct.h utf8.h edef.h efunc.h line.h
-fileio.o: fileio.c estruct.h utf8.h edef.h efunc.h line.h
-globals.o: globals.c estruct.h utf8.h edef.h
+basic.o: basic.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+bind.o: bind.c estruct.h utf8.h edef.h dyn_buf.h efunc.h epath.h line.h \
+ util.h idxsorter.h
+buffer.o: buffer.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+crypt.o: crypt.c estruct.h utf8.h edef.h dyn_buf.h efunc.h
+display.o: display.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h \
+ version.h
+dyn_buf.o: dyn_buf.c dyn_buf.h efunc.h estruct.h utf8.h edef.h
+eval.o: eval.c estruct.h utf8.h edef.h dyn_buf.h efunc.h evar.h line.h \
+ util.h version.h idxsorter.h
+exec.o: exec.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+file.o: file.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+fileio.o: fileio.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+globals.o: globals.c estruct.h utf8.h edef.h dyn_buf.h
 idxsorter.o: idxsorter.c idxsorter.h
-input.o: input.c estruct.h utf8.h edef.h efunc.h line.h
-isearch.o: isearch.c estruct.h utf8.h edef.h efunc.h line.h
-line.o: line.c line.h utf8.h estruct.h edef.h efunc.h
-lock.o: lock.c estruct.h utf8.h edef.h efunc.h
-main.o: main.c estruct.h utf8.h edef.h efunc.h line.h util.h version.h \
- ebind.h
-names.o: names.c estruct.h utf8.h edef.h efunc.h line.h util.h \
+input.o: input.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+isearch.o: isearch.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+line.o: line.c line.h utf8.h estruct.h edef.h dyn_buf.h efunc.h
+lock.o: lock.c estruct.h utf8.h edef.h dyn_buf.h efunc.h
+main.o: main.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h util.h \
+ version.h ebind.h
+names.o: names.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h util.h \
  idxsorter.h
-pklock.o: pklock.c estruct.h utf8.h edef.h efunc.h
-posix.o: posix.c estruct.h utf8.h edef.h efunc.h
-random.o: random.c estruct.h utf8.h edef.h efunc.h line.h charset.h
-region.o: region.c estruct.h utf8.h edef.h efunc.h line.h
-search.o: search.c estruct.h utf8.h edef.h efunc.h line.h
-spawn.o: spawn.c estruct.h utf8.h edef.h efunc.h
-tcap.o: tcap.c estruct.h utf8.h edef.h efunc.h
-utf8.o: utf8.c estruct.h utf8.h edef.h efunc.h combi.h
+pklock.o: pklock.c estruct.h utf8.h edef.h dyn_buf.h efunc.h
+posix.o: posix.c estruct.h utf8.h edef.h dyn_buf.h efunc.h
+random.o: random.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h \
+ charset.h
+region.o: region.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+search.o: search.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+spawn.o: spawn.c estruct.h utf8.h edef.h dyn_buf.h efunc.h
+tcap.o: tcap.c estruct.h utf8.h edef.h dyn_buf.h efunc.h
+utf8.o: utf8.c estruct.h utf8.h edef.h dyn_buf.h efunc.h util.h combi.h
 version.o: version.c version.h
-window.o: window.c estruct.h utf8.h edef.h efunc.h line.h
-word.o: word.c estruct.h utf8.h edef.h efunc.h line.h
+window.o: window.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
+word.o: word.c estruct.h utf8.h edef.h dyn_buf.h efunc.h line.h
 wrapper.o: wrapper.c
 
 # DEPENDENCIES MUST END AT END OF FILE

@@ -27,9 +27,8 @@
  */
 static char path_sep = '/';
 
-static int along_path(char *fname, char *fspec) {
+static int along_path(char *fname, db *fspec) {
     char *path;     /* environmental PATH variable */
-    char *sp;       /* pointer into path spec */
 
 /* get the PATH variable */
     path = getenv("PATH");
@@ -37,16 +36,14 @@ static int along_path(char *fname, char *fspec) {
         while (*path) {
 
 /* Build next possible file spec */
-            sp = fspec;
-            while (*path && (*path != PATHCHR)) *sp++ = *path++;
+            while (*path && (*path != PATHCHR)) dbp_addch(fspec, *path++);
 
-/* Add a terminating dir separator if we need it */
-            if (sp != fspec) *sp++ = path_sep;
-            *sp = 0;
-            strcat(fspec, fname);
+/* Add a terminating dir separator if we need it (if we have something) */
+            if (dbp_len(fspec)) dbp_addch(fspec, path_sep);
+            dbp_append(fspec, fname);
 
 /* And try it out */
-            if (ffropen(fspec) == FIOSUC) {
+            if (ffropen(dbp_val(fspec)) == FIOSUC) {
                 ffclose();
                 return TRUE;
             }
@@ -65,9 +62,9 @@ static int along_path(char *fname, char *fspec) {
  * char *fname;         base file name to search for
  * int hflag;           Look in the HOME environment variable first?
  */
+static db_def(fspec);
 char *flook(char *fname, int hflag, int mode) {
     int i;                          /* index */
-    static char fspec[NSTRING];     /* full path spec to search */
 
     pathexpand = FALSE;             /* GGR */
 
@@ -85,11 +82,11 @@ char *flook(char *fname, int hflag, int mode) {
 
     if (hflag) {
         if (udir.home) {    /* build home dir file spec */
-            snprintf(fspec, NSTRING, "%s%c%s", udir.home, path_sep, fname);
-            if (ffropen(fspec) == FIOSUC) { /* and try it out */
+            db_sprintf(fspec, "%s%c%s", udir.home, path_sep, fname);
+            if (ffropen(db_val(fspec)) == FIOSUC) {   /* and try it out */
                 ffclose();
                 pathexpand = TRUE;  /* GGR */
-                return fspec;
+                return db_val(fspec);
             }
         }
     }
@@ -107,21 +104,22 @@ char *flook(char *fname, int hflag, int mode) {
  * The caller knows which...
  */
     if (mode == ONPATH) {
-        if (along_path(fname, fspec) == TRUE) {
-            pathexpand = TRUE;                  /* GGR */
-            return fspec;
+        db_clear(fspec);        /* Empty it */
+        if (along_path(fname, &fspec) == TRUE) {
+            pathexpand = TRUE;  /* GGR */
+            return db_val(fspec);
         }
     }
 
     if (mode == INTABLE) {  /* look it up via the old table method */
         for (i = 0;; i++) {
             if (pathname[i] == NULL) break;
-            strcpy(fspec, pathname[i]);
-            strcat(fspec, fname);
-            if (ffropen(fspec) == FIOSUC) {    /* and try it out */
+            db_set(fspec, pathname[i]);
+            db_append(fspec, fname);
+            if (ffropen(db_val(fspec)) == FIOSUC) {  /* and try it out */
                 ffclose();
                 pathexpand = TRUE;          /* GGR */
-                return fspec;
+                return db_val(fspec);
             }
         }
     }
@@ -273,12 +271,14 @@ static unsigned int stock(char *keyname) {
  * int mflag;           going for a meta sequence?
  */
 static unsigned int getckey(int mflag) {
-    char tok[NSTRING];      /* command incoming */
 
 /* Check to see if we are executing a command line */
     if (clexec) {
-        macarg(tok);    /* get the next token */
-        return stock(tok);
+        db_def(tok);    /* command incoming */
+        macarg(&tok);   /* get the next token */
+        unsigned int ck = stock(db_val(tok));
+        db_free(tok);
+        return ck;
     }
 
 /* Or from user input */
@@ -651,15 +651,8 @@ static int update_keybind(int c, int ntimes, int internal_OK,
 
     ktp = getbind(c);
     if (ktp) {              /* If it exists, change it... (k_code is OK) */
-        if (bname) {        /* user-proc install */
-            if (ktp->k_type == FUNC_KMAP) /* Need to allocate space for name */
-                ktp->hndlr.pbp = Xmalloc(NBUFN);
-        }
-        else {              /* function install */
-            if (ktp->k_type == PROC_KMAP) { /* So need to free the name */
-                Xfree_setnull(ktp->hndlr.pbp);
-            }
-        }
+/* Need to free the old name? */
+        if (ktp->k_type == PROC_KMAP) Xfree_setnull(ktp->hndlr.pbp);
         destp = ktp;
     }
     else {  /* ...else add a new one at the end */
@@ -688,13 +681,12 @@ static int update_keybind(int c, int ntimes, int internal_OK,
             destp = keytab + destp_offs;
         }
         destp->k_code = c;          /* set keycode */
-        if (bname)                  /* user-proc install */
-            destp->hndlr.pbp = Xmalloc(NBUFN);
     }
     destp->bk_multiplier = ntimes;
     if (bname) {
         destp->k_type = PROC_KMAP;
         destp->fi = func_info(execproc);
+        destp->hndlr.pbp = Xmalloc(strlen(bname));
         strcpy(destp->hndlr.pbp, bname+1);  /* Skip the leading '/' */
     }
     else {
@@ -729,44 +721,32 @@ static int check_procbuf(struct buffer *cbp, char *bufn) {
 int buffertokey(int f, int n) {
     UNUSED(f); UNUSED(n);
     unsigned int c;         /* command key to bind */
-    char bname[NBUFN+1];    /* buffer name */
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
 
-/* Prompt the user to type in a key to bind */
+    db_def(bname);          /* buffer name */
+    db_def(btry);
 
-    if (!clexec) {
-        mlwrite_one(": buffer-to-key ");
-        mpresf = TRUE;          /* GGR */
-    }
-
-/* Fudge in the tag, then get the name of the buffer to invoke.
- * The maximum length is 16 chars *including* the NUL.
- * mlreply (via either token or getstring) includes the NUL in the size
- * and we are actually writing this in from offset 1, so we allow NBUFN
- * chars for that and complain if the reply fills the buffer (as that will
- * make the name too long, and we don't want unexpected truncation meaning
- * we have two different names ending up the same).
- * Note that we DO NOT SEND the leading '/', which means that lookups
- * (the CMPLT_BUF) currently fail. This is so that command macro files
- * can use the same name as on the store-procedure line.
+/* Get the name of the buffer to invoke.
+ * Note that we DO NOT SEND the leading '/'.
+ * We fudge the leading '/' later.
  */
-    bname[0] = '/';
     if ((status =
-         mlreply("user-proc name: ", bname+1, NBUFN, CMPLT_PROC)) != TRUE)
-        return status;
-    if (strlen(bname) >= NBUFN) {
-         mlforce("Procedure name too long: %s. Ignored.", bname);
-         sleep(1);
-         return TRUE;       /* Don't abort start-up file */
-    }
+         mlreply("user-proc name: ", &btry, CMPLT_PROC)) != TRUE)
+        goto exit;
+    db_set(bname, "/");
+    db_append(bname, db_val(btry));
 
 /* Check that this buffer exists */
-    if ((bp = bfind(bname, FALSE, 0)) == NULL) {
-        mlwrite("No such exec procedure %s", bname);
-        return FALSE;
+    if ((bp = bfind(db_val(bname), FALSE, 0)) == NULL) {
+        mlwrite("No such exec procedure %s", db_val(bname));
+        status = FALSE;
+        goto exit;
     }
-    if (check_procbuf(bp, bname) != TRUE) return FALSE;
+    if (check_procbuf(bp, db_val(bname)) != TRUE) {
+        status = FALSE;
+        goto exit;
+    }
 
     if (!clexec) mlwrite_one("key sequence: ");
 
@@ -774,11 +754,16 @@ int buffertokey(int f, int n) {
 
     c = getckey(FALSE);
     if (c == 0) {
-        mlwrite("Can't parse key for: %s: ", bname);
-        return FALSE;
+        mlwrite("Can't parse key for: %s: ", db_val(bname));
+        status = FALSE;
     }
-
-    return update_keybind(c, n, FALSE, NULL, bname);
+    else {
+        status = update_keybind(c, n, FALSE, NULL, db_val(bname));
+    }
+exit:
+    db_free(bname);
+    db_free(btry);
+    return status;
 }
 
 /* GGR addition to allow swapping in a user-procedure for one of the 4
@@ -789,19 +774,22 @@ int buffertokey(int f, int n) {
  */
 int switch_internal(int f, int n) {
     UNUSED(f); UNUSED(n);
-    char bind_char[2];
-    char uproc[NBUFN+1];
     int s;
     int bind_key;
     fn_t rpl_func;
 
+    db_def(btry);
+
 /* Get char to change */
 
-    if ((s = mlreply("Char to change [WCRX]: ", bind_char, 2, 0)) != TRUE) {
-        return s;
+    if ((s = mlreply("Char to change [WCRX]: ", &btry, 0)) != TRUE) {
+        goto exit;
     }
-    if (bind_char[0] == '\0') return FALSE;
-    char set_char = bind_char[0] & ~DIFCASE;    /* Quick ASCII upcase */
+    if (db_len(btry) == 0) {
+        s = FALSE;
+        goto exit;
+    }
+    char set_char = db_charat(btry, 0) & ~DIFCASE;   /* Quick ASCII upcase */
     switch(set_char) {
     case 'C':       /* Start of each "loop" in getstring()/main() */
     case 'R':       /* Before reading a file into a buffer (readin()) */
@@ -810,7 +798,8 @@ int switch_internal(int f, int n) {
         break;
     default:
         mlwrite("Invalid choice: %c", set_char);
-        return FALSE;
+        s = FALSE;
+        goto exit;
     };
 
 /* Both getcmd() and stock() prevent META|SPEC being, so these are safe
@@ -820,25 +809,31 @@ int switch_internal(int f, int n) {
 
 /* Get user-proc to install */
 
-    uproc[0] = '/';
-    if ((s = mlreply("user-proc (dflt for reset): ",
-             uproc+1, NBUFN, CMPLT_BUF)) != TRUE) {
-        return s;
+    if ((s = mlreply("user-proc (dflt for reset): ", &btry,
+         CMPLT_BUF)) != TRUE) {
+        goto exit;
     }
-    if (strcmp(uproc+1, "dflt") == 0) {     /* Reset */
+    if (db_cmp(btry, "dflt") == 0) {     /* Reset */
         if (set_char == 'W') rpl_func = wrapword;
         else                 rpl_func = nullproc;
         s = update_keybind(bind_key, n, TRUE, rpl_func, NULL);
     }
     else {
-        struct buffer *upb = bfind(uproc, FALSE, 0);
+        db_def(uproc);
+        db_set(uproc, "/");
+        db_append(uproc, db_val(btry));
+        struct buffer *upb = bfind(db_val(uproc), FALSE, 0);
         if (!upb) {
-            mlwrite("No such user procedure: %s", uproc+1);
+            mlwrite("No such user procedure: %s", db_val(uproc)+1);
             return FALSE;
         }
-        if (check_procbuf(upb, uproc) != TRUE) return FALSE;
-        s = update_keybind(bind_key, n, TRUE, NULL, uproc);
+        if (check_procbuf(upb, db_val(uproc)) != TRUE) return FALSE;
+        s = update_keybind(bind_key, n, TRUE, NULL, db_val(uproc));
+        db_free(uproc);
     }
+
+exit:
+    db_free(btry);
     return s;
 }
 
@@ -1125,13 +1120,17 @@ int desbind(int f, int n) {
 int apro(int f, int n) {
 
     UNUSED(f); UNUSED(n);
-    char mstring[NSTRING];  /* string to match cmd names to */
     int status;             /* status return */
 
-    status = mlreply("Apropos string: ", mstring, NSTRING - 1, CMPLT_NONE);
-    if (status != TRUE) return status;
+    db_def(mstring);        /* string to match cmd names to */
+    status = mlreply("Apropos string: ", &mstring, CMPLT_NONE);
+    if (status != TRUE) goto exit;
 
-    return buildlist(mstring);
+    status = buildlist(db_val(mstring));
+
+exit:
+    db_free(mstring);
+    return status;
 }
 
 /* execute the startup file
@@ -1207,6 +1206,8 @@ void free_bind(void) {
     Xfree(keystr_index);
     Xfree(next_keystr_index);
     if (free_path_reqd) Xfree(pathname[0]);
+
+    db_free(fspec);
     return;
 }
 #endif

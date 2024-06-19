@@ -61,20 +61,21 @@ char *ue_itoa(ue64I_t i) {
 
 /* Return the contents of the first item in the kill buffer
  */
+static db_def(kvalue);      /* fixed buffer for value */
 static char *getkill(void) {
-    int size;                       /* max number of chars to return */
-    static char value[NSTRING];     /* fixed buffer for value */
-
-    if (kbufh[0] == NULL)
-                /* no kill buffer....just a null string */
-        value[0] = 0;
-    else {      /* copy in the contents...allow for a trailing NUL */
-        if (kused[0] < NSTRING) size = kused[0];
-        else                    size = NSTRING - 1;
-        memcpy(value, kbufh[0]->d_chunk, size);
-        terminate_str(value+size);
+    db_set(kvalue, "");     /* default: no kill buffer....just null string */
+    if (kbufh[0] != NULL) { /* else, copy in the contents...all of it */
+        struct kill *kp = kbufh[0];
+        while (kp != NULL) {
+            int nb;
+            if (kp->d_next == NULL) nb = kused[0];
+            else                    nb = KBLOCK;
+            char *sp = kp->d_chunk;
+            db_appendn(kvalue, sp, nb);
+            kp = kp->d_next;
+        }
     }
-    return value;       /* Return the constructed value */
+    return db_val(kvalue);  /* Return the constructed value */
 }
 
 /* A user-settaable environment variable allowing the user to define
@@ -300,14 +301,12 @@ struct map_table {
     int to_len;
 };
 
+static db_def(xlres);
 static char *xlat(char *source, char *lookup, char *trans) {
-
-    static char result[NSTRING];    /* temporary result */
 
 /* There cannot be more mappings than the number of bytes in the lookup.
  * So allocate a table of that size now.
  */
-
     int llen = strlen(lookup);
     int tlen = strlen(trans);
 /* alloca() allocates on the stack, so automatically de-allocates
@@ -377,7 +376,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
 /* Now copy the source to the result, mapping any matching bytes/strings */
 
     char *sp = source;
-    char *rp = result;
+    db_clear(xlres);    /* Empty at start */
     while (*sp) {
         int ri = -1;    /* No matching index - yet */
         for (int i = 0; i < mtlen; i++) {
@@ -399,20 +398,17 @@ static char *xlat(char *source, char *lookup, char *trans) {
             case 0:         /* Remove from output */
                 break;
             case 1:
-                *rp = mtp[ri].to.c;
+                db_addch(xlres, mtp[ri].to.c);
                 break;
             default:
-                memcpy(rp, mtp[ri].to.utf8, mtp[ri].to_len);
+                db_appendn(xlres, mtp[ri].to.utf8, mtp[ri].to_len);
             }
             sp += mtp[ri].fr_len;
-            rp += mtp[ri].to_len;
         }
         else            /* Just copy the source byte to the result */
-            *rp++ = *sp++;
+            db_addch(xlres, *sp++);
     }
-
-    terminate_str(rp);
-    return result;
+    return db_val(xlres);
 }
 
 /* ptt_expand
@@ -422,15 +418,15 @@ static char *xlat(char *source, char *lookup, char *trans) {
  * Meant for use by test scripts, but might have other uses as
  * a lookup method?
  */
-static char *ptt_expand(char *str) {
-    static char result[NSTRING];    /* temporary result */
+static db_def(pttres);
+static char *ptt_expand(db *str) {
     struct buffer *bp;
 
 /* If there is no active PTT, return the given text */
 
     if (!(curbp->b_mode & MDPHON)) {
-        strcpy(result, str);
-        return result;
+        db_set(pttres, dbp_val(str));
+        return db_val(pttres);
     }
 
 /* The work is done by creating a new temporary buffer, placing the string
@@ -446,24 +442,26 @@ static char *ptt_expand(char *str) {
     struct buffer *sbp = curbp; /* save the old buffer */
     swbuffer(bp, 0);
     bp->b_mode = curbp->b_mode; /* Set mode to my original mode */
-    linstr(str);                /* Add string */
+    linstr(dbp_val(str));       /* Add string */
     backdel(0, 1);              /* Remove last grapheme */
-    ptt_handler(str[strlen(str)-1], FALSE); /* Re-add via handler */
+                                /* Re-add via handler */
+    ptt_handler(dbp_charat(str, dbp_len(str)-1), FALSE);
 
 /* Allow for the expansion being multi-line */
 
-    char *cp = result;
+    db_set(pttres, "");
     for (struct line *lp = lforw(curbp->b_linep); lp != curbp->b_linep;
          lp = lforw(lp)) {
-        cp = stpncpy(cp, ltext(lp), lused(lp));
-        *cp++ = '\n';
+        db_appendn(pttres, ltext(lp), lused(lp));
+        db_addch(pttres, '\n');
      }
 
 /* Is the final newline really part of the expansion? */
-    if (no_newline_in_pttex) cp--;
-    *cp = '\0';
+    if (no_newline_in_pttex) {
+        db_val(pttres)[--db_len(pttres)] = '\0';
+    }
     swbuffer(sbp, 0);
-    return result;
+    return db_val(pttres);
 }
 
 /* ue_printf
@@ -480,8 +478,8 @@ static char *ptt_expand(char *str) {
  * single static buffer at exit. This is to allow for re-entrancy.
  */
 
-/* The returned value - overflow NOT checked.... */
-static char ue_buf[NSTRING];
+/* The returned value - only set this on exit! */
+static db_def(ue_buf);
 
 /* The order here is IMPORTANT!!!
  * It is int, unsigned, double, char, str, ptr
@@ -492,10 +490,10 @@ static char ue_buf[NSTRING];
 
 static char *ue_printf(char *fmt) {
     unicode_t c;
-    char nexttok[NSTRING];
-    char local_buf[NSTRING];    /* Local building-up buffer */
+    db_def(nexttok);
+    db_def(lue_buf);
+    db_def(t_fmt);
 
-    char *op = local_buf;       /* Output pointer */
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
     if (bytes_togo == 0) goto finalize; /* Nothing else...clear line only */
@@ -504,8 +502,7 @@ static char *ue_printf(char *fmt) {
         int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
         if (c != '%') {         /* So copy in the *bytes*! */
-            memcpy(op, fmt, used);
-            op += used;
+            db_appendn(lue_buf, fmt, used);
             fmt += used;
             continue;
         }
@@ -514,7 +511,7 @@ static char *ue_printf(char *fmt) {
 
         fmt += used;
         if (*fmt == '%') {      /* %% is a literal '%' */
-            *op++ = '%';
+            db_addch(lue_buf, '%');
             fmt++;
             bytes_togo--;
             continue;
@@ -525,28 +522,23 @@ static char *ue_printf(char *fmt) {
  * specify specific args to use is an error.
  * We know this should just be ASCII, so can go byte-by-byte.
  */
-        char t_fmt[NSTRING];    /* So we can avoid a length check */
-        char *tp = t_fmt;
-        *tp++ = '%';            /* Start the template... */
+        db_set(t_fmt, "%");      /* Start the template... */
         while (!strchr(TMPL_CHAR, *fmt)) {
             if ((*fmt == '*') || (*fmt == '$')) {
-                strcpy(op, errorm);
-                op += strlen(errorm);
+                db_set(lue_buf, errorm);
                 goto finalize;
             }
-            if (!strchr(TMPL_SKIP, *fmt)) *tp++ = *fmt;
+            if (!strchr(TMPL_SKIP, *fmt)) db_addch(t_fmt, *fmt);
             fmt++;
             if (--bytes_togo == 0) {
-                strcpy(op, errorm);
-                op += strlen(errorm);
+                db_set(lue_buf, errorm);
                 goto finalize;
             }
         }
 
 /* The current char MUST be in TMPL_CHAR - anything else is an error! */
         if (!strchr(TMPL_CHAR, *fmt)) {
-            strcpy(op, errorm);
-            op += strlen(errorm);
+            db_set(lue_buf, errorm);
             goto finalize;
         }
         --bytes_togo;   /* We're about to use it... */
@@ -555,98 +547,111 @@ static char *ue_printf(char *fmt) {
  * variables we have to use that precision here.
  */
         if (strchr("diouxX", *fmt)) {
-            strcpy(tp, "ll");
-            tp += 2;
+            db_append(t_fmt, "ll");
         }
-        char conv_char = *tp++ = *fmt++;
-        terminate_str(tp);
+        char conv_char = *fmt++;
+        db_addch(t_fmt, conv_char);
 
 /* Get what to format. */
-        if (macarg(nexttok) != TRUE) break;
+        if (macarg(&nexttok) != TRUE) { /* Done */
+             bytes_togo = 0;    /* So we exit the loop */
+             continue;
+        }
 
 /* We now have nexttok as a string. Need to convert it to the correct
  * type for sprintf to format it if it is numeric.
  * Note that we still need to format a string (not just copy it) as
  * it may have specified field width or justifiction.
  */
-        int slen;
         if (conv_char == 'p') {      /* Is this actually useful? */
-            slen = sprintf(op, t_fmt, &nexttok);
+            db_sprintf(glb_db, db_val(t_fmt), &(db_val(nexttok)));
         }
         else if (conv_char == 's') {
-            slen = sprintf(op, t_fmt, nexttok);
+            db_sprintf(glb_db, db_val(t_fmt), db_val(nexttok));
         }
         else if (conv_char == 'c') {
-            slen = sprintf(op, t_fmt, nexttok[0]);
+            db_sprintf(glb_db, db_val(t_fmt), db_charat(nexttok, 0));
         }
         else {  /* Check in reverse order of presence in TMPL_CHAR */
             char *t_pos = (strchr(TMPL_CHAR, conv_char));
             if (t_pos >= &TMPL_CHAR[8]) {       /* Doubles */
-                double dv = strtod(nexttok, NULL);
-                slen = sprintf(op, t_fmt, dv);
+                double dv = strtod(db_val(nexttok), NULL);
+                db_sprintf(glb_db, db_val(t_fmt), dv);
             }
             else if (t_pos >= &TMPL_CHAR[3]) {  /* Unsigned */
-                unsigned long long uv = strtoull(nexttok, NULL, 10);
-                slen = sprintf(op, t_fmt, uv);
+                unsigned long long uv = strtoull(db_val(nexttok), NULL, 10);
+                db_sprintf(glb_db, db_val(t_fmt), uv);
             }
             else {                              /* Must be signed */
-                long long lv = strtoll(nexttok, NULL, 10);
-                slen = sprintf(op, t_fmt, lv);
+                long long lv = strtoll(db_val(nexttok), NULL, 10);
+                db_sprintf(glb_db, db_val(t_fmt), lv);
             }
         }
-        op +=slen;
+        db_append(lue_buf, db_val(glb_db));
     }
 
 /* Finalize the result with a NUL char an move it to the static buffer
  * so we can return a pointer to it.
  */
 finalize:
-    terminate_str(op);
-    strcpy(ue_buf, local_buf);
-    return ue_buf;
+    db_free(t_fmt);
+    db_free(nexttok);
+
+/* Now switch lue_buf to ue_buf, freeing any original ue_buf */
+    db_free(ue_buf);
+    ue_buf = lue_buf;
+    return db_val(ue_buf);
 }
 
 /* Evaluate a function.
  *
  * @fname: name of function to evaluate.
  */
+static db_def(funres);      /* Freed in free_eval(), if at all */
 static char *gtfun(char *fname) {
+    char lfname[4];         /* What we lookup */
     unsigned int fnum;      /* index to function to eval */
-    int status;             /* return status */
-    char *tsp;              /* temporary string pointer */
-    char arg1[NSTRING];     /* value of first argument */
-    char arg2[NSTRING];     /* value of second argument */
-    char arg3[NSTRING];     /* value of third argument */
-    static char result[2 * NSTRING];        /* string result */
-    int nb;                 /* Number of bytes in string */
+    int status;             /* status */
+    char *tsp;              /* Temporary string pointer */
+    db_def(arg1);           /* Value of first argument */
+    db_def(arg2);           /* Value of second argument */
+    db_def(arg3);           /* Value of third argument */
+    char *retval;           /* Value to return */
     struct mstr csinfo;     /* Casing info structure */
     ue64I_t int1, int2 = 0;
 
 /* Look the function up in the function table */
-    fname[3] = 0;           /* only first 3 chars significant */
-    mklower(fname);         /* and let it be upper or lower case */
+    strncpy(lfname, fname, 4);
+    lfname[3] = 0;          /* only first 3 chars significant */
+    mklower(lfname);        /* and let it be upper or lower case */
     for (fnum = 0; fnum < ARRAY_SIZE(funcs); fnum++)
-        if (strcmp(fname, funcs[fnum].f_name) == 0) break;
+        if (strcmp(lfname, funcs[fnum].f_name) == 0) break;
 
 /* Return errorm on a bad reference */
-    if (fnum == ARRAY_SIZE(funcs)) return errorm;
-
-    arg1[0] = arg2[0] = arg3[0] = '\0'; /* Keep gcc analyzer happy */
+    if (fnum == ARRAY_SIZE(funcs)) {
+        retval = errorm;
+        goto exit;
+    }
 
 /* Retrieve the required arguments */
+    status = FALSE;     /* Keep the compiler happy */
     do {
         int ft = funcs[fnum].f_type;
         if (ft == NILNAMIC) break;
-        if ((status = macarg(arg1)) != TRUE) return errorm;
+        if ((status = macarg(&arg1)) != TRUE) break;
         if (ft == MONAMIC) break;
-        if ((status = macarg(arg2)) != TRUE) return errorm;
+        if ((status = macarg(&arg2)) != TRUE) break;
         if (ft == DINAMIC) break;
-        if ((status = macarg(arg3)) != TRUE) return errorm;
+        if ((status = macarg(&arg3)) != TRUE) break;
     } while(0);     /* A 1-pass loop */
+    if (status != TRUE) {
+        retval = errorm;
+        goto exit;
+    }
 
 /* And now evaluate it!
  * The switch statements are grouped by functionality type so they
- * can share the initial arg1/arg2/arg3 conversions.
+ * can share the initial arg1/(arg2/arg3 conversions.
  */
     int tag = funcs[fnum].tag;  /* Useful for internal switches */
     switch(funcs[fnum].tag) {   /* enum checks all values are handled */
@@ -657,69 +662,77 @@ static char *gtfun(char *fname) {
     case UFTIMES:
     case UFDIV:
     case UFMOD: {
-        int2 = ue_atoi(arg2);
+        int2 = ue_atoi(db_val(arg2));
         if ((tag == UFDIV) || (tag == UFMOD)) {
-            if (int2 == 0)  /* The only "illegal" case for integer maths */
-                return "ZDIV";
+            if (int2 == 0) {    /* The only "illegal" case for integer maths */
+                retval = "ZDIV";
+                goto exit;
+            }
         }
     }   /* Falls through */
     case UFNEG:
     case UFABS: {
-        int1 = ue_atoi(arg1);
+        int1 = ue_atoi(db_val(arg1));
         switch(tag) {
-        case UFADD:   return ue_itoa(int1 + int2);
-        case UFSUB:   return ue_itoa(int1 - int2);
-        case UFTIMES: return ue_itoa(int1 * int2);
-        case UFDIV:   return ue_itoa(int1 / int2);
-        case UFMOD:   return ue_itoa(int1 % int2);
-        case UFNEG:   return ue_itoa(-int1);
-        default: /* UFABS */    return ue_itoa(llabs(int1));
+        case UFADD:   retval = ue_itoa(int1 + int2); break;
+        case UFSUB:   retval = ue_itoa(int1 - int2); break;
+        case UFTIMES: retval = ue_itoa(int1 * int2); break;
+        case UFDIV:   retval = ue_itoa(int1 / int2); break;
+        case UFMOD:   retval = ue_itoa(int1 % int2); break;
+        case UFNEG:   retval = ue_itoa(-int1); break;
+        default: /* UFABS */    retval = ue_itoa(llabs(int1));
         }
+        goto exit;
     }
 
 /* Logical operators */
     case UFEQUAL:
     case UFLESS:
     case UFGREATER: {
-        int1 = ue_atoi(arg1);
-        int2 = ue_atoi(arg2);
+        int1 = ue_atoi(db_val(arg1));
+        int2 = ue_atoi(db_val(arg2));
         switch(tag) {
-        case UFEQUAL:                return ltos(int1 == int2);
-        case UFLESS:                 return ltos(int1 < int2);
-        default: /* UFGREATER */     return ltos(int1 > int2);
+        case UFEQUAL:   retval = ltos(int1 == int2); break;
+        case UFLESS:    retval = ltos(int1 < int2); break;
+        default:        retval = ltos(int1 > int2);     /* UFGREATER */
         }
+        goto exit;
     }
     case UFAND:
     case UFOR:
-        int2 = stol(arg2);      /* Falls through */
+        int2 = stol(db_val(arg2));      /* Falls through */
     case UFNOT:
-        int1 = stol(arg1);
+        int1 = stol(db_val(arg1));
         switch(tag) {
-        case UFNOT:         return ltos(int1 == FALSE);
-        case UFAND:         return ltos(int1 && int2);
-        default: /* UFOR */ return ltos(int1 || int2);
+        case UFNOT: retval = ltos(int1 == FALSE); break;
+        case UFAND: retval = ltos(int1 && int2); break;
+        default:    retval =  ltos(int1 || int2);   /* UFOR */
         }
+        goto exit;
 
 /* Bitwise functions */
     case UFBAND:
     case UFBOR:
     case UFBXOR:
-        int2 = ue_atoi(arg2);   /* Falls through */
+        int2 = ue_atoi(db_val(arg2));   /* Falls through */
     case UFBNOT:
     case UFBLIT:
-        int1 = ue_atoi(arg1);
+        int1 = ue_atoi(db_val(arg1));
         switch(tag) {
-        case UFBAND:            return ue_itoa(int1 & int2);
-        case UFBOR:             return ue_itoa(int1 | int2);
-        case UFBXOR:            return ue_itoa(int1 ^ int2);
-        case UFBNOT:            return ue_itoa(~int1);
-        default: /* UFBLIT */   return ue_itoa(int1);
+        case UFBAND:    retval = ue_itoa(int1 & int2); break;
+        case UFBOR:     retval = ue_itoa(int1 | int2); break;
+        case UFBXOR:    retval = ue_itoa(int1 ^ int2); break;
+        case UFBNOT:    retval = ue_itoa(~int1); break;
+        default:        retval = ue_itoa(int1);  /* UFBLIT */
         }
+        goto exit;
 
 /* String functions */
     case UFCAT:
-        strcpy(result, arg1);
-        return strcat(result, arg2);
+        db_set(funres, db_val(arg1));
+        db_append(funres, db_val(arg2));
+        retval = db_val(funres);
+        goto exit;
 
 /* There is some similarity between the beginning and ending of
  * &lef, &rig and &mid, so code for that.
@@ -730,9 +743,12 @@ static char *gtfun(char *fname) {
     case UFMID: {
         char *rp;       /* Where the return value starts */
         int offs;       /* Eventually, how much to return */
-        int inbytes = strlen(arg1);
-        int gph_count = ue_atoi(arg2);
-        if (gph_count <= 0) return "";
+        int inbytes = strlen(db_val(arg1));
+        int gph_count = ue_atoi(db_val(arg2));
+        if (gph_count <= 0) {
+            retval = "";
+            goto exit;
+        }
 
 /* Now the call-specific bits
  * For UFLEFT and UFMID we need to count from start of the string.
@@ -750,7 +766,7 @@ static char *gtfun(char *fname) {
  * For UFMID we then set things up to run again the scan again
  * continuing from, and remembering, where we reached on the first pass.
  */
-            rp = arg1;
+            rp = db_val(arg1);
             offs = 0;
             while (1) {
                 while (gph_count--) {
@@ -761,10 +777,13 @@ static char *gtfun(char *fname) {
                 if (!reloop) break;
 /* Set things up for UFMID's second pass through the loop */
                 reloop = FALSE;     /* Only reloop once */
-                rp = arg1 + offs;   /* What we have left */
+                rp = db_val(arg1) + offs;    /* What we have left */
                 offs = 0;
-                gph_count = ue_atoi(arg3); /* How much to get */
-                if (gph_count <= 0) return "";
+                gph_count = ue_atoi(db_val(arg3)); /* How much to get */
+                if (gph_count <= 0) {
+                    retval = "";
+                    goto exit;
+                }
             }
         }
 /* The UFRIGHT scan runs backwards....
@@ -772,54 +791,72 @@ static char *gtfun(char *fname) {
         else {                  /* So is UFRIGHT */
             offs = inbytes;     /* Start at other end */
             while (gph_count--) {
-                offs = prev_utf8_offset(arg1, offs, TRUE);
+                offs = prev_utf8_offset(db_val(arg1), offs, TRUE);
                 if (offs == 0) break;   /* No bytes left */
             }
-            rp = arg1+offs;
+            rp = db_val(arg1)+offs;
             offs = inbytes - offs;
         }
-        memcpy(result, rp, offs);
-        result[offs] = '\0';
-        return result;
+        db_setn(funres, rp, offs);
+        retval = db_val(funres);
+        goto exit;
     }
-    case UFSEQUAL:      return ltos(strcmp(arg1, arg2) == 0);
-    case UFSLESS:       return ltos(strcmp(arg1, arg2) < 0);
-    case UFSGREAT:      return ltos(strcmp(arg1, arg2) > 0);
-    case UFLENGTH:      return ue_itoa(glyphcount_utf8(arg1));
+
+    case UFSEQUAL:
+        retval = ltos(strcmp(db_val(arg1), db_val(arg2)) == 0);
+        goto exit;
+    case UFSLESS:
+        retval = ltos(strcmp(db_val(arg1), db_val(arg2)) < 0);
+        goto exit;
+    case UFSGREAT:
+        retval = ltos(strcmp(db_val(arg1), db_val(arg2)) > 0);
+        goto exit;
+    case UFLENGTH:
+        retval = ue_itoa(glyphcount_utf8(db_val(arg1)));
+        goto exit;
     case UFUPPER:
     case UFLOWER:
         utf8_recase(tag == UFUPPER? UTF8_UPPER: UTF8_LOWER,
-             arg1, -1, &csinfo);
-        strcpy(result, csinfo.str);
+             db_val(arg1), -1, &csinfo);
+        db_set(funres, csinfo.str);
         Xfree(csinfo.str);
-        return(result);
-    case UFESCAPE:              /* Only need to escape ASCII chars */
-       {char *ip = arg1;        /* This is SHELL escaping... */
-        char *op = result;
+        retval = db_val(funres);
+        goto exit;
+    case UFESCAPE: {            /* Only need to escape ASCII chars */
+       char *ip = db_val(arg1); /* This is SHELL escaping... */
+        db_set(funres, "");  /* Start empty */
         while (*ip) {           /* Escape it? */
-            if (strchr(" \"$&'()*;<>?\\`{|", *ip)) *op++ = '\\';
-            *op++ = *ip++;
+            if (strchr(" \"$&'()*;<>?\\`{|", *ip)) db_addch(funres, '\\');
+            db_addch(funres, *ip++);
         }
-        terminate_str(op);
-        return result;
-       }
-    case UFSINDEX:      return ue_itoa(strindex(arg1, arg2));
-    case UFRINDEX:      return ue_itoa(rstrindex(arg1, arg2));
+        retval = db_val(funres);
+        goto exit;
+    }
+    case UFSINDEX:
+        retval = ue_itoa(strindex(db_val(arg1), db_val(arg2)));
+        goto exit;
+    case UFRINDEX:
+        retval = ue_itoa(rstrindex(db_val(arg1), db_val(arg2)));
+        goto exit;
 
 /* Miscellaneous functions */
     case UFIND: { /* Evaluate the next arg via temporary execstr */
         char *oldestr = execstr;
-        execstr = arg1;
-        macarg(result);
+        execstr = db_val(arg1);
+        macarg(&funres);
         execstr = oldestr;
-        return result;
+        retval = db_val(funres);
+        goto exit;
     }
 
-    case UFTRUTH:       return ltos(ue_atoi(arg1) == 42);
+    case UFTRUTH:
+        retval = ltos(ue_atoi(db_val(arg1)) == 42);
+        goto exit;
     case UFASCII: {     /* Returns base unicode char - but keep old name... */
         unicode_t uc_res;
-        (void)utf8_to_unicode(arg1, 0, strlen(arg1), &uc_res);
-        return ue_itoa(uc_res);
+        (void)utf8_to_unicode(db_val(arg1), 0, strlen(db_val(arg1)), &uc_res);
+        retval = ue_itoa(uc_res);
+        goto exit;
     }
 /* Allow for unicode as:
  *      decimal codepoint
@@ -827,44 +864,65 @@ static char *gtfun(char *fname) {
  *      U+hex           [0x must be chars 1 and 2]
  */
     case UFCHR:
-        if (arg1[0] == 'U' && arg1[1] == '+') {
+        if ((db_charat(arg1, 0) == 'U') && (db_charat(arg1, 1) == '+')) {
             static char targ[20] = "0x";    /* Fudge to 0x instead */
-            strcpy(targ+2, arg1+2);         /* strtol then handles it */
+            strcpy(targ+2, db_val(arg1)+2); /* strtol then handles it */
             tsp = targ;
         }
         else {
-            tsp = arg1;
+            tsp = db_val(arg1);
         }
-        nb = unicode_to_utf8(strtol(tsp, NULL, 0), result);
-        result[nb] = 0;
-        return result;
-    case UFGTKEY:       /* Allow for unicode input. -> utf-8 */
-        nb = unicode_to_utf8(tgetc(), result);
-        result[nb] = 0;
-        return result;
+        char temp[8];
+        int nb = unicode_to_utf8(strtol(tsp, NULL, 0), temp);
+        terminate_str(temp+nb);
+        db_set(funres, temp);
+        retval = db_val(funres);
+        goto exit;
+    case UFGTKEY: {     /* Allow for unicode input. -> utf-8 */
+        char temp[8];
+        (void)unicode_to_utf8(tgetc(), temp);
+        db_set(funres, temp);
+        retval = db_val(funres);
+        goto exit;
+    }
     case UFRND: {
             seed = abs(seed * 1721 + 10007);
-            return ue_itoa(seed % llabs(ue_atoi(arg1)) + 1);
+            retval = ue_itoa(seed % llabs(ue_atoi(db_val(arg1))) + 1);
+            goto exit;
     }
     case UFENV:
-        tsp = getenv(arg1);
-        return (tsp == NULL)? "" : tsp;
-    case UFBIND:        return transbind(arg1);
+        tsp = getenv(db_val(arg1));
+        retval = (tsp == NULL)? "" : tsp;
+        goto exit;
+    case UFBIND:
+        retval = transbind(db_val(arg1));
+        goto exit;
     case UFEXIST:   /* Need to "fixup" the arg */
-        return ltos(fexist(fixup_fname(arg1)));
-    case UFBXIST:       return ltos(bfind(arg1, 0, 0) != NULL);
+        retval = ltos(fexist(fixup_fname(db_val(arg1))));
+        goto exit;
+    case UFBXIST:
+        retval = ltos(bfind(db_val(arg1), 0, 0) != NULL);
+        goto exit;
     case UFFIND:
-        tsp = flook(arg1, TRUE, ONPATH);
-        return (tsp == NULL)? "" : tsp;
-    case UFXLATE:       return xlat(arg1, arg2, arg3);
-    case UFGRPTEXT:     return group_match(ue_atoi(arg1));
-    case UFPRINTF:      return ue_printf(arg1);
-    case UFPTTEX:       return ptt_expand(arg1);
-
+        tsp = flook(db_val(arg1), TRUE, ONPATH);
+        retval = (tsp == NULL)? "" : tsp;
+        goto exit;
+    case UFXLATE:
+        retval = xlat(db_val(arg1), db_val(arg2), db_val(arg3));
+        goto exit;
+    case UFGRPTEXT:
+        retval = group_match(ue_atoi(db_val(arg1)));
+        goto exit;
+    case UFPRINTF:
+        retval = ue_printf(db_val(arg1));
+        goto exit;
+    case UFPTTEX:
+        retval = ptt_expand(&arg1);
+        goto exit;
 
 /* Real arithmetic is to precision 12 in G-style strings.
  * Use &ptf to format the results as you wish.
- * The first 5 all take 2 real args and return 1 real result (as strings)
+ * The first 5 all take 2 real args and retval = 1 real result (as strings)
  * Overflow results in +/-INF
  * Undeflow results in 0.
  * Invalid bit patterns result in NAN - but you shouldn't be able
@@ -881,17 +939,17 @@ static char *gtfun(char *fname) {
     case UFRLESS:
     case UFRGREAT: {
         static char rdv_result[20];
-        double d1 = strtod(arg1, NULL);
-        double d2 = strtod(arg2, NULL);
+        double d1 = strtod(db_val(arg1), NULL);
+        double d2 = strtod(db_val(arg2), NULL);
         double res;
         switch(tag) {
-        case UFRADD:            res = d1 + d2; break;
-        case UFRSUB:            res = d1 - d2; break;
-        case UFRTIMES:          res = d1 * d2; break;
-        case UFRDIV:            res = d1 / d2; break;
-        case UFRPOW:            res = pow(d1, d2); break;
-        case UFRLESS:           return ltos(d1 < d2);
-        default: /* UFRGREAT */ return ltos(d1 > d2);
+        case UFRADD:    res = d1 + d2; break;
+        case UFRSUB:    res = d1 - d2; break;
+        case UFRTIMES:  res = d1 * d2; break;
+        case UFRDIV:    res = d1 / d2; break;
+        case UFRPOW:    res = pow(d1, d2); break;
+        case UFRLESS:   retval = ltos(d1 < d2); goto exit;
+        default:        retval = ltos(d1 > d2); goto exit;  /* UFRGREAT */
         }
         snprintf(rdv_result, 20, "%.12G", res);
 /* Solaris may use inf, Inf, INF, infinity, Infinity or INFINITY
@@ -905,23 +963,28 @@ static char *gtfun(char *fname) {
     else if ((rdv_result[si] == 'n') || (rdv_result[si] == 'N'))
         strcpy(rdv_result+si, "NAN");
 #endif
-        return rdv_result;
+        retval = rdv_result;
+        goto exit;
     }
 /* There IS NO UFREQUAL!!! You should never compare reals for equality! */
     case UFR2I: {       /* Add checks for overflow on conversion */
         errno = 0;
         feclearexcept(FE_ALL_EXCEPT);
-        int1 = lroundl(strtod(arg1, NULL));
+        int1 = lroundl(strtod(db_val(arg1), NULL));
         if ((errno != 0) || (fetestexcept(FE_INVALID|FE_OVERFLOW) != 0)) {
-            return "TOOBIG";
+            retval = "TOOBIG";
         }
-        return ue_itoa(int1);
+        retval = ue_itoa(int1);
+        goto exit;
     }
     }
     exit(-11);              /* never should get here */
-#ifdef __TINYC__
-    return "";              /* Avoid "function might return no value" */
-#endif
+
+exit:
+    db_free(arg1);
+    db_free(arg2);
+    db_free(arg3);
+    return retval;
 }
 
 /* Look up a user var's value (%xxx)
@@ -968,6 +1031,8 @@ static char *gtbvr(char *vname) {
 /* gtenv()
  *
  * char *vname;                 name of environment variable to retrieve
+ *
+ * This returns things which already exist, so doesn't need any db vars.
  */
 static char *gtenv(char *vname) {
     unsigned int vnum;  /* ordinal number of var referenced */
@@ -1013,8 +1078,8 @@ static char *gtenv(char *vname) {
     case EVWLINE:           return ue_itoa(curwp->w_ntrows);
     case EVCWLINE:          return ue_itoa(getwpos());
     case EVTARGET:          return ue_itoa(curgoal);
-    case EVSEARCH:          return pat;
-    case EVREPLACE:         return rpat;
+    case EVSEARCH:          return db_val(pat);
+    case EVREPLACE:         return db_val(rpat);
     case EVMATCH:           return group_match(0);
     case EVKILL:            return getkill();
     case EVCMODE:           return ue_itoa(curbp->b_mode);
@@ -1096,17 +1161,16 @@ static char *gtenv(char *vname) {
 int gettyp(char *token) {
     char c;         /* first char in token */
 
-    c = *token;     /* grab the first char (all we usually check) */
+    if (!token || ((c = *token) == '\0')) return TKNUL; /* no blanks!!! */
 
-    if (c == 0) return TKNUL;      /* no blanks!!! */
+/* A numeric literal?
+ * *GGR* allow for -ve ones too. -n and .nnn are numbers
+ */
+    char cn;
+    if (c == '-' || c == '.')   cn = token[1];
+    else                        cn = token[0];
+    if (cn >= '0' && cn <= '9') return TKLIT;
 
-/* A numeric literal? *GGR* allow for -ve ones too */
-
-    if (c >= '0' && c <= '9') return TKLIT;
-    if (c == '-' || c == '.') {     /* -n and .nnn are numbers */
-        char c2 = token[1];
-        if (c2 >= '0' && c2 <= '9') return TKLIT;
-    }
     switch (c) {
     case '"':   return TKSTR;
     case '!':   return TKDIR;
@@ -1125,17 +1189,17 @@ int gettyp(char *token) {
  *
  * char *token;         token to evaluate
  */
+static db_def(valres);          /* static returned val */
 char *getval(char *token) {
     struct buffer *bp;          /* temp buffer pointer */
-    int blen;                   /* length of buffer argument */
-    static char buf[NSTRING];   /* string buffer for some returns */
-    char tbuf[NSTRING];         /* string buffer for some workings */
 
     switch (gettyp(token)) {
     case TKNUL:
         return "";
 
     case TKARG: {               /* interactive argument */
+        db_def(tbuf);           /* string buffer for some workings */
+
 /* We allow internal uemacs code to set the response of the next TKARG
  * (this was set-up so that the showdir user-proc could be given a
  * "pre-loaded" response).
@@ -1143,31 +1207,27 @@ char *getval(char *token) {
         int do_fixup = (uproc_opts & UPROC_FIXUP);
         uproc_opts = 0;         /* Always reset flags after use */
         if (userproc_arg) {
-            strcpy(buf, userproc_arg);
+            db_set(tbuf, userproc_arg);
         }
         else {
 /* GGR - There is the possibility (actually, certainty) of an illegal
  * overlap of args here. So it must be done to a temporary buffer.
  *              strcpy(token, getval(token+1));
  */
-            strcpy(tbuf, getval(token+1));
+            db_set(tbuf, getval(token+1));
             int distmp = discmd;    /* Remember initial state */
             discmd = TRUE;
-            int status = getstring(tbuf, buf, NSTRING, CMPLT_NONE);
+            int status = getstring(db_val(tbuf), &tbuf, CMPLT_NONE);
             discmd = distmp;
             if (status == ABORT) return errorm;
         }
-        if (do_fixup) strcpy(buf, fixup_full(buf));
-        return buf;
+        if (do_fixup) db_set(valres, fixup_full(db_val(tbuf)));
+        db_free(tbuf);
+        return db_val(valres);
     }
     case TKBUF:                 /* buffer contents fetch */
-/* Grab the right buffer
- * GGR - There is the possibility of an illegal overlap of args here.
- *       So it must be done via a temporary buffer.
- *              strcpy(token, getval(token+1));
- */
-        strcpy(tbuf, getval(token+1));
-        bp = bfind(tbuf, FALSE, 0);
+/* Grab the right buffer */
+        bp = bfind(getval(token+1), FALSE, 0);
         if (bp == NULL) return errorm;
 
 /* If the buffer is displayed, get the window vars instead of the buffer vars */
@@ -1179,12 +1239,9 @@ char *getval(char *token) {
 /* Make sure we are not at the end */
         if (bp->b_linep == bp->b.dotp) return errorm;
 
-/* Grab the line as an argument */
-        blen = lused(bp->b.dotp) - bp->b.doto;
-        if (blen >= NSTRING)        /* GGR >= to allow for NUL */
-            blen = NSTRING - 1;
-        memcpy(buf, ltext(bp->b.dotp) + bp->b.doto, blen);
-        buf[blen] = 0;
+/* Grab the line as an argument - then */
+        int blen = lused(bp->b.dotp) - bp->b.doto;
+        db_setn(valres, ltext(bp->b.dotp) + bp->b.doto, blen);
 
 /* And step the buffer's line ptr ahead a line */
         bp->b.dotp = bp->b.dotp->l_fp;
@@ -1198,7 +1255,7 @@ char *getval(char *token) {
         }
 
 /* And return the spoils */
-        return buf;
+        return db_val(valres);
 
     case TKVAR:
         return gtusr(token + 1);
@@ -1425,8 +1482,8 @@ static int svar(struct variable_description *var, char *value) {
             com_flag |= CFCPCN; /* Set this flag */
             break;
         case EVREPLACE:
-            strcpy(rpat, value);
-            new_prompt(value);  /* Let gestring() know, via the search code */
+            db_set(rpat, value);
+            new_prompt(value);  /* Let getstring() know, via the search code */
             break;
         case EVCMODE:
             srch_can_hunt = 0;
@@ -1567,8 +1624,8 @@ static int svar(struct variable_description *var, char *value) {
             }
             else {
 /* If we a have an encryption key set we have to handle this by
- * encrypt it under the old key (which is a decrypt, as it's symmetric.
- * and enrcrpyt it again under the new mode.
+ * encrypting it under the old key (which is a decrypt, as it's symmetric)
+ * and then encrypt it again under the new mode.
  * For all buffers that have a key.
  * NOTE that in order to set an encryption key you must have first set
  * crypt_mode, so if crypt_mode is still unset there is no encryption key.
@@ -1618,36 +1675,38 @@ static int svar(struct variable_description *var, char *value) {
 int setvar(int f, int n) {
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
-    char var[NVSIZE + 1];           /* name of variable to fetch */
-    char value[NSTRING];            /* value to set variable to */
+
+    db_def(var);                    /* name of variable to set */
+    db_def(varval);                 /* value to set */
 
 /* First get the variable to set.. */
     if (clexec == FALSE) {
-        status = mlreply("Variable to set: ", var, NVSIZE, CMPLT_VAR);
+        status = mlreply("Variable to set: ", &var, CMPLT_VAR);
         if (status != TRUE) return status;
     }
     else {      /* macro line argument - grab token and skip it */
-        execstr = token(execstr, var, NVSIZE + 1);
+        execstr = token(execstr, &var);
    }
 
 /* Check the legality and find the var */
-    findvar(var, &vd, TRUE);
+    findvar(db_val(var), &vd, TRUE);
 
 /* If its not legal....bitch */
     if (vd.v_type == -1) {
-        mlwrite("%%No such variable as '%s'", var);
-        return FALSE;
+        mlwrite("%%No such variable as '%s'", db_val(var));
+        status = FALSE;
+        goto exit;
     }
 
 /* Get the value for that variable */
-    if (f == TRUE) strcpy(value, ue_itoa(n));
+    if (f == TRUE) db_set(varval, ue_itoa(n));
     else {
-        status = mlreply("Value: ", value, NSTRING, CMPLT_NONE);
-        if (status != TRUE) return status;
+        status = mlreply("Value: ", &varval, CMPLT_NONE);
+        if (status != TRUE) goto exit;
     }
 
 /* And set the appropriate value */
-    status = svar(&vd, value);
+    status = svar(&vd, db_val(varval));
 
 /* If $debug & 0x01, every assignment will be reported in the minibuffer.
  *      The user then needs to press a key to continue.
@@ -1658,16 +1717,16 @@ int setvar(int f, int n) {
  *      This is used by the ones which set macbug and clear //Debug.
  */
     if (macbug && !macbug_off) {    /* More likely failure first */
-        char outline[9+NVSIZE+NSTRING];
-        sprintf(outline, "(%s:%s:%s)", ltos(status), var, value);
+        db_sprintf(glb_db, "(%s:%s:%s)", ltos(status),
+             db_val(var), db_val(varval));
 
 /* Write out the debug line to //Debug? */
         if (macbug & 0x2) {
-            addline_to_anyb(outline, bdbgp);
+            addline_to_anyb(db_val(glb_db), bdbgp);
         }
 /* Write out the debug line to the message line? */
         if (macbug & 0x1) {
-            mlforce_one(outline);
+            mlforce_one(db_val(glb_db));
             update(TRUE);
 
 /* And get the keystroke */
@@ -1679,6 +1738,9 @@ int setvar(int f, int n) {
     }
 
 /* And return it */
+exit:
+    db_free(var);
+    db_free(varval);
     return status;
 }
 
@@ -1716,36 +1778,43 @@ int delvar(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
-    char var[NVSIZE + 1];           /* name of variable to fetch */
+
+    db_def(var);                    /* Variable to delete */
 
 /* First get the variable to delete.. */
     if (clexec == FALSE) {
-        status = mlreply("Variable to delete: ", var, NVSIZE, CMPLT_VAR);
+        status = mlreply("Variable to delete: ", &var, CMPLT_VAR);
         if (status != TRUE) return status;
     }
     else {      /* macro line argument - grab token and skip it */
-        execstr = token(execstr, var, NVSIZE + 1);
+        execstr = token(execstr, &var);
    }
 
 /* Check the legality and find the var */
-    findvar(var, &vd, FALSE);
+    findvar(db_val(var), &vd, FALSE);
 
 /* Delete by type, or complain about the type */
     switch(vd.v_type) {
     case TKVAR:
         del_simple_var(&vd, uv+(vd.v_num), MAXVARS);
-        return TRUE;
+        status = TRUE;
+        goto exit;
     case TKBVR:
         del_simple_var(&vd, &(execbp->bv[vd.v_num]), BVALLOC);
-        return TRUE;
+        status = TRUE;
+        goto exit;
     case -1:
-        mlwrite("No such variable as '%s'", var);
+        mlwrite("No such variable as '%s'", db_val(var));
         break;
     default:
-        mlwrite("Cannot delete '%s' (not a user or buffer variable)", var);
+        mlwrite("Cannot delete '%s' (not a user or buffer variable)",
+             db_val(var));
         break;
     }
-    return FALSE;
+    status = FALSE;
+exit:
+    db_free(var);
+    return status;
 }
 
 #ifdef DO_FREE
@@ -1762,6 +1831,12 @@ void free_eval(void) {
         if (uv[i].name[0] == '\0') break;  /* End of list */
         Xfree(uv[i].value);
     }
+    db_free(kvalue);
+    db_free(xlres);
+    db_free(pttres);
+    db_free(ue_buf);
+    db_free(funres);
+    db_free(valres);
     return;
 }
 #endif

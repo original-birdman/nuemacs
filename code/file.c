@@ -45,33 +45,32 @@
 /*
  * fixup_fname
  */
+static db_def(fn_expd);
 char *fixup_fname(char *fn) {
-    static char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
 
 /* Look for a ~ at the start. */
 
     if (fn[0]=='~') {          /* HOME dir wanted... */
         if (fn[1]=='/' || fn[1]==0) {
             if (udir.home) {
-                strcpy(fn_expd, udir.home);
+                db_set(fn_expd, udir.home);
                 int i = 1;
 /* Special case for root (i.e just "/")! */
-                if (fn[0]=='/' && fn[1]==0 && fn_expd[1] != 0)
+                if (fn[0]=='/' && fn[1]==0 && db_len(fn_expd) > 1)
                     i++;
-                strcat(fn_expd, fn+i);
+                db_append(fn_expd, fn+i);
             }
         }
 #ifndef STANDALONE
         else {
            struct passwd *pwptr;
-           char *p, *q;
+           char *p;
             p = fn + 1;
-            q = fn_expd;
+            db_clear(fn_expd);
             while (*p != 0 && *p != '/')
-                *q++ = *p++;
-            *q = 0;
-            if ((pwptr = getpwnam(fn_expd)) != NULL) {
-                sprintf(fn_expd, "%s%s", pwptr->pw_dir, p);
+                db_addch(fn_expd, *p++);
+            if ((pwptr = getpwnam(db_val(fn_expd))) != NULL) {
+                db_sprintf(fn_expd, "%s%s", pwptr->pw_dir, p);
             }
         }
 #endif
@@ -80,14 +79,16 @@ char *fixup_fname(char *fn) {
         ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
          (fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')))) {
 /* Just prepend $PWD - the slash_* loop at the end will fix up '.' and ".." */
-            sprintf(fn_expd, "%s/%s", udir.current, fn);
+            db_sprintf(fn_expd, "%s/%s", udir.current, fn);
     }
-    else strcpy(fn_expd, fn);
+    else db_set(fn_expd, fn);
 
 /* Convert any multiple consecutive "/" to "/" and strip any
  * trailing "/"...
  * Change any "/./" entries to "/".
  * Strip out ".." entries and their parent  (xxx/../yyy -> yyy)
+ * This can only make the string shorter, so we can manipulate it
+ * character by character and fix up the length/terminator at the end.
  */
     char *from, *to;
     int prev_was_slash = 0;
@@ -102,14 +103,14 @@ char *fixup_fname(char *fn) {
  * resettable only gets incremented when we find somewhere we can reset to,
  * which means that leading ".." entries don't get removed.
  */
-    if (fn_expd[0] != '/') {
-        resets[0] = fn_expd;
+    if (db_charat(fn_expd, 0) != '/') {
+        resets[0] = db_val(fn_expd);
         rsi = 1;
         resettable = 1;
     }
     else resettable = 0;
 
-    for (from = fn_expd, to = fn_expd; *from; from++) {
+    for (from = db_val(fn_expd), to = db_val(fn_expd); *from; from++) {
 /* Ignore a repeat '/' */
         if (prev_was_slash && (*from == '/')) continue;
 /* Reset states on no '/' */
@@ -123,7 +124,7 @@ char *fixup_fname(char *fn) {
                 resettable--;
             }
             else if (slash_d_d_state == 3) {
-                if ((fn_expd[0] == '/') || (resettable >= 2)) {
+                if ((db_charat(fn_expd, 0) == '/') || (resettable >= 2)) {
                     rsi -= 2;
                     if (rsi < 0) rsi = 0;
                     resettable -= 2;
@@ -164,7 +165,7 @@ char *fixup_fname(char *fn) {
     if (prev_was_slash) to--;
     if (slash_dot_state == 2) to -= 2;
     if (slash_d_d_state == 3) {
-        if ((fn_expd[0] == '/') || (resettable >= 2)) {
+        if ((db_charat(fn_expd, 0) == '/') || (resettable >= 2)) {
             rsi -= 2;
             if (rsi < 0) rsi = 0;
             resettable -= 2;
@@ -173,17 +174,18 @@ char *fixup_fname(char *fn) {
         }
     }
 /* Just have '/' or '.' left...keep it */
-    if (to <= fn_expd) to = fn_expd+1;
+    if (to <= db_val(fn_expd)) to = db_val(fn_expd)+1;
     terminate_str(to);
+    db_len(fn_expd) = strlen(db_val(fn_expd));
 
-    return fn_expd;
+    return db_val(fn_expd);
 }
 
 /*
  * fixup_full
  */
 char *fixup_full(char *fn) {
-    char fn_expd[2*NFILEN]; /* Overbig, for sprint overflow warnings */
+    db_def(fn_expd);
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
  * Then we call fixup_fname() to do what it can do, which includes
@@ -192,19 +194,21 @@ char *fixup_full(char *fn) {
  * currently already in fixup_fname()'s buffer.
  */
     if (udir.current && (fn[0] != '/' && fn[0] != '~')) {
-        sprintf(fn_expd, "%s/%s", udir.current, fn);
+        db_sprintf(fn_expd, "%s/%s", udir.current, fn);
     }
-    else strcpy(fn_expd, fn);
+    else db_set(fn_expd, fn);
 
-    return fixup_fname(fn_expd);    /* For '/', '.' and ".."  handling */
+    char *r = fixup_fname(db_val(fn_expd)); /* '/', '.' and ".."  handling */
+    db_free(fn_expd);
+
+    return r;
 }
 
 /*
  * get_realpath
  */
+static db_def(rp_res);
 char *get_realpath(char *fn) {
-
-    static char rp_res[NFILEN];
 
 /* Get the full pathname...(malloc'ed)
  * Have to cater for file not existing (but the dir has to...).
@@ -215,7 +219,7 @@ char *get_realpath(char *fn) {
     char *rp = realpath(dir, NULL);
     if (!rp) return fn;     /* Return input... */
     if (strlen(rp) == 1) rp[0] = '\0';  /* Blank a bare "/" */
-    sprintf(rp_res, "%s/%s", rp, ent);
+    db_sprintf(rp_res, "%s/%s", rp, ent);
     free(rp);
 
 /* See whether we can use ., .. or ~ to shorten this.
@@ -223,30 +227,30 @@ char *get_realpath(char *fn) {
  * as matching that would mean lengthening, not shortening, and the
  * code here assumes it can copy strings "leftwards" char by char.
  */
-    char *cfp = NULL;
-    char *ctp;
-    if ((udir.clen > 1) && strncmp(rp_res, udir.current, udir.clen) == 0) {
-        strcpy(rp_res, "./");
-        ctp = rp_res + 2;
-        cfp = rp_res + udir.clen;
+    char *cpp = NULL;
+    char *cfp;
+    if ((udir.clen > 1) && db_cmpn(rp_res, udir.current, udir.clen) == 0) {
+        cpp = "./";
+        cfp = db_val(rp_res) + udir.clen;
     }
-    else if ((udir.plen > 1) && strncmp(rp_res, udir.parent, udir.plen) == 0) {
-        strcpy(rp_res, "../");
-        ctp = rp_res + 3;
-        cfp = rp_res + udir.plen;
+    else if ((udir.plen > 1) && db_cmpn(rp_res, udir.parent, udir.plen) == 0) {
+        cpp = "../";
+        cfp = db_val(rp_res) + udir.plen;
     } else if ((udir.hlen > 1) &&
-               (strncmp(rp_res, udir.home, udir.hlen) == 0)) {
+               (db_cmpn(rp_res, udir.home, udir.hlen) == 0)) {
 /* NOTE: that any fn input of ~/file as a real file in a dir called "~"
  * will have already been expanded to a full path, so ~/ really will be
  * unique as being under HOME.
  */
-        strcpy(rp_res, "~/");
-        ctp = rp_res + 2;
-        cfp = rp_res + udir.hlen;
+        cpp = "~/";
+        cfp = db_val(rp_res) + udir.hlen;
     }
-    if (cfp) do { *ctp++ = *cfp; } while (*cfp++);
-
-    return rp_res;
+    if (cpp)  {
+        db_set(glb_db, cfp);
+        db_set(rp_res, cpp);
+        db_append(rp_res, db_val(glb_db));
+    }
+    return db_val(rp_res);
 }
 
 /* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
@@ -371,9 +375,8 @@ static void handle_filehooks(char *fname) {
     if (sfx && (*(sfx+1) != '/')
             && strlen(sfx) <= 19) {     /* Max bufname is 32, incl NUL */
         sfx++;                          /* Skip over '.' */
-        char sfx_bname[NBUFN];
-        sprintf(sfx_bname, "/file-hooks-%s", sfx);
-        if ((sb = bfind(sfx_bname, FALSE, 0)) != NULL) dobuf(sb);
+        db_sprintf(glb_db, "/file-hooks-%s", sfx);
+        if ((sb = bfind(db_val(glb_db), FALSE, 0)) != NULL) dobuf(sb);
     }
     return;
 }
@@ -452,8 +455,8 @@ int readin(char *fname, int lockfl) {
  */
     if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
     if (s == FIOFNF) {                              /* File not found. */
-        strcpy(readin_mesg, MLbkt("New file"));
-        mlwrite_one(readin_mesg);
+        db_set(readin_mesg, MLbkt("New file"));
+        mlwrite_one(db_val(readin_mesg));
         goto out;
     }
 
@@ -470,9 +473,9 @@ int readin(char *fname, int lockfl) {
     if (!silent) {                      /* GGR */
         char *dmg = "";
         if (dos_file) dmg = " - from DOS file!";
-        sprintf(readin_mesg, MLbkt("%sRead %d line%s%s"), emg, nlines,
+        db_sprintf(readin_mesg, MLbkt("%sRead %d line%s%s"), emg, nlines,
              (nlines > 1)? "s": "", dmg);
-        mlwrite_one(readin_mesg);
+        mlwrite_one(db_val(readin_mesg));
         if (s == FIOERR) sleep(1);   /* Let it be seen */
     }
 
@@ -499,20 +502,22 @@ out:
 int fileread(int f, int n) {
     UNUSED(f); UNUSED(n);
     int s;
-    char fname[NFILEN];
+    db_def(fname);
 
     if (restflag)           /* don't allow this command if restricted */
         return resterr();
 /* GGR - return any current filename for the buffer on <CR>.
  *      Useful for ^X^R <CR> to re-read current file on erroneous change
  */
-    s = mlreply("Read file: ", fname, NFILEN, CMPLT_FILE);
+    s = mlreply("Read file: ", &fname, CMPLT_FILE);
     if (s == ABORT) return(s);
     else if (s == FALSE) {
         if (*(curbp->b_fname) == 0) return(s);
-        else strcpy(fname, curbp->b_fname);
+        else db_set(fname, curbp->b_fname);
     }
-    return readin(fname, TRUE);
+    s = readin(db_val(fname), TRUE);
+    db_free(fname);
+    return s;
 }
 
 /* Insert file "fname" into the current buffer.
@@ -589,14 +594,15 @@ out:
  */
 int insfile(int f, int n) {
     int s;
-    char fname[NFILEN];
 
-    if (restflag)           /* don't allow this command if restricted */
+    if (restflag)               /* don't allow this command if restricted */
         return resterr();
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if      */
-        return rdonly();        /* we are in read only mode     */
-    if ((s = mlreply("Insert file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
-        return s;
+    if (curbp->b_mode & MDVIEW) /* don't allow this command if */
+        return rdonly();        /* we are in read only mode */
+
+    db_def(fname);
+    if ((s = mlreply("Insert file: ", &fname, CMPLT_FILE)) != TRUE)
+        goto exit;
 
 /* If we are given a user arg of 2 then it means "replace the active
  * content of the buffer by the file contents".
@@ -612,12 +618,13 @@ int insfile(int f, int n) {
 /* We do not want to save this kill, so tell killregion not to. */
             killregion(0, 2);
         }
-        else if ((s = bclear(curbp)) != TRUE) return s; /* Might be old.  */
+        else if ((s = bclear(curbp)) != TRUE) goto exit;    /* Might be old */
     }
 
-    if ((s = ifile(fname)) != TRUE)
-        return s;
-    return reposition(TRUE, -1);
+    if ((s = ifile(db_val(fname))) == TRUE) s = reposition(TRUE, -1);
+exit:
+    db_free(fname);
+    return s;
 }
 
 /* showdir_handled
@@ -627,11 +634,13 @@ int insfile(int f, int n) {
  */
 int showdir_handled(char *pname) {
     struct stat statbuf;
-    char exp_pname[NFILEN];
+    char *exp_pname;
 
 /* Have to expand it *now* to allow for ~ usage in dir-check */
 
-    strcpy(exp_pname, fixup_full(pname));   /* Make absolute pathname */
+/* Put absolute pathname on the stack, so no need to free */
+
+    exp_pname = strdupa(fixup_full(pname));
     int status = stat(exp_pname, &statbuf);
     if ((status == 0) && (statbuf.st_mode & S_IFMT) == S_IFDIR) {
 /* We can only call showdir if it exists as a userproc.
@@ -656,46 +665,19 @@ int showdir_handled(char *pname) {
 }
 
 /* Take a file name, and from it fabricate a buffer name.
- * The fabricated name is 4-chars short of the maximum, to allow
- * the unique-check code to append !nnn to make it unique
+ * There is no longer a maximum length...
  */
-void makename(char *bname, char *fname, int ensure_unique) {
+void makename(db *bname, char *fname, int ensure_unique) {
 
-/* First we have to step over any directory part in the name */
+/* Get the filename from the pathname.  Use a copy so no fname overwrite. */
 
-    int maxlen = strlen(fname);
-
-/* We wish to copy as much of the fname into bname as we can such that
- * we have 4 free bytes (besides the terminating NUL) for unqname
- * to ensure uniqueness.
- * We need to find and dir separator first.
- */
-    char *cp, *ocp;
-    char *dsp = strrchr(fname, '/');
-    if (dsp)  {
-        cp = dsp + 1;
-        maxlen -= (cp - fname);
-    }
-    else      cp = fname;
-    ocp = cp;
-    int bn_len = 0;
-    int newlen = 0;
-    while(newlen < maxlen) {
-        newlen = next_utf8_offset(cp, bn_len, maxlen, 1);
-        if (newlen < 0) break;              /* End of string */
-        if (newlen > (NBUFN - 5)) break;    /* Out of space */
-        bn_len = newlen;
-    }
+    dbp_set(bname, basename(strdupa(fname)));
 
 /* We can't have an empty buffer name (you wouldn't be able to specify
  * it in any command), so if it is empty (fname with a trailing /) change
  * it to " 0"
  */
-    if (bn_len > 0) {
-        memcpy(bname, ocp, bn_len);
-        terminate_str(bname+bn_len);
-    }
-    else strcpy(bname, " 0");
+    if (dbp_len(bname) == 0) dbp_set(bname, " 0");
 
 /* All done if we're not checking uniqueness */
 
@@ -703,24 +685,24 @@ void makename(char *bname, char *fname, int ensure_unique) {
 
 /* Check to see if it is in the buffer list */
 
-    if (bfind(bname, 0, FALSE) == NULL) return;  /* OK - not there */
+    if (bfind(dbp_val(bname), 0, FALSE) == NULL) return;  /* OK - not there */
 
 /* That name is already there, so append numbers until it is unique.
- * the code above has already left 4 bytes free for us so append !nnn
- * with nnn starting at 000 and increasing until unique.
  * If we still fail, well...
  * 999 rather than 1000 as otherwise gcc 8.4.0 on Arm64 complains
  * about possible excessive field-width.
  */
-    char *tagp = bname + strlen(bname);
+    dbp_append(bname, "!000");  /* Make it long enough */
+    char *op = dbp_val(bname) + dbp_len(bname) - 3; /* Where to overwrite */
     for (unsigned int unum = 0; unum < 999; unum++) {
-        snprintf(tagp, 5, "!%03u", unum);
+        snprintf(op, 4, "%03u", unum);
 /* Check to see if *this* one is in the buffer list */
-        if (bfind(bname, 0, FALSE) == NULL) {   /* This is unique */
+        if (bfind(dbp_val(bname), 0, FALSE) == NULL) {   /* This is unique */
             return;
         }
     }
-    mlforce("Unable to generate a unique buffer name for %s- exiting", bname);
+    mlforce("Unable to generate a unique buffer name for %s - exiting",
+        dbp_val(bname));
     sleep(2);
     quickexit(FALSE, 0);
 }
@@ -735,16 +717,21 @@ int getfile(char *fname, int lockfl, int check_dir) {
     struct line *lp;
     int i;
     int s;
-    char bname[NBUFN];      /* buffer name to put file */
+    char *lfn;          /* Don't overwrite callers version */
 
-    fname = fixup_fname(fname);
+    db_def(bname);      /* buffer name to put file */
+
+    lfn = strdupa(fixup_fname(fname));
 
 /* Check *now* if this is a directory and we've been asked to check.
  * This prevents setting up an incomplete buffer that isn't used by
  * the showdir code.
  * If it isn't a directory, or we can't find out, just continue,
  */
-    if ((check_dir == TRUE) && (showdir_handled(fname) == TRUE)) return TRUE;
+    if ((check_dir == TRUE) && (showdir_handled(lfn) == TRUE)) {
+        s = TRUE;
+        goto exit;
+    }
 
 /* Look for a buffer holding the same realpath, regardless of how the user
  * specified it.
@@ -754,7 +741,7 @@ int getfile(char *fname, int lockfl, int check_dir) {
  *          read the file into that buffer
  * We just use the first we come to....
  */
-    char *testp = get_realpath(fname);
+    char *testp = get_realpath(lfn);
     int found = 0;
     int moved_to = 0;
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
@@ -774,33 +761,35 @@ int getfile(char *fname, int lockfl, int check_dir) {
     if (moved_to) {
         mlwrite_one((found == 1)? MLbkt("Old buffer"):
              MLbkt("Old buffer (from multiple choices"));
-        return TRUE;
+        s = TRUE;
+        goto exit;
     }
 
-    makename(bname, fname, FALSE); /* New buffer name. No unique check. */
-    while ((bp = bfind(bname, FALSE, 0)) != NULL) {
+    makename(&bname, lfn, FALSE);    /* New buffer name. No unique check. */
+    while ((bp = bfind(db_val(bname), FALSE, 0)) != NULL) {
 /* Old buffer name conflict code */
-        s = mlreply("Buffer name: ", bname, NBUFN, CMPLT_BUF);
-        if (s == ABORT) return s;   /* ^G to just quit      */
-        if (s == FALSE) {           /* CR to clobber it     */
-            makename(bname, fname, FALSE);
-            break;
-        }
+        s = mlreply("Buffer name: ", &bname, CMPLT_BUF);
+        if (s == ABORT) goto exit;  /* ^G to just quit      */
+        if (s == FALSE) break;      /* CR to clobber it     */
     }
-    if (bp == NULL && (bp = bfind(bname, TRUE, 0)) == NULL) {
+    if (bp == NULL && (bp = bfind(db_val(bname), TRUE, 0)) == NULL) {
         mlwrite_one("Cannot create buffer");
-        return FALSE;
+        s = FALSE;
+        goto exit;
     }
     if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Undisplay */
 
 /* GGR - remember last buffer */
-    if (!inmb) strcpy(savnam, curbp->b_bname);
+    if (!inmb) db_set(savnam, curbp->b_bname);
 
     curbp = bp;                     /* Switch to it.        */
     curwp->w_bufp = bp;
     curbp->b_nwnd++;
-    s = readin(fname, lockfl);      /* Read it in.          */
+    s = readin(lfn, lockfl);        /* Read it in.          */
     cknewwindow();
+
+exit:
+    db_free(bname);
     return s;
 }
 
@@ -813,30 +802,35 @@ int getfile(char *fname, int lockfl, int check_dir) {
  */
 int filefind(int f, int n) {
     UNUSED(f); UNUSED(n);
-    char fname[NFILEN];     /* file user wishes to find */
     int s;                  /* status return */
 
     if (restflag)           /* don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("Find file: ", fname, NFILEN, CMPLT_FILE)) != TRUE) {
-        return s;
+
+    db_def(fname);          /* file user wishes to find */
+    if ((s = mlreply("Find file: ", &fname, CMPLT_FILE)) != TRUE) {
+        goto exit;
     }
     run_filehooks = 1;      /* set flag */
-    return getfile(fname, TRUE, TRUE);
+    s = getfile(db_val(fname), TRUE, TRUE);
+
+exit:
+    db_free(fname);
+    return s;
 }
 
 int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
     UNUSED(f); UNUSED(n);
-    char fname[NFILEN];         /* File user wishes to find */
     int s;                      /* Status return */
     struct window *wp;          /* Scan for windows that need updating */
 
     if (restflag)               /* Don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("View file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
-        return s;
+    db_def(fname);              /* File user wishes to find */
+    if ((s = mlreply("View file: ", &fname, CMPLT_FILE)) != TRUE)
+        goto exit;
     run_filehooks = 1;          /* Set flag */
-    s = getfile(fname, FALSE, TRUE);
+    s = getfile(db_val(fname), FALSE, TRUE);
     if (s) {                    /* If we succeed, put it in view mode */
         curwp->w_bufp->b_mode |= MDVIEW;
 
@@ -847,6 +841,8 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
             wp = wp->w_wndp;
         }
     }
+exit:
+    db_free(fname);
     return s;
 }
 
@@ -872,7 +868,7 @@ int writeout(char *fn) {
         if ((s = ffputline(ltext(lp), lused(lp))) != FIOSUC) break;
         ++nline;
         if (!(nline % 300) && !silent)      /* GGR */
-            mlwrite(MLbkt("Writing...") " : %d lines",nline);
+            mlwrite(MLbkt("Writing...") " : %d lines", nline);
         lp = lforw(lp);
     }
     if (s == FIOSUC) {                      /* No write error.      */
@@ -898,14 +894,14 @@ int filewrite(int f, int n) {
     UNUSED(f); UNUSED(n);
     struct window *wp;
     int s;
-    char fname[NFILEN];
 
     if (restflag)           /* Don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("Write file: ", fname, NFILEN, CMPLT_FILE)) != TRUE)
-        return s;
-    if ((s = writeout(fname)) == TRUE) {
-        set_buffer_filenames(curbp, fname);
+    db_def(fname);
+    if ((s = mlreply("Write file: ", &fname, CMPLT_FILE)) != TRUE)
+        goto exit;
+    if ((s = writeout(db_val(fname))) == TRUE) {
+        set_buffer_filenames(curbp, db_val(fname));
         curbp->b_flag &= ~BFCHG;
         wp = wheadp;        /* Update mode lines.   */
         while (wp != NULL) {
@@ -913,6 +909,8 @@ int filewrite(int f, int n) {
             wp = wp->w_wndp;
         }
     }
+exit:
+    db_free(fname);
     return s;
 }
 
@@ -973,17 +971,80 @@ int filesave(int f, int n) {
 int filename(int f, int n) {
     UNUSED(f); UNUSED(n);
     int s;
-    char fname[NFILEN];
 
     if (restflag)           /* Don't allow this command if restricted */
         return resterr();
-    if ((s = mlreply("Name: ", fname, NFILEN, CMPLT_FILE)) == ABORT)
-        return s;
-    set_buffer_filenames(curbp, (s == FALSE)? "": fname);
+
+    db_def(fname);
+    if ((s = mlreply("Name: ", &fname, CMPLT_FILE)) == ABORT)
+        goto exit;
+    set_buffer_filenames(curbp, (s == FALSE)? "": db_val(fname));
 
     for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
         if (wp->w_bufp == curbp) wp->w_flag |= WFMODE;
     }
     curbp->b_mode &= ~MDVIEW;   /* no longer read only mode */
+
+exit:
+    db_free(fname);
+    return s;
+}
+
+/* We no longer need these, now yuo can use storeproc to
+ * give a name to a procedure, and bind it with buffer-to-key
+ */
+#ifdef NUMBERED_MACROS
+/* cbuf:
+ *      Execute the contents of a numbered buffer
+ *
+ * int f, n;            default flag and numeric arg
+ * int bufnum;          number of buffer to execute
+ */
+static int cbuf(int f, int n, int bufnum) {
+    UNUSED(f);
+    struct buffer *bp;      /* ptr to buffer to execute */
+    int status;             /* status return */
+    static char bufname[] = "/Macro xx";
+
+/* Make the buffer name */
+    bufname[7] = '0' + (bufnum / 10);
+    bufname[8] = '0' + (bufnum % 10);
+
+/* Find the pointer to that buffer */
+    if ((bp = bfind(bufname, FALSE, 0)) == NULL) {
+        mlwrite_one("Macro not defined");
+        return FALSE;
+    }
+
+/* and now execute it as asked */
+    while (n-- > 0)
+        if ((status = dobuf(bp)) != TRUE)
+            return status;
     return TRUE;
 }
+
+/* Declare the historic 40 numbered macro buffers */
+#define NMAC(nmac) \
+   int cbuf ## nmac(int f, int n) { return cbuf(f, n, nmac); }
+
+NMAC(1)     NMAC(2)     NMAC(3)     NMAC(4)     NMAC(5)
+NMAC(6)     NMAC(7)     NMAC(8)     NMAC(9)     NMAC(10)
+NMAC(11)    NMAC(12)    NMAC(13)    NMAC(14)    NMAC(15)
+NMAC(16)    NMAC(17)    NMAC(18)    NMAC(19)    NMAC(20)
+NMAC(21)    NMAC(22)    NMAC(23)    NMAC(24)    NMAC(25)
+NMAC(26)    NMAC(27)    NMAC(28)    NMAC(29)    NMAC(30)
+NMAC(31)    NMAC(32)    NMAC(33)    NMAC(34)    NMAC(35)
+NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
+#endif
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ * Freeing NULL is a no-op.
+ */
+void free_file(void) {
+    db_free(fn_expd);
+    db_free(rp_res);
+    return;
+}
+#endif

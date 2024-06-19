@@ -545,7 +545,8 @@ static void dump_modified_buffers(void) {
  * We assume that we don't get multiple dumps in the same second to
  * the same user's HOME.
  */
-    char tagged_name[NFILEN], orig_name[NFILEN];
+    db_def(tagged_name);
+    db_def(orig_name);
 
 /* Scan the buffers */
 
@@ -595,16 +596,15 @@ static void dump_modified_buffers(void) {
             fn++;               /* Skip over the / */
             add_cwd = 0;
         }
-        strcpy(tagged_name, time_stamp);
-        strncpy(tagged_name+ts_len, fn, NFILEN-ts_len-1);
-        terminate_str(tagged_name + NFILEN-1);
-        strcpy(orig_name, bp->b_fname); /* For INDEX */
+        db_set(tagged_name, time_stamp);
+        db_append(tagged_name, fn);
+        db_set(orig_name, bp->b_fname);  /* For INDEX */
 /* Just in case the user has opened a file "kbd_macro", we alter the
  * tagged name to have a ! for this special case, to avoid any
  * name clash.
  */
-        if (curbp == kbdmac_bp) tagged_name[ts_len-1] = '!';
-        update_val(bp->b_fname, tagged_name);
+        if (curbp == kbdmac_bp) db_setcharat(tagged_name, ts_len-1, '!');
+        update_val(bp->b_fname, db_val(tagged_name));
         if ((status = filesave(0, 0)) != TRUE) {
             printf("  failed - skipping\n");
             continue;
@@ -621,10 +621,13 @@ static void dump_modified_buffers(void) {
                 dir = "";
                 sep = "";
             }
-            fprintf(index_fp, "%s <= %s%s%s\n", tagged_name, dir, sep,
-                  orig_name);
+            fprintf(index_fp, "%s <= %s%s%s\n", db_val(tagged_name),
+                 dir, sep, db_val(orig_name));
         }
     }
+
+    db_free(tagged_name);
+    db_free(orig_name);
     return;
 }
 
@@ -909,6 +912,8 @@ com_arg *multiplier_check(int c) {
 }
 
 static char *rcfile = NULL;     /* GGR non-default rc file */
+static char *rcextra[10];       /* GGR additional rc files */
+
 static int set_rcfile(char *fname) {
     if (rcfile) {
         fprintf(stderr, "You cannot have two startup files (-c/@)!\n");
@@ -916,10 +921,8 @@ static int set_rcfile(char *fname) {
     }
 /* ffropen() will expand any relative/~ pathname *IN PLACE* so
  * we need a copy of the command line option that is sufficiently long!
- * Do NOT use strdup here!.
  */
-    rcfile = Xmalloc(NFILEN);
-    strcpy(rcfile, fixup_fname(fname));
+    rcfile = Xstrdup(fixup_fname(fname));
     return TRUE;
 }
 
@@ -1049,7 +1052,7 @@ int getfence(int f, int n) {
  * A combining-char on a brace is meaningless.
  */
     if (oldoff == lused(oldlp)) ch = '\n';
-    else                          ch = lgetc(oldlp, oldoff);
+    else                        ch = lgetc(oldlp, oldoff);
 
 /* Setup proper matching fence */
     int (*move)(int);
@@ -1141,17 +1144,19 @@ static int fmatch(int ch) {
  */
 int macro_helper(int f, int n) {
     UNUSED(f);
-    char tag[2];                        /* Enough  */
+    db_def(tag);
 /* This is a macro helper - not need to call mlreply, just
  * extract the next token. We expect only 1 char (+ trailing NUL).
  * Also prevents any processing of the arg.
  */
-    execstr = token(execstr, tag, 2);
-    switch(tag[0]) {
+    execstr = token(execstr, &tag);
+    char tc = db_charat(tag, 0);
+    db_free(tag);
+    switch(tc) {
     case '}':
     case ']':
     case ')':
-        return insbrace(n, tag[0]);
+        return insbrace(n, tc);
     case '#':   return inspound();
     case '0':   return linsert_byte(n, 0);  /* Insert a NUL */
     }
@@ -1166,6 +1171,12 @@ int macro_helper(int f, int n) {
 static void edinit(char *bname) {
     struct buffer *bp;
     struct window *wp;
+
+/* Allocate the macro buffer */
+
+    n_kbdm = 256;
+    kbdm = Xmalloc(n_kbdm*sizeof(int));
+    kbdend = kbdm;
 
     bp = bfind(bname, TRUE, 0);             /* First buffer         */
     blistp = bfind("//List", TRUE, BFINVS); /* Buffer list buffer   */
@@ -1367,10 +1378,9 @@ int execute(int c, int f, int n) {
                 }
             }
             else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
-                char pbuf[NBUFN+1];
-                pbuf[0] = '/';
-                strcpy(pbuf+1, ktp->hndlr.pbp);
-                if ((proc_bp = bfind(pbuf, FALSE, 0)) != NULL) {
+                db_set(glb_db, "/");
+                db_append(glb_db, ktp->hndlr.pbp);
+                if ((proc_bp = bfind(db_val(glb_db), FALSE, 0)) != NULL) {
                     if (proc_bp->btp_opt.not_mb) {
                         run_not_in_mb = 1;
                         not_in_mb.funcname = ktp->hndlr.pbp;
@@ -1388,10 +1398,9 @@ int execute(int c, int f, int n) {
             }
             else if (ktp->k_type == PROC_KMAP && ktp->hndlr.pbp != NULL) {
                 if (!proc_bp) {     /* We might have just done this above */
-                    char pbuf[NBUFN+1];
-                    pbuf[0] = '/';
-                    strcpy(pbuf+1, ktp->hndlr.pbp);
-                    proc_bp = bfind(pbuf, FALSE, 0);
+                    db_set(glb_db, "/");
+                    db_append(glb_db, ktp->hndlr.pbp);
+                    proc_bp = bfind(db_val(glb_db), FALSE, 0);
                 }
                 if (proc_bp != NULL) {
                     if (!clexec && proc_bp->btp_opt.not_interactive) {
@@ -1498,8 +1507,6 @@ int execute(int c, int f, int n) {
                 break;
             }
             int decr = 1;
-            char fname[NFILEN];
-            int fnlen;
             for (;;) {
                 if (decr && *lp == ' ') {
                     decr = 0;
@@ -1518,24 +1525,24 @@ int execute(int c, int f, int n) {
             }
 /* Move to start of name, and get the length to end-of-data (no NUL here) */
             lp++;   /* Step over next space */
-            fnlen = curwp->w.dotp->l_text+lused(curwp->w.dotp) - lp;
+            int fnlen = curwp->w.dotp->l_text+lused(curwp->w.dotp) - lp;
 
 /* Now build up the full pathname
  * Start with the current buffer filename, and append "/", unless we
  * are actually at "/" (quick test).
  */
-            strcpy(fname, curwp->w_bufp->b_fname);
-            if (fname[1] != '\0') strcat(fname, "/");
+            db_def(fname);
+            db_set(fname, curwp->w_bufp->b_fname);
+            if (db_charat(fname, 1) != '\0') db_append(fname, "/");
 /* Add in this entryname, then work out the full pathname length
  * and append a NUL
  */
-            strncat(fname, lp, fnlen);
-            int full_len = strlen(curwp->w_bufp->b_fname) + 1 + fnlen;
-            terminate_str(fname + full_len);
+            db_appendn(fname, lp, fnlen);
 
 /* May be file or dir - getfile() sorts it out */
-            getfile(fname, test_char != 'v', TRUE); /* c.f. filefind/viewfile */
+            getfile(db_val(fname), test_char != 'v', TRUE); /* c.f. filefind/viewfile */
             if (test_char == 'v') curwp->w_bufp->b_mode |= MDVIEW;
+            db_free(fname);
             break;
            }
         case 'a':           /* Refresh/toggle current view in ASCII mode */
@@ -1547,14 +1554,15 @@ int execute(int c, int f, int n) {
             getfile(curbp->b_fname, FALSE, TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
-           {char fname[NFILEN];
-            strcpy(fname, curwp->w_bufp->b_fname);
-            char *upp = strrchr(fname, '/');
-            if (upp == fname) upp++;
-            terminate_str(upp);
-            userproc_arg = fname;
+           {db_def(fname);
+            db_set(fname, curwp->w_bufp->b_fname);
+            char *upp = strrchr(db_val(fname), '/');
+            if (upp == db_val(fname)) upp++;
+            db_setcharat(fname, upp-db_val(fname), '\0');
+            userproc_arg = db_val(fname);
             (void)run_user_proc("showdir", 0, 1);
             userproc_arg = NULL;
+            db_free(fname);
             break;
            }
         }
@@ -1748,10 +1756,6 @@ int unarg(int f, int n) {
     return TRUE;
 }
 
-#ifdef DO_FREE
-static char *pending_rcextra = NULL;
-#endif
-
 /* ======================================================================
  * Quit command. If an argument, always quit. Otherwise confirm if a buffer
  * has been changed and not written out. Normally bound to "C-X C-C".
@@ -1780,11 +1784,14 @@ int quit(int f, int n) {
         free_display();
         free_eval();
         free_exec();
+        free_file();
         free_input();
         free_line();
         free_names();
         free_search();
+        free_spawn();
         free_utf8();
+        free_word();
 
         if (filock) free_lock();
 
@@ -1796,10 +1803,18 @@ int quit(int f, int n) {
             Xfree(wp);
         }
         Xfree(eos_list);
-        Xfree(pending_rcextra);
         Xfree(udir.current);
         Xfree(udir.parent);
         Xfree(udir.home);
+        Xfree(rcfile);
+        for (size_t i = 0; i < ARRAY_SIZE(rcextra); i++) {
+            Xfree(rcextra[i]);
+        }
+        Xfree(kbdm);
+
+        db_free(savnam);
+        db_free(readin_mesg);
+        db_free(glb_db);
 #endif
 
         if (f) exit(n);
@@ -1906,10 +1921,10 @@ int main(int argc, char **argv) {
     struct buffer *bp;      /* temp buffer pointer */
     struct buffer *firstbp = NULL;  /* ptr to first buffer in cmd line */
     int gline = 0;          /* if so, what line? */
-    char bname[NBUFN];      /* buffer name of file to read */
-    char ekey[NPAT];        /* startup encryption key */
-    char *rcextra[10];      /* GGR additional rc files */
+    char ekey[NKEY];        /* startup encryption key */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
+
+    db_def(bname);          /* Buffer name of file to read */
 
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
@@ -1932,6 +1947,7 @@ int main(int argc, char **argv) {
 
 /* GGR The rest of initialization is done after processing optional args */
 
+    db_set(savnam, "main");
     varinit();              /* initialise user variables */
 
 /* Get these directory locations. */
@@ -1943,13 +1959,13 @@ int main(int argc, char **argv) {
     udir.home = NULL;
     char *p;
     if ((p = getenv("HOME")) != NULL) {
-        udir.home = strdup(p);
+        udir.home = Xstrdup(p);
     }
 #ifndef STANDALONE
     else {
         struct passwd *pwptr;
         if ((pwptr = getpwuid(geteuid())) != NULL) {
-            udir.home = strdup(pwptr->pw_dir);
+            udir.home = Xstrdup(pwptr->pw_dir);
         }
     }
 #endif
@@ -1995,8 +2011,8 @@ int main(int argc, char **argv) {
 #ifdef STANDALONE
 #include <libgen.h>
 do {
-    char exec_file[NFILEN];
-    ssize_t elen = readlink("/proc/self/exe", exec_file, NFILEN-1);
+    char exec_file[PATH_MAX];
+    ssize_t elen = readlink("/proc/self/exe", exec_file, PATH_MAX-1);
     if (elen < 0) break;
     terminate_str(exec_file + elen);
     char *exec_path = dirname(exec_file);
@@ -2084,7 +2100,7 @@ do {
             case 'K': {     /* -k<key> for code key */
                 /* GGR only if given a key.. */
                 int olen = strlen(opt);
-                if (olen > 0 && olen < NPAT) {
+                if (olen > 0 && olen < NKEY) {
                     cryptflag = TRUE;
                     strcpy(ekey, opt);
                 }
@@ -2105,10 +2121,10 @@ do {
                 break;
             case 'S':       /* -s for initial search string */
                 searchflag = TRUE;
-                strncpy(pat, opt, NPAT);
+                db_set(pat, opt);
 /* GGR - set-up some more things for the FAST search algorithm */
-                rvstrcpy(tap, pat);
-                srch_patlen = strlen(pat);
+                rvstrcpy(&tap, &pat);
+                srch_patlen = db_len(pat);
                 break;
             case 'V':       /* -v for View File */
                 if (!verflag) verflag = 1;    /* could be version or */
@@ -2118,10 +2134,8 @@ do {
                 if (rcnum < ARRAY_SIZE(rcextra)) {
 /* ffropen() will expand any relative/~ pathname *IN PLACE* so
  * we need a copy of the command line option that is sufficiently long!
- * Do NOT use strdup here!.
  */
-                    rcextra[rcnum] = Xmalloc(NFILEN);
-                    strcpy(rcextra[rcnum], fixup_fname(opt));
+                    rcextra[rcnum] = Xstrdup(fixup_fname(opt));
                     rcnum++;
                 }
                 break;
@@ -2159,14 +2173,8 @@ do {
     Xfree_setnull(rcfile);
     if (rcnum) {
         for (unsigned int n = 0; n < rcnum; n++) {
-#ifdef DO_FREE
-            pending_rcextra = rcextra[n];
-#endif
             startup(rcextra[n]);
-            Xfree(rcextra[n]);
-#ifdef DO_FREE
-            pending_rcextra = NULL;
-#endif
+            Xfree_setnull(rcextra[n]);
         }
     }
     silent = FALSE;
@@ -2183,12 +2191,6 @@ do {
         if (strcmp(*argv, "-e") == 0 || strcmp(*argv, "-v") == 0) {
             viewflag = *(*(argv++) + 1) == 'v';
             continue;
-        }
-        if (strlen(*argv) >= NFILEN) {  /* Sanity check */
-            fprintf(stderr, "filename too long!!\n");
-            sleep(2);
-            vttidy();
-            exit(1);
         }
 
 /* We need to check here whether this is a directory, as we don't want
@@ -2214,8 +2216,8 @@ do {
             if (duplicate) continue;
 
 /* Set-up a (unique) buffer for this file */
-            makename(bname, *argv, TRUE);
-            bp = bfind(bname, TRUE, 0);     /* set this to inactive */
+            makename(&bname, *argv, TRUE);
+            bp = bfind(db_val(bname), TRUE, 0); /* Set this to inactive */
             set_buffer_filenames(bp, fixup_fname(*argv));
             bp->b_active = FALSE;
             if (firstfile) {
@@ -2267,7 +2269,7 @@ do {
             mlwrite_one(MLbkt("Bogus goto argument"));
         }
     } else if (searchflag) {
-        setpattern(pat, tap);   /* Need a valid curwp for this */
+        setpattern(&pat, &tap); /* Need a valid curwp for this */
         srch_can_hunt = 1;
         if (forwhunt(FALSE, 0) == FALSE) update(FALSE);
     }
@@ -2290,7 +2292,7 @@ loop:
           mbuf_mess) {          /* Specific user message */
         int scol = curcol;
         int srow = currow;
-        mlwrite_one(mbuf_mess? mbuf_mess: readin_mesg);
+        mlwrite_one(mbuf_mess? mbuf_mess: db_val(readin_mesg));
         display_readin_msg = 0;
         mbuf_mess = NULL;
         movecursor(srow, scol); /* Send the cursor back to where it was */

@@ -11,6 +11,10 @@
 #ifndef EFUNC_H_
 #define EFUNC_H_
 
+#include "dyn_buf.h"
+#include "estruct.h"
+#include "edef.h"
+
 #define ONPATH 1
 #define INTABLE 2
 
@@ -124,11 +128,11 @@ extern char *getval(char *);
 
 /* exec.c */
 #ifndef EXEC_C
-extern char *token(char *, char *, int);
+extern char *token(char *, db *);
 extern int namedcmd(int, int);
 extern int execcmd(int, int);
-extern int macarg(char *);
-extern int nextarg(char *, char *, int, enum cmplt_type);
+extern int macarg(db *);
+extern int nextarg(char *, db *, enum cmplt_type);
 extern int storemac(int, int);
 extern void ptt_free(struct buffer *);
 extern int storepttable(int, int);
@@ -201,7 +205,7 @@ extern int viewfile(int, int);
 extern int showdir_handled(char *);
 extern int getfile(char *, int, int);
 extern int readin(char *, int);
-extern void makename(char *, char *, int);
+extern void makename(db *, char *, int);
 extern int filewrite(int, int);
 extern int filesave(int, int);
 extern int writeout(char *);
@@ -221,13 +225,13 @@ extern int fexist(char *);
 /* input.c */
 #ifndef INPUT_C
 extern int mlyesno(char *);
-extern int mlreply(char *, char *, int, enum cmplt_type);
+extern int mlreply(char *, db *, enum cmplt_type);
 extern struct name_bind *getname(char *, int);
 extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);
-extern void evaluate_cmdstr(char *, char *);
-extern int getstring(char *, char *, int , enum cmplt_type);
+extern void evaluate_cmdb(char *, db *);
+extern int getstring(char *, db *, enum cmplt_type);
 #endif
 
 /* isearch.c */
@@ -359,9 +363,9 @@ extern int forwhunt(int, int);
 extern int forwsearch(int, int);
 extern int backhunt(int, int);
 extern int backsearch(int, int);
-extern int scanmore(char *, int, int, int);
-extern void setpattern(const char[], const char[]);
-extern void rvstrcpy(char *, char *);
+extern int scanmore(db *, int, int, int);
+extern void setpattern(db *, db *);
+extern void rvstrcpy(db *, db *);
 extern int sreplace(int, int);
 extern int qreplace(int, int);
 extern char *group_match(int);
@@ -483,12 +487,15 @@ extern void free_buffer(void);
 extern void free_display(void);
 extern void free_eval(void);
 extern void free_exec(void);
+extern void free_file(void);
 extern void free_input(void);
 extern void free_line(void);
 extern void free_lock(void);
 extern void free_names(void);
 extern void free_search(void);
+extern void free_spawn(void);
 extern void free_utf8(void);
+extern void free_word(void);
 #endif
 
 #endif

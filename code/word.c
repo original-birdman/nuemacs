@@ -727,19 +727,20 @@ int wrapword(int f, int n) {
  * int f, n;            arguments ignored
  */
 static int n_eos = 0;
-static char eos_str[NLINE] = "";    /* String given by user */
+static db_def(eos_str);       /* String given by user */
 int eos_chars(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
-    char prompt[NLINE+60];
-    char buf[NLINE];
 
-    if (n_eos == 0) strcpy(eos_str, "none");    /* Clearer for user? */
-    sprintf(prompt,
+    db_def(prompt);
+    db_def(buf);
+
+    if (n_eos == 0) db_set(eos_str, "none"); /* Clearer for user? */
+    db_sprintf(prompt,
           "End of sentence characters " MLbkt("currently %s") ":",
-          eos_str);
+          db_val(eos_str));
 
-    status = mlreply(prompt, buf, NLINE - 1, CMPLT_NONE);
+    status = mlreply(db_val(prompt), &buf, CMPLT_NONE);
     if (status == FALSE) {      /* Empty response - remove item */
         Xfree_setnull(eos_list);
         n_eos = 0;
@@ -750,19 +751,21 @@ int eos_chars(int f, int n) {
  * multi-byte character in there) but it's not going to be that big.
  * Actually we'll allocate one extra and put an illegal value at the end.
  */
-        int len = strlen(buf);
+        int len = db_len(buf);
         eos_list = Xrealloc(eos_list, sizeof(unicode_t)*(len + 1));
         int i = 0;
         n_eos = 0;
         while (i < len) {
             unicode_t c;
-            i += utf8_to_unicode(buf, i, len, &c);
+            i += utf8_to_unicode(db_val(buf), i, len, &c);
             eos_list[n_eos++] = c;
         }
         eos_list[n_eos] = UEM_NOCHAR;
-        strcpy(eos_str, buf);
+        db_set(eos_str, db_val(buf));
     }
 /* Do nothing on anything else - allows you to abort once you've started. */
+    db_free(prompt);
+    db_free(buf);
     return status;              /* Whatever mlreply returned */
 }
 
@@ -1109,3 +1112,12 @@ int numberlist_region(int f, int n) {
     int status = region_listmaker(regionlist_number, n);
     return status;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_word(void) {
+    db_free(eos_str);
+}
+#endif

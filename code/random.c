@@ -517,7 +517,6 @@ static int cinsert(void) {
     int tptr;       /* index to scan into line */
     int bracef;     /* was there a brace at the end of line? */
     int i;
-    char ichar[NSTRING];    /* buffer to hold indent of last line */
 
 /* GGR fix - nothing fancy if we're at left hand edge */
     if (curwp->w.doto == 0) return(lnewline());
@@ -542,18 +541,18 @@ static int cinsert(void) {
 
 /* Save the indent of the previous line */
     i = 0;
-    while ((i < tptr) && (cptr[i] == ' ' || cptr[i] == '\t')
-          && (i < NSTRING - 1)) {
-        ichar[i] = cptr[i];
+    db_def(ichar);  /* buffer to hold indent of last line */
+    while ((i < tptr) && (cptr[i] == ' ' || cptr[i] == '\t')) {
+        db_addch(ichar, cptr[i]);
         ++i;
     }
-    ichar[i] = 0;           /* terminate it */
 
 /* Put in the newline */
     if (lnewline() == FALSE) return FALSE;
 
 /* And the saved indentation */
-    linstr(ichar);
+    linstr(db_val(ichar));
+    db_free(ichar);
 
 /* And one more tab for a brace */
     if (bracef) insert_tab(FALSE, 1);
@@ -803,8 +802,8 @@ static int adjustmode(int kind, int global) {
 #if COLOR
     int uflag;      /* was modename uppercase?      */
 #endif
-    char prompt[50];        /* string to prompt user with */
-    char cbuf[NPAT];        /* buffer to recieve mode name into */
+    char prompt[50];    /* string to prompt user with */
+    db_def(cbuf);       /* buffer to recieve mode name into */
 
 /* Build the proper prompt string */
     sprintf(prompt, "%sode to %s: ", (global)? "Global m": "M",
@@ -812,43 +811,45 @@ static int adjustmode(int kind, int global) {
 
 /* Prompt the user and get an answer */
 
-    status = mlreply(prompt, cbuf, NPAT - 1, CMPLT_NONE);
-    if (status != TRUE) return status;
+    status = mlreply(prompt, &cbuf, CMPLT_NONE);
+    if (status != TRUE) goto exit;
 
 /* Check for 1st char being uppercase */
 #if COLOR
-    uflag = (cbuf[0] >= 'A' && cbuf[0] <= 'Z');
+    uflag = (db_charat(cbuf, 0) >= 'A' && db_charat(cbuf, 0) <= 'Z');
 #endif
 
 /* Test it first against the colors we know */
     for (i = 0; i < NCOLORS; i++) {
-    if (strcasecmp(cbuf, cname[i]) == 0) {
+        if (db_casecmp(cbuf, cname[i]) == 0) {
 /* Finding the match, we set the color */
 #if COLOR
-    if (uflag) {
-        if (global) gfcolor = i;
-        curwp->w_fcolor = i;
-    }
-    else {
-        if (global) gbcolor = i;
-        curwp->w_bcolor = i;
-    }
-    curwp->w_flag |= WFCOLR;
+            if (uflag) {
+                if (global) gfcolor = i;
+                curwp->w_fcolor = i;
+            }
+            else {
+                if (global) gbcolor = i;
+                curwp->w_bcolor = i;
+            }
+            curwp->w_flag |= WFCOLR;
 #endif
-        mlerase();
-        return TRUE;
+            mlerase();
+            status = TRUE;
+            goto exit;
         }
     }
 
 /* Test it against the modes we know */
 
     for (i = 0; i < NUMMODES; i++) {
-        if (strcasecmp(cbuf, mode2name[i]) == 0) {
+        if (db_casecmp(cbuf, mode2name[i]) == 0) {
 /* Finding a match, we process it */
             if (kind == TRUE) {
                 if (!ptt && (modecode[i] == 'P')) {
                     mlforce("No phonetic translation tables are yet defined!");
-                    return FALSE;
+                    status = FALSE;
+                    goto exit;
                 }
                 if (global) gmode |= (1 << i);
                 else        curbp->b_mode |= (1 << i);
@@ -860,12 +861,16 @@ static int adjustmode(int kind, int global) {
 /* Display new mode line */
             if (global == 0) upmode(NULL);
             mlerase();      /* erase the junk */
-            return TRUE;
+            status = TRUE;
+            goto exit;
         }
     }
-
+    status = FALSE;
     mlwrite_one("No such mode!");
-    return FALSE;
+
+exit:
+    db_free(cbuf);
+    return status;
 }
 
 /* prompt and set an editor mode
@@ -929,19 +934,21 @@ int clrmes(int f, int n) {
 int writemsg(int f, int n) {
     UNUSED(f);
     int status;
-    char buf[NSTRING];          /* buffer to receive message into */
+    db_def(buf);        /* buffer to receive message into */
 
     if ((status =
-     mlreply("Message to write: ", buf, NSTRING - 1, CMPLT_NONE)) != TRUE)
-        return status;
+     mlreply("Message to write: ", &buf, CMPLT_NONE)) != TRUE)
+        goto exit;
 
 /* Write the message out */
-    if (n == 2) fprintf(stderr, "%s\n", buf);
+    if (n == 2) fprintf(stderr, "%s\n", db_val(buf));
     else {
-        mlforce_one(buf);
+        mlforce_one(db_val(buf));
         if (kbdmode == PLAY) mline_persist = TRUE;
     }
-    return TRUE;
+exit:
+    db_free(buf);
+    return status;
 }
 
 /* A string getter for istring and rawstring, as they only differ in the
@@ -950,10 +957,12 @@ int writemsg(int f, int n) {
 enum istr_type { RAW_STR, COOKED_STR };
 
 static int string_getter(int f, int n, enum istr_type call_type) {
-    int status;                     /* status return code */
-    char tstring[NLINE + 1];        /* string to add */
+    int status;             /* status return code */
     char *prompt;
-    char *istrp;                    /* Final string to insert */
+    char *istrp;            /* Final string to insert */
+
+    db_def(tstring);        /* string to add */
+    db_def(tok);
 
 /* Ask for string to insert, using the requested function.
  * If we are reading a macro just use the rest of the line (execstr).
@@ -961,10 +970,9 @@ static int string_getter(int f, int n, enum istr_type call_type) {
     if (clexec == FALSE) {
         if (call_type == RAW_STR) prompt = "String: ";
         else                      prompt = "Tokens/unicode chars: ";
-        status = mlreply(prompt, tstring, NLINE, CMPLT_NONE);
-        if (status != TRUE)
-            return status;
-        execstr = tstring;
+        status = mlreply(prompt, &tstring, CMPLT_NONE);
+        if (status != TRUE) goto exit;
+        execstr = db_val(tstring);
     }
 
 /* For COOKED_STR we have to process the rest of the line token-by-token.
@@ -974,36 +982,34 @@ static int string_getter(int f, int n, enum istr_type call_type) {
  * results in:
  *  ^R check1 plus some more 2
  */
-    char tok[NLINE];
     if (call_type == COOKED_STR) {
         char *vp;
-        char nstring[NLINE] = "";
-        int nlen = 0;
+        db_def(nstring);
         while(*execstr != '\0') {
-            execstr = token(execstr, tok, NLINE);
-            if (tok[0] == '\0') break;
-            vp = getval(tok);   /* Must evaluate tokens */
+            execstr = token(execstr, &tok);
+            if (db_len(tok) == 0) break;
+            vp = getval(db_val(tok));   /* Must evaluate tokens */
             if (!strncmp(vp, "0x", 2)) {
                 long add = strtol(vp+2, NULL, 16);
 /* This is only for a single byte */
                 if ((add < 0) || (add > 0xFF)) {
-                    mlwrite("Oxnn syntax is only for a single byte (%s)", tok);
+                    mlwrite("Oxnn syntax is only for a single byte (%s)",
+                         db_val(tok));
                     continue;
                 }
-                nstring[nlen++] = add;
+                db_addch(nstring, add);
             }
             else if (*vp == 'U' && *(vp+1) == '+') {
                 int val = strtol(vp+2, NULL, 16);
-                int incr = unicode_to_utf8(val, nstring+nlen);
-                nlen += incr;
+                char utf[8];
+                int incr = unicode_to_utf8(val, utf);
+                db_appendn(nstring, utf, incr);
             }
             else {
-                strcat(nstring, vp);
-                nlen += strlen(vp);
+                db_append(nstring, vp);
             }
-            terminate_str(nstring + nlen);
         }
-        istrp = nstring;
+        istrp = db_val(nstring);
     }
     else {
 /* For the RAW_STR we just take the next token and evaluate it.
@@ -1016,8 +1022,8 @@ static int string_getter(int f, int n, enum istr_type call_type) {
  * results in:
  *  A B C D
  */
-        execstr = token(execstr, tok, NLINE);
-        istrp = getval(tok);
+        execstr = token(execstr, &tok);
+        istrp = getval(db_val(tok));
     }
 
     if (f == FALSE) n = 1;
@@ -1026,6 +1032,10 @@ static int string_getter(int f, int n, enum istr_type call_type) {
 /* insert it */
 
     while (n-- && (status = linstr(istrp)));
+
+exit:
+    db_free(tstring);
+    db_free(tok);
     return status;
 }
 
@@ -1058,17 +1068,20 @@ int istring(int f, int n) {
  */
 int ovstring(int f, int n) {
     int status;     /* status return code */
-    char tstring[NPAT + 1]; /* string to add */
+    db_def(tstring); /* string to add */
 
 /* Ask for string to insert */
-    status = mlreply("String to overwrite: ", tstring, NPAT, CMPLT_NONE);
-    if (status != TRUE) return status;
+    status = mlreply("String to overwrite: ", &tstring, CMPLT_NONE);
+    if (status != TRUE) goto exit;
 
     if (f == FALSE) n = 1;
     if (n < 0) n = -n;
 
 /* Insert it */
-    while (n-- && (status = lover(tstring)));
+    while (n-- && (status = lover(db_val(tstring))));
+
+exit:
+    db_free(tstring);
     return status;
 }
 
@@ -1184,39 +1197,39 @@ int ggr_style(int f, int n) {
 int re_args_exec(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
-    char buf[NLINE];
 
-    status = mlreply("exec set: ", buf, NLINE - 1, CMPLT_NONE);
-    if (status != TRUE)         /* Only act on +ve response */
-        return status;
+    db_def(buf);
+    db_def(tok);
 
-    char *rp = buf;
-    char tok[NLINE];
+    status = mlreply("exec set: ", &buf, CMPLT_NONE);
+    if (status != TRUE) goto exit;  /* Only act on +ve response */
+
+    char *rp = db_val(buf);
     int mode = RX_ON;
     int orig_rxargs = rxargs;
     while(*rp != '\0') {
-        rp = token(rp, tok, NLINE);
-        if (tok[0] == '\0') break;
-        if (!strcasecmp(tok, "none")) {
+        rp = token(rp, &tok);
+        if (db_len(tok) == 0) break;
+        if (!strcasecmp(db_val(tok), "none")) {
             rxargs = 0;
             continue;
         }
-        if (!strcasecmp(tok, "all")) {
+        if (!strcasecmp(db_val(tok), "all")) {
             rxargs = ~0;
             continue;
         }
-        if (!strcmp(tok, "+")) {
+        if (!strcmp(db_val(tok), "+")) {
             mode = RX_ON;
             continue;
         }
-        if (!strcmp(tok, "-")) {
+        if (!strcmp(db_val(tok), "-")) {
             mode = RX_OFF;
             continue;
         }
         int found = 0;
         for (struct rx_mask *rxmp = rx_mask; ; rxmp++) {
             if (!rxmp->entry) break;
-            if (!strcmp(tok, rxmp->entry)) {
+            if (!db_cmp(tok, rxmp->entry)) {
                 if (mode == RX_ON)  rxargs |= rxmp->mask;
                 else                rxargs &= ~rxmp->mask;
                 found = 1;
@@ -1227,10 +1240,15 @@ int re_args_exec(int f, int n) {
 /* If we get here we've found something we couldn't handle, which is
  * an error. So complain and re-instate the original setting.
  */
-        mlwrite("Unexpected arg: %s", tok);
+        mlwrite("Unexpected arg: %s", db_val(tok));
         rxargs = orig_rxargs;
-        return FALSE;
+        status = FALSE;
+        goto exit;
     }
+
+exit:
+    db_free(buf);
+    db_free(tok);
     return TRUE;
 }
 
@@ -1244,7 +1262,7 @@ int open_parent(int f, int n) {
         mlforce("This buffer has no filename");
         return FALSE;
     }
-    char *bpath = strdup(curbp->b_fname);
+    char *bpath = Xstrdup(curbp->b_fname);
     char *parent_path = dirname(bpath);
     int status = TRUE;
     if (!showdir_handled(parent_path)) {
@@ -1262,18 +1280,18 @@ int open_parent(int f, int n) {
 int simulate(int f, int n) {
     UNUSED(f); UNUSED(n);
 
-    char input[NSTRING];
+    db_def(input);
 /* Grab the next token and advance past */
-    nextarg("", input, sizeof(input), CMPLT_NONE);
+    nextarg("", &input, CMPLT_NONE);
 
     int status = FALSE;     /* In case n <= 0 */
     while (n-- > 0) {
-        int offs = 0;
+        size_t offs = 0;
         unicode_t c;
-        int inlen = strlen(input);
         int mask = 0;
-        while (1) {
-            offs += utf8_to_unicode(input, offs, inlen, &c);
+        while (offs < db_len(input)) {
+            offs += utf8_to_unicode(db_val(input), offs,
+                 db_len(input), &c);
             switch(c) {
 /* Handle Esc(Meta), CtlX and control chars */
             case 0x1b:          /* Escape */
@@ -1290,8 +1308,8 @@ int simulate(int f, int n) {
             status = execute(c|mask, 0, 1);
             mask = 0;
             if (!status) break;
-            if (offs >=  inlen) break;
         }
     }
+    db_free(input);
     return status;
 }

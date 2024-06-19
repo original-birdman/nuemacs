@@ -53,27 +53,28 @@ static int cmd_reexecute = -1;          /* > 0 if re-executing command */
 /* Routine to prompt for I-Search string.
  */
 static int promptpattern(char *prompt) {
-    char tpat[NPAT + 20];
+    db_def(tpat);
 
 /* check to see whether we are executing a command line */
 
     if (clexec) return 0;
 
-    strcpy(tpat, prompt);       /* copy prompt to output string */
-    strcat(tpat, MLbkt("<Meta>") " ");
-    mlwrite_one(tpat);
+    db_set(tpat, prompt);    /* copy prompt to output string */
+    db_append(tpat, MLbkt("<Meta>") " ");
+    mlwrite_one(db_val(tpat));
 
 /* This now needs the grapheme length of the byte array... */
 
     int glen = 0;
-    int tplen = strlen(tpat);
+    int tplen = db_len(tpat);
     int tpi = 0;
     while (tpi < tplen) {
         struct grapheme dummy_gc;
 /* Don't build any ex... */
-        tpi = build_next_grapheme(tpat, tpi, tplen, &dummy_gc, 1);
+        tpi = build_next_grapheme(db_val(tpat), tpi, tplen, &dummy_gc, 1);
         glen++;
     }
+    db_free(tpat);
     return glen;
 }
 
@@ -206,27 +207,29 @@ int simulate_incr(int f, int n) {
     }
 
 /* Get the first token - this contains the input characters (Unicode) */
-    char ntok[NSTRING];
-    macarg(ntok);           /* This handles functions on command line */
+    db_def(ntok);
+    macarg(&ntok);          /* This handles functions on command line */
 
 /* Allocate as many unicode_t entries as we have bytes */
     struct pending *iip = &(ii->pdg[ii->np-1]);
-    int mlen = strlen(ntok);
+    int mlen = db_len(ntok);
     iip->input = Xmalloc(mlen*sizeof(unicode_t));
     int dbc = 0;
     int offs = 0;
     while (mlen > offs) {
         unicode_t tc;
-        int used = utf8_to_unicode(ntok, offs, mlen, &tc);
+        int used = utf8_to_unicode(db_val(ntok), offs, mlen, &tc);
         iip->input[dbc++] = tc;
         offs += used;
     }
     iip->ilen = dbc;
 
 /* Is there another token - the proc to run? */
-    execstr = token(execstr, ntok, NSTRING);
-    if (ntok[0] == '\0') iip->uproc = NULL; /* No */
-    else iip->uproc = Xstrdup(ntok);        /* Yes, so remember it */
+    execstr = token(execstr, &ntok);
+    if (db_len(ntok) == 0) iip->uproc = NULL;    /* No */
+    else iip->uproc = Xstrdup(db_val(ntok));     /* Yes, so remember it */
+
+    db_free(ntok);
     return TRUE;
 }
 
@@ -383,7 +386,7 @@ static int isearch(int f, int n) {
     int c;          /* current input character */
 
 /* GGR - Allow for a trailing NUL */
-    char pat_save[NPAT+1];  /* Saved copy of the old pattern str  */
+    db_def(pat_save);       /* Saved copy of the old pattern str  */
     struct line *curline;   /* Current line on entry              */
     int curoff;             /* Current offset on entry            */
     int init_direction;     /* The initial search direction       */
@@ -393,10 +396,12 @@ static int isearch(int f, int n) {
     cmd_reexecute = -1;         /* We're not re-executing (yet?)      */
     cmd_offset = 0;             /* Start at the beginning of the buff */
     terminate_str(cmd_buff);    /* Init the command buffer            */
-    strcpy(pat_save, pat);      /* Save the old pattern string        */
     curline = curwp->w.dotp;    /* Save the current line pointer      */
     curoff = curwp->w.doto;     /* Save the current offset            */
     init_direction = n;         /* Save the initial search direction  */
+
+    db_set(pat_save, db_val_nc(pat)); /* Save the old pattern string */
+    db_set(pat, "");            /* Start with nothing */
 
 /* Check for in "incremental-debug" mode? */
 
@@ -421,11 +426,11 @@ start_over:
 /* Reuse old search string?   */
 /* Yup, find the grapheme length and re-echo the string. */
         cpos = 0;
-        int plen = strlen(pat);
+        int plen = db_len(pat);
         int final_char = '!';
-        while (pat[cpos] != 0) {
+        while (db_charat(pat, cpos) != 0) {
             unicode_t uc;
-            cpos += utf8_to_unicode(pat, cpos, plen, &uc);
+            cpos += utf8_to_unicode(db_val(pat), cpos, plen, &uc);
             col = echo_char(uc, col);
             final_char = uc;
 	}
@@ -438,7 +443,8 @@ start_over:
         }
         else
             n = 1;                  /* Yes, search forward    */
-        status = scanmore(pat, n, FALSE, FALSE);    /* Do the search */
+                                    /* Do the search */
+        status = scanmore(&pat, n, FALSE, FALSE);
         if (!status) hilite(final_char, col);
         c = get_char();             /* Get another character */
     }
@@ -468,7 +474,7 @@ start_over:
 /* This calls asks for the *next* match, not a continuation of the
  * current one.
  */
-            status = scanmore(pat, n, TRUE, FALSE); /* Start again   */
+            status = scanmore(&pat, n, TRUE, FALSE);    /* Restart */
             if (!status) hilite('!', col+1);        /* No further match */
             c = get_char(); /* Get next char */
             continue;       /* Continue the search */
@@ -494,7 +500,7 @@ start_over:
             curwp->w.dotp = curline;        /* Reset the line pointer */
             curwp->w.doto = curoff; /*  and the offset       */
             n = init_direction;     /* Reset search direction */
-            strcpy(pat, pat_save);  /* Restore old search str */
+            db_set(pat, db_val(pat_save)); /* Restore old search str */
             cmd_reexecute = 0;      /* Start the whole mess over  */
             goto start_over;        /* Let it take care of itself */
 
@@ -517,25 +523,16 @@ start_over:
             nb = 1;
             ucb[0] = c;
         }
-        char *ucbp = ucb;
-        int togo = nb;
-        while (togo--) {
-            pat[cpos++] = *(ucbp++);/* put the char in the buffer */
-            if (cpos >= NPAT) {     /* too many chars in string?  */
-                                    /* Yup.  Complain about it    */
-                if (clexec == FALSE) mlwrite_one("? Search string too long");
-                status = TRUE;       /* Return an error            */
-                goto end_isearch;
-            }
-        }
-        pat[cpos] = 0;              /* null terminate the buffer  */
+        db_appendn(pat, ucb, nb);
         col = echo_char(c, col);    /* Echo the character         */
         if (!status) {              /* If we lost last time       */
             TTputc(BELL);           /* Feep again                 */
             TTflush();              /* see that the feep feeps    */
         }
         else                        /* Otherwise, we must have won */
-             status = scanmore(pat, n, FALSE, TRUE);    /* find next match */
+                                    /* find next match */
+             status = scanmore(&pat, n, FALSE, TRUE);
+
         if (!status) hilite(c, col);
         c = get_char();             /* Get the next char        */
 /* Exit if we run out of input.... */
@@ -544,6 +541,7 @@ start_over:
 end_isearch:
     (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
     if (using_incremental_debug) incremental_debug_cleanup();
+    db_free(pat_save);
     return status;
 }
 
@@ -570,7 +568,7 @@ int fisearch(int f, int n) {
         mlwrite_one(MLbkt("search failed"));   /* Say we died */
     } else
         mlerase();      /* If happy, just erase the cmd line  */
-    srch_patlen = strlen(pat);      /* Save default search pattern length */
+    srch_patlen = db_len(pat);   /* Save default search pattern length */
     discmd = saved_discmd;          /* Back to original... */
     return TRUE;
 }

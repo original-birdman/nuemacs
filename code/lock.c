@@ -16,8 +16,8 @@
 
 #include <errno.h>
 
-static char *lname[NLOCKS];             /* names of all locked files */
-static int numlocks;                    /* # of current locks active */
+static char *lname[NLOCKS];     /* names of all locked files */
+static int numlocks;            /* # of current locks active */
 
 /* report a lock error
  *
@@ -57,7 +57,6 @@ static int unlock(char *fname) {
 int lock(char *fname) {
     char *locker;       /* lock error message */
     int status;         /* return status      */
-    char msg[NSTRING];  /* message string     */
 
 /* Attempt to lock the file */
 
@@ -74,10 +73,10 @@ int lock(char *fname) {
 
 /* Someone else has it....override? */
 
-    strcpy(msg, "File in use by ");
-    strcat(msg, locker);
-    strcat(msg, ", override?");
-    status = mlyesno(msg);  /* ask them */
+    db_set(glb_db, "File in use by ");
+    db_append(glb_db, locker);
+    db_append(glb_db, ", override?");
+    status = mlyesno(db_val(glb_db));    /* Ask them */
     if (status == TRUE) return FALSE;
     else                return ABORT;
 }
@@ -99,13 +98,15 @@ int lockchk(char *fname) {
  * expansion on the passed-in name.
  * Remember to free it in errors!
  */
-    char *tmpname = (char *)Xmalloc(NFILEN);
-    strcpy(tmpname, fixup_fname(fname));
+    char *tmpname = Xstrdup(fixup_fname(fname));
 
 /* Check to see whether that file is already locked here */
 
     for (i = 0; i < numlocks; ++i)
-        if (strcmp(tmpname, lname[i]) == 0) return TRUE;
+        if (strcmp(tmpname, lname[i]) == 0) {
+            status = TRUE;
+            goto exit;
+        }
 
 /* If we have a full locking table, bitch and leave */
 
@@ -116,15 +117,17 @@ int lockchk(char *fname) {
     else {          /* Next, try to lock it */
         status = lock(tmpname);
         if (status) {
-/* Everything is cool, add it to the table */
-
+/* Everything is cool, add *just the name* to the table.
+ * Then exit - do not free!
+ */
             lname[++numlocks - 1] = tmpname;
             return TRUE;
         }
         if (status == FALSE)    /* locked, overriden, dont add to table */
             status = TRUE;
     }
-    Xfree(tmpname);             /* Didn't add to table, so free it */
+exit:
+    Xfree(tmpname);         /* Didn't add to table, so free it */
     return status;
 }
 

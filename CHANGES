@@ -7952,12 +7952,12 @@ basic.c (comment typo)
 version.h
     Update to GGR4.181
 
-==========
+========== GGR4.182
 
 display.c
 global.c
-main.c  
-edef.h 
+main.c
+edef.h
 tools/read-speed.sh
     Add a -P option to pretend we have an 80x24 display and redirect
     stdout to /dev/null, so we can run the read-speed.sh script.
@@ -7966,10 +7966,10 @@ autotest/*.sh
     Fix comment typo [all]
     Changes to TOOBIG test. (Needs more work!!!) [arithmetic-tests.sh]
     Remove unneeded $debug settings. [00-encrypt-file.sh]
-    Correct test to use the line that corrsponds to the test name.
-    [casechange.sh] 
-    Improve test desciptions, and set 0x07 correctly.
-    [incremental-search.sh] 
+    Correct test to use the line that corresponds to the test name.
+    [casechange.sh]
+    Improve test descriptions, and set 0x07 correctly.
+    [incremental-search.sh]
 
 exec.c
 names.c
@@ -7981,3 +7981,41 @@ input.c
 posix.c
     Change two mlwrite(NOMATCH) calls to mlwrite_one(NOMATCH).
     Change &tobuf[0] to tobuf in setbuffer() call. [posix.c]
+
+----------------------------------------
+Major change to remove NFILEN, NLINE, NSTRING and NBUFN limits with
+dynamic buffer allocation.
+
+NPAT moved to search.c.
+NPAT changed to NKEY for crypt usage.
+
+dyn_buf.c
+dyn_buf.h
+Makefile
+    New routines added for dynamic buffer usage
+
+basic.c
+bind.c
+buffer.c
+crypt.c
+display.c
+edef.h
+eval.c
+exec.c
+file.c
+globals.c
+input.c
+isearch.c
+line.c
+lock.c
+main.c
+random.c
+search.c
+spawn.c
+utf8.c
+word.c
+efunc.h
+estruct.h
+    Code modified to use dynamic buffer calls.
+
+----------------------------------------

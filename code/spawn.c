@@ -129,33 +129,32 @@ int bktoshell(int f, int n) {   /* suspend MicroEMACS and wait to wake up */
  * can ever be the "last executed" for reexecute, so they can share
  * the prev_spawn_cmd setting.
  */
-static char prev_spawn_cmd[NLINE] = "";
-static int next_spawn_cmd(int rxtest, char *prompt, char *line) {
-    if (inreex && (prev_spawn_cmd[0] != '\0') && rxtest) {
-        strcpy(line, prev_spawn_cmd);
+static db_def(prev_spawn_cmd);
+static int next_spawn_cmd(int rxtest, char *prompt, db *line) {
+    if (inreex && (db_len(prev_spawn_cmd) > 0) && rxtest) {
+        dbp_set(line, db_val(prev_spawn_cmd));
     }
     else {
         int s;
-        if ((s = mlreply(prompt, line, NLINE, CMPLT_NONE)) != TRUE) return s;
-        strcpy(prev_spawn_cmd, line);
+        if ((s = mlreply(prompt, line, CMPLT_NONE)) != TRUE) return s;
+        db_set(prev_spawn_cmd, dbp_val(line));
     }
     return TRUE;
 }
 static int run_one_liner(int rxcopy, int wait, char *prompt) {
     int s;
-    char line[NLINE];
+    db_def(line);
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
-
     get_orig_size();
 
-    if ((s = next_spawn_cmd(rxcopy, prompt, line)) != TRUE) return s;
+    if ((s = next_spawn_cmd(rxcopy, prompt, &line)) != TRUE) goto exit;
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
-    rval = system(line);
+    rval = system(db_val(line));
     fflush(stdout);         /* to be sure P.K.      */
     TTopen();
 
@@ -170,7 +169,9 @@ static int run_one_liner(int rxcopy, int wait, char *prompt) {
 
     check_for_resize();
 
-    return TRUE;
+exit:
+    db_free(line);
+    return s;
 }
 
 /* The two front-ends for run_one_liner */
@@ -197,30 +198,34 @@ int pipecmd(int f, int n) {
     int s;                  /* return status from CLI */
     struct window *wp;      /* pointer to new window */
     struct buffer *bp;      /* pointer to buffer to zot */
-    char line[NLINE + 16];  /* command line send to shell */
-    char comfile[NFILEN];
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
     get_orig_size();
 
+    db_def(line);           /* command line sent to shell */
+    db_def(comfile);
+
 /* Get the command to pipe in */
-    if ((s = next_spawn_cmd(RXARG(pipecmd), "@", line)) != TRUE) return s;
+    if ((s = next_spawn_cmd(RXARG(pipecmd), "@", &line)) != TRUE) return s;
 
 /* Find/create the PIPEBUF buffer, switch to it and ensure it is empty. */
-    if ((bp = bfind(PIPEBUF, TRUE, 0)) == NULL) return FALSE;
-    if (swbuffer(bp, 0) != TRUE) return FALSE;
-    if (bclear(bp) != TRUE) return FALSE;
+    if ( ((bp = bfind(PIPEBUF, TRUE, 0)) == NULL) ||
+         (swbuffer(bp, 0) != TRUE) ||
+         (bclear(bp) != TRUE) ) {
+        s = FALSE;
+        goto exit;
+    }
 
     char *hp = udir.home? udir.home: ".";   /* Default if absent */
-    sprintf(comfile, "%s/.ue_%08x", hp, getpid());
+    db_sprintf(comfile, "%s/.ue_%08x", hp, getpid());
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
-    strcat(line, ">");
-    strcat(line, comfile);
-    rval = system(line);
+    db_append(line, ">");
+    db_append(line, db_val(comfile));
+    rval = system(db_val(line));
     TTopen();
     TTkopen();
     TTflush();
@@ -229,13 +234,13 @@ int pipecmd(int f, int n) {
 
     check_for_resize();
 
-    if (s != TRUE) return s;
+    if (s != TRUE) goto exit;
 
 /* Split the current window to make room for the command output */
-    if (splitwind(FALSE, 1) == FALSE) return FALSE;
+    if (splitwind(FALSE, 1) == FALSE) goto exit;
 
 /* And read the stuff in */
-    if (readin(comfile, FALSE) != TRUE) return FALSE;
+    if (readin(db_val(comfile), FALSE) != TRUE) return FALSE;
     terminate_str(bp->b_fname);     /* Zap temporary filename */
 
 /* Put this window into VIEW mode.*/
@@ -247,8 +252,13 @@ int pipecmd(int f, int n) {
     }
 
 /* And get rid of the temporary file */
-    unlink(comfile);
-    return TRUE;
+    unlink(db_val(comfile));
+    s = TRUE;
+
+exit:
+    db_free(comfile);
+    db_free(line);
+    return s;
 }
 
 /* Filter a buffer through an external DOS program
@@ -258,9 +268,6 @@ int filter_buffer(int f, int n) {
     UNUSED(f); UNUSED(n);
     int s;                  /* return status from CLI */
     struct buffer *bp;      /* pointer to buffer to zot */
-    char line[NLINE + 24];  /* command line send to shell */
-    char tmpnam[NFILEN];    /* place to store real file name */
-    char fltin[NFILEN], fltout[NFILEN];
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
@@ -270,33 +277,42 @@ int filter_buffer(int f, int n) {
 
     get_orig_size();
 
+    db_def(line);        /* command line send to shell */
+    db_def(tmpnam);       /* place to store real file name */
+    db_def(fltin);
+    db_def(fltout);
+
 /* Get the filter name and its args */
-    if ((s = next_spawn_cmd(RXARG(filter_buffer), "#", line)) != TRUE) return s;
+    if ((s = next_spawn_cmd(RXARG(filter_buffer), "#", &line)) != TRUE)
+         goto exit;
 
 /* Setup the proper file names */
     bp = curbp;
-    strcpy(tmpnam, bp->b_fname);    /* Save the original name */
+    db_set(tmpnam, bp->b_fname);    /* Save the original name */
     char *hp = udir.home;
     if (!hp) hp = ".";              /* Default if absent */
-    sprintf(fltin, "%s/.ue_fin_%08x", hp, getpid());
-    sprintf(fltout, "%s/.ue_fout_%08x", hp, getpid());
-    strcpy(bp->b_fname, fltin);    /* set it to our new one */
+    db_sprintf(fltin, "<%s/.ue_fin_%08x", hp, getpid());
+    db_sprintf(fltout, ">%s/.ue_fout_%08x", hp, getpid());
+
+/* Set this to our new one */
+    update_val(bp->b_fname, db_val(fltin));
 
 /* Write it out, checking for errors */
-    if (writeout(fltin) != TRUE) {
+    if (writeout(db_val(fltin)) != TRUE) {
         mlwrite_one(MLbkt("Cannot write filter file"));
-        strcpy(bp->b_fname, tmpnam);
-        return FALSE;
+        update_val(bp->b_fname, db_val(tmpnam));
+        s = FALSE;
+        goto exit;
     }
     ttput1c('\n');          /* Already have '\r'    */
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
-    strcat(line, "<");
-    strcat(line, fltin);
-    strcat(line, ">");
-    strcat(line, fltout);
-    rval = system(line);
+    db_addch(line, '<');
+    db_append(line, db_val(fltin));
+    db_addch(line, '>');
+    db_append(line, db_val(fltout));
+    rval = system(db_val(line));
     TTopen();
     TTkopen();
     TTflush();
@@ -313,12 +329,12 @@ int filter_buffer(int f, int n) {
 /* If we are modfying the buffer that the match-group info points
  * to we want to mark them as invalid - readin() will do that.
  * Report any failure, then continue to tidy up... */
-    if ((s = readin(fltout, FALSE)) == FALSE) {
+    if ((s = readin(db_val(fltout), FALSE)) == FALSE) {
         mlwrite_one(MLbkt("Execution failed"));
     }
 
 /* Reset file name */
-    strcpy(bp->b_fname, tmpnam);    /* restore name */
+    update_val(bp->b_fname, db_val(tmpnam));    /* restore name */
     bp->b_flag |= BFCHG;            /* flag it as changed */
 
 /* If this is a translation table, remove any compiled data */
@@ -326,7 +342,22 @@ int filter_buffer(int f, int n) {
     if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
 
 /* And get rid of the temporary file */
-    unlink(fltin);
-    unlink(fltout);
+    unlink(db_val(fltin));
+    unlink(db_val(fltout));
+
+exit:
+    db_free(fltout);
+    db_free(fltin);
+    db_free(tmpnam);
+    db_free(line);
     return s;
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_spawn(void) {
+    db_free(prev_spawn_cmd);
+}
+#endif

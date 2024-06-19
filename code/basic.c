@@ -246,17 +246,19 @@ int backline(int f, int n) {
  */
 int gotoline(int f, int n) {
     int status;
-    char arg[NSTRING]; /* Buffer to hold argument. */
+    db_def(arg);  /* Buffer to hold argument. */
 
 /* Get an argument if one doesn't exist. */
     if (f == FALSE) {
         if ((status =
-          mlreply("Line to GOTO: ", arg, NSTRING, CMPLT_NONE)) != TRUE) {
+          mlreply("Line to GOTO: ", &arg, CMPLT_NONE)) != TRUE) {
             mlwrite_one(MLbkt("Aborted"));
             return status;
         }
-        n = atoi(arg);
+        n = atoi(db_val(arg));
     }
+    db_free(arg);
+
 /* Handle the case where the user may be passed something like this:
  * uemacs filename +
  * In this case we just go to the end of the buffer.

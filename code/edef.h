@@ -14,6 +14,8 @@
 #include <utf8proc.h>
 #include <time.h>
 
+#include "dyn_buf.h"
+
 /* FreeBSD (cclang) doesn't have strdupa(), so make our own....
  * ...or rather copy the GCC definition from string.h.
  * Hence this is here, as we've elready included <string.h>
@@ -51,7 +53,7 @@ typedef struct {
 typedef struct {
     char *preload;              /* text to preload into getstring() result */
     int update;                 /* Set to make getstring() update its prompt */
-    char prompt[NSTRING];       /* The new prompt to use */
+    db_dcl(prompt);             /* The new prompt to use */
 } prmpt_buf_st;
 
 typedef struct {
@@ -125,7 +127,8 @@ extern linked_items *macro_pin_headp;
 /* Initialized global external declarations. */
 
 extern int fillcol;             /* Fill column                  */
-extern int kbdm[];              /* Holds kayboard macro data    */
+extern int *kbdm;               /* Holds keyboard macro data    */
+extern int n_kbdm;              /* Allocated size of kbdm       */
 extern char *execstr;           /* pointer to string to execute */
 extern int eolexist;            /* does clear to EOL exist?     */
 extern int revexist;            /* does reverse video exist?    */
@@ -197,9 +200,9 @@ extern struct buffer *bheadp;   /* Head of list of buffers      */
 extern struct buffer *blistp;   /* Buffer for C-X C-B           */
 extern struct buffer *bdbgp;    /* Buffer for macro debug info  */
 
-extern char pat[];              /* Search pattern.              */
-extern char tap[];              /* Reversed pattern array.      */
-extern char rpat[];             /* Replacement pattern.         */
+extern db_dcl(pat);             /* Search pattern.              */
+extern db_dcl(tap);             /* Reversed pattern array.      */
+extern db_dcl(rpat);            /* Replacement pattern.         */
 
 extern unsigned int srch_patlen;
 
@@ -218,7 +221,7 @@ extern unicode_t *eos_list;     /* List of end-of-sentence characters */
 extern int inmb;                /* Set when in minibuffer */
 extern int pathexpand;          /* Whether to expand paths */
 extern int silent;              /* Set for "no message line info" */
-extern char savnam[];           /* Saved buffer name */
+extern db_dcl(savnam);          /* Saved buffer name */
 extern int do_savnam;           /* Whether to save buffer name */
 
 extern int allow_current;       /* Look in current dir for startup? */
@@ -260,7 +263,7 @@ extern int autoclean;
 extern char regionlist_text[MAX_REGL_LEN];
 extern char regionlist_number[MAX_REGL_LEN];
 
-extern char readin_mesg[NSTRING];
+extern db_dcl(readin_mesg);
 
 extern int running_function;
 extern char *current_command;
@@ -328,10 +331,15 @@ extern udir_t udir;
 
 extern int pretend_size;
 
+/* A global db, for use in localized code.
+ * Must NOT be used in calls to a function which might use it itself!!!
+ */
+extern db_dcl(glb_db);
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */
-extern char gl_enc_key[NPAT];   /* Global key */
+extern char gl_enc_key[];       /* Global key */
 extern int gl_enc_len;          /* Global key length */
 
 /* Crypt code modes */

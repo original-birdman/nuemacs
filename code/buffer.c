@@ -198,7 +198,7 @@ int swbuffer(struct buffer *bp, int macro_OK) {
     }
 
 /* Save last name so we can switch back to it on empty MB reply */
-    if (!inmb && do_savnam) strcpy(savnam, curbp->b_bname);
+    if (!inmb && do_savnam) db_set(savnam, curbp->b_bname);
 
     if (--curbp->b_nwnd == 0) curbp->b = curwp->w;  /* Last use */
     curbp = bp;                     /* Switch. */
@@ -226,12 +226,12 @@ int swbuffer(struct buffer *bp, int macro_OK) {
 /* A template struct buffer for new buffers */
 
 static struct buffer buf_templ = {
-    NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL,
-    { NULL, NULL, 0, 0, 0 },    /* struct locs */
-    { 0, 0, 0, 0, 0, 0 },       /* struct func_opts */
-    BTNORM, 0, 0, 0, 0,
-    TRUE, 0, 0
+    NULL, NULL, NULL, NULL, NULL, NULL, /* structs... */
+    NULL, NULL, NULL, NULL,             /* char *s */
+    { NULL, NULL, 0, 0, 0 },            /* struct locs */
+    { 0, 0, 0, 0, 0, 0 },               /* struct func_opts */
+    BTNORM, 0, 0, 0, 0,                 /* ints */
+    TRUE, 0, 0                          /* chars */
 };
 
 /* Find a buffer, by name. Return a pointer to the buffer structure
@@ -239,19 +239,11 @@ static struct buffer buf_templ = {
  * If the buffer is not found and the "cflag" is TRUE, create it.
  * The "bflag" is the settings for the flags in the buffer.
  */
-struct buffer *bfind(const char *bname, int cflag, int bflag) {
+struct buffer *bfind(char *bname, int cflag, int bflag) {
     struct buffer *bp;
     struct buffer *sb;      /* buffer to insert after */
     struct line *lp;
 
-/* GGR Add a check on the sent namelength, given that we are going
- * to copy it into a structure if we create a new buffer.
- */
-    if (strlen(bname) >= NBUFN) {   /* We need a NUL too */
-        mlforce("Buffer name too long: %s. Ignored.", bname);
-        sleep(1);
-        return NULL;
-    }
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (strcmp(bname, bp->b_bname) == 0) {
             if (bp->b_active != TRUE) { /* buffer not active yet */
@@ -313,18 +305,24 @@ int usebuffer(int f, int n) {
     UNUSED(n);
     struct buffer *bp;
     int s;
-    char bufn[NBUFN];
+    char *fbuf;
 
-    if (f) strcpy(bufn, savnam);
-    else
+    db_def(bufn);
+
+    if (f) fbuf = db_val(savnam);
+    else {
 /* GGR - handle saved buffer name in minibuffer */
-        if ((s = mlreply("Use buffer: ", bufn, NBUFN, CMPLT_BUF)) != TRUE) {
-            if (s != ABORT) strcpy(bufn, savnam);
-            else                     return(s);
+        if ((s = mlreply("Use buffer: ", &bufn, CMPLT_BUF)) != TRUE) {
+            if (s == ABORT) goto exit;
+            fbuf = db_val(savnam);    /* Null reply == use saved name */
         }
+        else fbuf = db_val(bufn);
+    }
+    s = ((bp = bfind(fbuf, TRUE, 0)) != NULL);
 
-    if ((bp = bfind(bufn, TRUE, 0)) == NULL) return FALSE;
-    return swbuffer(bp, 0);
+exit:
+    db_free(bufn);
+    return (s == TRUE)? swbuffer(bp, 0): s;
 }
 
 /* switch to the next buffer in the buffer list
@@ -374,24 +372,34 @@ int killbuffer(int f, int n) {
     UNUSED(f); UNUSED(n);
     struct buffer *bp;
     int s;
-    char bufn[NBUFN];
 
-    if ((s = mlreply("Kill buffer: ", bufn, NBUFN, CMPLT_BUF)) != TRUE)
-        return s;
-    if ((bp = bfind(bufn, FALSE, 0)) == NULL)   /* Easy if unknown. */
-        return TRUE;
+    db_def(bufn);
+
+    if ((s = mlreply("Kill buffer: ", &bufn, CMPLT_BUF)) != TRUE)
+        goto exit;
+    if ((bp = bfind(db_val(bufn), FALSE, 0)) == NULL) { /* Easy if unknown. */
+        s = TRUE;
+        goto exit;
+    }
 /* We usually ignore deletion of invisible buffers, but we're actually
  * happy to allow deletion of "/xxx" procedure buffers (it allows you to
  * set up "delete-after-use" ones), but still want to ignore special
  * buffers starting "//".  (These can be zotbuf()ed internally).
  */
     if (bp->b_flag & BFINVS) {
-        if ((bufn[0] == '/') && (bufn[1] != '/'))
+        if ((db_charat(bufn, 0) == '/') &&
+            (db_charat(bufn, 1) != '/'))
             ;
-        else
-            return TRUE;            /* by doing nothing.    */
+        else {
+            s = TRUE;           /* by doing nothing.    */
+            goto exit;
+        }
     }
-    return zotbuf(bp);
+    s = zotbuf(bp);
+
+exit:
+    db_free(bufn);
+    return s;
 }
 
 /* Rename the current buffer
@@ -400,24 +408,31 @@ int killbuffer(int f, int n) {
  */
 int namebuffer(int f, int n) {
     UNUSED(f); UNUSED(n);
-    char bufn[NBUFN];       /* buffer to hold buffer name */
+    int status;
 
+    db_def(bufn);
 /* Prompt for and get the new buffer name */
 ask:
-    if (mlreply("Change buffer name to: ", bufn, NBUFN, CMPLT_BUF) != TRUE)
-        return FALSE;
+    if (mlreply("Change buffer name to: ", &bufn, CMPLT_BUF) != TRUE) {
+        status = FALSE;
+        goto exit;
+    }
 
 /* And check for duplicates */
-    if (!set_buffer_name(bufn)) {
-        mlforce("%s already exists!", bufn);
+    if (!set_buffer_name(db_val(bufn))) {
+        mlforce("%s already exists!", db_val(bufn));
         sleep(1);
         goto ask;       /* try again */
     }
 
-    update_val(curbp->b_bname, bufn);   /* copy buffer name to structure */
-    curwp->w_flag |= WFMODE;            /* make mode line replot */
+    update_val(curbp->b_bname, db_val(bufn));   /* Copy name to structure */
+    curwp->w_flag |= WFMODE;                    /* Make mode line replot */
     mlerase();
-    return TRUE;
+    status = TRUE;
+
+exit:
+    db_free(bufn);
+    return status;
 }
 
 /* The argument "text" points to a string.
@@ -722,17 +737,19 @@ char do_force_mode(char *opt) {    /* Returns 0 if all OK */
 }
 int setforcemode(int f, int n) {
     UNUSED(f); UNUSED(n);
-    char cbuf[NPAT];        /* buffer to recieve mode name into */
+    db_def(cbuf);
 
 /* Prompt the user and get an answer */
 
-    int status = mlreply("Force mode to set:", cbuf, NPAT - 1, CMPLT_NONE);
-    if (status != TRUE) return status;
-    char errch = do_force_mode(cbuf);
+    int status = mlreply("Force mode to set:", &cbuf, CMPLT_NONE);
+    if (status != TRUE) goto exit;
+    char errch = do_force_mode(db_val(cbuf));
     if (errch) {
         mlforce("Invalid force mode: %c", errch);
         status = FALSE;
     }
+exit:
+    db_free(cbuf);
     return status;
 }
 
