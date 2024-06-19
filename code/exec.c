@@ -397,6 +397,7 @@ int execcmd(int f, int n) {
  * int f;               default flag
  * int n;               macro number to use
  */
+#ifdef NUMBERED_MACROS
 int storemac(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     char bufn[NBUFN];       /* name of buffer to use */
@@ -431,6 +432,7 @@ int storemac(int f, int n) {
     bstore = bp;
     return TRUE;
 }
+#endif
 
 /* GGR
  * Free up any current ptt_ent allocation
@@ -630,8 +632,12 @@ int storeproc(int f, int n) {
     int status;             /* return status */
     char bufn[NBUFN+1];     /* name of buffer to use */
 
+#ifdef NUMBERED_MACROS
 /* A numeric argument means its a numbered macro */
     if (f == TRUE) return storemac(f, n);
+#else
+    UNUSED(f); UNUSED(n);
+#endif
 
 /* Append the procedure name to the buffer marker tag */
     bufn[0] = '/';

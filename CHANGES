@@ -7970,3 +7970,9 @@ autotest/*.sh
     [casechange.sh] 
     Improve test desciptions, and set 0x07 correctly.
     [incremental-search.sh] 
+
+exec.c
+names.c
+    Only define storemac() if NUMBERED_MACROS is set. [exec.c, names.c]
+    In storeproc() only check for numeric argument if NUMBERED_MACROS is
+    set. [exec.c]

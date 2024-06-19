@@ -198,7 +198,9 @@ struct name_bind names[] = {
     {"simulate", simulate, {0, 1, 1, 1, 0, 1}, CFNONE},
     {"simulate-incr", simulate_incr, {0, 1, 1, 1, 0, 1}, CFNONE},
     {"split-current-window", splitwind, {0, 1, 0, 1, 0, 0}, CFNONE},
+#ifdef NUMBERED_MACROS
     {"store-macro", storemac, {0, 0, 0, 1, 0, 0}, CFNONE},
+#endif
     {"store-procedure", storeproc, {0, 0, 1, 1, 0, 0}, CFNONE},
     {"store-pttable", storepttable, {0, 0, 0, 1, 0, 0}, CFNONE},
     {"suspend-emacs", bktoshell, {0, 0, 0, 1, 0, 0}, CFNONE},
