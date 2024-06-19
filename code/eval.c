@@ -974,7 +974,9 @@ static char *gtfun(char *fname) {
         if ((errno != 0) || (fetestexcept(FE_INVALID|FE_OVERFLOW) != 0)) {
             retval = "TOOBIG";
         }
-        retval = ue_itoa(int1);
+        else {
+            retval = ue_itoa(int1);
+        }
         goto exit;
     }
     }

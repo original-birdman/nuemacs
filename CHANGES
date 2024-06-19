@@ -8019,3 +8019,8 @@ estruct.h
     Code modified to use dynamic buffer calls.
 
 ----------------------------------------
+
+eval.c
+autotest/arithmetic-tests.sh
+    Correct return value setting for UFR2I case. [eval.c]
+    Reinstate original TOOBIG test code. [arithmetic-tests.sh]

@@ -140,7 +140,7 @@ run run-test
 ; either!
 ;
 set .TOOBIG "TOOBIG"
-;;;; !if &gre &sin &env UE2RUN "valgrind" 0
+!if &gre &sin &env UE2RUN "valgrind" 0
     set .TOOBIG &bli 0x7fffffffffffffff     ; Max 64-bit +ve
 ; Using 0x8000000000000000 actually sets 0x7fffffffffffffff (strtoll
 ; feature), so just use integer overflow...
@@ -148,7 +148,7 @@ set .TOOBIG "TOOBIG"
     !if &seq $proc_type x86_64
         set .TOOBIG &add .TOOBIG 1
     !endif
-;;;; !endif
+!endif
 
 set %test "&r2i 12.493672E123"
 set %expect .TOOBIG
