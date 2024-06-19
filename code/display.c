@@ -1676,16 +1676,24 @@ void mlforce_one(const char *fmt) {
 /* Get terminal size from system.
  * Store number of lines into *heightp and width into *widthp.
  * If zero or a negative number is stored, the value is not valid.
- * If we can't get the size, we are stuffed (stdout redirected?).
  */
 
 void getscreensize(int *widthp, int *heightp) {
     struct winsize size;
     *widthp = 0;
     *heightp = 0;
-    if (ioctl(1, TIOCGWINSZ, &size) < 0) exit(ENXIO);
-    *widthp = size.ws_col;
-    *heightp = size.ws_row;
+/* If we can't get the size, we are stuffed (stdout redirected?).
+ * Unless the user has specified we set "dummy size" for testing.
+ */
+    if (pretend_size) {
+        *widthp = 80;
+        *heightp = 24;
+    }
+    else {
+        if (ioctl(1, TIOCGWINSZ, &size) < 0) exit(ENXIO);
+        *widthp = size.ws_col;
+        *heightp = size.ws_row;
+    }
 }
 
 void sizesignal(int signr) {

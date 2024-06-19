@@ -5912,7 +5912,7 @@ eval.c
     Added a real division function (&rdv).
 
 etc/uemacs.hlp
-    Reformatted end expanded the FUNCTIONS section.
+    Reformatted and expanded the FUNCTIONS section.
 
 eval.c
     Make ue_print re-entrant.
@@ -6687,6 +6687,7 @@ input.c
 line.c
     Use spos, having defined it.
 
+display.c
 search.c
 estruct.h
     Use new MD_EQVRPT define. [display.c]
@@ -7952,3 +7953,11 @@ version.h
     Update to GGR4.181
 
 ==========
+
+display.c
+global.c
+main.c  
+edef.h 
+tools/read-speed.sh
+    Add a -P option to pretend we have an 80x24 display and redirect
+    stdout to /dev/null, so we can run the read-speed.sh script.

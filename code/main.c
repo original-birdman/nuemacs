@@ -96,6 +96,7 @@ printf( \
 "      -k<key>      encryption key"                       NL \
 "      -m           message for mini-buffer at start-up"  NL \
 "      -n           accept null chars (now always true)"  NL \
+"      -P           close stdout, pretend we are 80x24"   NL \
 "      -r           restrictive use"                      NL \
 "      -s<str>      initial search string"                NL \
 "      -v           view only (no edit)"                  NL \
@@ -2092,6 +2093,12 @@ do {
                 mbuf_mess = opt;
                 break;
             case 'N':       /* -n accept null chars  - now just ignored */
+                break;
+            case 'P':       /* Pretend size and close stdout */
+                pretend_size = TRUE;
+                int nu = open("/dev/null", O_WRONLY);
+                (void)dup2(nu, 1);
+                close(nu);
                 break;
             case 'R':       /* -r restrictive use */
                 restflag = TRUE;

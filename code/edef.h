@@ -326,6 +326,8 @@ extern sysmark_t sysmark;
  */
 extern udir_t udir;
 
+extern int pretend_size;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

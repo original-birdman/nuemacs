@@ -21,7 +21,9 @@ find-file read-speed.tfile
 exit-emacs
 EOD
 
-etime=`/usr/bin/time -f "%E" ./uemacs -x  ./uetest.rc 2>&1`
+[ -z "$UE2RUN" ] && UE2RUN=./uemacs
+$UE2RUN -v
+etime=`/usr/bin/time -f "%E" $UE2RUN -P -x  ./uetest.rc 2>&1`
 
 rm -f read-speed.tfile
 
@@ -42,3 +44,4 @@ rm -f read-speed.tfile
     my $lrate = $lc/$time;
     printf "Rate is %.2f lines/sec\n", $lrate;
 '
+echo "(Read $lines lines in $etime)"

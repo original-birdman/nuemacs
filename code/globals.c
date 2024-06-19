@@ -222,6 +222,8 @@ meta_spec_flags_t meta_spec_active = { 0, 0, 0, 0 };
 
 int ggr_opts = 0;
 
+int pretend_size = FALSE;
+
 /* A system-wide mark for temporarily saving the current location.
  * p MUST be reset to NULL after every restore!!!
  */
