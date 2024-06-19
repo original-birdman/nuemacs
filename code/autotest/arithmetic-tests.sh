@@ -134,9 +134,13 @@ run run-test
 ;; I suspect this is a valgrind "feature".
 ; So check whether we are running under valgrind
 ; UE2RUN contains what we will run
+
+; Hmmmm.... whether TOOBIG is returned seems to depend on
+; library/valgrind version, so we really want ot be able to allow
+; either!
 ;
 set .TOOBIG "TOOBIG"
-!if &gre &sin &env UE2RUN "valgrind" 0
+;;;; !if &gre &sin &env UE2RUN "valgrind" 0
     set .TOOBIG &bli 0x7fffffffffffffff     ; Max 64-bit +ve
 ; Using 0x8000000000000000 actually sets 0x7fffffffffffffff (strtoll
 ; feature), so just use integer overflow...
@@ -144,7 +148,7 @@ set .TOOBIG "TOOBIG"
     !if &seq $proc_type x86_64
         set .TOOBIG &add .TOOBIG 1
     !endif
-!endif
+;;;; !endif
 
 set %test "&r2i 12.493672E123"
 set %expect .TOOBIG
@@ -174,7 +178,7 @@ newline
 insert-string &cat %test_name " ended"
 EOD
 
-# If running them all, leave - but first write out teh buffer if there
+# If running them all, leave - but first write out the buffer if there
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then

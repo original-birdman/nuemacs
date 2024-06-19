@@ -273,7 +273,7 @@ newline
 insert-string &cat %test_name " ended"
 EOD
 
-# If running them all, leave - but first write out teh buffer if there
+# If running them all, leave - but first write out the buffer if there
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then

@@ -130,7 +130,7 @@ incremental-search
 store-procedure check1
   set %test-report "  search for s"
   run report-status
-  set %curtest Search-s
+  set %curtest R-Search-s
   set %expline 4
   set %expcol 12
   set %expchar &asc "s"
@@ -140,7 +140,7 @@ store-procedure check1
 store-procedure check2
   set %test-report "  search for i"
   run report-status
-  set %curtest Search-i
+  set %curtest R-Search-i
   set %expline 4
   set %expcol 12
   set %expchar &asc "s"
@@ -150,7 +150,7 @@ store-procedure check2
 store-procedure check3
   set %test-report "  search for m"
   run report-status
-  set %curtest Search-m
+  set %curtest R-Search-m
   set %expline 4
   set %expcol 12
   set %expchar &asc "s"
@@ -164,7 +164,7 @@ store-procedure check3
 simulate-incr "s" "check1"
 simulate-incr "i" "check2"
 simulate-incr "m" "check3"
-simulate-incr 0x07
+simulate-incr &chr 0x07
 
 end-of-file
 ; Skip back over the (added) mississippi line

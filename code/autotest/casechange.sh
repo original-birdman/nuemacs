@@ -125,7 +125,7 @@ run check-position
 
 ; lowercase a region with the A strokes
 ;
-6 goto-line
+8 goto-line
 end-of-line
 set .ocol $curcol
 set-mark
@@ -134,14 +134,14 @@ case-region-lower
 exchange-point-and-mark
 
   set %curtest "Text check on shortening"
-  set %expline 6
+  set %expline 8
   set %expcol .ocol
   set %expchar 10
 run check-position
 
 ; Check the line contents are correct.
 ;
-set .expect "   ⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥⱥ"
+set .expect "   ɐɐɐɐɐɐɐɐɐɐɐɐɐɐɐɐɐɐɐɐ"
 !if &seq $line .expect
   set %test-report &cat %curtest &cat " - line OK: " $line
   set %ok &add %ok 1
@@ -166,7 +166,7 @@ newline
 insert-string &cat %test_name " ended"
 EOD
 
-# If running them all, leave - but first write out teh buffer if there
+# If running them all, leave - but first write out the buffer if there
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then

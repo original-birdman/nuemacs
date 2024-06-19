@@ -7961,3 +7961,12 @@ edef.h
 tools/read-speed.sh
     Add a -P option to pretend we have an 80x24 display and redirect
     stdout to /dev/null, so we can run the read-speed.sh script.
+
+autotest/*.sh
+    Fix comment typo [all]
+    Changes to TOOBIG test. (Needs more work!!!) [arithmetic-tests.sh]
+    Remove unneeded $debug settings. [00-encrypt-file.sh]
+    Correct test to use the line that corrsponds to the test name.
+    [casechange.sh] 
+    Improve test desciptions, and set 0x07 correctly.
+    [incremental-search.sh] 

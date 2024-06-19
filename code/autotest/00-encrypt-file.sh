@@ -17,7 +17,7 @@ still be read in the current one.
 Gordon Lack - 08 Jul, 2022.
 EOD
 
-# The commadn we will use to check results (hence the ./)
+# The command we will use to check results (hence the ./)
 #
 SCR_NAME="./comp-file.sh"
 export SCR_NAME
@@ -159,7 +159,7 @@ store-procedure compare-buffers
 !endm
 
 store-procedure check-encrypt
-  shell-command &ptf "%s %s" &env SCR_NAME %test_name
+  shell-command &ptf "%s %s" &env "SCR_NAME" %test_name
   !if &equ $rval 0
       set %test-report &cat %test_name ": OK"
       set %ok &add %ok 1
@@ -180,7 +180,7 @@ set $crypt_mode 0x3001
 add-mode Crypt
 set-encryption-key ATestEncryptionString
 write-file &cat %test_name "-NOW"
-; Run a filter to comapare what we wrote vs what we expext
+; Run a filter to compare what we wrote vs what we expext
 run check-encrypt
 !force kill-buffer %test_name
 
@@ -200,7 +200,6 @@ run check-encrypt
 ; Read this one from a new buffer, giving the encryption
 ; key as part of the read-file command
 ;
-set $debug 0x02
 set %test_name Encrypt-GGR4.120
 select-buffer NOT-ORIG
 delete-buffer ORIG
@@ -211,7 +210,6 @@ add-mode Crypt
 write-file &cat %test_name "-NOW" ATestEncryptionString
 run check-encrypt
 !force kill-buffer %test_name
-set $debug 0
 
 ; For this one we'll set the encryption key separately
 ;
@@ -234,7 +232,7 @@ newline
 insert-string &cat %test_name " ended"
 EOD
 
-# If running them all, leave - but first write out teh buffer if there
+# If running them all, leave - but first write out the buffer if there
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then
