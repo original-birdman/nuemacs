@@ -455,7 +455,7 @@ static int comp_file(char *name, char *choices) {
 
     if ((p = getffile(name)) == NULL) {
         close_dir();
-        mlwrite(NOMATCH);
+        mlwrite_one(NOMATCH);
         sleep(1);
         return FALSE;
     }
@@ -517,7 +517,7 @@ static int comp_gen(char *name, char *choices, enum cmplt_type mtype) {
         p = NULL;
     }
     if (p == NULL) {
-	mlwrite(NOMATCH);
+	mlwrite_one(NOMATCH);
         sleep(1);
         return FALSE;
     }
