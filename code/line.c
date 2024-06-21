@@ -29,42 +29,20 @@
 static int force_newline = 0;   /* lnewline may need to be told this */
 
 /* This routine allocates a block of memory large enough to hold a struct
- * line containing "used" characters. The block is always rounded up a bit.
- * Return a pointer to the new block, or NULL if there isn't any memory left.
- * Print a message in the message line if no space.
- * The assumption is that the user will fill l_text with used bytes
- * straight after the call. If this is not the case the caller must hande it.
+ * line.
+ * Since the text part is now a dynamic buffer all lines are allocated
+ * as empty.
+ * The forward and backward pointers are not set at all - that is
+ * for the caller to do.
  */
-struct line *lalloc(int used) {
+static db_bufdef(init_db);
+struct line *lalloc(void) {
     struct line *lp;
-    int size;
 
     lp = (struct line *)Xmalloc(sizeof(struct line));
-/* Always allocate at least 1 extra byte to l_text!
- * This enables other code to easily NUL-terminate the data if required.
- */
-    if (used < 0) {
-        ltext(lp) = NULL;
-        lsize(lp) = lused(lp) = 0;
-    }
-    else {
-        size = (used + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
-        if ((used > 0) && (size == BLOCK_SIZE))
-             size = 2*BLOCK_SIZE;   /* Min size */
-        ltext(lp) = Xmalloc(size);
-        lsize(lp) = size;
-        lused(lp) = used;
-    }
+    lp->l_ = init_db;
+
     return lp;
-}
-
-/* Routine to grow l_text to accomodate xtra more bytes */
-void ltextgrow(struct line *lp, int xtra) {
-
-    int size = lsize(lp) + xtra;
-    size = (size + BLOCK_SIZE) & ~(BLOCK_SIZE - 1);
-    ltext(lp) = Xrealloc(lp->l_text, size);
-    lsize(lp) = size;
 }
 
 /* Delete line "lp".
@@ -112,7 +90,7 @@ void lfree(struct line *lp) {
     lp->l_bp->l_fp = lp->l_fp;
     lp->l_fp->l_bp = lp->l_bp;
 
-    Xfree(ltext(lp));
+    db_free(lp->l_);
     Xfree(lp);
 }
 
@@ -155,21 +133,21 @@ void lchange(int flag) {
 int linsert_byte(int n, unsigned char c) {
     struct line *lp1;
     int doto;
-    int i;
 
     if (curbp->b_mode & MDVIEW) /* don't allow this command if */
         return rdonly();        /* we are in read only mode    */
     lchange(WFEDIT);
     lp1 = curwp->w.dotp;        /* Current line         */
+/* What we wish to insert */
+    char *tbuf = alloca(n+1);
+    memset(tbuf, c, n);
     if (lp1 == curbp->b_linep) {/* At the end: special  */
         if (curwp->w.doto != 0) {
             mlwrite_one("bug: linsert");
             return FALSE;
         }
-/* We have a function to add a line at the end of a buffer */
-        char *tbuf = alloca(n+1);
-        memset(tbuf, c, n);
         terminate_str(tbuf + n);
+/* We have a function to add a line at the end of a buffer */
         addline_to_curb(tbuf);
 /* addline_to_curb will put dot on the dummy end line, effectively
  * adding a newline at the end of it.
@@ -179,20 +157,9 @@ int linsert_byte(int n, unsigned char c) {
         return TRUE;
     }
     doto = curwp->w.doto;                   /* Save for later. */
-/* Check for >= (not just >) to ensure the final char of l_size is
- * not actually used.
- * This enables other code to easily NUL-terminate the data if required.
- */
-    if (lused(lp1) + n >= lsize(lp1)) {     /* Need to reallocate */
-        ltextgrow(lp1, n);
-    }
-/* All we now need to do is move the bytes beyond the insert point along
- * by n bytes, then insert our n chars.
- */
-    memmove(ltext(lp1)+doto+n, ltext(lp1)+doto, lused(lp1) - doto);
-    for (i = 0; i < n; ++i)         /* Add the new characters */
-        ltext(lp1)[doto + i] = c;
-    lused(lp1) += n;
+/* Insert the new text */
+    db_insertn_at(lp1->l_, tbuf, n, doto);
+
 /* Update dot/mark/pins in windows
  * NOTE that the dot check is ">=", as we wish to move with dot as
  * we insert, but we want to leave mark and pin where they were if they
@@ -252,7 +219,7 @@ int lnewline(void) {
     }
 /* Are we at the end of the text on the last "real" line? */
     else if (lused(curwp->w.dotp)
-             && curwp->w.doto == lused(curwp->w.dotp)
+             && (size_t)curwp->w.doto == lused(curwp->w.dotp)
              && lforw(curwp->w.dotp) == curbp->b_linep) {
         curwp->w.dotp = lforw(curwp->w.dotp);
         curwp->w.doto = 0;
@@ -265,7 +232,7 @@ int lnewline(void) {
  *       will also move with it.
  */
     else if (curwp->w.dotp == curbp->b_linep) {
-        lp1 = lalloc(0);
+        lp1 = lalloc();
         lp2 = curwp->w.dotp;
 /* Fix up back/forw pointers for these two lines */
         lp2->l_bp->l_fp = lp1;
@@ -290,9 +257,9 @@ int lnewline(void) {
     int xs = lused(lp1) - doto;
 
 /* Create a new line for the second part and copy the "trailing" text in */
-    lp2 = lalloc(xs);
-    memcpy(ltext(lp2), ltext(lp1)+doto, xs);
-    lused(lp1) = doto;          /* valid text left in lp1 */
+    lp2 = lalloc();
+    db_setn(lp2->l_, ltext(lp1)+doto, xs);
+    lused(lp1) = doto;      /* valid text left in lp1 */
 
 /* Fix up back/forw pointers for the two lines */
 
@@ -480,9 +447,7 @@ static int ldelnewline(void) {
 /* Add the lp2 text to lp1 */
 
     int orig_lp1_len = lused(lp1);  /* Might be needed */
-    ltextgrow(lp1, lused(lp2));
-    memcpy(ltext(lp1)+orig_lp1_len, ltext(lp2), lused(lp2));
-    lused(lp1) += lused(lp2);
+    db_appendn(lp1->l_, ltext(lp2), lused(lp2));
 
 /* Now fix up lp1 forward pointer and lp2 back pointer */
 
@@ -522,7 +487,7 @@ int lover(char *ostr) {
  * If we are at end-of-line we don't delete (so the line is extended)
  * and if we're at a tab-stop we may not need to do the delete.
  */
-            if (curwp->w.doto < lused(curwp->w.dotp) &&
+            if ((size_t)curwp->w.doto < lused(curwp->w.dotp) &&
                  (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
                  ((curwp->w.doto) & tabmask) == tabmask)) {
                 status = ldelgrapheme(1, FALSE);
@@ -576,8 +541,6 @@ int kinsert(int c) {
  * int kflag;            put killed text in kill buffer flag
  */
 int ldelete(ue64I_t n, int kflag) {
-    char *cp1;
-    char *cp2;
     struct line *dotp;
     int doto;
     int chunk;
@@ -600,17 +563,15 @@ int ldelete(ue64I_t n, int kflag) {
             continue;
         }
         lchange(WFEDIT);
-        cp1 = ltext(dotp) + doto;       /* Scrunch text.        */
-        cp2 = cp1 + chunk;
-        if (kflag != FALSE) {           /* Kill?                */
+        if (kflag != FALSE) {               /* Kill? */
+            char *cp1 = ltext(dotp) + doto; /* Scrunch text. */
+            char *cp2 = cp1 + chunk;
             while (cp1 != cp2) {
                 if (kinsert(*cp1) == FALSE) return FALSE;
                 ++cp1;
             }
-            cp1 = ltext(dotp) + doto;
         }
-        while (cp2 != ltext(dotp) + lused(dotp)) *cp1++ = *cp2++;
-        lused(dotp) -= chunk;
+        db_deleten_at(dotp->l_, chunk, doto);
 
 /* Fix-up windows */
         for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
@@ -644,7 +605,8 @@ int ldelete(ue64I_t n, int kflag) {
 /* getctext:    grab and return a string with the text of
  *              the current line
  */
-static db_def(rline);   /* Line to return */
+//GML Can this be db_bufdef ?? Once vars are db_bufdefs??
+static db_strdef(rline);   /* Line to return */
 char *getctext(void) {
 
 /* Could we just return ltext(curwp->w.dotp), having ensured it is

@@ -8030,3 +8030,8 @@ dyn_buf.c
 dyn_buf.h
     Add a type to struct db and use it to decide whether to add/allow
     for a terminating NUL char.
+
+line.c
+line.h
+    Use a BUF db for the line buffer. [line,c]
+    Rework the lused/ltext etc #defines to use this. [line.h]

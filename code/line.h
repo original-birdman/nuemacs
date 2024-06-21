@@ -2,6 +2,7 @@
 #define LINE_H_
 
 #include "utf8.h"
+#include "dyn_buf.h"
 
 #define BLOCK_SIZE 16 /* Line block chunk size. */
 
@@ -20,25 +21,25 @@
 struct line {
     struct line *l_fp;      /* Link to the next line        */
     struct line *l_bp;      /* Link to the previous line    */
-    int l_size;             /* Allocated size               */
-    int l_used;             /* Used size                    */
-    char *l_text;           /* A bunch of characters - malloc()ed */
+    db_dcl(l_);             /* Chars in dynamic buffer      */
 };
 
 #define lforw(lp)       ((lp)->l_fp)
 #define lback(lp)       ((lp)->l_bp)
-#define lgetc(lp, n)    ((lp)->l_text[(n)]&0xFF)
-#define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))
-#define lused(lp)       ((lp)->l_used)
-#define lsize(lp)       ((lp)->l_size)
-#define ltext(lp)       ((lp)->l_text)
+
+/* lp will always be a pointer, but l_ is not */
+
+#define lgetc(lp, n)    (db_charat((lp->l_), n))
+#define lputc(lp, n, c) (db_setcharat((lp->l_), n, c))
+#define lused(lp)       (db_len(lp->l_))
+#define lsize(lp)       (db_max(lp->l_))
+#define ltext(lp)       (db_val(lp->l_))
 
 /* Externally visible calls */
 
 #ifndef LINE_C
 
-extern struct line *lalloc(int);            /* Allocate a line. */
-extern void ltextgrow(struct line *, int);  /* Extend line buffer */
+extern struct line *lalloc(void);           /* Allocate a line. */
 extern void lfree(struct line *lp);
 extern void lchange(int flag);
 extern int insspace(int f, int n);
