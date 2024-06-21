@@ -53,7 +53,7 @@ static int cmd_reexecute = -1;          /* > 0 if re-executing command */
 /* Routine to prompt for I-Search string.
  */
 static int promptpattern(char *prompt) {
-    db_def(tpat);
+    db_strdef(tpat);
 
 /* check to see whether we are executing a command line */
 
@@ -207,7 +207,7 @@ int simulate_incr(int f, int n) {
     }
 
 /* Get the first token - this contains the input characters (Unicode) */
-    db_def(ntok);
+    db_strdef(ntok);
     macarg(&ntok);          /* This handles functions on command line */
 
 /* Allocate as many unicode_t entries as we have bytes */
@@ -386,7 +386,7 @@ static int isearch(int f, int n) {
     int c;          /* current input character */
 
 /* GGR - Allow for a trailing NUL */
-    db_def(pat_save);       /* Saved copy of the old pattern str  */
+    db_strdef(pat_save);       /* Saved copy of the old pattern str  */
     struct line *curline;   /* Current line on entry              */
     int curoff;             /* Current offset on entry            */
     int init_direction;     /* The initial search direction       */

@@ -275,7 +275,7 @@ struct buffer *bfind(char *bname, int cflag, int bflag) {
 
 /* Now override the "default" values in the template*/
 
-        lp = lalloc(-1);                /* Head record has no text buffer */
+        lp = lalloc();      /* Head record has no text buffer */
         bp->b.dotp = lp;
         bp->b_linep = lp;
         lp->l_fp = lp;
@@ -307,7 +307,7 @@ int usebuffer(int f, int n) {
     int s;
     char *fbuf;
 
-    db_def(bufn);
+    db_strdef(bufn);
 
     if (f) fbuf = db_val(savnam);
     else {
@@ -373,7 +373,7 @@ int killbuffer(int f, int n) {
     struct buffer *bp;
     int s;
 
-    db_def(bufn);
+    db_strdef(bufn);
 
     if ((s = mlreply("Kill buffer: ", &bufn, CMPLT_BUF)) != TRUE)
         goto exit;
@@ -410,7 +410,7 @@ int namebuffer(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
 
-    db_def(bufn);
+    db_strdef(bufn);
 /* Prompt for and get the new buffer name */
 ask:
     if (mlreply("Change buffer name to: ", &bufn, CMPLT_BUF) != TRUE) {
@@ -447,8 +447,8 @@ void addline_to_anyb(char *text, struct buffer *bp) {
     int ntext;
 
     ntext = strlen(text);
-    lp = lalloc(ntext);
-    memcpy(ltext(lp), text, ntext);
+    lp = lalloc();
+    db_setn(lp->l_, text, ntext);
     bp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
     lp->l_bp = bp->b_linep->l_bp;
     bp->b_linep->l_bp = lp;
@@ -737,7 +737,7 @@ char do_force_mode(char *opt) {    /* Returns 0 if all OK */
 }
 int setforcemode(int f, int n) {
     UNUSED(f); UNUSED(n);
-    db_def(cbuf);
+    db_strdef(cbuf);
 
 /* Prompt the user and get an answer */
 

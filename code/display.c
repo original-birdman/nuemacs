@@ -1116,7 +1116,7 @@ static void upddex(void) {
 
 /* Get a display name for the current buffer */
 
-static db_def(last_name);
+static db_strdef(last_name);
 static int last_width = -1;
 static struct buffer *last_bp = NULL;
 

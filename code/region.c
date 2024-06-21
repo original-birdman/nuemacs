@@ -143,7 +143,7 @@ int copyregion(int f, int n) {
     loffs = region.r_offset;        /* Current offset.      */
 /* This copies bytes - doesn't need to know about graphemes. */
     while (region.r_bytes--) {
-        if (loffs == lused(linep)) {  /* End of line. */
+        if ((size_t)loffs == lused(linep)) {    /* End of line. */
             if ((s = kinsert('\n')) != TRUE) return s;
             linep = lforw(linep);
             loffs = 0;

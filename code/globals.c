@@ -90,9 +90,9 @@ struct buffer *blistp;          /* Buffer for C-X C-B           */
 struct buffer *bdbgp;           /* Buffer for macro debug info  */
 
 /* GGR - Add one to these three to allow for trailing NULs      */
-db_def(pat);                    /* Search pattern               */
-db_def(tap);                    /* Reversed pattern array.      */
-db_def(rpat);                   /* replacement pattern          */
+db_strdef(pat);                    /* Search pattern               */
+db_strdef(tap);                    /* Reversed pattern array.      */
+db_strdef(rpat);                   /* replacement pattern          */
 
 struct line *fline;             /* dynamic return line */
 
@@ -118,7 +118,7 @@ int  allow_current   = 0;
 unicode_t *eos_list  = NULL;
 int  inmb            = FALSE;
 int  pathexpand      = TRUE;
-db_def(savnam);
+db_strdef(savnam);
 int do_savnam        = 1;
 
 int  silent          = FALSE;
@@ -157,8 +157,8 @@ char *not_interactive_fname = NULL;
 
 int pause_key_index_update = 0;
 
-/* Contains a db struct */
-prmpt_buf_st prmpt_buf = { NULL, 0, db_initval };
+/* Contains a db string struct */
+prmpt_buf_st prmpt_buf = { NULL, 0, db_str_initval };
 
 enum yank_type last_yank = None;
 
@@ -169,7 +169,7 @@ int autoclean = 7;
 char regionlist_text[MAX_REGL_LEN] = " o ";
 char regionlist_number[MAX_REGL_LEN] = " %2d. ";
 
-db_def(readin_mesg);
+db_strdef(readin_mesg);
 
 int running_function = 0;
 char *current_command = NULL;
@@ -230,7 +230,7 @@ int pretend_size = FALSE;
  * Must NOT be used in calls to a function which might use it itself!!!
  * Must be db_free()d in quit() in main.c. when FREE is set.
  */
-db_def(glb_db);
+db_strdef(glb_db);
 
 /* A system-wide mark for temporarily saving the current location.
  * p MUST be reset to NULL after every restore!!!

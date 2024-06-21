@@ -61,7 +61,7 @@ char *ue_itoa(ue64I_t i) {
 
 /* Return the contents of the first item in the kill buffer
  */
-static db_def(kvalue);      /* fixed buffer for value */
+static db_strdef(kvalue);      /* fixed buffer for value */
 static char *getkill(void) {
     db_set(kvalue, "");     /* default: no kill buffer....just null string */
     if (kbufh[0] != NULL) { /* else, copy in the contents...all of it */
@@ -301,7 +301,7 @@ struct map_table {
     int to_len;
 };
 
-static db_def(xlres);
+static db_strdef(xlres);
 static char *xlat(char *source, char *lookup, char *trans) {
 
 /* There cannot be more mappings than the number of bytes in the lookup.
@@ -418,7 +418,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
  * Meant for use by test scripts, but might have other uses as
  * a lookup method?
  */
-static db_def(pttres);
+static db_strdef(pttres);
 static char *ptt_expand(db *str) {
     struct buffer *bp;
 
@@ -479,7 +479,7 @@ static char *ptt_expand(db *str) {
  */
 
 /* The returned value - only set this on exit! */
-static db_def(ue_buf);
+static db_strdef(ue_buf);
 
 /* The order here is IMPORTANT!!!
  * It is int, unsigned, double, char, str, ptr
@@ -490,9 +490,9 @@ static db_def(ue_buf);
 
 static char *ue_printf(char *fmt) {
     unicode_t c;
-    db_def(nexttok);
-    db_def(lue_buf);
-    db_def(t_fmt);
+    db_strdef(nexttok);
+    db_strdef(lue_buf);
+    db_strdef(t_fmt);
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = strlen(fmt);
@@ -607,15 +607,15 @@ finalize:
  *
  * @fname: name of function to evaluate.
  */
-static db_def(funres);      /* Freed in free_eval(), if at all */
+static db_strdef(funres);      /* Freed in free_eval(), if at all */
 static char *gtfun(char *fname) {
     char lfname[4];         /* What we lookup */
     unsigned int fnum;      /* index to function to eval */
     int status;             /* status */
     char *tsp;              /* Temporary string pointer */
-    db_def(arg1);           /* Value of first argument */
-    db_def(arg2);           /* Value of second argument */
-    db_def(arg3);           /* Value of third argument */
+    db_strdef(arg1);           /* Value of first argument */
+    db_strdef(arg2);           /* Value of second argument */
+    db_strdef(arg3);           /* Value of third argument */
     char *retval;           /* Value to return */
     struct mstr csinfo;     /* Casing info structure */
     ue64I_t int1, int2 = 0;
@@ -1067,7 +1067,7 @@ static char *gtenv(char *vname) {
     case EVACOUNT:          return ue_itoa(gacount);
     case EVLASTKEY:         return ue_itoa(lastkey);
     case EVCURCHAR:     /* Make this return the current Unicode base char */
-        if (lused(curwp->w.dotp) == curwp->w.doto) return ue_itoa('\n');
+        if (lused(curwp->w.dotp) == (size_t)curwp->w.doto) return ue_itoa('\n');
         unicode_t uc_res;
         (void)utf8_to_unicode(ltext(curwp->w.dotp), curwp->w.doto,
              lused(curwp->w.dotp), &uc_res);
@@ -1191,7 +1191,7 @@ int gettyp(char *token) {
  *
  * char *token;         token to evaluate
  */
-static db_def(valres);          /* static returned val */
+static db_strdef(valres);          /* static returned val */
 char *getval(char *token) {
     struct buffer *bp;          /* temp buffer pointer */
 
@@ -1200,7 +1200,7 @@ char *getval(char *token) {
         return "";
 
     case TKARG: {               /* interactive argument */
-        db_def(tbuf);           /* string buffer for some workings */
+        db_strdef(tbuf);           /* string buffer for some workings */
 
 /* We allow internal uemacs code to set the response of the next TKARG
  * (this was set-up so that the showdir user-proc could be given a
@@ -1499,11 +1499,7 @@ static int svar(struct variable_description *var, char *value) {
             srch_can_hunt = 0;
 /* Just replace the current line's text with this text, and put dot at 0 */
             struct line *tlp = curwp->w.dotp;
-            int can_hold = lsize(tlp);
-            int need = strlen(value);
-            if (need >= can_hold) ltextgrow(tlp, need - can_hold);
-            strcpy(ltext(tlp), value);
-            lused(tlp) = need;
+            db_set(tlp->l_, value);
             curwp->w.doto = 0;      /* Has to go somewhere */
             break;
         case EVTAB:
@@ -1678,8 +1674,8 @@ int setvar(int f, int n) {
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
 
-    db_def(var);                    /* name of variable to set */
-    db_def(varval);                 /* value to set */
+    db_strdef(var);                    /* name of variable to set */
+    db_strdef(varval);                 /* value to set */
 
 /* First get the variable to set.. */
     if (clexec == FALSE) {
@@ -1781,7 +1777,7 @@ int delvar(int f, int n) {
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
 
-    db_def(var);                    /* Variable to delete */
+    db_strdef(var);                    /* Variable to delete */
 
 /* First get the variable to delete.. */
     if (clexec == FALSE) {

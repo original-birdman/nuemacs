@@ -65,7 +65,7 @@ int showcpos(int f, int n) {
         if (lp == curwp->w.dotp) {
             predlines = numlines;
             predchars = numchars + curwp->w.doto;
-            if ((curwp->w.doto) == lused(lp)) curchar = '\n';
+            if (((size_t)curwp->w.doto) == lused(lp)) curchar = '\n';
             else {
                 struct grapheme glyi;   /* Full data */
                 bytes_used = lgetgrapheme(&glyi, FALSE);
@@ -366,7 +366,7 @@ int detab(int f, int n) {
         curwp->w.doto = 0;      /* start at the beginning */
 
 /* Detab the entire current line */
-        while (curwp->w.doto < lused(curwp->w.dotp)) {
+        while ((size_t)curwp->w.doto < lused(curwp->w.dotp)) {
 /* If we have a tab */
             if (lgetc(curwp->w.dotp, curwp->w.doto) == '\t') {
                 ldelgrapheme(1, FALSE);
@@ -406,7 +406,7 @@ int entab(int f, int n) {
 /* Entab the entire current line */
         fspace = -1;
         ccol = 0;
-        while (curwp->w.doto < lused(curwp->w.dotp)) {
+        while ((size_t)curwp->w.doto < lused(curwp->w.dotp)) {
 /* See if it is time to compress */
             if ((fspace >= 0) && (nextab(fspace) <= ccol)) {
                 if (ccol - fspace < 2) fspace = -1;
@@ -541,7 +541,7 @@ static int cinsert(void) {
 
 /* Save the indent of the previous line */
     i = 0;
-    db_def(ichar);  /* buffer to hold indent of last line */
+    db_strdef(ichar);  /* buffer to hold indent of last line */
     while ((i < tptr) && (cptr[i] == ' ' || cptr[i] == '\t')) {
         db_addch(ichar, cptr[i]);
         ++i;
@@ -666,7 +666,7 @@ int indent(int f, int n) {
     UNUSED(f);
     int nicol;
     int c;
-    int i;
+    size_t i;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
@@ -706,6 +706,7 @@ int indent(int f, int n) {
 static int chardel(int f, int n) {
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
+
 /* Work out how many bytes to delete for n graphemes */
     if (n < 0) {    /* Go back requested amount */
         n = abs(back_grapheme(-n)); /* How many *do* we go back? */
@@ -803,7 +804,7 @@ static int adjustmode(int kind, int global) {
     int uflag;      /* was modename uppercase?      */
 #endif
     char prompt[50];    /* string to prompt user with */
-    db_def(cbuf);       /* buffer to recieve mode name into */
+    db_strdef(cbuf);       /* buffer to recieve mode name into */
 
 /* Build the proper prompt string */
     sprintf(prompt, "%sode to %s: ", (global)? "Global m": "M",
@@ -934,7 +935,7 @@ int clrmes(int f, int n) {
 int writemsg(int f, int n) {
     UNUSED(f);
     int status;
-    db_def(buf);        /* buffer to receive message into */
+    db_strdef(buf);        /* buffer to receive message into */
 
     if ((status =
      mlreply("Message to write: ", &buf, CMPLT_NONE)) != TRUE)
@@ -961,8 +962,8 @@ static int string_getter(int f, int n, enum istr_type call_type) {
     char *prompt;
     char *istrp;            /* Final string to insert */
 
-    db_def(tstring);        /* string to add */
-    db_def(tok);
+    db_strdef(tstring);        /* string to add */
+    db_strdef(tok);
 
 /* Ask for string to insert, using the requested function.
  * If we are reading a macro just use the rest of the line (execstr).
@@ -984,7 +985,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
  */
     if (call_type == COOKED_STR) {
         char *vp;
-        db_def(nstring);
+        db_strdef(nstring);
         while(*execstr != '\0') {
             execstr = token(execstr, &tok);
             if (db_len(tok) == 0) break;
@@ -1068,7 +1069,7 @@ int istring(int f, int n) {
  */
 int ovstring(int f, int n) {
     int status;     /* status return code */
-    db_def(tstring); /* string to add */
+    db_strdef(tstring); /* string to add */
 
 /* Ask for string to insert */
     status = mlreply("String to overwrite: ", &tstring, CMPLT_NONE);
@@ -1198,8 +1199,8 @@ int re_args_exec(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
 
-    db_def(buf);
-    db_def(tok);
+    db_strdef(buf);
+    db_strdef(tok);
 
     status = mlreply("exec set: ", &buf, CMPLT_NONE);
     if (status != TRUE) goto exit;  /* Only act on +ve response */
@@ -1280,7 +1281,7 @@ int open_parent(int f, int n) {
 int simulate(int f, int n) {
     UNUSED(f); UNUSED(n);
 
-    db_def(input);
+    db_strdef(input);
 /* Grab the next token and advance past */
     nextarg("", &input, CMPLT_NONE);
 

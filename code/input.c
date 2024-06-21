@@ -32,14 +32,14 @@ static int remap_c_on_intr = 0;
 
 #include <string.h>
 
-static db_def(picture);
-static db_def(directory);
+static db_strdef(picture);
+static db_strdef(directory);
 
 static struct buffer *expandbp;
 
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
-static db_def(so_far);    /* Maximal match so far */
+static db_strdef(so_far);    /* Maximal match so far */
 
 /* getnfile() and getffile()
  * Handle file name completion
@@ -58,7 +58,7 @@ static db_def(so_far);    /* Maximal match so far */
 
 static DIR *dirptr;
 static short allfiles;
-static db_def(fullname);
+static db_strdef(fullname);
 
 static void close_dir(void) {
     if (dirptr != NULL) {
@@ -100,7 +100,7 @@ static char *id_finder(void) {
 
 /* Get the next matching file name
  */
-static db_def(suggestion);
+static db_strdef(suggestion);
 static char *getnfile(void) {
     unsigned short type;        /* file type */
 
@@ -663,7 +663,7 @@ int mlreply(char *prompt, db *buf, enum cmplt_type ctype) {
 struct name_bind *getname(char *prompt, int new_command) {
     struct name_bind *nbp = NULL;
 
-    db_def(buf);
+    db_strdef(buf);
 
 /* First get the name... */
     if (clexec == FALSE) {
@@ -944,7 +944,7 @@ void evaluate_cmdb(char *input, db *result) {
  */
     execstr = strdupa(input);
     clexec = TRUE;
-    db_def(temp);
+    db_strdef(temp);
     while(1) {
         if (!*execstr) break;
         (void)nextarg("", &temp, 0);
@@ -974,9 +974,9 @@ int getstring(char *prompt, db *buf, enum cmplt_type ctype) {
     short savdoto;
     int prolen;
 
-    db_def(procopy);
-    db_def(choices);
-    db_def(tstring);
+    db_strdef(procopy);
+    db_strdef(choices);
+    db_strdef(tstring);
 
 /* We are about to enter the minibuffer, so all com_flags must
  * be turned off.

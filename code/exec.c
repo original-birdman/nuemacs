@@ -193,7 +193,7 @@ static int docmd(char *cline) {
     int status;             /* return status of function */
     int oldcle;             /* old contents of clexec flag */
     char *oldestr;          /* original exec string */
-    db_def(tkn);            /* next token off of command line */
+    db_strdef(tkn);            /* next token off of command line */
 
 /* If we are scanning and not executing..go back here */
     if (execlevel) return TRUE;
@@ -364,7 +364,7 @@ int namedcmd(int f, int n) {
 
 /* Buffer name for reexecute - shared by all command-callers */
 
-static db_def(prev_cmd);
+static db_strdef(prev_cmd);
 
 /* execcmd:
  *      Execute a command line command to be typed in
@@ -375,7 +375,7 @@ static db_def(prev_cmd);
 int execcmd(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
-    db_def(thecmd);         /* string holding command to execute */
+    db_strdef(thecmd);         /* string holding command to execute */
 
 /* Re-use last obtained command? */
     if (inreex && (db_charat(prev_cmd, 0) != '\0') && RXARG(execcmd))
@@ -484,9 +484,9 @@ static char* get_display_code(char *buf) {
 static int ptt_compile(struct buffer *bp) {
     char *ml_display_code;
 
-    db_def(lbuf);
-    db_def(tok);
-    db_def(from_string);
+    db_strdef(lbuf);
+    db_strdef(tok);
+    db_strdef(from_string);
 
 /* Free up any previously-compiled table and get a default display code */
 
@@ -642,8 +642,8 @@ struct func_opts null_func_opts = { 0, 0, 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
-    db_def(bufn);           /* name of buffer to use */
-    db_def(pbufn);          /* name of proc buf to use */
+    db_strdef(bufn);           /* name of buffer to use */
+    db_strdef(pbufn);          /* name of proc buf to use */
 
 #ifdef NUMBERED_MACROS
 /* A numeric argument means its a numbered macro */
@@ -670,7 +670,7 @@ int storeproc(int f, int n) {
 /* Add any options */
 
     bp->btp_opt = null_func_opts;
-    db_def(optstr);
+    db_strdef(optstr);
     while (1) {
         mlreply("opts: ", &optstr, CMPLT_BUF);
         if (db_charat(optstr, 0) == '\0') break;
@@ -732,8 +732,8 @@ int set_pttable(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
     struct buffer *bp;
-    db_def(pttbuf);
-    db_def(pbufn);
+    db_strdef(pttbuf);
+    db_strdef(pbufn);
 
 /* As soon as a table is defined ptt gets set, so if it isn't
  * we know that there are no translation tables.
@@ -1023,8 +1023,8 @@ int dobuf(struct buffer *bp) {
     int return_stat = TRUE; /* What we expect to do */
     int orig_pause_key_index_update;    /* State on entry - to be restored */
 
-    db_def(tkn);            /* buffer to evaluate an expresion in */
-    db_def(golabel);
+    db_strdef(tkn);            /* buffer to evaluate an expresion in */
+    db_strdef(golabel);
 
 /* GGR - Only allow recursion up to a certain level... */
 
@@ -1191,7 +1191,7 @@ nxtscan:          /* on to the next line */
  *      This is used by the ones which set macbug and clear //Debug.
  */
         if (macbug && !macbug_off) {    /* More likely failure first */
-            db_def(outline);
+            db_strdef(outline);
             db_sprintf(outline, "<%s:%s:%s>", bp->b_bname,
                 ue_itoa(execlevel), eline);
 
@@ -1484,7 +1484,7 @@ single_exit:
 int run_user_proc(char *procname, int forced, int rpts) {
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
-    db_def(bufn);
+    db_strdef(bufn);
 
 /* Construct the buffer name */
     db_set(bufn, "/");
@@ -1620,7 +1620,7 @@ int switch_with_pin(int f, int n) {
 
 /* Buffer name for reexecute - shared by all buffer-callers */
 
-static db_def(prev_bufn);
+static db_strdef(prev_bufn);
 
 /* execproc:
  *      Execute a procedure
@@ -1629,7 +1629,7 @@ static db_def(prev_bufn);
  */
 int execproc(int f, int n) {
     UNUSED(f);
-    db_def(bufn);           /* name of buffer to execute */
+    db_strdef(bufn);           /* name of buffer to execute */
     int status;             /* status return */
 
 /* Handle a reexecute */
@@ -1670,7 +1670,7 @@ int execbuf(int f, int n) {
     UNUSED(f);
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
-    db_def(bufn);           /* name of buffer to execute */
+    db_strdef(bufn);           /* name of buffer to execute */
 
 /* Handle a reexecute */
 
@@ -1723,7 +1723,7 @@ int dofile(char *fname) {
     struct buffer *cb;      /* temp to hold current buf while we read */
     int status;             /* results of various calls */
 
-    db_def(bufn);           /* name of buffer */
+    db_strdef(bufn);           /* name of buffer */
 
     makename(&bufn, fname, TRUE);       /* derive unique name for buffer */
     bp = bfind(db_val(bufn), TRUE, 0);  /* get the needed buffer */
@@ -1756,7 +1756,7 @@ int dofile(char *fname) {
 
 /* Filename for reexecute - shared by all file-callers */
 
-static db_def(prev_fname);
+static db_strdef(prev_fname);
 
 /* execute a series of commands in a file
  * If given fname starts with "^", remove that character and don't
@@ -1772,7 +1772,7 @@ int execfile(int f, int n) {
     int fail_ok = 0;
     int fns = 0;
 
-    db_def(fname);          /* name of file to execute */
+    db_strdef(fname);          /* name of file to execute */
 
 /* Re-use last obtained filename? */
     if (inreex && (db_len(prev_fname) > 0) && RXARG(execfile))

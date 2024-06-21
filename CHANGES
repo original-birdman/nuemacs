@@ -8035,3 +8035,25 @@ line.c
 line.h
     Use a BUF db for the line buffer. [line,c]
     Rework the lused/ltext etc #defines to use this. [line.h]
+
+basic.c
+bind.c
+buffer.c
+crypt.c
+display.c
+eval.c
+exec.c
+file.c
+fileio.c
+globals.c
+input.c
+isearch.c
+main.c
+random.c
+region.c
+search.c
+spawn.c
+utf8.c
+word.c
+    Modify the rest of the code to fit with the line.c/dyn_buf.c
+    changes. 

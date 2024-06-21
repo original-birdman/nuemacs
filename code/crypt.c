@@ -230,7 +230,7 @@ int set_encryption_key(int f, int n) {
         klenp = &curbp->b_keylen;
     }
     sprintf(prompt, "%s encryption string: ", type);
-    db_def(given);
+    db_strdef(given);
     status = mlreply(prompt, &given, CMPLT_NONE);
     mlwrite_one(" ");       /* clear it off the bottom line */
     disinp = odisinp;

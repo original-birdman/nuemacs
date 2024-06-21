@@ -129,7 +129,7 @@ int bktoshell(int f, int n) {   /* suspend MicroEMACS and wait to wake up */
  * can ever be the "last executed" for reexecute, so they can share
  * the prev_spawn_cmd setting.
  */
-static db_def(prev_spawn_cmd);
+static db_strdef(prev_spawn_cmd);
 static int next_spawn_cmd(int rxtest, char *prompt, db *line) {
     if (inreex && (db_len(prev_spawn_cmd) > 0) && rxtest) {
         dbp_set(line, db_val(prev_spawn_cmd));
@@ -143,7 +143,7 @@ static int next_spawn_cmd(int rxtest, char *prompt, db *line) {
 }
 static int run_one_liner(int rxcopy, int wait, char *prompt) {
     int s;
-    db_def(line);
+    db_strdef(line);
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
@@ -204,8 +204,8 @@ int pipecmd(int f, int n) {
 
     get_orig_size();
 
-    db_def(line);           /* command line sent to shell */
-    db_def(comfile);
+    db_strdef(line);           /* command line sent to shell */
+    db_strdef(comfile);
 
 /* Get the command to pipe in */
     if ((s = next_spawn_cmd(RXARG(pipecmd), "@", &line)) != TRUE) return s;
@@ -277,10 +277,10 @@ int filter_buffer(int f, int n) {
 
     get_orig_size();
 
-    db_def(line);        /* command line send to shell */
-    db_def(tmpnam);       /* place to store real file name */
-    db_def(fltin);
-    db_def(fltout);
+    db_strdef(line);        /* command line send to shell */
+    db_strdef(tmpnam);       /* place to store real file name */
+    db_strdef(fltin);
+    db_strdef(fltout);
 
 /* Get the filter name and its args */
     if ((s = next_spawn_cmd(RXARG(filter_buffer), "#", &line)) != TRUE)

@@ -62,7 +62,7 @@ static int along_path(char *fname, db *fspec) {
  * char *fname;         base file name to search for
  * int hflag;           Look in the HOME environment variable first?
  */
-static db_def(fspec);
+static db_strdef(fspec);
 char *flook(char *fname, int hflag, int mode) {
     int i;                          /* index */
 
@@ -274,7 +274,7 @@ static unsigned int getckey(int mflag) {
 
 /* Check to see if we are executing a command line */
     if (clexec) {
-        db_def(tok);    /* command incoming */
+        db_strdef(tok);    /* command incoming */
         macarg(&tok);   /* get the next token */
         unsigned int ck = stock(db_val(tok));
         db_free(tok);
@@ -724,8 +724,8 @@ int buffertokey(int f, int n) {
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
 
-    db_def(bname);          /* buffer name */
-    db_def(btry);
+    db_strdef(bname);          /* buffer name */
+    db_strdef(btry);
 
 /* Get the name of the buffer to invoke.
  * Note that we DO NOT SEND the leading '/'.
@@ -778,7 +778,7 @@ int switch_internal(int f, int n) {
     int bind_key;
     fn_t rpl_func;
 
-    db_def(btry);
+    db_strdef(btry);
 
 /* Get char to change */
 
@@ -819,7 +819,7 @@ int switch_internal(int f, int n) {
         s = update_keybind(bind_key, n, TRUE, rpl_func, NULL);
     }
     else {
-        db_def(uproc);
+        db_strdef(uproc);
         db_set(uproc, "/");
         db_append(uproc, db_val(btry));
         struct buffer *upb = bfind(db_val(uproc), FALSE, 0);
@@ -1122,7 +1122,7 @@ int apro(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
 
-    db_def(mstring);        /* string to match cmd names to */
+    db_strdef(mstring);        /* string to match cmd names to */
     status = mlreply("Apropos string: ", &mstring, CMPLT_NONE);
     if (status != TRUE) goto exit;
 

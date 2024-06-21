@@ -57,7 +57,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
     }
 
     zw_break = 0;
-    if (myoffs == lused(mylp)) {    /* Handle end of line */
+    if ((size_t)myoffs == lused(mylp)) {    /* Handle end of line */
         gc.uc = '\n';
         if (inwp) {                 /* Switch caller to next one */
             inwp->offs = 0;
@@ -334,7 +334,7 @@ int delfword(int f, int n) {
         while (n--) {
 
 /* If we are at EOL; skip to the beginning of the next */
-            while (curwp->w.doto == lused(curwp->w.dotp)) {
+            while ((size_t)curwp->w.doto == lused(curwp->w.dotp)) {
                 moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 ++size;     /* Will move one to next line */
@@ -692,7 +692,7 @@ int wrapword(int f, int n) {
  * This handles "mid-line" wraps and inability to wrap
  */
                 whitedelete(0, 0);
-                if ((curwp->w.doto != lused(curwp->w.dotp)) &&
+                if (((size_t)curwp->w.doto != lused(curwp->w.dotp)) &&
                     (curwp->w.doto != 0)) linsert_byte(1, ' ');
             }
 /* Back to where we were (which will have moved and been updated).
@@ -727,13 +727,13 @@ int wrapword(int f, int n) {
  * int f, n;            arguments ignored
  */
 static int n_eos = 0;
-static db_def(eos_str);       /* String given by user */
+static db_strdef(eos_str);       /* String given by user */
 int eos_chars(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
 
-    db_def(prompt);
-    db_def(buf);
+    db_strdef(prompt);
+    db_strdef(buf);
 
     if (n_eos == 0) db_set(eos_str, "none"); /* Clearer for user? */
     db_sprintf(prompt,
@@ -813,7 +813,7 @@ static int filler(int indent, int width, int justify) {
         if (!filler_fword()) return FALSE;          /* Next word */
         words_to_wrap++;
         whitedelete(0, 0);                          /* -> 0 spaces */
-        if (curwp->w.doto == lused(curwp->w.dotp)) {    /* E-o-line */
+        if ((size_t)curwp->w.doto == lused(curwp->w.dotp)) {    /* E-o-line */
             if (lforw(curwp->w.dotp) == end_line) {     /* At end of para? */
                 all_done = 1;       /* Time to wrap up - no more spaces... */
             }

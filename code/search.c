@@ -1989,7 +1989,7 @@ void setpattern(db *apat, db *tap) {
  */
 static int readpattern(char *prompt, db *apat, int srch) {
     int status;
-    db_def(tpat);
+    db_strdef(tpat);
 
     char saved_base[16];        /* Same size as current_base */
 
@@ -2412,7 +2412,8 @@ try_next_choice:;
         switch(mcptr->mc.type) {
         case BOL:
         case EOL:
-            if (curoff == ((mcptr->mc.type == BOL)? 0: lused(curline))) {
+            if ((size_t)curoff ==
+                      ((mcptr->mc.type == BOL)? 0: lused(curline))) {
                 goto next_entry;
             }
             else
@@ -2614,7 +2615,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
                 if (curline == curbp->b_linep)
                     return TRUE;    /* hit end of buffer */
             }
-            if (curoff == lused(curline)) {
+            if ((size_t)curoff == lused(curline)) {
                 jump = deltab[(int) '\n'];
             }
             else {
@@ -2654,7 +2655,7 @@ static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
     curoff = *pcuroff;
 
     if (dir == FORWARD) {
-        if (curoff == lused(curline)) {     /* if at EOL */
+        if ((size_t)curoff == lused(curline)) { /* if at EOL */
             curline = lforw(curline);       /* skip to next line */
             curoff = 0;
             c = '\n';                       /* and return a <NL> */
@@ -2971,7 +2972,7 @@ int forwsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible) we will have a pattern to use.
  */
-        db_def(opat);
+        db_strdef(opat);
         int could_hunt = srch_can_hunt;
         db_set(opat, db_val_nc(pat));
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
@@ -3087,7 +3088,7 @@ int backsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible), we will have a pattern to use.
  */
-        db_def(opat);
+        db_strdef(opat);
         int could_hunt = srch_can_hunt;
         db_set(opat, db_val_nc(pat));
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
@@ -3272,7 +3273,7 @@ static char *getrepl(void) {
             break;
         }
         case REPL_FNC: {
-            db_def(fnc_buf);
+            db_strdef(fnc_buf);
             db_set(fnc_buf, "");   /* Start with nothing */
             for (struct func_call *fcp = rmcptr->val.fc; fcp->type != EOL;
                     fcp = fcp->next) {
@@ -3299,7 +3300,7 @@ static char *getrepl(void) {
  * command-line text and return the resulting string
  * We have a function to do that...
  */
-            db_def(result);
+            db_strdef(result);
             evaluate_cmdb(db_val(fnc_buf), &result);
             db_free(fnc_buf);
             append_to_repl_buf(db_val(result), -1);

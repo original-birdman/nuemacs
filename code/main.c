@@ -545,8 +545,8 @@ static void dump_modified_buffers(void) {
  * We assume that we don't get multiple dumps in the same second to
  * the same user's HOME.
  */
-    db_def(tagged_name);
-    db_def(orig_name);
+    db_strdef(tagged_name);
+    db_strdef(orig_name);
 
 /* Scan the buffers */
 
@@ -937,7 +937,7 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
     int count = 1;
     int in_quote = 0;   /* May not be true, though best guess */
     while (1) {
-        if (!(curwp->w.doto == lused(curwp->w.dotp))) { /* Not e-o-l */
+        if (!((size_t)curwp->w.doto == lused(curwp->w.dotp))) { /* Not e-o-l */
             int c = lgetc(curwp->w.dotp, curwp->w.doto);
             if ((c == '"') || (c == '\'')) in_quote = 1 - in_quote;
             else if (!in_quote) {
@@ -1051,8 +1051,8 @@ int getfence(int f, int n) {
  * We only have ASCII braces, so no need to handle Unicode here.
  * A combining-char on a brace is meaningless.
  */
-    if (oldoff == lused(oldlp)) ch = '\n';
-    else                        ch = lgetc(oldlp, oldoff);
+    if ((size_t)oldoff == lused(oldlp)) ch = '\n';
+    else                                ch = lgetc(oldlp, oldoff);
 
 /* Setup proper matching fence */
     int (*move)(int);
@@ -1144,7 +1144,7 @@ static int fmatch(int ch) {
  */
 int macro_helper(int f, int n) {
     UNUSED(f);
-    db_def(tag);
+    db_strdef(tag);
 /* This is a macro helper - not need to call mlreply, just
  * extract the next token. We expect only 1 char (+ trailing NUL).
  * Also prevents any processing of the arg.
@@ -1525,13 +1525,13 @@ int execute(int c, int f, int n) {
             }
 /* Move to start of name, and get the length to end-of-data (no NUL here) */
             lp++;   /* Step over next space */
-            int fnlen = curwp->w.dotp->l_text+lused(curwp->w.dotp) - lp;
+            int fnlen = ltext(curwp->w.dotp) + lused(curwp->w.dotp) - lp;
 
 /* Now build up the full pathname
  * Start with the current buffer filename, and append "/", unless we
  * are actually at "/" (quick test).
  */
-            db_def(fname);
+            db_strdef(fname);
             db_set(fname, curwp->w_bufp->b_fname);
             if (db_charat(fname, 1) != '\0') db_append(fname, "/");
 /* Add in this entryname, then work out the full pathname length
@@ -1554,7 +1554,7 @@ int execute(int c, int f, int n) {
             getfile(curbp->b_fname, FALSE, TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
-           {db_def(fname);
+           {db_strdef(fname);
             db_set(fname, curwp->w_bufp->b_fname);
             char *upp = strrchr(db_val(fname), '/');
             if (upp == db_val(fname)) upp++;
@@ -1617,7 +1617,7 @@ int execute(int c, int f, int n) {
  * or we are at a tab stop, delete a char forward
  */
         if (curwp->w_bufp->b_mode & MDOVER &&
-            curwp->w.doto < lused(curwp->w.dotp) &&
+            (size_t)curwp->w.doto < lused(curwp->w.dotp) &&
             (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
             (curwp->w.doto) % 8 == 7))
                 ldelgrapheme(1, FALSE);
@@ -1924,7 +1924,7 @@ int main(int argc, char **argv) {
     char ekey[NKEY];        /* startup encryption key */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
 
-    db_def(bname);          /* Buffer name of file to read */
+    db_strdef(bname);          /* Buffer name of file to read */
 
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);

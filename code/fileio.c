@@ -304,28 +304,9 @@ int ffputline(char *buf, int nbuf) {
  * Cannot return with any error. Any allocation error exist uemacs.
  */
 static void add_to_fline(int len) {
-    enum need_type { NONE, MORE, NEW };
+    if (fline == NULL) fline = lalloc();
 
-    enum need_type need = NONE;
-    if (fline == NULL) {
-        need = NEW;
-    }
-    else if (len >= (lsize(fline) - lused(fline))) {
-        need = MORE;
-    }
-    switch(need) {
-    case NEW:
-        fline = lalloc(len);
-        lused(fline) = 0;   /* Set what is actually there NOW!! */
-        break;
-    case MORE:
-        ltextgrow(fline, len + lused(fline));
-        break;
-    case NONE:
-        break;
-    }
-    memcpy(ltext(fline)+lused(fline), cache.buf+cache.rst, len);
-    lused(fline) += len;    /* Record the real size of the line */
+    db_appendn(fline->l_, cache.buf+cache.rst, len);
     cache.rst += len;       /* Advance cache read-pointer */
     cache.len -= len;       /* Decrement left-to-read counter */
     return;
