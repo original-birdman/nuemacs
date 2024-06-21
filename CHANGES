@@ -8017,6 +8017,7 @@ word.c
 efunc.h
 estruct.h
     Code modified to use dynamic buffer calls.
+    Buffer display name in modeline now abbreviated if it won't fit.
 
 ----------------------------------------
 
@@ -8024,3 +8025,8 @@ eval.c
 autotest/arithmetic-tests.sh
     Correct return value setting for UFR2I case. [eval.c]
     Reinstate original TOOBIG test code. [arithmetic-tests.sh]
+
+dyn_buf.c
+dyn_buf.h
+    Add a type to struct db and use it to decide whether to add/allow
+    for a terminating NUL char.
