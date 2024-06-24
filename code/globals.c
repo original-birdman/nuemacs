@@ -196,7 +196,7 @@ struct rx_mask rx_mask[] = {
 /* ...and the current setting */
 int rxargs = ~0;            /* Everything on by default */
 
-char *userproc_arg = NULL;
+const char *userproc_arg = NULL;
 
 int comline_processing = 1;
 

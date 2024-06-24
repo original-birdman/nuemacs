@@ -153,13 +153,13 @@ static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
             mlwrite("%s: cannot leave keyboard macro buffer!", who);
             return FALSE;   /* and probably panic! */
         }
-        *curwp = wsave;             /* Structure copy - restore */
+        *curwp = wsave;         /* Structure copy - restore */
         kbdmac_bp->b_nwnd = saved_nw;
         do_savnam = 1;
         last_mode = OutOf_KBDM;
         return TRUE;
     }
-out_of_phase:                       /* Can only get here on error */
+out_of_phase:                   /* Can only get here on error */
     mlforce("Keyboard macro collection out of phase - aborted.");
     do_savnam = 1;
     kbdmode = STOP;
@@ -272,7 +272,7 @@ static void set_narg_kbdmacro(int n) {
 /* ======================================================================
  * Add a string to the keyboard macro buffer.
  */
-int addto_kbdmacro(char *text, int new_command, int do_quote) {
+int addto_kbdmacro(const char *text, int new_command, int do_quote) {
     if (!kbdmac_bp) {
         mlwrite_one("addto: no keyboard macro buffer!");
         return FALSE;
@@ -296,7 +296,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
 /* We need to quote if the first char is an "active" character
  * or if the text contain any spaces or "s.
  */
-        char *tp = text;
+        const char *tp = text;
         switch(*tp) {
         case '"':
         case '!':
@@ -316,7 +316,7 @@ int addto_kbdmacro(char *text, int new_command, int do_quote) {
             tp++;
         }
         if (qreq) linsert_byte(1, '"');
-        for (char *tp = text; *tp; tp++) {
+        for (const char *tp = text; *tp; tp++) {
             char cc = *tp & 0xff;
             char xc = 0;
             switch(cc) {
@@ -553,10 +553,10 @@ static void dump_modified_buffers(void) {
     int add_cwd;
 
     for(struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-        if ((bp->b_flag & BFCHG) == 0     /* Not changed...*/
-         || (bp->b_flag & BFINVS) != 0    /* ...not real... */
-         || (bp->b_mode & MDVIEW) != 0    /* ...read-only... */
-         || (*(bp->b_fname) == '\0')) {   /* ...has no filename */
+        if ((bp->b_flag & BFCHG) == 0   /* Not changed...*/
+         || (bp->b_flag & BFINVS) != 0  /* ...not real... */
+         || (bp->b_mode & MDVIEW) != 0  /* ...read-only... */
+         || (*(bp->b_fname) == '\0')) { /* ...has no filename */
 
 /* Not interested ... but we *do* want to save any keyboard-macro.
  * which is marked as invisible.
@@ -577,7 +577,7 @@ static void dump_modified_buffers(void) {
         }
         if ((bp->b_flag & BFNAROW) != 0) {
             printf("Widening %s...\n", bp->b_bname);
-            curwp->w_bufp = bp;         /* widen() widens this one */
+            curwp->w_bufp = bp;     /* widen() widens this one */
             if (widen(0, 0) != TRUE) {
                 printf(" - failed - skipping\n");
                 continue;
@@ -1186,9 +1186,9 @@ static void edinit(char *bname) {
     curbp = bp;             /* Make this current    */
     wheadp = wp;
     curwp = wp;
-    wp->w_wndp = NULL;                      /* Initialize window    */
+    wp->w_wndp = NULL;      /* Initialize window    */
     wp->w_bufp = bp;
-    bp->b_nwnd = 1;                         /* Displayed.           */
+    bp->b_nwnd = 1;         /* Displayed.           */
     wp->w_linep = bp->b_linep;
     wp->w.dotp = bp->b_linep;
     wp->w.doto = 0;
@@ -1491,7 +1491,7 @@ int execute(int c, int f, int n) {
  * Then advance a space and take the rest of the line as the entry name
  * since we're only looking for space we can just use ASCII.
  */
-           {char *lp = ltext(curwp->w.dotp);
+           {const char *lp = ltext(curwp->w.dotp);
 /* Check that we can handle this type of entry.
  * The showdir command will have followed all symlinks, so
  * we're only interested in directories and files.
@@ -1640,7 +1640,7 @@ int execute(int c, int f, int n) {
             }
 	}
         else {
-            status = linsert_uc(n, c);    /* We get Unicode, not utf-8 */
+            status = linsert_uc(n, c);  /* We get Unicode, not utf-8 */
             if (!inmb && kbdmode == RECORD) {
                 int nc = 1;
                 if ((f > 0) && (n > 1)) nc = n;
@@ -1663,7 +1663,7 @@ int execute(int c, int f, int n) {
         return status;
     }
     TTbeep();
-    mlwrite_one(MLbkt("Key not bound"));  /* complain             */
+    mlwrite_one(MLbkt("Key not bound"));    /* Complain */
     return FALSE;
 }
 
@@ -1838,28 +1838,28 @@ int quickexit(int f, int n) {
     bp = bheadp;
     while (bp != NULL) {
         if ((bp->b_flag & BFCHG) != 0       /* Changed.             */
-             && (bp->b_flag & BFTRUNC) == 0  /* Not truncated P.K.   */
-             && (bp->b_flag & BFINVS) == 0) {/* Real.                */
-            curbp = bp;                 /* make that buffer cur */
+             && (bp->b_flag & BFTRUNC) == 0 /* Not truncated P.K.   */
+             && (bp->b_flag & BFINVS) == 0) {   /* Real.            */
+            curbp = bp;                     /* make that buffer cur */
             mlwrite(MLbkt("Saving %s"), bp->b_fname);
             mlwrite_one("\n");              /* So user can see filename */
             if ((status = filesave(f, n)) != TRUE) {
-                curbp = oldcb;          /* restore curbp */
+                curbp = oldcb;              /* restore curbp */
                 sleep(1);
-                redraw(FALSE, 0);       /* Redraw - remove filenames */
+                redraw(FALSE, 0);           /* Redraw - remove filenames */
                 return status;
             }
         }
-        bp = bp->b_bufp;            /* on to the next buffer */
+        bp = bp->b_bufp;            /* On to the next buffer */
     }
-    quit(f, n);                     /* conditionally quit   */
+    quit(f, n);                     /* Conditionally quit   */
     return TRUE;
 }
 
-/* *Now* include the bindings - aftre we've defined the functions
- * in this file.
+/* *Now* include the Default key bindings - after we've defined the
+ * functions in this file.
  */
-#include "ebind.h"   /* Default key bindings. */
+#include "ebind.h"
 
 /* ======================================================================
  * GGR - Extend the size of the key_table list.
@@ -1881,7 +1881,7 @@ void extend_keytab(int n_ents) {
         keytab_alloc_ents = n_ents;
     }
     keytab = Xrealloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
-    if (init_from == 0) {           /* Add in starting data */
+    if (init_from == 0) {   /* Add in starting data */
         int n_init_keys = ARRAY_SIZE(init_keytab);
         struct key_tab *ktp = keytab;
         for (int n = 0; n < n_init_keys; n++, ktp++) {
@@ -1924,7 +1924,7 @@ int main(int argc, char **argv) {
     char ekey[NKEY];        /* startup encryption key */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
 
-    db_strdef(bname);          /* Buffer name of file to read */
+    db_strdef(bname);       /* Buffer name of file to read */
 
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
@@ -2038,7 +2038,7 @@ do {
                         /* Process Switches */
         if (**argv == '+') {
             gotoflag = TRUE;
-            gline = atoi(*argv + 1); /* skip the '+' */
+            gline = atoi(*argv + 1);    /* skip the '+' */
         }
         else if (**argv == '-') {
             char *opt = NULL;
@@ -2127,7 +2127,7 @@ do {
                 srch_patlen = db_len(pat);
                 break;
             case 'V':       /* -v for View File */
-                if (!verflag) verflag = 1;    /* could be version or */
+                if (!verflag) verflag = 1;  /* could be version or */
                 viewflag = TRUE;    /* view request */
                 break;
             case 'X':       /* GGR: -x for eXtra rc file */
@@ -2156,8 +2156,8 @@ do {
 
 /* Initialize the editor. */
 
-    vtinit();               /* Display */
-    edinit("main");         /* Buffers, windows - must be after vtinit */
+    vtinit();       /* Display */
+    edinit("main"); /* Buffers, windows - must be after vtinit */
 
 /* Set this up before running init files */
 
@@ -2203,7 +2203,7 @@ do {
 /* Check whether we have already been passed this filename, possibly
  * under a different path (e.g. full vs relative).
  */
-            char *testp = get_realpath(*argv);
+            const char *testp = get_realpath(*argv);
             int duplicate = FALSE;
             for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
                 if (strcmp(bp->b_rpname, testp) == 0) {
@@ -2230,7 +2230,7 @@ do {
             if (cryptflag) {
                 bp->b_mode |= MDCRYPT;
                 bp->b_keylen = strlen(ekey);
-                myencrypt((char *) NULL, 0);
+                myencrypt(NULL, 0);
                 myencrypt(ekey, bp->b_keylen);
                 memcpy(bp->b_key, ekey, bp->b_keylen);
             }
@@ -2312,7 +2312,7 @@ loop:
     com_arg *carg = multiplier_check(c);
 
 /* And execute the command */
-    if (carg->f) mlerase();   /* Remove any numeric arg */
+    if (carg->f) mlerase();     /* Remove any numeric arg */
     execute(carg->c, carg->f, carg->n);
     goto loop;
 }

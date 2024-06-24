@@ -41,14 +41,14 @@
 #define PENDIN 0
 #endif
 
-static int kbdflgs;                     /* saved keyboard fd flags      */
-static int kbdpoll;                     /* in O_NDELAY mode             */
+static int kbdflgs;             /* saved keyboard fd flags      */
+static int kbdpoll;             /* in O_NDELAY mode             */
 
-static struct termios otermios;         /* original terminal characteristics */
-static struct termios ntermios;         /* charactoristics to use inside */
+static struct termios otermios; /* original terminal characteristics */
+static struct termios ntermios; /* charactoristics to use inside */
 
 #define TBUFSIZ 128
-static char tobuf[TBUFSIZ];             /* terminal output buffer */
+static char tobuf[TBUFSIZ];     /* terminal output buffer */
 
 
 /* This function is called once to set up the terminal device streams.
@@ -81,7 +81,7 @@ void ttopen(void) {
 /* One character, no timeout */
     ntermios.c_cc[VMIN] = 1;
     ntermios.c_cc[VTIME] = 0;
-    tcsetattr(0, TCSADRAIN, &ntermios);     /* and activate them */
+    tcsetattr(0, TCSADRAIN, &ntermios); /* and activate them */
 
 /* Provide a smaller terminal output buffer so that the type-ahead
  * detection works better (more often)
@@ -157,7 +157,7 @@ int ttgetc(void) {
     unicode_t c;
     int count, bytes = 1, expected;
 
-    count = pending;        /* So we don't update pending on error */
+    count = pending;    /* So we don't update pending on error */
     if (!count) {
         count = read(0, buffer, sizeof(buffer));
         if (count <= 0) return 0;

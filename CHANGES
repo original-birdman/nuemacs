@@ -8056,4 +8056,32 @@ spawn.c
 utf8.c
 word.c
     Modify the rest of the code to fit with the line.c/dyn_buf.c
-    changes. 
+    changes.
+
+----------
+
+*.c
+dyn_buf.h
+edef.h
+efunc.h
+line.h
+utf8.h
+    Change the db_* dynamic buffer access macros to be const and update
+    the function prototypes etc.  to handle this.  To avoid attempts to
+    change these without going via the dyn_buf.c/h code.
+    Tidied up comment alignment as well.
+
+Additional changes/fixes along the way.
+
+dynbuf.c/h
+    Add db_truncate()
+    Add db_overwrite()
+
+eval.c
+    In ue_printf(), fix %p handling.
+
+random.c
+    In twiddle, use db_overwrite to add new byte order.
+
+version.c
+    Display unknown version for libc if it cannot be determined.

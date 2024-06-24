@@ -271,7 +271,7 @@ int set_encryption_key(int f, int n) {
  * on itself.
  */
     *klenp = strlen(ukey);
-    myencrypt((char *) NULL, 0);
+    myencrypt(NULL, 0);
     myencrypt(ukey, *klenp);
     return TRUE;
 }

@@ -30,25 +30,27 @@ typedef struct {
 /* We need to access the entries for local/global entries (db_*)
  * and entries arriving as function parameters (dbp_*).
  */
-#define db_val(a)   ((a).val)
-#define db_len(a)   ((a).len)
-#define db_max(a)   ((a).alloc)
-#define db_type(a)  ((a).type)
-#define dbp_val(a)  ((a)->val)
-#define dbp_len(a)  ((a)->len)
-#define dbp_max(a)  ((a)->alloc)
-#define dbp_type(a) ((a)->type)
+#define db_val(a)   ((const char *)(a).val)
+#define db_len(a)   ((const size_t)(a).len)
+#define db_max(a)   ((const size_t)(a).alloc)
+#define db_type(a)  ((const enum db_type)(a).type)
+#define dbp_val(a)  ((const char *)(a)->val)
+#define dbp_len(a)  ((const size_t)(a)->len)
+#define dbp_max(a)  ((const size_t)(a)->alloc)
+#define dbp_type(a) ((const enum db_type)(a)->type)
 
 /* The actual function calls (in dyn_str.c) to manipulate them.
  * Not expecting these to be called directly
  */
 
-char *_dbp_val_nc(db *);
+const char *_dbp_val_nc(db *);
 void _dbp_setn(db *, const void *, size_t);
 void _dbp_set(db *, const char *);
 void _dbp_insertn_at(db *, const void *, size_t, size_t);
 void _dbp_deleten_at(db *, int, size_t);
+void _dbp_overwriten_at(db *, const void *, size_t, size_t);
 void _dbp_clear(db *);
+void _dbp_truncate(db *, size_t);
 void _dbp_appendn(db *, const char *, size_t);
 void _dbp_append(db *, const char *);
 void _dbp_addch(db *, const char);
@@ -85,8 +87,16 @@ void _dbp_free(db *);
 #define db_deleten_at(to_ds, n, w) _dbp_deleten_at(&(to_ds), n, w);
 #define dbp_deleten_at(to_ds, n, w) _dbp_deleten_at((to_ds), n, w);
 
+#define db_overwriten_at(to_ds, from_buf, flen, w) \
+     _dbp_overwriten_at(&(to_ds), from_buf, flen, w)
+#define dbp_overwriten_at(to_ds, from_buf, flen, w) \
+     _dbp_overwriten_at((to_ds), from_buf, flen, w)
+
 #define db_clear(ds) _dbp_clear(&(ds))
 #define dbp_clear(ds) _dbp_clear((ds))
+
+#define db_truncate(ds, n) _dbp_truncate(&(ds), n)
+#define dbp_truncate(ds, n) _dbp_truncate((ds), n)
 
 #define db_appendn(to_ds, add, alen) _dbp_appendn(&(to_ds), add, alen)
 #define dbp_appendn(to_ds, add, alen) _dbp_appendn((to_ds), add, alen)

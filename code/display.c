@@ -293,7 +293,7 @@ void vtinit(void) {
 
 /* Now free any previous data and move the new allocations to the live ones */
 
-    if (prev_mrow) {        /* We have previous data to free */
+    if (prev_mrow) {    /* We have previous data to free */
         Xfree(vscreen);
         Xfree(pscreen);
         Xfree(vdata);
@@ -347,7 +347,7 @@ void vttidy(void) {
  * terminal buffers. Only column overflow is checked.
  */
 static void vtputc(unsigned int c) {
-    struct video *vp;       /* ptr to line being updated */
+    struct video *vp;   /* ptr to line being updated */
 
     if (c > MAX_UTF8_CHAR) c = display_for(c);
 
@@ -554,7 +554,7 @@ static int reframe(struct window *wp) {
         scrflags |= WFKILLS;
     }
     else                            /* put dot where requested */
-        i = wp->w_force;        /* (is 0, unless reposition() was called) */
+        i = wp->w_force;            /* (is 0 unless reposition() was called) */
 
     wp->w_flag |= WFMODE;
 
@@ -562,7 +562,7 @@ static int reframe(struct window *wp) {
     if (i > 0) {            /* only one screen worth of lines max */
         if (--i >= wp->w_ntrows) i = wp->w_ntrows - 1;
     }
-    else if (i < 0) {     /* negative update???? */
+    else if (i < 0) {       /* negative update???? */
         i += wp->w_ntrows;
         if (i < 0) i = 0;
     }
@@ -595,7 +595,7 @@ static void show_line(struct line *lp) {
 /* Map a char string with (possibly) utf8 sequences in it to unicode
  * for vtputc.
  */
-static void show_utf8(char *utf8p) {
+static void show_utf8(const char *utf8p) {
     int i = 0, len = strlen(utf8p);
     while (i < len) {
         unicode_t c;
@@ -710,7 +710,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
     int longmatch, longcount;
     int from, to;
 
-    if (!term.t_scroll) return FALSE;       /* No way to scroll */
+    if (!term.t_scroll) return FALSE;   /* No way to scroll */
 
     rows = term.t_mbline;           /* First line to ignore */
     cols = term.t_ncol;
@@ -786,7 +786,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
             vpp = pscreen[to + i];
             vpv = vscreen[to + i];
             memcpy(vpp->v_text, vpv->v_text, sizeof(struct grapheme)*cols);
-            vpp->v_flag = vpv->v_flag;      /* XXX */
+            vpp->v_flag = vpv->v_flag;  /* XXX */
             if (vpp->v_flag & VFREV) {
                 vpp->v_flag &= ~VFREV;
                 vpp->v_flag |= ~VFREQ;
@@ -1120,7 +1120,7 @@ static db_strdef(last_name);
 static int last_width = -1;
 static struct buffer *last_bp = NULL;
 
-static char *get_buffer_display_name(int w_want) {
+static const char *get_buffer_display_name(int w_want) {
 
     if (w_want < 3) w_want = 3;     /* Set a minimum (1 fr, 1 ell, 1 bk) */
 
@@ -1184,7 +1184,7 @@ static char *get_buffer_display_name(int w_want) {
  * The minibuffer modeline is different, but still handled here.
  */
 static void modeline(struct window *wp) {
-    char *cp;
+    const char *cp;
     int c;
     struct buffer *bp;
     int i;                  /* loop index */
@@ -1371,11 +1371,11 @@ next_mode:
 /* Pad to full width. */
     while (vtcol < term.t_ncol) vtputc(lchar);
 
-/* determine if top line, bottom line, or both are visible */
+/* Determine whether top line, bottom line, or both are visible */
 
     struct line *lp = wp->w_linep;
     int rows = wp->w_ntrows;
-    char *msg = NULL;
+    const char *msg = NULL;
 
     vtcol -= 7;  /* strlen(" top ") plus a couple */
     while (rows--) {
@@ -1406,18 +1406,18 @@ next_mode:
             if (lp == wp->w_linep) {
                 predlines = numlines;
             }
-                ++numlines;
-                lp = lforw(lp);
-            }
-            if (wp->w.dotp == bp->b_linep) {
-                msg = " Bot ";
-            } else {
-                ratio = 0;
-                if (numlines != 0) ratio = (100L * predlines) / numlines;
-                if (ratio > 99)    ratio = 99;
-                db_sprintf(glb_db, " %2d%% ", ratio);
-                msg = db_val(glb_db);
-            }
+            ++numlines;
+            lp = lforw(lp);
+        }
+        if (wp->w.dotp == bp->b_linep) {
+            msg = " Bot ";
+        } else {
+            ratio = 0;
+            if (numlines != 0) ratio = (100L * predlines) / numlines;
+            if (ratio > 99)    ratio = 99;
+            db_sprintf(glb_db, " %2d%% ", ratio);
+            msg = db_val(glb_db);
+        }
     }
     show_utf8(msg);
 }
@@ -1510,7 +1510,7 @@ void update(int force) {
     while (wp != NULL) {
         if (wp->w_flag) {
 /* If the window has changed, service it */
-            reframe(wp);    /* check the framing */
+            reframe(wp);        /* Check the framing */
             if (wp->w_flag & (WFKILLS | WFINS)) {
                 scrflags |= (wp->w_flag & (WFINS | WFKILLS));
                 wp->w_flag &= ~(WFKILLS | WFINS);
@@ -1637,7 +1637,7 @@ static int mlw_level = 0;
 
 void mlwrite_one(const char *); /* Forward declaration */
 static void mlwrite_ap(const char *fmt, npva ap) {
-    unicode_t c;            /* current char in format string */
+    unicode_t c;                /* current char in format string */
 
 /* If we are not currently echoing on the command line, abort this */
     if (discmd == FALSE) return;
@@ -1667,14 +1667,14 @@ static void mlwrite_ap(const char *fmt, npva ap) {
 /* If we are about to go into the last column, put a $ there and stop,
  * otherwise we get wrap-around and the display messes up.
  */
-        int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
+        int used = utf8_to_unicode(fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
         fmt += used;
         if ((ap.p == NULL) || (c != '%')) {
             TTput_1uc_lim(c);
         } else {
             if (bytes_togo <= 0) continue;
-            int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
+            int used = utf8_to_unicode(fmt, 0, bytes_togo, &c);
             bytes_togo -= used;
             fmt += used;
 
@@ -1739,7 +1739,7 @@ void mlwrite_one(const char *fmt) {
     return;
 }
 void mlforce_one(const char *fmt) {
-    int oldcmd;     /* original command display flag */
+    int oldcmd;             /* original command display flag */
     oldcmd = discmd;        /* save the discmd value */
     discmd = TRUE;          /* and turn display on */
     mlwrite_ap(fmt, nullva);    /* write the string out */

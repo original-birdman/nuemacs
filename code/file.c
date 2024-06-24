@@ -46,7 +46,7 @@
  * fixup_fname
  */
 static db_strdef(fn_expd);
-char *fixup_fname(char *fn) {
+const char *fixup_fname(const char *fn) {
 
 /* Look for a ~ at the start. */
 
@@ -63,8 +63,8 @@ char *fixup_fname(char *fn) {
         }
 #ifndef STANDALONE
         else {
-           struct passwd *pwptr;
-           char *p;
+            struct passwd *pwptr;
+            const char *p;
             p = fn + 1;
             db_clear(fn_expd);
             while (*p != 0 && *p != '/')
@@ -87,8 +87,10 @@ char *fixup_fname(char *fn) {
  * trailing "/"...
  * Change any "/./" entries to "/".
  * Strip out ".." entries and their parent  (xxx/../yyy -> yyy)
- * This can only make the string shorter, so we can manipulate it
+ * This can ONLY make the string shorter, so we can manipulate it
  * character by character and fix up the length/terminator at the end.
+ * Which requires casting to remove the db_* consts.
+ * Kludgy, but this code already existed before dynamic buffers were used.
  */
     char *from, *to;
     int prev_was_slash = 0;
@@ -104,13 +106,14 @@ char *fixup_fname(char *fn) {
  * which means that leading ".." entries don't get removed.
  */
     if (db_charat(fn_expd, 0) != '/') {
-        resets[0] = db_val(fn_expd);
+        resets[0] = (char *)db_val(fn_expd);
         rsi = 1;
         resettable = 1;
     }
     else resettable = 0;
 
-    for (from = db_val(fn_expd), to = db_val(fn_expd); *from; from++) {
+    for (from = (char *)db_val(fn_expd), to = (char *)db_val(fn_expd);
+         *from; from++) {
 /* Ignore a repeat '/' */
         if (prev_was_slash && (*from == '/')) continue;
 /* Reset states on no '/' */
@@ -174,9 +177,10 @@ char *fixup_fname(char *fn) {
         }
     }
 /* Just have '/' or '.' left...keep it */
-    if (to <= db_val(fn_expd)) to = db_val(fn_expd)+1;
-    terminate_str(to);
-    db_len(fn_expd) = strlen(db_val(fn_expd));
+    if (to <= db_val(fn_expd)) to = (char *)db_val(fn_expd)+1;
+
+/* Terminate it by writing in the trailing NUL (which sets len) */
+    db_setcharat(fn_expd, to-db_val(fn_expd), '\0');
 
     return db_val(fn_expd);
 }
@@ -184,7 +188,7 @@ char *fixup_fname(char *fn) {
 /*
  * fixup_full
  */
-char *fixup_full(char *fn) {
+const char *fixup_full(const char *fn) {
     db_strdef(fn_expd);
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
@@ -198,7 +202,8 @@ char *fixup_full(char *fn) {
     }
     else db_set(fn_expd, fn);
 
-    char *r = fixup_fname(db_val(fn_expd)); /* '/', '.' and ".."  handling */
+/* '/', '.' and ".."  handling */
+    const char *r = fixup_fname(db_val(fn_expd));
     db_free(fn_expd);
 
     return r;
@@ -208,7 +213,7 @@ char *fixup_full(char *fn) {
  * get_realpath
  */
 static db_strdef(rp_res);
-char *get_realpath(char *fn) {
+const char *get_realpath(const char *fn) {
 
 /* Get the full pathname...(malloc'ed)
  * Have to cater for file not existing (but the dir has to...).
@@ -227,8 +232,8 @@ char *get_realpath(char *fn) {
  * as matching that would mean lengthening, not shortening, and the
  * code here assumes it can copy strings "leftwards" char by char.
  */
-    char *cpp = NULL;
-    char *cfp;
+    const char *cpp = NULL;
+    const char *cfp;
     if ((udir.clen > 1) && db_cmpn(rp_res, udir.current, udir.clen) == 0) {
         cpp = "./";
         cfp = db_val(rp_res) + udir.clen;
@@ -255,7 +260,7 @@ char *get_realpath(char *fn) {
 
 /* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
 
-void set_buffer_filenames(struct buffer *bp, char *fname) {
+void set_buffer_filenames(struct buffer *bp, const char *fname) {
 
 /* If activating an inactive buffer, these may be the same and the
  * action of strcpy() is undefined for overlapping strings.
@@ -350,10 +355,10 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
  * NOTE, if the line is empty it cannot contain a CR!
  */
         if ((nlines == 0) && check_dos && (lused(lp1) > 0) &&
-             (ltext(lp1)[lused(lp1)-1] == '\r')) dos_file = TRUE;
+             (db_charat(ldb(lp1), lused(lp1)-1) == '\r')) dos_file = TRUE;
         if (dos_file && (lused(lp1) > 0) &&
-             (ltext(lp1)[lused(lp1)-1] == '\r'))
-             lused(lp1)--;                  /* Remove the trailing CR */
+             (db_charat(ldb(lp1), lused(lp1)-1) == '\r'))
+            db_deleten_at(ldb(lp1), 1, lused(lp1)-1)    /* Remove trailing CR */
         if (!(++nlines % 300) && !silent)   /* GGR */
              mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
     }
@@ -366,7 +371,7 @@ static int file2buf(struct line *iline, char *mode, int goto_end,
  * We now look for /file-hooks-<<sfx>> after /file-hooks.
  * And now done in readin() only
  */
-static void handle_filehooks(char *fname) {
+static void handle_filehooks(const char *fname) {
     struct buffer *sb;
     run_filehooks = 0;                  /* reset flag */
     if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
@@ -392,7 +397,7 @@ static void handle_filehooks(char *fname) {
  * char fname[];        name of file to read
  * int lockfl;          check for file locks?
  */
-int readin(char *fname, int lockfl) {
+int readin(const char *fname, int lockfl) {
     struct window *wp;
     struct buffer *bp;
     int s;
@@ -426,7 +431,7 @@ int readin(char *fname, int lockfl) {
  * open a new file in a non-existant directory) that we just warn
  * about it...
  */
-    char *rp = get_realpath(fname);
+    const char *rp = get_realpath(fname);
     if (rp == fname) {  /* Unable to get real path */
         mlwrite_one("Parent directory absent for new file");
         sleep(1);
@@ -524,7 +529,7 @@ int fileread(int f, int n) {
  * Called by insert file command.
  * Return the final status of the read.
  */
-static int ifile(char *fname) {
+static int ifile(const char *fname) {
     struct buffer *bp;
     int s;
 
@@ -632,7 +637,7 @@ exit:
  *  If it is, and we have a "showdir" userproc, then let that handle it.
  *  Return TRUE if we passed it to showdir, otherwise FALSE.
  */
-int showdir_handled(char *pname) {
+int showdir_handled(const char *pname) {
     struct stat statbuf;
     char *exp_pname;
 
@@ -667,7 +672,7 @@ int showdir_handled(char *pname) {
 /* Take a file name, and from it fabricate a buffer name.
  * There is no longer a maximum length...
  */
-void makename(db *bname, char *fname, int ensure_unique) {
+void makename(db *bname, const char *fname, int ensure_unique) {
 
 /* Get the filename from the pathname.  Use a copy so no fname overwrite. */
 
@@ -693,7 +698,8 @@ void makename(db *bname, char *fname, int ensure_unique) {
  * about possible excessive field-width.
  */
     dbp_append(bname, "!000");  /* Make it long enough */
-    char *op = dbp_val(bname) + dbp_len(bname) - 3; /* Where to overwrite */
+/* Where to overwrite, and remove the const to do so. */
+    char *op = (char *)dbp_val(bname) + dbp_len(bname) - 3;
     for (unsigned int unum = 0; unum < 999; unum++) {
         snprintf(op, 4, "%03u", unum);
 /* Check to see if *this* one is in the buffer list */
@@ -712,7 +718,7 @@ void makename(db *bname, char *fname, int ensure_unique) {
  * char fname[];        file name to find
  * int lockfl;          check the file for locks?
  */
-int getfile(char *fname, int lockfl, int check_dir) {
+int getfile(const char *fname, int lockfl, int check_dir) {
     struct buffer *bp;
     struct line *lp;
     int i;
@@ -741,7 +747,7 @@ int getfile(char *fname, int lockfl, int check_dir) {
  *          read the file into that buffer
  * We just use the first we come to....
  */
-    char *testp = get_realpath(lfn);
+    const char *testp = get_realpath(lfn);
     int found = 0;
     int moved_to = 0;
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
@@ -851,7 +857,7 @@ exit:
  * The number of lines written is displayed.
  * Most of the grief is error checking of some sort.
  */
-int writeout(char *fn) {
+int writeout(const char *fn) {
     int s;
     struct line *lp;
     int nline;

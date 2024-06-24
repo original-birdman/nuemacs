@@ -132,30 +132,30 @@ static int echo_char(int c, int col) {
  * next character.
  */
 static int get_char(void) {
-    int c;                      /* A place to get a character   */
+    int c;                      /* A place to get a character */
 
 /* See if we're re-executing:
  * If so we want to play out all of the characters again, in order,
  * so that we replay the whole thing.
  */
 
-    if (cmd_reexecute >= 0)     /* Is there an offset?          */
+    if (cmd_reexecute >= 0)     /* Is there an offset? */
         if ((c = cmd_buff[cmd_reexecute++]) != 0)
-            return c;           /* Yes, return any character    */
+            return c;           /* Yes, return any character */
 
 /* We're not re-executing (or aren't any more).  Try for a real char */
 
-    cmd_reexecute = -1;     /* Say we're in real mode again     */
-    update(FALSE);          /* Pretty up the screen             */
+    cmd_reexecute = -1;     /* Say we're in real mode again */
+    update(FALSE);          /* Pretty up the screen */
 /* If we're getting too big ...  Complain loudly and bitterly */
     if (cmd_offset >= CMDBUFLEN - 1) {
         mlwrite_one("? command too long");
-        return metac;                   /* And force a quit */
+        return metac;       /* And force a quit */
     }
-    c = tgetc();            /* Get the next literal character      */
-    cmd_buff[cmd_offset++] = c;     /* Save the char for next time */
+    c = tgetc();            /* Get the next literal character */
+    cmd_buff[cmd_offset++] = c; /* Save the char for next time */
     terminate_str(cmd_buff + cmd_offset);
-    return c;               /* Return the character                */
+    return c;               /* Return the character */
 }
 
 /* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -239,7 +239,7 @@ int simulate_incr(int f, int n) {
  */
 static void activate_cmd(void) {
     if (!ii->pdg[0].uproc) return;  /* Run first on list - if there */
-    char *prev_execstr = execstr;   /* In case we are already running */
+    const char *prev_execstr = execstr; /* In case we are already running */
     execstr = ii->pdg[0].uproc;     /* Fudge name in as command line */
     int prev_inreex = inreex;
     inreex = FALSE;
@@ -341,7 +341,7 @@ static void hilite(int c, int col) {
         }
     }
     else {
-        cw = utf8char_width(c);   /* Set it back the correct amount */
+        cw = utf8char_width(c); /* Set it back the correct amount */
     }
     col -= cw;
 
@@ -380,13 +380,13 @@ static void hilite(int c, int col) {
  */
 static int isearch(int f, int n) {
     UNUSED(f);
-    int status;             /* Search status */
-    int col;                /* prompt column */
+    int status;     /* Search status */
+    int col;        /* prompt column */
     int cpos;       /* character number in search string  */
     int c;          /* current input character */
 
 /* GGR - Allow for a trailing NUL */
-    db_strdef(pat_save);       /* Saved copy of the old pattern str  */
+    db_strdef(pat_save);    /* Saved copy of the old pattern str  */
     struct line *curline;   /* Current line on entry              */
     int curoff;             /* Current offset on entry            */
     int init_direction;     /* The initial search direction       */
@@ -497,19 +497,19 @@ start_over:
             }
             --cmd_offset;           /* Back up over Rubout  */
             terminate_str(cmd_buff + --cmd_offset); /* Yes, delete last char */
-            curwp->w.dotp = curline;        /* Reset the line pointer */
+            curwp->w.dotp = curline;    /* Reset the line pointer */
             curwp->w.doto = curoff; /*  and the offset       */
             n = init_direction;     /* Reset search direction */
-            db_set(pat, db_val(pat_save)); /* Restore old search str */
+            db_set(pat, db_val(pat_save));  /* Restore old search str */
             cmd_reexecute = 0;      /* Start the whole mess over  */
             goto start_over;        /* Let it take care of itself */
 
 /* Presumably a quasi-normal character comes here.
  * This can include control-chars not explicitly handled.
  */
-        default:                /* All other chars        */
+        default:            /* All other chars        */
             break;
-        }               /* Switch */
+        }   /* end switch */
 
 /* I guess we got something to search for, so search for it */
 

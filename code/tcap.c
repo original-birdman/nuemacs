@@ -77,7 +77,7 @@ struct terminal term = {
     tcapfcol,
     tcapbcol,
 #endif
-    NULL,              /* set dynamically at open time */
+    NULL,               /* Set dynamically at open time */
 /* "Constants" (== variables that are set)
  * The first eight values are set dynamically at open/resize time.
  */
@@ -141,7 +141,7 @@ static void tcapopen(void) {
     SE = tgetstr("se", &p);
     SO = tgetstr("so", &p);
     revexist = (SO != NULL);
-    if (tgetnum("sg") > 0) {    /* can reverse be used? P.K. */
+    if (tgetnum("sg") > 0) {    /* Can reverse be used? P.K. */
         revexist = FALSE;
         SE = NULL;
         SO = NULL;

@@ -33,7 +33,7 @@ static int numlocks;            /* # of current locks active */
  * char *fname;         file to unlock
  */
 static int unlock(char *fname) {
-    char *locker;   /* undolock return string */
+    const char *locker; /* undolock return string */
 
 /* Unlock and return */
 
@@ -54,14 +54,14 @@ static int unlock(char *fname) {
  *
  * char *fname;         file name to lock
  */
-int lock(char *fname) {
-    char *locker;       /* lock error message */
+int lock(const char *fname) {
+    const char *locker; /* lock error message */
     int status;         /* return status      */
 
 /* Attempt to lock the file */
 
     locker = dolock(fname);
-    if (locker == NULL)     /* we win */
+    if (locker == NULL) /* We win */
         return TRUE;
 
 /* File failed...abort */
@@ -76,7 +76,7 @@ int lock(char *fname) {
     db_set(glb_db, "File in use by ");
     db_append(glb_db, locker);
     db_append(glb_db, ", override?");
-    status = mlyesno(db_val(glb_db));    /* Ask them */
+    status = mlyesno(db_val(glb_db));   /* Ask them */
     if (status == TRUE) return FALSE;
     else                return ABORT;
 }
@@ -90,7 +90,7 @@ int lock(char *fname) {
  *
  * char *fname;                 file to check for a lock
  */
-int lockchk(char *fname) {
+int lockchk(const char *fname) {
     int i;          /* loop indexes */
     int status;     /* return status */
 /* GGR

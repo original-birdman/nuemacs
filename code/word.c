@@ -264,8 +264,8 @@ int lowerword(int f, int n) {
  */
 int capword(int f, int n) {
     UNUSED(f);
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
-        return rdonly();        /* we are in read only mode     */
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
+        return rdonly();            /* we are in read only mode     */
     if (n < 0) return FALSE;
     while (n--) {
         while (inword(NULL) == FALSE) {
@@ -877,7 +877,7 @@ static int filler(int indent, int width, int justify) {
                start_offs = indent;        /* Spaces are 1-byte chars */
             }
         }
-        else if (!all_done) {                   /* Not wrapping */
+        else if (!all_done) {               /* Not wrapping */
 /* Handle any defined punctuation characters.
  * Note that this does not need to be done for the last word on the line,
  * which happens at any wrap point and at end of paragraph.
@@ -900,8 +900,8 @@ static int filler(int indent, int width, int justify) {
         }
         if (all_done) {                             /* Tidy up */
             if (curwp->w.dotp != curbp->b_linep) {
-                curwp->w.dotp = lforw(curwp->w.dotp);   /* End at the start... */
-                curwp->w.doto = 0;                      /* ...of next line */
+                curwp->w.dotp = lforw(curwp->w.dotp); /* End at the start... */
+                curwp->w.doto = 0;                  /* ...of next line */
             }
             break;                                  /* All done */
         }

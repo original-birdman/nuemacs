@@ -171,7 +171,7 @@ int copyregion(int f, int n) {
  * of executable size than a function...
  */
 #define ccr_Tail_Copy \
-    if (b_end < lused(linep)) {   /* Shuffle chars along... */ \
+    if (b_end < lused(linep)) {     /* Shuffle chars along... */ \
         memmove(ltext(linep)+b_offs+replen, \
             ltext(linep)+b_end, \
             lused(linep)-b_end); \
@@ -181,7 +181,7 @@ static int casechange_region(int newcase) { /* The handling function */
     struct region region;
     int s;
 
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
         return rdonly();            /* we are in read only mode     */
     if ((s = getregion(&region)) != TRUE) return s;
 
@@ -256,9 +256,9 @@ int narrow(int f, int n) {
     }
 
 /* Find the boundaries of the current region */
-    struct window orig_wp = *curwp;         /* Copy original struct */
+    struct window orig_wp = *curwp; /* Copy original struct */
     if ((status = getregion(&creg)) != TRUE) {
-        *curwp = orig_wp;       /* restore original struct */
+        *curwp = orig_wp;           /* Restore original struct */
         return(status);
     }
 
@@ -328,14 +328,14 @@ int narrow(int f, int n) {
     return(TRUE);
 }
 
-/* widen-from-region (^X->) restores a narrowed region     */
+/* widen-from-region (^X->) restores a narrowed region */
 
 int widen(int f, int n) {
     UNUSED(f); UNUSED(n);
     struct line *lp;
 
 /* Find the proper buffer and make sure we are narrow */
-    struct buffer *bp = curwp->w_bufp;     /* find the right buffer */
+    struct buffer *bp = curwp->w_bufp;  /* find the right buffer */
     if ((bp->b_flag&BFNAROW) == 0) {
         mlwrite_one("This buffer is not narrowed");
         return(FALSE);

@@ -21,7 +21,7 @@
 
 /* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
 
-int set_buffer_name(char *bufn) {
+int set_buffer_name(const char *bufn) {
 
 /* Provided no buffer other than curbp has this name, set it for curbp.
  * Return whether the name was set.
@@ -129,7 +129,7 @@ int zotbuf(struct buffer *bp) {
     }
     if ((s = bclear(bp)) != TRUE)   /* Blow text away.      */
         return s;
-    Xfree((char *) bp->b_linep);    /* Release header line (no l_text here) */
+    Xfree(bp->b_linep);             /* Release header line (no l_text here) */
     bp1 = NULL;                     /* Find the header.     */
     bp2 = bheadp;
     while (bp2 != bp) {
@@ -149,7 +149,7 @@ int zotbuf(struct buffer *bp) {
     Xfree(bp->b_key);
 
 /* Release buffer block */
-    Xfree((char *) bp);
+    Xfree(bp);
 
 /* Remove any per-macro-level marks */
     per_macro_level_remove(bp);
@@ -239,7 +239,7 @@ static struct buffer buf_templ = {
  * If the buffer is not found and the "cflag" is TRUE, create it.
  * The "bflag" is the settings for the flags in the buffer.
  */
-struct buffer *bfind(char *bname, int cflag, int bflag) {
+struct buffer *bfind(const char *bname, int cflag, int bflag) {
     struct buffer *bp;
     struct buffer *sb;      /* buffer to insert after */
     struct line *lp;
@@ -305,7 +305,7 @@ int usebuffer(int f, int n) {
     UNUSED(n);
     struct buffer *bp;
     int s;
-    char *fbuf;
+    const char *fbuf;
 
     db_strdef(bufn);
 
@@ -391,7 +391,7 @@ int killbuffer(int f, int n) {
             (db_charat(bufn, 1) != '/'))
             ;
         else {
-            s = TRUE;           /* by doing nothing.    */
+            s = TRUE;   /* By doing nothing.    */
             goto exit;
         }
     }
@@ -422,7 +422,7 @@ ask:
     if (!set_buffer_name(db_val(bufn))) {
         mlforce("%s already exists!", db_val(bufn));
         sleep(1);
-        goto ask;       /* try again */
+        goto ask;       /* Try again */
     }
 
     update_val(curbp->b_bname, db_val(bufn));   /* Copy name to structure */
@@ -442,13 +442,13 @@ exit:
  * buffer pointer.
  * ALSO the caller MUST NOT PUT ANY NEWLINE IN THE TEXT!!
  */
-void addline_to_anyb(char *text, struct buffer *bp) {
+void addline_to_anyb(const char *text, struct buffer *bp) {
     struct line *lp;
     int ntext;
 
     ntext = strlen(text);
     lp = lalloc();
-    db_setn(lp->l_, text, ntext);
+    db_setn(ldb(lp), text, ntext);
     bp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
     lp->l_bp = bp->b_linep->l_bp;
     bp->b_linep->l_bp = lp;
@@ -477,7 +477,7 @@ static int makelist(int iflag) {
     struct line *lp;
     int s;
     int i;
-    ue64I_t nbytes;                     /* # of bytes in current buffer */
+    ue64I_t nbytes;     /* # of bytes in current buffer */
     int mcheck;
 
     char *line = Xmalloc(term.t_mcol);
@@ -628,7 +628,7 @@ static int makelist(int iflag) {
         bp = bp->b_bufp;
     }
     Xfree(line);
-    return TRUE;            /* All done             */
+    return TRUE;        /* All done             */
 }
 
 /* List all of the active buffers.  First update the special
@@ -698,14 +698,14 @@ int unmark(int f, int n) {
 /* Set the force_mode settings.
  *
  */
-char do_force_mode(char *opt) {    /* Returns 0 if all OK */
+char do_force_mode(const char *opt) {    /* Returns 0 if all OK */
 
 /* Are we just changing what is there, or setting an absolute value? */
 
     if (opt[0] == '+') opt++;      /* Skip the + */
     else force_mode_off = force_mode_on = 0;
 
-    char *op = opt;
+    const char *op = opt;
     char c;
     int *word_to_set, *word_to_notset, bit_to_set;
     while ((c = *op++)) {
@@ -766,7 +766,7 @@ void free_buffer(void) {
     struct buffer *nextbp;
     struct line *lp, *nextlp;
     for (struct buffer *bp = bheadp; bp; bp = nextbp) {
-        nextbp = bp->b_bufp;    /* Get it while we can */
+        nextbp = bp->b_bufp;                /* Get it while we can */
         if (bp->b_flag & BFNAROW) {
             struct buffer *obp = curwp->w_bufp;
             curwp->w_bufp = bp;             /* Ensure this is current */

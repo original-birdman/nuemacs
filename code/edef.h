@@ -129,7 +129,7 @@ extern linked_items *macro_pin_headp;
 extern int fillcol;             /* Fill column                  */
 extern int *kbdm;               /* Holds keyboard macro data    */
 extern int n_kbdm;              /* Allocated size of kbdm       */
-extern char *execstr;           /* pointer to string to execute */
+extern const char *execstr;     /* pointer to string to execute */
 extern int eolexist;            /* does clear to EOL exist?     */
 extern int revexist;            /* does reverse video exist?    */
 extern int flickcode;           /* do flicker supression?       */
@@ -274,7 +274,7 @@ extern int rxargs;
 
 /* To allow macro procedures to get args from C-code */
 
-extern char *userproc_arg;
+extern const char *userproc_arg;
 
 /* Are we still processing the command line? */
 extern int comline_processing;

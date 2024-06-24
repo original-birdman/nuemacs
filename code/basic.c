@@ -27,8 +27,8 @@
  * It's not empty if we have any *byte* other than a space or tab
  */
 static int curline_empty(void) {
-    char *cp = ltext(curwp->w.dotp);
-    char *ep = cp + lused(curwp->w.dotp);
+    const char *cp = ltext(curwp->w.dotp);
+    const char *ep = cp + lused(curwp->w.dotp);
     while (cp < ep) {
         if ((*cp != ' ') && (*cp != '\t')) return FALSE;
         cp++;
@@ -151,8 +151,7 @@ int backchar(int f, int n) {
     return (back_grapheme(n) > 0);
 }
 
-/* Move the cursor to the end of the current line. Trivial. No errors.
- */
+/* Move the cursor to the end of the current line. Trivial. No errors. */
 int gotoeol(int f, int n) {
     UNUSED(f); UNUSED(n);
     curwp->w.doto = lused(curwp->w.dotp);
@@ -242,7 +241,7 @@ int backline(int f, int n) {
 
 /* Move to a particular line.
  *
- * @n: The specified line position at the current buffer.
+ * n: The specified line position in the current buffer.
  */
 int gotoline(int f, int n) {
     int status;
@@ -298,17 +297,17 @@ static int at_whitespace(void) {
  */
 int gotoeop(int, int);      /* Forward declaration */
 int gotobop(int f, int n) {
-    int suc;        /* Bytes moved by last back_grapheme() */
+    int suc;                /* Bytes moved by last back_grapheme() */
 
-    if (n < 0)      /* the other way... */
+    if (n < 0)              /* the other way... */
         return gotoeop(f, -n);
 
-    while (n-- > 0) {   /* For each one asked for */
+    while (n-- > 0) {       /* For each one asked for */
 
 /* First scan back until we are in a word... */
         suc = back_grapheme(1);
         while ((suc > 0) && at_whitespace()) suc = back_grapheme(1);
-        curwp->w.doto = 0;          /* ...and go to the B-O-Line */
+        curwp->w.doto = 0;  /* ...and go to the B-O-Line */
 
 /* Then scan back until we hit an empty line or B-O-buffer... */
         while (lback(curwp->w.dotp) != curbp->b_linep) {
@@ -322,7 +321,7 @@ int gotobop(int f, int n) {
         suc = 1;
         while ((suc > 0) && at_whitespace()) suc = forw_grapheme(1);
     }
-    curwp->w_flag |= WFMOVE;        /* Force screen update */
+    curwp->w_flag |= WFMOVE;    /* Force screen update */
     return TRUE;
 }
 
@@ -332,17 +331,17 @@ int gotobop(int f, int n) {
  * int f, n;            default Flag & Numeric argument
  */
 int gotoeop(int f, int n) {
-    int suc;        /* Bytes moved by last back_grapheme() */
+    int suc;            /* Bytes moved by last back_grapheme() */
 
-    if (n < 0)      /* the other way... */
+    if (n < 0)          /* the other way... */
         return gotobop(f, -n);
 
-    while (n-- > 0) {  /* for each one asked for */
+    while (n-- > 0) {   /* for each one asked for */
 /* First scan forward until we are in/looking at a word... */
         suc = 1;
         while ((suc > 0) && at_whitespace()) suc = forw_grapheme(1);
-        curwp->w.doto = 0;          /* ...and go to the B-O-Line */
-        if (suc)                    /* of next line if not at EOF */
+        curwp->w.doto = 0;  /* ...and go to the B-O-Line */
+        if (suc)            /* in next line if not at EOF */
             curwp->w.dotp = lforw(curwp->w.dotp);
 
 /* Then scan forward until we hit an empty line or E-O-Buffer... */
@@ -356,9 +355,9 @@ int gotoeop(int f, int n) {
 /* ...and then backward until we are in a word */
         suc = back_grapheme(1);
         while ((suc > 0) && at_whitespace()) suc = back_grapheme(1);
-        curwp->w.doto = lused(curwp->w.dotp);    /* and to the EOL */
+        curwp->w.doto = lused(curwp->w.dotp);   /* and to the EOL */
     }
-    curwp->w_flag |= WFMOVE;  /* force screen update */
+    curwp->w_flag |= WFMOVE;    /* Force screen update */
     return TRUE;
 }
 
@@ -376,13 +375,13 @@ int forwpage(int f, int n) {
             if (overlap == 0) n = curwp->w_ntrows / 3 * 2;
             else              n = curwp->w_ntrows - overlap;
         else
-            n = curwp->w_ntrows - 2;   /* Default scroll. */
-        if (n <= 0)         /* Forget the overlap. */
-            n = 1;          /* If tiny window. */
+            n = curwp->w_ntrows - 2;    /* Default scroll. */
+        if (n <= 0)                     /* Forget the overlap */
+            n = 1;                      /* if tiny window. */
     } else if (n < 0)
         return backpage(f, -n);
-    else                        /* Convert from pages. */
-        n *= curwp->w_ntrows;   /* To lines. */
+    else                                /* Convert from pages */
+        n *= curwp->w_ntrows;           /* to lines. */
     lp = curwp->w_linep;
 
 /* GGR
@@ -415,13 +414,13 @@ int backpage(int f, int n) {
             else              n = curwp->w_ntrows - overlap;
         else
             n = curwp->w_ntrows - 2; /* Default scroll. */
-        if (n <= 0)     /* Don't blow up if the. */
-            n = 1;  /* Window is tiny. */
+        if (n <= 0)     /* Don't blow up if the */
+            n = 1;      /* window is tiny. */
     }
     else if (n < 0)
         return forwpage(f, -n);
-    else  /* Convert from pages. */
-        n *= curwp->w_ntrows;  /* To lines. */
+    else                        /* Convert from pages */
+        n *= curwp->w_ntrows;   /* to lines. */
 
     lp = curwp->w_linep;
     while (n-- && lback(lp) != curbp->b_linep) lp = lback(lp);

@@ -24,12 +24,6 @@
  * Call this at the end of any function that calls system().
  */
 static int orig_width, orig_height;
-#if 0
-static void get_orig_size(void) {
-    getscreensize(&orig_width, &orig_height);
-    return;
-}
-#endif
 #define get_orig_size() (getscreensize(&orig_width, &orig_height))
 
 static void check_for_resize(void) {
@@ -87,7 +81,7 @@ int spawncli(int f, int n) {
     return TRUE;
 }
 
-int bktoshell(int f, int n) {   /* suspend MicroEMACS and wait to wake up */
+int bktoshell(int f, int n) {   /* Suspend MicroEMACS and wait to wake up */
     UNUSED(f); UNUSED(n);
     vttidy();
 /******************************
@@ -204,7 +198,7 @@ int pipecmd(int f, int n) {
 
     get_orig_size();
 
-    db_strdef(line);           /* command line sent to shell */
+    db_strdef(line);        /* command line sent to shell */
     db_strdef(comfile);
 
 /* Get the command to pipe in */
@@ -277,7 +271,7 @@ int filter_buffer(int f, int n) {
 
     get_orig_size();
 
-    db_strdef(line);        /* command line send to shell */
+    db_strdef(line);         /* command line send to shell */
     db_strdef(tmpnam);       /* place to store real file name */
     db_strdef(fltin);
     db_strdef(fltout);
@@ -334,8 +328,8 @@ int filter_buffer(int f, int n) {
     }
 
 /* Reset file name */
-    update_val(bp->b_fname, db_val(tmpnam));    /* restore name */
-    bp->b_flag |= BFCHG;            /* flag it as changed */
+    update_val(bp->b_fname, db_val(tmpnam));    /* Restore name */
+    bp->b_flag |= BFCHG;            /* Flag it as changed */
 
 /* If this is a translation table, remove any compiled data */
 

@@ -202,8 +202,8 @@ int setccol(int pos) {
         i += utf8_to_unicode(ltext(dlp), i, len, &c);
         update_screenpos_for_char(col, c);
     }
-    curwp->w.doto = i;              /* Set us at the new position... */
-    return col >= pos;              /* ..and tell whether we made it */
+    curwp->w.doto = i;          /* Set us at the new position... */
+    return col >= pos;          /* ..and tell whether we made it */
 }
 
 /* Twiddle the two characters on either side of dot. If dot is at the end of
@@ -224,7 +224,7 @@ int twiddle(int f, int n) {
 
     dotp = curwp->w.dotp;
     int maxlen = lused(dotp);
-    char *l_buf = ltext(dotp);
+    const char *l_buf = ltext(dotp);
 
     while (n-- > 0) {
         int reset_col = 0;
@@ -258,15 +258,16 @@ int twiddle(int f, int n) {
         lch_nb = rch_st - lch_st;
 
 /* We know where the two characters start, and how many bytes each has.
- * So we take a copy of each and put them back in the reverse order.
+ * So we copy them into a buffer in the reverse order and then 
+ * overwrite the original string with this new one.
  * If we are twiddling *around* point (i.e. not GGR_TWIDDLE mode and not
  * at eol) we might now be in the "middle" of a character, so we move to
  * the end of the pair (meaning we advance as we twiddle).
  */
-        memcpy(rch_buf, l_buf + rch_st, rch_nb);
-        memcpy(lch_buf, l_buf + lch_st, lch_nb);
-        memcpy(l_buf+lch_st, rch_buf, rch_nb);
-        memcpy(l_buf+lch_st+rch_nb, lch_buf, lch_nb);
+        db_setn(glb_db, rch_buf, rch_nb);
+        db_appendn(glb_db, lch_buf, lch_nb);
+        db_overwriten_at(ldb(dotp), db_val(glb_db), db_len(glb_db), lch_st);
+
         if (reset_col) curwp->w.doto = lch_st + lch_nb + rch_nb;
     }
     lchange(WFEDIT);
@@ -393,15 +394,15 @@ int entab(int f, int n) {
     int ccol;       /* current cursor column */
     char cchar;     /* current character */
 
-    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
-          return rdonly();          /* we are in read only mode    */
+    if (curbp->b_mode & MDVIEW) /* Don't allow this command if */
+          return rdonly();      /* we are in read only mode    */
 
     if (f == FALSE) n = 1;
 
 /* Loop thru entabbing n lines */
     inc = ((n > 0) ? 1 : -1);
     while (n) {
-        curwp->w.doto = 0;      /* start at the beginning */
+        curwp->w.doto = 0;      /* Start at the beginning */
 
 /* Entab the entire current line */
         fspace = -1;
@@ -461,8 +462,8 @@ int trim(int f, int n) {
     int length;             /* current length */
     int inc;                /* increment to next line [sgn(n)] */
 
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
-          return rdonly();          /* we are in read only mode    */
+    if (curbp->b_mode & MDVIEW) /* don't allow this command if */
+          return rdonly();      /* we are in read only mode    */
 
     if (f == FALSE) n = 1;
 
@@ -479,7 +480,7 @@ int trim(int f, int n) {
                   break;
             length--;
         }
-        lused(lp) = length;
+        db_truncate(ldb(lp), length);
 
 /* Advance/or back to the next line */
         forwline(TRUE, inc);
@@ -513,9 +514,9 @@ int openline(int f, int n) {
 
 /* Insert a newline and indentation for C */
 static int cinsert(void) {
-    char *cptr;     /* string pointer into text to copy */
-    int tptr;       /* index to scan into line */
-    int bracef;     /* was there a brace at the end of line? */
+    const char *cptr;   /* string pointer into text to copy */
+    int tptr;           /* index to scan into line */
+    int bracef;         /* was there a brace at the end of line? */
     int i;
 
 /* GGR fix - nothing fancy if we're at left hand edge */
@@ -739,7 +740,7 @@ int forwdel(int f, int n) {
     return chardel(f, n);
 }
 /* Delete backwards. This just sends the negated count to chardel.
- * which know to move backward befoire doing a forward delete.
+ * which know to move backward before doing a forward delete.
  */
 int backdel(int f, int n) {
     return chardel(f, -n);
@@ -804,7 +805,7 @@ static int adjustmode(int kind, int global) {
     int uflag;      /* was modename uppercase?      */
 #endif
     char prompt[50];    /* string to prompt user with */
-    db_strdef(cbuf);       /* buffer to recieve mode name into */
+    db_strdef(cbuf);    /* buffer to recieve mode name into */
 
 /* Build the proper prompt string */
     sprintf(prompt, "%sode to %s: ", (global)? "Global m": "M",
@@ -935,7 +936,7 @@ int clrmes(int f, int n) {
 int writemsg(int f, int n) {
     UNUSED(f);
     int status;
-    db_strdef(buf);        /* buffer to receive message into */
+    db_strdef(buf);     /* buffer to receive message into */
 
     if ((status =
      mlreply("Message to write: ", &buf, CMPLT_NONE)) != TRUE)
@@ -960,9 +961,9 @@ enum istr_type { RAW_STR, COOKED_STR };
 static int string_getter(int f, int n, enum istr_type call_type) {
     int status;             /* status return code */
     char *prompt;
-    char *istrp;            /* Final string to insert */
+    const char *istrp;      /* Final string to insert */
 
-    db_strdef(tstring);        /* string to add */
+    db_strdef(tstring);     /* string to add */
     db_strdef(tok);
 
 /* Ask for string to insert, using the requested function.
@@ -984,7 +985,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
  *  ^R check1 plus some more 2
  */
     if (call_type == COOKED_STR) {
-        char *vp;
+        const char *vp;
         db_strdef(nstring);
         while(*execstr != '\0') {
             execstr = token(execstr, &tok);
@@ -1103,7 +1104,7 @@ int leaveone(int f, int n) {
 int whitedelete(int f, int n) {
     UNUSED(f);
 
-    char *lp, *rp, *stp, *etp;
+    const char *lp, *rp, *stp, *etp;
     stp = ltext(curwp->w.dotp);         /* Start of line text */
     etp = stp + lused(curwp->w.dotp);   /* End of line text */
     lp = rp = stp + curwp->w.doto;      /* Working pointers */
@@ -1141,7 +1142,7 @@ int whitedelete(int f, int n) {
     int to_delete = rp - lp;
     if (to_delete <= 0) return (n == -1);
     curwp->w.doto = lp - stp;       /* Move dot to left-most space */
-    ldelete(to_delete, FALSE);      /* Delete the in one go */
+    ldelete(to_delete, FALSE);      /* Delete them in one go */
     return TRUE;
 }
 
@@ -1154,8 +1155,8 @@ int quotedcount(int f, int n) {
     int count;
     int doubles;
 
-    if (curbp->b_mode&MDVIEW)       /* don't allow this command if  */
-         return(rdonly());          /* we are in read only mode     */
+    if (curbp->b_mode&MDVIEW)   /* don't allow this command if  */
+         return(rdonly());      /* we are in read only mode     */
     doubles = 0;
     savedpos = curwp->w.doto;
     while (curwp->w.doto > 0) {
@@ -1205,7 +1206,7 @@ int re_args_exec(int f, int n) {
     status = mlreply("exec set: ", &buf, CMPLT_NONE);
     if (status != TRUE) goto exit;  /* Only act on +ve response */
 
-    char *rp = db_val(buf);
+    const char *rp = db_val(buf);
     int mode = RX_ON;
     int orig_rxargs = rxargs;
     while(*rp != '\0') {
@@ -1295,15 +1296,15 @@ int simulate(int f, int n) {
                  db_len(input), &c);
             switch(c) {
 /* Handle Esc(Meta), CtlX and control chars */
-            case 0x1b:          /* Escape */
+            case 0x1b:      /* Escape */
                 mask |= META;
                 continue;
-            case 0x18:          /* CtlX */
+            case 0x18:      /* CtlX */
                 mask |= CTLX;
                 continue;
             default:
                 if (c <= 0x1F) c = CONTROL | (c + '@');
-                else    /* If any mask is set, force Upper case */
+                else        /* If any mask is set, force Upper case */
                     if (mask) c = (c & ~DIFCASE);
             }
             status = execute(c|mask, 0, 1);

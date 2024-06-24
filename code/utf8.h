@@ -17,7 +17,8 @@ typedef long long ue64I_t;
 #define MAX_UTF8_CHAR 0x0010FFFF
 typedef unsigned int unicode_t;
 
-unsigned utf8_to_unicode(char *line, unsigned index, unsigned len, unicode_t *res);
+unsigned utf8_to_unicode(const char *line, unsigned index, unsigned len,
+     unicode_t *res);
 unsigned unicode_to_utf8(unsigned int c, char *utf8);
 
 /* GGR
@@ -61,11 +62,11 @@ struct mstr {
 
 #ifndef UTF8_C
 
-int next_utf8_offset(char *, int, int, int);
-int prev_utf8_offset(char *, int, int);
+int next_utf8_offset(const char *, int, int, int);
+int prev_utf8_offset(const char *, int, int);
 
-int build_next_grapheme(char *, int, int, struct grapheme *, int);
-int build_prev_grapheme(char *, int, int, struct grapheme *, int);
+int build_next_grapheme(const char *, int, int, struct grapheme *, int);
+int build_prev_grapheme(const char *, int, int, struct grapheme *, int);
 
 int same_grapheme(struct grapheme *, struct grapheme *, int);
 
@@ -73,14 +74,13 @@ int combining_type(unicode_t);
 int char_replace(int, int);
 unicode_t display_for(unicode_t);
 
-int utf8_to_uclen(char *, int, int);
+int utf8_to_uclen(const char *, int, int);
 
-int nocasecmp_utf8(char *, int, int, char *, int, int);
-int unicode_back_utf8(int, char *, int);
+int nocasecmp_utf8(const char *, int, int, const char *, int, int);
+int unicode_back_utf8(int, const char *, int);
 int utf8char_width(unicode_t c);
 
-void utf8_recase(int , char *, int, struct mstr*);
-char *tolower_utf8(char *, int, int *, int *);
+void utf8_recase(int , const char *, int, struct mstr*);
 
 #endif
 

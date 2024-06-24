@@ -74,7 +74,7 @@ static void pop_head(linked_items **headp) {
  * char *src,       source string
  * db *tok;       destination token dynamic string
  */
-char *token(char *src, db *tok) {
+const char *token(const char *src, db *tok) {
     int quotef;     /* is the current string quoted? */
     char c;         /* temporary character */
 
@@ -143,7 +143,7 @@ char *token(char *src, db *tok) {
  * int size                 size of the buffer
  * int ctype                type of context completion if we prompt
  */
-int nextarg(char *prompt, db *buffer, enum cmplt_type ctype) {
+int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
 
 /* If we are interactive, go get it! */
     if (clexec == FALSE) return getstring(prompt, buffer, ctype);
@@ -187,13 +187,13 @@ int macarg(db *tok) {
  *
  * char *cline;         command line to execute
  */
-static int docmd(char *cline) {
+static int docmd(const char *cline) {
     int f;                  /* default argument flag */
     ue64I_t n;              /* numeric repeat value */
     int status;             /* return status of function */
     int oldcle;             /* old contents of clexec flag */
-    char *oldestr;          /* original exec string */
-    db_strdef(tkn);            /* next token off of command line */
+    const char *oldestr;    /* original exec string */
+    db_strdef(tkn);         /* next token off of command line */
 
 /* If we are scanning and not executing..go back here */
     if (execlevel) return TRUE;
@@ -212,7 +212,7 @@ static int docmd(char *cline) {
     f = FALSE;
     n = 1;
 
-    if ((status = macarg(&tkn)) != TRUE) {  /* and grab the first token */
+    if ((status = macarg(&tkn)) != TRUE) {  /* Grab the first token */
         goto final_exit;
     }
 
@@ -255,7 +255,7 @@ static int docmd(char *cline) {
  * as that will get tokenized...
  */
     if (strcmp(db_val(tkn), "reexecute") == 0) {
-        Xfree(this_line_seen);   /* Drop the "reexecute" */
+        Xfree(this_line_seen);  /* Drop the "reexecute" */
         this_line_seen = Xstrdup(prev_line_seen);
         status = TRUE;
         while (n-- && status) status = docmd(prev_line_seen);
@@ -375,7 +375,7 @@ static db_strdef(prev_cmd);
 int execcmd(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
-    db_strdef(thecmd);         /* string holding command to execute */
+    db_strdef(thecmd);      /* string holding command to execute */
 
 /* Re-use last obtained command? */
     if (inreex && (db_charat(prev_cmd, 0) != '\0') && RXARG(execcmd))
@@ -388,7 +388,7 @@ int execcmd(int f, int n) {
     }
     execlevel = 0;
     status = docmd(db_val(thecmd));
-    db_set(prev_cmd, db_val(thecmd)); /* Now we remember this... */
+    db_set(prev_cmd, db_val(thecmd));   /* Now we remember this... */
 
 exit:
     db_free(thecmd);
@@ -454,7 +454,7 @@ void ptt_free(struct buffer *bp) {
         ptr = fwdptr;
     }
     bp->ptt_headp = NULL;
-    if (ptt == bp) ptt = NULL;      /* Clear if was in use */
+    if (ptt == bp) ptt = NULL;  /* Clear if was in use */
     return;
 }
 
@@ -467,7 +467,7 @@ void ptt_free(struct buffer *bp) {
 /* Get the 2 grapheme display code for modeline display when this PTT
  * is active.
  */
-static char* get_display_code(char *buf) {
+static const char* get_display_code(const char *buf) {
     static char ml_display_code[32];
 
     int mlen = strlen(buf);
@@ -482,7 +482,7 @@ static char* get_display_code(char *buf) {
  * Compile the contents of a buffer into a ptt_remap structure
  */
 static int ptt_compile(struct buffer *bp) {
-    char *ml_display_code;
+    const char *ml_display_code;
 
     db_strdef(lbuf);
     db_strdef(tok);
@@ -503,12 +503,12 @@ static int ptt_compile(struct buffer *bp) {
 /* The rest of the handling expects text, not binary, so no bcopy here */
         db_setn(lbuf, ltext(lp), lused(lp));
 /* Provided we don't change lbuf, we can use rp */
-        char *rp = db_val(lbuf);
+        const char *rp = db_val(lbuf);
         rp = token(rp, &tok);
 /* Ignore any entry with a newline in the from text */
         if (strchr(db_val(tok), '\n')) continue;
         int bow;
-        char *from_start;
+        const char *from_start;
         if (db_charat(tok, 0) == '^') {
             bow = 1;
             from_start = db_val(tok)+1;
@@ -519,7 +519,7 @@ static int ptt_compile(struct buffer *bp) {
         }
         db_set(from_string, from_start);
         if (!db_cmpn(from_string, "caseset-", strlen("caseset-"))) {
-            char *test_opt = db_val(from_string) + strlen("caseset-");
+            const char *test_opt = db_val(from_string) + strlen("caseset-");
             if (!strcmp("on", test_opt)) {
                 caseset = CASESET_ON;
                 continue;
@@ -606,7 +606,7 @@ static int ptt_compile(struct buffer *bp) {
             new->from_len_uc = uclen_utf8(new->from);
         }
 /* Input comes in as unicode chars, so we need to save the last one
- * *as unicode*!.
+ * *as Unicode*!.
  * We don't save the full grapheme, as you can only type one character
  * at a time.
  */
@@ -642,8 +642,8 @@ struct func_opts null_func_opts = { 0, 0, 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
-    db_strdef(bufn);           /* name of buffer to use */
-    db_strdef(pbufn);          /* name of proc buf to use */
+    db_strdef(bufn);        /* name of buffer to use */
+    db_strdef(pbufn);       /* name of proc buf to use */
 
 #ifdef NUMBERED_MACROS
 /* A numeric argument means its a numbered macro */
@@ -1018,12 +1018,11 @@ int dobuf(struct buffer *bp) {
     struct while_block *whlist;     /* ptr to !WHILE list */
     struct while_block *scanner;    /* ptr during scan */
     struct while_block *whtemp;     /* temporary ptr to a struct while_block */
-    char *einit = NULL; /* Initial val of eline - allocate on first call */
-    char *eline;        /* text of line to execute */
-    int return_stat = TRUE; /* What we expect to do */
+    char *einit = NULL;      /* Initial val of eline - set on first call */
+    int return_stat = TRUE;  /* What we expect to do */
     int orig_pause_key_index_update;    /* State on entry - to be restored */
 
-    db_strdef(tkn);            /* buffer to evaluate an expresion in */
+    db_strdef(tkn);         /* buffer to evaluate an expresion in */
     db_strdef(golabel);
 
 /* GGR - Only allow recursion up to a certain level... */
@@ -1068,7 +1067,7 @@ int dobuf(struct buffer *bp) {
     int in_store_mode = FALSE;
     while (lp != hlp) {
 /* Scan the current line */
-        eline = ltext(lp);
+        const char *eline = ltext(lp);
         i = lused(lp);
 
 /* Trim leading whitespace */
@@ -1146,7 +1145,7 @@ int dobuf(struct buffer *bp) {
         default:        /* Nothing yet for the rest...*/
             ;
         }
-nxtscan:          /* on to the next line */
+nxtscan:                /* On to the next line */
         lp = lp->l_fp;
     }
 
@@ -1163,12 +1162,14 @@ nxtscan:          /* on to the next line */
     lp = hlp->l_fp;
     int eilen = 0;
     while (lp != hlp) {
-/* Allocate eline and copy macro line to it */
+/* Allocate eline and copy macro line to it.
+ * We may edit it in this loop
+ */
+        char *eline;
         linlen = lused(lp);
         if (linlen == 0) goto onward;
         if (linlen > eilen) {
             einit = Xrealloc(einit, linlen + 1);
-            eline = einit;
             eilen = linlen;
         }
         eline = einit;
@@ -1314,8 +1315,8 @@ nxtscan:          /* on to the next line */
             case DGOTO:     /* GOTO directive */
 /* .....only if we are currently executing */
                 if (execlevel == 0) {
-/* Grab label to jump to.  Allow it to be evaulated. */
-                    eline = token(eline, &golabel);
+/* Grab label to jump to.  Allow it to be evaluated. */
+                    eline = (char *)token(eline, &golabel);
 /* Via temp copy, to avoid overwrite of own value */
                     db_set(golabel, strdupa(getval(db_val(golabel))));
                     linlen = db_len(golabel);
@@ -1481,7 +1482,7 @@ single_exit:
 
 /* Run (execute) a user-procedure stored in a buffer */
 
-int run_user_proc(char *procname, int forced, int rpts) {
+int run_user_proc(const char *procname, int forced, int rpts) {
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
     db_strdef(bufn);
@@ -1629,8 +1630,8 @@ static db_strdef(prev_bufn);
  */
 int execproc(int f, int n) {
     UNUSED(f);
-    db_strdef(bufn);           /* name of buffer to execute */
-    int status;             /* status return */
+    db_strdef(bufn);    /* name of buffer to execute */
+    int status;         /* status return */
 
 /* Handle a reexecute */
 
@@ -1718,7 +1719,7 @@ exit:
  *
  * char *fname;         file name to execute
  */
-int dofile(char *fname) {
+int dofile(const char *fname) {
     struct buffer *bp;      /* buffer to place file to exeute */
     struct buffer *cb;      /* temp to hold current buf while we read */
     int status;             /* results of various calls */
@@ -1739,11 +1740,11 @@ int dofile(char *fname) {
  * the fixup_fname() output (its internal buffer) directly.
  */
     if ((status = readin(fixup_fname(fname), FALSE)) != TRUE) {
-        curbp = cb;     /* restore the current buffer */
+        curbp = cb;         /* restore the current buffer */
         pathexpand = TRUE;  /* GGR */
         return status;
     }
-    pathexpand = TRUE;          /* GGR */
+    pathexpand = TRUE;      /* GGR */
 
 /* Go execute it! */
     curbp = cb;             /* restore the current buffer */
@@ -1768,11 +1769,11 @@ static int include_level = 0;
 int execfile(int f, int n) {
     UNUSED(f);
     int status;             /* return status of name query */
-    char *fspec;            /* full file spec */
+    const char *fspec;      /* full file spec */
     int fail_ok = 0;
     int fns = 0;
 
-    db_strdef(fname);          /* name of file to execute */
+    db_strdef(fname);       /* name of file to execute */
 
 /* Re-use last obtained filename? */
     if (inreex && (db_len(prev_fname) > 0) && RXARG(execfile))

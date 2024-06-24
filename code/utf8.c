@@ -25,7 +25,7 @@
  *           So it can always return a +ve result, and a "valid" res.
  *  NOW CHANGED to return 0 and a unicode char of 0.
  */
-unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
+unsigned utf8_to_unicode(const char *line, unsigned index, unsigned len,
      unicode_t *res) {
     if (index >= len) {
         *res = UEM_NOCHAR;
@@ -77,7 +77,7 @@ unsigned utf8_to_unicode(char *line, unsigned index, unsigned len,
  * grapheme handling in display.c
  * The combi_range array is largish for a check-per-character but
  * since most expected characters are below the first entry it
- * will actually be quick - provided we make teh quick check first.
+ * will actually be quick - provided we make the quick check first.
  * A better(?) test might just be to get the utf8proc_category_string()
  * for the character and see whether it starts with "M" (Mn, Mc, Me).
  * But still include a lower range check at least....
@@ -157,8 +157,8 @@ unsigned unicode_to_utf8(unsigned int c, char *utf8) {
  *    check the following character(s) for having a non-zero Combining
  *    Class too.
  */
-int
- next_utf8_offset(char *buf, int offs, int max_offset, int grapheme_start) {
+int next_utf8_offset(const char *buf, int offs, int max_offset,
+     int grapheme_start) {
 
     if (offs >= max_offset) return -1;
     unicode_t c;
@@ -186,7 +186,7 @@ int
  * Optional (grapheme_start):
  *    if we find a Combining character we go back to the next previous one.
  */
-int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
+int prev_utf8_offset(const char *buf, int offset, int grapheme_start) {
 
     if (offset <= 0) return -1;
     unicode_t res = 0;
@@ -227,7 +227,7 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
                     offs = trypos;
                     got_utf8 = 1;
                 }
-                break;                      /* By default, now done */
+                break;  /* By default, now done */
             }
         }
         if (got_utf8) res = poss;
@@ -247,8 +247,8 @@ int prev_utf8_offset(char *buf, int offset, int grapheme_start) {
  * If offs > max -> UEM_NOCHAR
  * If no_ex_alloc is set, don't allocate any ex fields (but do count them).
  */
-int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc,
-    int no_ex_alloc) {
+int build_next_grapheme(const char *buf, int offs, int max,
+     struct grapheme *gc, int no_ex_alloc) {
     unicode_t c;
 
     gc->cdm = 0;    /* Must initialize these two... */
@@ -292,8 +292,8 @@ int build_next_grapheme(char *buf, int offs, int max, struct grapheme *gc,
  * So repeated calls move backwards through the buffer.
  * NOTE: that we don't handle the NUL-terminated buf string here!
  */
-int build_prev_grapheme(char *buf, int offs, int max, struct grapheme *gc,
-     int no_ex_alloc) {
+int build_prev_grapheme(const char *buf, int offs, int max,
+     struct grapheme *gc, int no_ex_alloc) {
     int final_off = prev_utf8_offset(buf, offs, TRUE);
     build_next_grapheme(buf, final_off, max, gc, no_ex_alloc);
     return final_off;
@@ -323,7 +323,7 @@ int char_replace(int f, int n) {
           &buf, CMPLT_NONE);
     if (status != TRUE) goto exit;  /* Only act on +ve response */
 
-    char *rp = db_val(buf);
+    const char *rp = db_val(buf);
     while(*rp != '\0') {
         rp = token(rp, &tok);
         if (db_len(tok) == 0) break;
@@ -345,20 +345,21 @@ int char_replace(int f, int n) {
             if (newval > 0 && newval <= 0x0010FFFF) repchar = newval;
         }
         else {  /* Assume a char to map (possibly a range) */
-            char *tp = db_val(tok);
+            const char *tp = db_val(tok);
+            char *fp;       /* First non-digit - hopefully a range */
             if (*tp == 'U' && *(tp+1) == '+') tp += 2;
-            unsigned int lowval = strtoul(tp, &tp, 16);
+            unsigned int lowval = strtoul(tp, &fp, 16);
             if (lowval & 0x80000000) continue;  /* Ignore any such... */
             unsigned int topval;
-            if (*tp == '-') {               /* We have a range */
-                tp++;                       /* Skip over the - */
-                if (*tp == 'U' && *(tp+1) == '+') tp += 2;
-                topval = strtol(tp, NULL, 16);
-                if (topval <= 0) continue;  /* Ignore this... */
+            if (*fp == '-') {                   /* We have a range */
+                fp++;                           /* Skip over the - */
+                if (*fp == 'U' && *(fp+1) == '+') fp += 2;
+                topval = strtol(fp, NULL, 16);
+                if (topval <= 0) continue;      /* Ignore this... */
             }
             else topval = lowval;
             if (lowval > topval || lowval > 0x0010FFFF || topval > 0x0010FFFF)
-                continue;                   /* Error - just ignore */
+                continue;                       /* Error - just ignore */
 
 /* Get the current size - we want one more, or two more if it's
  * currently empty
@@ -430,7 +431,7 @@ unicode_t display_for(unicode_t uc) {
 /* Common code for some #define length macros (see utf8.h).
  * If -ve maxxlen assume we have a NUL-terminated string.
  */
-unsigned int utf8_to_uclen(char *str, int count_graphemes,
+unsigned int utf8_to_uclen(const char *str, int count_graphemes,
      int maxlen) {
     unsigned int len = 0;
     int offs = 0;
@@ -445,8 +446,8 @@ unsigned int utf8_to_uclen(char *str, int count_graphemes,
 /* Compare two utf8 buffers case-insensitively.
  * This assumes that the second buffer is already lowercased.
  */
-int nocasecmp_utf8(char *tbuf, int t_start, int t_maxlen,
-              char *lbuf, int l_start, int l_maxlen) {
+int nocasecmp_utf8(const char *tbuf, int t_start, int t_maxlen,
+              const char *lbuf, int l_start, int l_maxlen) {
 
     unicode_t tc, lc;
     while (t_start < t_maxlen && l_start < l_maxlen) {
@@ -462,10 +463,10 @@ int nocasecmp_utf8(char *tbuf, int t_start, int t_maxlen,
  * chars.
  * Returns -1 if you try to go back beyond the start of the buffer.
  */
-int unicode_back_utf8(int n_back, char *buf, int offset) {
+int unicode_back_utf8(int n_back, const char *buf, int offset) {
 
     if (n_back <= 0) return offset;
-    while (offset) {       /* Until we reach the BOL */
+    while (offset) {        /* Until we reach the BOL */
         offset = prev_utf8_offset(buf, offset, FALSE);
         if (--n_back <= 0) break;
     }
@@ -476,7 +477,7 @@ int unicode_back_utf8(int n_back, char *buf, int offset) {
 /* ------------------------------------------------------------ */
 
 /* Called multiple times with differing args */
-static void add_to_res(struct mstr *mstr, char *buf, int nc, int incr) {
+static void add_to_res(struct mstr *mstr, const char *buf, int nc, int incr) {
 
     if ((mstr->utf8c + nc) >= mstr->alloc) {    /* Allow for NUL we'll add */
         mstr->alloc += incr;
@@ -495,7 +496,7 @@ static void add_to_res(struct mstr *mstr, char *buf, int nc, int incr) {
  * If the "want" key is not recognized it is treated as UTF8_TITLE
  * (which is more likely to show up with unexpected results...)
  */
-void utf8_recase(int want, char *in, int len, struct mstr *mstr) {
+void utf8_recase(int want, const char *in, int len, struct mstr *mstr) {
     utf8proc_int32_t (*caser)(utf8proc_int32_t);
 
 /* Set the case-mapping handler we wish to use */

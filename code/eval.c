@@ -51,7 +51,7 @@ static int seed;
  * int i;               integer to translate to a string
  */
 #define INTWIDTH        sizeof(ue64I_t) * 3
-char *ue_itoa(ue64I_t i) {
+const char *ue_itoa(ue64I_t i) {
     static char result[INTWIDTH+1];     /* Enough for resulting string */
 
     sprintf(result, "%lld", i);
@@ -62,7 +62,7 @@ char *ue_itoa(ue64I_t i) {
 /* Return the contents of the first item in the kill buffer
  */
 static db_strdef(kvalue);      /* fixed buffer for value */
-static char *getkill(void) {
+static const char *getkill(void) {
     db_set(kvalue, "");     /* default: no kill buffer....just null string */
     if (kbufh[0] != NULL) { /* else, copy in the contents...all of it */
         struct kill *kp = kbufh[0];
@@ -195,7 +195,7 @@ int nxti_usrvar(int ci) {
  *
  * char *val;           value to check for stol
  */
-int stol(char *val) {
+int stol(const char *val) {
 /* check for logical values */
     if (val[0] == 'F') return FALSE;
     if (val[0] == 'T') return TRUE;
@@ -231,11 +231,11 @@ static char *mklower(char *str) {
  * char *source;        source string to search
  * char *pattern;       string to look for
  */
-static int strindex(char *source, char *pattern) {
+static int strindex(const char *source, const char *pattern) {
     if (pattern[0] == '\0') return 0;
     char *locp = strstr(source, pattern);
     int res;
-    if (!locp) res = 0;  /* Not found */
+    if (!locp) res = 0; /* Not found */
 /* For a non-zero result, convert to graphemes */
     else res = glyphcount_utf8_array(source, locp - source) + 1;
     return res;
@@ -247,18 +247,18 @@ static int strindex(char *source, char *pattern) {
  * char *source;        source string to search
  * char *pattern;       string to look for
  */
-static int rstrindex(char *source, char *pattern) {
+static int rstrindex(const char *source, const char *pattern) {
     if (pattern[0] == '\0') return 0;
 
 /* We keep trying from one past where the last match matched
  * until we fail.
  */
-    char *locp = source - 1;
-    char *lastp = NULL;
+    const char *locp = source - 1;
+    const char *lastp = NULL;
 /* () around assigment used for result. */
     while((locp = strstr(locp+1, pattern))) lastp = locp;
     int res;
-    if (!lastp) res = 0;  /* Not found */
+    if (!lastp) res = 0;    /* Not found */
 /* For a non-zero result, convert to graphemes */
     else res = glyphcount_utf8_array(source, lastp - source) + 1;
     return res;
@@ -270,14 +270,14 @@ static int rstrindex(char *source, char *pattern) {
  * this logic will need to be changed.
  */
 #ifndef strndupa
- #define strndupa(s, n)                                     \
-  (__extension__                                            \
-    ({                                                      \
-      const char *__old = (s);                              \
-      size_t __len = (n);                                   \
-      char *__new = (char *) __builtin_alloca (__len + 1);  \
-      __new[__len] = '\0';                                  \
-      (char *) memcpy (__new, __old, __len);                \
+ #define strndupa(s, n)                             \
+  (__extension__                                    \
+    ({                                              \
+      const char *__old = (s);                      \
+      size_t __len = (n);                           \
+      char *__new = __builtin_alloca (__len + 1);   \
+      __new[__len] = '\0';                          \
+      memcpy (__new, __old, __len);                 \
     }))
 #endif
 
@@ -302,7 +302,8 @@ struct map_table {
 };
 
 static db_strdef(xlres);
-static char *xlat(char *source, char *lookup, char *trans) {
+static const char *xlat(const char *source, const char *lookup,
+     const char *trans) {
 
 /* There cannot be more mappings than the number of bytes in the lookup.
  * So allocate a table of that size now.
@@ -319,8 +320,8 @@ static char *xlat(char *source, char *lookup, char *trans) {
  * If there is any trans left when we run out of lookup, it's an
  * error.
  */
-    char *lp = lookup;
-    char *tp = trans;
+    const char *lp = lookup;
+    const char *tp = trans;
     struct map_table *wmtp = mtp;
     int mtlen = 0;
     while (*lp) {
@@ -375,7 +376,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
 
 /* Now copy the source to the result, mapping any matching bytes/strings */
 
-    char *sp = source;
+    const char *sp = source;
     db_clear(xlres);    /* Empty at start */
     while (*sp) {
         int ri = -1;    /* No matching index - yet */
@@ -419,7 +420,7 @@ static char *xlat(char *source, char *lookup, char *trans) {
  * a lookup method?
  */
 static db_strdef(pttres);
-static char *ptt_expand(db *str) {
+static const char *ptt_expand(db *str) {
     struct buffer *bp;
 
 /* If there is no active PTT, return the given text */
@@ -457,8 +458,8 @@ static char *ptt_expand(db *str) {
      }
 
 /* Is the final newline really part of the expansion? */
-    if (no_newline_in_pttex) {
-        db_val(pttres)[--db_len(pttres)] = '\0';
+    if (no_newline_in_pttex) {  /* Remove it */
+        db_setcharat(pttres, db_len(pttres)-1, '\0');
     }
     swbuffer(sbp, 0);
     return db_val(pttres);
@@ -488,7 +489,7 @@ static db_strdef(ue_buf);
 #define TMPL_CHAR "di ouxX eEfFgGaA c s p"
 #define TMPL_SKIP "hlqLjzZt"
 
-static char *ue_printf(char *fmt) {
+static const char *ue_printf(const char *fmt) {
     unicode_t c;
     db_strdef(nexttok);
     db_strdef(lue_buf);
@@ -499,7 +500,7 @@ static char *ue_printf(char *fmt) {
     if (bytes_togo == 0) goto finalize; /* Nothing else...clear line only */
 
     while (bytes_togo > 0) {
-        int used = utf8_to_unicode((char *)fmt, 0, bytes_togo, &c);
+        int used = utf8_to_unicode(fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
         if (c != '%') {         /* So copy in the *bytes*! */
             db_appendn(lue_buf, fmt, used);
@@ -563,10 +564,8 @@ static char *ue_printf(char *fmt) {
  * Note that we still need to format a string (not just copy it) as
  * it may have specified field width or justifiction.
  */
-        if (conv_char == 'p') {      /* Is this actually useful? */
-            db_sprintf(glb_db, db_val(t_fmt), &(db_val(nexttok)));
-        }
-        else if (conv_char == 's') {
+        if ((conv_char == 'p')  /* Not useful...but valid option */
+            || (conv_char == 's')) {
             db_sprintf(glb_db, db_val(t_fmt), db_val(nexttok));
         }
         else if (conv_char == 'c') {
@@ -608,15 +607,15 @@ finalize:
  * @fname: name of function to evaluate.
  */
 static db_strdef(funres);      /* Freed in free_eval(), if at all */
-static char *gtfun(char *fname) {
+static const char *gtfun(const char *fname) {
     char lfname[4];         /* What we lookup */
     unsigned int fnum;      /* index to function to eval */
     int status;             /* status */
-    char *tsp;              /* Temporary string pointer */
-    db_strdef(arg1);           /* Value of first argument */
-    db_strdef(arg2);           /* Value of second argument */
-    db_strdef(arg3);           /* Value of third argument */
-    char *retval;           /* Value to return */
+    const char *tsp;        /* Temporary string pointer */
+    db_strdef(arg1);        /* Value of first argument */
+    db_strdef(arg2);        /* Value of second argument */
+    db_strdef(arg3);        /* Value of third argument */
+    const char *retval;     /* Value to return */
     struct mstr csinfo;     /* Casing info structure */
     ue64I_t int1, int2 = 0;
 
@@ -723,7 +722,7 @@ static char *gtfun(char *fname) {
         case UFBOR:     retval = ue_itoa(int1 | int2); break;
         case UFBXOR:    retval = ue_itoa(int1 ^ int2); break;
         case UFBNOT:    retval = ue_itoa(~int1); break;
-        default:        retval = ue_itoa(int1);  /* UFBLIT */
+        default:        retval = ue_itoa(int1); /* UFBLIT */
         }
         goto exit;
 
@@ -741,7 +740,7 @@ static char *gtfun(char *fname) {
     case UFLEFT:
     case UFRIGHT:
     case UFMID: {
-        char *rp;       /* Where the return value starts */
+        const char *rp; /* Where the return value starts */
         int offs;       /* Eventually, how much to return */
         int inbytes = strlen(db_val(arg1));
         int gph_count = ue_atoi(db_val(arg2));
@@ -777,9 +776,9 @@ static char *gtfun(char *fname) {
                 if (!reloop) break;
 /* Set things up for UFMID's second pass through the loop */
                 reloop = FALSE;     /* Only reloop once */
-                rp = db_val(arg1) + offs;    /* What we have left */
+                rp = db_val(arg1) + offs;   /* What we have left */
                 offs = 0;
-                gph_count = ue_atoi(db_val(arg3)); /* How much to get */
+                gph_count = ue_atoi(db_val(arg3));  /* How much to get */
                 if (gph_count <= 0) {
                     retval = "";
                     goto exit;
@@ -823,7 +822,7 @@ static char *gtfun(char *fname) {
         retval = db_val(funres);
         goto exit;
     case UFESCAPE: {            /* Only need to escape ASCII chars */
-       char *ip = db_val(arg1); /* This is SHELL escaping... */
+        const char *ip = db_val(arg1);  /* This is SHELL escaping... */
         db_set(funres, "");  /* Start empty */
         while (*ip) {           /* Escape it? */
             if (strchr(" \"$&'()*;<>?\\`{|", *ip)) db_addch(funres, '\\');
@@ -840,9 +839,9 @@ static char *gtfun(char *fname) {
         goto exit;
 
 /* Miscellaneous functions */
-    case UFIND: { /* Evaluate the next arg via temporary execstr */
-        char *oldestr = execstr;
-        execstr = db_val(arg1);
+    case UFIND: {   /* Evaluate the next arg via temporary execstr */
+        const char *oldestr = execstr;
+        execstr = strdupa(db_val(arg1));    /* Writable copy */
         macarg(&funres);
         execstr = oldestr;
         retval = db_val(funres);
@@ -980,7 +979,7 @@ static char *gtfun(char *fname) {
         goto exit;
     }
     }
-    exit(-11);              /* never should get here */
+    exit(-11);          /* Should never get here */
 
 exit:
     db_free(arg1);
@@ -993,7 +992,7 @@ exit:
  *
  * char *vname;                 name of user variable to fetch
  */
-static char *gtusr(char *vname) {
+static const char *gtusr(const char *vname) {
     int vnum;       /* Ordinal number of user var */
 
 /* Scan the list looking for the user var name */
@@ -1016,7 +1015,7 @@ static char *gtusr(char *vname) {
  *
  * char *vname;                 name of user variable to fetch
  */
-static char *gtbvr(char *vname) {
+static const char *gtbvr(const char *vname) {
     int vnum;       /* Ordinal number of user var */
 
     if (!execbp || !execbp->bv) return errorm;
@@ -1036,8 +1035,8 @@ static char *gtbvr(char *vname) {
  *
  * This returns things which already exist, so doesn't need any db vars.
  */
-static char *gtenv(char *vname) {
-    unsigned int vnum;  /* ordinal number of var referenced */
+static const char *gtenv(const char *vname) {
+    unsigned int vnum;  /* Ordinal number of var referenced */
 
 /* Scan the list, looking for the referenced name */
     for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
@@ -1150,7 +1149,7 @@ static char *gtenv(char *vname) {
     }
     }
 
-    exit(-12);              /* again, we should never get here */
+    exit(-12);              /* Again, we should never get here */
 #ifdef __TINYC__
     return "";              /* Avoid "function might return no value" */
 #endif
@@ -1160,10 +1159,10 @@ static char *gtenv(char *vname) {
  *
  * char *token;         token to analyze
  */
-int gettyp(char *token) {
+int gettyp(const char *token) {
     char c;         /* first char in token */
 
-    if (!token || ((c = *token) == '\0')) return TKNUL; /* no blanks!!! */
+    if (!token || ((c = *token) == '\0')) return TKNUL; /* No blanks!!! */
 
 /* A numeric literal?
  * *GGR* allow for -ve ones too. -n and .nnn are numbers
@@ -1191,8 +1190,8 @@ int gettyp(char *token) {
  *
  * char *token;         token to evaluate
  */
-static db_strdef(valres);          /* static returned val */
-char *getval(char *token) {
+static db_strdef(valres);       /* static returned val */
+const char *getval(const char *token) {
     struct buffer *bp;          /* temp buffer pointer */
 
     switch (gettyp(token)) {
@@ -1200,7 +1199,7 @@ char *getval(char *token) {
         return "";
 
     case TKARG: {               /* interactive argument */
-        db_strdef(tbuf);           /* string buffer for some workings */
+        db_strdef(tbuf);        /* string buffer for some workings */
 
 /* We allow internal uemacs code to set the response of the next TKARG
  * (this was set-up so that the showdir user-proc could be given a
@@ -1288,7 +1287,8 @@ char *getval(char *token) {
  * @create: only add new entry for user and buffer vars if this is set
  *   (use to be @size: size of variable array., but that was always NVSIZE+1)
  */
-static void findvar(char *var, struct variable_description *vd, int vcreate) {
+static void findvar(const char *var, struct variable_description *vd,
+     int vcreate) {
     unsigned int vnum;  /* subscript in variable arrays */
     int vtype;          /* type to return */
 
@@ -1297,7 +1297,7 @@ fvar:
     vtype = -1;
     switch (var[0]) {
 
-    case '$':               /* Check for legal enviromnent var */
+    case '$':           /* Check for legal enviromnent var */
         for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
             if (strcmp(var+1, evl[vnum].var) == 0) {
                 vtype = TKENV;
@@ -1305,7 +1305,7 @@ fvar:
             }
         break;
 
-    case '%':               /* Check for existing legal user variable */
+    case '%':           /* Check for existing legal user variable */
         for (vnum = 0; vnum < MAXVARS; vnum++)
             if (strcmp(var+1, uv[vnum].name) == 0) {
                 vtype = TKVAR;
@@ -1366,7 +1366,7 @@ fvar:
  * @var: variable to set.
  * @value: value to set to.
  */
-static int svar(struct variable_description *var, char *value) {
+static int svar(struct variable_description *var, const char *value) {
     int vnum;       /* ordinal number of var referenced */
     int vtype;      /* type of variable to set */
     int status;     /* status return */
@@ -1457,7 +1457,7 @@ static int svar(struct variable_description *var, char *value) {
             break;
         case EVCURCHAR:
             srch_can_hunt = 0;
-            ldelgrapheme(1, FALSE);     /* delete 1 char-place */
+            ldelgrapheme(1, FALSE);     /* Delete 1 char-place */
             c = atoi(value);
             if (c == '\n') lnewline();
             else           linsert_uc(1, c);
@@ -1586,7 +1586,7 @@ static int svar(struct variable_description *var, char *value) {
  */
         case EVSDOPTS:
             if (strlen(value) > MAX_SD_OPTS) status = FALSE;
-            else            strcpy(showdir_opts, value);
+            else strcpy(showdir_opts, value);
             break;
         case EVGGROPTS:
             ggr_opts = ue_atoi(value);
@@ -1608,7 +1608,7 @@ static int svar(struct variable_description *var, char *value) {
                     break;
                 }
                 int key_fill = (new_mode & CRYPT_MODEMASK);
-                switch(key_fill) {      /* Check for a valid value */
+                switch(key_fill) {  /* Check for a valid value */
                 case CRYPT_RAW:
                 case CRYPT_FILL63:
                     break;
@@ -1634,10 +1634,10 @@ static int svar(struct variable_description *var, char *value) {
                          bp != NULL; bp = bp->b_bufp) {
                         if (bp->b_keylen > 0) {
                             crypt_mode = old_mode;
-                            myencrypt((char *) NULL, 0);
+                            myencrypt(NULL, 0);
                             myencrypt(bp->b_key, bp->b_keylen);
                             crypt_mode = new_mode;
-                            myencrypt((char *) NULL, 0);
+                            myencrypt(NULL, 0);
                             myencrypt(bp->b_key, bp->b_keylen);
                         }
                     }
@@ -1674,8 +1674,8 @@ int setvar(int f, int n) {
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
 
-    db_strdef(var);                    /* name of variable to set */
-    db_strdef(varval);                 /* value to set */
+    db_strdef(var);         /* name of variable to set */
+    db_strdef(varval);      /* value to set */
 
 /* First get the variable to set.. */
     if (clexec == FALSE) {
@@ -1777,7 +1777,7 @@ int delvar(int f, int n) {
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
 
-    db_strdef(var);                    /* Variable to delete */
+    db_strdef(var);         /* Variable to delete */
 
 /* First get the variable to delete.. */
     if (clexec == FALSE) {
@@ -1826,7 +1826,7 @@ void free_eval(void) {
     Xfree(envvar_index);
     Xfree(next_envvar_index);
     for (int i = 0; i < MAXVARS; i++) {
-        if (uv[i].name[0] == '\0') break;  /* End of list */
+        if (uv[i].name[0] == '\0') break;   /* End of list */
         Xfree(uv[i].value);
     }
     db_free(kvalue);

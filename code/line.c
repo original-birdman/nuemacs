@@ -134,7 +134,7 @@ int linsert_byte(int n, unsigned char c) {
     struct line *lp1;
     int doto;
 
-    if (curbp->b_mode & MDVIEW) /* don't allow this command if */
+    if (curbp->b_mode & MDVIEW) /* Don't allow this command if */
         return rdonly();        /* we are in read only mode    */
     lchange(WFEDIT);
     lp1 = curwp->w.dotp;        /* Current line         */
@@ -156,7 +156,7 @@ int linsert_byte(int n, unsigned char c) {
         backchar(0, 1);
         return TRUE;
     }
-    doto = curwp->w.doto;                   /* Save for later. */
+    doto = curwp->w.doto;       /* Save for later. */
 /* Insert the new text */
     db_insertn_at(lp1->l_, tbuf, n, doto);
 
@@ -203,7 +203,7 @@ int lnewline(void) {
     struct line *lp1;
     struct line *lp2;
 
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
          return rdonly();           /* we are in read only mode     */
     lchange(WFHARD | WFINS);
 
@@ -228,7 +228,7 @@ int lnewline(void) {
 /* Are we are already on the dummy last line?
  * If so, we need to put a new empty line in place before it (and stay
  * where we are - on the dummy end line).
- * NOTE: that if the mark or a pin is on teh klast line, it
+ * NOTE: that if the mark or a pin is on the last line, it
  *       will also move with it.
  */
     else if (curwp->w.dotp == curbp->b_linep) {
@@ -258,8 +258,8 @@ int lnewline(void) {
 
 /* Create a new line for the second part and copy the "trailing" text in */
     lp2 = lalloc();
-    db_setn(lp2->l_, ltext(lp1)+doto, xs);
-    lused(lp1) = doto;      /* valid text left in lp1 */
+    db_setn(ldb(lp2), ltext(lp1)+doto, xs);
+    db_truncate(ldb(lp1), doto);    /* valid text left in lp1 */
 
 /* Fix up back/forw pointers for the two lines */
 
@@ -427,7 +427,7 @@ static int ldelnewline(void) {
     struct line *lp1;
     struct line *lp2;
 
-    if (curbp->b_mode & MDVIEW)     /* don't allow this command if  */
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
         return rdonly();            /* we are in read only mode     */
     lp1 = curwp->w.dotp;
     lp2 = lp1->l_fp;
@@ -519,9 +519,9 @@ int kinsert(int c) {
 /* Check to see if we need a new chunk */
     if (kused[0] >= KBLOCK) {
         nchunk = (struct kill *)Xmalloc(sizeof(struct kill));
-        if (kbufh[0] == NULL)  /* set head ptr if first time */
+        if (kbufh[0] == NULL)   /* set head ptr if first time */
             kbufh[0] = nchunk;
-        if (kbufp != NULL)  /* point the current to this new one */
+        if (kbufp != NULL)      /* point the current to this new one */
             kbufp->d_next = nchunk;
         kbufp = nchunk;
         kbufp->d_next = NULL;
@@ -550,9 +550,9 @@ int ldelete(ue64I_t n, int kflag) {
     while (n != 0) {
         dotp = curwp->w.dotp;
         doto = curwp->w.doto;
-        if (dotp == curbp->b_linep)     /* Hit end of buffer.   */
+        if (dotp == curbp->b_linep) /* Hit end of buffer.   */
             return FALSE;
-        chunk = lused(dotp) - doto;     /* Size of chunk.       */
+        chunk = lused(dotp) - doto; /* Size of chunk.       */
         if (chunk > n) chunk = n;
         if (chunk == 0) {       /* End of line, merge.  */
             lchange(WFHARD | WFKILLS);
@@ -563,9 +563,9 @@ int ldelete(ue64I_t n, int kflag) {
             continue;
         }
         lchange(WFEDIT);
-        if (kflag != FALSE) {               /* Kill? */
-            char *cp1 = ltext(dotp) + doto; /* Scrunch text. */
-            char *cp2 = cp1 + chunk;
+        if (kflag != FALSE) {                       /* Kill? */
+            const char *cp1 = ltext(dotp) + doto;   /* Scrunch text. */
+            const char *cp2 = cp1 + chunk;
             while (cp1 != cp2) {
                 if (kinsert(*cp1) == FALSE) return FALSE;
                 ++cp1;
@@ -607,7 +607,7 @@ int ldelete(ue64I_t n, int kflag) {
  */
 //GML Can this be db_bufdef ?? Once vars are db_bufdefs??
 static db_strdef(rline);   /* Line to return */
-char *getctext(void) {
+const char *getctext(void) {
 
 /* Could we just return ltext(curwp->w.dotp), having ensured it is
  * NUL-terminated?
@@ -675,7 +675,7 @@ static void rotate_lastmb_ring(int n) {
 /* Add an entry at the top.
  * Done by rotating the entries by -1 and replacing the now-top entry
  */
-void addto_lastmb_ring(char *mb_text) {
+void addto_lastmb_ring(const char *mb_text) {
     rotate_lastmb_ring(-1);
     Xfree(lastmb[0]);
     lastmb[0] = Xstrdup(mb_text);
@@ -804,8 +804,8 @@ int yank(int f, int n) {
 int yankmb(int f, int n) {
     UNUSED(f);
 
-    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if  */
-        return(rdonly());           /* we are in read only mode     */
+    if (curbp->b_mode & MDVIEW) /* Don't allow this command if  */
+        return(rdonly());       /* we are in read only mode     */
     if (n < 0) return (FALSE);
 
     if (yank_mode == GNU) {     /* A *given* numeric arg is kill rotating */
@@ -826,9 +826,9 @@ int yankmb(int f, int n) {
 
 /* Make sure there is something to yank */
     if (lastmb[0] && strlen(lastmb[0]) == 0) {
-        com_flag |= CFYANK;             /* It's still a yank... */
-        last_yank = MiniBufferYank;     /* Save the type */
-        return TRUE;                    /* not an error, just nothing */
+        com_flag |= CFYANK;         /* It's still a yank... */
+        last_yank = MiniBufferYank; /* Save the type */
+        return TRUE;                /* not an error, just nothing */
     }
 
 /* We need to handle the case of being at the start of an empty buffer.

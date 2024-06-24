@@ -39,17 +39,17 @@ static struct buffer *expandbp;
 
 /* Static variable shared by comp_file(), comp_buff() and matcher() */
 
-static db_strdef(so_far);    /* Maximal match so far */
+static db_strdef(so_far);   /* Maximal match so far */
 
 /* getnfile() and getffile()
  * Handle file name completion
  *
  * Here is what getffile() should do.
- * Parse out any directory and file parts.
- * Open that directory, if necessary.
- * Build a wildcard from the file part.
- * Call getnfile() to return the first match.
- * If the system is not case-sensitive, force lower case.
+ * o Parse out any directory and file parts.
+ * o Open that directory, if necessary.
+ * o Build a wildcard from the file part.
+ * o Call getnfile() to return the first match.
+ * o If the system is not case-sensitive, force lower case.
  */
 #include <sys/types.h>
 #include <dirent.h>
@@ -101,8 +101,8 @@ static char *id_finder(void) {
 /* Get the next matching file name
  */
 static db_strdef(suggestion);
-static char *getnfile(void) {
-    unsigned short type;        /* file type */
+static const char *getnfile(void) {
+    unsigned short type;    /* file type */
 
 /* Handle ~xxx by looking up all matching login ids.
  * NOTE that ~xxx/ has specified a full id, and so is handled by
@@ -144,10 +144,10 @@ static char *getnfile(void) {
  * Actually just sets things up so that getnfile() or id_finder()
  * can get it...
  */
-static char *getffile(char *fspec) {
-    char *p;                        /* handy pointers */
+static const char *getffile(const char *fspec_in) {
+    char *p;                /* handy pointers */
 
-    dirptr = NULL;                  /* Initialise things */
+    dirptr = NULL;          /* Initialise things */
 
 /* "'getpwent' in statically linked applications requires at runtime the
  * shared libraries from the glibc version used for linking"
@@ -160,9 +160,9 @@ static char *getffile(char *fspec) {
  * NOTE that ~xxx/ has specified a full id, and that is handled by
  * fixup_fname().
  */
-    if ((*fspec == '~') && (!strchr(fspec, '/'))) {
-        strncpy(id_to_find, fspec+1, 39);
-        terminate_str(id_to_find+39);       /* Ensure NUL terminated */
+    if ((*fspec_in == '~') && (!strchr(fspec_in, '/'))) {
+        strncpy(id_to_find, fspec_in+1, 39);
+        terminate_str(id_to_find+39);   /* Ensure NUL terminated */
         id_to_find_len = strlen(id_to_find);
         run_id_finder = 1;
         setpwent();                 /* Start it off */
@@ -176,6 +176,10 @@ static char *getffile(char *fspec) {
     if (run_id_finder) endpwent();  /* In case it was opened earlier */
     run_id_finder = 0;
 #endif
+
+/* From here on we need an editable copy */
+
+    char *fspec = strdupa(fspec_in);
 
 /* fixup_fname will strip any trailing '/'
  * This leads to a "loop", as the rest of this code would just add it back
@@ -194,9 +198,9 @@ static char *getffile(char *fspec) {
  * We can't just use fspec_eoff as the place to put put back a '/' as
  * the length may have changed!
  */
-    fspec = fixup_fname(fspec);
-    if (fspec_eoff) strcat(fspec, "/");
-    db_set(directory, fspec);
+    db_set(glb_db, fixup_fname(fspec));
+    if (fspec_eoff) db_addch(glb_db, '/');
+    db_set(directory, db_val(glb_db));
 
     if ((p = strrchr(db_val(directory), '/'))) {
         p++;
@@ -228,8 +232,9 @@ static char *getffile(char *fspec) {
  * with names starting '/' and a type of BTPHON.
  */
 
-static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
-    char *retptr;
+static const char *getnbuffer(const char *bpic, int bpiclen,
+     enum cmplt_type mtype) {
+    const char *retptr;
 
     if (expandbp) {
 /* We NEVER return minibuffer buffers (//minibnnnn), and we return internal
@@ -244,7 +249,7 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
             else                       offset = 0;
         if ((mtype == CMPLT_PROC &&
               (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/' ||
-               expandbp->b_bname[1] == '/')) ||     /* Catch //kbd_macro */
+               expandbp->b_bname[1] == '/')) || /* Catch //kbd_macro */
             (mtype == CMPLT_PHON &&
               (expandbp->b_type != BTPHON || expandbp->b_bname[0] != '/')) ||
             (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
@@ -277,7 +282,7 @@ static char *getnbuffer(char *bpic, int bpiclen, enum cmplt_type mtype) {
  * match.
  */
 static int n_nidx;
-static char *getnname(char *name, int namelen) {
+static const char *getnname(const char *name, int namelen) {
     int noname_on_nomatch = (n_nidx != -1);
     while ((n_nidx = nxti_name_info(n_nidx)) >= 0) {
         if (strncmp(name, names[n_nidx].n_name, namelen) == 0)
@@ -306,7 +311,7 @@ extern struct evlist evl[];
  * can just put it into a static buffer here
  */
 
-static char *varcat(char pfx, char *name) {
+static char *varcat(char pfx, const char *name) {
     static char pfxd_name[NVSIZE + 1];
     pfxd_name[0] = pfx;
     strcpy(pfxd_name+1, name);
@@ -315,7 +320,7 @@ static char *varcat(char pfx, char *name) {
 
 static int nul_state;   /* 0 = doing $, 1 = doing %, 2 = done */
 static int n_evidx, n_uvidx;
-static char *getnvar(char *name, int namelen) {
+static const char *getnvar(const char *name, int namelen) {
     if (namelen == 0) {
         if (nul_state == 1) {
             nul_state = 2;
@@ -326,7 +331,7 @@ static char *getnvar(char *name, int namelen) {
         }
     }
     namelen--;      /* We don't compare the leading $ or % */
-    char *mp = name + 1;
+    const char *mp = name + 1;
     if (name[0] == '$') {
 /* -1 at end of list */
         while ((n_evidx = nxti_envvar(n_evidx)) >= 0) {
@@ -343,7 +348,7 @@ static char *getnvar(char *name, int namelen) {
     return NULL;
 }
 
-static char *getfvar(char *name, int namelen) {
+static const char *getfvar(const char *name, int namelen) {
     nul_state = 0;
     if (namelen == 0) {
         nul_state = 1;
@@ -365,11 +370,11 @@ static char *getfvar(char *name, int namelen) {
  * A routine to do the matching for completion code.
  * The routine to get the next item to check is determined by mtype.
  */
-static int matcher(char *name, int namelen, db *choices,
+static int matcher(const char *name, int namelen, db *choices,
       enum cmplt_type mtype) {
-    char *next;                 /* Next filename to look at */
+    const char *next;           /* Next filename to look at */
     int match_length;           /* Maximal match length     */
-    char *p, *q;                /* Handy pointers           */
+    const char *p, *q;          /* Handy pointers           */
     int max, l, unique;
 
     match_length = db_len(so_far);
@@ -387,7 +392,7 @@ static int matcher(char *name, int namelen, db *choices,
     dbp_set(choices, db_val(so_far));
     max -= l;
     unique = TRUE;
-    while (1) {             /* Rather than try to put the switch in there. */
+    while (1) {         /* Rather than try to put the switch in there. */
         switch(mtype) {
         case CMPLT_FILE:
             next = getnfile();
@@ -403,7 +408,7 @@ static int matcher(char *name, int namelen, db *choices,
         case CMPLT_VAR:
             next = getnvar(name, namelen);
             break;
-        default:            /* If mtype arrives oddly? */
+        default:        /* If mtype arrives oddly? */
             next = NULL;
         }
         if (next == NULL) break;
@@ -442,7 +447,7 @@ static int matcher(char *name, int namelen, db *choices,
  * builds a catenated string of them in choices.
  */
 static int comp_file(db *name, db *choices) {
-    char *p;                /* Handy pointer */
+    const char *p;      /* Handy pointer */
     int unique;
 
     dbp_set(choices, "");
@@ -491,7 +496,7 @@ static int comp_file(db *name, db *choices) {
  * builds a catenated string of them in choices.
  */
 static int comp_gen(db *name, db *choices, enum cmplt_type mtype) {
-    char *p;                /* Handy pointer */
+    const char *p;      /* Handy pointer */
     int namelen;
 
     dbp_set(choices, "");
@@ -527,18 +532,18 @@ static int comp_gen(db *name, db *choices, enum cmplt_type mtype) {
  *          Resolve any keyboard macro action.
  */
 int tgetc(void) {
-    int c;                      /* fetched character */
+    int c;              /* fetched character */
 
 /* If we are playing a keyboard macro back, */
     if (kbdmode == PLAY) {
-        if (kbdptr < kbdend)    /* if there is some left... */
+        if (kbdptr < kbdend)    /* If there is some left... */
             return (int) *kbdptr++;
         if (--kbdrep < 1) {     /* at the end of last repetition? */
             kbdmode = STOP;     /* Leave ctlxe_togo alone */
-            if (!vismac) update(FALSE); /* force update now all is done? */
+            if (!vismac) update(FALSE); /* Force update now all is done? */
         }
         else {
-            kbdptr = kbdm;      /* reset macro to beginning for the next rep */
+            kbdptr = kbdm;      /*` Reset macro to beginning for the next rep */
             f_arg = p_arg;      /* Restore original f_arg */
             return (int) *kbdptr++;
         }
@@ -616,13 +621,13 @@ int get1key(void) {
  * ABORT. The ABORT status is returned if the user bumps out of the question
  * with a ^G. Used any time a confirmation is required.
  */
-int mlyesno(char *prompt) {
-    int c;                  /* input character - tgetc() returns unicode */
-    int res = -1;           /* NOT ABORT, TRUE or FALSE */
+int mlyesno(const char *prompt) {
+    int c;              /* input character - tgetc() returns unicode */
+    int res = -1;       /* NOT ABORT, TRUE or FALSE */
     while(res == -1) {
         mlwrite("%s%s", prompt, " " MLbkt("y/n") "? ");
 
-        c = get1key();        /* get the response */
+        c = get1key();  /* get the response */
         switch(c) {
         case 'y':
         case 'Y':
@@ -633,7 +638,7 @@ int mlyesno(char *prompt) {
             res = FALSE;
             break;
         default:
-            if (c == abortc) res = ABORT;   /* as abortc is a var */
+            if (c == abortc) res = ABORT;   /* As abortc is a var */
             break;
         }
     }
@@ -652,7 +657,7 @@ int mlyesno(char *prompt) {
  * So macro-file args need to be quoted...
  * We pass on any expansion-type requested (for, eventually, getstring()).
  */
-int mlreply(char *prompt, db *buf, enum cmplt_type ctype) {
+int mlreply(const char *prompt, db *buf, enum cmplt_type ctype) {
     return nextarg(prompt, buf, ctype);
 }
 
@@ -660,7 +665,7 @@ int mlreply(char *prompt, db *buf, enum cmplt_type ctype) {
  * that pressing a <TAB> will attempt to complete an unfinished command
  * name if it is unique.
  */
-struct name_bind *getname(char *prompt, int new_command) {
+struct name_bind *getname(const char *prompt, int new_command) {
     struct name_bind *nbp = NULL;
 
     db_strdef(buf);
@@ -711,14 +716,14 @@ static int ensure_uppercase(int c) {
 #define CSI 0x9b
 
 int getcmd(void) {
-    int c;                  /* fetched keystroke */
+    int c;              /* Fetched keystroke */
     int ctlx = FALSE;
     int meta = FALSE;
     int cmask = 0;
 
 /* Keep going until we return something */
 
-    while ((c = get1key())) {       /* Extra ()s for gcc warniing */
+    while ((c = get1key())) {   /* Extra ()s for gcc warniing */
 /* Esc-O is really SS3, but cursor keys often send Esc-O A|B|C|D so it
  * helps to add to in here and treat it as CSI.
  * This does mean that if you bind a function to Esc-O you have to use
@@ -845,18 +850,18 @@ int getcmd(void) {
     case 13: c = 'c'; break;
     case 14: c = 'd'; break;
     case 15: c = 'e'; break;
-    case 17: c = 'f'; break;        /* Skip 16 */
+    case 17: c = 'f'; break;    /* Skip 16 */
     case 18: c = 'g'; break;
     case 19: c = 'h'; break;
     case 20: c = 'i'; break;
     case 21: c = 'j'; break;
-    case 23: c = 'k'; break;        /* Skip 22 */
+    case 23: c = 'k'; break;    /* Skip 22 */
     case 24: c = 'l'; break;
     case 25: c = 'm'; break;
     case 26: c = 'n'; break;
-    case 28: c = 'o'; break;        /* Skip 27 */
+    case 28: c = 'o'; break;    /* Skip 27 */
     case 29: c = 'p'; break;
-    case 31: c = 'q'; break;        /* Skip 30 */
+    case 31: c = 'q'; break;    /* Skip 30 */
     case 32: c = 'r'; break;
     case 33: c = 's'; break;
     case 34: c = 't'; break;
@@ -933,9 +938,9 @@ static void sigwinch_handler(int signr) {
  * we have then running token() before replacing things.
  * We (now) loop over all of the command string.
  */
-void evaluate_cmdb(char *input, db *result) {
-    dbp_set(result, "");         /* Empty it */
-    char *orig_execstr = execstr;   /* Just in case... */
+void evaluate_cmdb(const char *input, db *result) {
+    dbp_set(result, "");                /* Empty it */
+    const char *orig_execstr = execstr; /* Just in case... */
     int orig_clexec = clexec;
     char *sep = "";
 
@@ -959,14 +964,14 @@ void evaluate_cmdb(char *input, db *result) {
 
 /* The actual getstring() starts now... */
 
-int getstring(char *prompt, db *buf, enum cmplt_type ctype) {
+int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     struct buffer *bp;
     struct buffer *cb;
     char mbname[20];        /* Ample */
-    int    c;               /* command character */
+    int c;                  /* command character */
     struct line *lp;        /* line to copy */
     int size;
-    char *sp;               /* string pointer into line */
+    const char *sp;         /* string pointer into line */
     int status;
     int do_evaluate = FALSE;
     func_arg sav;
@@ -1004,7 +1009,7 @@ int getstring(char *prompt, db *buf, enum cmplt_type ctype) {
 /* Create a minibuffer window for use by all minibuffers */
     if (!mb_winp) {
         mb_winp = (struct window *)Xmalloc(sizeof(struct window));
-        mb_winp->w_wndp = NULL;               /* Initialize window    */
+        mb_winp->w_wndp = NULL;     /* Initialize window */
 #if COLOR
 /* initialize colors to global defaults */
         mb_winp->w_fcolor = gfcolor;
@@ -1014,7 +1019,7 @@ int getstring(char *prompt, db *buf, enum cmplt_type ctype) {
         mb_winp->w_ntrows = 1;
         mb_winp->w.fcol = 0;
         mb_winp->w_force = 0;
-        mb_winp->w_flag = WFMODE | WFHARD;    /* Full.                */
+        mb_winp->w_flag = WFMODE | WFHARD;  /* Full */
     }
 
 /* Get a minibuffer name based on the current level */
@@ -1035,7 +1040,7 @@ int getstring(char *prompt, db *buf, enum cmplt_type ctype) {
     db_set(procopy, prompt);
     prolen = db_len(procopy);
     prmpt_buf.update = 0;
-    dbp_set(buf, "");          /* Ensure we never return garbage */
+    dbp_set(buf, "");           /* Ensure we never return garbage */
 
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
@@ -1121,7 +1126,7 @@ loop:
  */
     if (prmpt_buf.preload) {
         linstr(prmpt_buf.preload);
-        prmpt_buf.preload = NULL;    /* One-time usage */
+        prmpt_buf.preload = NULL;   /* One-time usage */
     }
 
 /* Prepend the prompt to the beginning of the visible line (i.e.
@@ -1308,17 +1313,17 @@ abort:
         return FALSE;
     unmark(TRUE, 1);
 
-    if (--mb_info.mbdepth) {        /* Back to previous mini-buffer */
-        if (!swbuffer(cb, 0))       /* Switch to its buffer... */
+    if (--mb_info.mbdepth) {    /* Back to previous mini-buffer */
+        if (!swbuffer(cb, 0))   /* Switch to its buffer... */
             return FALSE;
-        *curwp = wsave;             /* ...and its window info */
+        *curwp = wsave;         /* ...and its window info */
     }
-    else {                              /* Leaving minibuffer */
+    else {                      /* Leaving minibuffer */
         if (!swbuffer(mb_info.main_bp, 0))  /* Switch back to main buffer */
             return FALSE;
-        curwp = mb_info.main_wp;        /* Reset window info ptr */
-        wheadp = mb_info.wheadp;        /* Reset window list */
-        inmb = FALSE;                   /* Note we have left mb */
+        curwp = mb_info.main_wp;    /* Reset window info ptr */
+        wheadp = mb_info.wheadp;    /* Reset window list */
+        inmb = FALSE;               /* Note we have left mb */
     }
     curwp->w_flag |= WFMODE;        /* Forces modeline redraw */
     zotbuf(bp);                     /* Remove this minibuffer */

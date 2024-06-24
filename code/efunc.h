@@ -44,6 +44,7 @@ extern int swapmark(int, int);
 /* bind.c */
 #ifndef BIND_C
 extern int help(int, int);
+extern const char *flook(const char *, int, int);
 extern int not_in_mb_error(int, int);
 extern int deskey(int, int);
 extern struct key_tab *getbyfnc(fn_t);
@@ -54,31 +55,30 @@ extern int bindtokey(int, int);
 extern int unbindkey(int, int);
 extern int desbind(int, int);
 extern int apro(int, int);
-extern int startup(char *);
-extern void set_pathname(char *);
-extern char *flook(char *, int, int);
-extern char *transbind(char *);
+extern int startup(const char *);
+extern void set_pathname(const char *);
+extern const char *transbind(const char *);
 #endif
 
 /* buffer.c */
 #define addline_to_curb(text) addline_to_anyb(text, curbp)
 
 #ifndef BUFFER_C
-extern int set_buffer_name(char *);
+extern int set_buffer_name(const char *);
 extern int usebuffer(int, int);
 extern int nextbuffer(int, int);
 extern int swbuffer(struct buffer *, int);
 extern int killbuffer(int, int);
 extern int zotbuf(struct buffer *);
 extern int namebuffer(int, int);
-extern void addline_to_anyb(char *, struct buffer *);
+extern void addline_to_anyb(const char *, struct buffer *);
 extern int listbuffers(int, int);
 extern int anycb(void);
 /* Lookup a buffer by name. */
 extern struct buffer *bfind(const char *, int, int);
 extern int bclear(struct buffer *);
 extern int unmark(int, int);
-extern char do_force_mode(char *);
+extern char do_force_mode(const char *);
 extern int setforcemode(int, int);
 #endif
 
@@ -118,21 +118,21 @@ extern void init_envvar_index(void);
 extern int nxti_envvar(int);
 extern void sort_user_var(void);
 extern int nxti_usrvar(int);
-extern int stol(char *);
+extern int stol(const char *);
 extern int setvar(int, int);
 extern int delvar(int, int);
-extern char *ue_itoa(int);
-extern int gettyp(char *);
-extern char *getval(char *);
+extern const char *ue_itoa(int);
+extern int gettyp(const char *);
+extern const char *getval(const char *);
 #endif
 
 /* exec.c */
 #ifndef EXEC_C
-extern char *token(char *, db *);
+extern const char *token(const char *, db *);
 extern int namedcmd(int, int);
 extern int execcmd(int, int);
 extern int macarg(db *);
-extern int nextarg(char *, db *, enum cmplt_type);
+extern int nextarg(const char *, db *, enum cmplt_type);
 extern int storemac(int, int);
 extern void ptt_free(struct buffer *);
 extern int storepttable(int, int);
@@ -141,7 +141,7 @@ extern int next_pttable(int, int);
 extern int toggle_ptmode(int, int);
 extern int ptt_handler(int, int);
 extern int storeproc(int, int);
-extern int run_user_proc(char *, int, int);
+extern int run_user_proc(const char *, int, int);
 extern int drop_pin(int, int);
 extern int back_to_pin(int, int);
 extern int switch_with_pin(int, int);
@@ -149,7 +149,7 @@ extern int execproc(int, int);
 extern int execbuf(int, int);
 extern int dobuf(struct buffer *);
 extern int execfile(int, int);
-extern int dofile(char *);
+extern int dofile(const char *);
 extern int cbuf1(int, int);
 extern int cbuf2(int, int);
 extern int cbuf3(int, int);
@@ -194,44 +194,44 @@ extern int cbuf40(int, int);
 
 /* file.c */
 #ifndef FILE_C
-extern char *fixup_fname(char *);
-extern char *fixup_full(char *);
-extern char *get_realpath(char *);
-extern void set_buffer_filenames(struct buffer *, char *);
+extern const char *fixup_fname(const char *);
+extern const char *fixup_full(const char *);
+extern const char *get_realpath(const char *);
+extern void set_buffer_filenames(struct buffer *, const char *);
 extern int fileread(int, int);
 extern int insfile(int, int);
 extern int filefind(int, int);
 extern int viewfile(int, int);
-extern int showdir_handled(char *);
-extern int getfile(char *, int, int);
-extern int readin(char *, int);
-extern void makename(db *, char *, int);
+extern int showdir_handled(const char *);
+extern int getfile(const char *, int, int);
+extern int readin(const char *, int);
+extern void makename(db *, const char *, int);
 extern int filewrite(int, int);
 extern int filesave(int, int);
-extern int writeout(char *);
+extern int writeout(const char *);
 extern int filename(int, int);
 #endif
 
 /* fileio.c */
 #ifndef FILEIO_C
-extern int ffropen(char *);
-extern int ffwopen(char *);
+extern int ffropen(const char *);
+extern int ffwopen(const char *);
 extern int ffclose(void);
-extern int ffputline(char *, int);
+extern int ffputline(const char *, int);
 extern int ffgetline(void);
-extern int fexist(char *);
+extern int fexist(const char *);
 #endif
 
 /* input.c */
 #ifndef INPUT_C
-extern int mlyesno(char *);
-extern int mlreply(char *, db *, enum cmplt_type);
-extern struct name_bind *getname(char *, int);
+extern int mlyesno(const char *);
+extern int mlreply(const char *, db *, enum cmplt_type);
+extern struct name_bind *getname(const char *, int);
 extern int tgetc(void);
 extern int get1key(void);
 extern int getcmd(void);
-extern void evaluate_cmdb(char *, db *);
-extern int getstring(char *, db *, enum cmplt_type);
+extern void evaluate_cmdb(const char *, db *);
+extern int getstring(const char *, db *, enum cmplt_type);
 #endif
 
 /* isearch.c */
@@ -245,15 +245,15 @@ extern int fisearch(int, int);
 
 /* lock.c */
 #ifndef LOCK_C
-extern int lockchk(char *);
+extern int lockchk(const char *);
 extern int lockrel(void);
-extern int lock(char *);
+extern int lock(const char *);
 #endif
 
 /* main.c */
 #ifndef MAIN_C
 extern void addchar_kbdmacro(char);
-extern int addto_kbdmacro(char *, int, int);
+extern int addto_kbdmacro(const char *, int, int);
 extern int macro_helper(int, int);
 extern void dumpdir_tidy(void);
 extern com_arg *multiplier_check(int);
@@ -280,14 +280,14 @@ extern void extend_keytab(int);
 #ifndef NAMES_C
 extern void init_namelookup(void);
 extern struct name_bind *func_info(fn_t);
-extern struct name_bind *name_info(char *);
+extern struct name_bind *name_info(const char *);
 extern int nxti_name_info(int);
 #endif
 
 /* pklock.c */
 #ifndef PKLOCK_C
-extern char *dolock(char *);
-extern char *undolock(char *);
+extern const char *dolock(const char *);
+extern const char *undolock(const char *);
 #endif
 
 /* posix.c */
@@ -354,7 +354,7 @@ extern int widen(int, int);
 /* search.c */
 #ifndef SEARCH_C
 extern void init_search_ringbuffers(void);
-extern void new_prompt(char *);
+extern void new_prompt(const char *);
 extern void rotate_sstr(int);
 extern void select_sstr(void);
 extern int unicode_eq(unsigned int, unsigned);

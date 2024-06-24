@@ -29,7 +29,7 @@
  * if other error, returns "LOCK ERROR: explanation"
  *
  *********************/
-char *dolock(char *fname) {
+const char *dolock(const char *fname) {
     int fd, n;
     static char lname[MAXLOCK], locker[MAXNAME + 1];
     int mask;
@@ -95,7 +95,7 @@ char *dolock(char *fname) {
  *
  *********************/
 
-char *undolock(char *fname) {
+const char *undolock(const char *fname) {
     static char lname[MAXLOCK];
 
     strcat(strcpy(lname, fname), ".lock~");

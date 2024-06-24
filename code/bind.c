@@ -27,11 +27,10 @@
  */
 static char path_sep = '/';
 
-static int along_path(char *fname, db *fspec) {
-    char *path;     /* environmental PATH variable */
+static int along_path(const char *fname, db *fspec) {
 
-/* get the PATH variable */
-    path = getenv("PATH");
+/* Get the PATH variable */
+    const char *path = getenv("PATH");
     if (path != NULL)
         while (*path) {
 
@@ -63,7 +62,7 @@ static int along_path(char *fname, db *fspec) {
  * int hflag;           Look in the HOME environment variable first?
  */
 static db_strdef(fspec);
-char *flook(char *fname, int hflag, int mode) {
+const char *flook(const char *fname, int hflag, int mode) {
     int i;                          /* index */
 
     pathexpand = FALSE;             /* GGR */
@@ -71,7 +70,7 @@ char *flook(char *fname, int hflag, int mode) {
 /* If we've been given a pathname, rather than a filename, just use that */
 
     if (strchr(fname, path_sep)) {
-        char *res = NULL;   /* Assume the worst */
+        const char *res = NULL; /* Assume the worst */
         if (ffropen(fname) == FIOSUC) {
             ffclose();
             res = fname;
@@ -81,7 +80,7 @@ char *flook(char *fname, int hflag, int mode) {
     }
 
     if (hflag) {
-        if (udir.home) {    /* build home dir file spec */
+        if (udir.home) {    /* Build home dir file spec */
             db_sprintf(fspec, "%s%c%s", udir.home, path_sep, fname);
             if (ffropen(db_val(fspec)) == FIOSUC) {   /* and try it out */
                 ffclose();
@@ -94,7 +93,7 @@ char *flook(char *fname, int hflag, int mode) {
 /* Always try the current directory first - if allowed */
     if (allow_current && ffropen(fname) == FIOSUC) {
         ffclose();
-        pathexpand = TRUE;                  /* GGR */
+        pathexpand = TRUE;          /* GGR */
         return fname;
     }
 
@@ -116,7 +115,7 @@ char *flook(char *fname, int hflag, int mode) {
             if (pathname[i] == NULL) break;
             db_set(fspec, pathname[i]);
             db_append(fspec, fname);
-            if (ffropen(db_val(fspec)) == FIOSUC) {  /* and try it out */
+            if (ffropen(db_val(fspec)) == FIOSUC) { /* and try it out */
                 ffclose();
                 pathexpand = TRUE;          /* GGR */
                 return db_val(fspec);
@@ -124,16 +123,17 @@ char *flook(char *fname, int hflag, int mode) {
         }
     }
 
-    pathexpand = TRUE;                          /* GGR */
+    pathexpand = TRUE;      /* GGR */
     return NULL;            /* no such luck */
 }
 
-int help(int f, int n) {    /* give me some help!!!!
-                               bring up a fake buffer and read the help file
-                               into it with view mode                 */
+/* Give me some help!!!!
+ * Bring up a fake buffer and read the help file into it with view mode.
+ */
+int help(int f, int n) {
     UNUSED(f); UNUSED(n);
-    struct buffer *bp;      /* buffer pointer to help */
-    char *fname = NULL;     /* ptr to file returned by flook() */
+    struct buffer *bp;          /* buffer pointer to help */
+    const char *fname = NULL;   /* ptr to file returned by flook() */
 
 /* First check if we are already here */
     bp = bfind(HELP_BUF, FALSE, 0);     /* GGR - epath.h setting */
@@ -180,15 +180,19 @@ int help(int f, int n) {    /* give me some help!!!!
  *
  * char *keyname;       name of key to translate to Command key from
  */
-static unsigned int stock(char *keyname) {
+static unsigned int stock(const char *given_keyname) {
     unsigned int c; /* key sequence to return */
+
+/* Work with a copy so we can in-0line edit the supplied arg */
+
+    char *keyname = strdupa(given_keyname);
 
 /* GGR - allow different bindings for 1char UPPER and lower.
  * If anyone wants to bind them...
  */
     int kn_len = strlen(keyname);
     int noupper = (kn_len == 1);
-    char *kn_end = keyname + kn_len;
+    const char *kn_end = keyname + kn_len;
     int special = 0;
 
 /* Parse it up */
@@ -241,7 +245,7 @@ static unsigned int stock(char *keyname) {
 
 /* Make sure we are not lower case with only Control or Meta */
     if (ch_as_uc(*keyname) >= 'a' && ch_as_uc(*keyname) <= 'z' &&
-         !(noupper))            /* GGR */
+         !(noupper))                /* GGR */
         *keyname -= 32;
 
 /* NOTE that any char beyond the ASCII range is NO LONGER disallowed
@@ -274,7 +278,7 @@ static unsigned int getckey(int mflag) {
 
 /* Check to see if we are executing a command line */
     if (clexec) {
-        db_strdef(tok);    /* command incoming */
+        db_strdef(tok); /* command incoming */
         macarg(&tok);   /* get the next token */
         unsigned int ck = stock(db_val(tok));
         db_free(tok);
@@ -319,7 +323,7 @@ static char *cmdstr(int c) {
 /* Strip the prefixes and output the final sequence */
 
     c &= 0x0fffffff;
-    if (c  == ' ') {        /* Handle the "SP" for space which we allow */
+    if (c  == ' ') {    /* Handle the "SP" for space which we allow */
         *ptr++ = 'S';
         *ptr++ = 'P';
     }
@@ -332,7 +336,7 @@ static char *cmdstr(int c) {
         if (c < 0x80)  *ptr++ = c & 255;
         else            ptr += unicode_to_utf8(c, ptr);
     }
-    *ptr = 0;               /* terminate the string */
+    *ptr = 0;           /* terminate the string */
     return result;
 }
 
@@ -513,7 +517,7 @@ struct key_tab *getbind(int c) {
         else last = middle - 1;
     }
     if (first > last) {
-        return NULL;        /* No such binding */
+        return NULL;    /* No such binding */
     }
     struct key_tab *res = &keytab[key_index[middle]];
     current_command = res->fi->n_name;
@@ -572,8 +576,8 @@ int deskey(int f, int n) {
  * int c;               command key to unbind
  */
 static int unbindchar(int c) {
-    struct key_tab *ktp;   /* pointer into the command table */
-    struct key_tab *sktp;  /* saved pointer into the command table */
+    struct key_tab *ktp;    /* pointer into the command table */
+    struct key_tab *sktp;   /* saved pointer into the command table */
 
 /* Search the table to see whether the key exists */
 
@@ -610,7 +614,7 @@ static int unbindchar(int c) {
  * We expect to be given a bname *including* the leading '/'.
  */
 static int update_keybind(int c, int ntimes, int internal_OK,
-     fn_t kfunc, char *bname) {
+     fn_t kfunc, const char *bname) {
     struct key_tab *ktp;    /* pointer into the command table */
     struct key_tab *destp;  /* Where to copy the name and type */
 
@@ -690,11 +694,11 @@ static int update_keybind(int c, int ntimes, int internal_OK,
         strcpy(destp->hndlr.pbp, bname+1);  /* Skip the leading '/' */
     }
     else {
-        destp->k_type = FUNC_KMAP;      /* Set the type */
-        destp->hndlr.k_fp = kfunc;      /* and the function pointer */
+        destp->k_type = FUNC_KMAP;  /* Set the type */
+        destp->hndlr.k_fp = kfunc;  /* and the function pointer */
         destp->fi = func_info(kfunc);
     }
-    mpresf = TRUE;                      /* GGR */
+    mpresf = TRUE;                  /* GGR */
     TTflush();
 
     key_index_valid = 0;    /* Rebuild index before using it. */
@@ -702,7 +706,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
 }
 
 /* Check for a procedure buffer and complain if not */
-static int check_procbuf(struct buffer *cbp, char *bufn) {
+static int check_procbuf(struct buffer *cbp, const char *bufn) {
     if (cbp->b_type != BTPROC) {
         mlforce("Buffer %s is not a procedure buffer.", bufn);
         sleep(1);
@@ -724,7 +728,7 @@ int buffertokey(int f, int n) {
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
 
-    db_strdef(bname);          /* buffer name */
+    db_strdef(bname);       /* buffer name */
     db_strdef(btry);
 
 /* Get the name of the buffer to invoke.
@@ -895,7 +899,7 @@ int bindtokey(int f, int n) {
         if (kfunc == metafn)     metac = c;
         else if (kfunc == cex)   ctlxc = c;
         else if (kfunc == unarg) reptc = c;
-        else                    abortc = c;    /* Only other option */
+        else                    abortc = c;     /* Only other option */
     }
 
     return update_keybind(c, n, FALSE, kfunc, NULL);
@@ -929,7 +933,7 @@ int unbindkey(int f, int n) {
 /* If it isn't bound, bitch */
     if (unbindchar(c) == FALSE) {
         mlwrite_one(MLbkt("Key not bound"));
-        mpresf = TRUE;  /* GGR */
+        mpresf = TRUE;      /* GGR */
         return FALSE;
     }
     TTflush();              /* GGR */
@@ -963,11 +967,11 @@ static void show_key_binding(unicode_t key) {
  *
  * char *mstring;       match string for a partial list
  */
-static int buildlist(char *mstring) {
-    struct window *wp;         /* scanning pointer to windows */
-    struct key_tab *ktp;       /* pointer into the command table */
-    struct buffer *bp;         /* buffer to put binding list into */
-    char outseq[80];           /* output buffer for keystroke sequence */
+static int buildlist(const char *mstring) {
+    struct window *wp;      /* scanning pointer to windows */
+    struct key_tab *ktp;    /* pointer into the command table */
+    struct buffer *bp;      /* buffer to put binding list into */
+    char outseq[80];        /* output buffer for keystroke sequence */
 
 /* Split the current window to make room for the binding list */
     if (splitwind(FALSE, 1) == FALSE) return FALSE;
@@ -1122,7 +1126,7 @@ int apro(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
 
-    db_strdef(mstring);        /* string to match cmd names to */
+    db_strdef(mstring);     /* string to match cmd names to */
     status = mlreply("Apropos string: ", &mstring, CMPLT_NONE);
     if (status != TRUE) goto exit;
 
@@ -1137,8 +1141,8 @@ exit:
  *
  * char *sfname;        name of startup file (null if default)
  */
-int startup(char *sfname) {
-    char *fname;            /* resulting file name to execute */
+int startup(const char *sfname) {
+    const char *fname;      /* resulting file name to execute */
 
 /* Look up the startup file */
     if (*sfname != 0) fname = flook(sfname, TRUE, INTABLE);
@@ -1155,7 +1159,7 @@ int startup(char *sfname) {
  * This overrides the compiled-in defaults
  */
 static int free_path_reqd = 0;
-void set_pathname(char *cl_string) {
+void set_pathname(const char *cl_string) {
     int slen;
     int add_sep = 0;
     slen = strlen(cl_string);
@@ -1184,7 +1188,7 @@ void set_pathname(char *cl_string) {
  *
  * char *skey;          name of key to get binding for
  */
-char *transbind(char *skey) {
+char *transbind(const char *skey) {
     struct key_tab *ktp = getbind(stock(skey));
     if (!ktp) return "ERROR";
     return ktp->fi->n_name;

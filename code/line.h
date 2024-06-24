@@ -34,6 +34,7 @@ struct line {
 #define lused(lp)       (db_len(lp->l_))
 #define lsize(lp)       (db_max(lp->l_))
 #define ltext(lp)       (db_val(lp->l_))
+#define ldb(lp)         (lp->l_)
 
 /* Externally visible calls */
 
@@ -44,18 +45,18 @@ extern void lfree(struct line *lp);
 extern void lchange(int flag);
 extern int insspace(int f, int n);
 extern int linsert_byte(int, unsigned char);
-extern int linstr(char *instr);
+extern int linstr(const char *instr);
 extern int linsert_uc(int n, unicode_t c);
-extern int lover(char *ostr);
+extern int lover(const char *ostr);
 extern int lnewline(void);
 extern int ldelete(ue64I_t n, int kflag);
 extern int ldelgrapheme(ue64I_t n, int kflag);
 extern int lgetgrapheme(struct grapheme *, int);
 extern int lputgrapheme(struct grapheme *gp);
-extern char *getctext(void);
+extern const char *getctext(void);
 
 extern void kdelete(void);
-extern void addto_lastmb_ring(char *);
+extern void addto_lastmb_ring(const char *);
 extern int kinsert(int c);
 extern int yank(int f, int n);
 extern int yank_replace(int, int);

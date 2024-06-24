@@ -292,7 +292,7 @@ struct name_bind *func_info(fn_t func) {
  * NOTE: that we don't need a binary chop that ensures we find the first
  * entry of any multiple ones, as there can't be such entries!
  */
-struct name_bind *name_info(char *name) {
+struct name_bind *name_info(const char *name) {
     int first = 0;
     int last = needed - 1;
 

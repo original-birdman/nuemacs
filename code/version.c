@@ -67,5 +67,6 @@ void version(void) {
         if (retval && strlen(retval) > 4)
               printf(" (dynamic) libc version %s", retval+4);
     }
+    else printf(" unknown libc version!\n");
 #endif
 }

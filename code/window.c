@@ -35,7 +35,7 @@ int redraw(int f, int n) {
     if (f == FALSE)
         sgarbf = TRUE;
     else {
-        curwp->w_force = 0;     /* Center dot. */
+        curwp->w_force = 0; /* Center dot. */
         curwp->w_flag |= WFFORCE;
     }
 
@@ -159,7 +159,7 @@ int mvupwind(int f, int n) {
     }
 
     curwp->w_linep = lp;
-    curwp->w_flag |= WFHARD;        /* Mode line is OK. */
+    curwp->w_flag |= WFHARD;    /* Mode line is OK. */
 
     for (i = 0; i < curwp->w_ntrows; ++i) {
         if (lp == curwp->w.dotp) return TRUE;
@@ -168,7 +168,7 @@ int mvupwind(int f, int n) {
     }
 
     lp = curwp->w_linep;
-    i = curwp->w_ntrows / 2;
+    i = curwp->w_ntrows/2;
     while (i-- && lp != curbp->b_linep) lp = lforw(lp);
     curwp->w.dotp = lp;
     curwp->w.doto = 0;
@@ -298,7 +298,7 @@ int splitwind(int f, int n) {
         return FALSE;
     }
     wp = Xmalloc(sizeof(struct window));
-    ++curbp->b_nwnd;                        /* Displayed twice.     */
+    ++curbp->b_nwnd;    /* Displayed twice.     */
     wp->w_bufp = curbp;
     wp->w = curwp->w;
     wp->w_flag = 0;
@@ -308,8 +308,8 @@ int splitwind(int f, int n) {
     wp->w_fcolor = gfcolor;
     wp->w_bcolor = gbcolor;
 #endif
-    ntru = (curwp->w_ntrows - 1) / 2;       /* Upper size           */
-    ntrl = (curwp->w_ntrows - 1) - ntru;    /* Lower size           */
+    ntru = (curwp->w_ntrows - 1)/2;         /* Upper size */
+    ntrl = (curwp->w_ntrows - 1) - ntru;    /* Lower size */
     lp = curwp->w_linep;
     ntrd = 0;
     while (lp != curwp->w.dotp) {
@@ -319,7 +319,7 @@ int splitwind(int f, int n) {
     lp = curwp->w_linep;
     if (((f == FALSE) && (ntrd <= ntru)) || ((f == TRUE) && (n == 1))) {
 /* Old is upper window. */
-        if (ntrd == ntru) lp = lforw(lp);   /* Hit mode line.       */
+        if (ntrd == ntru) lp = lforw(lp);   /* Hit mode line. */
         curwp->w_ntrows = ntru;
         wp->w_wndp = curwp->w_wndp;
         curwp->w_wndp = wp;
@@ -338,14 +338,14 @@ int splitwind(int f, int n) {
         wp->w_wndp = curwp;
         wp->w_toprow = curwp->w_toprow;
         wp->w_ntrows = ntru;
-        ++ntru;                             /* Mode line.           */
+        ++ntru;          /* Mode line. */
         curwp->w_toprow += ntru;
         curwp->w_ntrows = ntrl;
         while (ntru--)
         lp = lforw(lp);
     }
-    curwp->w_linep = lp;                    /* Adjust the top lines */
-    wp->w_linep = lp;                       /* if necessary.        */
+    curwp->w_linep = lp; /* Adjust the top lines */
+    wp->w_linep = lp;    /* if necessary.        */
     curwp->w_flag |= WFMODE | WFHARD;
     wp->w_flag |= WFMODE | WFHARD;
     return TRUE;
@@ -444,7 +444,7 @@ int enlargewind(int f, int n) {
  * int f, n;            default flag and numeric argument
  */
 int resize(int f, int n) {
-    int clines;             /* current # of lines in window */
+    int clines;     /* current # of lines in window */
 
 /* Must have a non-default argument, else ignore call */
     if (f == FALSE) return TRUE;
@@ -465,10 +465,10 @@ int resize(int f, int n) {
 struct window *wpopup(void) {
     struct window *wp;
 
-    if (wheadp->w_wndp == NULL      /* Only 1 window        */
-          && splitwind(FALSE, 0) == FALSE)  /* and it won't split   */
+    if (wheadp->w_wndp == NULL              /* Only 1 window... */
+          && splitwind(FALSE, 0) == FALSE)  /* and it won't split */
         return NULL;
-    wp = wheadp;                    /* Find window to use   */
+    wp = wheadp;    /* Find window to use */
     while (wp != NULL && wp == curwp) wp = wp->w_wndp;
     return wp;
 }
@@ -633,8 +633,8 @@ int newwidth(int n) {
 
 /* Get screen offset of current line in current window */
 int getwpos(void) {
-    int sline;              /* screen line from top of window */
-    struct line *lp;        /* scannile line pointer */
+    int sline;          /* screen line from top of window */
+    struct line *lp;    /* scannile line pointer */
 
 /* Search down the line we want */
     lp = curwp->w_linep;

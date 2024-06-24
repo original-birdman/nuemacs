@@ -413,17 +413,17 @@ static char *expandp(const char *srcstr, char *deststr) {
 /* Scan through the string. */
 
     while ((c = *srcstr++) != 0) {
-        if (c == '\n') {                        /* it's a newline */
+        if (c == '\n') {    /* It's a newline */
             *dp++ = '<';
             *dp++ = 'N';
             *dp++ = 'L';
             *dp++ = '>';
         }
-        else if ((c > 0 && c < 0x20) || c == 0x7f) { /* control character */
+        else if ((c > 0 && c < 0x20) || c == 0x7f) { /* Control character */
             *dp++ = '^';
             *dp++ = c ^ 0x40;
         }
-        else {                                  /* any other character */
+        else {              /* Any other character */
             *dp++ = c;
         }
     }
@@ -472,7 +472,7 @@ static int boundry(struct line *curline, int curoff, int dir) {
  * text as the default.
  * Also called from svar() if it sets $replace or $search
  */
-void new_prompt(char *dflt_str) {
+void new_prompt(const char *dflt_str) {
     db_sprintf(prmpt_buf.prompt, "%s " MLpre "%s" MLpost ": ",
         current_base, expandp(dflt_str, NULL));
     prmpt_buf.update = 1;
@@ -510,7 +510,7 @@ void rotate_sstr(int n) {
         tmp_txt[rotator] = txt[ix];
     }
     memcpy(txt, tmp_txt, sizeof(tmp_txt));  /* Copy rotated array back */
-    dbp_set(t_db, txt[0]);                 /* Update (r)pat */
+    dbp_set(t_db, txt[0]);                  /* Update (r)pat */
 
 /* We need to make getstring() show this new value in its prompt.
  * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
@@ -537,7 +537,7 @@ static char *clearbits(void) {
     char *cclmap;
     int i;
 
-    cclmap = cclstart = (char *)Xmalloc(BMBYTES);
+    cclmap = cclstart = Xmalloc(BMBYTES);
     for (i = 0; i < BMBYTES; i++) *cclmap++ = 0;
     return cclstart;
 }
@@ -694,7 +694,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
         if (gc.ex) {            /* Our responsibility! */
             Xfree_setnull(gc.ex);
         }
-        if (prev_gc.ex) {   /* Our responsibility! */
+        if (prev_gc.ex) {       /* Our responsibility! */
             Xfree_setnull(prev_gc.ex);
         }
         goto error_exit;
@@ -715,7 +715,7 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     }
 /* We've used the current character, so remove it...(gc.ex cannot be set) */
     goto invalidate_current;
-    END_TEST(!first....)           /* End of range handling */
+    END_TEST(!first....)        /* End of range handling */
 
 /* For the first char/grapheme there is no more to do - except to handle
  * the loop transition.
@@ -903,7 +903,7 @@ handle_prev:
             setbit('\t', bmap);
             goto invalidate_current;
 /* NOTE: that this means \\ is taken to mean \ in a class */
-        default:                /* Set bit for current char */
+        default:            /* Set bit for current char */
             setbit(gc.uc, bmap);
             goto invalidate_current;
         }
@@ -1087,7 +1087,7 @@ static int group_cntr;  /* Number of possible groups in search pattern */
 static int mc_alloc = FALSE;    /* Initial state */
 static int mcstr(void) {
     struct magic *mcptr = mcpat;
-    char *patptr = db_val(pat);
+    char *patptr = strdupa(db_val(pat));
     int mj;
     int pchr;
     int status = TRUE;
@@ -1119,7 +1119,7 @@ static int mcstr(void) {
 
     WHILE_BLOCK((pchr = *patptr) && status)
     int possible_slow_scan = FALSE;     /* Not yet */
-    mcptr->mc = null_mg;        /* Initialize fields */
+    mcptr->mc = null_mg;    /* Initialize fields */
     mcptr->mc.group_num = curr_group;
 /* Is the next character non-ASCII? */
     struct grapheme gc;
@@ -1241,7 +1241,7 @@ static int mcstr(void) {
         mcptr--;
         mcptr->mc.repeat = 1;
         mcptr->cl_lim.low = (pchr == MC_ONEPLUS)? 1: 0;
-        mcptr->cl_lim.high = INT_MAX;     /* Not quite infinity */
+        mcptr->cl_lim.high = INT_MAX;   /* Not quite infinity */
         can_repeat = FALSE;
         break;
     case MC_RANGE:
@@ -1303,7 +1303,7 @@ static int mcstr(void) {
  */
         mcptr->x.next_or = NULL;            /* No following OR from here yet */
         cntl_grp_info[curr_group].next_choice->x.next_or = mcptr;   /* Chain */
-        cntl_grp_info[curr_group].next_choice = mcptr;  /* next link is here */
+        cntl_grp_info[curr_group].next_choice = mcptr;  /* Next link is here */
         can_repeat = FALSE;
         break;
 
@@ -1409,8 +1409,8 @@ static int mcstr(void) {
             case 'd':
             case 'D':
                 mcptr->mc.type = UCPROP;
-                mcptr->val.prop[0] = 'N';     /* Numeric... */
-                mcptr->val.prop[1] = 'd';     /* ...digit */
+                mcptr->val.prop[0] = 'N';   /* Numeric... */
+                mcptr->val.prop[1] = 'd';   /* ...digit */
                 terminate_str(mcptr->val.prop + 2); /* Ensure NUL terminated */
                 mcptr->mc.negate_test = (pchr == 'D');
                 can_repeat = TRUE;
@@ -1452,7 +1452,7 @@ static int mcstr(void) {
                 mcptr->mc.type = LITCHAR;
                 mcptr->val.lchar = pchr;
                 can_repeat = TRUE;
-                goto pchr_done;     /* To skip possible_slow_scan reset */
+                goto pchr_done; /* To skip possible_slow_scan reset */
             default:
                 pchr = *patptr;
                 can_repeat = TRUE;
@@ -1462,7 +1462,7 @@ static int mcstr(void) {
         mcptr->mc.type = LITCHAR;
         mcptr->val.lchar = pchr;
         can_repeat = TRUE;
-        possible_slow_scan = FALSE;     /* Not from this one, at least */
+        possible_slow_scan = FALSE; /* Not from this one, at least */
         break;
     }               /* End of switch on original pchr */
 pchr_done:
@@ -1471,7 +1471,7 @@ pchr_done_noincr:
     mcptr++;
     mj++;
     if (possible_slow_scan) slow_scan = TRUE;
-    END_WHILE(pchr = *patptr....)       /* End of while. */
+    END_WHILE(pchr = *patptr....)   /* End of while. */
 
 /* Close off the meta-string. */
     mcptr->mc = null_mg;
@@ -1491,7 +1491,7 @@ pchr_done_noincr:
         return FALSE;
     }
 
-    if (cntl_grp_info[0].state != GPCLOSED) {   /* Closed at the end, or error */
+    if (cntl_grp_info[0].state != GPCLOSED) {   /* Not Closed at end == error */
         parse_error(patptr-1, "unterminated grouping");
         return FALSE;
     }
@@ -1517,7 +1517,7 @@ static struct func_call *new_fc(void) {
  */
 static int rmcstr(void) {
     struct magic_replacement *rmcptr = rmcpat;
-    char *patptr = db_val(rpat);
+    char *patptr = strdupa(db_val(rpat));
     char *btext;
     char btbuf[NPAT+1];
 
@@ -1541,7 +1541,7 @@ static int rmcstr(void) {
         bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
         if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
             patptr += bc;
-            if (!gc.cdm)    {   /* No combining marks */
+            if (!gc.cdm) {  /* No combining marks */
                 rmcptr->mc.type = UCLITL;
                 rmcptr->val.uchar = gc.uc;
             }
@@ -1559,7 +1559,7 @@ static int rmcstr(void) {
         switch (*patptr) {
         case MC_REPL:
             patptr++;
-            if (*patptr != '{') {       /* balancer: } */
+            if (*patptr != '{') {   /* balancer: } */
                 parse_error(patptr, "$ without {...}");
                 return FALSE;
             }
@@ -1661,7 +1661,7 @@ static int rmcstr(void) {
                             }
                         }
                     }
-                    else {                  /* group */
+                    else {                  /* Group */
                         wkfcp->type = REPL_GRP;
                         wkfcp->val.group_num = atoi(cnt);
                     }
@@ -1671,8 +1671,8 @@ static int rmcstr(void) {
                     tr_start = bp;
                 }
 /* Copy any trailing text */
-                if (ep - tr_start) {    /* Save trailing text, if any */
-                    wkfcp->type = LITCHAR;      /* Change type */
+                if (ep - tr_start) {        /* Save trailing text, if any */
+                    wkfcp->type = LITCHAR;  /* Change type */
                     wkfcp->val.ltext = strndup(tr_start, (ep - tr_start));
                     wkfcp->next = new_fc();
                     wkfcp = wkfcp->next;
@@ -1686,22 +1686,22 @@ static int rmcstr(void) {
             rmagical = TRUE;
             patptr += patptr_advance;
             break;
-        case MC_ESC:        /* Just insert the next grapheme! */
-            if (!*(++patptr)) {     /* Can't be last char */
+        case MC_ESC:            /* Just insert the next grapheme! */
+            if (!*(++patptr)) { /* Can't be last char */
                 parse_error(patptr, "dangling \\ at end");
                 return FALSE;
 	    }
             rmagical = TRUE;    /* Can't do literal now... */
 	    /* Fall through - to handle next char... */
-        default:            /* Need to test for ASCII again after MC_ESC */
+        default:                /* Need to test for ASCII again after MC_ESC */
             bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
             if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
                 patptr += bc;
-                if (!gc.cdm)    {   /* No combining marks so just UCLITL */
+                if (!gc.cdm) {  /* No combining marks so just UCLITL */
                     rmcptr->mc.type = UCLITL;
                     rmcptr->val.uchar = gc.uc;
                 }
-                else {              /* Has combining marks, so UCGRAPH */
+                else {          /* Has combining marks, so UCGRAPH */
                     rmcptr->mc.type = UCGRAPH;
 /* We copy all of the data into our saved one. This means that any
  * malloc'ed ex parts get their pointers copied, and there is no more to
@@ -1922,18 +1922,23 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  */
 void rvstrcpy(db *rvstr, db *str) {
 
-/* Ensure rvstr has the correct length and storage */
-    dbp_set(rvstr, dbp_val(str));
+/* Get a copy of the original */
+
+    char *wp = strdupa(dbp_val(str));
 
 /* Now reverse this copy */
 
-    char *bp = dbp_val(rvstr);
-    char *ep = bp + dbp_len(rvstr) - 1;
+    char *bp = wp;
+    char *ep = wp + dbp_len(str) - 1;
     do {
         char a = *bp;   /* Original begin */
         *bp++ = *ep;    /* Copy end to begin */
         *ep-- = a;      /* Original begin into end */
     } while (bp < ep);
+
+/* Now set the result */
+    dbp_set(rvstr, wp);
+    return;
 }
 
 /*      Setting up search jump tables.
@@ -2130,7 +2135,7 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
     curoff = *pcuroff;
 
     offs_4_nl = (dir == FORWARD)? lused(curline): 0;
-    if (curoff == offs_4_nl) {      /* Need to change lines */
+    if (curoff == offs_4_nl) {  /* Need to change lines */
         if (dir == FORWARD) {
             nextline = lforw(curline);
             nextoff = 0;
@@ -2174,7 +2179,8 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
                 gc.uc = UEM_NOCHAR;
                 return &gc;
             }
-            typedef int (*fn_gcall)(char *, int, int, struct grapheme *, int);
+            typedef int (*fn_gcall)(const char *, int, int,
+                 struct grapheme *, int);
             fn_gcall get_graph;
             if (dir == FORWARD) get_graph = build_next_grapheme;
             else                get_graph = build_prev_grapheme;
@@ -2489,7 +2495,7 @@ static void init_dyn_group_status(void) {
  * NOTE: that for a REVERSE search we step towards the start of the file
  * but always check against the pattern-match in a "forwards" direction.
  *
- * struct magic *mcpatrn;                       pointer into pattern
+ * struct magic *mcpatrn;       pointer into pattern
  * int direct;                  which way to go.
  * int beg_or_end;              put point at beginning or end of pattern.
  */
@@ -3114,7 +3120,7 @@ int backsearch(int f, int n) {
 static struct line *sm_line = NULL;
 static int sm_off = 0;
 int scanmore(db *patrn, int dir, int next_match, int extend_match) {
-    int sts;                /* search status              */
+    int sts;                /* search status */
 
 /* If called with a NULL pattern, just remove group info. */
     if (!patrn) {
@@ -3209,7 +3215,7 @@ static struct {
     int alloc;
 } repl = { NULL, 0, 0 };
 #define REPL_INCR 100
-static void append_to_repl_buf(char *buf, int nb) {
+static void append_to_repl_buf(const char *buf, int nb) {
     if (nb == -1) nb = strlen(buf);
     int space_needed = (repl.len + nb + 1) - repl.alloc;
     if (space_needed > 0) { /* Round up to next REPL_INCR */
@@ -3253,7 +3259,7 @@ static char *getrepl(void) {
             }
             break;
         case REPL_VAR: {
-            char *vval = getval(rmcptr->val.varname);
+            const char *vval = getval(rmcptr->val.varname);
             append_to_repl_buf(vval, -1);
             break;
         }
@@ -3337,7 +3343,7 @@ static struct {
  * The replacement string is the actual text to insert - our caller
  * will have done any replacement magic already.
  */
-static int delins(char *repstr) {
+static int delins(const char *repstr) {
 
 /* Remember what the replacement was */
 
@@ -3464,7 +3470,7 @@ static int replaces(int query, int f, int n) {
     while ((f == FALSE || n > nummatch) &&
            (nlflag == FALSE || nlrepl == FALSE)) {
 
-        char *match_p, *repl_p;
+        const char *match_p, *repl_p;
 
 /* Search for the pattern. The true length of the matched string ends up
  * in match_grp_info[0].len
@@ -3522,7 +3528,7 @@ qprompt:
             case ' ':
                 break;
 
-            case 'n':       /* no, onword */
+            case 'n':       /* no, onwards */
                 forw_grapheme(1);
                 continue;
 

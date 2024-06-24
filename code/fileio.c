@@ -21,7 +21,7 @@
 
 #include "utf8proc.h"
 
-static int ffp;                         /* File unit, all functions. */
+static int ffp;             /* File unit, all functions. */
 
 /* The cache.
  * Used for reading and writing as only one can be active at any one time.
@@ -60,7 +60,7 @@ int ffclose(void) {
 
 /* Open file <fn> for reading on global file-unit ffp
  */
-int ffropen(char *fn) {
+int ffropen(const char *fn) {
     struct stat statbuf;
 
     ffp_mode = O_RDONLY;
@@ -99,7 +99,7 @@ int ffropen(char *fn) {
 
 /* Open file <fn> for writing on global file-unit ffp
  */
-int ffwopen(char *fn) {
+int ffwopen(const char *fn) {
 
     ffp_mode = O_WRONLY;
 
@@ -147,7 +147,7 @@ int ffwopen(char *fn) {
  * We can detect 2. by checking for cryptflag && curbp->b_EOLmissing.
  * We also need to code make a heuristic check between a text and binary file.
  * file_is_binary() is only called when we are writing the first cache block,
- * so rst is sitll 0 and len is the real valid length.
+ * so rst is still 0 and len is the real valid length.
  */
 
 static int file_is_binary(void) {
@@ -216,7 +216,7 @@ static int flush_write_cache(void) {
  * been sent and use the otherwise unused cache.rst variable to note
  * that we've seen the first line.
  */
-int ffputline(char *buf, int nbuf) {
+int ffputline(const char *buf, int nbuf) {
 
     static int doing_newline = 0;
     int status;
@@ -265,7 +265,7 @@ int ffputline(char *buf, int nbuf) {
         doing_newline = 0;
         if (status != FIOSUC) return status;
     }
-    cache.rst = 1;              /* Set the "seen first line" flag */
+    cache.rst = 1;          /* Set the "seen first line" flag */
 
     while(nbuf > 0) {
         int to_fill;
@@ -281,7 +281,7 @@ int ffputline(char *buf, int nbuf) {
         }
 
         nbuf -= to_fill;        /* bytes left */
-        cache.len += to_fill;  /* valid in cache */
+        cache.len += to_fill;   /* valid in cache */
         buf += to_fill;         /* new start of input */
         if (nbuf > 0) {         /* More to go, so flush cache */
             status = flush_write_cache();
@@ -306,7 +306,7 @@ int ffputline(char *buf, int nbuf) {
 static void add_to_fline(int len) {
     if (fline == NULL) fline = lalloc();
 
-    db_appendn(fline->l_, cache.buf+cache.rst, len);
+    db_appendn(ldb(fline), cache.buf+cache.rst, len);
     cache.rst += len;       /* Advance cache read-pointer */
     cache.len -= len;       /* Decrement left-to-read counter */
     return;
@@ -376,7 +376,7 @@ int ffgetline(void) {
 /* Does file <fn> exist on disk?
  *
  */
-int fexist(char *fn) {
+int fexist(const char *fn) {
     struct stat statbuf;
 
     int status = stat(fn, &statbuf);

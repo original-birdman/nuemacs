@@ -1,6 +1,8 @@
 /* dyn_buf.c
  * Utility code to handle dynamic buffers (strings or binary data)
  * All moving is done by mem* calls with specific lengths
+ * CANNOT use the dbp_val(x) etc. macros here, as they are marked as
+ * const. This is the only place where we should modify them.
  */
 
 #include <stdio.h>
@@ -15,8 +17,8 @@
 #define DYN_INCR 64
 static void _dbp_realloc(db *ds, size_t need) {
     size_t want = (need + DYN_INCR) & ~(DYN_INCR - 1);
-    dbp_val(ds) = Xrealloc(dbp_val(ds), want);
-    dbp_max(ds) = want;
+    ds->val = Xrealloc(ds->val, want);
+    ds->alloc = want;
     return;
 }
 
@@ -24,18 +26,18 @@ static void _dbp_realloc(db *ds, size_t need) {
  * Intended for string use.
  */
 
-char *_dbp_val_nc(db *ds) {
-    return dbp_val(ds)? dbp_val(ds): "";
+const char *_dbp_val_nc(db *ds) {
+    return ds->val? ds->val: "";
 }
 
 /* Set value to the n bytes */
 
 void _dbp_setn(db *ds, const void *mp, size_t n) {
-    size_t need = n + dbp_type(ds);
-    if (need > dbp_max(ds)) _dbp_realloc(ds, need);
-    memcpy(dbp_val(ds), mp, n);
-    dbp_len(ds) = n;
-    if (dbp_type(ds) == STR) *(dbp_val(ds)+dbp_len(ds)) = '\0';
+    size_t need = n + ds->type;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
+    memcpy(ds->val, mp, n);
+    ds->len = n;
+    if (ds->type == STR) *(ds->val+ds->len) = '\0';
     return;
 }
 
@@ -48,14 +50,14 @@ void _dbp_set(db *ds, const char *str) {
 /* Insert n chars into buffer */
 
 void _dbp_insertn_at(db *ds, const void *mp, size_t n, size_t offs) {
-    int movers = dbp_len(ds) - offs;
+    int movers = ds->len - offs;
     if (movers < 0) return;   /* Offset too big */
-    size_t need = dbp_len(ds) + n + dbp_type(ds);
-    if (need > dbp_max(ds)) _dbp_realloc(ds, need);
-    memmove(dbp_val(ds)+offs+n, dbp_val(ds)+offs, movers);
-    memcpy(dbp_val(ds)+offs, mp, n);
-    dbp_len(ds) += n;
-    if (dbp_type(ds) == STR) *(dbp_val(ds)+dbp_len(ds)) = '\0';    
+    size_t need = ds->len + n + ds->type;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
+    memmove(ds->val+offs+n, ds->val+offs, movers);
+    memcpy(ds->val+offs, mp, n);
+    ds->len += n;
+    if (ds->type == STR) *(ds->val+ds->len) = '\0';
     return;
 }
 
@@ -63,35 +65,56 @@ void _dbp_insertn_at(db *ds, const void *mp, size_t n, size_t offs) {
 
 void _dbp_deleten_at(db *ds, int n, size_t offs) {
 /* Since we are deleting we must already have enough space */
-    if ((n + offs) > dbp_len(ds))  n = dbp_len(ds) - offs;
+    if ((n + offs) > ds->len)  n = ds->len - offs;
     if (n < 0) return;
-    int movers = dbp_len(ds) - offs - n;
-    memmove(dbp_val(ds)+offs, dbp_val(ds)+offs+n, movers);
-    dbp_len(ds) -= n;
-    if (dbp_type(ds) == STR) *(dbp_val(ds)+dbp_len(ds)) = '\0';
+    int movers = ds->len - offs - n;
+    memmove(ds->val+offs, ds->val+offs+n, movers);
+    ds->len -= n;
+    if (ds->type == STR) *(ds->val+ds->len) = '\0';
     return;
+}
+
+/* Overwrite n chars at offset.
+ * The full length must already be valid for the target.
+ */
+void _dbp_overwriten_at(db *ds, const void *mp, size_t n, size_t offs) {
+     if ((offs + n) > ds->len) return;
+     memmove(ds->val+offs, mp, n);
+     return;
 }
 
 /* Clear a value.
  * Set the length to 0 and, for STR, if val is allocated ensure byte 0 is 0.
  */
 void _dbp_clear(db *ds) {
-    dbp_len(ds) = 0;
-    if ((ds->val) && (dbp_type(ds) == STR)) *(ds->val) = '\0';
+    ds->len = 0;
+    if ((ds->val) && (ds->type == STR)) *(ds->val) = '\0';
+    return;
+}
+
+/* Truncate a value.
+ * Do nothing if the current length is less than or equal to the request.
+ * If this is a STR buffer, append a NUL.
+ * We do not need any more space for this.
+ */
+void _dbp_truncate(db *ds, size_t n) {
+    if (n >= ds->len) return;
+    ds->len = n;
+    if (ds->type == STR) *(ds->val+ds->len) = '\0';
     return;
 }
 
 /* Append n bytes */
 
 void _dbp_appendn(db *ds, const char *str, size_t n) {
-    size_t need = dbp_len(ds) + n + dbp_type(ds);
-    if (need > dbp_max(ds)) _dbp_realloc(ds, need);
+    size_t need = ds->len + n + ds->type;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* Append n chars, set length and terminate if needed */
 
-    memcpy(dbp_val(ds) + dbp_len(ds), str, n);
-    dbp_len(ds) += n;
-    if (dbp_type(ds) == STR) *(dbp_val(ds)+dbp_len(ds)) = '\0';
+    memcpy(ds->val + ds->len, str, n);
+    ds->len += n;
+    if (ds->type == STR) *(ds->val+ds->len) = '\0';
     return;
 }
 
@@ -106,23 +129,23 @@ void _dbp_append(db *ds, const char *str) {
 /* Append a character */
 
 void _dbp_addch(db *ds, const char ch) {
-    size_t need = dbp_len(ds) + 1 + dbp_type(ds);
-    if (need > dbp_max(ds)) _dbp_realloc(ds, need);
+    size_t need = ds->len + 1 + ds->type;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* We know the destination length, so just drop the new char at the end. */
 
-    char *eloc = dbp_val(ds) + dbp_len(ds);
+    char *eloc = ds->val + ds->len;
     *eloc++ = ch;
-    dbp_len(ds)++;
-    if (dbp_type(ds) == STR) *eloc = '\0';
+    ds->len++;
+    if (ds->type == STR) *eloc = '\0';
     return;
 }
 
 /* Get char at offset (0-based) */
 
 char _dbp_charat(db *ds, size_t w) {
-    if (w >= dbp_len(ds)) return '\0';
-    return *(dbp_val(ds) + w);
+    if (w >= ds->len) return '\0';
+    return *(ds->val + w);
 }
 
 /* Set char at offset (0-based)
@@ -131,29 +154,29 @@ char _dbp_charat(db *ds, size_t w) {
  */
 
 int _dbp_setcharat(db *ds, size_t w, char c) {
-    if (w >= dbp_len(ds)) return 1;
-    *(dbp_val(ds) + w) = c;
+    if (w >= ds->len) return 1;
+    *(ds->val + w) = c;
 /* If we've written a NUL, change the stored length */
-    if ((dbp_type(ds) == STR) && (c == '\0')) dbp_len(ds) = w;
+    if ((ds->type == STR) && (c == '\0')) ds->len = w;
     return 0;
 }
 
 /* Compare a string.
  * The non-n versions only make sense for STR buffers.
- * MAKE THESE #defines?
+ * GML - MAKE THESE #defines?
  */
 
 char _dbp_cmp(db *ds, const char *str) {
-    return strcmp(dbp_val(ds), str);
+    return strcmp(ds->val, str);
 }
 char _dbp_cmpn(db *ds, const char *str, size_t n) {
-    return strncmp(dbp_val(ds), str, n);
+    return strncmp(ds->val, str, n);
 }
 char _dbp_casecmp(db *ds, const char *str) {
-    return strcasecmp(dbp_val(ds), str);
+    return strcasecmp(ds->val, str);
 }
 char _dbp_casecmpn(db *ds, const char *str, size_t n) {
-    return strncasecmp(dbp_val(ds), str, n);
+    return strncasecmp(ds->val, str, n);
 }
 
 /* sprintf-style call to format a db.
@@ -163,12 +186,12 @@ char _dbp_casecmpn(db *ds, const char *str, size_t n) {
 void _dbp_sprintf(db *ds, const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    dbp_len(ds) = vsnprintf(dbp_val(ds), dbp_max(ds), fmt, ap);
+    ds->len = vsnprintf(ds->val, ds->alloc, fmt, ap);
     va_end(ap);
-    if (dbp_len(ds) >= dbp_max(ds)) {  /* Go again */
-        _dbp_realloc(ds, dbp_len(ds));
+    if (ds->len >= ds->alloc) {  /* Go again */
+        _dbp_realloc(ds, ds->len);
         va_start(ap, fmt);
-        dbp_len(ds) = vsnprintf(dbp_val(ds), dbp_max(ds), fmt, ap);
+        ds->len = vsnprintf(ds->val, ds->alloc, fmt, ap);
         va_end(ap);
     }
 }
@@ -176,8 +199,8 @@ void _dbp_sprintf(db *ds, const char *fmt, ...) {
 /* Free (reset) a Dynamic String */
 
 void _dbp_free(db *ds) {
-    Xfree_setnull(dbp_val(ds));
-    dbp_len(ds) = 0;
-    dbp_max(ds) = 0;
+    Xfree_setnull(ds->val);
+    ds->len = 0;
+    ds->alloc = 0;
     return;
 }

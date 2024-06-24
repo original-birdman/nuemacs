@@ -75,7 +75,7 @@ static inline unsigned char get_ibyte(
  */
 #define int_case(ivar, imin) \
     case sizeof(ivar): \
-        memcpy(&ivar, ip, sizeof(ivar));    /* Ensure alignment */ \
+        memcpy(&ivar, ip, sizeof(ivar));    /* To ensure alignment */ \
         if (type == 'I') ivar -= imin; \
         ivar >>= 8*(sizeof(ivar) - 1 - offset); \
         return (unsigned char)(ivar & 0xff)
@@ -98,7 +98,7 @@ static inline unsigned char get_ibyte(
             *cstr_done = 0;
             return *(fp+offset);
         }
-        return *(ip+offset);            /* Index into char array */
+        return *(ip+offset);    /* Index into char array */
     default:
 /* This is really an error, but there's no way to signal that...
  * ...also, it should never happen as we've already validated the fields
