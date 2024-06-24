@@ -8085,3 +8085,7 @@ random.c
 
 version.c
     Display unknown version for libc if it cannot be determined.
+
+-----
+autotest/dump_mc.debug
+    Moved to ../tools/dump_mc.debug

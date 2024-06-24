@@ -1,4 +1,4 @@
-/* To use this, #include it into search.c aftre declarations and
+/* To use this, #include it into search.c after declarations and
  * before the first function (init_search_ringbuffers()?)>
  * Then, at the point where you wish to dump a struct magic(_replacement)
  * put:
@@ -14,7 +14,7 @@ or
 
 /* Dump the struct magic structure at mp */
 
-#include "../utf8.h"
+#include "../code/utf8.h"
 
 #define DUMP_MATCH(message) \
    dump_mc((union magicp)mcpat, MATCHER, message, __LINE__);
