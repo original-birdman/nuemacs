@@ -23,16 +23,16 @@
 /* basic.c */
 #ifndef BASIC_C
 extern int gotobol(int, int);
+extern int forw_grapheme(int);
 extern int back_grapheme(int);
 extern int backchar(int, int);
 extern int gotoeol(int, int);
-extern int forw_grapheme(int);
 extern int forwchar(int, int);
-extern int gotoline(int, int);
 extern int gotobob(int, int);
 extern int gotoeob(int, int);
 extern int forwline(int, int);
 extern int backline(int, int);
+extern int gotoline(int, int);
 extern int gotobop(int, int);
 extern int gotoeop(int, int);
 extern int forwpage(int, int);
@@ -43,12 +43,12 @@ extern int swapmark(int, int);
 
 /* bind.c */
 #ifndef BIND_C
-extern int help(int, int);
 extern const char *flook(const char *, int, int);
+extern int help(int, int);
 extern int not_in_mb_error(int, int);
-extern int deskey(int, int);
 extern struct key_tab *getbyfnc(fn_t);
 extern struct key_tab *getbind(int);
+extern int deskey(int, int);
 extern int buffertokey(int, int);
 extern int switch_internal(int, int);
 extern int bindtokey(int, int);
@@ -65,18 +65,18 @@ extern const char *transbind(const char *);
 
 #ifndef BUFFER_C
 extern int set_buffer_name(const char *);
+extern int bclear(struct buffer *);
+extern int zotbuf(struct buffer *);
+extern int swbuffer(struct buffer *, int);
+/* Lookup a buffer by name. */
+extern struct buffer *bfind(const char *, int, int);
 extern int usebuffer(int, int);
 extern int nextbuffer(int, int);
-extern int swbuffer(struct buffer *, int);
 extern int killbuffer(int, int);
-extern int zotbuf(struct buffer *);
 extern int namebuffer(int, int);
 extern void addline_to_anyb(const char *, struct buffer *);
 extern int listbuffers(int, int);
 extern int anycb(void);
-/* Lookup a buffer by name. */
-extern struct buffer *bfind(const char *, int, int);
-extern int bclear(struct buffer *);
 extern int unmark(int, int);
 extern char do_force_mode(const char *);
 extern int setforcemode(int, int);
@@ -84,72 +84,73 @@ extern int setforcemode(int, int);
 
 /* crypt.c */
 #ifndef CRYPT_C
-extern int set_encryption_key(int, int);
 extern void myencrypt(char *, unsigned int);
+extern int set_encryption_key(int, int);
 #endif
 
 /* display.c */
 #ifndef DISPLAY_C
+extern void movecursor(int, int);
+extern void force_movecursor(int, int);
+extern void mlerase(void);
 extern int ttput1c(char);
 extern void vtinit(void);
 extern void vttidy(void);
 extern int upscreen(int, int);
-extern void update(int);
 extern void upmode(struct buffer *);
-extern void movecursor(int, int);
-extern void force_movecursor(int, int);
-extern void mlerase(void);
+extern void set_scrarray_size(int, int);
+extern int newscreensize(int, int, int);
+extern void update(int);
 extern void mlwrite(const char *, ...);
 extern void mlforce(const char *, ...);
 extern void mlwrite_one(const char *);
 extern void mlforce_one(const char *);
 extern void getscreensize(int *, int *);
 extern void sizesignal(int);
-extern void set_scrarray_size(int, int);
-extern int newscreensize(int, int, int);
 extern void mberase(void);
 extern void mbupdate(void);
 #endif
 
 /* eval.c */
 #ifndef EVAL_C
+extern const char *ue_itoa(int);
 extern void varinit(void);
 extern void init_envvar_index(void);
 extern int nxti_envvar(int);
 extern void sort_user_var(void);
 extern int nxti_usrvar(int);
 extern int stol(const char *);
-extern int setvar(int, int);
-extern int delvar(int, int);
-extern const char *ue_itoa(int);
 extern int gettyp(const char *);
 extern const char *getval(const char *);
+extern int setvar(int, int);
+extern int delvar(int, int);
 #endif
 
 /* exec.c */
 #ifndef EXEC_C
 extern const char *token(const char *, db *);
+extern int nextarg(const char *, db *, enum cmplt_type);
+extern int macarg(db *);
 extern int namedcmd(int, int);
 extern int execcmd(int, int);
-extern int macarg(db *);
-extern int nextarg(const char *, db *, enum cmplt_type);
 extern int storemac(int, int);
 extern void ptt_free(struct buffer *);
+extern int storeproc(int, int);
 extern int storepttable(int, int);
 extern int set_pttable(int, int);
 extern int next_pttable(int, int);
 extern int toggle_ptmode(int, int);
 extern int ptt_handler(int, int);
-extern int storeproc(int, int);
+extern int dobuf(struct buffer *);
 extern int run_user_proc(const char *, int, int);
 extern int drop_pin(int, int);
 extern int back_to_pin(int, int);
 extern int switch_with_pin(int, int);
 extern int execproc(int, int);
 extern int execbuf(int, int);
-extern int dobuf(struct buffer *);
-extern int execfile(int, int);
 extern int dofile(const char *);
+extern int execfile(int, int);
+#ifdef NUMBERED_MACROS
 extern int cbuf1(int, int);
 extern int cbuf2(int, int);
 extern int cbuf3(int, int);
@@ -191,6 +192,7 @@ extern int cbuf38(int, int);
 extern int cbuf39(int, int);
 extern int cbuf40(int, int);
 #endif
+#endif
 
 /* file.c */
 #ifndef FILE_C
@@ -198,25 +200,25 @@ extern const char *fixup_fname(const char *);
 extern const char *fixup_full(const char *);
 extern const char *get_realpath(const char *);
 extern void set_buffer_filenames(struct buffer *, const char *);
+extern int readin(const char *, int);
 extern int fileread(int, int);
 extern int insfile(int, int);
+extern int showdir_handled(const char *);
+extern void makename(db *, const char *, int);
+extern int getfile(const char *, int, int);
 extern int filefind(int, int);
 extern int viewfile(int, int);
-extern int showdir_handled(const char *);
-extern int getfile(const char *, int, int);
-extern int readin(const char *, int);
-extern void makename(db *, const char *, int);
+extern int writeout(const char *);
 extern int filewrite(int, int);
 extern int filesave(int, int);
-extern int writeout(const char *);
 extern int filename(int, int);
 #endif
 
 /* fileio.c */
 #ifndef FILEIO_C
+extern int ffclose(void);
 extern int ffropen(const char *);
 extern int ffwopen(const char *);
-extern int ffclose(void);
 extern int ffputline(const char *, int);
 extern int ffgetline(void);
 extern int fexist(const char *);
@@ -224,11 +226,11 @@ extern int fexist(const char *);
 
 /* input.c */
 #ifndef INPUT_C
+extern int tgetc(void);
+extern int get1key(void);
 extern int mlyesno(const char *);
 extern int mlreply(const char *, db *, enum cmplt_type);
 extern struct name_bind *getname(const char *, int);
-extern int tgetc(void);
-extern int get1key(void);
 extern int getcmd(void);
 extern void evaluate_cmdb(const char *, db *);
 extern int getstring(const char *, db *, enum cmplt_type);
@@ -239,40 +241,40 @@ extern int getstring(const char *, db *, enum cmplt_type);
 extern int simulate_incr(int, int);
 extern int incremental_debug_check(int);
 extern void incremental_debug_cleanup(void);
-extern int risearch(int, int);
 extern int fisearch(int, int);
+extern int risearch(int, int);
 #endif
 
 /* lock.c */
 #ifndef LOCK_C
+extern int lock(const char *);
 extern int lockchk(const char *);
 extern int lockrel(void);
-extern int lock(const char *);
 #endif
 
 /* main.c */
 #ifndef MAIN_C
 extern void addchar_kbdmacro(char);
 extern int addto_kbdmacro(const char *, int, int);
-extern int macro_helper(int, int);
 extern void dumpdir_tidy(void);
 extern com_arg *multiplier_check(int);
 extern int getfence(int, int);
-extern int not_interactive(int, int);
-extern int execute(int c, int, int);
-extern int quickexit(int, int);
-extern int quit(int, int);
+extern int macro_helper(int, int);
 extern int ctlxlp(int, int);
-extern int ctlxrp(int, int);
 extern int ctlxe(int, int);
+extern int nullproc(int, int);
+extern int not_interactive(int, int);
+extern int ctlxrp(int, int);
+extern int execute(int c, int, int);
+extern int reexecute(int, int);
 extern int ctrlg(int, int);
 extern int rdonly(void);
 extern int resterr(void);
-extern int nullproc(int, int);
 extern int metafn(int, int);
 extern int cex(int, int);
 extern int unarg(int, int);
-extern int reexecute(int, int);
+extern int quit(int, int);
+extern int quickexit(int, int);
 extern void extend_keytab(int);
 #endif
 
@@ -342,11 +344,11 @@ extern int simulate(int, int);
 
 /* region.c */
 #ifndef REGION_C
+extern int getregion(struct region *);
 extern int killregion(int, int);
 extern int copyregion(int, int);
-extern int lowerregion(int, int);
 extern int upperregion(int, int);
-extern int getregion(struct region *);
+extern int lowerregion(int, int);
 extern int narrow(int, int);
 extern int widen(int, int);
 #endif
@@ -359,23 +361,22 @@ extern void rotate_sstr(int);
 extern void select_sstr(void);
 extern int unicode_eq(unsigned int, unsigned);
 extern int asceq(unsigned char, unsigned char);
+extern void rvstrcpy(db *, db *);
+extern void setpattern(db *, db *);
+extern const char *group_match(int);
 extern int forwhunt(int, int);
 extern int forwsearch(int, int);
 extern int backhunt(int, int);
 extern int backsearch(int, int);
 extern int scanmore(db *, int, int, int);
-extern void setpattern(db *, db *);
-extern void rvstrcpy(db *, db *);
 extern int sreplace(int, int);
 extern int qreplace(int, int);
-extern char *group_match(int);
 #endif
 
 /* spawn.c */
 #ifndef SPAWN_C
 extern int spawncli(int, int);
 extern int bktoshell(int, int);
-extern void rtfrmshell(void);
 extern int spawn(int, int);
 extern int execprg(int, int);
 extern int pipecmd(int, int);
@@ -386,6 +387,7 @@ extern int filter_buffer(int, int);
 #ifndef WINDOW_C
 extern int reposition(int, int);
 extern int redraw(int, int);
+extern void cknewwindow(void);
 extern int nextwind(int, int);
 extern int prevwind(int, int);
 extern int mvdnwind(int, int);
@@ -393,8 +395,8 @@ extern int mvupwind(int, int);
 extern int onlywind(int, int);
 extern int delwind(int, int);
 extern int splitwind(int, int);
-extern int enlargewind(int, int);
 extern int shrinkwind(int, int);
+extern int enlargewind(int, int);
 extern int resize(int, int);
 extern struct window *wpopup(void);  /* Pop up window creation. */
 extern int scrnextup(int, int);
@@ -404,7 +406,6 @@ extern int restwnd(int, int);
 extern int newsize(int);
 extern int newwidth(int);
 extern int getwpos(void);
-extern void cknewwindow(void);
 #endif
 
 /* word.c */
@@ -440,10 +441,6 @@ extern int numberlist_region(int, int);
 
 /* wrapper.c */
 #ifndef WRAPPER_C
-extern void *Xfree(void *);
-extern void *Xfree_and_set(void **);
-#define Xfree_setnull(a) Xfree_and_set((void **)&(a))
-
 #if __GCC__ >= 11
 #define MALLOC_ATTR __attribute__ ((malloc, malloc (Xfree, 1), returns_nonnull))
 #elif __GCC__ >= 4
@@ -461,6 +458,10 @@ extern void *Xmalloc(size_t) MALLOC_ATTR;
 #endif
 extern void *Xrealloc(void *, size_t) REALLOC_ATTR;
 #undef REALLOC_ATTR
+
+extern void *Xfree(void *);
+extern void *Xfree_and_set(void **);
+#define Xfree_setnull(a) Xfree_and_set((void **)&(a))
 
 #if __GCC__ >= 11
 #define STRDUP_ATTR __attribute__((malloc (Xfree), returns_nonnull))

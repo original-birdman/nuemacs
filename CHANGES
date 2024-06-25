@@ -8093,3 +8093,13 @@ autotest/dump_mc.debug
 buffer.c
     Free line text correctly in free_buffer() now we use BUF db for the
     line buffer.
+
+search.c
+wrapper.c
+efunc.h
+    Added const to return value for group_match(). [search.c, efunc.h]
+    Declare die() as static. [wrapper.c]
+    Removed non-existent rtfrmshell() declaration. [efunc.h]
+    Made cbuf* declarations conditional on NUMBERED_MACROS. [efunc.h]
+    Ordered all extern declarations in the order they occur in their
+    source file. [efunc.h]

@@ -2280,7 +2280,7 @@ try_next_choice:;
             match_grp_info[mcptr->mc.group_num].mline = curline;
             match_grp_info[mcptr->mc.group_num].start = curoff;
             match_grp_info[mcptr->mc.group_num].len = 0;
-/* Need to remember where the start if the match is */
+/* Need to remember where the start of the match is */
             match_grp_info[mcptr->mc.group_num].base = pre_match + ambytes;
             cntl_grp_info[mcptr->mc.group_num].state = GPOPEN;
             cntl_grp_info[mcptr->mc.group_num].next_choice = mcptr->x.next_or;
@@ -2339,6 +2339,7 @@ try_next_choice:;
  *      the position for the *next character*. We need to undo this
  *      effect here...
  */
+
         if (mcptr->mc.min_repeat) {
             while (nmatch <= hi_lim) {
                 int sub_ambytes = amatch(mcptr+1, &curline, &curoff,
@@ -2818,7 +2819,7 @@ fail:;                                  /* continue to search */
  * We only allocate each group text on demand for each search.
  * Any allocated space is freed by the reset for a new search.
  */
-char *group_match(int grp) {
+const char *group_match(int grp) {
 
 /* Is the group-match data valid?? */
 
@@ -2874,8 +2875,8 @@ char *group_match(int grp) {
 static int do_preskip = 0;
 
 static void report_match(void) {
-    char *fullm = group_match(0);
-    char *rpt_text;
+    const char *fullm = group_match(0);
+    const char *rpt_text;
     if (strchr(fullm, '\n') == NULL) {
         rpt_text = fullm;
     }
@@ -3264,7 +3265,7 @@ static char *getrepl(void) {
             break;
         }
         case REPL_GRP: {
-            char *gval = group_match(rmcptr->mc.group_num);
+            const char *gval = group_match(rmcptr->mc.group_num);
             append_to_repl_buf(gval, -1);
             break;
         }
