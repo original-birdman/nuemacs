@@ -775,8 +775,8 @@ void free_buffer(void) {
         }
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = nextlp) {
             nextlp = lforw(lp);
-/* Just free the text and struct. No point fixing up pointers, etc... */
-            Xfree(ltext(lp));
+/* Just need to free the text and struct. */
+            db_free(ldb(lp));
             Xfree(lp);
         }
         Xfree(bp->b_linep); /* No text in this one */

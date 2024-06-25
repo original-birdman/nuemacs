@@ -8089,3 +8089,7 @@ version.c
 -----
 autotest/dump_mc.debug
     Moved to ../tools/dump_mc.debug
+
+buffer.c
+    Free line text correctly in free_buffer() now we use BUF db for the
+    line buffer.
