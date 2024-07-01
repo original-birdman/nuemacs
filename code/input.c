@@ -123,9 +123,10 @@ static const char *getnfile(void) {
          (!strncmp(dp->d_name, db_val(picture), db_len(picture))))) &&
          (strcmp(dp->d_name, ".")) &&
          (strcmp(dp->d_name, ".."))) {
-
-        db_append(fullname, dp->d_name);
-        stat(db_val(fullname), &statbuf);
+/* catenate fullname and d_name in glb_db */
+        db_set(glb_db, db_val(fullname));
+        db_append(glb_db, dp->d_name);
+        stat(db_val(glb_db), &statbuf);
         type = (statbuf.st_mode & S_IFMT);
         if ((type == S_IFREG)
 #ifdef S_IFLNK
@@ -152,7 +153,7 @@ static const char *getffile(const char *fspec_in) {
 /* "'getpwent' in statically linked applications requires at runtime the
  * shared libraries from the glibc version used for linking"
  * But that can't happen and in the likely setting for a STANDALONE
- * version you won't be tryign to lookup by id.
+ * version you won't be trying to lookup by id.
  */
 #ifndef STANDALONE
 

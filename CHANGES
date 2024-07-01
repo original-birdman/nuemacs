@@ -8106,3 +8106,6 @@ efunc.h
 
 tools/dump_mc.debug
     Add ptr to structure to dump to DUMP_MATCH and DUMP_REPLACE.
+
+input.c
+    Fix filename generating in getnfile().
