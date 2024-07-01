@@ -8103,3 +8103,6 @@ efunc.h
     Made cbuf* declarations conditional on NUMBERED_MACROS. [efunc.h]
     Ordered all extern declarations in the order they occur in their
     source file. [efunc.h]
+
+tools/dump_mc.debug
+    Add ptr to structure to dump to DUMP_MATCH and DUMP_REPLACE.

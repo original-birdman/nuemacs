@@ -3,10 +3,11 @@
  * Then, at the point where you wish to dump a struct magic(_replacement)
  * put:
 {
-  DUMP_MATCH("Identity text...")
+  DUMP_MATCH(ptr, "Identity text...")
 or
-  DUMP_REPLACE("Identity text...")
+  DUMP_REPLACE(ptr, "Identity text...")
 }
+where ptr is a *pointer* to the data structure.
  */
 
 #ifndef _DUMP_MC_DEBUG_
@@ -16,10 +17,10 @@ or
 
 #include "../code/utf8.h"
 
-#define DUMP_MATCH(message) \
-   dump_mc((union magicp)mcpat, MATCHER, message, __LINE__);
-#define DUMP_REPLACE(message) \
-   dump_mc((union magicp)rmcpat, REPLACER, message, __LINE__);
+#define DUMP_MATCH(ptr, message) \
+   dump_mc((union magicp)ptr, MATCHER, message, __LINE__);
+#define DUMP_REPLACE(ptr, message) \
+   dump_mc((union magicp)ptr, REPLACER, message, __LINE__);
 
 union magicp { struct magic *mmp; struct magic_replacement *rmp; };
 enum d_type { MATCHER, REPLACER };  /* So pointer advance can work */
