@@ -268,14 +268,17 @@ struct magic_replacement {
 /* The group_info data contains some only used when building the
  * struct magic array and some only used when processing it.
  */
-enum GP_state { GPOPEN, GPCLOSED };
+enum GP_state { GPIDLE, GPOPEN, GPPENDING, GPVALID };
 struct control_group_info {     /* Info that controls usage */
     struct magic *next_choice;  /* In mcstr(), where to put OR for this group
                                  * In amatch()/step_scanner(), where the next
                                  * OR is. */
     struct magic *gpend;        /* Where the group pattern ends */
     int parent_group;           /* Group to fall into when this group ends */
-    enum GP_state state;        /* For group balancing check in mcstr() */
+    enum GP_state state;        /* For group balancing check in mcstr() and
+                                   for "is group valid" in group_match() */
+    int start_level;            /* amatch() level group was started */
+    int pending_level;          /* amatch() level group was closed */
 };
 struct match_group_info {       /* String match info - reset on failures */
     struct line *mline;         /* Buffer location of match */
@@ -330,7 +333,12 @@ char current_base[16] = "";
 enum call_type {Search, Replace};  /* So we know the current call type */
 static enum call_type this_rt;
 
+/* Function to set things for the start of searching. */
 void init_search_ringbuffers(void) {
+
+/* Allocate all of these and set them to "".
+ * update_ring() expects this.
+ */
     for (int ix = 0; ix < RING_SIZE; ix++) {
         srch_txt[ix] = Xmalloc(1);
         terminate_str(srch_txt[ix]);
@@ -338,7 +346,7 @@ void init_search_ringbuffers(void) {
         terminate_str(repl_txt[ix]);
     }
 /* Initialize the group text pointers - these are only
- * allocated on request, and freed/reset on each ne pattern
+ * allocated on request, and freed/reset on each new pattern
  * set-up.
  */
     for (int gi = 0; gi < NGRP; gi++) grp_text[gi] = NULL;
@@ -346,7 +354,6 @@ void init_search_ringbuffers(void) {
 /* Ensure that the first mcpat and rmcpat entries are "empty"
  * (it's used as a flag)
  */
-
     mcpat[0].mc = null_mg;
     rmcpat[0].mc = null_mg;
     return;
@@ -579,6 +586,7 @@ static char *brace_text(char *fp, char *btxt) {
  * to follow because of resulting code line wrapping.
  * The following macros can be used for the start/end of block tests,
  * which mean that uemacs won't try to indent to the wrong level.
+ * NOTE! that these must NOT have a trailing ; when used!
  */
 #define TEST_BLOCK(x) if (x) {
 #define END_TEST(x) }
@@ -1091,7 +1099,7 @@ static int mcstr(void) {
     int mj;
     int pchr;
     int status = TRUE;
-    int can_repeat = FALSE;
+    int repeat_allowed = FALSE; /* Set to can_repeat at end of each loop */
     char *btext;
     char btbuf[NPAT+1];
 
@@ -1100,7 +1108,8 @@ static int mcstr(void) {
     if (mc_alloc) mcclear();
     mc_alloc = FALSE;
     group_cntr = 0;
-    cntl_grp_info[0].state = GPOPEN;
+
+    cntl_grp_info[0].state = GPOPEN;    /* But group 0 is always OPEN */
     cntl_grp_info[0].parent_group = -1; /* None */
     int curr_group = 0;
 
@@ -1118,6 +1127,7 @@ static int mcstr(void) {
     mj = 0;
 
     WHILE_BLOCK((pchr = *patptr) && status)
+    int can_repeat = TRUE;  /* Will be switched off as required */
     int possible_slow_scan = FALSE;     /* Not yet */
     mcptr->mc = null_mg;    /* Initialize fields */
     mcptr->mc.group_num = curr_group;
@@ -1132,7 +1142,6 @@ static int mcstr(void) {
  */
         if (!(curwp->w_bufp->b_mode & MDEXACT))
             slow_scan = TRUE;   /* Only case that sets this for non-MAGIC */
-        can_repeat = TRUE;
         patptr += bc;
         if (!gc.cdm)    {   /* No combining marks */
             mcptr->mc.type = UCLITL;
@@ -1172,14 +1181,10 @@ static int mcstr(void) {
     switch (pchr) {
     case MC_CCL:
         status = cclmake(&patptr, mcptr);
-        can_repeat = TRUE;
         mc_alloc = TRUE;
         break;
     case MC_SGRP:
-        group_cntr++;
-/* We allocate 1 more than the counter (so we can then index by group number)
- * Group0 is used for the overall match.
- */
+        group_cntr++;       /* Create a "new" group */
         cntl_grp_info[group_cntr].state = GPOPEN;
         cntl_grp_info[group_cntr].parent_group = curr_group;
         curr_group = group_cntr;
@@ -1187,7 +1192,7 @@ static int mcstr(void) {
         mcptr->mc.group_num = group_cntr;               /* Set correct one */
         mcptr->x.next_or = NULL;                        /* No OR yet but... */
         cntl_grp_info[group_cntr].next_choice = mcptr;  /* it would go here */
-        can_repeat = TRUE;
+        can_repeat = FALSE;
         break;
     case MC_EGRP:
         mcptr->mc.type = EGRP;  /* Close group */
@@ -1196,7 +1201,7 @@ static int mcstr(void) {
         int closed_ok = 0;
         for (int gc = group_cntr; gc > 0; gc--) {
             if (cntl_grp_info[gc].state == GPOPEN) {
-                cntl_grp_info[gc].state = GPCLOSED;
+                cntl_grp_info[gc].state = GPVALID;
                 cntl_grp_info[gc].gpend = mcptr;
                 closed_ok = 1;
                 break;
@@ -1225,7 +1230,6 @@ static int mcstr(void) {
         break;
     case MC_ANY:
         mcptr->mc.type = ANY;
-        can_repeat = TRUE;
         break;
     case MC_REPEAT:
     case MC_ONEPLUS:
@@ -1233,7 +1237,7 @@ static int mcstr(void) {
  * previous element and indicate it is enclosed.
  * If not, that's an error...
  */
-        if (!can_repeat) {
+        if (!repeat_allowed) {
             parse_error(patptr+1, "repeating a non-repeatable item");
             return FALSE;
         }
@@ -1245,7 +1249,7 @@ static int mcstr(void) {
         can_repeat = FALSE;
         break;
     case MC_RANGE:
-        if (!can_repeat) {
+        if (!repeat_allowed) {
             parse_error(patptr+1, "repeating a non-repeatable item");
             return FALSE;
         }
@@ -1272,7 +1276,7 @@ static int mcstr(void) {
  */
         mj--;
         mcptr--;
-        if (can_repeat) {
+        if (repeat_allowed) {
             mcptr->mc.repeat = 1;
             mcptr->cl_lim.low = 0;
             mcptr->cl_lim.high = 1;
@@ -1320,14 +1324,13 @@ static int mcstr(void) {
  *  f       form feed
  *  t       tab
  */
-    case MC_ESC:
+    case MC_ESC:            /* ALL of these can repeat */
         pchr = *(patptr + 1);
         if (pchr) {         /* MC_ESC at EOB is taken literally... */
             patptr++;       /* Advance to next char */
             switch (pchr) { /* The first few MUST finish with goto!! */
             case 'X':
                 mcptr->mc.type = ANYGPH;
-                can_repeat = TRUE;
                 goto pchr_done;
 /* These all use a {} text fetcher */
             case 'u':       /* Unicode char in hex */
@@ -1344,7 +1347,6 @@ static int mcstr(void) {
                 mcptr->mc.type = UCLITL;
 /* For the moment(?), don't validate we have a hex-only field) */
                 mcptr->val.uchar = strtol(btext, NULL, 16);
-                can_repeat = TRUE;
                 patptr += strlen(btext);
                 goto pchr_done;
             case 'k':       /* "kind of" char - just check base unicode */
@@ -1376,7 +1378,6 @@ static int mcstr(void) {
                 mcptr->mc.type = UCKIND;
                 mcptr->val.uchar = kgc.uc;
                 mcptr->mc.negate_test = (pchr == 'K');
-                can_repeat = TRUE;
                 patptr += strlen(btext);
                 goto pchr_done;
             case 'p':
@@ -1403,7 +1404,6 @@ static int mcstr(void) {
                 if (btext[1]) mcptr->val.prop[1] = btext[1] | DIFCASE;
                 terminate_str(mcptr->val.prop + 2); /* Ensure NUL terminated */
                 mcptr->mc.negate_test = (pchr == 'P');
-                can_repeat = TRUE;
                 patptr += strlen(btext);
                 goto pchr_done;
             case 'd':
@@ -1413,7 +1413,6 @@ static int mcstr(void) {
                 mcptr->val.prop[1] = 'd';   /* ...digit */
                 terminate_str(mcptr->val.prop + 2); /* Ensure NUL terminated */
                 mcptr->mc.negate_test = (pchr == 'D');
-                can_repeat = TRUE;
                 goto pchr_done;
 /* w/W is word chars and s/S is whitespace.
  * All four can be passed off to cclmake() generically.
@@ -1427,7 +1426,6 @@ static int mcstr(void) {
                 char *dpatptr = SETTER;
                 (void)cclmake(&dpatptr, mcptr);
                 mcptr->mc.negate_test = !(pchr & DIFCASE);  /* If UPPER */
-                can_repeat = TRUE;
                 goto pchr_done;
             }
 
@@ -1451,17 +1449,14 @@ static int mcstr(void) {
                 }
                 mcptr->mc.type = LITCHAR;
                 mcptr->val.lchar = pchr;
-                can_repeat = TRUE;
                 goto pchr_done; /* To skip possible_slow_scan reset */
             default:
                 pchr = *patptr;
-                can_repeat = TRUE;
             }
         } /* Falls through */
     default:
         mcptr->mc.type = LITCHAR;
         mcptr->val.lchar = pchr;
-        can_repeat = TRUE;
         possible_slow_scan = FALSE; /* Not from this one, at least */
         break;
     }               /* End of switch on original pchr */
@@ -1471,6 +1466,7 @@ pchr_done_noincr:
     mcptr++;
     mj++;
     if (possible_slow_scan) slow_scan = TRUE;
+    repeat_allowed = can_repeat;    /* Can the next pass be a repeat? */
     END_WHILE(pchr = *patptr....)   /* End of while. */
 
 /* Close off the meta-string. */
@@ -1480,7 +1476,7 @@ pchr_done_noincr:
     int closed_ok = 0;
     for (int gc = group_cntr; gc >= 0; gc--) {
         if (cntl_grp_info[gc].state == GPOPEN) {
-            cntl_grp_info[gc].state = GPCLOSED;
+            cntl_grp_info[gc].state = GPVALID;
             cntl_grp_info[gc].gpend = mcptr;
             closed_ok = 1;
             break;
@@ -1491,9 +1487,19 @@ pchr_done_noincr:
         return FALSE;
     }
 
-    if (cntl_grp_info[0].state != GPCLOSED) {   /* Not Closed at end == error */
+    if (cntl_grp_info[0].state != GPVALID) {    /* Not Closed at end == error */
         parse_error(patptr-1, "unterminated grouping");
         return FALSE;
+    }
+
+/* Remove all of the cntl_grp_info next_choice items.
+ * amatch() will add the relevant value as required, but we need to be able
+ * to check whether it has added any.
+ */
+
+    for (int gi = 0; gi <= group_cntr; gi++) {
+        cntl_grp_info[gi].next_choice = NULL;
+        cntl_grp_info[gi].state = GPIDLE;
     }
 
 /* The only way the status would be bad is from the cclmake() routine,
@@ -1750,7 +1756,7 @@ int asceq(unsigned char bc, unsigned char pc) {
 
 /* mgpheq -- meta-character equality with a grapheme.
  *  Used by step_scanner.
- * NOTE that the free()s any ex part of the incoming gc!
+ * NOTE that this free()s any ex part of the incoming gc!
  * (because all callers are done with it after this call, so it
  * puts the free() in one location).
  */
@@ -1910,7 +1916,9 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
         res = FALSE;
     }
 
-/* ODD to free it here, but once we've tested it we've done with it. */
+/* May seem unusual to free it here, but once we've tested it we've
+ * done with it.
+ */
     if (gc->ex) {           /* Our responsibility! */
         Xfree_setnull(gc->ex);
     }
@@ -2033,7 +2041,7 @@ static int readpattern(char *prompt, db *apat, int srch) {
  */
     if (status == FALSE) {              /* Empty response */
         if (our_rt == Search) {
-            if (db_len(pat) > 0) {   /* Have a default to use? */
+            if (db_len(pat) > 0) {      /* Have a default to use? */
                 db_set(tpat, db_val(pat));
                 do_update_ring = 0;     /* Don't save this */
                 status = TRUE;          /* So we do the next section... */
@@ -2195,20 +2203,6 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
     return &gc;
 }
 
-/* amatch -- Search for a meta-pattern, now *always* in the forwards
- *      direction.
- *      Based on the recursive routine amatch() (for "anchored match") in
- *      Kernighan & Plauger's "Software Tools".
- *
- * The return value from this is now the number of bytes matched
- * with a -ve number meaning FAILed.
- *  Used by step_scanner
- *
- * struct magic *mcptr;         string to scan for
- * struct line **pcwline;       current line during scan
- * int *pcwoff;                 position within current line
- */
-
 /* check_next() - helper routine to fetch next char or grapheme.
  * Returns number of bytes used, or -1 on no match.
  *  Used by step_scanner
@@ -2230,11 +2224,28 @@ static int check_next(struct line **cline, int *coff, struct magic *mcptr) {
     else if (!mgpheq(gc, mcptr)) {
         used = -1;      /* Failed (to match the next character) */
     }
-/* mgpheq() will have freed any malloc()ed gc->ex parts */
+/* mgpheq() will have freed any malloc()ed gc->ex parts.
+ * And if we didn't get round to calling mgpheq(), then there won;t be
+ * any gc->ex parts to free.
+ */
     return used;
 }
 
-/* The pre_match value here tells us whether this amatch call is anchored
+/* amatch -- Search for the *entirety* of a  meta-pattern,
+ *           now *always* in the forwards direction.
+ *
+ *      Based on the recursive routine amatch() (for "anchored match") in
+ *      Kernighan & Plauger's "Software Tools". (or was - may not be now).
+ *
+ * The return value from this is now the number of bytes matched
+ * with a -ve number meaning FAILed.
+ *  Used by step_scanner
+ *
+ * struct magic *mcptr;         string to scan for
+ * struct line **pcwline;       current line during scan
+ * int *pcwoff;                 position within current line
+ *
+ * The pre_match value here tells us whether this amatch call is anchored
  * to a buffer location or whether the first match of a repeat may
  * be shortened.
  * Use the number of already-matched chars when calling amatch()
@@ -2243,7 +2254,7 @@ static int check_next(struct line **cline, int *coff, struct magic *mcptr) {
  *  Used by step_scanner
  */
 #define AMFAIL -1
-
+static int am_level = 0;
 static int amatch(struct magic *mcptr, struct line **pcwline, int *pcwoff,
      int pre_match) {
     struct line *curline;           /* current line during scan */
@@ -2255,45 +2266,62 @@ static int amatch(struct magic *mcptr, struct line **pcwline, int *pcwoff,
     curline = *pcwline;
     curoff = *pcwoff;
     int ambytes = 0;                /* Bytes *we've* matched */
+    am_level++;                     /* Which round of amatch() we are */
 
-/* We come back here with curline/curoff reset for CHOICEs */
-
-try_next_choice:;
-    int first = 1;
+try_next_choice:
+    int skip_choices = FALSE;       /* Can't be in a CHOICE here */
     while (1) {
         int bytes_used = 0;         /* Bytes on this pass, not yet in ambytes */
 
 /* Handle start/end groups
  */
+        int cgn = mcptr->mc.group_num;
         switch(mcptr->mc.type) {
-        case SGRP:
         case CHOICE:
-/* If this is a CHOICE and this is NOT the first pass round the loop
- * then we have SUCCEEDED (but only this group!), so we need to skip
- * to the end of it (to run the EGRP block to finalize the match).
- * Otherwise a CHOICE *restarts* a group.
+/* If we hit a CHOICE then, if we are still running a CHOICE (i.e the
+ * previous CHOICE) we have to skip to the end of CHOICES and process that.
+ * Otherwise we drop though to the group start (as CHOICEs always start groups)
+ * and let things run.
  */
-            if ((mcptr->mc.type == CHOICE) && !first) {
+            if (skip_choices) {     /* Alreadt in in a CHOICE */
                 mcptr = cntl_grp_info[mcptr->mc.group_num].gpend;
                 continue;
             }
-            match_grp_info[mcptr->mc.group_num].mline = curline;
-            match_grp_info[mcptr->mc.group_num].start = curoff;
-            match_grp_info[mcptr->mc.group_num].len = 0;
+            skip_choices = TRUE;
+            /* Falls through */
+        case SGRP:
+            match_grp_info[cgn].mline = curline;
+            match_grp_info[cgn].start = curoff;
+            match_grp_info[cgn].len = 0;
 /* Need to remember where the start of the match is */
-            match_grp_info[mcptr->mc.group_num].base = pre_match + ambytes;
-            cntl_grp_info[mcptr->mc.group_num].state = GPOPEN;
-            cntl_grp_info[mcptr->mc.group_num].next_choice = mcptr->x.next_or;
+            match_grp_info[cgn].base = pre_match + ambytes;
+/* This should not happen. Enable if it seems to be doing so. */
+#if 0
+            if (cntl_grp_info[cgn].state != GPIDLE) {
+                mlwrite("Opening non-idle group %d", cgn);
+                return AMFAIL;
+            }
+#endif
+            cntl_grp_info[cgn].state = GPOPEN;
+            cntl_grp_info[cgn].start_level = am_level;
+            cntl_grp_info[cgn].next_choice = mcptr->x.next_or;
+            if (mcptr->x.next_or) {
+                skip_choices = TRUE;
+            }
             goto next_entry;
         case EGRP:
-            match_grp_info[mcptr->mc.group_num].len =
-                 (pre_match + ambytes) - match_grp_info[mcptr->mc.group_num].base;
-            cntl_grp_info[mcptr->mc.group_num].state = GPCLOSED;
-            if (mcptr->mc.group_num == 0) goto success;
+            match_grp_info[cgn].len =
+                 (pre_match + ambytes) - match_grp_info[cgn].base;
+            cntl_grp_info[cgn].state = GPPENDING;
+            cntl_grp_info[cgn].pending_level = am_level;
+            if (cgn == 0) goto success;
             goto next_entry;
         }
         int used;
 
+/* Iff we have a repeat count we handle it here.
+ * This can have limits, and also be a minimal or maximal repeat.
+ */
         TEST_BLOCK(mcptr->mc.repeat)
 
 /* Try to get as many matches as possible against the current meta-character.
@@ -2301,7 +2329,7 @@ try_next_choice:;
  * We might also now want the shortest match...
  */
         int hi_lim = mcptr->cl_lim.high;
-        if (hi_lim == 0) {  /* A zero-length match - currently valid */
+        if (hi_lim == 0) {  /* Zero-length match - currently valid, so OK */
             goto next_entry;
         }
 
@@ -2314,14 +2342,15 @@ try_next_choice:;
         while (nmatch < lo_lim) {
             int nb = check_next(&curline, &curoff, mcptr);
             if (nb < 0) break;
-            bytes_used += nb;       /* Add to our running count */
+            bytes_used += nb;   /* Add to our running count */
             nmatch++;
         }
-        if (nmatch < lo_lim) goto failed;
+        if (nmatch < lo_lim) goto failed;   /* Can't make lower limit */
 
-/* If the pattern is a min_repeat that is unanchored (no preceding match)
+/* If the pattern is a minimal repeat that is unanchored (no preceding match)
  * then anything more than a minimum must fail, so that we get the shortest
- * match at the start.
+ * match at the start. (As we'll get a shorter match after we step over this
+ * grapheme and try again).
  * This may not be the first pattern test, as it is possible for patterns
  * to match nothing (e.g. a*)
  */
@@ -2329,17 +2358,20 @@ try_next_choice:;
             if (mcptr->mc.min_repeat) hi_lim = lo_lim;
         }
 
-/* Now add in more matches for the current pattern and check whether
- * what is left of the string matches the rest of the magic/regex
- * patterns.
+/* Now check for further matches against the current pattern.
+ * For each success we run amatch on the rest of the string and pattern.
  *
- * For a min_repeat match we just keep adding the current pattern until we
- * find a match, or have no more current pattern to add (== failure).
- * NOTE: that nextgph() gets the grapheme at curline/curoff and advances
- *      the position for the *next character*. We need to undo this
- *      effect here...
+ * For minimal match we keep going while check_next() succeeds until
+ * amatch() also succeeds.  We then have the minimal match.
+ *
+ * For a maximal match we run check_next() until it *fails* then step
+ * *backwards* until amatch() succeeds. We then have the maximal match.
+ *
+ * NOTE: that if amatch() returns a success then we have completed a
+ * succesful search. We're succesfull to get here, and amatch() has
+ * said were successful from here on. So we will have completed the
+ * entire match and just have to unwind.
  */
-
         if (mcptr->mc.min_repeat) {
             while (nmatch <= hi_lim) {
                 int sub_ambytes = amatch(mcptr+1, &curline, &curoff,
@@ -2357,7 +2389,7 @@ try_next_choice:;
             goto failed;
         }
 
-/* For a MAXIMUM match we eat as many of the current char as possible
+/* For a MAXIMAL match we eat as many of the current char as possible
  * first, then backtrack until we find a match. Or fail if we don't.
  */
         else {
@@ -2379,7 +2411,7 @@ try_next_choice:;
  * before each successive test.
  * Since repeat matches *zero* or more occurrences of a pattern, a match
  * may start even if the previous loop matched no characters.
- * (NOTE: We actually now allow a lower limit to this match...)
+ * (NOTE: We actually now allow a non-zero lower limit to this match...)
  * There is no need to test individual chars/graphemes on the way back
  * as we already tested them to get here in the first place. We're just
  * adjusting curline and curoff.
@@ -2399,7 +2431,7 @@ try_next_choice:;
                 if (--nmatch < lo_lim) goto failed;
             }
         }
-        goto next_entry;    /* To next loop entry.... */
+        goto next_entry;    /* To next loop entry...(can never get here?) */
         END_TEST(mcptr->mc.repeat)
 
 /* The only way we'd get a BOL metacharacter here is at the end of the
@@ -2423,8 +2455,9 @@ try_next_choice:;
                       ((mcptr->mc.type == BOL)? 0: lused(curline))) {
                 goto next_entry;
             }
-            else
+            else {
                 goto failed;
+            }
         }
 
 /* The "Not a repeat" cases */
@@ -2436,38 +2469,60 @@ try_next_choice:;
 /* Increment the length counter and advance the pattern pointer. */
 next_entry:
         ambytes += bytes_used;
-        first = 0;
         mcptr++;
     }                       /* End of mcptr loop. */
 
-/* A SUCCESSFUL MATCH!!!  Set the "." pointers to the end of the match */
+/* A SUCCESSFUL MATCH!!!  Set the "." pointers to the end of the match
+ *  and set groups marked as GPPENDING at this level to be GPVALID.
+ */
 
 success:
     *pcwline = curline;
     *pcwoff = curoff;
-
+    for (int gi = 0; gi <= group_cntr; gi++) {
+        if ((cntl_grp_info[gi].state == GPPENDING) &&
+            (cntl_grp_info[gi].pending_level == am_level)) {
+            cntl_grp_info[gi].state = GPVALID;
+        }
+        else if ((cntl_grp_info[gi].state == GPOPEN) &&
+            (cntl_grp_info[gi].start_level == am_level)) {
+            cntl_grp_info[gi].state = GPIDLE;
+        }
+    }
+    am_level--;
     return ambytes;
 
 failed:
-/* If we failed, but have a further choice, go back to near the start
- * of this function, but with a new mcptr and the saved curline+curoff
- * and ambytes from the group start.
- * But first we have to undo any group matches for higher groups,
- * since these are now no longer valid.
- * And we need to do this for all failures.
+
+/* If we failed we must clear any pending groups we found, or groups
+ * we opened.
+ * Then, if we have a further choice, go back to near the start of this
+ * function, but with a new mcptr and the saved curline+curoff and ambytes
+ * from the group start.
+ * Have to find highest group with a choice.
  */
-    for (int gi = mcptr->mc.group_num + 1; gi <= group_cntr; gi++) {
-        match_grp_info[gi] = null_match_grp_info;
+    for (int gi = 0; gi <= group_cntr; gi++) {
+        if ((cntl_grp_info[gi].state == GPPENDING) &&
+            (cntl_grp_info[gi].pending_level == am_level)) {
+            cntl_grp_info[gi].state = GPIDLE;
+        }
+        else if ((cntl_grp_info[gi].state == GPOPEN) &&
+            (cntl_grp_info[gi].start_level == am_level)) {
+            cntl_grp_info[gi].state = GPIDLE;
+        }
     }
-    if (cntl_grp_info[mcptr->mc.group_num].next_choice) {
-        mcptr = cntl_grp_info[mcptr->mc.group_num].next_choice;
-        curline = match_grp_info[mcptr->mc.group_num].mline;
-        curoff = match_grp_info[mcptr->mc.group_num].start;
-        ambytes = match_grp_info[mcptr->mc.group_num].base;
-        goto try_next_choice;
+
+    for (int gi = group_cntr; gi >= 0; gi--) {
+        if (cntl_grp_info[gi].next_choice) {
+            mcptr = cntl_grp_info[gi].next_choice;
+            curline = match_grp_info[gi].mline;
+            curoff = match_grp_info[gi].start;
+            ambytes = match_grp_info[gi].base;
+            goto try_next_choice;
+        }
     }
-/* For a total failure, undo this group match info too */
-    match_grp_info[mcptr->mc.group_num] = null_match_grp_info;
+
+    am_level--;
     return AMFAIL;
 }
 
@@ -2476,6 +2531,7 @@ failed:
  * Also at the end of replaces() to forget any matches there.
  */
 static void init_dyn_group_status(void) {
+
 /* If we allocated any result strings, free them now... */
     for (int gi = 0; gi < NGRP; gi++) {
         if (grp_text[gi]) {
@@ -2530,6 +2586,7 @@ static int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
     magic_search.start_point = curoff;
     for (int gi = 0; gi <= group_cntr; gi++) {
         match_grp_info[gi] = null_match_grp_info;
+        cntl_grp_info[gi].state = GPIDLE;
     }
 
 /* Scan each character until we hit the head link record. */
@@ -2542,10 +2599,14 @@ static int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
         int amres = amatch(mcpatrn, &curline, &curoff, 0);
 
         if (amres >= 0) {       /* A SUCCESSFUL MATCH!!! */
-            match_grp_info[0].mline = matchline;
-            match_grp_info[0].start = matchoff;
-            match_grp_info[0].len = amres;
-            cntl_grp_info[0].state = GPCLOSED;
+
+/* Ensure that any groups that are not GPVALID have no mline set */
+
+            for (int gi = 0; gi <= group_cntr; gi++) {
+                if (cntl_grp_info[gi].state != GPVALID) {
+                    match_grp_info[gi].mline = NULL;
+                }
+            }
 
 /* Reset the global "." pointers. */
             if (beg_or_end == PTEND) {        /* Go to end of string */
@@ -2559,6 +2620,7 @@ static int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
             curwp->w_flag |= WFMOVE;        /* flag that we've moved */
             magic_search.start_line = NULL;
             group_match_buffer = curwp->w_bufp;
+
             return TRUE;
         }
 
@@ -3208,29 +3270,9 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
 /* Work out the replacement text for the current match.
  * The working buffer is never freed - only grows as needed.
  */
-//GML Could this just be made a db?
+static db_strdef(repl);
 
-static struct {
-    char *buf;
-    int len;
-    int alloc;
-} repl = { NULL, 0, 0 };
-#define REPL_INCR 100
-static void append_to_repl_buf(const char *buf, int nb) {
-    if (nb == -1) nb = strlen(buf);
-    int space_needed = (repl.len + nb + 1) - repl.alloc;
-    if (space_needed > 0) { /* Round up to next REPL_INCR */
-        space_needed = repl.len + nb + 1;
-        space_needed += (REPL_INCR - (space_needed % REPL_INCR));
-        repl.buf = Xrealloc(repl.buf, space_needed);
-        repl.alloc = space_needed;
-    }
-    memcpy(repl.buf+repl.len, buf, nb);
-    repl.len += nb;
-    return;
-}
-
-static char *getrepl(void) {
+static const char *getrepl(void) {
 
 /* Process rmcpat .... */
     repl.len = 0;   /* Start afresh */
@@ -3240,33 +3282,30 @@ static char *getrepl(void) {
     while (rmcptr->mc.type != EGRP) {
         switch(rmcptr->mc.type) {
         case LITCHAR:
-            ucb[0] = rmcptr->val.lchar;
-            append_to_repl_buf(ucb, 1);
+            db_addch(repl, rmcptr->val.lchar);
             break;
         case UCLITL:
             nb = unicode_to_utf8(rmcptr->val.uchar, ucb);
-            append_to_repl_buf(ucb, nb);
+            db_appendn(repl, ucb, nb);
             break;
         case UCGRAPH:
             nb = unicode_to_utf8(rmcptr->val.gc.uc, ucb);
-            append_to_repl_buf(ucb, nb);
+            db_appendn(repl, ucb, nb);
             if (!rmcptr->val.gc.cdm) break;
             nb = unicode_to_utf8(rmcptr->val.gc.cdm, ucb);
-            append_to_repl_buf(ucb, nb);
+            db_appendn(repl, ucb, nb);
             unicode_t *uc_ex = rmcptr->val.gc.ex;
             while (uc_ex) {
                 nb = unicode_to_utf8(*uc_ex++, ucb);
-                append_to_repl_buf(ucb, nb);
+                db_appendn(repl, ucb, nb);
             }
             break;
         case REPL_VAR: {
-            const char *vval = getval(rmcptr->val.varname);
-            append_to_repl_buf(vval, -1);
+            db_append(repl, getval(rmcptr->val.varname));
             break;
         }
         case REPL_GRP: {
-            const char *gval = group_match(rmcptr->mc.group_num);
-            append_to_repl_buf(gval, -1);
+            db_append(repl, group_match(rmcptr->mc.group_num));
             break;
         }
         case REPL_CNT: {
@@ -3276,7 +3315,7 @@ static char *getrepl(void) {
                  rmcptr->val.x.curval);
             if (nlen >= MAX_COUNTER_LEN) nlen = MAX_COUNTER_LEN - 1;
             rmcptr->val.x.curval += rmcptr->val.x.incr;
-            append_to_repl_buf(mc_text, nlen);
+            db_appendn(repl, mc_text, nlen);
             break;
         }
         case REPL_FNC: {
@@ -3310,7 +3349,7 @@ static char *getrepl(void) {
             db_strdef(result);
             evaluate_cmdb(db_val(fnc_buf), &result);
             db_free(fnc_buf);
-            append_to_repl_buf(db_val(result), -1);
+            db_append(repl, db_val(result));
             db_free(result);
             break;
         }
@@ -3318,8 +3357,7 @@ static char *getrepl(void) {
         }
     rmcptr++;
     }
-    terminate_str(repl.buf + repl.len);
-    return repl.buf;
+    return db_val(repl);
 }
 
 /* last_match info -- this is used to get the last match in a query replace
@@ -3658,7 +3696,6 @@ int qreplace(int f, int n) {
  * valgrind usage.
  */
 void free_search(void) {
-    Xfree(repl.buf);
     Xfree(last_match.match);
     Xfree(last_match.replace);
     for (int gi = 0; gi < NGRP; gi++) Xfree(grp_text[gi]);
@@ -3669,6 +3706,7 @@ void free_search(void) {
     if (mc_alloc) mcclear();
     rmcclear();
 
+    db_free(repl);
     db_free(pat);
     db_free(tap);
     db_free(rpat);

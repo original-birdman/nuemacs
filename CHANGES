@@ -627,7 +627,6 @@ epath.h
    Set DFLT_PATH to the "standard" locations of /opt/local/etc/ then
    /usr/local/etc/ for Unix-style systems.
 
-
 buffer.c
 exec.c
 file.c
@@ -643,7 +642,6 @@ line.c
 etc/uemacs.rc
    Removed H (horizontal scrolling) mode from the toggle-lmode and
    toggle-gmode macros, as it no longer exists.
-
 
 buffer.c
 exec.c
@@ -947,7 +945,6 @@ efunc.h
    confusion.
    Changed the return value of both functions on an incomplete move to
    be minus the actual move. Adjusted callers accordingly.
-
 
 display.c
 exec.c
@@ -2017,7 +2014,6 @@ etc/uemacs.hlp
    Update to version GGR4.130
    Added information on the kill ring buffers to README and uemacs.hlp.
 
-
 ========== GGR4.130
 
 random.c
@@ -2144,7 +2140,6 @@ If you enter text into the middle line of the former you get:
    ...text...
    new-text
    <empty>
-
 
 while if you enter it into the empty (last) line of the latter you get:
 
@@ -2640,7 +2635,6 @@ input.c
     A better fix for the "may be used uninitialized" issue with
     gcc4.4.7.
 
-
 buffer.c
 input.c
 region.c
@@ -2798,7 +2792,6 @@ names.c
     that mlerase() after execute() isn't needed there.  [input.c]
     Disable "select-buffer" when in the mini-buffer.  [names.c]
 
-
 exec.c
 main.c
 efunc.h
@@ -2949,7 +2942,6 @@ line.h
     No actual code changes except:
     o Removed abs() from eval.c and efunc.h, as it's a C library function.
     o Removed '#undef abs' checking from estruct.h
-
 
 Makefile
 bind.c
@@ -3401,7 +3393,6 @@ basic.c     bind.c      buffer.c    crypt.c     eval.c      exec.c
 file.c      input.c     main.c      random.c    search.c    spawn.c
 utf8.c      word.c      estruct.h
     Merge the EXP* enum and COMP* defines into a CMPL_* enum.
-
 
 basic.c     bind.c      buffer.c    charset.h   crypt.c     display.c
 estruct.h   eval.c      exec.c      file.c      fileio.c    globals.c
@@ -4248,7 +4239,6 @@ autotest/search-groups.sh
     Extended groups test-harness to include groups with choices (?) in.
     [autotest/search-groups.sh]
 
-
 ../CHANGES
 version.h
 etc/uemacs.hlp
@@ -4423,7 +4413,6 @@ estruct.h
     Add not_interactive and caller_handles_macro options to
     storeproc handling. [exec.c]
     Added not_interactive_fname global. [globals.c, edef.h]
-
 
 Makefile
 version.h
@@ -4616,7 +4605,6 @@ search.c
     This allows you to put \n in a negative class match to limit it to
     matching on one line.
 
-
 exec.c
 globals.c
 main.c
@@ -4781,7 +4769,6 @@ main.c
 
 random.c
     Add the byte offset to the information line (after the column info)
-
 
 buffer.c
 globals.c
@@ -5632,7 +5619,6 @@ autotest/zero-length-magic.sh
     Update tests to allow for $curcol now being 1-based.
     Ensure all test macros end with "-2 redraw-display".
 
-
 display.c
 eval.c
 input.c
@@ -5706,7 +5692,6 @@ display.c
     Improve data initializing and freeing in vtinit().
     Free any old grapheme ex data then initialize all of the new vscreen
     and pscreen.  This is simpler, and allows for ncol/nrow shrinking.
-
 
 Minor changes to get uemacs working on Solaris11 (x64)
 -----
@@ -5792,7 +5777,6 @@ Makefile
     Use a run-time test to look utf8proc_unicode_version as it really
     does depend on what we have now, not what we had when we compiled.
     Also, fix up libraries used - all now have ncurses.
-
 
 Add force_mode_on and force_mode_off settings to allow specific modes to
 be force on regardless of file-hooks.
@@ -6346,7 +6330,6 @@ line.h
     Call lalloc(-1) for the head ("dummy") line creation. [buffer.c]
     Just call Xfree on the malloced part of the line pointers (not
     lfree()) in the DO_FREE code. [buffer.c]
-
 
 bind.c
 buffer.c
@@ -7595,7 +7578,6 @@ tools/read-speed.sh
     A simple script to determine the reading speed of uemacs in
     lines/sec. Very basic....
 
-
 ../CHANGES
 version.h
 etc/uemacs.hlp
@@ -7613,7 +7595,6 @@ main.c
     Handle bare "/" in udir entries in get_realpath(). [file.c]
     Initialize udir.hlen if no HOME found. [main.c]
 
-
 buffer.c
 eval.c
 efunc.h
@@ -7623,7 +7604,6 @@ efunc.h
 
 fileio.c
     Move the check_for_file() code into ffropen() - the only user.
-
 
 file.c
     In getfile(), report if >1 buffer with the same path is found and go
@@ -7897,7 +7877,6 @@ word.c
 autotest/casechange.sh
     Add simple tests for case changing a region.
 
-
 exec.c
 region.c
 word.c
@@ -8109,3 +8088,7 @@ tools/dump_mc.debug
 
 input.c
     Fix filename generating in getnfile().
+
+search.c
+    Fix group handling to work for choices and nested/multiple groups.
+    Replace repl with a dynamic buffer and remove append_to_repl_buf().
