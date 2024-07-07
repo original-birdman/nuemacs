@@ -633,10 +633,13 @@ static const char *gtfun(const char *fname) {
     }
 
 /* Retrieve the required arguments */
-    status = FALSE;     /* Keep the compiler happy */
+
     do {
         int ft = funcs[fnum].f_type;
-        if (ft == NILNAMIC) break;
+        if (ft == NILNAMIC) {
+            status = TRUE;
+            break;
+        }
         if ((status = macarg(&arg1)) != TRUE) break;
         if (ft == MONAMIC) break;
         if ((status = macarg(&arg2)) != TRUE) break;
@@ -879,8 +882,8 @@ static const char *gtfun(const char *fname) {
         goto exit;
     case UFGTKEY: {     /* Allow for unicode input. -> utf-8 */
         char temp[8];
-        (void)unicode_to_utf8(tgetc(), temp);
-        db_set(funres, temp);
+        int nb = unicode_to_utf8(tgetc(), temp);
+        db_setn(funres, temp, nb);
         retval = db_val(funres);
         goto exit;
     }
