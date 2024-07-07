@@ -2673,7 +2673,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
                 spare = curoff - lused(curline);
             }
             if (spare == 0) {
-                jump = deltaf[(int) '\n'];
+                jump = deltaf[ch_as_uc('\n')];
             }
             else {
                 jump = deltaf[ch_as_uc(lgetc(curline, curoff))];
@@ -2698,10 +2698,10 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
                     return TRUE;    /* hit end of buffer */
             }
             if ((size_t)curoff == lused(curline)) {
-                jump = deltab[(int) '\n'];
+                jump = deltab[ch_as_uc('\n')];
             }
             else {
-                jump = deltab[(int) lgetc(curline, curoff)];
+                jump = deltab[ch_as_uc(lgetc(curline, curoff))];
             }
         }
 /* the last character matches, so back up to start of possible match */
@@ -2731,7 +2731,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
 static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
     struct line *curline;
     int curoff;
-    int c;
+    char c;
 
     curline = *pcurline;
     curoff = *pcuroff;

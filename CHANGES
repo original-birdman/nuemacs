@@ -8095,3 +8095,8 @@ search.c
 
 search.c
     Remove NGRP limit by dynamically allocating structures.
+
+main.c
+random.c
+search.c
+    Tidy up using lgetc value as a char - it no longer masks with 0xFF.

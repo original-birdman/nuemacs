@@ -938,7 +938,7 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
     int in_quote = 0;   /* May not be true, though best guess */
     while (1) {
         if (!((size_t)curwp->w.doto == lused(curwp->w.dotp))) { /* Not e-o-l */
-            int c = lgetc(curwp->w.dotp, curwp->w.doto);
+            char c = lgetc(curwp->w.dotp, curwp->w.doto);
             if ((c == '"') || (c == '\'')) in_quote = 1 - in_quote;
             else if (!in_quote) {
                 if (c == this) ++count;
@@ -964,7 +964,7 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
  * matching reverse-brace.
  */
 static int insbrace(int n, int brkt) {
-    int ch;                 /* Last character before input */
+    char ch;                /* Last character before input */
     int ob;                 /* The reverse-facing brkt */
     int i, count;
     int target;             /* Column brkt should go after */

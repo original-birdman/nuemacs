@@ -476,9 +476,15 @@ int trim(int f, int n) {
 
 /* Trim the current line */
         while (length > offset) {
-            if (lgetc(lp, length - 1) != ' ' && lgetc(lp, length - 1) != '\t')
-                  break;
-            length--;
+            switch(lgetc(lp, length - 1)) {
+                case ' ':
+                case '\t':
+                    length--;
+                    continue;   /* Keep going... */
+                default:
+                    break;
+            }
+            break;
         }
         db_truncate(ldb(lp), length);
 
@@ -609,7 +615,7 @@ int insert_newline(int f, int n) {
 
 /* insert a # into the text here...we are in CMODE */
 int inspound(void) {
-    int ch; /* last character before input */
+    char ch;    /* last character before input */
     int i;
 
 /* If we are at the beginning of the line, no go */
@@ -666,7 +672,7 @@ int deblank(int f, int n) {
 int indent(int f, int n) {
     UNUSED(f);
     int nicol;
-    int c;
+    char c;
     size_t i;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
