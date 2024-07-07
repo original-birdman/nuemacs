@@ -2300,6 +2300,7 @@ static int amatch(struct magic *mcptr, struct line **pcwline, int *pcwoff,
      int pre_match) {
     struct line *curline;           /* current line during scan */
     int curoff;                     /* position within current line */
+    int skip_choices;
 
 /* Set up local scan pointers to ".", and get the current character.
  * Then loop around the pattern pointer until success or failure.
@@ -2310,7 +2311,7 @@ static int amatch(struct magic *mcptr, struct line **pcwline, int *pcwoff,
     am_level++;                     /* Which round of amatch() we are */
 
 try_next_choice:
-    int skip_choices = FALSE;       /* Can't be in a CHOICE here */
+    skip_choices = FALSE;           /* Can't be in a CHOICE here */
     while (1) {
         int bytes_used = 0;         /* Bytes on this pass, not yet in ambytes */
 
@@ -3748,14 +3749,14 @@ void free_search(void) {
     Xfree(cntl_grp_info);
     Xfree(match_grp_info);
     Xfree(grp_text);
-    Xfree(mcpat);
-    Xfree(rmcpat);
     for (int ix = 0; ix < RING_SIZE; ix++) {
         Xfree(srch_txt[ix]);
         Xfree(repl_txt[ix]);
     }
     if (mc_alloc) mcclear();
     rmcclear();
+    Xfree(mcpat);
+    Xfree(rmcpat);
 
     db_free(repl);
     db_free(pat);
