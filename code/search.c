@@ -259,11 +259,6 @@ struct magic_replacement {
     } val;
 };
 
-/* Group status and information.
- * We cannot have more than NPAT/2 groups (in fact probably NPAT/3)
- */
-#define NPAT 128                /* Max bytes in pattern */
-
 /* The group_info data contains some only used when building the
  * struct magic array and some only used when processing it.
  */
@@ -315,8 +310,10 @@ static struct {
  * slow_scan will be set if we need the step_scanner() for searching.
  */
 static int rmagical = FALSE;
-static struct magic mcpat[NPAT]; /* The magic pattern. */
-static struct magic_replacement rmcpat[NPAT]; /* Replacement magic array. */
+static int magic_size = 0;
+static struct magic *mcpat = NULL;              /* The magic pattern. */
+static int magic_repl_size = 0;
+static struct magic_replacement *rmcpat = NULL; /* Replacement magic array. */
 
 static int slow_scan = FALSE;
 
@@ -345,6 +342,20 @@ static void increase_group_info(void) {
     for (int gi = 0; gi < max_grp; gi++) grp_text[gi] = NULL;
 }
 
+/* Functions to increase allocated sizes for magic patterns */
+#define MAGIC_INCR 16
+static void increase_magic_info(void) {
+    magic_size += MAGIC_INCR;
+    mcpat = Xrealloc(mcpat, magic_size*sizeof(struct magic));
+    return;
+}
+static void increase_magic_repl_info(void) {
+    magic_repl_size += MAGIC_INCR;
+    rmcpat = Xrealloc(rmcpat,
+         magic_repl_size*sizeof(struct magic_replacement));
+    return;
+}
+
 /* Function to set things for the start of searching. */
 void init_search_ringbuffers(void) {
 
@@ -359,10 +370,11 @@ void init_search_ringbuffers(void) {
     }
 
 /* Allocate and initialize the arrays for group info.
- * We allocate 10 at first, then will reallocate in blocks of 10
- * if we run out.
+ * Also initialize magic structures.
  */
     increase_group_info();
+    increase_magic_info();
+    increase_magic_repl_info();
 
 /* Ensure that the first mcpat and rmcpat entries are "empty"
  * (it's used as a flag)
@@ -417,38 +429,29 @@ static void update_ring(const char *str) {
  *            Assumes caller has sent a large enough buffer.
  *
  * char *srcstr;                string to expand
- * char *deststr;               destination of expanded string
- *                              If NULL, use internal one.
- *  returns the expanded text.
+ *  returns the expanded text in a dynamic buffer
  */
-static char *expandp(const char *srcstr, char *deststr) {
-    static char ibuf[NPAT*2];   /* More than needed? */
+static db_strdef(expbuf);
+static db *expandp(const char *srcstr) {
     unsigned char c;        /* current char to translate */
-    char *dp;               /* Destination buffer pointer */
-    char *rp;               /* Final result */
 
-    dp = (deststr)? deststr: ibuf;
-    rp = dp;
+    db_set(expbuf, "");     /* NOT db_clear, to ensure val is not NULL */
 
 /* Scan through the string. */
 
     while ((c = *srcstr++) != 0) {
         if (c == '\n') {    /* It's a newline */
-            *dp++ = '<';
-            *dp++ = 'N';
-            *dp++ = 'L';
-            *dp++ = '>';
+            db_append(expbuf, "<NL>");
         }
         else if ((c > 0 && c < 0x20) || c == 0x7f) { /* Control character */
-            *dp++ = '^';
-            *dp++ = c ^ 0x40;
+            db_addch(expbuf, '^');
+            db_addch(expbuf, c ^ 0x40);
         }
         else {              /* Any other character */
-            *dp++ = c;
+            db_addch(expbuf, c);
         }
     }
-    terminate_str(dp);
-    return rp;
+    return &expbuf;
 }
 
 /* boundry -- Return information depending on whether we may search no
@@ -493,8 +496,9 @@ static int boundry(struct line *curline, int curoff, int dir) {
  * Also called from svar() if it sets $replace or $search
  */
 void new_prompt(const char *dflt_str) {
+    dbp_dcl(ep) = expandp(dflt_str);
     db_sprintf(prmpt_buf.prompt, "%s " MLpre "%s" MLpost ": ",
-        current_base, expandp(dflt_str, NULL));
+         current_base, ep);
     prmpt_buf.update = 1;
     return;
 }
@@ -566,29 +570,30 @@ static char *clearbits(void) {
  * It expects to be called with the first char *after* a brace, so
  * collects up to the next "}"
  * It does allow for internal {} groups.
- * The caller must supply a buffer for the result.
  * It does not process the text in any way, so can do a byte-scan.
+ * Since this returns the result in a static buffer the caller
+ * must use this before calling here again.
  */
-static char *brace_text(char *fp, char *btxt) {
-    char *tp = btxt;
-    int max = 511;
+static db_strdef(btbuf);
+static db *brace_text(char *fp) {
     int escaping = 0;
     int level = 0;
-    while (max--) {
+
+    db_set(btbuf, "");      /* NOT db_clear, to ensure val is not NULL */
+    while (1) {
         if (!*fp) break;
         if (!escaping && (*fp == '\\')) {
             escaping = 1;
         }
         else {
             escaping = 0;
-            *tp++ = *fp;
+            db_addch(btbuf, *fp);
             if (*fp == '{') level++;
         }
         fp++;
         if (!escaping && (*fp == '}')) {
             if (level-- > 0) continue;
-            terminate_str(tp);
-            return btxt;
+            return &btbuf;
         }
     }
     return NULL;
@@ -655,8 +660,7 @@ static struct grapheme null_gc = { UEM_NOCHAR, 0, NULL };
 static int cclmake(char **ppatptr, struct magic *mcptr) {
     char *bmap;
     char *patptr;
-    char *btext;
-    char btbuf[NPAT+1];
+    dbp_dcl(btext);
 
 /* We always set up the bitmap structure */
 
@@ -784,16 +788,16 @@ handle_prev:
                 parse_error(patptr, "\\u{} not started");
                 return FALSE;
             }
-            btext = brace_text(++patptr, btbuf);
+            btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "\\u{} not ended");
                 return FALSE;
             }
             struct xccl *xp = add2_xt_cclmap(mcptr, UCLITL);
-            xp->xval.uchar = strtol(btext, NULL, 16);
+            xp->xval.uchar = strtol(dbp_val(btext), NULL, 16);
 
 /* For the moment(?), don't validate we have a hex-only field) */
-            patptr += strlen(btext);
+            patptr += dbp_len(btext);
             goto invalidate_current;
         }
         case 'k':       /* "kind of" char - just check base unicode */
@@ -802,15 +806,15 @@ handle_prev:
                 parse_error(patptr, "\\k/K{} not started");
                 return FALSE;
             }
-            btext = brace_text(++patptr, btbuf);
+            btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "\\k/K{} not ended");
                 return FALSE;
             }
             struct grapheme kgc;
-            int klen = strlen(btext);
+            int klen = dbp_len(btext);
 /* Don't build any ex... */
-            int bc = build_next_grapheme(btext, 0, klen, &kgc, 1);
+            int bc = build_next_grapheme(dbp_val(btext), 0, klen, &kgc, 1);
             if (bc != klen) {
                 parse_error(patptr,
                      "\\k{} must only contain one unicode char");
@@ -824,7 +828,7 @@ handle_prev:
             struct xccl *xp = add2_xt_cclmap(mcptr, UCKIND);
             xp->xval.uchar = kgc.uc;
             xp->xc.negate_test = (gc.uc == 'K');
-            patptr += strlen(btext);
+            patptr += dbp_len(btext);
             goto invalidate_current;
         case 'p':
         case 'P': {
@@ -832,7 +836,7 @@ handle_prev:
                 parse_error(patptr, "\\p/P{} not started");
                 return FALSE;
             }
-            btext = brace_text(++patptr, btbuf);
+            btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "\\p/P{} not ended");
                 return FALSE;
@@ -846,10 +850,12 @@ handle_prev:
  */
             xp->xval.prop[0] = '?';     /* Unknown default */
             terminate_str(xp->xval.prop + 1);
-            if (btext[0]) xp->xval.prop[0] = btext[0] & (~DIFCASE);
-            if (btext[1]) xp->xval.prop[1] = btext[1] | DIFCASE;
+            if (dbp_charat(btext, 0))
+                 xp->xval.prop[0] = dbp_charat(btext, 0) & (~DIFCASE);
+            if (dbp_charat(btext, 1))
+                 xp->xval.prop[1] = dbp_charat(btext, 1) | DIFCASE;
             terminate_str(xp->xval.prop + 2);   /* Ensure NUL terminated */
-            patptr += strlen(btext);
+            patptr += dbp_len(btext);
             goto invalidate_current;
 	}
         case 'd':
@@ -1113,8 +1119,7 @@ static int mcstr(void) {
     int pchr;
     int status = TRUE;
     int repeat_allowed = FALSE; /* Set to can_repeat at end of each loop */
-    char *btext;
-    char btbuf[NPAT+1];
+    dbp_dcl(btext);
 
 /* If we allocated anything in the previous mcpat, free it now.
  */
@@ -1135,9 +1140,9 @@ static int mcstr(void) {
     mcptr->x.next_or = NULL;
     cntl_grp_info[0].next_choice = mcptr;   /* Where to put the next CHOICE */
     mcptr++;
+    mj = 0;     /* This is *1 less* than the index that mcptr points to!! */
 
     slow_scan = FALSE;      /* Assume not, until something needs it */
-    mj = 0;
 
     WHILE_BLOCK((pchr = *patptr) && status)
     int can_repeat = TRUE;  /* Will be switched off as required */
@@ -1198,6 +1203,7 @@ static int mcstr(void) {
         break;
     case MC_SGRP:
         group_cntr++;       /* Create a "new" group */
+        if (group_cntr >= max_grp) increase_group_info();
         cntl_grp_info[group_cntr].state = GPOPEN;
         cntl_grp_info[group_cntr].parent_group = curr_group;
         curr_group = group_cntr;
@@ -1352,15 +1358,15 @@ static int mcstr(void) {
                     parse_error(patptr, "opening { expected");
                     return FALSE;
                 }
-                btext = brace_text(++patptr, btbuf);
+                btext = brace_text(++patptr);
                 if (!btext) {
                     parse_error(patptr, "found no closing }");
                     return FALSE;
                 }
                 mcptr->mc.type = UCLITL;
 /* For the moment(?), don't validate we have a hex-only field) */
-                mcptr->val.uchar = strtol(btext, NULL, 16);
-                patptr += strlen(btext);
+                mcptr->val.uchar = strtol(dbp_val(btext), NULL, 16);
+                patptr += dbp_len(btext);
                 goto pchr_done;
             case 'k':       /* "kind of" char - just check base unicode */
             case 'K':       /* Not "kind of" ... */
@@ -1369,15 +1375,15 @@ static int mcstr(void) {
                     parse_error(patptr, "opening { expected");
                     return FALSE;
                 }
-                btext = brace_text(++patptr, btbuf);
+                btext = brace_text(++patptr);
                 if (!btext) {
                     parse_error(patptr, "found no closing }");
                     return FALSE;
                 }
                 struct grapheme kgc;
-                int klen = strlen(btext);
+                int klen = dbp_len(btext);
 /* Don't build any ex... */
-                int bc = build_next_grapheme(btext, 0, klen, &kgc, 1);
+                int bc = build_next_grapheme(dbp_val(btext), 0, klen, &kgc, 1);
                 if (bc != klen) {
                     parse_error(patptr+1,
                          "\\k{} must only contain one unicode char");
@@ -1391,7 +1397,7 @@ static int mcstr(void) {
                 mcptr->mc.type = UCKIND;
                 mcptr->val.uchar = kgc.uc;
                 mcptr->mc.negate_test = (pchr == 'K');
-                patptr += strlen(btext);
+                patptr += dbp_len(btext);
                 goto pchr_done;
             case 'p':
             case 'P':
@@ -1400,7 +1406,7 @@ static int mcstr(void) {
                     parse_error(patptr, "opening { expected");
                     return FALSE;
                 }
-                btext = brace_text(++patptr, btbuf);
+                btext = brace_text(++patptr);
                 if (!btext) {
                     parse_error(patptr, "found no closing }");
                     return FALSE;
@@ -1413,11 +1419,13 @@ static int mcstr(void) {
  */
                 mcptr->val.prop[0] = '?';     /* Fail by default */
                 terminate_str(mcptr->val.prop + 1);
-                if (btext[0]) mcptr->val.prop[0] = btext[0] & (~DIFCASE);
-                if (btext[1]) mcptr->val.prop[1] = btext[1] | DIFCASE;
+                if (dbp_charat(btext, 0))
+                     mcptr->val.prop[0] = dbp_charat(btext, 0) & (~DIFCASE);
+                if (dbp_charat(btext, 1))
+                     mcptr->val.prop[1] = dbp_charat(btext, 1) | DIFCASE;
                 terminate_str(mcptr->val.prop + 2); /* Ensure NUL terminated */
                 mcptr->mc.negate_test = (pchr == 'P');
-                patptr += strlen(btext);
+                patptr += dbp_len(btext);
                 goto pchr_done;
             case 'd':
             case 'D':
@@ -1476,8 +1484,15 @@ static int mcstr(void) {
 pchr_done:
     patptr++;
 pchr_done_noincr:
+    mj++;           /* So now has value of the 0-based mcpat entry just used */
+/* Do we need to increase magic size? */
+    if ((mj + 1) >= magic_size) {   /* Allow for mcpat moving */
+        int ptr_offs = mcptr - mcpat;
+        increase_magic_info();
+        mcptr = mcpat + ptr_offs;
+    }
     mcptr++;
-    mj++;
+
     if (possible_slow_scan) slow_scan = TRUE;
     repeat_allowed = can_repeat;    /* Can the next pass be a repeat? */
     END_WHILE(pchr = *patptr....)   /* End of while. */
@@ -1535,10 +1550,10 @@ static struct func_call *new_fc(void) {
  *      character array rpat[] as the replacement string.
  */
 static int rmcstr(void) {
+    int rmj = 0;        /* Entry counter */
     struct magic_replacement *rmcptr = rmcpat;
     char *patptr = strdupa(db_val(rpat));
-    char *btext;
-    char btbuf[NPAT+1];
+    dbp_dcl(btext);
 
 /* If we had metacharacters in the struct magic_replacement array previously,
  * free up any parts that may have been allocated (before we reset slow_scan).
@@ -1582,24 +1597,24 @@ static int rmcstr(void) {
                 parse_error(patptr, "$ without {...}");
                 return FALSE;
             }
-            btext = brace_text(++patptr, btbuf);
+            btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "${} not ended");
                 return FALSE;
             }
-            int patptr_advance = strlen(btext);
+            int patptr_advance = dbp_len(btext);
 
 /* What do we have?
  * Can be $var/%var/.var, @ (for a counter) or number...
  */
-            switch(btext[0]) {
+            switch(dbp_charat(btext, 0)) {
             case '$':
             case '%':
             case '.':
                 rmcptr->mc.type = REPL_VAR;
 /* Adding 1 for NUL */
-                rmcptr->val.varname = Xmalloc(strlen(btext)+1);
-                strcpy(rmcptr->val.varname, btext);
+                rmcptr->val.varname = Xmalloc(dbp_len(btext)+1);
+                strcpy(rmcptr->val.varname, dbp_val(btext));
                 break;
             case '@':   /* Replace with a counter - optional formatting */
                 rmcptr->mc.type = REPL_CNT;
@@ -1612,8 +1627,8 @@ static int rmcstr(void) {
  * We've already got the length of btext for advancing, so the fact that
  * strtok will write NULs into it doesn't worry us.
  */
-                if (btext[1] == ':') {
-                    char *tokp = strdupa(btext+2);
+                if (dbp_charat(btext, 1) == ':') {
+                    char *tokp = strdupa(dbp_val(btext)+2);
                     char *ntp;
                     while ((ntp = strtok(tokp, ","))) {
                         tokp = NULL;
@@ -1635,12 +1650,14 @@ static int rmcstr(void) {
 /* Need to parse the btext looking for groups and counters.
  * We do not need to handle variables, as evaluating the function will
  * do that.
+ * But we do need to take a copy of btext, as it comes from brace_text()
+ * and we will call it again.
  */
                 rmcptr->val.fc = new_fc();
                 struct func_call *wkfcp = rmcptr->val.fc;
-                char *bp = btext;
-                char *tr_start = btext;
-                char *ep = btext + strlen(btext);
+                char *bp = strdupa(dbp_val(btext));
+                char *tr_start = bp;
+                char *ep = bp + dbp_len(btext);
                 while (*bp) {
                     char *nxt = strstr(bp, "${");
                     if (!nxt) break;
@@ -1650,9 +1667,9 @@ static int rmcstr(void) {
                         wkfcp->next = new_fc();
                         wkfcp = wkfcp->next;
                     }
-                    char ctext[NPAT+1];
-                    char *cnt = brace_text(nxt+2, ctext);
-                    if (*cnt == '@') {      /* A counter */
+                    dbp_dcl(cnt);
+                    cnt = brace_text(nxt+2);
+                    if (dbp_charat(cnt, 0) == '@') {    /* A counter */
 /* Defaults... */
                         wkfcp->type = REPL_CNT;
                         wkfcp->val.x.curval = 1;
@@ -1663,8 +1680,8 @@ static int rmcstr(void) {
  * We've already got the length of btext for advancing, so the fact that
  * strtok will write NULs into it doesn't worry us.
  */
-                        if (*(cnt+1) == ':') {
-                            char *tokp = strdupa(cnt+2);
+                        if (dbp_charat(cnt, 1) == ':') {
+                            char *tokp = strdupa(dbp_val(cnt)+2);
                             char *ntp;
                             while ((ntp = strtok(tokp, ","))) {
                                 tokp = NULL;
@@ -1682,11 +1699,11 @@ static int rmcstr(void) {
                     }
                     else {                  /* Group */
                         wkfcp->type = REPL_GRP;
-                        wkfcp->val.group_num = atoi(cnt);
+                        wkfcp->val.group_num = atoi(dbp_val(cnt));
                     }
                     wkfcp->next = new_fc();
                     wkfcp = wkfcp->next;
-                    bp = nxt + strlen(cnt) + 3;
+                    bp = nxt + dbp_len(cnt) + 3;
                     tr_start = bp;
                 }
 /* Copy any trailing text */
@@ -1699,7 +1716,7 @@ static int rmcstr(void) {
                  break;
             default:    /* Assume a group number... */
                 rmcptr->mc.type = REPL_GRP;
-                rmcptr->mc.group_num = atoi(btext);
+                rmcptr->mc.group_num = atoi(dbp_val(btext));
                 break;
             }
             rmagical = TRUE;
@@ -1736,6 +1753,14 @@ static int rmcstr(void) {
         }
         patptr++;
         rmcptr++;
+        rmj++;      /* Is now the 0-based index of rmcptr value */
+/* Do we need to increase magic_repl size? */
+        if (rmj >= magic_repl_size) {   /* Allow for rmcpat moving */
+            int ptr_offs = rmcptr - rmcpat;
+            increase_magic_repl_info();
+            rmcptr = rmcpat + ptr_offs;
+        }
+
 pchr_done_noincr:;
     }
 
@@ -2025,8 +2050,8 @@ static int readpattern(char *prompt, db *apat, int srch) {
  */
     strcpy(saved_base, current_base);
     strcpy(current_base, prompt);
-    db_sprintf(tpat, "%s " MLpre "%s" MLpost ": ", prompt,
-         expandp(dbp_val_nc(apat), NULL));
+    dbp_dcl(ep) = expandp(dbp_val_nc(apat));
+    db_sprintf(tpat, "%s " MLpre "%s" MLpost ": ", prompt, dbp_val(ep));
 
 /* Read a pattern.  Either we get one or we just get an empty result
  * and use the previous pattern.
@@ -2812,6 +2837,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 /* Scan through the pattern for a match. */
         while (*patptr != '\0') {
             c = nextbyte(&scanline, &scanoff, direct);
+
 #if 0
 /* Debugging info, show the character and the remains of the string
  * it is being compared with.
@@ -3554,6 +3580,7 @@ pprompt:
  * Both group_match(0) and getrepl() may change on successive matches
  * in Magic mode.
  * To allow for undo we set repl_p here and pass it to delins().
+ * NOTE that rpat can't change on an undo unless rmagical is set.
  */
             if (undone) {
                 undone = 0;
@@ -3561,11 +3588,14 @@ pprompt:
                 if (rmagical) repl_p = last_match.replace;
                 else          repl_p = db_val(rpat);
             }
-/* rpat can't change on an undo unless rmagical is set */
-/* We need our own temp buf for one of these expandp calls */
-            char tbuf[NPAT/2];
-            mlwrite("Replace '%s' with '%s'? ",
-                expandp(match_p, tbuf), expandp(repl_p, NULL));
+
+/* We need to take a copy of one expandp() result, as it uses
+ * a static buffer for its results.
+ */
+            dbp_dcl(ep) = expandp(match_p);
+            char *rt = strdupa(dbp_val(ep));
+            ep = expandp(repl_p);
+            mlwrite("Replace '%s' with '%s'? ", rt, dbp_val(ep));
 
 qprompt:
             update(TRUE);   /* show the proposed place to change */
@@ -3711,10 +3741,12 @@ int qreplace(int f, int n) {
 void free_search(void) {
     Xfree(last_match.match);
     Xfree(last_match.replace);
-    for (int gi = 0; gi < NGRP; gi++) Xfree(grp_text[gi]);
+    for (int gi = 0; gi < max_grp; gi++) Xfree(grp_text[gi]);
     Xfree(cntl_grp_info);
     Xfree(match_grp_info);
     Xfree(grp_text);
+    Xfree(mcpat);
+    Xfree(rmcpat);
     for (int ix = 0; ix < RING_SIZE; ix++) {
         Xfree(srch_txt[ix]);
         Xfree(repl_txt[ix]);
@@ -3726,6 +3758,8 @@ void free_search(void) {
     db_free(pat);
     db_free(tap);
     db_free(rpat);
+    db_free(expbuf);
+    db_free(btbuf);
 
     return;
 }

@@ -1,5 +1,5 @@
 /* To use this, #include it into search.c after declarations and
- * before the first function (init_search_ringbuffers()?)>
+ * before the first function (increase_group_info(void)?)>
  * Then, at the point where you wish to dump a struct magic(_replacement)
  * put:
 {

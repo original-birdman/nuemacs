@@ -26,6 +26,7 @@ typedef struct {
 #define db_bufdef(a) db a = db_buf_initval
 #define db_strdef(a) db a = db_str_initval
 #define db_dcl(a) db a
+#define dbp_dcl(a) db *a
 
 /* We need to access the entries for local/global entries (db_*)
  * and entries arriving as function parameters (dbp_*).

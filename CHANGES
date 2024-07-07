@@ -8100,3 +8100,10 @@ main.c
 random.c
 search.c
     Tidy up using lgetc value as a char - it no longer masks with 0xFF.
+
+search.c
+dyn_buf.h
+tools/dump_mc.debug
+    Remove NPAT limit by dynamically allocating structures.
+    Add dbp_dcl() define. [dyn_buf.h]
+    Update first procedure comment [dump_mc.debug]
