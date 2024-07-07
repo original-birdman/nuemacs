@@ -263,7 +263,6 @@ struct magic_replacement {
  * We cannot have more than NPAT/2 groups (in fact probably NPAT/3)
  */
 #define NPAT 128                /* Max bytes in pattern */
-#define NGRP (NPAT/2 + 1)
 
 /* The group_info data contains some only used when building the
  * struct magic array and some only used when processing it.
@@ -288,9 +287,10 @@ struct match_group_info {       /* String match info - reset on failures */
                                  * of group.
                                  * ambytes is reset to this on CHOICE. */
     };
-static struct control_group_info cntl_grp_info[NGRP];
-static struct match_group_info match_grp_info[NGRP];
-static char *grp_text[NGRP];
+static int max_grp = 0;
+static struct control_group_info *cntl_grp_info = NULL;
+static struct match_group_info *match_grp_info = NULL;
+static char **grp_text = NULL;
 
 /* A value with which to reset */
 static const struct match_group_info null_match_grp_info = { NULL, 0, 0, 0 };
@@ -333,6 +333,18 @@ char current_base[16] = "";
 enum call_type {Search, Replace};  /* So we know the current call type */
 static enum call_type this_rt;
 
+/* Function to increase allocated sizes for group control info */
+#define NGRP_INCR 10
+static void increase_group_info(void) {
+    max_grp += NGRP_INCR;
+    cntl_grp_info = Xrealloc(cntl_grp_info,
+         max_grp*sizeof(struct control_group_info));
+    match_grp_info = Xrealloc(match_grp_info,
+         max_grp*sizeof(struct match_group_info));
+    grp_text = Xrealloc(grp_text, max_grp*sizeof(char *));
+    for (int gi = 0; gi < max_grp; gi++) grp_text[gi] = NULL;
+}
+
 /* Function to set things for the start of searching. */
 void init_search_ringbuffers(void) {
 
@@ -345,11 +357,12 @@ void init_search_ringbuffers(void) {
         repl_txt[ix] = Xmalloc(1);
         terminate_str(repl_txt[ix]);
     }
-/* Initialize the group text pointers - these are only
- * allocated on request, and freed/reset on each new pattern
- * set-up.
+
+/* Allocate and initialize the arrays for group info.
+ * We allocate 10 at first, then will reallocate in blocks of 10
+ * if we run out.
  */
-    for (int gi = 0; gi < NGRP; gi++) grp_text[gi] = NULL;
+    increase_group_info();
 
 /* Ensure that the first mcpat and rmcpat entries are "empty"
  * (it's used as a flag)
@@ -2533,7 +2546,7 @@ failed:
 static void init_dyn_group_status(void) {
 
 /* If we allocated any result strings, free them now... */
-    for (int gi = 0; gi < NGRP; gi++) {
+    for (int gi = 0; gi < max_grp; gi++) {
         if (grp_text[gi]) {
             Xfree_setnull(grp_text[gi]);
         }
@@ -2804,7 +2817,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
  * it is being compared with.
  */
  fprintf(stderr, "fast1: moved to %c(%02x) at %d in %.*s\n", c, c, scanoff,
-    lused(scanline), ltext(scanline));
+    (int)lused(scanline), ltext(scanline));
 #endif
             if (!asceq(c, *patptr++)) {
                 jump = (direct == FORWARD)? lastchfjump: lastchbjump;
@@ -3699,6 +3712,9 @@ void free_search(void) {
     Xfree(last_match.match);
     Xfree(last_match.replace);
     for (int gi = 0; gi < NGRP; gi++) Xfree(grp_text[gi]);
+    Xfree(cntl_grp_info);
+    Xfree(match_grp_info);
+    Xfree(grp_text);
     for (int ix = 0; ix < RING_SIZE; ix++) {
         Xfree(srch_txt[ix]);
         Xfree(repl_txt[ix]);

@@ -8092,3 +8092,6 @@ input.c
 search.c
     Fix group handling to work for choices and nested/multiple groups.
     Replace repl with a dynamic buffer and remove append_to_repl_buf().
+
+search.c
+    Remove NGRP limit by dynamically allocating structures.
