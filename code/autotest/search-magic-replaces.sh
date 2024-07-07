@@ -152,7 +152,7 @@ replace-string "^(...)" "${&tim ${1} 6}"
 ; Check what we have...
 ;
 beginning-of-file
-set %curtest "number multiplication"
+set %curtest "Number multiplication"
 set %expline "0"
 run check-line
 next-line
@@ -181,7 +181,7 @@ replace-string "^.(.)." "${&tim &asc ${1} ${@:start=2,incr=3}}"
 ; Check what we have...
 ;
 beginning-of-file
-set %curtest "number multiplication"
+set %curtest "Counter usage in multiplication"
 set %expline "132"              ; 66 * 2
 run check-line
 next-line
@@ -192,6 +192,55 @@ set %expline "616"              ; 77 * 8
 run check-line
 next-line
 set %expline "935"              ; 85 * 11
+run check-line
+
+; Use different  buffer for further tests.
+; unmark current one first
+;
+unmark-buffer
+select-buffer TEST
+beginning-of-file
+add-mode Exact
+add-mode Magic
+
+; A replacement with nested groups where one group is not matched (so is "")
+; The matching and replacement text should be long enough to force an
+; (r)mcpat reallocation
+; It is:
+;   Start group (0-3) ==    4
+;   End group (0-3)   ==    4
+;   Literal x9        ==    9
+;   Any byte x2       ==    2
+;   CHOICE x1         ==    1
+; So 20 entries, and MAGIC_INCR is 16.
+;
+; The replacement has:
+;   Literal x19        19
+;   Add group x4        4
+;   End group           1
+; So 24 entries, also > 16
+;
+set %curtest "Unmatched group"
+insert-string "abcdefghi"
+beginning-of-file
+replace-string "abc((..)|(def))ghi" "gp0:${0} gp1:${1} gp2:${2} gp3:${3}"
+set %expline "gp0:abcdefghi gp1:def gp2: gp3:def"
+run check-line
+
+; Clear buffer
+;
+beginning-of-file
+set-mark
+end-of-file
+kill-region
+
+; A replacement where the groups reverse order
+;
+set %curtest "Reverse groups in replacement"
+insert-string "   ds_val(xyz)  ds_len(fgh)  "
+beginning-of-file
+replace-string "ds_(.*?)\((.*?)\)" "${2}->${1}"
+set %expline "   xyz->val  fgh->len  "
 run check-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
