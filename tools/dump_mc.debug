@@ -31,6 +31,7 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
     if (!header) header = "anon";
     fprintf(stderr, "%s (at line %d)\n", header, line);
     int ix = 0;
+    union magicp base = mp; /* For index-based addresses */
 
 /* We can dump struct magic_replacement data too - just need to ensure
  * that both structures have the same named things in the same place
@@ -38,9 +39,9 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
  * Which means that both have to start with struct mg_info then union val.
  */
 //    struct magic_replacement *rmp = (struct magic_replacement *)mp;
-    while(ix < 30) {    /* Put a limit on it...*/
+    while(ix < 100) {   /* Put a limit on it...*/
         fprintf(stderr, "(gp %d) ", mp.mmp->mc.group_num);
-        fprintf(stderr, "%*d (%p): ", (2*depth+1), ++ix, mp.mmp);
+        fprintf(stderr, "%*d (%p): ", (2*depth+1), ix++, mp.mmp);
         switch(mp.mmp->mc.type) {
         case LITCHAR:
             fprintf(stderr, " literal %c(%02x)\n", mp.mmp->val.lchar,
@@ -50,18 +51,24 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
             fprintf(stderr, " any byte\n");
             break;
         case SGRP: {
-            fprintf(stderr, " start group %d (end %p)\n",
-                 mp.mmp->mc.group_num, cntl_grp_info[mp.mmp->mc.group_num].gpend);
-            if (mp.mmp->x.next_or)
-                fprintf(stderr, " %32s [next CHOICE %p]\n",
-                      "", mp.mmp->x.next_or);
+            fprintf(stderr, " start group %d (end %d (%p))\n",
+                 mp.mmp->mc.group_num,
+                 cntl_grp_info[mp.mmp->mc.group_num].gpend,
+                 base.mmp + cntl_grp_info[mp.mmp->mc.group_num].gpend);
+            if (mp.mmp->x.next_or_idx)                 
+                fprintf(stderr, " %32s [next CHOICE %d (%p)]\n",
+                      "", mp.mmp->x.next_or_idx,
+                      base.mmp + mp.mmp->x.next_or_idx);
             else
                 fprintf(stderr, " %32s [no CHOICEs]\n", "");
             depth++;
             break;
         }
         case EGRP:
-            fprintf(stderr, " end group %d\n", mp.mmp->mc.group_num);
+            if (type == MATCHER)
+                fprintf(stderr, " end group %d\n", mp.mmp->mc.group_num);
+            else
+                fprintf(stderr, " end replacement code\n");
             if (mp.mmp->mc.group_num == 0) {
                 fprintf(stderr, "====================\n");
                 goto done;
@@ -69,11 +76,14 @@ static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
             depth--;
             break;
         case CHOICE:
-            fprintf(stderr, " CHOICE for group %d (end %p)\n",
-                 mp.mmp->mc.group_num, cntl_grp_info[mp.mmp->mc.group_num].gpend);
-            if (mp.mmp->x.next_or)
-                fprintf(stderr, " %32s [next CHOICE %p]\n",
-                      "", mp.mmp->x.next_or);
+            fprintf(stderr, " CHOICE for group %d (end %d (%p))\n",
+                 mp.mmp->mc.group_num,
+                 cntl_grp_info[mp.mmp->mc.group_num].gpend,
+                 base.mmp + cntl_grp_info[mp.mmp->mc.group_num].gpend);
+            if (mp.mmp->x.next_or_idx)
+                fprintf(stderr, " %32s [next CHOICE %d (%p)]\n",
+                     "", mp.mmp->x.next_or_idx,
+                     base.mmp + mp.mmp->x.next_or_idx);
             else
                 fprintf(stderr, " %32s [no CHOICEs]\n", "");
             break;

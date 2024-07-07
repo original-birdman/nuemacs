@@ -228,7 +228,7 @@ struct magic {
     struct range cl_lim;        /* Limits if mc.repeat set */
     union {                     /* Extended info */
         struct xccl *xt_cclmap; /* Pointer */
-        struct magic *next_or;  /* next alternative check */
+        int next_or_idx;        /* next alternative check */
     } x;
 };
 
@@ -264,15 +264,15 @@ struct magic_replacement {
  */
 enum GP_state { GPIDLE, GPOPEN, GPPENDING, GPVALID };
 struct control_group_info {     /* Info that controls usage */
-    struct magic *next_choice;  /* In mcstr(), where to put OR for this group
-                                 * In amatch()/step_scanner(), where the next
-                                 * OR is. */
-    struct magic *gpend;        /* Where the group pattern ends */
     int parent_group;           /* Group to fall into when this group ends */
     enum GP_state state;        /* For group balancing check in mcstr() and
                                    for "is group valid" in group_match() */
     int start_level;            /* amatch() level group was started */
     int pending_level;          /* amatch() level group was closed */
+    int next_choice_idx;        /* In mcstr(), where to put OR for this group
+                                 * In amatch()/step_scanner(), where the next
+                                 * OR is. */
+    int gpend;                  /* Index where the group pattern ends */
 };
 struct match_group_info {       /* String match info - reset on failures */
     struct line *mline;         /* Buffer location of match */
@@ -1137,10 +1137,10 @@ static int mcstr(void) {
     mcptr->mc = null_mg;            /* Initialize fields */
     mcptr->mc.type = SGRP;
     mcptr->mc.group_num = group_cntr;
-    mcptr->x.next_or = NULL;
-    cntl_grp_info[0].next_choice = mcptr;   /* Where to put the next CHOICE */
+    mcptr->x.next_or_idx = 0;
+    cntl_grp_info[0].next_choice_idx = 0;   /* Where to put the next CHOICE */
     mcptr++;
-    mj = 0;     /* This is *1 less* than the index that mcptr points to!! */
+    mj = 1;     /* This is the index in mcpat that mcptr points to!! */
 
     slow_scan = FALSE;      /* Assume not, until something needs it */
 
@@ -1174,7 +1174,7 @@ static int mcstr(void) {
             mcptr->val.gc = gc;
             mc_alloc = TRUE;
         }
-        goto pchr_done_noincr;
+        goto pchr_done_noincr;  /* patptr was incremented a few lines back */
     }
 
 /* IMPORTANT!!!!
@@ -1209,8 +1209,8 @@ static int mcstr(void) {
         curr_group = group_cntr;
         mcptr->mc.type = SGRP;
         mcptr->mc.group_num = group_cntr;               /* Set correct one */
-        mcptr->x.next_or = NULL;                        /* No OR yet but... */
-        cntl_grp_info[group_cntr].next_choice = mcptr;  /* it would go here */
+        mcptr->x.next_or_idx = 0;                       /* No OR yet but... */
+        cntl_grp_info[group_cntr].next_choice_idx = mj; /* it would go here */
         can_repeat = FALSE;
         break;
     case MC_EGRP:
@@ -1221,7 +1221,7 @@ static int mcstr(void) {
         for (int gc = group_cntr; gc > 0; gc--) {
             if (cntl_grp_info[gc].state == GPOPEN) {
                 cntl_grp_info[gc].state = GPVALID;
-                cntl_grp_info[gc].gpend = mcptr;
+                cntl_grp_info[gc].gpend = mj;
                 closed_ok = 1;
                 break;
             }
@@ -1232,7 +1232,7 @@ static int mcstr(void) {
         }
         break;
     case MC_BOL:
-        if (mj != 0) {
+        if (mj != 1) {
             parse_error(patptr+1, "must be first");
             return FALSE;
         }
@@ -1284,7 +1284,7 @@ static int mcstr(void) {
         can_repeat = FALSE;
         break;
     case MC_MINIMAL:
-        if (mj == 0) {
+        if (mj <= 1) {
             parse_error(patptr+1, "nothing to minimally repeat");
             return FALSE;
         }
@@ -1315,18 +1315,22 @@ static int mcstr(void) {
         can_repeat = FALSE;
         break;
 /* When we have an OR we link its location back into the previous OR
- * (or the start of the group if there is no previous OR) using next_orlink.
+ * (or the start of the group if there is no previous OR) using next_or_index.
  * This means we can try each option in turn and if it fails, move onto any
  * following one.
  */
     case MC_OR:
         mcptr->mc.type = CHOICE;
 /* Add this to the OR chain for this group and mark where next OR
- * has to be added
+ * has to be added.
+ * Now uses indexed entries, not pointers.
  */
-        mcptr->x.next_or = NULL;            /* No following OR from here yet */
-        cntl_grp_info[curr_group].next_choice->x.next_or = mcptr;   /* Chain */
-        cntl_grp_info[curr_group].next_choice = mcptr;  /* Next link is here */
+/* No following OR from here yet */
+        mcptr->x.next_or_idx = 0;
+/* Set the previous choice to point here (linking) */
+        mcpat[cntl_grp_info[curr_group].next_choice_idx].x.next_or_idx = mj;
+/* Remember where any folowing choice needs to put its chaining link */
+        cntl_grp_info[curr_group].next_choice_idx = mj;
         can_repeat = FALSE;
         break;
 
@@ -1484,14 +1488,14 @@ static int mcstr(void) {
 pchr_done:
     patptr++;
 pchr_done_noincr:
-    mj++;           /* So now has value of the 0-based mcpat entry just used */
+    mj++;           /* So now has value of the next 0-based mcpat entry */
+    mcptr++;
 /* Do we need to increase magic size? */
-    if ((mj + 1) >= magic_size) {   /* Allow for mcpat moving */
-        int ptr_offs = mcptr - mcpat;
+    if (mj >= magic_size) {
+        int ptr_offs = mcptr - mcpat;   /* Allow for mcpat moving */
         increase_magic_info();
         mcptr = mcpat + ptr_offs;
     }
-    mcptr++;
 
     if (possible_slow_scan) slow_scan = TRUE;
     repeat_allowed = can_repeat;    /* Can the next pass be a repeat? */
@@ -1505,7 +1509,7 @@ pchr_done_noincr:
     for (int gc = group_cntr; gc >= 0; gc--) {
         if (cntl_grp_info[gc].state == GPOPEN) {
             cntl_grp_info[gc].state = GPVALID;
-            cntl_grp_info[gc].gpend = mcptr;
+            cntl_grp_info[gc].gpend = mj;
             closed_ok = 1;
             break;
         }
@@ -1520,13 +1524,13 @@ pchr_done_noincr:
         return FALSE;
     }
 
-/* Remove all of the cntl_grp_info next_choice items.
+/* Remove all of the cntl_grp_info next_choice_idx items.
  * amatch() will add the relevant value as required, but we need to be able
  * to check whether it has added any.
  */
 
     for (int gi = 0; gi <= group_cntr; gi++) {
-        cntl_grp_info[gi].next_choice = NULL;
+        cntl_grp_info[gi].next_choice_idx = 0;
         cntl_grp_info[gi].state = GPIDLE;
     }
 
@@ -1755,15 +1759,14 @@ static int rmcstr(void) {
         rmcptr++;
         rmj++;      /* Is now the 0-based index of rmcptr value */
 /* Do we need to increase magic_repl size? */
-        if (rmj >= magic_repl_size) {   /* Allow for rmcpat moving */
-            int ptr_offs = rmcptr - rmcpat;
+        if (rmj >= magic_repl_size) {
+            int ptr_offs = rmcptr - rmcpat; /* Allow for rmcpat moving */
             increase_magic_repl_info();
             rmcptr = rmcpat + ptr_offs;
         }
 
 pchr_done_noincr:;
     }
-
     rmcptr->mc = null_mg;
     return TRUE;
 }
@@ -2321,8 +2324,8 @@ try_next_choice:
  * Otherwise we drop though to the group start (as CHOICEs always start groups)
  * and let things run.
  */
-            if (skip_choices) {     /* Alreadt in in a CHOICE */
-                mcptr = cntl_grp_info[mcptr->mc.group_num].gpend;
+            if (skip_choices) {     /* Already in in a CHOICE */
+                mcptr = mcpat + cntl_grp_info[mcptr->mc.group_num].gpend;
                 continue;
             }
             skip_choices = TRUE;
@@ -2342,8 +2345,8 @@ try_next_choice:
 #endif
             cntl_grp_info[cgn].state = GPOPEN;
             cntl_grp_info[cgn].start_level = am_level;
-            cntl_grp_info[cgn].next_choice = mcptr->x.next_or;
-            if (mcptr->x.next_or) {
+            cntl_grp_info[cgn].next_choice_idx = mcptr->x.next_or_idx;
+            if (mcptr->x.next_or_idx) {
                 skip_choices = TRUE;
             }
             goto next_entry;
@@ -2551,8 +2554,8 @@ failed:
     }
 
     for (int gi = group_cntr; gi >= 0; gi--) {
-        if (cntl_grp_info[gi].next_choice) {
-            mcptr = cntl_grp_info[gi].next_choice;
+        if (cntl_grp_info[gi].next_choice_idx) {
+            mcptr = mcpat + cntl_grp_info[gi].next_choice_idx;
             curline = match_grp_info[gi].mline;
             curoff = match_grp_info[gi].start;
             ambytes = match_grp_info[gi].base;

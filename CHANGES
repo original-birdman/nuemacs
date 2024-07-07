@@ -8110,3 +8110,8 @@ tools/dump_mc.debug
 
 eval.c
     Terminate gtkey bytes.
+
+search.c
+tools/dump_mc.debug
+    Use index of entries, not pointers, in mcpat linking.
+    A realloc can move things around.
