@@ -8123,3 +8123,6 @@ search.c
     Free (r)mcpat after calling (r)mcclear() in free_search().
     Change skip_choices definition for FreeBSD (clang compiler).
     It doesn't like a label on a definition.
+
+autotest/search-magic-replaces.sh
+    Add a test to ensure group info is reallocated.

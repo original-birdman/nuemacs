@@ -227,20 +227,38 @@ replace-string "abc((..)|(def))ghi" "gp0:${0} gp1:${1} gp2:${2} gp3:${3}"
 set %expline "gp0:abcdefghi gp1:def gp2: gp3:def"
 run check-line
 
-; Clear buffer
+; A replacement where the groups reverse order
+; First clear the buffer
 ;
 beginning-of-file
 set-mark
 end-of-file
 kill-region
 
-; A replacement where the groups reverse order
-;
 set %curtest "Reverse groups in replacement"
 insert-string "   ds_val(xyz)  ds_len(fgh)  "
 beginning-of-file
 replace-string "ds_(.*?)\((.*?)\)" "${2}->${1}"
 set %expline "   xyz->val  fgh->len  "
+run check-line
+
+; A replacement with a lot of groups, to force realloc (so > 10)
+; Include one "wrapper" group (3) that opens before and closes after the
+; first realloc
+; First clear the buffer
+;
+beginning-of-file
+set-mark
+end-of-file
+kill-region
+
+set %curtest "Lots of groups in replacement"
+insert-string "0123456789abcdef"
+beginning-of-file
+set .match "(.)(.)((.)(.)(.)(.)(.)(.))(.)(.)(..)(..)(..)"
+set .replace "${14}${13}${12}${11}${10}${9}${8}${7}${6}${5}${4}${3}${2}${1}${0}"
+replace-string .match .replace
+set %expline "efcdab98765432234567100123456789abcdef"
 run check-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
