@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.181 Help Index     (04 Jun 2024)
+=>                   nuEmacs GGR4.182 Help Index     (10 Jul 2024)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -359,7 +359,8 @@ MAGIC mode details.
 
 (...)
     Denotes a group. These can be used in replacement strings by using
-    ${n} for the contents that matched the corresponding group.
+    ${n} for the contents that matched the corresponding group. There is
+    no limit to the number of groups you may create.
     Groups are counted from 1 based on their opening "(".
     Groups may be nested.
     The ENTIRE match is found in ${0}.

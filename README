@@ -61,9 +61,6 @@ Other changes so far made are:
     you do nothing else after the yank.
     Also works after yank-minibuffer.
     Note that yanking rotates the kill-ring list.
-  o Context-sensitive name completion when prompting for files, buffers,
-    procedures, phonetic translation tables, commands and variable
-    names.
   o Opening a directory will list the files in the directory and let you
     select one to open.
     Requires a user procedure (defined in the standard uemacs.rc) to
@@ -83,10 +80,11 @@ Other changes so far made are:
   o Allow key-bindings for functions to have a default numeric argument
     "attached".
   o Improved handling of function/keypad escape sequences.
-  o Add the ability to mark a function as "one pass", so they will only
+  o Add the ability to mark a function as "one pass", so it will only
     be called once.  User procedures can determine what numeric arg was
-    given, whether this was forced (rather then the default) and which
-    current execution loop they are on (useful if  not "one pass").
+    given (so a "one pass" function can determine how to handle this),
+    whether this was forced (rather then the default) and which
+    current execution loop they are on (useful if not "one pass").
   o Allow a user procedure to be installed as one of the four "internal"
     keybindings.
   o Allow looking for overlapping matches while searching.
@@ -106,6 +104,9 @@ Other changes so far made are:
   o Add the concept of pins, which allow user macros to preserve marks.
   o Save any modified buffers on a crash and, on x64 and arm64,
     optionally (at compile time) produce a stack trace.
+  o Remove most string-size limits by using dynamically-allocated buffers.
+  o Enable a test version to be built for running with valgrind, to
+    check for dynamic memory leaks or overwrites.
 
 NOTE:
 The uemacs.rc file re-binds various keys from the standard settings in

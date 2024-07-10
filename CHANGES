@@ -8126,3 +8126,10 @@ search.c
 
 autotest/search-magic-replaces.sh
     Add a test to ensure group info is reallocated.
+
+etc/uemacs.hlp
+version.h
+README
+    Update to GGR4.182
+
+==========
