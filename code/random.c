@@ -216,7 +216,6 @@ int twiddle(int f, int n) {
     UNUSED(f); UNUSED(n);
     struct line *dotp;
     int doto;
-    char rch_buf[64], lch_buf[64];
     int rch_st, rch_nb, lch_st, lch_nb;
 
     if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
@@ -264,8 +263,8 @@ int twiddle(int f, int n) {
  * at eol) we might now be in the "middle" of a character, so we move to
  * the end of the pair (meaning we advance as we twiddle).
  */
-        db_setn(glb_db, rch_buf, rch_nb);
-        db_appendn(glb_db, lch_buf, lch_nb);
+        db_setn(glb_db, l_buf+rch_st, rch_nb);
+        db_appendn(glb_db, l_buf+lch_st, lch_nb);
         db_overwriten_at(ldb(dotp), db_val(glb_db), db_len(glb_db), lch_st);
 
         if (reset_col) curwp->w.doto = lch_st + lch_nb + rch_nb;

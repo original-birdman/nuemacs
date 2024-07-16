@@ -8132,4 +8132,16 @@ version.h
 README
     Update to GGR4.182
 
-==========
+========== GGR4.183
+
+display.c
+eval.c
+random.c
+search.c
+    Fixes for dynamic buffer changes, missed in GGR4.182.
+    Differentiate between last displayed buffer name and last actual
+    buffer name in get_buffer_display_name(). [display.c]
+    Use db_val_nc() in various places to ensure we end up with "", not a
+    NULL pointer. [eval.c, search.c]
+    Use correct buffers in twiddle(). [random.c]
+    Fix prompt string in new_prompt. [search.c]

@@ -1116,7 +1116,8 @@ static void upddex(void) {
 
 /* Get a display name for the current buffer */
 
-static db_strdef(last_name);
+static db_strdef(last_display);
+static db_strdef(last_bname);
 static int last_width = -1;
 static struct buffer *last_bp = NULL;
 
@@ -1124,11 +1125,14 @@ static const char *get_buffer_display_name(int w_want) {
 
     if (w_want < 3) w_want = 3;     /* Set a minimum (1 fr, 1 ell, 1 bk) */
 
-/* Handle the most common case quickly */
+/* Handle the most common case quickly.
+ * Note that for last_width to match, last_bname and last_display
+ * must have been set to non-NULL.
+ */
 
     if ((curbp == last_bp) && (w_want == last_width) &&
-        (db_casecmp(last_name, curbp->b_bname) == 0)) {
-        return db_val(last_name);
+        (db_casecmp(last_bname, curbp->b_bname) == 0)) {
+        return db_val(last_display);
     }
 
 /* Have to work out a new one... */
@@ -1138,7 +1142,7 @@ static const char *get_buffer_display_name(int w_want) {
 /* If we have enough space for the whole name, this is easy.  */
 
     if (bn_glyph <= w_want) {
-        db_set(last_name, curbp->b_bname);
+        db_set(last_display, curbp->b_bname);
     }
     else {
 
@@ -1146,7 +1150,7 @@ static const char *get_buffer_display_name(int w_want) {
 
         int ncut = bn_glyph - w_want + 1;   /* Glyphs to cut (+ ellipsis) */
         int scut = 2*(w_want - 1)/3;        /* Where to start cut */
-        db_clear(last_name);
+        db_clear(last_display);
 
 /* Add up until scut */
         char *cp = curbp->b_bname;
@@ -1155,7 +1159,7 @@ static const char *get_buffer_display_name(int w_want) {
         while (scut--) {
             offs = next_utf8_offset(cp, offs, max, TRUE);
         }
-        db_appendn(last_name, cp, offs);
+        db_appendn(last_display, cp, offs);
 
 /* Skip ncut - replace with MHE  */
 
@@ -1163,19 +1167,18 @@ static const char *get_buffer_display_name(int w_want) {
             offs = next_utf8_offset(cp, offs, max, TRUE);
         }
         static char MHE[3] = { 0xe2, 0x8b, 0xaf };
-        db_appendn(last_name, MHE, 3);
+        db_appendn(last_display, MHE, 3);
 
 /* Add the rest */
 
-        db_append(last_name, cp+offs);
+        db_append(last_display, cp+offs);
     }
     last_width = w_want;
     last_bp = curbp;
+    db_set(last_bname, curbp->b_bname);
 
-    return db_val(last_name);
+    return db_val(last_display);
 }
-
-
 
 /* Redisplay the mode line for the window pointed to by the "wp". This is the
  * only routine that has any idea of how the modeline is formatted. You can
@@ -1833,7 +1836,8 @@ void free_display(void) {
     Xfree(pscreen);
     Xfree(vdata);
 
-    db_free(last_name);
+    db_free(last_bname);
+    db_free(last_display);
     return;
 }
 #endif

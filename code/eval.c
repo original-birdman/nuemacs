@@ -409,7 +409,7 @@ static const char *xlat(const char *source, const char *lookup,
         else            /* Just copy the source byte to the result */
             db_addch(xlres, *sp++);
     }
-    return db_val(xlres);
+    return db_val_nc(xlres);
 }
 
 /* ptt_expand
@@ -599,7 +599,7 @@ finalize:
 /* Now switch lue_buf to ue_buf, freeing any original ue_buf */
     db_free(ue_buf);
     ue_buf = lue_buf;
-    return db_val(ue_buf);
+    return db_val_nc(ue_buf);
 }
 
 /* Evaluate a function.
@@ -1082,8 +1082,8 @@ static const char *gtenv(const char *vname) {
     case EVWLINE:           return ue_itoa(curwp->w_ntrows);
     case EVCWLINE:          return ue_itoa(getwpos());
     case EVTARGET:          return ue_itoa(curgoal);
-    case EVSEARCH:          return db_val(pat);
-    case EVREPLACE:         return db_val(rpat);
+    case EVSEARCH:          return db_val_nc(pat);
+    case EVREPLACE:         return db_val_nc(rpat);
     case EVMATCH:           return group_match(0);
     case EVKILL:            return getkill();
     case EVCMODE:           return ue_itoa(curbp->b_mode);
@@ -1227,7 +1227,7 @@ const char *getval(const char *token) {
         }
         if (do_fixup) db_set(valres, fixup_full(db_val(tbuf)));
         db_free(tbuf);
-        return db_val(valres);
+        return db_val_nc(valres);
     }
     case TKBUF:                 /* buffer contents fetch */
 /* Grab the right buffer */
@@ -1259,7 +1259,7 @@ const char *getval(const char *token) {
         }
 
 /* And return the spoils */
-        return db_val(valres);
+        return db_val_nc(valres);
 
     case TKVAR:
         return gtusr(token + 1);

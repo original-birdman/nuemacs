@@ -381,6 +381,12 @@ void init_search_ringbuffers(void) {
  */
     mcpat[0].mc = null_mg;
     rmcpat[0].mc = null_mg;
+
+/* Ensure that pat and rpat are "", not NULL */
+
+    db_set(pat, "");
+    db_set(rpat, "");
+
     return;
 }
 
@@ -498,7 +504,7 @@ static int boundry(struct line *curline, int curoff, int dir) {
 void new_prompt(const char *dflt_str) {
     dbp_dcl(ep) = expandp(dflt_str);
     db_sprintf(prmpt_buf.prompt, "%s " MLpre "%s" MLpost ": ",
-         current_base, ep);
+         current_base, dbp_val(ep));
     prmpt_buf.update = 1;
     return;
 }
@@ -3400,7 +3406,7 @@ static const char *getrepl(void) {
         }
     rmcptr++;
     }
-    return db_val(repl);
+    return db_val_nc(repl);
 }
 
 /* last_match info -- this is used to get the last match in a query replace
