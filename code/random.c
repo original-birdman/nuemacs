@@ -770,7 +770,10 @@ int killtext(int f, int n) {
     }
     if (f == FALSE) {
         chunk = lused(curwp->w.dotp) - curwp->w.doto;
-        if (chunk == 0) chunk = 1;
+        if (chunk == 0) {   /* Can't kill newline on last line... */
+            if (lforw(curwp->w.dotp) == curbp->b_linep) return FALSE;
+            else chunk = 1;
+        }
     }
     else if (n == 0) {
         chunk = curwp->w.doto;

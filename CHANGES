@@ -8152,4 +8152,6 @@ file.c
     Use a shortened value for fname (if possible) in
     set_buffer_filenames() [file.c]
 
+random.c
+    Fix kill on last line in file
 
