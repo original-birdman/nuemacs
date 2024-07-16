@@ -8145,3 +8145,11 @@ search.c
     NULL pointer. [eval.c, search.c]
     Use correct buffers in twiddle(). [random.c]
     Fix prompt string in new_prompt. [search.c]
+
+eval.c
+file.c
+    Return b_rpname for EVCFNAME. [eval.c]
+    Use a shortened value for fname (if possible) in
+    set_buffer_filenames() [file.c]
+
+

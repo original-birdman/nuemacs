@@ -209,10 +209,11 @@ const char *fixup_full(const char *fn) {
     return r;
 }
 
-/*
- * get_realpath
+/* get_realpath
+ * This can generate a shortened name.
  */
 static db_strdef(rp_res);
+static int force_full = 0;
 const char *get_realpath(const char *fn) {
 
 /* Get the full pathname...(malloc'ed)
@@ -232,28 +233,32 @@ const char *get_realpath(const char *fn) {
  * as matching that would mean lengthening, not shortening, and the
  * code here assumes it can copy strings "leftwards" char by char.
  */
-    const char *cpp = NULL;
-    const char *cfp;
-    if ((udir.clen > 1) && db_cmpn(rp_res, udir.current, udir.clen) == 0) {
-        cpp = "./";
-        cfp = db_val(rp_res) + udir.clen;
-    }
-    else if ((udir.plen > 1) && db_cmpn(rp_res, udir.parent, udir.plen) == 0) {
-        cpp = "../";
-        cfp = db_val(rp_res) + udir.plen;
-    } else if ((udir.hlen > 1) &&
-               (db_cmpn(rp_res, udir.home, udir.hlen) == 0)) {
+    if (!force_full) {
+        const char *cpp = NULL;
+        const char *cfp;
+        if ((udir.clen > 1) &&
+             (db_cmpn(rp_res, udir.current, udir.clen) == 0)) {
+            cpp = "./";
+            cfp = db_val(rp_res) + udir.clen;
+        }
+        else if ((udir.plen > 1) &&
+             (db_cmpn(rp_res, udir.parent, udir.plen) == 0)) {
+            cpp = "../";
+            cfp = db_val(rp_res) + udir.plen;
+        } else if ((udir.hlen > 1) &&
+                   (db_cmpn(rp_res, udir.home, udir.hlen) == 0)) {
 /* NOTE: that any fn input of ~/file as a real file in a dir called "~"
  * will have already been expanded to a full path, so ~/ really will be
  * unique as being under HOME.
  */
-        cpp = "~/";
-        cfp = db_val(rp_res) + udir.hlen;
-    }
-    if (cpp)  {
-        db_set(glb_db, cfp);
-        db_set(rp_res, cpp);
-        db_append(rp_res, db_val(glb_db));
+            cpp = "~/";
+            cfp = db_val(rp_res) + udir.hlen;
+        }
+        if (cpp)  {
+            db_set(glb_db, cfp);
+            db_set(rp_res, cpp);
+            db_append(rp_res, db_val(glb_db));
+        }
     }
     return db_val(rp_res);
 }
@@ -266,8 +271,16 @@ void set_buffer_filenames(struct buffer *bp, const char *fname) {
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
  */
-    if (bp->b_fname != fname) update_val(bp->b_fname, fname);
+    const char *rp = get_realpath(fname);
+    if (*rp == '/') {   /* It was shortened */
+        update_val(bp->b_fname, rp);
+    }
+    else {
+        if (bp->b_fname != fname) update_val(bp->b_fname, fname);
+    }
+    force_full = 1;     /* Want the real, full path for this one */
     update_val(bp->b_rpname, get_realpath(fname));
+    force_full = 0;
     return;
 }
 

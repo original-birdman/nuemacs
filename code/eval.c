@@ -1062,7 +1062,7 @@ static const char *gtenv(const char *vname) {
     case EVCURLINE:         return ue_itoa(getcline());
     case EVCURWIDTH:        return ue_itoa(term.t_ncol);
     case EVCBUFNAME:        return curbp->b_bname;
-    case EVCFNAME:          return curbp->b_fname;
+    case EVCFNAME:          return curbp->b_rpname;
     case EVDEBUG:           return ue_itoa(macbug);
     case EVSTATUS:          return ltos(cmdstatus);
     case EVASAVE:           return ue_itoa(gasave);
