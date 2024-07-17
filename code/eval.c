@@ -972,7 +972,7 @@ static const char *gtfun(const char *fname) {
     case UFR2I: {       /* Add checks for overflow on conversion */
         errno = 0;
         feclearexcept(FE_ALL_EXCEPT);
-        int1 = lroundl(strtod(db_val(arg1), NULL));
+        int1 = lround(strtod(db_val(arg1), NULL));
         if ((errno != 0) || (fetestexcept(FE_INVALID|FE_OVERFLOW) != 0)) {
             retval = "TOOBIG";
         }

@@ -8155,3 +8155,5 @@ file.c
 random.c
     Fix kill on last line in file
 
+eval.c
+    Fix UFR2I code to use consistent double size.
