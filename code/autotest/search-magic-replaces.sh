@@ -261,6 +261,21 @@ replace-string .match .replace
 set %expline "efcdab98765432234567100123456789abcdef"
 run check-line
 
+; Multi-group, with second group matching its second choice.
+;
+
+beginning-of-file
+set-mark
+end-of-file
+kill-region
+
+set %curtest "Second group matches second choice"
+insert-string "<p>abc</p>"
+beginning-of-file
+replace-string </(p|li|dd|dt|blockquote)(\s|>) XXX${2}
+set %expline <p>abcXXX>
+run check-line
+
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Unmark (modified) autotest.tfile at end of tests...
 ;

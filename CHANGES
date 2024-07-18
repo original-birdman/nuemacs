@@ -8162,3 +8162,6 @@ search.c
     Fix group invalidation on amatch() failing.
     Wipe out next_choice_idx at start of each search.
     Set mc_alloc in cclmake().
+
+autotest/search-magic-replaces.sh
+    Add a test for second group matches second choice.
