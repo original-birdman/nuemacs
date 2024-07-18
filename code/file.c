@@ -272,11 +272,11 @@ void set_buffer_filenames(struct buffer *bp, const char *fname) {
  * On a Mac it will crash...
  */
     const char *rp = get_realpath(fname);
-    if (*rp == '/') {   /* It was shortened */
-        update_val(bp->b_fname, rp);
+    if (*rp == '/') {   /* It wasn't shortened */
+        if (bp->b_fname != fname) update_val(bp->b_fname, fname);
     }
     else {
-        if (bp->b_fname != fname) update_val(bp->b_fname, fname);
+        update_val(bp->b_fname, rp);
     }
     force_full = 1;     /* Want the real, full path for this one */
     update_val(bp->b_rpname, get_realpath(fname));

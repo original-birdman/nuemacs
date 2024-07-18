@@ -8165,3 +8165,6 @@ search.c
 
 autotest/search-magic-replaces.sh
     Add a test for second group matches second choice.
+
+file.c
+    Fix inverted logic in set_buffer_filenames().
