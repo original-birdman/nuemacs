@@ -8157,3 +8157,8 @@ random.c
 
 eval.c
     Fix UFR2I code to use consistent double size.
+
+search.c
+    Fix group invalidation on amatch() failing.
+    Wipe out next_choice_idx at start of each search.
+    Set mc_alloc in cclmake().

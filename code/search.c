@@ -314,6 +314,7 @@ static int magic_size = 0;
 static struct magic *mcpat = NULL;              /* The magic pattern. */
 static int magic_repl_size = 0;
 static struct magic_replacement *rmcpat = NULL; /* Replacement magic array. */
+static int mc_alloc = FALSE;                    /* Initial state */
 
 static int slow_scan = FALSE;
 
@@ -668,9 +669,10 @@ static int cclmake(char **ppatptr, struct magic *mcptr) {
     char *patptr;
     dbp_dcl(btext);
 
-/* We always set up the bitmap structure */
+/* We *always* set up the bitmap structure, so mc_alloc must be set */
 
     mcptr->val.cclmap = bmap = clearbits();
+    mc_alloc = TRUE;
     patptr = *ppatptr;
 
 /* Test the initial character(s) in ccl for the special cases of negate ccl.
@@ -1117,7 +1119,6 @@ static void rmcclear(void) {
  *      times to allow this!!
  */
 static int group_cntr;  /* Number of possible groups in search pattern */
-static int mc_alloc = FALSE;    /* Initial state */
 static int mcstr(void) {
     struct magic *mcptr = mcpat;
     char *patptr = strdupa(db_val(pat));
@@ -1205,7 +1206,6 @@ static int mcstr(void) {
     switch (pchr) {
     case MC_CCL:
         status = cclmake(&patptr, mcptr);
-        mc_alloc = TRUE;
         break;
     case MC_SGRP:
         group_cntr++;       /* Create a "new" group */
@@ -2541,33 +2541,34 @@ success:
     return ambytes;
 
 failed:
-
-/* If we failed we must clear any pending groups we found, or groups
- * we opened.
- * Then, if we have a further choice, go back to near the start of this
+/* If we have a further choice, go back to near the start of this
  * function, but with a new mcptr and the saved curline+curoff and ambytes
  * from the group start.
- * Have to find highest group with a choice.
+ * If we do have another choice then we must invalidate all
+ * groups at that group-level or higher before trying that next choice.
+ * They must now be invalid, but lower ones are still currently OK.
+ * NOTE!!!
+ * If we do not have another choice then we must not invalidate any groups!
+ * If we did we'd wipe out all earlier groups when a repeat pattern fails.
  */
-    for (int gi = 0; gi <= group_cntr; gi++) {
-        if ((cntl_grp_info[gi].state == GPPENDING) &&
-            (cntl_grp_info[gi].pending_level == am_level)) {
-            cntl_grp_info[gi].state = GPIDLE;
-        }
-        else if ((cntl_grp_info[gi].state == GPOPEN) &&
-            (cntl_grp_info[gi].start_level == am_level)) {
-            cntl_grp_info[gi].state = GPIDLE;
-        }
-    }
-
+    ;   /* Dummy statement to allow declaration to follow */
+    int nc = -1;
     for (int gi = group_cntr; gi >= 0; gi--) {
         if (cntl_grp_info[gi].next_choice_idx) {
-            mcptr = mcpat + cntl_grp_info[gi].next_choice_idx;
-            curline = match_grp_info[gi].mline;
-            curoff = match_grp_info[gi].start;
-            ambytes = match_grp_info[gi].base;
-            goto try_next_choice;
+            nc = gi;
+            break;
         }
+    }
+    if (nc >= 0) {
+        for (int gi = group_cntr; gi >= nc; gi--) {
+/* Just set the value to GPIDLE regardless of its current state. */
+            cntl_grp_info[gi].state = GPIDLE;
+        }
+        mcptr = mcpat + cntl_grp_info[nc].next_choice_idx;
+        curline = match_grp_info[nc].mline;
+        curoff = match_grp_info[nc].start;
+        ambytes = match_grp_info[nc].base;
+        goto try_next_choice;
     }
 
     am_level--;
@@ -2632,9 +2633,11 @@ static int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
 
     magic_search.start_line = curline;
     magic_search.start_point = curoff;
+/* Set the initial values for group info markers at the start of each search */
     for (int gi = 0; gi <= group_cntr; gi++) {
         match_grp_info[gi] = null_match_grp_info;
         cntl_grp_info[gi].state = GPIDLE;
+        cntl_grp_info[gi].next_choice_idx = 0;
     }
 
 /* Scan each character until we hit the head link record. */
