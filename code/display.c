@@ -1294,7 +1294,7 @@ static void modeline(struct window *wp) {
         while ((c = *cp++) != 0) vtputc(c);
     }
 
-/* The buffer name is teh next item to display, but may now be shortened
+/* The buffer name is the next item to display, but may now be shortened
  * according to the the screen width (and hence the modeline length).
  * So remember where we are now, build up the rh_side text then
  * get a buffer name display text based on what space is left.
@@ -1356,10 +1356,14 @@ next_mode:
     db_append(glb_db, MLpost " ");
 
 /* Add in the filename if set and it is different to the buffername.
+ 8 (after allowing for the leading "./" we now use).
  * This can contain utf8...
  * For the minibuffer this will be the main buffer name .
  */
-    if (*(bp->b_dfname) != 0 && strcmp(bp->b_bname, bp->b_dfname) != 0) {
+    if ( (*bp->b_dfname != 0) &&
+         (*bp->b_dfname == '.') &&
+         (*bp->b_dfname+1 == '/') &&
+         (strcmp(bp->b_bname, bp->b_dfname+2) != 0)) {
         db_append(glb_db, bp->b_dfname);
         db_addch(glb_db, ' ');
     }

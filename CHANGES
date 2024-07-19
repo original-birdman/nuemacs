@@ -8193,3 +8193,6 @@ autotest/arithmetic-tests.sh
 
 eval.c
     Fix TKARG handling in getval().
+
+display.c
+    Change filename vs buffername test to allow for leading "./".
