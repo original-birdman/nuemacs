@@ -8186,3 +8186,7 @@ estruct.h
     otherwise file-wide and local name clash. [file.c]
     Make filesave() and readin() use b_rpname. [file.c]
     Make crash saving use b_rpname. [main.c]
+
+autotest/arithmetic-tests.sh
+    Set TOOBIG to work for valgrind on FreeBSD and Solaris in
+    Virtualbox.

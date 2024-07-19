@@ -148,6 +148,12 @@ set .TOOBIG "TOOBIG"
     !if &seq $proc_type x86_64
         set .TOOBIG &add .TOOBIG 1
     !endif
+    !if &seq $proc_type amd64   ; For FreeBSD on VirtualBox
+        set .TOOBIG &add .TOOBIG 1
+    !endif
+    !if &seq $proc_type i86pc   ; For Solaris on VirtualBox
+        set .TOOBIG &add .TOOBIG 1
+    !endif
 !endif
 
 set %test "&r2i 12.493672E123"
