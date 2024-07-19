@@ -1288,7 +1288,7 @@ static void modeline(struct window *wp) {
         db_set(glb_db, " " PROGRAM_NAME_LONG);
 
 /* GGR - only if no user-given filename (space issue) */
-        if (*(bp->b_fname) == 0) db_append(glb_db, " " VERSION);
+        if (*(bp->b_dfname) == 0) db_append(glb_db, " " VERSION);
         db_append(glb_db, ": ");
         cp = db_val(glb_db);
         while ((c = *cp++) != 0) vtputc(c);
@@ -1359,8 +1359,8 @@ next_mode:
  * This can contain utf8...
  * For the minibuffer this will be the main buffer name .
  */
-    if (*(bp->b_fname) != 0 && strcmp(bp->b_bname, bp->b_fname) != 0) {
-        db_append(glb_db, bp->b_fname);
+    if (*(bp->b_dfname) != 0 && strcmp(bp->b_bname, bp->b_dfname) != 0) {
+        db_append(glb_db, bp->b_dfname);
         db_addch(glb_db, ' ');
     }
 

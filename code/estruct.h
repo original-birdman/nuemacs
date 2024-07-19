@@ -318,7 +318,7 @@ struct buffer {
     struct ptt_ent *ptt_headp;
     struct simple_variable *bv; /* Only for b_type = BTPROC */
 
-    char *b_fname;          /* File name (as user gave)     */
+    char *b_dfname;         /* Display file name (may be ~/name) */
     char *b_rpname;         /* Real pathname                */
     char *b_bname;          /* Buffer name                  */
     char *b_key;            /* current encrypted key        */

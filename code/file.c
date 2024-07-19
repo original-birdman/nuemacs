@@ -189,7 +189,7 @@ const char *fixup_fname(const char *fn) {
  * fixup_full
  */
 const char *fixup_full(const char *fn) {
-    db_strdef(fn_expd);
+    db_strdef(l_fn_expd);
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
  * Then we call fixup_fname() to do what it can do, which includes
@@ -198,13 +198,13 @@ const char *fixup_full(const char *fn) {
  * currently already in fixup_fname()'s buffer.
  */
     if (udir.current && (fn[0] != '/' && fn[0] != '~')) {
-        db_sprintf(fn_expd, "%s/%s", udir.current, fn);
+        db_sprintf(l_fn_expd, "%s/%s", udir.current, fn);
     }
-    else db_set(fn_expd, fn);
+    else db_set(l_fn_expd, fn);
 
 /* '/', '.' and ".."  handling */
-    const char *r = fixup_fname(db_val(fn_expd));
-    db_free(fn_expd);
+    const char *r = fixup_fname(db_val(l_fn_expd));
+    db_free(l_fn_expd);
 
     return r;
 }
@@ -232,6 +232,9 @@ const char *get_realpath(const char *fn) {
  * We have to cater for (and ignore) an udir entry being just "/"
  * as matching that would mean lengthening, not shortening, and the
  * code here assumes it can copy strings "leftwards" char by char.
+ * Files in the current directory end up as ./file so that we
+ * can use ~/ for a file in HOME withput clashing with a local
+ * directory called "~".
  */
     if (!force_full) {
         const char *cpp = NULL;
@@ -248,8 +251,8 @@ const char *get_realpath(const char *fn) {
         } else if ((udir.hlen > 1) &&
                    (db_cmpn(rp_res, udir.home, udir.hlen) == 0)) {
 /* NOTE: that any fn input of ~/file as a real file in a dir called "~"
- * will have already been expanded to a full path, so ~/ really will be
- * unique as being under HOME.
+ * will have already been expanded to a full path or ./~/file, so ~/
+ * really will be unique as being under HOME.
  */
             cpp = "~/";
             cfp = db_val(rp_res) + udir.hlen;
@@ -270,16 +273,14 @@ void set_buffer_filenames(struct buffer *bp, const char *fname) {
 /* If activating an inactive buffer, these may be the same and the
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
+ * But if we arrive with fname set to bp->b_dfname we also have a problem
+ * that update_val() may realloc() it before the second get_realpath()
+ * call, so just run with a local copy and avoid all of this.
  */
-    const char *rp = get_realpath(fname);
-    if (*rp == '/') {   /* It wasn't shortened */
-        if (bp->b_fname != fname) update_val(bp->b_fname, fname);
-    }
-    else {
-        update_val(bp->b_fname, rp);
-    }
+    const char *fn_copy = strdupa(fname);
+    update_val(bp->b_dfname, get_realpath(fn_copy));
     force_full = 1;     /* Want the real, full path for this one */
-    update_val(bp->b_rpname, get_realpath(fname));
+    update_val(bp->b_rpname, get_realpath(fn_copy));
     force_full = 0;
     return;
 }
@@ -418,7 +419,8 @@ int readin(const char *fname, int lockfl) {
     if (filock && lockfl && lockchk(fname) == ABORT) {
         s = FIOFNF;
         bp = curbp;
-        terminate_str(bp->b_fname);     /* Makes it empty */
+        terminate_str(bp->b_dfname);    /* Makes it empty */
+        terminate_str(bp->b_rpname);    /* Makes it empty */
         goto out;
     }
 
@@ -439,17 +441,16 @@ int readin(const char *fname, int lockfl) {
 
     set_buffer_filenames(bp, fname);
 
-/* Always set the real pathname now, so getfile() can check it.
- * NOTE that if we cannot get a real pathname (e.g trying to
- * open a new file in a non-existant directory) that we just warn
- * about it...
+/* Check that we can actually get the real pathname.
+ * (Even though set_buffer_filenames() will have just made this call)
+ * If it return the input buffer as its result, then it will have
+ * failed, e.g. trying to open a new file in a non-existant directory.
+ * So we can post a warnign message.
  */
-    const char *rp = get_realpath(fname);
-    if (rp == fname) {  /* Unable to get real path */
+    if (get_realpath(fname) == fname) { /* Unable to get real path */
         mlwrite_one("Parent directory absent for new file");
         sleep(1);
     }
-    else update_val(bp->b_rpname, rp);
 
 /* GGR - run filehooks on this iff the caller sets the flag */
     if (run_filehooks) handle_filehooks(fname);
@@ -470,9 +471,11 @@ int readin(const char *fname, int lockfl) {
 
 /* NOTE! that all of the above (in particular) filehooks and Esc-Spec-R
  * are run *before* the file is read into the buffer.
+ * We use the full name based on what the user gave.
  */
-    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open. */
-    if (s == FIOFNF) {                              /* File not found. */
+    s = ffropen(bp->b_rpname);
+    if (s == FIOERR) goto out;  /* Hard open failure. */
+    if (s == FIOFNF) {          /* File not found. */
         db_set(readin_mesg, MLbkt("New file"));
         mlwrite_one(db_val(readin_mesg));
         goto out;
@@ -530,8 +533,8 @@ int fileread(int f, int n) {
     s = mlreply("Read file: ", &fname, CMPLT_FILE);
     if (s == ABORT) return(s);
     else if (s == FALSE) {
-        if (*(curbp->b_fname) == 0) return(s);
-        else db_set(fname, curbp->b_fname);
+        if (*(curbp->b_rpname) == 0) return(s);
+        else db_set(fname, curbp->b_rpname);
     }
     s = readin(db_val(fname), TRUE);
     db_free(fname);
@@ -948,7 +951,7 @@ int filesave(int f, int n) {
         return rdonly();        /* we are in read only mode     */
     if (!f && (curbp->b_flag & BFCHG) == 0) /* Return, no changes.  */
         return TRUE;
-    if (*(curbp->b_fname) == 0) {   /* Must have a name. */
+    if (*(curbp->b_rpname) == 0) {  /* Must have a name. */
         mlwrite_one("No file name");
         return FALSE;
     }
@@ -969,7 +972,7 @@ int filesave(int f, int n) {
         }
     }
 
-    if ((s = writeout(curbp->b_fname)) == TRUE) {
+    if ((s = writeout(curbp->b_rpname)) == TRUE) {
         curbp->b_flag &= ~BFCHG;
         wp = wheadp;            /* Update mode lines. */
         while (wp != NULL) {

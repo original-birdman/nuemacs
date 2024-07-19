@@ -159,7 +159,7 @@ int help(int f, int n) {
         int res = readin(fname, FALSE);
         pathexpand = TRUE;
         if (res == FALSE) return(FALSE);
-        terminate_str(bp->b_fname); /* Remove filename */
+        terminate_str(bp->b_dfname);    /* Remove filename */
         terminate_str(bp->b_rpname);
     }
     else

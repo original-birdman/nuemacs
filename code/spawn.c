@@ -235,7 +235,8 @@ int pipecmd(int f, int n) {
 
 /* And read the stuff in */
     if (readin(db_val(comfile), FALSE) != TRUE) return FALSE;
-    terminate_str(bp->b_fname);     /* Zap temporary filename */
+    terminate_str(bp->b_dfname);    /* Zap temporary filename */
+    terminate_str(bp->b_rpname);    /* Zap temporary filename */
 
 /* Put this window into VIEW mode.*/
     curwp->w_bufp->b_mode |= MDVIEW;
@@ -282,21 +283,20 @@ int filter_buffer(int f, int n) {
 
 /* Setup the proper file names */
     bp = curbp;
-    db_set(tmpnam, bp->b_fname);    /* Save the original name */
+    db_set(tmpnam, bp->b_rpname);   /* Save the (full) original name */
     char *hp = udir.home;
     if (!hp) hp = ".";              /* Default if absent */
     db_sprintf(fltin, "<%s/.ue_fin_%08x", hp, getpid());
     db_sprintf(fltout, ">%s/.ue_fout_%08x", hp, getpid());
 
-/* Set this to our new one */
-    update_val(bp->b_fname, db_val(fltin));
+/* Set this to our new one for */
+    set_buffer_filenames(bp, db_val(fltin));
 
 /* Write it out, checking for errors */
     if (writeout(db_val(fltin)) != TRUE) {
         mlwrite_one(MLbkt("Cannot write filter file"));
-        update_val(bp->b_fname, db_val(tmpnam));
         s = FALSE;
-        goto exit;
+        goto reset_bufname_exit;
     }
     ttput1c('\n');          /* Already have '\r'    */
     TTflush();
@@ -326,9 +326,6 @@ int filter_buffer(int f, int n) {
     if ((s = readin(db_val(fltout), FALSE)) == FALSE) {
         mlwrite_one(MLbkt("Execution failed"));
     }
-
-/* Reset file name */
-    update_val(bp->b_fname, db_val(tmpnam));    /* Restore name */
     bp->b_flag |= BFCHG;            /* Flag it as changed */
 
 /* If this is a translation table, remove any compiled data */
@@ -339,6 +336,8 @@ int filter_buffer(int f, int n) {
     unlink(db_val(fltin));
     unlink(db_val(fltout));
 
+reset_bufname_exit:
+    set_buffer_filenames(bp, db_val(tmpnam));
 exit:
     db_free(fltout);
     db_free(fltin);

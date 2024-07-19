@@ -1268,11 +1268,11 @@ exit:
 int open_parent(int f, int n) {
     UNUSED(f); UNUSED(n);
 
-    if (*(curbp->b_fname) == '\0') {
+    if (*(curbp->b_rpname) == '\0') {
         mlforce("This buffer has no filename");
         return FALSE;
     }
-    char *bpath = Xstrdup(curbp->b_fname);
+    char *bpath = Xstrdup(curbp->b_rpname);
     char *parent_path = dirname(bpath);
     int status = TRUE;
     if (!showdir_handled(parent_path)) {

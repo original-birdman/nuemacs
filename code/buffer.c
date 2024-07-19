@@ -144,7 +144,7 @@ int zotbuf(struct buffer *bp) {
 
 /* Free allocated fields */
     Xfree(bp->b_bname);
-    Xfree(bp->b_fname);
+    Xfree(bp->b_dfname);
     Xfree(bp->b_rpname);
     Xfree(bp->b_key);
 
@@ -167,7 +167,7 @@ static void make_active(struct buffer *nbp) {
     run_filehooks = 1;          /* set flag */
     struct buffer *real_curbp = curbp;
     curbp = nbp;
-    readin(nbp->b_fname, TRUE);
+    readin(nbp->b_rpname, TRUE);
 /* Set any buffer modes that are forced.
  * This comes *after* file-hooks.
  */
@@ -288,7 +288,7 @@ struct buffer *bfind(const char *bname, int cflag, int bflag) {
         if (force_mode_on) bp->b_mode |= force_mode_on;
         if (force_mode_off) bp->b_mode &= ~force_mode_off;
         update_val(bp->b_bname, bname);
-        update_val(bp->b_fname, "");
+        update_val(bp->b_dfname, "");
         update_val(bp->b_rpname, "");
     }
     return bp;
@@ -485,7 +485,7 @@ static int makelist(int iflag) {
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
         return s;
-    terminate_str(blistp->b_fname);     /* Makes it empty */
+    terminate_str(blistp->b_dfname);    /* Makes it empty */
 
     addline("ACT MODES   Type↴      Size Buffer        File");
     addline("--- ------------.      ---- ------        ----");
@@ -580,7 +580,7 @@ static int makelist(int iflag) {
         *cp1++ = ' ';                   /* Gap.                 */
         cp2 = bp->b_bname;              /* Buffer name          */
         while ((c = *cp2++) != 0) *cp1++ = c;
-        cp2 = bp->b_fname;              /* File name            */
+        cp2 = bp->b_dfname;             /* File name            */
         if (*cp2 != 0) {
 /* We know the current screen width, so use it...
  */
@@ -789,7 +789,7 @@ void free_buffer(void) {
         Xfree(bp->bv);
         if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
         Xfree(bp->b_bname);
-        Xfree(bp->b_fname);
+        Xfree(bp->b_dfname);
         Xfree(bp->b_rpname);
         Xfree(bp->b_key);
         Xfree(bp);

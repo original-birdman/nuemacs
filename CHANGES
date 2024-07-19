@@ -8168,3 +8168,21 @@ autotest/search-magic-replaces.sh
 
 file.c
     Fix inverted logic in set_buffer_filenames().
+
+bind.c
+buffer.c
+display.c
+file.c
+main.c
+random.c
+spawn.c
+estruct.h
+    Changes to use b_rpname not b_fname for file manipulation as the
+    latter is for display and may now be ~/name.
+    Renamed b_fname to b_dfname [all]
+    Take copy of fname for set_buffer_filenames() to avoid realloc() and
+    copy-to-self issues. [file.c]
+    Rename fn_expd to l_fn_expd in fixup_full() to avoid confusing the
+    otherwise file-wide and local name clash. [file.c]
+    Make filesave() and readin() use b_rpname. [file.c]
+    Make crash saving use b_rpname. [main.c]

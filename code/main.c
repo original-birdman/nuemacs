@@ -553,16 +553,16 @@ static void dump_modified_buffers(void) {
     int add_cwd;
 
     for(struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-        if ((bp->b_flag & BFCHG) == 0   /* Not changed...*/
-         || (bp->b_flag & BFINVS) != 0  /* ...not real... */
-         || (bp->b_mode & MDVIEW) != 0  /* ...read-only... */
-         || (*(bp->b_fname) == '\0')) { /* ...has no filename */
+        if ((bp->b_flag & BFCHG) == 0       /* Not changed...*/
+         || (bp->b_flag & BFINVS) != 0      /* ...not real... */
+         || (bp->b_mode & MDVIEW) != 0      /* ...read-only... */
+         || (*(bp->b_dfname) == '\0')) {    /* ...has no filename */
 
 /* Not interested ... but we *do* want to save any keyboard-macro.
  * which is marked as invisible.
  */
             if (bp == kbdmac_bp && (bp->b_flag & BFCHG) != 0) {
-                update_val(bp->b_fname, kbdmacro_buffer);   /* Set a value */
+                update_val(bp->b_dfname, kbdmacro_buffer);  /* Set a value */
                 update_val(bp->b_rpname, kbdmacro_buffer);  /* Set a value */
             }
             else {
@@ -572,7 +572,7 @@ static void dump_modified_buffers(void) {
 
         curbp = bp;     /* Needed for functionality calls */
         if ((bp->b_flag & BFTRUNC) != 0) {
-            printf("Skipping %s - truncated\n", bp->b_fname);
+            printf("Skipping %s - truncated\n", bp->b_dfname);
             continue;
         }
         if ((bp->b_flag & BFNAROW) != 0) {
@@ -587,9 +587,9 @@ static void dump_modified_buffers(void) {
         }
         printf("Saving %s...\n", bp->b_bname);
 /* Get the filename from any pathname */
-        char *fn = strrchr(bp->b_fname, '/');
+        char *fn = strrchr(bp->b_rpname, '/');
         if (fn == NULL) {       /* Just a filename */
-            fn = bp->b_fname;
+            fn = bp->b_rpname;
             add_cwd = 1;
         }
         else {
@@ -598,13 +598,13 @@ static void dump_modified_buffers(void) {
         }
         db_set(tagged_name, time_stamp);
         db_append(tagged_name, fn);
-        db_set(orig_name, bp->b_fname);  /* For INDEX */
+        db_set(orig_name, bp->b_rpname);    /* For INDEX */
 /* Just in case the user has opened a file "kbd_macro", we alter the
  * tagged name to have a ! for this special case, to avoid any
  * name clash.
  */
         if (curbp == kbdmac_bp) db_setcharat(tagged_name, ts_len-1, '!');
-        update_val(bp->b_fname, db_val(tagged_name));
+        update_val(bp->b_rpname, db_val(tagged_name));
         if ((status = filesave(0, 0)) != TRUE) {
             printf("  failed - skipping\n");
             continue;
@@ -1532,7 +1532,7 @@ int execute(int c, int f, int n) {
  * are actually at "/" (quick test).
  */
             db_strdef(fname);
-            db_set(fname, curwp->w_bufp->b_fname);
+            db_set(fname, curwp->w_bufp->b_rpname);
             if (db_charat(fname, 1) != '\0') db_append(fname, "/");
 /* Add in this entryname, then work out the full pathname length
  * and append a NUL
@@ -1551,11 +1551,11 @@ int execute(int c, int f, int n) {
         case 'h':           /* Toggle hidden files in current mode */
         case 'm':           /* Toggle mixed/type-sorted display */
         case 'f':           /* Toggle dirs/files order in type-sorted mode */
-            getfile(curbp->b_fname, FALSE, TRUE);
+            getfile(curbp->b_rpname, FALSE, TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
            {db_strdef(fname);
-            db_set(fname, curwp->w_bufp->b_fname);
+            db_set(fname, curwp->w_bufp->b_rpname);
             char *upp = strrchr(db_val(fname), '/');
             if (upp == db_val(fname)) upp++;
             db_setcharat(fname, upp-db_val(fname), '\0');
@@ -1722,7 +1722,7 @@ int rdonly(void) {
     TTbeep();
     if (running_function)
         mlwrite(MLbkt("%s illegal in read-only buffer: %s"),
-            current_command, curbp->b_fname);
+            current_command, curbp->b_dfname);
     else
         mlwrite_one(MLbkt("Key illegal in VIEW mode"));
     return FALSE;
@@ -1841,7 +1841,7 @@ int quickexit(int f, int n) {
              && (bp->b_flag & BFTRUNC) == 0 /* Not truncated P.K.   */
              && (bp->b_flag & BFINVS) == 0) {   /* Real.            */
             curbp = bp;                     /* make that buffer cur */
-            mlwrite(MLbkt("Saving %s"), bp->b_fname);
+            mlwrite(MLbkt("Saving %s"), bp->b_dfname);
             mlwrite_one("\n");              /* So user can see filename */
             if ((status = filesave(f, n)) != TRUE) {
                 curbp = oldcb;              /* restore curbp */
