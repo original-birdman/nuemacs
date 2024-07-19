@@ -213,20 +213,30 @@ const char *fixup_full(const char *fn) {
  * This can generate a shortened name.
  */
 static db_strdef(rp_res);
+
+/* Two markers so that set_buffer_filenames() can call here
+ * twice to get short an full names, without calling realpath() twice.
+ */
 static int force_full = 0;
+static int fn_is_full = 0;
 const char *get_realpath(const char *fn) {
 
+    if (fn_is_full) {
+        db_set(rp_res, fn);
+    }
+    else {
 /* Get the full pathname...(malloc'ed)
  * Have to cater for file not existing (but the dir has to...).
  */
-    char *dir = dirname(strdupa(fn));
-    char *ent = basename(strdupa(fn));
+        char *dir = dirname(strdupa(fn));
+        char *ent = basename(strdupa(fn));
 
-    char *rp = realpath(dir, NULL);
-    if (!rp) return fn;     /* Return input... */
-    if (strlen(rp) == 1) rp[0] = '\0';  /* Blank a bare "/" */
-    db_sprintf(rp_res, "%s/%s", rp, ent);
-    free(rp);
+        char *rp = realpath(dir, NULL);
+        if (!rp) return fn;     /* Return input... */
+        if (strlen(rp) == 1) rp[0] = '\0';  /* Blank a bare "/" */
+        db_sprintf(rp_res, "%s/%s", rp, ent);
+        free(rp);
+    }
 
 /* See whether we can use ., .. or ~ to shorten this.
  * We have to cater for (and ignore) an udir entry being just "/"
@@ -276,12 +286,15 @@ void set_buffer_filenames(struct buffer *bp, const char *fname) {
  * But if we arrive with fname set to bp->b_dfname we also have a problem
  * that update_val() may realloc() it before the second get_realpath()
  * call, so just run with a local copy and avoid all of this.
+ * We get the full one first, then use that result to get a short one.
  */
     const char *fn_copy = strdupa(fname);
-    update_val(bp->b_dfname, get_realpath(fn_copy));
     force_full = 1;     /* Want the real, full path for this one */
     update_val(bp->b_rpname, get_realpath(fn_copy));
     force_full = 0;
+    fn_is_full = 1;
+    update_val(bp->b_dfname, get_realpath(bp->b_rpname));
+    fn_is_full = 0;
     return;
 }
 

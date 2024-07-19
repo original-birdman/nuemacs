@@ -8196,3 +8196,7 @@ eval.c
 
 display.c
     Change filename vs buffername test to allow for leading "./".
+
+file.c
+    Add a fn_is_full flag for set_buffer_filenames() calls to
+    get_realpath(). 
