@@ -1202,7 +1202,6 @@ const char *getval(const char *token) {
         return "";
 
     case TKARG: {               /* interactive argument */
-        db_strdef(tbuf);        /* string buffer for some workings */
 
 /* We allow internal uemacs code to set the response of the next TKARG
  * (this was set-up so that the showdir user-proc could be given a
@@ -1211,22 +1210,23 @@ const char *getval(const char *token) {
         int do_fixup = (uproc_opts & UPROC_FIXUP);
         uproc_opts = 0;         /* Always reset flags after use */
         if (userproc_arg) {
-            db_set(tbuf, userproc_arg);
+            db_set(valres, userproc_arg);
         }
         else {
 /* GGR - There is the possibility (actually, certainty) of an illegal
  * overlap of args here. So it must be done to a temporary buffer.
  *              strcpy(token, getval(token+1));
  */
+            db_strdef(tbuf);        /* string buffer for some workings */
             db_set(tbuf, getval(token+1));
             int distmp = discmd;    /* Remember initial state */
             discmd = TRUE;
-            int status = getstring(db_val(tbuf), &tbuf, CMPLT_NONE);
+            int status = getstring(db_val(tbuf), &valres, CMPLT_NONE);
+            db_free(tbuf);
             discmd = distmp;
             if (status == ABORT) return errorm;
         }
-        if (do_fixup) db_set(valres, fixup_full(db_val(tbuf)));
-        db_free(tbuf);
+        if (do_fixup) db_set(valres, fixup_full(db_val(valres)));
         return db_val_nc(valres);
     }
     case TKBUF:                 /* buffer contents fetch */
