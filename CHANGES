@@ -8199,4 +8199,10 @@ display.c
 
 file.c
     Add a fn_is_full flag for set_buffer_filenames() calls to
-    get_realpath(). 
+    get_realpath().
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.183
+
+==========
