@@ -8205,4 +8205,9 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.183
 
-==========
+========== GGR4.184
+
+main.c
+    Initialze screen size at start-up (so that scrolling works
+    correctly).
+

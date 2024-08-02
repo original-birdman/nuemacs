@@ -2154,9 +2154,14 @@ do {
         exit(EXIT_SUCCESS);
     }
 
-/* Initialize the editor. */
-
-    vtinit();       /* Display */
+/* Initialize the editor.
+ * newscreensize() will call vtinit()
+ */
+{
+    int w, h;
+    getscreensize(&w, &h);
+    newscreensize(h, w, 1);
+}
     edinit("main"); /* Buffers, windows - must be after vtinit */
 
 /* Set this up before running init files */
