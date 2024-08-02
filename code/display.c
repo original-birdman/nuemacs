@@ -964,9 +964,7 @@ static int updupd(int force) {
         vp1 = vscreen[i];
 
 /* For each line that needs to be updated */
-        if ((vp1->v_flag & VFCHG) != 0) {
-            updateline(i, vp1, pscreen[i]);
-        }
+        if ((vp1->v_flag & VFCHG) != 0) updateline(i, vp1, pscreen[i]);
     }
     return TRUE;
 }
@@ -979,10 +977,9 @@ static int updupd(int force) {
  */
 static void updext(void) {
     int rcursor;                /* real cursor location */
-    struct line *lp;            /* pointer to current line */
 
 /* Calculate what column the real cursor will end up in */
-    rcursor = ((curcol - term.t_ncol) % term.t_scrsiz) + term.t_margin;
+    rcursor = (curcol % term.t_scrsiz) + term.t_margin;
     lbound = curcol - rcursor + 1;
     taboff = lbound + curwp->w.fcol;
 
@@ -990,8 +987,7 @@ static void updext(void) {
  * once we reach the left edge.
  */
     vtmove(currow, -taboff);    /* start scanning offscreen */
-    lp = curwp->w.dotp;         /* line to output */
-    show_line(lp);
+    show_line(curwp->w.dotp);   /* Show the line */
 
 /* Truncate the virtual line, restore tab offset */
     vteeol();
@@ -1006,6 +1002,11 @@ static void updext(void) {
         set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
     }
 }
+
+/* updpos() and upddex() need to agree on when a line will be scrolled
+ * right, so define a macro for it.
+ */
+#define DO_SCROLL (curcol > (term.t_scrsiz + term.t_margin))
 
 /* updpos:
  *      update the position of the hardware cursor and handle extended
@@ -1057,8 +1058,9 @@ static void updpos(void) {
             curwp->w_flag |= WFHARD | WFMODE;
         }
     } else {
-/* If extended, flag so and update the virtual line image */
-        if (curcol >= term.t_ncol - 1) {
+/* If extended, flag so and update the virtual line image.
+ */
+        if (DO_SCROLL && (lused(curwp->w.dotp) > (size_t)term.t_ncol)) {
             vscreen[currow]->v_flag |= (VFEXT | VFCHG);
             updext();
         } else
@@ -1093,8 +1095,7 @@ static void upddex(void) {
         while ((i < wp->w_toprow + wp->w_ntrows) &&
              (lp != wp->w_bufp->b_linep)) {
             if (vscreen[i]->v_flag & VFEXT) {
-                if ((wp != curwp) || (lp != wp->w.dotp) ||
-                     (curcol < term.t_ncol - 1)) {
+                if ((wp != curwp) || (lp != wp->w.dotp) || !DO_SCROLL) {
                     taboff = wp->w.fcol;
                     vtmove(i, -taboff);
                     show_line(lp);

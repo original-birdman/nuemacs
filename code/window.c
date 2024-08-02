@@ -615,10 +615,12 @@ int newwidth(int n) {
         vtinit();
     }
 
-/* Otherwise, just re-width it (no big deal) */
+/* Otherwise, just re-width it (no big deal).
+ * t_margin is just a hueristic. Nothing special...
+ */
     term.t_ncol = n;
-    term.t_margin = n / 10;
-    term.t_scrsiz = n - (term.t_margin * 2);
+    term.t_margin = 2 + n/40;
+    term.t_scrsiz = n - (2*term.t_margin);
 
 /* Force all windows to redraw */
     wp = wheadp;

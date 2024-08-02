@@ -8211,3 +8211,6 @@ main.c
     Initialze screen size at start-up (so that scrolling works
     correctly).
 
+display.c
+window.c
+    Change over-length line scrolling logic.
