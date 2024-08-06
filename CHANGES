@@ -8218,3 +8218,8 @@ window.c
 search.c
     Fix to ensure any \-escaping in Magic mode turns on the slow scan.
     Otherwise \(abc\) results in a fast search for that literal string.
+
+word.c
+    Don't add a newline if the last line in a paragraph is over long.
+    Use filler_fword(), not forwword(), in fillpara() so that any
+    non-whitespace can form a filled paragraph.

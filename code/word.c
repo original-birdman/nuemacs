@@ -870,7 +870,7 @@ static int filler(int indent, int width, int justify) {
 /* Having sorted out the text for this line, insert a newline
  * and indent if more text to process.
  */
-            lnewline();
+            if (!all_done || (words_to_wrap > 1)) lnewline();
             if (lused(curwp->w.dotp) > 0) {
                words_to_wrap = 0;
                if (indent) if (!linsert_byte(indent, ' ')) return FALSE;
@@ -924,7 +924,7 @@ int fillpara(int f, int n) {
     if (n == 0) n = 1;
     int status = FALSE;
     while (n--) {
-        forwword(FALSE, 1);
+        filler_fword();
         if (!gotobop(FALSE, 1)) return FALSE;
         status = filler(0, fillcol, justify);
         if (status != TRUE) break;
