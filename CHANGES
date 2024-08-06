@@ -8214,3 +8214,7 @@ main.c
 display.c
 window.c
     Change over-length line scrolling logic.
+
+search.c
+    Fix to ensure any \-escaping in Magic mode turns on the slow scan.
+    Otherwise \(abc\) results in a fast search for that literal string.

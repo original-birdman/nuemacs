@@ -1195,10 +1195,11 @@ static int mcstr(void) {
         goto pchr_done;
     }
 
-/* From now on anything we do, EXCEPT the default LITCHAR case, involves
- * producing a slow_scan control structure that is not the same as the
- * literal characters in apat meaning we can't use the literal input,
- * so must use the slow scan (even a simple \n -> '\n' change requires this!).
+/* From now on anything we do, EXCEPT the default LITCHAR case (but EXCLUDING
+ * the drop-though case from MS_ESC(\) handling) involves producing a
+ * slow_scan control structure that is NOT the same as the literal characters
+ * in apat, meaning we can't use the literal input, so must use the slow scan
+ * (even a simple \n -> '\n' change requires this!).
  */
     possible_slow_scan = TRUE;
 
@@ -1477,12 +1478,11 @@ static int mcstr(void) {
                 case 't':
                     pchr = '\t';
                     break;
-                }
+                }   /* Falls through */
+            default:        /* Still slow_scan, for the unneeded \ */
                 mcptr->mc.type = LITCHAR;
                 mcptr->val.lchar = pchr;
                 goto pchr_done; /* To skip possible_slow_scan reset */
-            default:
-                pchr = *patptr;
             }
         } /* Falls through */
     default:
