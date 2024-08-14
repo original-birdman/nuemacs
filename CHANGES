@@ -8223,3 +8223,10 @@ word.c
     Don't add a newline if the last line in a paragraph is over long.
     Use filler_fword(), not forwword(), in fillpara() so that any
     non-whitespace can form a filled paragraph.
+
+line.c
+random.c
+    Really fix kill on last line in file. We need to allow one
+    newline into the kill ring. [random.c]
+    Refactor yank() and yankmb(), extending definition of "at end of
+    buffer". [line.c]

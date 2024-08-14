@@ -707,6 +707,68 @@ static void rotate_kill_ring(int n) {
     return;
 }
 
+/* yank and yankmb have some duplicate code to run, so run it here. */
+
+static struct line *orig_line;
+static int orig_doto, need_reposition, do_force;
+
+static void setup_for_yank(void) {
+
+/* We need to handle the case of being at the start of an empty buffer.
+ * If we just let things run and yank (say) 2 complete lines, the current
+ * point will be at the start of the third line. With SCROLLCODE set (which
+ * is now hard-wired) this will be on-screen so nothing gets redrawn - the
+ * added text is left positioned just off the top of the screen; which is
+ * a bit disconcerting.
+ * So if the next line is the same as the previous line (which can only
+ * happen if we are in a single-line buffer, when both point to the headp)
+ * we set a flag to do a final reposition().
+ */
+    need_reposition = (lforw(curwp->w.dotp) == lback(curwp->w.dotp));
+
+/* Handle the end of buffer. lnewline() needs to know if that is
+ * where we are (by force_newline being UNSET).
+ *
+ * "End of buffer" state includes being at the end of the line before the
+ * final (dummy) line.
+ */
+    if (((curwp->w.doto == 0) && (curwp->w.dotp == curbp->b_linep)) ||
+        (((size_t)curwp->w.doto == lused(curwp->w.dotp)) &&
+             (lforw(curwp->w.dotp) == curbp->b_linep))) {
+        do_force = 0;
+    }
+    else do_force = 1;
+
+/* After the yank we want to set the mark to the current dot position,
+ * so remember this now.
+ */
+    orig_line = curwp->w.dotp;
+    orig_doto = curwp->w.doto;
+    return;
+}
+
+static void finish_for_yank(int yank_type) {
+
+    force_newline = 0;
+
+/* This will display the inserted text, leaving the last line at the last
+ * but one line, if there is sufficient text for that, otherwise with the
+ * top line at the top.
+ */
+    if (need_reposition) reposition(TRUE, -1);
+
+/* We've just yanked, so set the mark to where we were, which makes the
+ * yanked text become the current region, for any following
+ * re-kill or yank_replace().
+ */
+    curwp->w.markp = orig_line;
+    curwp->w.marko = orig_doto;
+
+    com_flag |= CFYANK;         /* This is a yank */
+    last_yank = yank_type;      /* Save the type */
+    return;
+}
+
 /* Yank text back from the kill buffer. This is really easy. All of the work
  * is done by the standard insert routines. All you do is run the loop, and
  * check for errors. Bound to "C-Y".
@@ -730,14 +792,6 @@ int yank(int f, int n) {
         if (n < 0) return FALSE;
     }
 
-/* We are about to yank, so define an empty region at the current point,
- * in case we don't actually have any text to yank.
- * This ensure that we have a valid region after any yank for any
- * re-kill or yank_replace().
- */
-    curwp->w.markp = curwp->w.dotp;
-    curwp->w.marko = curwp->w.doto;
-
 /* Make sure there is something to yank */
     if (kbufh[0] == NULL) {
         com_flag |= CFYANK;         /* It's still a yank... */
@@ -745,29 +799,12 @@ int yank(int f, int n) {
         return TRUE;                /* not an error, just nothing */
     }
 
-/* We need to handle the case of being at the start of an empty buffer.
- * If we just let things run and yank (say) 2 complete lines, the current
- * point will be at the start of the third line. With SCROLLCODE set (which
- * is now hard-wired) this will be on-screen so nothing gets redrawn - the
- * added text is left positioned just off the top of the screen; which is
- * a bit disconcerting.
- * So if the next line is the same as the previous line (which can only
- * happen if we are in a single-line buffer, when both point to the headp)
- * we set a flag to do a final reposition().
- */
-    int need_reposition = (lforw(curwp->w.dotp) == lback(curwp->w.dotp));
+    setup_for_yank();
 
-/* Handle the end of buffer. If we do nothing the mark will move with it
- * whereas we want it to stay after the last current character (any final
- * newline doesn't really exist).
- * So we remember the previous line and later set the mark to the next
- * line from there, offset zero. (same code is in yankmb())
+/* For each time....
+ * force_newline is set in the loop each time in case lnewline unsets it.
+ * But it only needs to be reset here once, after the loop.
  */
-    struct line *fixup_line = NULL;
-    if (curwp->w.dotp == curbp->b_linep && curwp->w.doto == 0)
-         fixup_line = lback(curbp->b_linep);
-
-/* For each time.... */
     while (n--) {
         kp = kbufh[0];
         while (kp != NULL) {
@@ -775,26 +812,12 @@ int yank(int f, int n) {
             if (kp->d_next == NULL) nb = kused[0];
             else                    nb = KBLOCK;
             sp = kp->d_chunk;
-            if (!fixup_line) force_newline = 1;
+            if (do_force) force_newline = 1;
             if ((status = lins_nc(sp, nb)) != TRUE) return status;
-            force_newline = 0;
-            kp = kp->d_next;
+             kp = kp->d_next;
         }
     }
-
-/* This will display the inserted text, leaving the last line at the last
- * but one line, if there is sufficient text for that, otherwise with the
- * top line at the top.
- */
-    if (need_reposition) reposition(TRUE, -1);
-
-/* Do any fixup for the original mark being at end of buffer */
-    if (fixup_line) {
-        curwp->w.markp = lforw(fixup_line);
-        curwp->w.marko = 0;
-    }
-    com_flag |= CFYANK;         /* This is a yank */
-    last_yank = NormalYank;     /* Save the type */
+    finish_for_yank(NormalYank);    /* Finish up and set the type */
     return TRUE;
 }
 
@@ -806,7 +829,6 @@ int yankmb(int f, int n) {
 
     if (curbp->b_mode & MDVIEW) /* Don't allow this command if  */
         return(rdonly());       /* we are in read only mode     */
-    if (n < 0) return (FALSE);
 
     if (yank_mode == GNU) {     /* A *given* numeric arg is kill rotating */
         if (f && n) rotate_lastmb_ring(n);  /* No rotate on default */
@@ -816,14 +838,6 @@ int yankmb(int f, int n) {
         if (n < 0) return FALSE;
     }
 
-/* We are about to yank, so define an empty region at the current point,
- * in case we don't actually have any text to yank.
- * This ensure that we have a valid region after any yank for any
- * re-kill or yank_replace().
- */
-    curwp->w.markp = curwp->w.dotp;
-    curwp->w.marko = curwp->w.doto;
-
 /* Make sure there is something to yank */
     if (lastmb[0] && strlen(lastmb[0]) == 0) {
         com_flag |= CFYANK;         /* It's still a yank... */
@@ -831,48 +845,17 @@ int yankmb(int f, int n) {
         return TRUE;                /* not an error, just nothing */
     }
 
-/* We need to handle the case of being at the start of an empty buffer.
- * If we just let things run and yank (say) 2 complete lines, the current
- * point will be at the start of the third line. With SCROLLCODE set (which
- * is now hard-wired) this will be on-screen so nothing gets redrawn - the
- * added text is left positioned just off the top of the screen; which is
- * a bit disconcerting.
- * So if the next line is the same as the previous line (which can only
- * happen if we are in a single-line buffer, when both point to the headp)
- * we set a flag to do a final reposition().
- */
-    int need_reposition = (lforw(curwp->w.dotp) == lback(curwp->w.dotp));
+    setup_for_yank();
 
-/* Handle the end of buffer. If we do nothing the mark will move with it
- * whereas we want it to stay after the last current character (any final
- * newline doesn't really exist).
- * So we remember the previous line and later set the mark to the next
- * line from there, offset zero. (same code is in yankmb())
+/* force_newline is set in the loop each time in case lnewline unsets it.
+ * But it only needs to be reset here once, after the loop.
  */
-    struct line *fixup_line = NULL;
-    if (curwp->w.dotp == curbp->b_linep /* && curwp->w.doto == 0 */)
-         fixup_line = lback(curbp->b_linep);
-
     while (n--) {
         int status;
-        if (!fixup_line) force_newline = 1;
+        if (do_force) force_newline = 1;
         if ((status = linstr(lastmb[0])) != TRUE) return status;
-        force_newline = 0;
     }
-
-/* This will display the inserted text, leaving the last line at the last
- * but one line, if there is sufficient text for that, otherwise with the
- * top line at the top.
- */
-    if (need_reposition) reposition(TRUE, -1);
-
-/* Do any fixup for the original mark being at end of buffer */
-    if (fixup_line) {
-        curwp->w.markp = lforw(fixup_line);
-        curwp->w.marko = 0;
-    }
-    com_flag |= CFYANK;         /* This is a yank */
-    last_yank = MiniBufferYank; /* Save the type */
+    finish_for_yank(MiniBufferYank);    /* Finish up and set the type */
     return (TRUE);
 }
 

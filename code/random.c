@@ -704,7 +704,7 @@ int indent(int f, int n) {
  * number of bytes is then removed.
  * If any non-default argument is present, it kills rather than deletes,
  * to prevent loss of text if typed with a big argument.
- * Normally bound to ctlD (forwdel) and ctlH [BackSpace (backdel).
+ * Normally bound to ctlD (forwdel) and ctlH [BackSpace] (backdel).
  * NOTE!!!
  * We can't just call ldelgrapheme() as that only deletes forwards and
  * also wouldn't update the com_flag.
@@ -720,7 +720,7 @@ static int chardel(int f, int n) {
     else {          /* Go forwards requested amount then back to start */
         struct line *saved_dotp = curwp->w.dotp;    /* Save line */
         int saved_doto = curwp->w.doto;             /* Save offset */
-        n = abs(forw_grapheme(n));  /* How many *d0* we go forwards? */
+        n = abs(forw_grapheme(n));  /* How many *do* we go forwards? */
         curwp->w.dotp = saved_dotp;                 /* Restore line */
         curwp->w.doto = saved_doto;                 /* Restore offset */
     }
@@ -758,6 +758,7 @@ int backdel(int f, int n) {
  * number of newlines. If called with a negative argument it kills backwards
  * that number of newlines. Normally bound to "C-K".
  */
+static int last_done = FALSE;
 int killtext(int f, int n) {
     struct line *nextp;
     ue64I_t chunk;
@@ -767,12 +768,24 @@ int killtext(int f, int n) {
     if ((com_flag & CFKILL) == 0) { /* Clear kill buffer if */
           kdelete();                /* last wasn't a kill.  */
           com_flag |= CFKILL;
+          last_done = FALSE;
     }
     if (f == FALSE) {
         chunk = lused(curwp->w.dotp) - curwp->w.doto;
-        if (chunk == 0) {   /* Can't kill newline on last line... */
-            if (lforw(curwp->w.dotp) == curbp->b_linep) return FALSE;
-            else chunk = 1;
+        if (chunk == 0) {
+/* We need to remember if we have killed the newline onto last line, as
+ * we can only do this once (it is always there, so if you don't remember
+ * this you keep killing blank lines, which suddenly appear on a yank!).
+ * The flag is reset any time we arrive here with the previous command being
+ * a non-kill.
+ */
+            if (last_done & (lforw(curwp->w.dotp) == curbp->b_linep)) {
+                return FALSE;
+            }
+            else {
+                last_done = TRUE;
+                chunk = 1;
+            }
         }
     }
     else if (n == 0) {
