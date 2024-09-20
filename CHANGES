@@ -8230,3 +8230,7 @@ random.c
     newline into the kill ring. [random.c]
     Refactor yank() and yankmb(), extending definition of "at end of
     buffer". [line.c]
+
+Makefile
+    Turn off auto-inlining of functions.
+    Any speed-up from inlinign isn't relevant for a text editor.
