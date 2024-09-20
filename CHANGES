@@ -8234,3 +8234,9 @@ random.c
 Makefile
     Turn off auto-inlining of functions.
     Any speed-up from inlinign isn't relevant for a text editor.
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.184
+
+==========
