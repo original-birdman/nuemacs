@@ -2,3 +2,9 @@ Make word-split chars configurable (forwword, backword but *not*
 fillpara).  i.e.  make inword() list configurable (as the comment there
 says it should be).  Or make it use lgetgrapheme, and treat as a
 word-char anything whose base is a word-char.  Or both...
+
+==========
+
+Get all code that gets values (especially setvar, but also command-line
+and user-input) to allow NUL as a valid char. So can't use strcpy etc.
+Can these things all become dyn_str?

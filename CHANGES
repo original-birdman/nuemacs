@@ -8244,3 +8244,9 @@ version.h
 display.c
     Correct the (partly inverted) logic of whether to display a
     filename.
+
+../TODO
+etc/uemacs.hlp
+version.h
+    Update TODO.
+    Update to GGR4.185
