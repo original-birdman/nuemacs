@@ -1357,14 +1357,14 @@ next_mode:
     db_append(glb_db, MLpost " ");
 
 /* Add in the filename if set and it is different to the buffername.
- 8 (after allowing for the leading "./" we now use).
+ * (after allowing for the leading "./" we now use).
  * This can contain utf8...
  * For the minibuffer this will be the main buffer name .
  */
     if ( (*bp->b_dfname != 0) &&
-         (*bp->b_dfname == '.') &&
-         (*bp->b_dfname+1 == '/') &&
-         (strcmp(bp->b_bname, bp->b_dfname+2) != 0)) {
+         ( (*bp->b_dfname != '.') ||
+           (*bp->b_dfname+1 != '/') ||
+           (strcmp(bp->b_bname, bp->b_dfname+2) != 0))) {
         db_append(glb_db, bp->b_dfname);
         db_addch(glb_db, ' ');
     }

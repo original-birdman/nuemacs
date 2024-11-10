@@ -8208,7 +8208,7 @@ version.h
 ========== GGR4.184
 
 main.c
-    Initialze screen size at start-up (so that scrolling works
+    Initialize screen size at start-up (so that scrolling works
     correctly).
 
 display.c
@@ -8233,10 +8233,14 @@ random.c
 
 Makefile
     Turn off auto-inlining of functions.
-    Any speed-up from inlinign isn't relevant for a text editor.
+    Any speed-up from inlining isn't relevant for a text editor.
 
 etc/uemacs.hlp
 version.h
     Update to GGR4.184
 
-==========
+========== GGR4.185
+
+display.c
+    Correct the (partly inverted) logic of whether to display a
+    filename.
