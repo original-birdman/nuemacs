@@ -8256,3 +8256,7 @@ version.h
 eval.c
     Get the screen to resdisplay correctly as soon as any horizontal
     scrolling is turned off.
+
+display.c
+    Fix extended line scrolling to work with tabbed lines.
+    Removed inline setting on TTputgrapheme() and TTput_1uc().

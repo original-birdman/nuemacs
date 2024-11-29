@@ -184,7 +184,7 @@ static int
 /* Output a grapheme - which is in one column.
  * Handle remapping on the main character.
  */
-static inline int TTputgrapheme(struct grapheme *gp) {
+static int TTputgrapheme(struct grapheme *gp) {
     int status = TTputc(display_for(gp->uc));
     if (gp->cdm) TTputc(gp->cdm);   /* Might add display_for here too */
     if (gp->ex != NULL) {
@@ -196,7 +196,7 @@ static inline int TTputgrapheme(struct grapheme *gp) {
     return status;
 }
 /* Output a single character. mlwrite, mlput* may send Combining ones */
-static inline int TTput_1uc(unicode_t uc) {
+static int TTput_1uc(unicode_t uc) {
     int status = TTputc(display_for(uc));
     if (!combining_type(uc)) ttcol += utf8char_width(uc);
     return status;
@@ -1008,6 +1008,30 @@ static void updext(void) {
  */
 #define DO_SCROLL (curcol > (term.t_scrsiz + term.t_margin))
 
+static int cline_display_overlong(void) {
+    int scol = 0;
+    unsigned char *cps = (unsigned char *)ltext(curwp->w.dotp);
+    unsigned char *cp = (unsigned char *)ltext(curwp->w.dotp);
+    unsigned char *ep = cp + lused(curwp->w.dotp);
+    while (cp <= ep) {
+        if (ch_as_uc(*cp) <= 0xa0) {
+            if (*cp == '\t') { scol |= tabmask; scol++; }   /* Round up */  \
+            else if (*cp < 0x20 || *cp == 0x7f) scol += 2;  /* ^X */        \
+            else if (*cp >= 0x80 && *cp <= 0xa0) scol += 3; /* \nn */       \
+            else scol++;
+            cp++;
+        }
+        else {
+            struct grapheme gc;
+            cp = cps + build_next_grapheme((char *)cps, scol,
+                 lused(curwp->w.dotp), &gc, TRUE);
+            scol += utf8char_width(gc.uc);
+        }
+        if (scol > term.t_ncol) return TRUE;
+    }
+    return FALSE;
+}
+
 /* updpos:
  *      update the position of the hardware cursor and handle extended
  *      lines. This is the only update for simple moves.
@@ -1059,8 +1083,10 @@ static void updpos(void) {
         }
     } else {
 /* If extended, flag so and update the virtual line image.
+ * The old lused(curwp->w.dotp) test does not work if the line contains tabs
+ * We need to check whether the *total column count* is > t_ncol
  */
-        if (DO_SCROLL && (lused(curwp->w.dotp) > (size_t)term.t_ncol)) {
+        if (DO_SCROLL && cline_display_overlong()) {
             vscreen[currow]->v_flag |= (VFEXT | VFCHG);
             updext();
         } else
