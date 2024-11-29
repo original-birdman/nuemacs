@@ -1533,6 +1533,17 @@ static int svar(struct variable_description *var, const char *value) {
         case EVHSCROLL:
             hscroll = stol(value);
             lbound = 0;
+/* If we have switched it off, we need to undo any exisiting visible
+ * hscroll.
+ * Easiest done by temporarily switching to col0, updating then switching
+ * back to where we were...
+ */
+            if (!hscroll) {
+                int sdoto = curwp->w.doto;
+                curwp->w.doto = 0;
+                update(TRUE);
+                curwp->w.doto = sdoto;
+            }
             break;
         case EVYANKMODE:
             if (strcmp("old", value) == 0)

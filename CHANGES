@@ -8250,3 +8250,9 @@ etc/uemacs.hlp
 version.h
     Update TODO.
     Update to GGR4.185
+
+========== GGR4.186
+
+eval.c
+    Get the screen to resdisplay correctly as soon as any horizontal
+    scrolling is turned off.
