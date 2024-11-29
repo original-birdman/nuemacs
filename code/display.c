@@ -120,7 +120,7 @@ void mlerase(void) {
  * (no longer has a "no_free" flag, as no such callers remain).
  * Internal to this file.
  */
-static void set_grapheme(struct grapheme *gp, unicode_t uc) {
+static void update_grapheme(struct grapheme *gp, unicode_t uc) {
     gp->uc = uc;
     gp->cdm = 0;
     if (gp->ex != NULL) {
@@ -152,7 +152,7 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
 /* Copy grapheme data between structures.
  * HOWEVER, since this *always* copies from vscreen to pscreen we DO NOT
  * NEED to allocate any ex section in the target, as we never free
- * anything from pscreen - it will be freed (by set_grapheme) when the
+ * anything from pscreen - it will be freed (by update_grapheme) when the
  * vscreen is set! We just copy the pointer, so copy the whole structure.
  * Is now just be defined as:
  *      #define clone_grapheme(to, from)   *to = *from
@@ -291,8 +291,9 @@ void vtinit(void) {
 /* Set new_pscreen to zeroes */
     memset(new_pscreen[0], 0, term.t_mrow * row_size);
 
-/* Now free any previous data and move the new allocations to the live ones */
-
+/* Now free any previous data (NOTE that any gc->ex parts have already been
+ * freed) and move the new allocations to the live ones.
+ */
     if (prev_mrow) {    /* We have previous data to free */
         Xfree(vscreen);
         Xfree(pscreen);
@@ -365,7 +366,7 @@ static void vtputc(unsigned int c) {
  * to handle it.
  */
         if (vtcol == 0) {
-            set_grapheme(&(vp->v_text[0]), ' ');
+            update_grapheme(&(vp->v_text[0]), ' ');
             extend_grapheme(&(vp->v_text[0]), c);
             ++vtcol;
         }
@@ -380,11 +381,11 @@ static void vtputc(unsigned int c) {
         for (int dcol = term.t_ncol - 1; dcol >= 0; dcol--) {
             if (vp->v_text[dcol].uc == '$') break;  /* Quick repeat exit */
             if (vp->v_text[dcol].uc != 0) {
-                set_grapheme(&(vp->v_text[dcol]), '$');
+                update_grapheme(&(vp->v_text[dcol]), '$');
                 break;
             }
         }
-        set_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
+        update_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
         return;
     }
 
@@ -426,12 +427,12 @@ static void vtputc(unsigned int c) {
  */
     int cw = utf8char_width(c);
     if (vtcol >= 0) {
-        set_grapheme(&(vp->v_text[vtcol]), c);
+        update_grapheme(&(vp->v_text[vtcol]), c);
 /* This code assumes that a NUL byte will not be displayed */
         int pvcol = vtcol;
         for (int nulpad = cw - 1; nulpad > 0; nulpad--) {
             pvcol++;
-            set_grapheme(&(vp->v_text[pvcol]), 0);
+            update_grapheme(&(vp->v_text[pvcol]), 0);
         }
     }
 /* If vtcol is -ve, but will be +ve after the cw increment we need to space
@@ -439,7 +440,7 @@ static void vtputc(unsigned int c) {
  */
     else {
         for (int pcol = vtcol + cw; pcol > 0; pcol--) {
-            set_grapheme(&(vp->v_text[pcol-1]), ' ');
+            update_grapheme(&(vp->v_text[pcol-1]), ' ');
         }
     }
     vtcol += cw;
@@ -448,12 +449,13 @@ static void vtputc(unsigned int c) {
 /* Erase from the end of the software cursor to the end of the line on which
  * the software cursor is located.
  * Since this is a vscreen allocation we need to ensure we free any
- * pre-exisiting gc.ex entries.
+ * pre-existing gc.ex entries.
+ * vtcol can be -ve (horizontal scrolling), so check for that!
  */
 static void vteeol(void) {
     struct grapheme *vcp = vscreen[vtrow]->v_text;
-
-    while (vtcol < term.t_ncol) set_grapheme(&(vcp[vtcol++]), ' ');
+    if (vtcol < 0) vtcol = 0;
+    while (vtcol < term.t_ncol) update_grapheme(&(vcp[vtcol++]), ' ');
 }
 
 void update(int);           /* Forward declaration */
@@ -665,8 +667,7 @@ static void updall(struct window *wp) {
         vscreen[sline]->v_rbcolor = wp->w_bcolor;
 #endif
 
-/* Make sure we are on the screen */
-        if (vtcol < 0) vtcol = 0;
+/* vteeol() makes sure we are on the screen */
         vteeol();
         ++sline;
     }
@@ -997,9 +998,9 @@ static void updext(void) {
  * need to change any following NULs to spaces
  */
     int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
-    set_grapheme(&(vscreen[currow]->v_text[0]), '$');
+    update_grapheme(&(vscreen[currow]->v_text[0]), '$');
     for (int pcol = cw - 1; pcol > 0; pcol--) {
-        set_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
+        update_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
     }
 }
 

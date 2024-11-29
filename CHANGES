@@ -8254,9 +8254,13 @@ version.h
 ========== GGR4.186
 
 eval.c
-    Get the screen to resdisplay correctly as soon as any horizontal
+    Get the screen to redisplay correctly as soon as any horizontal
     scrolling is turned off.
 
 display.c
     Fix extended line scrolling to work with tabbed lines.
     Removed inline setting on TTputgrapheme() and TTput_1uc().
+
+display.c
+    Fix vteeol() to check for vtcol being -ve.
+    Rename set_grapheme() to update_grapheme().
