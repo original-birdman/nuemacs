@@ -1347,6 +1347,16 @@ abort:
     db_free(choices);
     db_free(tstring);
 
+/* If this is a CMPLT_FILE type then we have a filename.
+ * So run fixup_fname() on  it for consistent returns - if no
+ * tabbing was done it won't have ever been expanded and we might
+ * have something like ~/x/test.
+ */
+    if (ctype == CMPLT_FILE) {
+        db_set(glb_db, fixup_fname(dbp_val(buf)));
+        dbp_set(buf, db_val(glb_db));
+    }
+
     return status;
 }
 

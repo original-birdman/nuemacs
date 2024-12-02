@@ -8264,3 +8264,8 @@ display.c
 display.c
     Fix vteeol() to check for vtcol being -ve.
     Rename set_grapheme() to update_grapheme().
+
+input.c
+    For a CMPLT_FILE type call run fixup_fname() before returning.
+    This is for consistency. We may have "~/x/test" withou
+    tab-completion ever having been run.
