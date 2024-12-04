@@ -8269,3 +8269,9 @@ input.c
     For a CMPLT_FILE type call run fixup_fname() before returning.
     This is for consistency. We may have "~/x/test" withou
     tab-completion ever having been run.
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.186
+
+==========
