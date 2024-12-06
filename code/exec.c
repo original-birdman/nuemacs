@@ -1828,7 +1828,7 @@ exit:
     return status;
 }
 
-/* We no longer need these, now yuo can use storeproc to
+/* We no longer need these, now you can use storeproc to
  * give a name to a procedure, and bind it with buffer-to-key
  */
 #ifdef NUMBERED_MACROS
@@ -1838,8 +1838,7 @@ exit:
  * int f, n;            default flag and numeric arg
  * int bufnum;          number of buffer to execute
  */
-static int cbuf(int f, int n, int bufnum) {
-    UNUSED(f);
+static int cbuf(int n, int bufnum) {
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
     static char bufname[] = "/Macro xx";
@@ -1863,7 +1862,7 @@ static int cbuf(int f, int n, int bufnum) {
 
 /* Declare the historic 40 numbered macro buffers */
 #define NMAC(nmac) \
-   int cbuf ## nmac(int f, int n) { return cbuf(f, n, nmac); }
+   int cbuf ## nmac(int f, int n) { UNUSED(f); return cbuf(n, nmac); }
 
 NMAC(1)     NMAC(2)     NMAC(3)     NMAC(4)     NMAC(5)
 NMAC(6)     NMAC(7)     NMAC(8)     NMAC(9)     NMAC(10)

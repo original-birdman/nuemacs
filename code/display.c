@@ -949,8 +949,8 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
  *
  * int force;           forced update flag
  */
-static int updupd(int force) {
-    UNUSED(force);
+static int updupd(void) {
+
     struct video *vp1;
     int i;
     if (scrflags & WFKILLS)
@@ -1574,7 +1574,7 @@ void update(int force) {
     if (sgarbf != FALSE) updgar();
 
 /* Update the virtual screen to the physical screen */
-    updupd(force);
+    updupd();
 
 /* Update the cursor and flush the buffers */
     movecursor(currow, curcol - lbound);

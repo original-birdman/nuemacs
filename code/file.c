@@ -1025,53 +1025,6 @@ exit:
     return s;
 }
 
-/* We no longer need these, now yuo can use storeproc to
- * give a name to a procedure, and bind it with buffer-to-key
- */
-#ifdef NUMBERED_MACROS
-/* cbuf:
- *      Execute the contents of a numbered buffer
- *
- * int f, n;            default flag and numeric arg
- * int bufnum;          number of buffer to execute
- */
-static int cbuf(int f, int n, int bufnum) {
-    UNUSED(f);
-    struct buffer *bp;      /* ptr to buffer to execute */
-    int status;             /* status return */
-    static char bufname[] = "/Macro xx";
-
-/* Make the buffer name */
-    bufname[7] = '0' + (bufnum / 10);
-    bufname[8] = '0' + (bufnum % 10);
-
-/* Find the pointer to that buffer */
-    if ((bp = bfind(bufname, FALSE, 0)) == NULL) {
-        mlwrite_one("Macro not defined");
-        return FALSE;
-    }
-
-/* and now execute it as asked */
-    while (n-- > 0)
-        if ((status = dobuf(bp)) != TRUE)
-            return status;
-    return TRUE;
-}
-
-/* Declare the historic 40 numbered macro buffers */
-#define NMAC(nmac) \
-   int cbuf ## nmac(int f, int n) { return cbuf(f, n, nmac); }
-
-NMAC(1)     NMAC(2)     NMAC(3)     NMAC(4)     NMAC(5)
-NMAC(6)     NMAC(7)     NMAC(8)     NMAC(9)     NMAC(10)
-NMAC(11)    NMAC(12)    NMAC(13)    NMAC(14)    NMAC(15)
-NMAC(16)    NMAC(17)    NMAC(18)    NMAC(19)    NMAC(20)
-NMAC(21)    NMAC(22)    NMAC(23)    NMAC(24)    NMAC(25)
-NMAC(26)    NMAC(27)    NMAC(28)    NMAC(29)    NMAC(30)
-NMAC(31)    NMAC(32)    NMAC(33)    NMAC(34)    NMAC(35)
-NMAC(36)    NMAC(37)    NMAC(38)    NMAC(39)    NMAC(40)
-#endif
-
 #ifdef DO_FREE
 /* Add a call to allow free() of normally-unfreed items here for, e.g,
  * valgrind usage.

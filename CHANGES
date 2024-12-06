@@ -8275,3 +8275,12 @@ version.h
     Update to GGR4.186
 
 ==========
+
+display.c
+exec.c
+file.c
+    Remove unused force arg from updupd(). [display.c]
+    Remove unused f arg from cbuf() call. Mark f as unused in the
+    generating macro instead. [exec.c]
+    Remove "#ifdef NUMBERED_MACROS" block. Erroneosuly copied from
+    exec.c in GGR4.182. [file.c]
