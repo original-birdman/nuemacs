@@ -8274,7 +8274,7 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.186
 
-==========
+========== GGR4.187
 
 display.c
 exec.c
@@ -8287,3 +8287,9 @@ file.c
 
 display.c
     Change column to buffer offset in cline_display_overlong().
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.187
+
+==========
