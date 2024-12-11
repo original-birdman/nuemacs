@@ -8284,3 +8284,6 @@ file.c
     generating macro instead. [exec.c]
     Remove "#ifdef NUMBERED_MACROS" block. Erroneosuly copied from
     exec.c in GGR4.182. [file.c]
+
+display.c
+    Change column to buffer offset in cline_display_overlong().

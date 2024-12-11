@@ -1024,7 +1024,7 @@ static int cline_display_overlong(void) {
         }
         else {
             struct grapheme gc;
-            cp = cps + build_next_grapheme((char *)cps, scol,
+            cp = cps + build_next_grapheme((char *)cps, cp - cps,
                  lused(curwp->w.dotp), &gc, TRUE);
             scol += utf8char_width(gc.uc);
         }
