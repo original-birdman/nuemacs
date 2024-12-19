@@ -631,7 +631,7 @@ Unless noted as (read-only), these may be set as well as read.
     $lwidth ............... width of current line (read-only)
     $line ................. text of current line
     $rval ................. child process return value (read-only)
-    $tab .................. tab 4 or 8
+    $tab .................. tab (only 4 or 8 allowed)
     $overlap .............. Overlap on next/prev page
     $jump ................. Number of lines to jump on scroll
     $scroll ............... scroll enabled

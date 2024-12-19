@@ -1507,8 +1507,8 @@ static int svar(struct variable_description *var, const char *value) {
             break;
         case EVTAB:
             tabmask = atoi(value) - 1;
-            if (tabmask != 0x07 && tabmask != 0x03)
-            tabmask = 0x07;
+/* tab can only be set to 8 or 4 */
+            if (tabmask != 0x07 && tabmask != 0x03) tabmask = 0x07;
             curwp->w_flag |= WFHARD;
             break;
         case EVOVERLAP:

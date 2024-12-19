@@ -8297,3 +8297,6 @@ version.h
 display.c
     Simplify code in cline_display_overlong(). The logic is unchanged.
 
+eval.c
+etc/uemacs.hlp
+    Add comments that ONLY 4 or 8 is allowed for $tab setting.
