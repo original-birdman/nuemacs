@@ -8292,4 +8292,8 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.187
 
-==========
+========== GGR4.188
+
+display.c
+    Simplify code in cline_display_overlong(). The logic is unchanged.
+

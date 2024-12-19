@@ -1010,25 +1010,25 @@ static void updext(void) {
 #define DO_SCROLL (curcol > (term.t_scrsiz + term.t_margin))
 
 static int cline_display_overlong(void) {
-    int scol = 0;
-    unsigned char *cps = (unsigned char *)ltext(curwp->w.dotp);
+    int dcol = 0;       /* Display column */
+    int offs = 0;       /* Offset into line buffer */
     unsigned char *cp = (unsigned char *)ltext(curwp->w.dotp);
-    unsigned char *ep = cp + lused(curwp->w.dotp);
-    while (cp <= ep) {
-        if (ch_as_uc(*cp) <= 0xa0) {
-            if (*cp == '\t') { scol |= tabmask; scol++; }   /* Round up */  \
-            else if (*cp < 0x20 || *cp == 0x7f) scol += 2;  /* ^X */        \
-            else if (*cp >= 0x80 && *cp <= 0xa0) scol += 3; /* \nn */       \
-            else scol++;
-            cp++;
+    int max_offs = lused(curwp->w.dotp);
+    while (offs < max_offs) {
+        unsigned char cc = ch_as_uc(*(cp+offs));
+        if (cc <= 0xa0) {
+            if (cc == '\t') { dcol |= tabmask; dcol++; }    /* Round up */  \
+            else if (cc < 0x20 || cc == 0x7f) dcol += 2;    /* ^X */        \
+            else if (cc >= 0x80 && cc <= 0xa0) dcol += 3;   /* \nn */       \
+            else dcol++;
+            offs++;
         }
         else {
             struct grapheme gc;
-            cp = cps + build_next_grapheme((char *)cps, cp - cps,
-                 lused(curwp->w.dotp), &gc, TRUE);
-            scol += utf8char_width(gc.uc);
+            offs = build_next_grapheme((char *)cp, offs, max_offs, &gc, TRUE);
+            dcol += utf8char_width(gc.uc);
         }
-        if (scol > term.t_ncol) return TRUE;
+        if (dcol > term.t_ncol) return TRUE;
     }
     return FALSE;
 }
