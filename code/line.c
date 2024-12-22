@@ -134,14 +134,15 @@ int linsert_byte(int n, unsigned char c) {
     struct line *lp1;
     int doto;
 
-    if (curbp->b_mode & MDVIEW) /* Don't allow this command if */
-        return rdonly();        /* we are in read only mode    */
+    if (n <= 0) return (n == 0);    /* So 0 is TRUE, but -ve is FALSE */
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
+        return rdonly();            /* we are in read only mode */
     lchange(WFEDIT);
-    lp1 = curwp->w.dotp;        /* Current line         */
+    lp1 = curwp->w.dotp;            /* Current line */
 /* What we wish to insert */
     char *tbuf = alloca(n+1);
     memset(tbuf, c, n);
-    if (lp1 == curbp->b_linep) {/* At the end: special  */
+    if (lp1 == curbp->b_linep) {    /* At the end: special */
         if (curwp->w.doto != 0) {
             mlwrite_one("bug: linsert");
             return FALSE;

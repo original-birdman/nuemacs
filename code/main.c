@@ -236,9 +236,9 @@ void addchar_kbdmacro(char addch) {
 static void flush_kbd_text(void) {
     linstr("\ninsert-string ");
     if (must_quote) linsert_byte(1, '"');
-    terminate_str(kbd_text+ kbd_idx);   /* Terminate current text */
+    terminate_str(kbd_text+kbd_idx);    /* Terminate current text */
 /* This loop may look odd, but if we have NUL bytes to insert it means
- * that it works as if we haven't yet added enough it must be because
+ * that it works, as if we haven't yet added enough it must be because
  * we've hit a NUL, so process that and continue on from there.
  */
     int added = 0;
@@ -558,7 +558,7 @@ static void dump_modified_buffers(void) {
          || (bp->b_mode & MDVIEW) != 0      /* ...read-only... */
          || (*(bp->b_dfname) == '\0')) {    /* ...has no filename */
 
-/* Not interested ... but we *do* want to save any keyboard-macro.
+/* Not interested ... but we *do* want to save any keyboard-macro,
  * which is marked as invisible.
  */
             if (bp == kbdmac_bp && (bp->b_flag & BFCHG) != 0) {
@@ -794,7 +794,7 @@ static void exit_via_signal(int signr) {
     fflush(stdout);
     setvbuf(stdout, NULL, _IONBF, 0);
 
-/* Let's go through the steps order...various globals get set here... */
+/* Let's go through the steps in order...various globals get set here... */
 
     ts_len = set_time_stamp(0);             /* Set it for "now" */
     can_dump_files = get_to_dumpdir();      /* Opens INDEX if possible */
@@ -926,7 +926,7 @@ static int set_rcfile(char *fname) {
     return TRUE;
 }
 
-/* These three (fmatch, insbrace and getfence) all share the same
+/* These three (fmatch, insbracket and getfence) all share the same
  * simple search algorithm for a matching bracket.
  * This has very basic quoted string/char handling.
  */
@@ -955,7 +955,7 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
  * of the matching opening bracket is done by fmatch.
  *
  * If we are asked to insert something other than a right-bracket of
- * semo sort we do nothing at all.
+ * some sort we do nothing at all.
  *
  * int n        repeat count
  * int brace    brace to insert (always '}' for now)
@@ -963,7 +963,7 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
  * NOTE: that if the repeat count is >1, it still only looks for one
  * matching reverse-brace.
  */
-static int insbrace(int n, int brkt) {
+static int insbracket(int n, int brkt) {
     char ch;                /* Last character before input */
     int ob;                 /* The reverse-facing brkt */
     int i, count;
@@ -971,8 +971,9 @@ static int insbrace(int n, int brkt) {
     struct line *oldlp;
     int oldoff;
 
-/* If we aren't at the beginning of the line scan to see if all
- * chars before this are white space
+/* If we aren't at the beginning of the line, scan to see whether all
+ * chars before this are whitespace.
+ * If they are not then we just insert the bracket where we are.
  * We can just check the bytes here as it will produce the same result
  * more easily/quickly than handling it as Unicode.
  */
@@ -983,7 +984,7 @@ static int insbrace(int n, int brkt) {
         }
     }
 
-/* Determine the other-facing bracket */
+/* Determine the other-facing bracket - the one to search for */
 
     switch (brkt) {
     case '}':   ob = '{';   break;
@@ -1016,14 +1017,28 @@ static int insbrace(int n, int brkt) {
 /* If we have a target column then get to it.
  * We know from the check when we arrived that anything preceding us
  * on the line is whitespace.
- * So,
- *  o if we are too far in, delete the excess graphemes.
- *  o if we are insufficiently in, insert additional spaces.
+ * So what to do before inserting the brace:
+ *  o if we are insufficiently in, insert additional spaces to get there
+ *  o if we are too far in, go to the required column then delete any
+ *    excess whitespace beyond it on the same line.
  */
     if (target >= 0) {
         int need = target - getccol();
         if (need > 0)       linsert_byte(need, ' ');
-        else if (need < 0)  backdel(FALSE, -need);
+        else if (need < 0) {
+            setccol(target);
+/* If the preceding whitespace was tabs we might have gone beyond
+ * our target.
+ * If so, remove the tab and replace it with the correct number of spaces.
+ */
+            while (getccol() > target) backdel(0, 1);
+            linsert_byte(target - getccol(), ' ');  /* 0 for arg1 is now OK */
+
+/* NOTE that in this loop, lused is varying (decreasing)! */
+            while (at_wspace(NULL) &&
+                   ((size_t)curwp->w.doto < lused(curwp->w.dotp)))
+                 forwdel(0, 1);
+        }
     }
 
 /* Now insert the required brkt(s) */
@@ -1145,7 +1160,7 @@ static int fmatch(int ch) {
 int macro_helper(int f, int n) {
     UNUSED(f);
     db_strdef(tag);
-/* This is a macro helper - not need to call mlreply, just
+/* This is a macro helper - no need to call mlreply, just
  * extract the next token. We expect only 1 char (+ trailing NUL).
  * Also prevents any processing of the arg.
  */
@@ -1156,7 +1171,7 @@ int macro_helper(int f, int n) {
     case '}':
     case ']':
     case ')':
-        return insbrace(n, tc);
+        return insbracket(n, tc);
     case '#':   return inspound();
     case '0':   return linsert_byte(n, 0);  /* Insert a NUL */
     }
@@ -1624,7 +1639,7 @@ int execute(int c, int f, int n) {
 
 /* Do the appropriate insertion */
         if (c == '}' && (curbp->b_mode & MDCMOD) != 0) {
-            status = insbrace(n, c);
+            status = insbracket(n, c);
             if (!inmb && kbdmode == RECORD) {
                 if ((f > 0) && (n != 1))    /* Record any count */
                     set_narg_kbdmacro(n);

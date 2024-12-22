@@ -8300,3 +8300,10 @@ display.c
 eval.c
 etc/uemacs.hlp
     Add comments that ONLY 4 or 8 is allowed for $tab setting.
+
+line.c
+main.c
+    Test for negative or zero arg to linsert_byte(). [line.c]
+    Correct deletion of excess whitespace in insbrace(). [main.c]
+    Rename insbrace to insbracket, as it isn't just used for braces. [main.c]
+
