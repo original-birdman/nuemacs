@@ -8307,3 +8307,8 @@ main.c
     Correct deletion of excess whitespace in insbrace(). [main.c]
     Rename insbrace to insbracket, as it isn't just used for braces. [main.c]
 
+etc/uemacs.hlp
+version.h
+    Update to GGR4.188
+
+==========
