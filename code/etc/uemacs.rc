@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.179 (requires GGR4.173+)
-;                       Last Update: 30 Jan 2024
+;                       Version - GGR4.189 (requires GGR4.173+)
+;                       Last Update: 31 Mar 2025
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -33,13 +33,12 @@ store-procedure file-hooks
     !if &equ .rctmp 0
         !return
     !endif
-; Make the max &mid return length to be more than the longest
-; suffix we test for.
+; Pick up everything after the last .
 ;
-    set .rctmp &mid $cfname &add .rctmp 1 5
+    set .rctmp &rig $cfname &add .rctmp 1
     set .rctmp &lower .rctmp
 ; A quick "is it in list" check.  Assumes no-one uses "c cc" as a suffix..
-    !if &les 0 &sin "c cc cpp c++ h pl" .rctmp
+    !if &les 0 &sin "c cc cpp c++ h pl js php" .rctmp
         add-mode "cmode"
         delete-mode "wrap"
     !else

@@ -8282,7 +8282,7 @@ file.c
     Remove unused force arg from updupd(). [display.c]
     Remove unused f arg from cbuf() call. Mark f as unused in the
     generating macro instead. [exec.c]
-    Remove "#ifdef NUMBERED_MACROS" block. Erroneosuly copied from
+    Remove "#ifdef NUMBERED_MACROS" block. Erroneously copied from
     exec.c in GGR4.182. [file.c]
 
 display.c
@@ -8311,4 +8311,8 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.188
 
-==========
+========== GGR4.189
+
+etc/uemacs.rc
+    Add js and php to C-mode list for file-hooks
+    Simplify suffix generation.
