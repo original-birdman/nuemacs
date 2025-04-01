@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.189 Help Index     (31 Mar 2025)
+=>                   nuEmacs GGR4.189 Help Index     (01 Apr 2025)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -619,6 +619,8 @@ Unless noted as (read-only), these may be set as well as read.
                already existing buffer name).
     $cfname ............... current file name (full path)
     $debug ................ macro debugging
+        If bit 0x01 is set, wait for a key press after each command
+        If bit 0x02 is set, append the debug trace to the //Debug buffer
     $status ............... returns the status of the last command
     $asave ................ # of chars between auto-saves
     $acount ............... # of chars until next auto-save

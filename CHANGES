@@ -8323,3 +8323,6 @@ etc/uemacs.hlp
 file.c
     Remove a string length limit when looking for file-hooks-<<sfx>> as
     the buffer is now dynamic.
+
+etc/uemacs.hlp
+    Document the $debug variable bit values.
