@@ -404,8 +404,7 @@ static void handle_filehooks(const char *fname) {
     if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
     char *sfx = strrchr(fname, '.');
 /* Check we haven't found ../xxx or ./xxx */
-    if (sfx && (*(sfx+1) != '/')
-            && strlen(sfx) <= 19) {     /* Max bufname is 32, incl NUL */
+    if (sfx && (*(sfx+1) != '/')) {
         sfx++;                          /* Skip over '.' */
         db_sprintf(glb_db, "/file-hooks-%s", sfx);
         if ((sb = bfind(db_val(glb_db), FALSE, 0)) != NULL) dobuf(sb);

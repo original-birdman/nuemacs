@@ -8319,3 +8319,7 @@ etc/uemacs.rc
 
 etc/uemacs.hlp
     Expand and tidy up the FUNCTIONS section.
+
+file.c
+    Remove a string length limit when looking for file-hooks-<<sfx>> as
+    the buffer is now dynamic.
