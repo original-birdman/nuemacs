@@ -8314,5 +8314,8 @@ version.h
 ========== GGR4.189
 
 etc/uemacs.rc
-    Add js and php to C-mode list for file-hooks
+    Add js and php to C-mode list for file-hooks.
     Simplify suffix generation.
+
+etc/uemacs.hlp
+    Expand and tidy up the FUNCTIONS section.

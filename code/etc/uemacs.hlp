@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.188 Help Index     (22 Dec 2024)
+=>                   nuEmacs GGR4.189 Help Index     (31 Mar 2025)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -28,6 +28,7 @@
 .. GGR style
 .. Crypt mode
 .. Start-up file
+
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
 Notations: ^X means <Ctrl> and X. The <Meta> key is <Esc> on most systems.
@@ -37,6 +38,7 @@ A BUFFER is a named area containing a FILE being edited. Many buffers may
 be active at once. Many WINDOWS may be active at once on the screen. All
 windows may show different parts of the same buffer, or each may display a
 different one.
+
 -------------------------------------------------------------------------------
 =>                      CURSOR MOVEMENT
 Backward character ....      ^B         Forward character .....      ^F
@@ -46,6 +48,7 @@ Previous line ......... ^P or ^Z        Next line .............      ^N
 Previous paragraph .... Meta  P         Next paragraph ........ Meta  N
 Previous page ......... Meta  V         Next page .............      ^V
 Beginning of file ..... Meta  <         End of file ........... Meta  >
+
 -------------------------------------------------------------------------------
 =>                      FILE COMMANDS
 Find file .............   ^X ^F         Quick exit ............ Meta  Z
@@ -73,6 +76,7 @@ Typing      Result
  r          Refresh the current view in the current mode.
 
 The current mode is remembered when you move through the directory tree.
+
 -------------------------------------------------------------------------------
 =>                      MISCELLANEOUS CHARACTER COMMANDS
 Newline ...............      ^M         Transpose characters ..      ^T
@@ -81,6 +85,7 @@ Open line .............      ^O
 Handle tab ............      ^I         Quote character .......   ^X  Q
 Goto line ............. Meta  G         Abort command .........      ^G
 Goto matching fence ... Meta ^F
+
 -------------------------------------------------------------------------------
 =>                      BUFFER MODE COMMANDS
 Add mode ..............   ^X  M         Add global mode	....... Meta  M
@@ -235,6 +240,7 @@ Copy region ........... Meta  W     ::  the mark and the current position.
     placed on the kill ring.
 
 Yank last minibuffer .. Meta ^Y  (10 in a ring, numeric arg allowed)
+
 -------------------------------------------------------------------------------
 =>                      MARKS AND PINS
 
@@ -289,6 +295,7 @@ Justify paragraph ..... Meta  J
 Left and right Justify  Meta ^J         Narrow to region ......   ^X  <
 Make list from region   Meta  /         Widen from region .....   ^X  >
 Number list from region   ^X  /
+
 -------------------------------------------------------------------------------
 =>                      WINDOW COMMANDS
 Split current window ..   ^X  2         Next window ...........   ^X  O
@@ -298,6 +305,7 @@ Grow window ...........   ^X  Z         Scroll next down ...... Meta ^V
 Shrink window .........   ^X ^Z         Resize window .........   ^X  W
 Move window up ........   ^X ^P         Save window ........... not bound
 Move window down ......   ^X ^N         Restore window ........ not bound
+
 -------------------------------------------------------------------------------
 =>                      BUFFER COMMANDS
 Next buffer ...........   ^X  X         Buffer position .......   ^X  =
@@ -306,6 +314,7 @@ List buffers ..........   ^X ^B
 Delete buffer .........   ^X  K         Write message ......... not bound
 Name buffer ........... Meta ^N         Clear message line .... not bound
 Filter buffer .........   ^X  #         Execute buffer ........ not bound
+
 -------------------------------------------------------------------------------
 =>                      SEARCHING AND REPLACING
 Search forward ........ Meta  S     ::  End string with <CR>.
@@ -542,6 +551,7 @@ Shell command .........   ^X  !     ::  Execute one operating system command.
 Pipe command ..........   ^X  @     ::  Pipe command results to a new buffer.
 Filter buffer .........   ^X  #     ::  Filter buffer through a program.
 Execute program .......   ^X  $     ::  Execute external command.
+
 -------------------------------------------------------------------------------
 =>                      MACRO COMMANDS
 Begin macro ...........   ^X  (
@@ -591,6 +601,7 @@ Execute named command . Meta  X         Insert string ......... not bound
 Execute command line .. not bound       Overwrite string ...... not bound
 Set encryption key .... Meta  E         Wrap word ............. not bound
 Count words ........... Meta ^C         Update screen ......... not bound
+
 -------------------------------------------------------------------------------
 =>                      SYSTEM VARIABLES
 Set ................... ^X A
@@ -669,50 +680,72 @@ Unless noted as (read-only), these may be set as well as read.
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS
 
+These all return values. They do not alter their arguments.
+
 Arithmetic
-    &neg, &abs, &add, &sub, &tim, &div, &mod
+    &neg n1     negate the value
+    &abs n1     the absolute value
+    &add n1 n2  add n1 and n2
+    &sub n1 n2  subtract n2 from n1
+    &tim n1 n2  multiply n1 and n2
+    &div n1 n2  (integer) divide n1 by n2
+    &mod n1 n2  n1 mod n2
 
 NOTE: that &div and &mod will return "ZDIV" if the divisor is 0.
       This will be treated as 0 if it is used as a number.
 
 Arithmetic comparisons
-    &equ, &les, &gre
+    &equ n1 n2      Is n1 equal to n2
+    &les n1 n2      Is n1 less than n2
+    &gre n1 n2      Is n1 greater than n2
 
 Logical
-    &not, &and, &or
+    &and l1 l2      Logical AND of l1 and l2
+    &or l1 l2       Logical OR of l1 and l2
+    &not l1         Logical inverse of l1
 
 Real arithmetic (uses doubles internally)
-    &rad, &rsu, &rti, &rdv, &rpw, &r2i
+    &rad r1 r2      Add r1 and r2
+    &rsu r1 r2      Subtract r2 from r1
+    &rti r1 r2      Multiple r1 by r2
+    &rdv r1 r2      Divide r1 by r2
+    &rpw r1 r2      r1 raised to the power r2
+    &rlt r1 r2      Is r1 less than r2
+    &rgt r1 r2      Is r1 greater than r2
+ (there is no equals, as you shouldn't compare reals for equality)
+    &r2i r1         round r1 to an integer
 
 NOTE: There is no &i2r as all integer (strings) are valid real number
       (strings).
       These functions may return ZDIV, NAN, INF, -INF or TOOBIG (&r2i).
 
-Arithmetic comparisons
-    &rlt, &rgt (no equals, as you shouldn't compare reals for equality)
-
 NOTE: You should probably use the &ptf function to format real numbers
       to the output format you wish.
-      (They are stored as strings in G format).
+      (They are stored internally as strings in G format).
       &r2i rounds them to integers (rounded away from 0, so 0.5 => 1
       while -0.5 => -1)
 
 Bit operations
-    &ban, &bor, &bxo, &bno
-    &bli            Convert hex ("0x"), octal (0..) or decimal to number.
+    &ban, &bor, &bxo b1 b2  bitwise AND, OR, XOR of b1 and b2
+    &bno b1         bitwise NOT b1
+    &bli s1         Convert hex ("0x"), octal ("0..") or decimal to number.
 
 Substring
     &lef s len      Leftmost len graphemes from string s
-    &rig s pos      Rightmost len graphemes from string s
+    &rig s pos      Rightmost graphemes starting from pos in string s
     &mid s pos len  Rightmost len graphemes from string s staring at pos
         These only copy up to end-of-string if len/pos is too big.
 
 Other string operations
-    &cat, &len, &upp, &low
-        (&len returns the length in graphemes)
+    &cat s1 s2  Catenate s1 and s2
+    &len s1     The length of s1 in graphemes
+    &upp s1     Returns the uppercased version of s1
+    &low s1     Returns the lowercased version of s1
 
 String comparisons
-   &seq, &sle, &sgr
+   &seq s1 s2   Are strings s1 and s2 the same
+   &sle s1 s2   Is s1 lexically less then s2
+   &sgr s1 s2   Is s1 lexically greater then s2
 
 String index
     &sin str1 str2  Index of first str2 in str1 (0 if not found).
@@ -722,12 +755,12 @@ String index
         (if str2 is the empty string, these functions return 0)
 
 Char to Code conversion
-    &asc c          Byte code of base char
+    &asc c          Code of base char (Unicode)
     &chr d          Char for given code (U+nnn, 0xnnn or decimal)
 
 File & buffer operations
-    &exi, &exb      File exists, Buffer exists.
-    &fin            Find a file on the uemacs PATH
+    &exi, &exb f1   File exists, Buffer exists.
+    &fin f1         Find a file on the uemacs PATH
 
 Miscellaneous
     &esc s          Escape string to make suitable for shell usage
@@ -738,6 +771,7 @@ Miscellaneous
     &gtk            Get a key (from keyboard)
     &env name       Get an environment variable
     &bin key-spec   Get the function bound to key (or ERROR)
+                    (key is given as, e.g. ^X^C - for exit-emacs)
     &xla s, l, t    Translation table.
                     If char in s is found in l, replace with char
                     from same offset in t.      (cf. Unix tr)
@@ -752,7 +786,9 @@ Miscellaneous
                     of "diouxX"). uemacs knows its internal precision
                     (64-bit).
     &ptx str        Return the entry for str using the current phonetic
-                    translation table (if any). (As it woudl be inserted).
+                    translation table (if any). (As it would be inserted).
+                    (returns str if there is no current phonetic
+                    translation table active).
 
 -------------------------------------------------------------------------------
 =>                        NAME COMPLETION
@@ -771,6 +807,7 @@ For file completion, shell expansion is handled and leading ".." dirs
 are taken relative to the $PWD environment variable.
 You may also use ~ (or ~id) at the start of a pathname for login id
 expansion.
+
 -------------------------------------------------------------------------------
 => Opening a directory
 
