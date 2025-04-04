@@ -17,7 +17,8 @@ struct evlist evl[] = {
  { "curline",   EVCURLINE },    /* current line in file */
  { "curwidth",  EVCURWIDTH },   /* current screen width */
  { "cbufname",  EVCBUFNAME },   /* current buffer name */
- { "cfname",    EVCFNAME },     /* current file name */
+ { "cfname",    EVCFNAME },     /* current canonical file name */
+ { "dfname",    EVDFNAME },     /* current display file name (read-only) */
  { "debug",     EVDEBUG },      /* macro debugging */
  { "status",    EVSTATUS },     /* returns the status of the last command */
  { "asave",     EVASAVE },      /* # of chars between auto-saves */

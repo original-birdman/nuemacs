@@ -88,8 +88,10 @@ static char showdir_opts[MAX_SD_OPTS+1] = "";
 /* User variables. External as used by completion code in input.c */
 
 #define MAXVARS 64
+char *uvnames[MAXVARS];
 
 /* This bit is internal. We keep a separate list of the names (uvnames) */
+
 static struct simple_variable uv[MAXVARS];
 
 /* Initialize the user variable list. */
@@ -152,8 +154,6 @@ int nxti_envvar(int ci) {
  * of the names which exist.
  * We don't actually need the values for getf/nvar() in input.c
  */
-
-char *uvnames[MAXVARS];
 static int n_uvn;
 
 void sort_user_var(void) {
@@ -1063,6 +1063,7 @@ static const char *gtenv(const char *vname) {
     case EVCURWIDTH:        return ue_itoa(term.t_ncol);
     case EVCBUFNAME:        return curbp->b_bname;
     case EVCFNAME:          return curbp->b_rpname;
+    case EVDFNAME:          return curbp->b_dfname;
     case EVDEBUG:           return ue_itoa(macbug);
     case EVSTATUS:          return ltos(cmdstatus);
     case EVASAVE:           return ue_itoa(gasave);
@@ -1398,6 +1399,7 @@ static int svar(struct variable_description *var, const char *value) {
         switch (vnum) {
 
 /* All of these are read-only */
+        case EVDFNAME:
         case EVVERSION:
         case EVPROGNAME:
         case EVSEARCH:
@@ -1703,9 +1705,9 @@ int setvar(int f, int n) {
 /* Check the legality and find the var */
     findvar(db_val(var), &vd, TRUE);
 
-/* If its not legal....bitch */
+/* If it's not legal....bitch */
     if (vd.v_type == -1) {
-        mlwrite("%%No such variable as '%s'", db_val(var));
+        mlwrite("No such variable as '%s'", db_val(var));
         status = FALSE;
         goto exit;
     }

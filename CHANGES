@@ -8326,3 +8326,12 @@ file.c
 
 etc/uemacs.hlp
     Document the $debug variable bit values.
+
+eval.c
+file.c
+estruct.h
+evar.h
+etc/uemacs.hlp
+    Add $dfname (display file name) as a read-only variable. [eval.c,
+    estruct.h, evar.h, uemacs.hlp
+    Update comments and description of $cfname. [file.c]

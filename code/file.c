@@ -32,9 +32,12 @@
  *  wish to do) then calls fixup_fname() with what it has.
  *
  * get_realpath:
- *  get the full physical path (symlinks resolved) of a filename.
- *  So this is a unique path for a file.
- *  The result is then shortened to start with ./, ../ or ~., if appropriate.
+ *  get the full physical path (symlinks in the directory part resolved)
+ *  of a filename.
+ *  If not being forced to a full path the result is then shortened to
+ *  start with ./, ../ or ~/, if appropriate.
+ *  This is to ensure that ../file and ~/file are treated the same
+ *  as the full path to the file.
  *
  * THESE ALL RETURN A POINTER TO AN INTERNAL static char ARRAY.
  * The CALLER must handle appropriately.
