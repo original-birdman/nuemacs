@@ -8340,3 +8340,8 @@ display.c
     Use the displaying buffer when getting the display name, not the
     current buffer (for split windows).
 
+etc/uemacs.hlp
+version.h
+    Update to GGR4.189
+
+==========
