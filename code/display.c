@@ -1142,14 +1142,17 @@ static void upddex(void) {
     }
 }
 
-/* Get a display name for the current buffer */
+/* Get a display name for a buffer.
+ * Remember that with a split window there is more than one buffer on
+ * display, so we need to know which we are looking at.
+ */
 
 static db_strdef(last_display);
 static db_strdef(last_bname);
 static int last_width = -1;
 static struct buffer *last_bp = NULL;
 
-static const char *get_buffer_display_name(int w_want) {
+static const char *get_buffer_display_name(struct buffer *tbp, int w_want) {
 
     if (w_want < 3) w_want = 3;     /* Set a minimum (1 fr, 1 ell, 1 bk) */
 
@@ -1158,19 +1161,19 @@ static const char *get_buffer_display_name(int w_want) {
  * must have been set to non-NULL.
  */
 
-    if ((curbp == last_bp) && (w_want == last_width) &&
-        (db_casecmp(last_bname, curbp->b_bname) == 0)) {
+    if ((tbp == last_bp) && (w_want == last_width) &&
+        (db_casecmp(last_bname, tbp->b_bname) == 0)) {
         return db_val(last_display);
     }
 
 /* Have to work out a new one... */
 
-    int bn_glyph = glyphcount_utf8(curbp->b_bname);
+    int bn_glyph = glyphcount_utf8(tbp->b_bname);
 
 /* If we have enough space for the whole name, this is easy.  */
 
     if (bn_glyph <= w_want) {
-        db_set(last_display, curbp->b_bname);
+        db_set(last_display, tbp->b_bname);
     }
     else {
 
@@ -1181,9 +1184,9 @@ static const char *get_buffer_display_name(int w_want) {
         db_clear(last_display);
 
 /* Add up until scut */
-        char *cp = curbp->b_bname;
+        char *cp = tbp->b_bname;
         int offs = 0;
-        int max = strlen(curbp->b_bname);
+        int max = strlen(tbp->b_bname);
         while (scut--) {
             offs = next_utf8_offset(cp, offs, max, TRUE);
         }
@@ -1202,8 +1205,8 @@ static const char *get_buffer_display_name(int w_want) {
         db_append(last_display, cp+offs);
     }
     last_width = w_want;
-    last_bp = curbp;
-    db_set(last_bname, curbp->b_bname);
+    last_bp = tbp;
+    db_set(last_bname, tbp->b_bname);
 
     return db_val(last_display);
 }
@@ -1396,11 +1399,11 @@ next_mode:
         db_addch(glb_db, ' ');
     }
 
-/* Now get a buffer name display text and display it and (most of) the
- * rh_side.
+/* Now get the buffer name display text for this buffer, display it
+ * and (most of) the rh_side.
  */
     int w_avail = term.t_ncol - lh_width - db_len(glb_db) - 7;
-    show_utf8(get_buffer_display_name(w_avail));
+    show_utf8(get_buffer_display_name(bp, w_avail));
     show_utf8(db_val(glb_db));
 
 /* Pad to full width. */

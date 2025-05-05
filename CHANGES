@@ -8335,3 +8335,8 @@ etc/uemacs.hlp
     Add $dfname (display file name) as a read-only variable. [eval.c,
     estruct.h, evar.h, uemacs.hlp
     Update comments and description of $cfname. [file.c]
+
+display.c
+    Use the displaying buffer when getting the display name, not the
+    current buffer (for split windows).
+
