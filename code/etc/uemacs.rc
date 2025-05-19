@@ -34,8 +34,10 @@ store-procedure file-hooks
         !return
     !endif
 ; Pick up everything after the last .
+; The last number just needs to be at least 1 more than the longest
+; suffix we check for.
 ;
-    set .rctmp &rig $cfname &add .rctmp 1
+    set .rctmp &mid $cfname &add .rctmp 1 5
     set .rctmp &lower .rctmp
 ; A quick "is it in list" check.  Assumes no-one uses "c cc" as a suffix..
     !if &les 0 &sin "c cc cpp c++ h pl js php" .rctmp

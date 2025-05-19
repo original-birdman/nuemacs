@@ -8344,4 +8344,7 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.189
 
-==========
+========== GGR4.190
+
+etc/uemacs.rc
+    Fix suffix calculation in file-hooks.
