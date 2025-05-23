@@ -608,7 +608,7 @@ static int makelist(int iflag) {
         addline(line);
 
 /* This next section (SHOW_RPNAMES) is only for checking
- * what has been set by get_realpath.
+ * what has been set by get_uniqpath.
  * It is not meant to be activated in normal use.
  */
 

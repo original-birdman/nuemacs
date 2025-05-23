@@ -249,3 +249,12 @@ linked_items *macro_pin_headp = NULL;
  */
 
 udir_t udir;
+
+/* Ignored prefixes  - need to limit assignment... */
+
+const char *path_pfx_map = NULL;
+const char *path_pfx_map_from[MAX_PFX_MAP];
+const char *path_pfx_map_to[MAX_PFX_MAP];
+int path_pfx_map_from_len[MAX_PFX_MAP];
+int path_pfx_map_to_len[MAX_PFX_MAP];
+int path_pfx_map_valid = 0;

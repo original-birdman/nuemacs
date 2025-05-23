@@ -1151,6 +1151,7 @@ static const char *gtenv(const char *vname) {
         wt = wt/1000000;    /* ns -> ms */
         return ue_itoa(wt);
     }
+    case EVPPFXMAP:         return path_pfx_map;
     }
 
     exit(-12);              /* Again, we should never get here */
@@ -1671,6 +1672,52 @@ static int svar(struct variable_description *var, const char *value) {
             }
             else pause_time.tv_sec = 0;
             pause_time.tv_nsec = bracket_ms*1000000;
+            break;
+        }
+        case EVPPFXMAP: {
+/* The format of this variable is:
+ *  found_prefix1~0replace_prefix1~0found_prefix2~0replace_prefix2...
+ *  where ~0 is a NUL character.
+ * Except that doesn't (yet) work, so use & in place if ~0 and
+ * convert to NULs here.
+ * We store the orifinal string and work with a copy.
+ */
+            if (path_pfx_map) Xfree((void *)path_pfx_map);
+            path_pfx_map = strdup(value);
+
+            int max_off = strlen(value);
+            char *work_value = strdupa(value);
+
+// TEMPORARY convert & to NUL
+            char *tp = (char *)work_value + strlen(work_value);
+            while (tp > work_value) {
+                if (*tp == '&') *tp = '\0';
+                tp--;
+            }
+
+            int offs = 0;
+            int pi_ind = 0;
+            const char *ntp = work_value;
+            while(offs < max_off) {
+                if (path_pfx_map_from[pi_ind])
+                     Xfree((void *)path_pfx_map_from[pi_ind]);
+                if (path_pfx_map_to[pi_ind])
+                     Xfree((void *)path_pfx_map_to[pi_ind]);
+                path_pfx_map_from[pi_ind] = strdup(ntp);
+                path_pfx_map_from_len[pi_ind] = strlen(ntp);
+                offs += strlen(ntp) + 1;
+                if (offs < max_off) {   /* Check there is still some... */
+                    ntp += strlen(ntp) + 1;
+                    path_pfx_map_to[pi_ind] = strdup(ntp);
+                    path_pfx_map_to_len[pi_ind] = strlen(ntp);
+                    offs += strlen(ntp) + 1;
+                    ntp += strlen(ntp) + 1;
+                }
+                pi_ind++;
+                if (pi_ind >= MAX_PFX_MAP) break;
+            }
+            path_pfx_map_valid = pi_ind;
+            udir_init();    /* Recalculate curent, parent and home values */
             break;
         }
         }

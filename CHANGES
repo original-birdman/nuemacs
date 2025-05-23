@@ -8353,3 +8353,25 @@ exec.c
     Add code in token to take ~0 to be a NUL.
     NOTE that no other part of the code handles this yet!
 
+buffer.c
+eval.c
+file.c
+globals.c
+main.c
+edef.h
+efunc.h
+estruct.h
+evar.h
+etc/uemacs.hlp
+    Added code to handle prefix mapping (for Entware on Asus routers, to
+    enable removing the /tmp/mnt/Entware/... - resulting from using
+    symlinks - from paths). [eval.c, file.c, globals.c, edef.h,
+    estruct.h, evar.h]
+    Changed get_realpath() to get_uniqpath() and make a few fixes for
+    handling prefix mapping. [buffer.c, file.c, main.c, efunc.h
+    Ensure cwd runs through get_uniqpath() in get_to_dumpdir(). [main.c]
+    Set udir values in a function, as the code may now be run more than
+    once. Moved ensure_trailing_slash() to file.c. [eval.c, file.c,
+    main.c, efunc.h]
+    Moved dumpdir_tidy() to before handling "files for editing" from
+    the command line. [main.c]

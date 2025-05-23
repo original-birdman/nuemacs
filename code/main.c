@@ -502,6 +502,7 @@ static int get_to_dumpdir(void) {
 
     char *dnc = getcwd(cwd, 1024);
     UNUSED(dnc);    /* To avoid "warn_unused_result" message */
+    strcpy(cwd, get_uniqpath(cwd));
 
 /* Get to the dump directory */
 
@@ -1494,7 +1495,7 @@ int execute(int c, int f, int n) {
 
     if (dir_browsing) {
         int test_char = c | DIFCASE;    /* Quick lowercase */
-        switch(test_char) { /* NOTE: Space and 'b' *cannot* be used here! */
+        switch(test_char) { /* NOTE: Space, b, n, p *cannot* be used here! */
         case 'd':           /* Dive into entry on current line */
         case 'o':           /* Open entry on current line */
         case 'v':           /* View entry on current line */
@@ -1918,19 +1919,6 @@ void extend_keytab(int n_ents) {
     return;
 }
 
-/* It's simpler for us to ensure that we have a trailing / on the udirs */
-
-static char *ensure_trailing_slash(char *inp) {
-    if (inp) {
-        int slen = strlen(inp);
-        if (*(inp+slen-1) != '/') {
-            inp = Xrealloc(inp, slen+2);
-            strcat(inp, "/");
-        }
-    }
-    return inp;
-}
-
 int main(int argc, char **argv) {
     int c;                  /* command character */
     struct buffer *bp;      /* temp buffer pointer */
@@ -1964,32 +1952,7 @@ int main(int argc, char **argv) {
 
     db_set(savnam, "main");
     varinit();              /* initialise user variables */
-
-/* Get these directory locations. */
-
-    udir.current = ensure_trailing_slash(realpath(".", NULL));
-    udir.clen = strlen(udir.current);
-    udir.parent = ensure_trailing_slash(realpath("..", NULL));
-    udir.plen = strlen(udir.parent);
-    udir.home = NULL;
-    char *p;
-    if ((p = getenv("HOME")) != NULL) {
-        udir.home = Xstrdup(p);
-    }
-#ifndef STANDALONE
-    else {
-        struct passwd *pwptr;
-        if ((pwptr = getpwuid(geteuid())) != NULL) {
-            udir.home = Xstrdup(pwptr->pw_dir);
-        }
-    }
-#endif
-    if (udir.home) {
-        udir.home = ensure_trailing_slash(udir.home);
-        udir.hlen = strlen(udir.home);
-    }
-    else udir.hlen = 0;
-
+    udir_init();
     int viewflag = FALSE;   /* view mode defaults off in command line */
     int gotoflag = FALSE;   /* set to off to begin with */
     int searchflag = FALSE; /* set to off to begin with */
@@ -2202,6 +2165,11 @@ do {
 /* If we are C error parsing... run it! */
     if (errflag) startup("error.cmd");
 
+/* Run the autocleaner...MUST come after processing start-up files, as they
+ * may set $autoclean.
+ */
+    dumpdir_tidy();
+
 /* Process rest of comline, which is a list of files to edit */
     while (argc--) {
 
@@ -2223,7 +2191,7 @@ do {
 /* Check whether we have already been passed this filename, possibly
  * under a different path (e.g. full vs relative).
  */
-            const char *testp = get_realpath(*argv);
+            const char *testp = get_uniqpath(*argv);
             int duplicate = FALSE;
             for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {
                 if (strcmp(bp->b_rpname, testp) == 0) {
@@ -2257,11 +2225,6 @@ do {
         }
         argv++;
     }
-
-/* Run the autocleaner...MUST come after processing start-up files, as they
- * may set $autoclean.
- */
-    dumpdir_tidy();
 
 /* Done with processing command line */
 

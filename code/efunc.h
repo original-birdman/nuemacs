@@ -198,7 +198,8 @@ extern int cbuf40(int, int);
 #ifndef FILE_C
 extern const char *fixup_fname(const char *);
 extern const char *fixup_full(const char *);
-extern const char *get_realpath(const char *);
+extern const char *get_uniqpath(const char *);
+extern void udir_init(void);
 extern void set_buffer_filenames(struct buffer *, const char *);
 extern int readin(const char *, int);
 extern int fileread(int, int);

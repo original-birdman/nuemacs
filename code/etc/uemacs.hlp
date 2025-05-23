@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.189 Help Index     (05 May 2025)
+=>                   nuEmacs GGR4.189a Help Index     (23 May 2025)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -679,6 +679,11 @@ Unless noted as (read-only), these may be set as well as read.
     $filock ............... Do we want file locking?
     $crypt_mode ........... Crypt mode to use (default NONE)
     $brkt_ms .............. Pause time (ms) for bracket matching
+    $path_pfx_map ......... Mapping for editing the start of pathnames
+                            Currently from1&to1&from2&to2 .... (10 at most)
+                            Any "from" at the start of a full pathname
+                            will be mapped to "to". The order is important.
+                            froms *and* tos should start and end with a /.
 
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS

@@ -77,6 +77,7 @@ struct evlist evl[] = {
  { "filock", EVFILOCK },        /* Do we want file locking? */
  { "crypt_mode", EVCRYPT },     /* Crypt mode to use (default NONE) */
  { "brkt_ms", EVBRKTMS },       /* Pause time (ms) for bracket matching */
+ { "path_pfx_map", EVPPFXMAP }, /* Prefices to ignore in pathname */
 };
 
 /* The tags for user functions - used in struct evlist */

@@ -37,6 +37,7 @@
 
 #define KRING_SIZE 10
 #define MAX_REGL_LEN 16
+#define MAX_PFX_MAP 10
 
 typedef struct {
     struct buffer *main_bp;     /* curbp of arriving window */
@@ -330,6 +331,15 @@ extern sysmark_t sysmark;
 extern udir_t udir;
 
 extern int pretend_size;
+
+/* Ignored prefixes  - need to limit assignment... */
+
+extern const char *path_pfx_map;
+extern const char *path_pfx_map_from[MAX_PFX_MAP];
+extern const char *path_pfx_map_to[MAX_PFX_MAP];
+extern int path_pfx_map_from_len[MAX_PFX_MAP];
+extern int path_pfx_map_to_len[MAX_PFX_MAP];
+extern int path_pfx_map_valid;
 
 /* A global db, for use in localized code.
  * Must NOT be used in calls to a function which might use it itself!!!

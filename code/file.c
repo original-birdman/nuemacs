@@ -31,7 +31,7 @@
  *  expands any leading "." to an absolute name (something we don't always
  *  wish to do) then calls fixup_fname() with what it has.
  *
- * get_realpath:
+ * get_uniqpath:
  *  get the full physical path (symlinks in the directory part resolved)
  *  of a filename.
  *  If not being forced to a full path the result is then shortened to
@@ -212,33 +212,77 @@ const char *fixup_full(const char *fn) {
     return r;
 }
 
-/* get_realpath
+/* get_uniqpath
  * This can generate a shortened name.
  */
 static db_strdef(rp_res);
 
-/* Two markers so that set_buffer_filenames() can call here
+/* Two INTERNAL markers so that set_buffer_filenames() can call here
  * twice to get short an full names, without calling realpath() twice.
  */
-static int force_full = 0;
 static int fn_is_full = 0;
-const char *get_realpath(const char *fn) {
+static int force_full = 0;
+const char *get_uniqpath(const char *fn) {
 
+    int trim_slash = 0;
     if (fn_is_full) {
         db_set(rp_res, fn);
     }
     else {
 /* Get the full pathname...(malloc'ed)
- * Have to cater for file not existing (but the dir has to...).
+ * May need to cater for file not existing (but the dir has to...).
  */
-        char *dir = dirname(strdupa(fn));
-        char *ent = basename(strdupa(fn));
-
-        char *rp = realpath(dir, NULL);
+        char *ent, *rp;
+        char *tp = realpath(fn, NULL);
+        if (!tp) {
+            char *dir = dirname(strdupa(fn));
+            rp = realpath(dir, NULL);
+            ent = basename(strdupa(fn));
+        }
+        else {
+            rp = dirname(strdupa(tp));
+            ent = basename(strdupa(tp));
+            Xfree(tp);
+        }
         if (!rp) return fn;     /* Return input... */
-        if (strlen(rp) == 1) rp[0] = '\0';  /* Blank a bare "/" */
-        db_sprintf(rp_res, "%s/%s", rp, ent);
-        free(rp);
+/* If rp is just '/', nullify it to prevent multiple
+ * consecutive /s in rp_res.
+ * Also, don't add /ent if ent is empty.
+ */
+        if (strlen(rp) == 1) *rp = '\0';
+        if (strlen(ent) == 0)
+            db_set(rp_res, rp);
+        else
+            db_sprintf(rp_res, "%s/%s", rp, ent);
+        if (!tp) free(rp);
+
+/* Iff we have a directory and it is not just '/', append a /, to match
+ * against mapping and udir values correctly.
+ * But remove it before we return....
+ */
+        struct stat fst;
+        if (db_len(rp_res) > 1 && (0 == stat(db_val(rp_res), &fst))) {
+            if ((fst.st_mode & S_IFMT) == S_IFDIR) {
+                db_addch(rp_res, '/');
+                trim_slash = 1;
+            }
+        }
+
+/* Do any prefix changes match? */
+
+        for (int i = 0; i < path_pfx_map_valid; i++) {
+            if (strncmp(db_val(rp_res),
+                  path_pfx_map_from[i], path_pfx_map_from_len[i]) == 0) {
+                int nlen = db_len(rp_res) - path_pfx_map_from_len[i]
+                    + path_pfx_map_to_len[i] + 1;
+                char *trp = Xmalloc(nlen);
+                strcpy(trp, path_pfx_map_to[i]);
+                strcpy(trp+path_pfx_map_to_len[i],
+                     db_val(rp_res)+path_pfx_map_from_len[i]);
+                db_set(rp_res, trp);
+                Xfree(trp);
+            }
+        }
     }
 
 /* See whether we can use ., .. or ~ to shorten this.
@@ -252,16 +296,16 @@ const char *get_realpath(const char *fn) {
     if (!force_full) {
         const char *cpp = NULL;
         const char *cfp;
-        if ((udir.clen > 1) &&
+        if (udir.current && (udir.clen > 1) &&
              (db_cmpn(rp_res, udir.current, udir.clen) == 0)) {
             cpp = "./";
             cfp = db_val(rp_res) + udir.clen;
         }
-        else if ((udir.plen > 1) &&
+        else if (udir.parent && (udir.plen > 1) &&
              (db_cmpn(rp_res, udir.parent, udir.plen) == 0)) {
             cpp = "../";
             cfp = db_val(rp_res) + udir.plen;
-        } else if ((udir.hlen > 1) &&
+        } else if (udir.home && (udir.hlen > 1) &&
                    (db_cmpn(rp_res, udir.home, udir.hlen) == 0)) {
 /* NOTE: that any fn input of ~/file as a real file in a dir called "~"
  * will have already been expanded to a full path or ./~/file, so ~/
@@ -276,7 +320,79 @@ const char *get_realpath(const char *fn) {
             db_append(rp_res, db_val(glb_db));
         }
     }
+    if (trim_slash) db_truncate(rp_res, db_len(rp_res) - 1);
     return db_val(rp_res);
+}
+
+/* It's simpler for us to ensure that we have a trailing / on the udirs */
+
+static char *ensure_trailing_slash(char *inp) {
+    if (inp) {
+        int slen = strlen(inp);
+        if (*(inp+slen-1) != '/') {
+            inp = Xrealloc(inp, slen+2);
+            strcat(inp, "/");
+        }
+    }
+    return inp;
+}
+
+/* Get current, parent and HOME for the process so we can shorten
+ * display filenames in the modeline.
+ * A function as the values are needed before any file input,
+ * but also need to be reset after any path_pfx_map setting.
+ */
+static int udir_allocated = 0;
+void udir_init(void) {
+
+/* Free any already allocated */
+
+    if (udir_allocated) {
+        Xfree_setnull(udir.current);
+        Xfree_setnull(udir.parent);
+        Xfree_setnull(udir.home);
+    }
+
+/* Get these directory locations.
+ * get_uniqpath() returns the char* from a dyn_buf, so we can't send
+ * it to ensure_trailing_slash, where it might get realloc'ed and
+ * and lengthened.
+ * We also set force_full so that none of them gets "abbreviated" to
+ * mention on of the others.
+ */
+    char *tp;
+    tp = strdup(get_uniqpath("."));
+    udir.current = ensure_trailing_slash(tp);
+    udir.clen = strlen(udir.current);
+//    tp = strdup(get_uniqpath(".."));
+    tp = strdup(dirname(strdupa(udir.current)));
+    udir.parent = ensure_trailing_slash(tp);
+    udir.plen = strlen(udir.parent);
+
+    force_full = 1;
+    udir.home = NULL;
+    if ((tp = getenv("HOME")) != NULL) {
+        udir.home = Xstrdup(tp);
+    }
+#ifndef STANDALONE
+    else {
+        struct passwd *pwptr;
+        if ((pwptr = getpwuid(geteuid())) != NULL) {
+            udir.home = Xstrdup(pwptr->pw_dir);
+        }
+    }
+#endif
+    if (udir.home) {
+        tp = strdup(get_uniqpath(udir.home));
+        Xfree(udir.home);
+        udir.home = ensure_trailing_slash(tp);
+        udir.hlen = strlen(udir.home);
+    }
+    else udir.hlen = 0;
+    force_full = 0;
+
+    udir_allocated = 1;
+    return;
 }
 
 /* -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- */
@@ -287,16 +403,16 @@ void set_buffer_filenames(struct buffer *bp, const char *fname) {
  * action of strcpy() is undefined for overlapping strings.
  * On a Mac it will crash...
  * But if we arrive with fname set to bp->b_dfname we also have a problem
- * that update_val() may realloc() it before the second get_realpath()
+ * that update_val() may realloc() it before the second get_uniqpath()
  * call, so just run with a local copy and avoid all of this.
  * We get the full one first, then use that result to get a short one.
  */
     const char *fn_copy = strdupa(fname);
     force_full = 1;     /* Want the real, full path for this one */
-    update_val(bp->b_rpname, get_realpath(fn_copy));
+    update_val(bp->b_rpname, get_uniqpath(fn_copy));
     force_full = 0;
     fn_is_full = 1;
-    update_val(bp->b_dfname, get_realpath(bp->b_rpname));
+    update_val(bp->b_dfname, get_uniqpath(bp->b_rpname));
     fn_is_full = 0;
     return;
 }
@@ -462,7 +578,7 @@ int readin(const char *fname, int lockfl) {
  * failed, e.g. trying to open a new file in a non-existant directory.
  * So we can post a warnign message.
  */
-    if (get_realpath(fname) == fname) { /* Unable to get real path */
+    if (get_uniqpath(fname) == fname) { /* Unable to get real path */
         mlwrite_one("Parent directory absent for new file");
         sleep(1);
     }
@@ -778,7 +894,7 @@ int getfile(const char *fname, int lockfl, int check_dir) {
  *          read the file into that buffer
  * We just use the first we come to....
  */
-    const char *testp = get_realpath(lfn);
+    const char *testp = get_uniqpath(lfn);
     int found = 0;
     int moved_to = 0;
     for (bp = bheadp; bp != NULL; bp = bp->b_bufp) {

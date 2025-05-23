@@ -493,7 +493,7 @@ struct kill {
 };
 
 /* When emacs' command interpreter needs to get a variable's name,
- * rather than it's value, it is passed back as a variable description
+ * rather than its value, it is passed back as a variable description
  * structure. The v_num field is a index into the appropriate variable table.
  */
 struct variable_description {
@@ -564,7 +564,7 @@ enum ev_val {
     EVSRCHCANHUNT,  EVULPCOUNT, EVULPTOTAL, EVULPFORCED,
     EVSDOPTS,   EVGGROPTS,      EVSYSTYPE,  EVPROCTYPE,
     EVFORCEMODEON,  EVFORCEMODEOFF,         EVPTTMODE,  EVVISMAC,
-    EVFILOCK,   EVCRYPT,    EVBRKTMS,
+    EVFILOCK,   EVCRYPT,    EVBRKTMS,   EVPPFXMAP,
 };
 
 struct evlist {
