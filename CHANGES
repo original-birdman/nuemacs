@@ -8348,3 +8348,8 @@ version.h
 
 etc/uemacs.rc
     Fix suffix calculation in file-hooks.
+
+exec.c
+    Add code in token to take ~0 to be a NUL.
+    NOTE that no other part of the code handles this yet!
+

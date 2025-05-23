@@ -70,11 +70,12 @@ static void pop_head(linked_items **headp) {
 /* token:
  *      chop a token off a string
  *      return a pointer past the token
+ *      Since the token is now a dyn_buf, it may contain NULs using ~0
  *
  * char *src,       source string
  * db *tok;       destination token dynamic string
  */
-const char *token(const char *src, db *tok) {
+const char *token(const char *src, dbp_dcl(tok)) {
     int quotef;     /* is the current string quoted? */
     char c;         /* temporary character */
 
@@ -109,6 +110,7 @@ const char *token(const char *src, db *tok) {
             case 't':   c = 9;  break;
             case 'b':   c = 8;  break;
             case 'f':   c = 12; break;
+            case '0':   c = 0;  break;
             default:    c = *(src - 1);
             }
         }
@@ -131,7 +133,6 @@ const char *token(const char *src, db *tok) {
         }
         dbp_addch(tok, c);
     }
-
     return src;
 }
 
@@ -155,6 +156,7 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
 /* GGR - There is the possibility of an illegal overlap of args here.
  *       Or a copy to iself.
  *       So it must be done via a temporary buffer.
+ * But we must allow for buffers containing NULs!
  */
     dbp_set(buffer, strdupa(getval(dbp_val(buffer))));
     return TRUE;
