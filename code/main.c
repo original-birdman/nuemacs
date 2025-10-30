@@ -1112,7 +1112,7 @@ static int backgr_on_screen(int n) {
 }
 
 /* Close fences are matched against their partners, and if
- * on screen the cursor briefly lights there.
+ * on screen the cursor briefly alights there.
  * This is called AFTER the character has been inserted.
  *
  * char ch;                     fence type to match against
@@ -2022,7 +2022,15 @@ do {
             char *opt = NULL;
             char key1;
             char *arg = *argv + 1;
-            if (*arg == '-') arg++; /* Treat -- as - */
+            if (*arg == '-') {  /* Treat -- as - */
+                arg++;
+/* But, treat a bare -- as end of args */
+                if (*arg == '\0') {
+                    argc--; argv++; /* Skip this arg */
+                    break;
+                }
+            }
+
 /* Check for specials: help and version requests */
             if (*arg == '?' || strncmp("help", arg, strlen(arg)) == 0) {
                  usage(EXIT_FAILURE);

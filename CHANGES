@@ -8378,3 +8378,7 @@ etc/uemacs.hlp
 
 file.c
     Ensure that readin() sets readin_mesg on all errors.
+
+main.c
+    Let a bare "--" indicate end of arg list.
+    Allows EDITOR=uemacs to work for visudo.
