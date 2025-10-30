@@ -605,10 +605,12 @@ int readin(const char *fname, int lockfl) {
  * We use the full name based on what the user gave.
  */
     s = ffropen(bp->b_rpname);
-    if (s == FIOERR) goto out;  /* Hard open failure. */
+    if (s == FIOERR) {          /* Hard open failure. */
+        db_set(readin_mesg, MLbkt("Can't open!"));
+        goto out;
+    }
     if (s == FIOFNF) {          /* File not found. */
         db_set(readin_mesg, MLbkt("New file"));
-        mlwrite_one(db_val(readin_mesg));
         goto out;
     }
 
@@ -642,7 +644,10 @@ out:
             wp->w_flag |= WFMODE | WFHARD;
         }
     }
-    if (s == FIOERR || s == FIOFNF) return FALSE;   /* False if error. */
+    if (s == FIOERR || s == FIOFNF) {
+        mlwrite_one(db_val(readin_mesg));   /* Has been set... */
+        return FALSE;                       /* False if error. */
+    }
     return TRUE;
 }
 

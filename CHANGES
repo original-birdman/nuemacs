@@ -8375,3 +8375,6 @@ etc/uemacs.hlp
     main.c, efunc.h]
     Moved dumpdir_tidy() to before handling "files for editing" from
     the command line. [main.c]
+
+file.c
+    Ensure that readin() sets readin_mesg on all errors.
