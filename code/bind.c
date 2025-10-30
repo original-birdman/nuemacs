@@ -183,7 +183,7 @@ int help(int f, int n) {
 static unsigned int stock(const char *given_keyname) {
     unsigned int c; /* key sequence to return */
 
-/* Work with a copy so we can in-0line edit the supplied arg */
+/* Work with a copy so we can in-line edit the supplied arg */
 
     char *keyname = strdupa(given_keyname);
 

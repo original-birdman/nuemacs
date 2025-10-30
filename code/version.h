@@ -9,7 +9,7 @@
 
 #define PROGRAM_NAME_LONG "nuEmacs"
 
-#define VERSION "GGR4.189"
+#define VERSION "GGR4.190"
 
 /* Print the version string. */
 void version(void);

@@ -8382,3 +8382,12 @@ file.c
 main.c
     Let a bare "--" indicate end of arg list.
     Allows EDITOR=uemacs to work for visudo.
+
+bind.c
+input.c
+etc/uemacs.hlp
+version.h
+    Fix comment typos. [bind.c, input.c]
+    Update to GGR4.190
+
+==========

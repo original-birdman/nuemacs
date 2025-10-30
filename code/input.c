@@ -299,9 +299,9 @@ static const char *getnname(const char *name, int namelen) {
  * Handle internal env/user variable completions.
  *
  * We build the env variable sort index in getfvar once
- * We build the use variable sort index in getfvar each time.
+ * We build the user variable sort index in getfvar each time.
  * However iff the incoming text is blank we just want to show
- * $... %..., and if it doesn't start with $ or % we want show no match.
+ * $... %..., and if it doesn't start with $ or % we want to show no match.
  */
 extern int *envvar_index;
 extern int *usrvar_index;
