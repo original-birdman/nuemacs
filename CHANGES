@@ -8480,3 +8480,6 @@ efunc.h
 file.c
     Tidy up the "Convert any multiple consecutive" code in fixup_fname()
     to not rely on the internal structure of a dyn_buf.
+
+eval.c
+    Expand use of setting res and using set_exit in gtfun()

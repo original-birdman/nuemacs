@@ -593,7 +593,6 @@ exit:
  * directly into res (if there might be NULs around) then goto set_exit.
  *
  */
-static db_strdef(funres);      /* Freed in free_eval(), if at all */
 static void gtfun(dbp_dcl(res), const char *fname) {
     char lfname[4];         /* What we lookup */
     unsigned int fnum;      /* index to function to eval */
@@ -785,9 +784,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
             rp = db_val(arg1)+offs;
             offs = inbytes - offs;
         }
-        db_setn(funres, rp, offs);
-        retval = db_val(funres);
-        goto exit;
+        dbp_setn(res, rp, offs);
+        goto set_exit;
     }
 
     case UFSEQUAL:
@@ -806,19 +804,17 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFLOWER:
         utf8_recase(tag == UFUPPER? UTF8_UPPER: UTF8_LOWER,
              db_val(arg1), -1, &csinfo);
-        db_set(funres, csinfo.str);
+        dbp_setn(res, csinfo.str, csinfo.utf8c);
         Xfree(csinfo.str);
-        retval = db_val(funres);
-        goto exit;
+        goto set_exit;
     case UFESCAPE: {            /* Only need to escape ASCII chars */
         const char *ip = db_val(arg1);  /* This is SHELL escaping... */
-        db_set(funres, "");  /* Start empty */
+        dbp_set(res, "");        /* Start empty */
         while (*ip) {           /* Escape it? */
-            if (strchr(" \"$&'()*;<>?\\`{|", *ip)) db_addch(funres, '\\');
-            db_addch(funres, *ip++);
+            if (strchr(" \"$&'()*;<>?\\`{|", *ip)) dbp_addch(res, '\\');
+            dbp_addch(res, *ip++);
         }
-        retval = db_val(funres);
-        goto exit;
+        goto set_exit;
     }
     case UFSINDEX:
         retval = ue_itoa(strindex(db_val(arg1), db_val(arg2)));
@@ -831,13 +827,12 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFIND: {   /* Evaluate the next arg via temporary execstr */
         dbp_dcl(oldestr) = execstr;
         db_upstrdef(nexecstr);
-        db_set(nexecstr, db_val(arg1));     /* Updateable copy */
+        db_setn(nexecstr, db_val(arg1), db_len(arg1));  /* Updateable copy */
         execstr = &nexecstr;
-        macarg(&funres);
+        macarg(res);
         execstr = oldestr;
         db_free(nexecstr);
-        retval = db_val(funres);
-        goto exit;
+        goto set_exit;
     }
 
     case UFTRUTH:
@@ -866,15 +861,13 @@ static void gtfun(dbp_dcl(res), const char *fname) {
         char temp[8];
         int nb = unicode_to_utf8(strtol(tsp, NULL, 0), temp);
         terminate_str(temp+nb);
-        db_set(funres, temp);
-        retval = db_val(funres);
-        goto exit;
+        dbp_set(res, temp);
+        goto set_exit;
     case UFGTKEY: {     /* Allow for unicode input. -> utf-8 */
         char temp[8];
         int nb = unicode_to_utf8(tgetc(), temp);
-        db_setn(funres, temp, nb);
-        retval = db_val(funres);
-        goto exit;
+        dbp_setn(res, temp, nb);
+        goto set_exit;
     }
     case UFRND: {
             seed = abs(seed * 1721 + 10007);
@@ -1207,7 +1200,7 @@ int gettyp(const char *token) {
  *
  * char *token;         token to evaluate
  */
-static db_strdef(valres);       /* static returned val */
+static db_strdef(valres);       /* static temporary val */
 
 /* Incoming token is a dyn_buf, so that strings may contan NULs */
 
@@ -1253,6 +1246,7 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
             if (status == ABORT) goto have_error;
         }
         if (do_fixup) dbp_set(res, fixup_full(db_val_nc(valres)));
+        else dbp_set(res, db_val_nc(valres));
         return;
     }
     case TKBUF:                 /* buffer contents fetch */
@@ -1288,17 +1282,13 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
         return;
 
     case TKVAR: {
-        db_strdef(tbuf);
-        gtusr(&tbuf, db_val(tok1));
-        dbp_setn(res, db_val(tbuf), db_len(tbuf));
-        db_free(tbuf);
+        gtusr(&valres, db_val(tok1));
+        dbp_setn(res, db_val(valres), db_len(valres));
         return;
     }
     case TKBVR: {
-        db_strdef(tbuf);
-        gtbvr(&tbuf, db_val(tok1));
-        dbp_setn(res, db_val(tbuf), db_len(tbuf));
-        db_free(tbuf);
+        gtbvr(&valres, db_val(tok1));
+        dbp_setn(res, db_val(valres), db_len(valres));
         return;
     }
     case TKENV:
@@ -1397,10 +1387,8 @@ fvar:
 
     case '&':               /* A function to generate the name? */
         db_strdef(tbuf);
-        db_strdef(vbuf);
-        db_set(vbuf, var);
-        getval(&vbuf, &tbuf);
-        db_free(vbuf);
+        db_set(valres, var);
+        getval(&valres, &tbuf);
         var = db_val(tbuf);
         db_free(tbuf);
         goto fvar;
@@ -1942,7 +1930,6 @@ void free_eval(void) {
     db_free(kvalue);
     db_free(xlres);
     db_free(pttres);
-    db_free(funres);
     db_free(valres);
     db_free(tfmt);
     db_free(tres);
