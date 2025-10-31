@@ -160,11 +160,14 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
 
 /* Evaluate it */
 /* GGR - There is the possibility of an illegal overlap of args here.
- *       Or a copy to iself.
+ *       Or a copy to itself.
  *       So it must be done via a temporary buffer.
  * But we must allow for buffers containing NULs!
  */
-    dbp_set(buffer, getval(dbp_val(buffer)));
+    db_strdef(tbuf);
+    getval(buffer, &tbuf);
+    dbp_setn(buffer, db_val(tbuf), db_len(tbuf));
+    db_free(tbuf);
     return TRUE;
 }
 
@@ -237,7 +240,10 @@ static int docmd(const char *cline) {
     case TKVAR:
     case TKFUN:
     case TKBVR:
-        db_set(tkn, getval(db_val(tkn)));
+        db_strdef(tbuf);
+        getval(&tkn, &tbuf);
+        db_set(tkn, db_val(tbuf));
+        db_free(tbuf);
         ttype = gettyp(db_val(tkn));    /* What we have in tkn now... */
     };
 
@@ -1328,7 +1334,10 @@ nxtscan:                /* On to the next line */
 /* Grab label to jump to.  Allow it to be evaluated. */
                     token(execstr, &golabel);
 /* Via temp copy, to avoid overwrite of own value */
-                    db_set(golabel, getval(db_val(golabel)));
+                    db_strdef(tbuf);
+                    getval(&golabel, &tbuf);
+                    db_set(golabel, db_val(tbuf));
+                    db_free(tbuf);
                     linlen = db_len(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
 /* We need at least 2 chars on the line for a label... */

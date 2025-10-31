@@ -121,7 +121,7 @@ extern void sort_user_var(void);
 extern int nxti_usrvar(int);
 extern int stol(const char *);
 extern int gettyp(const char *);
-extern const char *getval(const char *);
+extern void getval(db *, db *);
 extern int setvar(int, int);
 extern int delvar(int, int);
 #endif

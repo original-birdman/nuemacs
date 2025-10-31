@@ -87,7 +87,7 @@ int bclear(struct buffer *bp) {
     if (bp->bv) {       /* Must free the values too... */
         for (int vnum = 0; vnum < BVALLOC; vnum++) {
             if (bp->bv[vnum].name[0] == '\0') break;
-            Xfree(bp->bv[vnum].value);
+            db_free(bp->bv[vnum].value);
         }
         Xfree_setnull(bp->bv);
     }
@@ -783,7 +783,7 @@ void free_buffer(void) {
         if (bp->bv) {       /* Must free the values too... */
             for (int vnum = 0; vnum < BVALLOC; vnum++) {
                 if (bp->bv[vnum].name[0] == '\0') break;
-                Xfree(bp->bv[vnum].value);
+                db_free(bp->bv[vnum].value);
             }
         }
         Xfree(bp->bv);

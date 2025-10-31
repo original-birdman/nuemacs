@@ -964,7 +964,7 @@ int writemsg(int f, int n) {
         goto exit;
 
 /* Write the message out */
-    if (n == 2) fprintf(stderr, "%s\n", db_val(buf));
+    if (n == 2) fwrite(db_val(buf), 1, db_len(buf), stderr);
     else {
         mlforce_one(db_val(buf));
         if (kbdmode == PLAY) mline_persist = TRUE;
@@ -982,7 +982,6 @@ enum istr_type { RAW_STR, COOKED_STR };
 static int string_getter(int f, int n, enum istr_type call_type) {
     int status;             /* status return code */
     char *prompt;
-    const char *istrp;      /* Final string to insert */
 
     db_strdef(tstring);     /* string to add */
     db_strdef(tok);
@@ -995,7 +994,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
         else                      prompt = "Tokens/unicode chars: ";
         status = mlreply(prompt, &tstring, CMPLT_NONE);
         if (status != TRUE) goto exit;
-        dbp_set(execstr, db_val(tstring));
+        dbp_setn(execstr, db_val(tstring), db_len(tstring));
     }
 
 /* For COOKED_STR we have to process the rest of the line token-by-token.
@@ -1005,34 +1004,37 @@ static int string_getter(int f, int n, enum istr_type call_type) {
  * results in:
  *  ^R check1 plus some more 2
  */
+    db_clear(tstring);
     if (call_type == COOKED_STR) {
         const char *vp;
-        db_strdef(nstring);
         while(dbp_len(execstr) > 0) {
             token(execstr, &tok);
             if (db_len(tok) == 0) break;
-            vp = getval(db_val(tok));   /* Must evaluate tokens */
+            db_strdef(tbuf);
+            getval(&tok, &tbuf);    /* Must evaluate tokens */
+            vp = db_val(tbuf);
             if (!strncmp(vp, "0x", 2)) {
                 long add = strtol(vp+2, NULL, 16);
 /* This is only for a single byte */
                 if ((add < 0) || (add > 0xFF)) {
                     mlwrite("Oxnn syntax is only for a single byte (%s)",
                          db_val(tok));
-                    continue;
+                    goto free_tbuf;
                 }
-                db_addch(nstring, add);
+                db_addch(tstring, add);
             }
             else if (*vp == 'U' && *(vp+1) == '+') {
                 int val = strtol(vp+2, NULL, 16);
                 char utf[8];
                 int incr = unicode_to_utf8(val, utf);
-                db_appendn(nstring, utf, incr);
+                db_appendn(tstring, utf, incr);
             }
             else {
-                db_append(nstring, vp);
+                db_appendn(tstring, db_val(tbuf), db_len(tbuf));
             }
+free_tbuf:
+            db_free(tbuf);
         }
-        istrp = db_val(nstring);
     }
     else {
 /* For the RAW_STR we just take the next token and evaluate it.
@@ -1046,7 +1048,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
  *  A B C D
  */
         token(execstr, &tok);
-        istrp = getval(db_val(tok));
+        getval(&tok, &tstring);
     }
 
     if (f == FALSE) n = 1;
@@ -1054,7 +1056,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
 
 /* insert it */
 
-    while (n-- && (status = linstr(istrp)));
+    while (n-- && (status = lins_dynbuf(&tstring)));
 
 exit:
     db_free(tstring);
@@ -1303,9 +1305,10 @@ int simulate(int f, int n) {
     UNUSED(f); UNUSED(n);
 
     db_strdef(input);
-/* Grab the next token and advance past */
-    nextarg("", &input, CMPLT_NONE);
 
+/* Grab the next token and advance past */
+
+    nextarg("", &input, CMPLT_NONE);
     int status = FALSE;     /* In case n <= 0 */
     while (n-- > 0) {
         size_t offs = 0;

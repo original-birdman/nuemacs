@@ -13,6 +13,7 @@
 #include <limits.h>
 
 #include "utf8.h"
+#include "dyn_buf.h"
 
 /* Various bits of code use chars as indices.
  * Ensure these are treated as unsigned.
@@ -297,7 +298,7 @@ struct ptt_ent {
  */
 #define BVALLOC 32
 struct simple_variable {
-    char *value;            /* value (string) */
+    db_dcl(value);          /* value (string) */
     char name[NVSIZE + 1];  /* name of buffer variable */
 };
 

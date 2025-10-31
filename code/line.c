@@ -302,9 +302,8 @@ int lnewline(void) {
 /* linstr -- Insert a string at the current point
  */
 
-int linstr(char *instr) {
+int lins_dynbuf(dbp_dcl(instr)) {
     int status = TRUE;
-    char tmpc;
 
 /* We have to check this here to avoid the "Out of memory" message
  * on failure when linsert_byte() gripes about it.
@@ -312,19 +311,29 @@ int linstr(char *instr) {
     if (curbp->b_mode & MDVIEW) /* don't allow this command if */
         return rdonly();        /* we are in read only mode    */
 
-    if (instr != NULL)
-        while ((tmpc = *instr)) {
+    const char *tmpc = dbp_val(instr);
+    if (tmpc != NULL) {
+        int nc = dbp_len(instr);
+        while(nc--) {
 /* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
-            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
+            status = (*tmpc == '\n' ? lnewline() : linsert_byte(1, *tmpc));
 
 /* Insertion error? */
             if (status != TRUE) {
                 mlwrite_one("Out of memory while inserting");
                 break;
             }
-            instr++;
+            tmpc++;
         }
+    }
     return status;
+}
+int linstr(char *instr) {
+    db_strdef(temp);
+    db_set(temp, instr);
+    int stat = lins_dynbuf(&temp);
+    db_free(temp);
+    return stat;
 }
 
 /* lins_nc -- Insert bytes given a pointer and count

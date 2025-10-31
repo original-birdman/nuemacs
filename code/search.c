@@ -3353,7 +3353,13 @@ static const char *getrepl(void) {
             }
             break;
         case REPL_VAR: {
-            db_append(repl, getval(rmcptr->val.varname));
+            db_strdef(tbuf);
+            db_strdef(vbuf);
+            db_set(vbuf, rmcptr->val.varname);  /* No NULs in names */
+            getval(&vbuf, &tbuf);
+            db_free(vbuf);
+            db_appendn(repl, db_val(tbuf), db_len(tbuf));   /* Can be NULs */
+            db_free(tbuf);
             break;
         }
         case REPL_GRP: {

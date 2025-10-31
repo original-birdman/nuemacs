@@ -92,13 +92,14 @@ char *uvnames[MAXVARS];
 
 /* This bit is internal. We keep a separate list of the names (uvnames) */
 
+static db new_db = db_str_initval;
 static struct simple_variable uv[MAXVARS];
 
 /* Initialize the user variable list. */
 void varinit(void) {
     int i;
     for (i = 0; i < MAXVARS; i++) {
-        uv[i].value = NULL;
+        uv[i].value = new_db;
         uv[i].name[0] = 0;
     }
 /* Take advantage of this initialization call */
@@ -465,149 +466,135 @@ static const char *ptt_expand(db *str) {
     return db_val(pttres);
 }
 
-/* ue_printf
- *
- * printf-like handling for multiple args together...
- * All values are strings, but this allows for integer and float args too
- * by converting them from the strings then formatting them according
- * to the template.
- * The formatting does not allow the use of any formatting optins that
- * specify specific parameters (* and $) and ignores options which specify
- * parameter sizes.
- *
- * The output is built up in a local buffer and only copied to the
- * single static buffer at exit. This is to allow for re-entrancy.
- */
+static db_strdef(tfmt);
+static db_strdef(tres);
+static db_strdef(atoken);
+static void dbp_uesprintf(dbp_dcl(ds), dbp_dcl(tmpl), ...) {
+    unicode_t c;                /* current char in format string */
 
-/* The returned value - only set this on exit! */
-static db_strdef(ue_buf);
+    dbp_clear(ds);
+    int bytes_togo = dbp_len(tmpl);
+    const char *fmt  = dbp_val(tmpl);
+    while (bytes_togo > 0) {
+        int n_bytes = utf8_to_unicode(fmt, 0, bytes_togo, &c);
+        bytes_togo -= n_bytes;
 
-/* The order here is IMPORTANT!!!
- * It is int, unsigned, double, char, str, ptr
+/* Not %, or no further arg, so just append it to the result */
+
+        if (c != '%') {
+            dbp_appendn(ds, fmt, n_bytes);
+            fmt += n_bytes;
+            continue;
+        }
+
+        fmt += n_bytes;                 /* Advance to next byte */
+        if (bytes_togo <= 0) goto exit; /* Run out of format string!! */
+
+/* %% is a literal % */
+
+        if (*fmt == '%') {
+            dbp_addch(ds, '%');
+            continue;
+        }
+
+/* We now need to get the format character for the %.
+ * This may be preceded by m.n, where any of the 3 parts may be absent
+ * (although if the . is absent, there is onluy m).
+ * Since all we are looking for is ASCII we can do this byte-wise.
+ * We just continue looking along the format string.
+ *
+ * The TMPL_CHAR order is important. It is:
+ *  int, unsigned, double, char, str, ptr
  * The latter isn't of any practical use, but is a valid conversion char
  */
-#define TMPL_CHAR "di ouxX eEfFgGaA c s p"
-#define TMPL_SKIP "hlqLjzZt"
-
-static const char *ue_printf(const char *fmt) {
-    unicode_t c;
-    db_strdef(nexttok);
-    db_strdef(lue_buf);
-    db_strdef(t_fmt);
-
-/* GGR - loop through the bytes getting any utf8 sequence as unicode */
-    int bytes_togo = strlen(fmt);
-    if (bytes_togo == 0) goto finalize; /* Nothing else...clear line only */
-
-    while (bytes_togo > 0) {
-        int used = utf8_to_unicode(fmt, 0, bytes_togo, &c);
-        bytes_togo -= used;
-        if (c != '%') {         /* So copy in the *bytes*! */
-            db_appendn(lue_buf, fmt, used);
-            fmt += used;
-            continue;
-        }
-
-/* We have a '%': test the next char */
-
-        fmt += used;
-        if (*fmt == '%') {      /* %% is a literal '%' */
-            db_addch(lue_buf, '%');
+#define TMPL_CHAR "diouxXeEfFgGaAcsp"
+        const char *st_fmt = fmt - 1;   /* Remember the starting % */
+        while(bytes_togo) {
+            char *tc_pos = strchr(TMPL_CHAR, *fmt);
             fmt++;
             bytes_togo--;
-            continue;
-        }
+            if (!tc_pos) continue;  /* Not a template character */
 
-/* Now keep going until we find a conversion specifier, to pick up the
- * template - but skip anything we don't want, and any attempt to
- * specify specific args to use is an error.
- * We know this should just be ASCII, so can go byte-by-byte.
- */
-        db_set(t_fmt, "%");      /* Start the template... */
-        while (!strchr(TMPL_CHAR, *fmt)) {
-            if ((*fmt == '*') || (*fmt == '$')) {
-                db_set(lue_buf, errorm);
-                goto finalize;
-            }
-            if (!strchr(TMPL_SKIP, *fmt)) db_addch(t_fmt, *fmt);
-            fmt++;
-            if (--bytes_togo == 0) {
-                db_set(lue_buf, errorm);
-                goto finalize;
-            }
-        }
-
-/* The current char MUST be in TMPL_CHAR - anything else is an error! */
-        if (!strchr(TMPL_CHAR, *fmt)) {
-            db_set(lue_buf, errorm);
-            goto finalize;
-        }
-        --bytes_togo;   /* We're about to use it... */
-
-/* We have to specify the precision. Since we use 64-bits for integer
- * variables we have to use that precision here.
- */
-        if (strchr("diouxX", *fmt)) {
-            db_append(t_fmt, "ll");
-        }
-        char conv_char = *fmt++;
-        db_addch(t_fmt, conv_char);
+            int nb = fmt - st_fmt;  /* Allows for a NULL */
+            db_clear(tfmt);
+            db_appendn(tfmt, st_fmt, nb);
 
 /* Get what to format. */
-        if (macarg(&nexttok) != TRUE) { /* Done */
-             bytes_togo = 0;    /* So we exit the loop */
-             continue;
-        }
-
-/* We now have nexttok as a string. Need to convert it to the correct
- * type for sprintf to format it if it is numeric.
- * Note that we still need to format a string (not just copy it) as
- * it may have specified field width or justifiction.
+            if (macarg(&atoken) != TRUE) goto exit;
+            if (*tc_pos == 's') {
+/* If this is an s we have to treat it as a special case, for NULs.
+ * So have to handle any m.n formatting ourself.
+ * m controls padding.
+ * n controls how much to append.
  */
-        if ((conv_char == 'p')  /* Not useful...but valid option */
-            || (conv_char == 's')) {
-            db_sprintf(glb_db, db_val(t_fmt), db_val(nexttok));
-        }
-        else if (conv_char == 'c') {
-            db_sprintf(glb_db, db_val(t_fmt), db_charat(nexttok, 0));
-        }
-        else {  /* Check in reverse order of presence in TMPL_CHAR */
-            char *t_pos = (strchr(TMPL_CHAR, conv_char));
-            if (t_pos >= &TMPL_CHAR[8]) {       /* Doubles */
-                double dv = strtod(db_val(nexttok), NULL);
-                db_sprintf(glb_db, db_val(t_fmt), dv);
+                db_deleten_at(tfmt, 1, db_len(tfmt) - 1);
+                db_deleten_at(tfmt, 1, 0);
+                int mf = db_len(atoken);
+                int nf = db_len(atoken);
+                if (db_len(tfmt) > 0) {
+                    char *editable = strdup(db_val(tfmt));
+                    char *tok = strtok(editable, ".");
+                    mf = atoi(tok);
+                    tok = strtok(NULL, ".");
+                    if (tok) {
+                        int poss = atoi(tok);
+                        if (poss < nf) nf = poss;
+                    }
+                }
+                int pad = abs(mf) - db_len(atoken);
+                if (mf < 0) while (pad--) dbp_addch(ds, ' ');
+                dbp_appendn(ds, db_val(atoken), nf);
+                if (mf > 0) while (pad--) dbp_addch(ds, ' ');
             }
-            else if (t_pos >= &TMPL_CHAR[3]) {  /* Unsigned */
-                unsigned long long uv = strtoull(db_val(nexttok), NULL, 10);
-                db_sprintf(glb_db, db_val(t_fmt), uv);
+            else {          /* "Normal" case */
+/* We have the conversion type in *tc_pos.
+ * So we need to use that to figure out how to convert the text we
+ * have been sent to convert it to a numeric value that can be sent to
+ * db_sprintf.
+ * The arg text must be a C-string and the result (tres) will be too.
+ */
+                if (*tc_pos == 'p') {   /* Not useful...but valid option */
+                    db_sprintf(tres, db_val(tfmt), db_val(atoken));
+                }
+                else if (*tc_pos == 'c') {
+                    db_sprintf(tres, db_val(tfmt), db_charat(atoken, 0));
+                }
+                else {
+/* Check in reverse order of presence in TMPL_CHAR */
+                    if (tc_pos >= &TMPL_CHAR[6]) {       /* Doubles */
+                        double dv = strtod(db_val(atoken), NULL);
+                        db_sprintf(tres, db_val(tfmt), dv);
+                    }
+                    else if (tc_pos >= &TMPL_CHAR[2]) {  /* Unsigned */
+                        unsigned long long uv =
+                              strtoull(db_val(atoken), NULL, 10);
+                        db_sprintf(tres, db_val(tfmt), uv);
+                    }
+                    else {                              /* Must be signed */
+                        long long lv = strtoll(db_val(atoken), NULL, 10);
+                        db_sprintf(tres, db_val(tfmt), lv);
+                    }
+                }
+/* Append this result */
+                dbp_append(ds, db_val(tres));
             }
-            else {                              /* Must be signed */
-                long long lv = strtoll(db_val(nexttok), NULL, 10);
-                db_sprintf(glb_db, db_val(t_fmt), lv);
-            }
+            break;
         }
-        db_append(lue_buf, db_val(glb_db));
     }
-
-/* Finalize the result with a NUL char an move it to the static buffer
- * so we can return a pointer to it.
- */
-finalize:
-    db_free(t_fmt);
-    db_free(nexttok);
-
-/* Now switch lue_buf to ue_buf, freeing any original ue_buf */
-    db_free(ue_buf);
-    ue_buf = lue_buf;
-    return db_val_nc(ue_buf);
+exit:
+    return;
 }
 
 /* Evaluate a function.
  *
  * @fname: name of function to evaluate.
+ *
+ * The code can either write into retval then goto exit or write
+ * directly into res (if there might be NULs around) then goto set_exit.
+ *
  */
 static db_strdef(funres);      /* Freed in free_eval(), if at all */
-static const char *gtfun(const char *fname) {
+static void gtfun(dbp_dcl(res), const char *fname) {
     char lfname[4];         /* What we lookup */
     unsigned int fnum;      /* index to function to eval */
     int status;             /* status */
@@ -731,10 +718,9 @@ static const char *gtfun(const char *fname) {
 
 /* String functions */
     case UFCAT:
-        db_set(funres, db_val(arg1));
-        db_append(funres, db_val(arg2));
-        retval = db_val(funres);
-        goto exit;
+        dbp_setn(res, db_val(arg1), db_len(arg1));
+        dbp_appendn(res, db_val(arg2), db_len(arg2));
+        goto set_exit;
 
 /* There is some similarity between the beginning and ending of
  * &lef, &rig and &mid, so code for that.
@@ -814,7 +800,7 @@ static const char *gtfun(const char *fname) {
         retval = ltos(strcmp(db_val(arg1), db_val(arg2)) > 0);
         goto exit;
     case UFLENGTH:
-        retval = ue_itoa(glyphcount_utf8(db_val(arg1)));
+        retval = ue_itoa(glyphcount_utf8_array(db_val(arg1), db_len(arg1)));
         goto exit;
     case UFUPPER:
     case UFLOWER:
@@ -919,8 +905,8 @@ static const char *gtfun(const char *fname) {
         retval = group_match(ue_atoi(db_val(arg1)));
         goto exit;
     case UFPRINTF:
-        retval = ue_printf(db_val(arg1));
-        goto exit;
+        dbp_uesprintf(res, &arg1);
+        goto set_exit;
     case UFPTTEX:
         retval = ptt_expand(&arg1);
         goto exit;
@@ -988,51 +974,74 @@ static const char *gtfun(const char *fname) {
     exit(-11);          /* Should never get here */
 
 exit:
+    dbp_set(res, retval);
+set_exit:
     db_free(arg1);
     db_free(arg2);
     db_free(arg3);
-    return retval;
+    return;
 }
 
 /* Look up a user var's value (%xxx)
  *
  * char *vname;                 name of user variable to fetch
  */
-static const char *gtusr(const char *vname) {
+static void gtusr(dbp_dcl(res), const char *vname) {
     int vnum;       /* Ordinal number of user var */
 
 /* Scan the list looking for the user var name */
     for (vnum = 0; vnum < MAXVARS; vnum++) {
-        if (uv[vnum].name[0] == 0) return errorm;
+        if (uv[vnum].name[0] == 0) break;
 /* If a user var is being used in the same statement as it is being set
  *      set %test &add %test 1
  * then we can up with the name existing, but no value set...
  * We must check for this to avoid a crash!
  */
-        if (strcmp(vname, uv[vnum].name) == 0)
-             return uv[vnum].value? uv[vnum].value: errorm;
+        if ((strcmp(vname, uv[vnum].name) == 0)) {
+            if (db_val(uv[vnum].value))  {
+                dbp_setn(res, db_val(uv[vnum].value), db_len(uv[vnum].value));
+            }
+            else {
+                dbp_set(res, errorm);
+            }
+            return;
+        }
     }
 
 /* Return errorm if we run off the end */
-    return errorm;
+    dbp_set(res, errorm);
+    return;
 }
 
 /* Look up a buffer var's value (.xxx)
  *
  * char *vname;                 name of user variable to fetch
  */
-static const char *gtbvr(const char *vname) {
+static void gtbvr(dbp_dcl(res), const char *vname) {
     int vnum;       /* Ordinal number of user var */
 
-    if (!execbp || !execbp->bv) return errorm;
+    if (!execbp || !execbp->bv) {
+        dbp_set(res, errorm);
+        return;
+    }
+
 /* Scan the list looking for the user var name */
     struct simple_variable *tp = execbp->bv;
     for (vnum = 0; vnum < BVALLOC; vnum++, tp++) {
-        if (!strcmp(vname, tp->name)) return tp->value? tp->value: errorm;
+        if ((strcmp(vname, tp->name) == 0)) {
+            if (db_val(tp->value))  {
+                dbp_setn(res, db_val(tp->value), db_len(tp->value));
+            }
+            else {
+                dbp_set(res, errorm);
+            }
+            return;
+        }
     }
 
 /* Return errorm if we run off the end */
-    return errorm;
+    dbp_set(res, errorm);
+    return;
 }
 
 /* gtenv()
@@ -1199,12 +1208,27 @@ int gettyp(const char *token) {
  * char *token;         token to evaluate
  */
 static db_strdef(valres);       /* static returned val */
-const char *getval(const char *token) {
+
+/* Incoming token is a dyn_buf, so that strings may contan NULs */
+
+void getval(dbp_dcl(token), dbp_dcl(res)) {
     struct buffer *bp;          /* temp buffer pointer */
 
-    switch (gettyp(token)) {
+    dbp_set(res, "");           /* So we know what we start with */
+
+    if (dbp_len(token) == 0) return;
+
+/* For most of these we want to look at the text from the second
+ * character, so make a local copy of token in this state. */
+
+    db_dcl(tok1);
+    tok1 = *token;
+    tok1.type = DB_STR|DB_UPS;  /* Make the val ptr updateable */
+    db_upval(tok1, db_val(tok1)+1);
+
+    switch (gettyp(dbp_val(token))) {   /* First char won't be NUL */
     case TKNUL:
-        return "";
+        return;
 
     case TKARG: {               /* interactive argument */
 
@@ -1222,22 +1246,19 @@ const char *getval(const char *token) {
  * overlap of args here. So it must be done to a temporary buffer.
  *              strcpy(token, getval(token+1));
  */
-            db_strdef(tbuf);        /* string buffer for some workings */
-            db_set(tbuf, getval(token+1));
             int distmp = discmd;    /* Remember initial state */
             discmd = TRUE;
-            int status = getstring(db_val(tbuf), &valres, CMPLT_NONE);
-            db_free(tbuf);
+            int status = getstring(db_val_nc(tok1), &valres, CMPLT_NONE);
             discmd = distmp;
-            if (status == ABORT) return errorm;
+            if (status == ABORT) goto have_error;
         }
-        if (do_fixup) db_set(valres, fixup_full(db_val(valres)));
-        return db_val_nc(valres);
+        if (do_fixup) dbp_set(res, fixup_full(db_val_nc(valres)));
+        return;
     }
     case TKBUF:                 /* buffer contents fetch */
 /* Grab the right buffer */
-        bp = bfind(getval(token+1), FALSE, 0);
-        if (bp == NULL) return errorm;
+        bp = bfind(db_val(tok1), FALSE, 0);
+        if (bp == NULL) goto have_error;
 
 /* If the buffer is displayed, get the window vars instead of the buffer vars */
         if (bp->b_nwnd > 0) {
@@ -1246,11 +1267,11 @@ const char *getval(const char *token) {
         }
 
 /* Make sure we are not at the end */
-        if (bp->b_linep == bp->b.dotp) return errorm;
+        if (bp->b_linep == bp->b.dotp) goto have_error;
 
 /* Grab the line as an argument - then */
         int blen = lused(bp->b.dotp) - bp->b.doto;
-        db_setn(valres, ltext(bp->b.dotp) + bp->b.doto, blen);
+        dbp_setn(res, ltext(bp->b.dotp) + bp->b.doto, blen);
 
 /* And step the buffer's line ptr ahead a line */
         bp->b.dotp = bp->b.dotp->l_fp;
@@ -1264,28 +1285,44 @@ const char *getval(const char *token) {
         }
 
 /* And return the spoils */
-        return db_val_nc(valres);
+        return;
 
-    case TKVAR:
-        return gtusr(token + 1);
-    case TKBVR:
-        return gtbvr(token + 1);
-    case TKENV:
-        return gtenv(token + 1);
-    case TKFUN:
-        return gtfun(token + 1);
-    case TKDIR:
-        return errorm;
-    case TKLBL:
-        return errorm;
-    case TKLIT:
-        return token;
-    case TKSTR:
-        return token + 1;
-    case TKCMD:
-        return token;
+    case TKVAR: {
+        db_strdef(tbuf);
+        gtusr(&tbuf, db_val(tok1));
+        dbp_setn(res, db_val(tbuf), db_len(tbuf));
+        db_free(tbuf);
+        return;
     }
-    return errorm;
+    case TKBVR: {
+        db_strdef(tbuf);
+        gtbvr(&tbuf, db_val(tok1));
+        dbp_setn(res, db_val(tbuf), db_len(tbuf));
+        db_free(tbuf);
+        return;
+    }
+    case TKENV:
+        dbp_set(res, gtenv(db_val(tok1)));
+        return;
+    case TKFUN:
+        gtfun(res, db_val(tok1));
+        return;
+    case TKDIR:
+    case TKLBL:
+        goto have_error;
+    case TKLIT:
+        dbp_setn(res, dbp_val(token), dbp_len(token));
+        return;
+    case TKSTR:
+        dbp_setn(res, db_val(tok1), db_len(tok1));
+        return;
+    case TKCMD:
+        dbp_set(res, dbp_val(token));
+        return;
+    }
+have_error:
+    dbp_set(res, errorm);
+    return;
 }
 
 /* Find a variables type and name.
@@ -1336,7 +1373,7 @@ fvar:
             int count = BVALLOC;
             while(count--) {
                 terminate_str(tp->name);    /* Makes it empty */
-                tp->value = NULL;
+                tp->value = new_db;
                 tp++;
             }
         }
@@ -1359,7 +1396,13 @@ fvar:
         break;
 
     case '&':               /* A function to generate the name? */
-        var = getval(var);
+        db_strdef(tbuf);
+        db_strdef(vbuf);
+        db_set(vbuf, var);
+        getval(&vbuf, &tbuf);
+        db_free(vbuf);
+        var = db_val(tbuf);
+        db_free(tbuf);
         goto fvar;
     }
 
@@ -1374,11 +1417,14 @@ fvar:
  * @var: variable to set.
  * @value: value to set to.
  */
-static int svar(struct variable_description *var, const char *value) {
+static int svar(struct variable_description *var, dbp_dcl(val)) {
     int vnum;       /* ordinal number of var referenced */
     int vtype;      /* type of variable to set */
     int status;     /* status return */
     int c;          /* translated character */
+
+/* For simplicity of things not expecting NULs */
+    const char *value = dbp_val(val);
 
 /* simplify the vd structure (we are gonna look at it a lot) */
     vnum = var->v_num;
@@ -1388,14 +1434,11 @@ static int svar(struct variable_description *var, const char *value) {
     status = TRUE;
     switch (vtype) {
     case TKVAR:             /* set a user variable */
-        uv[vnum].value = Xrealloc(uv[vnum].value, strlen(value) + 1);
-        strcpy(uv[vnum].value, value);
+        db_setn(uv[vnum].value, dbp_val(val), dbp_len(val));
         break;
 
     case TKBVR:             /* set a buffer variable - findvar check BTPROC */
-        execbp->bv[vnum].value =
-             Xrealloc(execbp->bv[vnum].value, strlen(value) + 1);
-        strcpy(execbp->bv[vnum].value, value);
+        db_setn(execbp->bv[vnum].value, dbp_val(val), dbp_len(val));
         break;
 
     case TKENV:             /* set an environment variable */
@@ -1770,7 +1813,8 @@ int setvar(int f, int n) {
     }
 
 /* And set the appropriate value */
-    status = svar(&vd, db_val(varval));
+
+    status = svar(&vd, &varval);
 
 /* If $debug & 0x01, every assignment will be reported in the minibuffer.
  *      The user then needs to press a key to continue.
@@ -1822,14 +1866,14 @@ static void del_simple_var(struct variable_description *vd,
  * empty variable name.
  */
     struct simple_variable *np = op+1;
-    Xfree(op->value);
+    db_free(op->value);
     for (int vnum = vd->v_num; vnum < listlen; vnum++, op++, np++) {
         strcpy(op->name, np->name);
         op->value = np->value;
         if (op->name[0] == '\0') break;     /* All done */
     }
     terminate_str(np->name);                /* Makes it empty */
-    np->value = NULL;
+    np->value = new_db;
 }
 
 /* Delete a variable
@@ -1893,14 +1937,16 @@ void free_eval(void) {
     Xfree(next_envvar_index);
     for (int i = 0; i < MAXVARS; i++) {
         if (uv[i].name[0] == '\0') break;   /* End of list */
-        Xfree(uv[i].value);
+        db_free(uv[i].value);
     }
     db_free(kvalue);
     db_free(xlres);
     db_free(pttres);
-    db_free(ue_buf);
     db_free(funres);
     db_free(valres);
+    db_free(tfmt);
+    db_free(tres);
+    db_free(atoken);
     return;
 }
 #endif

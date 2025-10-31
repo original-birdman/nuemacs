@@ -45,6 +45,7 @@ extern void lfree(struct line *lp);
 extern void lchange(int flag);
 extern int insspace(int f, int n);
 extern int linsert_byte(int, unsigned char);
+extern int lins_dynbuf(db *);
 extern int linstr(const char *instr);
 extern int linsert_uc(int n, unicode_t c);
 extern int lover(const char *ostr);

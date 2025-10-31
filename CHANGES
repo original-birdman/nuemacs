@@ -8432,3 +8432,36 @@ edef.h
     "illegal" action rather then just returning. [dyn_buf.c, dyn_buf.h]
     Display an error message on exit/in signal handler. [dyn_buf.c,
     globals.c, main.c, edef.h]
+
+----------
+Changes to allow a NUL character in the value of a variable or string
+constant.
+
+buffer.c
+eval.c
+exec.c
+line.c
+random.c
+search.c
+efunc.h
+estruct.h
+line.h
+autotest/nul-handling.sh
+
+    Replace ue_printf() with dbp_uesprintf() to handle dyn_bufs.
+    Change gtfun(), gtusr(), gtbvr() and getval() to update a dyn_buf
+    with the resulting value.
+    Change getval() to have the incoming token as a dyn_buf.
+    Change svar() to have the incoming value as a dyn_buf.
+    All in exec.c
+
+    Use db_free() to free buffer variable values. [buffer.c]
+    Change calls to getval() to use a dyn_buf. [exec.c, search.c]
+    Added lins_dynbuf() and redo linstr() to use it [line.c, line.h]
+    Change writemsg() to use fwrite, not fprintf [random.c]
+    Redo string_getter() to use dyn_bufs for getval(), dbp_setn() and
+    insert with lins_dynbuf() [random.c]
+    Change simple_variable to use dyn_buf. [estruct.h]
+    Add a simple set of NUL tests. [autotest/nul-handling.sh] 
+
+----------
