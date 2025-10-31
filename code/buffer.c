@@ -435,20 +435,18 @@ exit:
     return status;
 }
 
-/* The argument "text" points to a string.
+/* The argument "text" points to a dynamic buffer.
  * Append this line to the given buffer.
  * Handcraft the EOL on the end.
  * It is the CALLER'S responsibility to know that bp is a valid
  * buffer pointer.
  * ALSO the caller MUST NOT PUT ANY NEWLINE IN THE TEXT!!
  */
-void addline_to_anyb(const char *text, struct buffer *bp) {
+void addline_to_anyb(dbp_dcl(dbtext), struct buffer *bp) {
     struct line *lp;
-    int ntext;
 
-    ntext = strlen(text);
     lp = lalloc();
-    db_setn(ldb(lp), text, ntext);
+    db_setn(ldb(lp), dbp_val(dbtext), dbp_len(dbtext));
     bp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
     lp->l_bp = bp->b_linep->l_bp;
     bp->b_linep->l_bp = lp;
@@ -457,8 +455,16 @@ void addline_to_anyb(const char *text, struct buffer *bp) {
         bp->b.dotp = lp;                /* to new line (doto will be 0)  */
     return;
 }
+void addstr_to_anyb(const char *instr, struct buffer *bp) {
+    db_strdef(tbuf);
+    db_set(tbuf, instr);
+    addline_to_anyb(&tbuf, bp);
+    db_free(tbuf);
+    return;
+};
+
 /* This is for internal use to add to the //List buffer. */
-#define addline(text) addline_to_anyb(text, blistp)
+#define addline(line) addstr_to_anyb(line, blistp)
 
 /* This routine rebuilds the text in the special secret buffer
  * that holds the buffer list.

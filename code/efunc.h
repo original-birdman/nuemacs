@@ -61,7 +61,8 @@ extern const char *transbind(const char *);
 #endif
 
 /* buffer.c */
-#define addline_to_curb(text) addline_to_anyb(text, curbp)
+#define addline_to_curb(dbuf) addline_to_anyb(dbuf, curbp)
+#define addstr_to_curb(dbuf) addstr_to_anyb(dbuf, curbp)
 
 #ifndef BUFFER_C
 extern int set_buffer_name(const char *);
@@ -74,7 +75,8 @@ extern int usebuffer(int, int);
 extern int nextbuffer(int, int);
 extern int killbuffer(int, int);
 extern int namebuffer(int, int);
-extern void addline_to_anyb(const char *, struct buffer *);
+extern void addline_to_anyb(db *, struct buffer *);
+extern void addstr_to_anyb(const char *, struct buffer *);
 extern int listbuffers(int, int);
 extern int anycb(void);
 extern int unmark(int, int);

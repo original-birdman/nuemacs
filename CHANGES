@@ -8462,6 +8462,17 @@ autotest/nul-handling.sh
     Redo string_getter() to use dyn_bufs for getval(), dbp_setn() and
     insert with lins_dynbuf() [random.c]
     Change simple_variable to use dyn_buf. [estruct.h]
-    Add a simple set of NUL tests. [autotest/nul-handling.sh] 
+    Add a simple set of NUL tests. [autotest/nul-handling.sh]
+
+bind.c
+buffer.c
+eval.c
+exec.c
+line.c
+main.c
+efunc.h
+    Change addline_to_anyb() to use a dyn_buf [buffer.c, efunc.h]
+    Change addline_to_anyb() callers to comply [bind.c, eval.c, exec.c,
+    line.c, main.c]
 
 ----------

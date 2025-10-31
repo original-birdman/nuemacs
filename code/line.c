@@ -147,9 +147,12 @@ int linsert_byte(int n, unsigned char c) {
             mlwrite_one("bug: linsert");
             return FALSE;
         }
-        terminate_str(tbuf + n);
-/* We have a function to add a line at the end of a buffer */
-        addline_to_curb(tbuf);
+/* We have a function to add a dyn_buf at the end of a buffer */
+        db_strdef(ibuf);
+        db_setn(ibuf, tbuf, n);
+        addline_to_curb(&ibuf);
+        db_free(ibuf);
+
 /* addline_to_curb will put dot on the dummy end line, effectively
  * adding a newline at the end of it.
  * So we move dot back 1 char, to the end of what we've added....
@@ -180,7 +183,6 @@ int linsert_byte(int n, unsigned char c) {
             if (mmi(mp, offset) > doto) mmi(mp, offset) += n;
          }
     }
-
     return TRUE;
 }
 

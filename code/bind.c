@@ -959,7 +959,7 @@ static void show_key_binding(unicode_t key) {
         strcat(outseq, " ");
         strcat(outseq, ktp->hndlr.pbp);
     }
-    addline_to_curb(outseq);
+    addstr_to_curb(outseq);
     return;
 }
 
@@ -1019,7 +1019,7 @@ static int buildlist(const char *mstring) {
         ktp = getbyfnc(names[ni].n_func);
         while (ktp) {
             sprintf(outseq, "%-28s%s", np, cmdstr(ktp->k_code));
-            addline_to_curb(outseq);
+            addstr_to_curb(outseq);
             np = "";    /* For any fursther bindings */
 
 /* Look for any more keybindings ot this function */
@@ -1029,7 +1029,7 @@ static int buildlist(const char *mstring) {
 
 /* if no key was bound, we need to dump it anyway */
         if (np == names[ni].n_name) {   /* So not set to "" */
-            addline_to_curb(np);
+            addstr_to_curb(np);
         }
     }
 
@@ -1049,8 +1049,8 @@ static int buildlist(const char *mstring) {
 
         if (ktp->k_type == PROC_KMAP) {
             if (!found) {
-                addline_to_curb("");
-                addline_to_curb("Procedure bindings:");
+                addstr_to_curb("");
+                addstr_to_curb("Procedure bindings:");
                 found = 1;
             }
         }
@@ -1061,15 +1061,15 @@ static int buildlist(const char *mstring) {
  */
         snprintf(outseq, sizeof(outseq), "%-28s%s",
              ktp->hndlr.pbp, cmdstr(ktp->k_code));
-        addline_to_curb(outseq);
+        addstr_to_curb(outseq);
     }
 
 /* Now, if this is not apropos, list everything in key-binding order,
  * with a heading for each "prefix-type".
  */
     if (!mstring) {
-        addline_to_curb(""); addline_to_curb(""); /* Two empty lines */
-        addline_to_curb("All key bindings:");
+        addstr_to_curb(""); addstr_to_curb(""); /* Two empty lines */
+        addstr_to_curb("All key bindings:");
 
 /* Note that getcmd() and stock() both prevent SPEC|META being set,
  * so mask any such as (internal)

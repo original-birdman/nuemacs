@@ -1214,7 +1214,7 @@ nxtscan:                /* On to the next line */
 
 /* Write out the debug line to //Debug? */
             if (macbug & 0x2) {
-                addline_to_anyb(db_val(outline), bdbgp);
+                addline_to_anyb(&outline, bdbgp);
             }
 /* Write out the debug line to the message line? */
             if (macbug & 0x1) {
@@ -1256,7 +1256,7 @@ nxtscan:                /* On to the next line */
 
 /* If macro store is on, just salt this away */
         if (bstore) {
-            addline_to_anyb(eline, bstore);
+            addstr_to_anyb(eline, bstore);
             goto onward;
         }
 

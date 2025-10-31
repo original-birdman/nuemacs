@@ -1830,7 +1830,7 @@ int setvar(int f, int n) {
 
 /* Write out the debug line to //Debug? */
         if (macbug & 0x2) {
-            addline_to_anyb(db_val(glb_db), bdbgp);
+            addline_to_anyb(&glb_db, bdbgp);
         }
 /* Write out the debug line to the message line? */
         if (macbug & 0x1) {
