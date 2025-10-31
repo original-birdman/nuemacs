@@ -33,11 +33,11 @@ static char *prev_line_seen = NULL;
 #ifdef DO_FREE
 /* We only need these for valgrind testing */
 
-/** pending_line_seen doesn't seem to need it an array*/
 static char *pending_line_seen = NULL;
 static db *pending_docmd_tknp = NULL;
 static db *pending_dobuf_tknp = NULL;
 static db *pending_golabel = NULL;
+static db *pending_nexecstr = NULL;
 
 static linked_items *pending_einit_headp = NULL;
 static linked_items *pending_whlist_headp = NULL;
@@ -75,13 +75,16 @@ static void pop_head(linked_items **headp) {
  * char *src,       source string
  * db *tok;       destination token dynamic string
  */
-const char *token(const char *src, dbp_dcl(tok)) {
+void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
     int quotef;     /* is the current string quoted? */
     char c;         /* temporary character */
 
     dbp_clear(tok); /* Start with nothing */
 
-/* First scan past any whitespace in the source string */
+/* First scan past any whitespace in the source string.
+ * Since we're getting tokens we know we won't have NULs within the buffer
+ */
+    char *src = (char *)dbp_val(lbuf);
     while (*src == ' ' || *src == '\t') ++src;
 
 /* Scan through the source string.
@@ -126,14 +129,17 @@ const char *token(const char *src, dbp_dcl(tok)) {
 /* Set quote mode if quote found */
             if (c == '"') {
                 quotef = TRUE;
-                continue;   /* Don't record it...only in pos1 is it kept */
+                continue;   /* Don't record it...it's only kept in pos1 */
             }
 
 /* Record the character */
         }
         dbp_addch(tok, c);
     }
-    return src;
+
+/* Update the lbuf values - THIS FUNCTION can do this */
+    dbp_upval(lbuf, src);
+    return;
 }
 
 /* nextarg:
@@ -150,7 +156,7 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
     if (clexec == FALSE) return getstring(prompt, buffer, ctype);
 
 /* Grab token and advance past */
-    execstr = token(execstr, buffer);
+    token(execstr, buffer);
 
 /* Evaluate it */
 /* GGR - There is the possibility of an illegal overlap of args here.
@@ -158,7 +164,7 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
  *       So it must be done via a temporary buffer.
  * But we must allow for buffers containing NULs!
  */
-    dbp_set(buffer, strdupa(getval(dbp_val(buffer))));
+    dbp_set(buffer, getval(dbp_val(buffer)));
     return TRUE;
 }
 
@@ -194,14 +200,15 @@ static int docmd(const char *cline) {
     ue64I_t n;              /* numeric repeat value */
     int status;             /* return status of function */
     int oldcle;             /* old contents of clexec flag */
-    const char *oldestr;    /* original exec string */
     db_strdef(tkn);         /* next token off of command line */
 
 /* If we are scanning and not executing..go back here */
     if (execlevel) return TRUE;
 
-    oldestr = execstr;      /* save last ptr to string to execute */
-    execstr = cline;        /* and set this one as current */
+    dbp_dcl(oldestr) = execstr;
+    db_upstrdef(nexecstr);
+    db_set(nexecstr, cline);    /* Updateable copy */
+    execstr = &nexecstr;        /* and set this one as current */
 
 /* We need to take a copy of the current command line now.
  * The token parsing writes NULs into the buffer as it goes...
@@ -230,7 +237,7 @@ static int docmd(const char *cline) {
     case TKVAR:
     case TKFUN:
     case TKBVR:
-        db_set(tkn, strdupa(getval(db_val(tkn))));
+        db_set(tkn, getval(db_val(tkn)));
         ttype = gettyp(db_val(tkn));    /* What we have in tkn now... */
     };
 
@@ -285,11 +292,13 @@ static int docmd(const char *cline) {
 #ifdef DO_FREE
     pending_line_seen = this_line_seen;
     pending_docmd_tknp = &tkn;
+    pending_nexecstr = &nexecstr;
 #endif
     status = (nbp->n_func)(f, n); /* call the function */
 #ifdef DO_FREE
     pending_line_seen = NULL;
     pending_docmd_tknp = NULL;
+    pending_nexecstr = NULL;
 #endif
     if (!nbp->opt.search_ok) srch_can_hunt = 0;
     com_flag &= nbp->keep_flags;
@@ -316,6 +325,7 @@ final_exit:
     Xfree(this_line_seen);
     db_free(tkn);
     execstr = oldestr;
+    db_free(nexecstr);
     return status;
 }
 
@@ -486,7 +496,7 @@ static const char* get_display_code(const char *buf) {
 static int ptt_compile(struct buffer *bp) {
     const char *ml_display_code;
 
-    db_strdef(lbuf);
+    db_upstrdef(lbuf);
     db_strdef(tok);
     db_strdef(from_string);
 
@@ -504,9 +514,7 @@ static int ptt_compile(struct buffer *bp) {
     for (struct line *lp = hlp->l_fp; lp != hlp; lp = lp->l_fp) {
 /* The rest of the handling expects text, not binary, so no bcopy here */
         db_setn(lbuf, ltext(lp), lused(lp));
-/* Provided we don't change lbuf, we can use rp */
-        const char *rp = db_val(lbuf);
-        rp = token(rp, &tok);
+        token(&lbuf, &tok);
 /* Ignore any entry with a newline in the from text */
         if (strchr(db_val(tok), '\n')) continue;
         int bow;
@@ -548,14 +556,14 @@ static int ptt_compile(struct buffer *bp) {
             }
         }
         if (!db_cmp(from_string, "display-code")) {
-            rp = token(rp, &tok);
+            token(&lbuf, &tok);
             if (db_charat(tok, 0) != '\0')
                  ml_display_code = get_display_code(db_val(tok));
             continue;
         }
         db_clear(glb_db);
-        while(*rp != '\0') {
-            rp = token(rp, &tok);
+        while(db_len(lbuf) > 0) {
+            token(&lbuf, &tok);
             if (db_charat(tok, 0) == '\0') break;
             if (!strncmp(db_val(tok), "0x", 2)) {
                 long add = strtol(db_val(tok)+2, NULL, 16);
@@ -1012,7 +1020,7 @@ int dobuf(struct buffer *bp) {
     struct line *hlp;       /* pointer to line header */
     struct line *glp;       /* line to goto */
     int dirnum;             /* directive index */
-    int linlen;             /* length of line to execute */
+    size_t linlen;          /* length of line to execute */
     int i;                  /* index */
     int c;                  /* temp character */
     int force;              /* force TRUE result? */
@@ -1162,7 +1170,7 @@ nxtscan:                /* On to the next line */
  */
     hlp = bp->b_linep;
     lp = hlp->l_fp;
-    int eilen = 0;
+    size_t eilen = 0;
     while (lp != hlp) {
 /* Allocate eline and copy macro line to it.
  * We may edit it in this loop
@@ -1267,7 +1275,7 @@ nxtscan:                /* On to the next line */
         if (dirnum != -1) {
 /* Skip past the directive */
             while (*eline && *eline != ' ' && *eline != '\t') ++eline;
-            execstr = eline;
+            dbp_set(execstr, eline);
 
             switch (dirnum) {
             case DIF:       /* IF directive */
@@ -1318,9 +1326,9 @@ nxtscan:                /* On to the next line */
 /* .....only if we are currently executing */
                 if (execlevel == 0) {
 /* Grab label to jump to.  Allow it to be evaluated. */
-                    eline = (char *)token(eline, &golabel);
+                    token(execstr, &golabel);
 /* Via temp copy, to avoid overwrite of own value */
-                    db_set(golabel, strdupa(getval(db_val(golabel))));
+                    db_set(golabel, getval(db_val(golabel)));
                     linlen = db_len(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
 /* We need at least 2 chars on the line for a label... */
@@ -1901,6 +1909,7 @@ void free_exec(void) {
     db_free(prev_cmd);
     db_free(prev_fname);
     db_free(prev_bufn);
+    if (pending_nexecstr) dbp_free(pending_nexecstr);
     if (pending_docmd_tknp) dbp_free(pending_docmd_tknp);
     if (pending_dobuf_tknp) dbp_free(pending_dobuf_tknp);
     if (pending_golabel) dbp_free(pending_golabel);

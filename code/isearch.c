@@ -225,7 +225,7 @@ int simulate_incr(int f, int n) {
     iip->ilen = dbc;
 
 /* Is there another token - the proc to run? */
-    execstr = token(execstr, &ntok);
+    token(execstr, &ntok);
     if (db_len(ntok) == 0) iip->uproc = NULL;    /* No */
     else iip->uproc = Xstrdup(db_val(ntok));     /* Yes, so remember it */
 
@@ -239,12 +239,16 @@ int simulate_incr(int f, int n) {
  */
 static void activate_cmd(void) {
     if (!ii->pdg[0].uproc) return;  /* Run first on list - if there */
-    const char *prev_execstr = execstr; /* In case we are already running */
-    execstr = ii->pdg[0].uproc;     /* Fudge name in as command line */
+
+    dbp_dcl(oldestr) = execstr;
+    db_upstrdef(nexecstr);
+    db_set(nexecstr, ii->pdg[0].uproc);     /* Updateable copy */
+    execstr = &nexecstr;
     int prev_inreex = inreex;
     inreex = FALSE;
     execproc(0, 0);                 /* It must be a user proc */
-    execstr = prev_execstr;
+    execstr = oldestr;
+    db_free(nexecstr);
     inreex = prev_inreex;
 }
 

@@ -843,10 +843,13 @@ static const char *gtfun(const char *fname) {
 
 /* Miscellaneous functions */
     case UFIND: {   /* Evaluate the next arg via temporary execstr */
-        const char *oldestr = execstr;
-        execstr = strdupa(db_val(arg1));    /* Writable copy */
+        dbp_dcl(oldestr) = execstr;
+        db_upstrdef(nexecstr);
+        db_set(nexecstr, db_val(arg1));     /* Updateable copy */
+        execstr = &nexecstr;
         macarg(&funres);
         execstr = oldestr;
+        db_free(nexecstr);
         retval = db_val(funres);
         goto exit;
     }
@@ -1746,7 +1749,7 @@ int setvar(int f, int n) {
         if (status != TRUE) return status;
     }
     else {      /* macro line argument - grab token and skip it */
-        execstr = token(execstr, &var);
+        token(execstr, &var);
    }
 
 /* Check the legality and find the var */
@@ -1848,7 +1851,7 @@ int delvar(int f, int n) {
         if (status != TRUE) return status;
     }
     else {      /* macro line argument - grab token and skip it */
-        execstr = token(execstr, &var);
+        token(execstr, &var);
    }
 
 /* Check the legality and find the var */

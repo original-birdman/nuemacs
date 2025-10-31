@@ -73,6 +73,9 @@
 #include <signal.h>
 static void emergencyexit(int);
 
+/* Define the main exec command ine buffer */
+static db_upstrdef(main_execstr);
+
 /* ======================================================================
  * GGR - list all options actually available!
  */
@@ -1165,7 +1168,7 @@ int macro_helper(int f, int n) {
  * extract the next token. We expect only 1 char (+ trailing NUL).
  * Also prevents any processing of the arg.
  */
-    execstr = token(execstr, &tag);
+    token(execstr, &tag);
     char tc = db_charat(tag, 0);
     db_free(tag);
     switch(tc) {
@@ -1831,6 +1834,7 @@ int quit(int f, int n) {
         db_free(savnam);
         db_free(readin_mesg);
         db_free(glb_db);
+        db_free(main_execstr);
 #endif
 
         if (f) exit(n);
@@ -1927,8 +1931,11 @@ int main(int argc, char **argv) {
     char ekey[NKEY];        /* startup encryption key */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
 
-    db_strdef(bname);       /* Buffer name of file to read */
-
+/* FIRST, set up the standard execute line buffer so that we know
+ * it exists before anything tries to use it.
+ */
+    db_strdef(bname);           /* Buffer name of file to read */
+    execstr = &main_execstr;
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
 

@@ -128,7 +128,7 @@ extern int delvar(int, int);
 
 /* exec.c */
 #ifndef EXEC_C
-extern const char *token(const char *, db *);
+extern void token(db *, db *);
 extern int nextarg(const char *, db *, enum cmplt_type);
 extern int macarg(db *);
 extern int namedcmd(int, int);

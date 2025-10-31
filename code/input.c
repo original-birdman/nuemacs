@@ -679,7 +679,7 @@ struct name_bind *getname(const char *prompt, int new_command) {
         if (status != TRUE) goto exit;
     }
     else {      /* macro line argument - grab token and skip it */
-        execstr = token(execstr, &buf);
+        token(execstr, &buf);
    }
 
 /* Now check it exists */
@@ -941,24 +941,26 @@ static void sigwinch_handler(int signr) {
  */
 void evaluate_cmdb(const char *input, db *result) {
     dbp_set(result, "");                /* Empty it */
-    const char *orig_execstr = execstr; /* Just in case... */
+    dbp_dcl(orig_execstr) = execstr;
     int orig_clexec = clexec;
     char *sep = "";
 
 /* We take a copy of the input, so that we don't overwrite
  * the user input.
  */
-    execstr = strdupa(input);
+    db_upstrdef(nexecstr);
+    db_set(nexecstr, input);    /* Updateable copy */
+    execstr = &nexecstr;;
     clexec = TRUE;
     db_strdef(temp);
-    while(1) {
-        if (!*execstr) break;
+    while(dbp_len(execstr) > 0) {
         (void)nextarg("", &temp, 0);
         dbp_append(result, sep);
         sep = " ";
         dbp_append(result, db_val(temp));
     }
     db_free(temp);
+    db_free(nexecstr);
     execstr = orig_execstr;
     clexec = orig_clexec;
 }

@@ -316,16 +316,15 @@ int char_replace(int f, int n) {
     UNUSED(f); UNUSED(n);
 
     int status;
-    db_strdef(buf);
+    db_upstrdef(buf);
     db_strdef(tok);
 
     status = mlreply("reset | repchar [U+]xxxx | [U+]xxxx[-[U+]xxxx] ",
           &buf, CMPLT_NONE);
     if (status != TRUE) goto exit;  /* Only act on +ve response */
 
-    const char *rp = db_val(buf);
-    while(*rp != '\0') {
-        rp = token(rp, &tok);
+    while(db_len(buf) > 0) {
+        token(&buf, &tok);
         if (db_len(tok) == 0) break;
         if (!db_cmp(tok, "reset")) {
             if (remap != NULL) {
@@ -334,7 +333,7 @@ int char_replace(int f, int n) {
             }
         }
         else if (!db_cmp(tok, "repchar")) {
-            rp = token(rp, &tok);
+            token(&buf, &tok);
             if (db_len(tok) == 0) break;
             int ci;
             if ((db_charat(tok, 0) == 'U') && (db_charat(tok, 1) == '+'))

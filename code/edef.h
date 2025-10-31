@@ -130,7 +130,7 @@ extern linked_items *macro_pin_headp;
 extern int fillcol;             /* Fill column                  */
 extern int *kbdm;               /* Holds keyboard macro data    */
 extern int n_kbdm;              /* Allocated size of kbdm       */
-extern const char *execstr;     /* pointer to string to execute */
+extern dbp_dcl(execstr);        /* string in dyn_buf to execute */
 extern int eolexist;            /* does clear to EOL exist?     */
 extern int revexist;            /* does reverse video exist?    */
 extern int flickcode;           /* do flicker supression?       */

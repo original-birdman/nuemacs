@@ -8403,7 +8403,22 @@ search.c
 
 dyn_buf.c
 dyn_buf.h
-    Fixes for "walking" along change.
+    Fixes/changes for the "walking" along change.
     Check DB_STR bit in type, don'y just add type.
     Set ds->asp in _dbp_setn.
     Add _dbp_upval() to update the asp value for db_upstrdef vars.
+
+eval.c
+exec.c
+globals.c
+input.c
+isearch.c
+main.c
+random.c
+utf8.c
+edef.h
+efunc.h
+    Change execstr to be a dyn_buf and modify token() accordingly.
+    [edef.h, efunc.h, exec.c, globals.c, main.c]
+    Change temporary execstr saving to handle dyn_buf. [eval.c, exec.c,
+    input.c, isearch.c. main.c, random.c, utf8.c]

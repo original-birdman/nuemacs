@@ -8,7 +8,7 @@
 /* initialized global definitions */
 
 int fillcol = 72;               /* Current fill column          */
-char *execstr = NULL;           /* pointer to string to execute */
+dbp_dcl(execstr) = NULL;        /* pointer to string to execute */
 char *mode2name[] = {           /* Display name of modes        */
                                 /* Also text when checking them */
         "Wrap",  "Cmode", "Phon",  "Exact", "View", "Over",

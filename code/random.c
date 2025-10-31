@@ -257,7 +257,7 @@ int twiddle(int f, int n) {
         lch_nb = rch_st - lch_st;
 
 /* We know where the two characters start, and how many bytes each has.
- * So we copy them into a buffer in the reverse order and then 
+ * So we copy them into a buffer in the reverse order and then
  * overwrite the original string with this new one.
  * If we are twiddling *around* point (i.e. not GGR_TWIDDLE mode and not
  * at eol) we might now be in the "middle" of a character, so we move to
@@ -995,7 +995,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
         else                      prompt = "Tokens/unicode chars: ";
         status = mlreply(prompt, &tstring, CMPLT_NONE);
         if (status != TRUE) goto exit;
-        execstr = db_val(tstring);
+        dbp_set(execstr, db_val(tstring));
     }
 
 /* For COOKED_STR we have to process the rest of the line token-by-token.
@@ -1008,8 +1008,8 @@ static int string_getter(int f, int n, enum istr_type call_type) {
     if (call_type == COOKED_STR) {
         const char *vp;
         db_strdef(nstring);
-        while(*execstr != '\0') {
-            execstr = token(execstr, &tok);
+        while(dbp_len(execstr) > 0) {
+            token(execstr, &tok);
             if (db_len(tok) == 0) break;
             vp = getval(db_val(tok));   /* Must evaluate tokens */
             if (!strncmp(vp, "0x", 2)) {
@@ -1045,7 +1045,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
  * results in:
  *  A B C D
  */
-        execstr = token(execstr, &tok);
+        token(execstr, &tok);
         istrp = getval(db_val(tok));
     }
 
@@ -1221,17 +1221,16 @@ int re_args_exec(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
 
-    db_strdef(buf);
+    db_upstrdef(buf);
     db_strdef(tok);
 
     status = mlreply("exec set: ", &buf, CMPLT_NONE);
     if (status != TRUE) goto exit;  /* Only act on +ve response */
 
-    const char *rp = db_val(buf);
     int mode = RX_ON;
     int orig_rxargs = rxargs;
-    while(*rp != '\0') {
-        rp = token(rp, &tok);
+    while(db_len(buf) > 0) {
+        token(&buf, &tok);
         if (db_len(tok) == 0) break;
         if (!strcasecmp(db_val(tok), "none")) {
             rxargs = 0;
