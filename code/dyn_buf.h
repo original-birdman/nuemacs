@@ -30,7 +30,7 @@ typedef struct {
 #define db_upstr_initval { NULL, NULL, 0, 0, 0, DB_STR|DB_UPS }
 #define db_bufdef(a) db a = db_buf_initval
 #define db_strdef(a) db a = db_str_initval
-#define db_upstrdef(a) db a = db_str_initval
+#define db_upstrdef(a) db a = db_upstr_initval
 #define db_dcl(a) db a
 #define dbp_dcl(a) db *a
 
@@ -50,7 +50,6 @@ typedef struct {
 #define dbp_len(a)  ((const size_t)((a)->alen))
 #define dbp_max(a)  ((const size_t)((a)->alloc))
 #define dbp_type()  ((const int)((a)->type))
-
 
 /* The actual function calls (in dyn_str.c) to manipulate them.
  * Not expecting these to be called directly
@@ -73,6 +72,8 @@ char _dbp_cmp(db *, const char *);
 char _dbp_cmpn(db *, const char *, size_t);
 char _dbp_casecmp(db *, const char *);
 char _dbp_casecmpn(db *, const char *, size_t);
+
+void _dbp_upval(db *, char *);
 
 void _dbp_sprintf(db *ds, const char *fmt, ...);
 
@@ -143,5 +144,8 @@ void _dbp_free(db *);
 
 #define db_free(ds) _dbp_free(&(ds))
 #define dbp_free(ds) _dbp_free((ds))
+
+#define db_upval(ds, charp) _dbp_upval(&(ds), charp)
+#define dbp_upval(ds, charp) _dbp_upval((ds), charp)
 
 #endif

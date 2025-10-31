@@ -8400,3 +8400,10 @@ dyn_buf.h
 search.c
     Hide db structure by calling db_clear() to restart repl, not set
     repl.len = 0.
+
+dyn_buf.c
+dyn_buf.h
+    Fixes for "walking" along change.
+    Check DB_STR bit in type, don'y just add type.
+    Set ds->asp in _dbp_setn.
+    Add _dbp_upval() to update the asp value for db_upstrdef vars.

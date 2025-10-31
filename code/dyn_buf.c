@@ -37,11 +37,13 @@ const char *_dbp_val_nc(db *ds) {
 /* Set value to the n bytes */
 
 void _dbp_setn(db *ds, const void *mp, size_t n) {
-    size_t need = n + ds->type;
+    size_t need = n;
+    if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     memcpy(ds->buf, mp, n);
     ds->blen = n;
     ds->alen = n;
+    ds->asp = ds->buf;
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
     return;
 }
@@ -58,7 +60,8 @@ void _dbp_insertn_at(db *ds, const void *mp, size_t n, size_t offs) {
     int movers = ds->blen - offs;
     if (movers < 0) return;   /* Offset too big */
     if ((ds->blen - ds->alen) > offs) return;   /* No insert before valid */
-    size_t need = ds->blen + n + ds->type;
+    size_t need = ds->blen + n;
+    if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     memmove(ds->buf+offs+n, ds->buf+offs, movers);
     memcpy(ds->buf+offs, mp, n);
@@ -127,7 +130,8 @@ void _dbp_truncate(db *ds, size_t n) {
 /* Append n bytes */
 
 void _dbp_appendn(db *ds, const char *str, size_t n) {
-    size_t need = ds->blen + n + ds->type;
+    size_t need = ds->blen + n;
+    if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* Append n chars, set length and terminate if needed */
@@ -150,7 +154,8 @@ void _dbp_append(db *ds, const char *str) {
 /* Append a character */
 
 void _dbp_addch(db *ds, const char ch) {
-    size_t need = ds->blen + 1 + ds->type;
+    size_t need = ds->blen + 1;
+    if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* We know the destination length, so just drop the new char at the end. */
@@ -199,6 +204,19 @@ char _dbp_casecmp(db *ds, const char *str) {
 }
 char _dbp_casecmpn(db *ds, const char *str, size_t n) {
     return strncasecmp(ds->buf, str, n);
+}
+
+/* Update the actual string pointer and, from it, the length left.
+ * ONLY for UPS buffers.
+ * Must be updated to a value within the vald buffer.
+ */
+void _dbp_upval(db *ds, char *np) {
+    if (!(ds->type & DB_UPS)) return;
+    if (np < ds->buf) return;
+    if (np > ds->buf + ds->blen) return;
+    ds->asp = np;
+    ds->alen = ds->blen - (ds->asp - ds->buf);
+    return;
 }
 
 /* sprintf-style call to format a db.
