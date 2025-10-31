@@ -8507,3 +8507,6 @@ line.h
     Change gtenv() to use dyn_buf variables and to set EVLINE result
     directly. [eval.c]
     Remove getctext [line.c, line.h]
+
+main.c
+    Add -- description to help screen.

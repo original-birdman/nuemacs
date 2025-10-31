@@ -105,6 +105,8 @@ printf( \
 "      -v           view only (no edit)"                  NL \
 "      -x<filepath> an additional rc file"                NL \
 "      -h,--help    display this help and exit"           NL \
+"      --           end of main arg list. -v and -e are"  NL \
+"                   still handled in remaining tokens"    NL \
 "      -V,--version output version information and exit"  NL \
         , PROGRAM_NAME);
   exit(status);
