@@ -8499,3 +8499,11 @@ autotest/nul-handling.sh
     Document this [etc/uemacs.hlp]
     Also, committed autotest/nul-handling.sh, which had been omitted in
     the fast-forward adding.
+
+eval.c
+line.c
+line.h
+    Handle NULs in the kill buffer [eval.c]
+    Change gtenv() to use dyn_buf variables and to set EVLINE result
+    directly. [eval.c]
+    Remove getctext [line.c, line.h]

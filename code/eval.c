@@ -61,9 +61,8 @@ const char *ue_itoa(ue64I_t i) {
 
 /* Return the contents of the first item in the kill buffer
  */
-static db_strdef(kvalue);      /* fixed buffer for value */
-static const char *getkill(void) {
-    db_set(kvalue, "");     /* default: no kill buffer....just null string */
+static void getkill(dbp_dcl(kval)) {
+    dbp_set(kval, "");      /* default: no kill buffer....just null string */
     if (kbufh[0] != NULL) { /* else, copy in the contents...all of it */
         struct kill *kp = kbufh[0];
         while (kp != NULL) {
@@ -71,11 +70,11 @@ static const char *getkill(void) {
             if (kp->d_next == NULL) nb = kused[0];
             else                    nb = KBLOCK;
             char *sp = kp->d_chunk;
-            db_appendn(kvalue, sp, nb);
+            dbp_appendn(kval, sp, nb);
             kp = kp->d_next;
         }
     }
-    return db_val(kvalue);  /* Return the constructed value */
+    return;
 }
 
 /* A user-settaable environment variable allowing the user to define
@@ -1041,140 +1040,155 @@ static void gtbvr(dbp_dcl(res), const char *vname) {
  *
  * char *vname;                 name of environment variable to retrieve
  *
- * This returns things which already exist, so doesn't need any db vars.
+ * This returns things which already exist, some of which might contain
+ * a NUL.
  */
-static const char *gtenv(const char *vname) {
+static void gtenv(dbp_dcl(res), const char *vname) {
     unsigned int vnum;  /* Ordinal number of var referenced */
 
 /* Scan the list, looking for the referenced name */
     for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
         if (strcmp(vname, evl[vnum].var) == 0) break;
 
-/* Return errorm on a bad reference */
+/* Return errorm on a bad reference, unless there is an environment
+ * variable of that name.
+ */
     if (vnum == ARRAY_SIZE(evl)) {
         char *ename = getenv(vname);
-        if (ename != NULL)
-            return ename;
-        else
-            return errorm;
+        if (ename != NULL)  dbp_set(res, ename);
+        else                dbp_set(res, errorm);
+        return;
     }
+
+    const char *tmpres;
+#define setval(a) { tmpres = (a); break; }
 
 /* Otherwise, fetch the appropriate value */
     switch (evl[vnum].tag) {
-    case EVFILLCOL:         return ue_itoa(fillcol);
-    case EVPAGELEN:         return ue_itoa(term.t_nrow);
-    case EVCURCOL:          return ue_itoa(getccol() + 1);
-    case EVCURLINE:         return ue_itoa(getcline());
-    case EVCURWIDTH:        return ue_itoa(term.t_ncol);
-    case EVCBUFNAME:        return curbp->b_bname;
-    case EVCFNAME:          return curbp->b_rpname;
-    case EVDFNAME:          return curbp->b_dfname;
-    case EVDEBUG:           return ue_itoa(macbug);
-    case EVSTATUS:          return ltos(cmdstatus);
-    case EVASAVE:           return ue_itoa(gasave);
-    case EVACOUNT:          return ue_itoa(gacount);
-    case EVLASTKEY:         return ue_itoa(lastkey);
-    case EVCURCHAR:     /* Make this return the current Unicode base char */
-        if (lused(curwp->w.dotp) == (size_t)curwp->w.doto) return ue_itoa('\n');
+    case EVFILLCOL:         setval(ue_itoa(fillcol));
+    case EVPAGELEN:         setval(ue_itoa(term.t_nrow));
+    case EVCURCOL:          setval(ue_itoa(getccol() + 1));
+    case EVCURLINE:         setval(ue_itoa(getcline()));
+    case EVCURWIDTH:        setval(ue_itoa(term.t_ncol));
+    case EVCBUFNAME:        setval(curbp->b_bname);
+    case EVCFNAME:          setval(curbp->b_rpname);
+    case EVDFNAME:          setval(curbp->b_dfname);
+    case EVDEBUG:           setval(ue_itoa(macbug));
+    case EVSTATUS:          setval(ltos(cmdstatus));
+    case EVASAVE:           setval(ue_itoa(gasave));
+    case EVACOUNT:          setval(ue_itoa(gacount));
+    case EVLASTKEY:         setval(ue_itoa(lastkey));
+    case EVCURCHAR: {   /* Make this setval the current Unicode base char */
         unicode_t uc_res;
-        (void)utf8_to_unicode(ltext(curwp->w.dotp), curwp->w.doto,
-             lused(curwp->w.dotp), &uc_res);
-        return ue_itoa(uc_res);
-    case EVDISCMD:          return ltos(discmd);
-    case EVVERSION:         return VERSION;
-    case EVPROGNAME:        return PROGRAM_NAME_LONG;
-    case EVSEED:            return ue_itoa(seed);
-    case EVDISINP:          return ltos(disinp);
-    case EVWLINE:           return ue_itoa(curwp->w_ntrows);
-    case EVCWLINE:          return ue_itoa(getwpos());
-    case EVTARGET:          return ue_itoa(curgoal);
-    case EVSEARCH:          return db_val_nc(pat);
-    case EVREPLACE:         return db_val_nc(rpat);
-    case EVMATCH:           return group_match(0);
-    case EVKILL:            return getkill();
-    case EVCMODE:           return ue_itoa(curbp->b_mode);
-    case EVGMODE:           return ue_itoa(gmode);
-    case EVPENDING:         return ltos(typahead());
-    case EVLWIDTH:          return ue_itoa(lused(curwp->w.dotp));
-    case EVLINE:            return getctext();
-    case EVRVAL:            return ue_itoa(rval);
-    case EVTAB:             return ue_itoa(tabmask + 1);
-    case EVOVERLAP:         return ue_itoa(overlap);
-    case EVSCROLLJUMP:      return ue_itoa(scrolljump);
-    case EVSCROLL:          return ltos(term.t_scroll != NULL);
-    case EVINMB:            return ue_itoa(inmb);
-    case EVFCOL:            return(ue_itoa(curwp->w.fcol) + 1);
-    case EVHJUMP:           return(ue_itoa(hjump));
-    case EVHSCROLL:         return(ltos(hscroll));
+        if (lused(curwp->w.dotp) == (size_t)curwp->w.doto) uc_res = '\n';
+        else
+            (void)utf8_to_unicode(ltext(curwp->w.dotp), curwp->w.doto,
+                 lused(curwp->w.dotp), &uc_res);
+        setval(ue_itoa(uc_res));
+    }
+    case EVDISCMD:          setval(ltos(discmd));
+    case EVVERSION:         setval(VERSION);
+    case EVPROGNAME:        setval(PROGRAM_NAME_LONG);
+    case EVSEED:            setval(ue_itoa(seed));
+    case EVDISINP:          setval(ltos(disinp));
+    case EVWLINE:           setval(ue_itoa(curwp->w_ntrows));
+    case EVCWLINE:          setval(ue_itoa(getwpos()));
+    case EVTARGET:          setval(ue_itoa(curgoal));
+    case EVSEARCH:
+        dbp_setn(res, db_val(pat), db_len(pat));
+        return;
+    case EVREPLACE:
+        dbp_setn(res, db_val(rpat), db_len(rpat));
+        return;
+    case EVMATCH:           setval(group_match(0));
+    case EVKILL:
+        getkill(res);
+        return;
+    case EVCMODE:           setval(ue_itoa(curbp->b_mode));
+    case EVGMODE:           setval(ue_itoa(gmode));
+    case EVPENDING:         setval(ltos(typahead()));
+    case EVLWIDTH:          setval(ue_itoa(lused(curwp->w.dotp)));
+    case EVLINE:
+        dbp_setn(res, ltext(curwp->w.dotp), lused(curwp->w.dotp));
+        return;
+    case EVRVAL:            setval(ue_itoa(rval));
+    case EVTAB:             setval(ue_itoa(tabmask + 1));
+    case EVOVERLAP:         setval(ue_itoa(overlap));
+    case EVSCROLLJUMP:      setval(ue_itoa(scrolljump));
+    case EVSCROLL:          setval(ltos(term.t_scroll != NULL));
+    case EVINMB:            setval(ue_itoa(inmb));
+    case EVFCOL:            setval(ue_itoa(curwp->w.fcol) + 1);
+    case EVHJUMP:           setval(ue_itoa(hjump));
+    case EVHSCROLL:         setval(ltos(hscroll));
     case EVYANKMODE:        switch (yank_mode) {
-                            case Old:   return "old";   break;
-                            case GNU:   return "gnu";   break;
+                            case Old:   setval("old");
+                            case GNU:   setval("gnu");
+                            default:    setval("");
                             }
-                            return "";
                             break;
-    case EVAUTOCLEAN:       return ue_itoa(autoclean);
-    case EVREGLTEXT:        return regionlist_text;
-    case EVREGLNUM:         return regionlist_number;
-    case EVAUTODOS:         return ltos(autodos);
-    case EVSDTKSKIP:        return ue_itoa(showdir_tokskip);
-    case EVUPROCOPTS:       return ue_itoa(uproc_opts);
-    case EVFORCESTAT:       return force_status;
+    case EVAUTOCLEAN:       setval(ue_itoa(autoclean));
+    case EVREGLTEXT:        setval(regionlist_text);
+    case EVREGLNUM:         setval(regionlist_number);
+    case EVAUTODOS:         setval(ltos(autodos));
+    case EVSDTKSKIP:        setval(ue_itoa(showdir_tokskip));
+    case EVUPROCOPTS:       setval(ue_itoa(uproc_opts));
+    case EVFORCESTAT:       setval(force_status);
     case EVEQUIVTYPE:
 /* Can't use switch - utf8proc_NFC etc. are not constants.
  * We'll put the standard setting first...
  */
-            if (equiv_handler == utf8proc_NFKC) return "NFKC";
-            if (equiv_handler == utf8proc_NFC)  return "NFC";
-            if (equiv_handler == utf8proc_NFD)  return "NFD";
-            return "NFKD";
+            if (equiv_handler == utf8proc_NFKC) setval("NFKC");
+            if (equiv_handler == utf8proc_NFC)  setval("NFC");
+            if (equiv_handler == utf8proc_NFD)  setval("NFD");
+            setval("NFKD");
             break;
-    case EVSRCHCANHUNT:     return ue_itoa(srch_can_hunt);
-    case EVULPCOUNT:        return ue_itoa(uproc_lpcount);
-    case EVULPTOTAL:        return ue_itoa(uproc_lptotal);
-    case EVULPFORCED:       return ue_itoa(uproc_lpforced);
-    case EVSDOPTS:          return showdir_opts;
-    case EVGGROPTS:         return ue_itoa(ggr_opts);
+    case EVSRCHCANHUNT:     setval(ue_itoa(srch_can_hunt));
+    case EVULPCOUNT:        setval(ue_itoa(uproc_lpcount));
+    case EVULPTOTAL:        setval(ue_itoa(uproc_lptotal));
+    case EVULPFORCED:       setval(ue_itoa(uproc_lpforced));
+    case EVSDOPTS:          setval(showdir_opts);
+    case EVGGROPTS:         setval(ue_itoa(ggr_opts));
     case EVSYSTYPE:
     case EVPROCTYPE: {
         static struct utsname tuname;
         uname(&tuname);
-        return (evl[vnum].tag == EVSYSTYPE)? tuname.sysname: tuname.machine;
+        setval((evl[vnum].tag == EVSYSTYPE)? tuname.sysname: tuname.machine);
     }
-    case EVFORCEMODEON:     return ue_itoa(force_mode_on);
-    case EVFORCEMODEOFF:    return ue_itoa(force_mode_off);
+    case EVFORCEMODEON:     setval(ue_itoa(force_mode_on));
+    case EVFORCEMODEOFF:    setval(ue_itoa(force_mode_off));
     case EVPTTMODE:         if (curbp->b_mode & MDPHON)
-                                return ptt->b_bname + 1;    /* Omit "/" */
+                                tmpres = ptt->b_bname + 1;  /* Omit "/" */
                             else
-                                return "";
-    case EVVISMAC:          return ltos(vismac);
-    case EVFILOCK:          return ltos(filock);
-    case EVCRYPT:           return ue_itoa(crypt_mode);
+                                tmpres = "";
+                            break;
+    case EVVISMAC:          setval(ltos(vismac));
+    case EVFILOCK:          setval(ltos(filock));
+    case EVCRYPT:           setval(ue_itoa(crypt_mode));
     case EVBRKTMS: {
 /* We deal in ms, so need to convert from the s + ns of timespec */
 
         time_t wt = (pause_time.tv_sec * 1000000000) + pause_time.tv_nsec;
         wt = wt/1000000;    /* ns -> ms */
-        return ue_itoa(wt);
+        setval(ue_itoa(wt));
     }
 /* This is a series of strings, so return it in a format that would
  * reparse to the correct setting.
  */
     case EVPPFXMAP: {
-        db_strdef(valres);
+        dbp_clear(res);
         for (int i = 0; i < path_pfx_map_valid; i++) {
-            db_append(valres, path_pfx_map_from[i]);
-            db_append(valres, "~0");
-            db_append(valres, path_pfx_map_to[i]);
-            db_append(valres, "~0");
+            dbp_append(res, path_pfx_map_from[i]);
+            dbp_append(res, "~0");
+            dbp_append(res, path_pfx_map_to[i]);
+            dbp_append(res, "~0");
         }
-        return(db_val_nc(valres));
+        return;
     }
+    default:    setval(errorm); /* Shouldn't happen */
     }
+    dbp_set(res, tmpres);
+    return;
 
-    exit(-12);              /* Again, we should never get here */
-#ifdef __TINYC__
-    return "";              /* Avoid "function might return no value" */
-#endif
 }
 
 /* find the type of a passed token
@@ -1293,18 +1307,14 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
 /* And return the spoils */
         return;
 
-    case TKVAR: {
-        gtusr(&valres, db_val(tok1));
-        dbp_setn(res, db_val(valres), db_len(valres));
+    case TKVAR:
+        gtusr(res, db_val(tok1));
         return;
-    }
-    case TKBVR: {
-        gtbvr(&valres, db_val(tok1));
-        dbp_setn(res, db_val(valres), db_len(valres));
+    case TKBVR:
+        gtbvr(res, db_val(tok1));
         return;
-    }
     case TKENV:
-        dbp_set(res, gtenv(db_val(tok1)));
+        gtenv(res, db_val(tok1));
         return;
     case TKFUN:
         gtfun(res, db_val(tok1));

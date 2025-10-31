@@ -614,20 +614,6 @@ int ldelete(ue64I_t n, int kflag) {
     return TRUE;
 }
 
-/* getctext:    grab and return a string with the text of
- *              the current line
- */
-//GML Can this be db_bufdef ?? Once vars are db_bufdefs??
-static db_strdef(rline);   /* Line to return */
-const char *getctext(void) {
-
-/* Could we just return ltext(curwp->w.dotp), having ensured it is
- * NUL-terminated?
- */
-    db_setn(rline, ltext(curwp->w.dotp), lused(curwp->w.dotp));
-    return db_val(rline);
-}
-
 /* Free up the first kill buffer ring entry for new text by pushing all
  * of the others down by 1.
  * If the ring was already all in use then free the last entry (which will

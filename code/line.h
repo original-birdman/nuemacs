@@ -54,7 +54,6 @@ extern int ldelete(ue64I_t n, int kflag);
 extern int ldelgrapheme(ue64I_t n, int kflag);
 extern int lgetgrapheme(struct grapheme *, int);
 extern int lputgrapheme(struct grapheme *gp);
-extern const char *getctext(void);
 
 extern void kdelete(void);
 extern void addto_lastmb_ring(const char *);
