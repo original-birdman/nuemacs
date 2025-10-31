@@ -8489,3 +8489,13 @@ exec.c
 random.c
 search.c
     Tidy up various temporary uses of a tbuf for dyn_buf in new calls.
+
+eval.c
+etc/uemacs.hlp
+autotest/nul-handling.sh
+    Change the $path_pfx_map code to use ~0 (NUL) as a separator.
+    When getting the value, recombine the parts using "~0" as a joiner.
+    [eval.c]
+    Document this [etc/uemacs.hlp]
+    Also, committed autotest/nul-handling.sh, which had been omitted in
+    the fast-forward adding.

@@ -1156,7 +1156,19 @@ static const char *gtenv(const char *vname) {
         wt = wt/1000000;    /* ns -> ms */
         return ue_itoa(wt);
     }
-    case EVPPFXMAP:         return path_pfx_map;
+/* This is a series of strings, so return it in a format that would
+ * reparse to the correct setting.
+ */
+    case EVPPFXMAP: {
+        db_strdef(valres);
+        for (int i = 0; i < path_pfx_map_valid; i++) {
+            db_append(valres, path_pfx_map_from[i]);
+            db_append(valres, "~0");
+            db_append(valres, path_pfx_map_to[i]);
+            db_append(valres, "~0");
+        }
+        return(db_val_nc(valres));
+    }
     }
 
     exit(-12);              /* Again, we should never get here */
@@ -1386,8 +1398,8 @@ fvar:
         break;
 
     case '&':               /* A function to generate the name? */
-        db_strdef(tbuf);
         db_set(valres, var);
+        db_strdef(tbuf);
         getval(&valres, &tbuf);
         var = db_val(tbuf);
         db_free(tbuf);
@@ -1716,22 +1728,13 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
  * convert to NULs here.
  * We store the orifinal string and work with a copy.
  */
-            if (path_pfx_map) Xfree((void *)path_pfx_map);
-            path_pfx_map = strdup(value);
-
-            int max_off = strlen(value);
-            char *work_value = strdupa(value);
-
-// TEMPORARY convert & to NUL
-            char *tp = (char *)work_value + strlen(work_value);
-            while (tp > work_value) {
-                if (*tp == '&') *tp = '\0';
-                tp--;
-            }
+            path_pfx_map = Xrealloc((char *)path_pfx_map, dbp_len(val)+1);
+            memcpy((char *)path_pfx_map, dbp_val(val), dbp_len(val));
+            int max_off = dbp_len(val);
 
             int offs = 0;
             int pi_ind = 0;
-            const char *ntp = work_value;
+            const char *ntp = dbp_val(val);
             while(offs < max_off) {
                 if (path_pfx_map_from[pi_ind])
                      Xfree((void *)path_pfx_map_from[pi_ind]);
@@ -1751,7 +1754,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
                 if (pi_ind >= MAX_PFX_MAP) break;
             }
             path_pfx_map_valid = pi_ind;
-            udir_init();    /* Recalculate curent, parent and home values */
+            udir_init();    /* Recalculate current, parent and home values */
             break;
         }
         }
