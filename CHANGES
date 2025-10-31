@@ -8396,3 +8396,7 @@ dyn_buf.c
 dyn_buf.h
     Extended db struct to allow for "walking" along it to collect
     tokens.
+
+search.c
+    Hide db structure by calling db_clear() to restart repl, not set
+    repl.len = 0.

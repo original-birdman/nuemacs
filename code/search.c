@@ -3327,7 +3327,7 @@ static db_strdef(repl);
 static const char *getrepl(void) {
 
 /* Process rmcpat .... */
-    repl.len = 0;   /* Start afresh */
+    db_clear(repl);     /* Start afresh */
     struct magic_replacement *rmcptr = rmcpat;
     char ucb[6];
     int nb;
