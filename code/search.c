@@ -3352,14 +3352,11 @@ static const char *getrepl(void) {
                 db_appendn(repl, ucb, nb);
             }
             break;
+/* Just use expbuf and btbuf here as temp values */
         case REPL_VAR: {
-            db_strdef(tbuf);
-            db_strdef(vbuf);
-            db_set(vbuf, rmcptr->val.varname);  /* No NULs in names */
-            getval(&vbuf, &tbuf);
-            db_free(vbuf);
-            db_appendn(repl, db_val(tbuf), db_len(tbuf));   /* Can be NULs */
-            db_free(tbuf);
+            db_set(expbuf, rmcptr->val.varname);    /* No NULs in names */
+            getval(&expbuf, &btbuf);
+            db_appendn(repl, db_val(btbuf), db_len(btbuf)); /* Can be NULs */
             break;
         }
         case REPL_GRP: {

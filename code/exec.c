@@ -30,6 +30,9 @@ static int macro_level = 0;
  */
 static char *prev_line_seen = NULL;
 
+/* A static buffer for dyn_buf call wrapping. Freed in free_exec() */
+static db_strdef(abuf);
+
 #ifdef DO_FREE
 /* We only need these for valgrind testing */
 
@@ -163,6 +166,7 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
  *       Or a copy to itself.
  *       So it must be done via a temporary buffer.
  * But we must allow for buffers containing NULs!
+ * We CANNOT use abuf here!
  */
     db_strdef(tbuf);
     getval(buffer, &tbuf);
@@ -240,10 +244,8 @@ static int docmd(const char *cline) {
     case TKVAR:
     case TKFUN:
     case TKBVR:
-        db_strdef(tbuf);
-        getval(&tkn, &tbuf);
-        db_set(tkn, db_val(tbuf));
-        db_free(tbuf);
+        getval(&tkn, &abuf);
+        db_set(tkn, db_val(abuf));
         ttype = gettyp(db_val(tkn));    /* What we have in tkn now... */
     };
 
@@ -1334,10 +1336,8 @@ nxtscan:                /* On to the next line */
 /* Grab label to jump to.  Allow it to be evaluated. */
                     token(execstr, &golabel);
 /* Via temp copy, to avoid overwrite of own value */
-                    db_strdef(tbuf);
-                    getval(&golabel, &tbuf);
-                    db_set(golabel, db_val(tbuf));
-                    db_free(tbuf);
+                    getval(&golabel, &abuf);
+                    db_set(golabel, db_val(abuf));
                     linlen = db_len(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
 /* We need at least 2 chars on the line for a label... */
@@ -1922,6 +1922,8 @@ void free_exec(void) {
     if (pending_docmd_tknp) dbp_free(pending_docmd_tknp);
     if (pending_dobuf_tknp) dbp_free(pending_dobuf_tknp);
     if (pending_golabel) dbp_free(pending_golabel);
+
+    db_free(abuf);
     return;
 }
 #endif

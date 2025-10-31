@@ -455,11 +455,10 @@ void addline_to_anyb(dbp_dcl(dbtext), struct buffer *bp) {
         bp->b.dotp = lp;                /* to new line (doto will be 0)  */
     return;
 }
+static db_strdef(addbuf);
 void addstr_to_anyb(const char *instr, struct buffer *bp) {
-    db_strdef(tbuf);
-    db_set(tbuf, instr);
-    addline_to_anyb(&tbuf, bp);
-    db_free(tbuf);
+    db_set(addbuf, instr);
+    addline_to_anyb(&addbuf, bp);
     return;
 };
 
@@ -799,6 +798,7 @@ void free_buffer(void) {
         Xfree(bp->b_rpname);
         Xfree(bp->b_key);
         Xfree(bp);
+        db_free(addbuf);
     }
     return;
 }

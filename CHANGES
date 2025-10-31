@@ -8483,3 +8483,9 @@ file.c
 
 eval.c
     Expand use of setting res and using set_exit in gtfun()
+
+buffer.c
+exec.c
+random.c
+search.c
+    Tidy up various temporary uses of a tbuf for dyn_buf in new calls.

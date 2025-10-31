@@ -1007,10 +1007,10 @@ static int string_getter(int f, int n, enum istr_type call_type) {
     db_clear(tstring);
     if (call_type == COOKED_STR) {
         const char *vp;
+        db_strdef(tbuf);
         while(dbp_len(execstr) > 0) {
             token(execstr, &tok);
             if (db_len(tok) == 0) break;
-            db_strdef(tbuf);
             getval(&tok, &tbuf);    /* Must evaluate tokens */
             vp = db_val(tbuf);
             if (!strncmp(vp, "0x", 2)) {
@@ -1019,7 +1019,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
                 if ((add < 0) || (add > 0xFF)) {
                     mlwrite("Oxnn syntax is only for a single byte (%s)",
                          db_val(tok));
-                    goto free_tbuf;
+                    break;
                 }
                 db_addch(tstring, add);
             }
@@ -1032,9 +1032,8 @@ static int string_getter(int f, int n, enum istr_type call_type) {
             else {
                 db_appendn(tstring, db_val(tbuf), db_len(tbuf));
             }
-free_tbuf:
-            db_free(tbuf);
         }
+        db_free(tbuf);
     }
     else {
 /* For the RAW_STR we just take the next token and evaluate it.
