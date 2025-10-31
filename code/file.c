@@ -49,19 +49,39 @@
  * fixup_fname
  */
 static db_strdef(fn_expd);
+
+/* Allocate an array for remembering /s and add the code for . and .. */
+
+static int *slp;
+static int sli;
+
+static void handle_dots(int n) {
+    if (n == 1) sli= sli - 1;
+    else if (n == 2) sli= sli - 2;
+    else return;    /* Shouldn't be called,  but ... */
+    if (sli < 0) sli = 0;
+    db_truncate(fn_expd, slp[sli]);
+    return;
+}
+
 const char *fixup_fname(const char *fn) {
+
+/* Start with a temporary value, so we can run the "multiple consecutive"
+ * check into the result buffer.
+ */
+    db_strdef(tfn);
 
 /* Look for a ~ at the start. */
 
     if (fn[0]=='~') {          /* HOME dir wanted... */
         if (fn[1]=='/' || fn[1]==0) {
             if (udir.home) {
-                db_set(fn_expd, udir.home);
+                db_set(tfn, udir.home);
                 int i = 1;
 /* Special case for root (i.e just "/")! */
-                if (fn[0]=='/' && fn[1]==0 && db_len(fn_expd) > 1)
+                if (fn[0]=='/' && fn[1]==0 && db_len(tfn) > 1)
                     i++;
-                db_append(fn_expd, fn+i);
+                db_append(tfn, fn+i);
             }
         }
 #ifndef STANDALONE
@@ -69,11 +89,11 @@ const char *fixup_fname(const char *fn) {
             struct passwd *pwptr;
             const char *p;
             p = fn + 1;
-            db_clear(fn_expd);
+            db_clear(tfn);
             while (*p != 0 && *p != '/')
-                db_addch(fn_expd, *p++);
-            if ((pwptr = getpwnam(db_val(fn_expd))) != NULL) {
-                db_sprintf(fn_expd, "%s%s", pwptr->pw_dir, p);
+                db_addch(tfn, *p++);
+            if ((pwptr = getpwnam(db_val(tfn))) != NULL) {
+                db_sprintf(tfn, "%s%s", pwptr->pw_dir, p);
             }
         }
 #endif
@@ -82,109 +102,51 @@ const char *fixup_fname(const char *fn) {
         ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
          (fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')))) {
 /* Just prepend $PWD - the slash_* loop at the end will fix up '.' and ".." */
-            db_sprintf(fn_expd, "%s/%s", udir.current, fn);
+            db_sprintf(tfn, "%s/%s", udir.current, fn);
     }
-    else db_set(fn_expd, fn);
+    else db_set(tfn, fn);
 
 /* Convert any multiple consecutive "/" to "/" and strip any
  * trailing "/"...
  * Change any "/./" entries to "/".
  * Strip out ".." entries and their parent  (xxx/../yyy -> yyy)
- * This can ONLY make the string shorter, so we can manipulate it
- * character by character and fix up the length/terminator at the end.
- * Which requires casting to remove the db_* consts.
- * Kludgy, but this code already existed before dynamic buffers were used.
  */
-    char *from, *to;
-    int prev_was_slash = 0;
-    int slash_dot_state = 1;    /* 1 seen '/', 2 seen '.' */
-    int slash_d_d_state = 1;    /* 1 seen '/', 2 seen '.' , 3 see '..' */
-    char *resets[512];          /* location of slashes+1 */
-    int rsi = 0;                /* Index into resets - points at "next" one */
-    int resettable;             /* Count increments on not . or .. */
+    db_clear(fn_expd);
 
-/* Work out the first reset - this should never get reset by the
- * rest of the algorithm.
- * resettable only gets incremented when we find somewhere we can reset to,
- * which means that leading ".." entries don't get removed.
- */
-    if (db_charat(fn_expd, 0) != '/') {
-        resets[0] = (char *)db_val(fn_expd);
-        rsi = 1;
-        resettable = 1;
-    }
-    else resettable = 0;
+/* Allocate an array for remembering /s */
 
-    for (from = (char *)db_val(fn_expd), to = (char *)db_val(fn_expd);
-         *from; from++) {
-/* Ignore a repeat '/' */
-        if (prev_was_slash && (*from == '/')) continue;
-/* Reset states on no '/' */
-        if ((slash_dot_state == 2) && (*from != '/')) slash_dot_state = 0;
-        if ((slash_d_d_state == 3) && (*from != '/')) slash_d_d_state = 0;
-/* If at '/' do we need to "go back"? */
-        if (*from == '/') {
-            prev_was_slash = 1;
-            if (slash_dot_state == 2) {
-                to = resets[--rsi];
-                resettable--;
+    slp = alloca(sizeof(int)*(1 + db_len(tfn)/2));
+    sli = 0;
+
+    const char *cp = db_val(tfn);
+    int n_dots = 0;
+    int at_slash = 0;
+    while(*cp) {
+        switch(*cp) {
+        case '/':
+            if (at_slash) {
+                cp++;
+                continue; /* Ignore consecutive slashes */
+                ;
             }
-            else if (slash_d_d_state == 3) {
-                if ((db_charat(fn_expd, 0) == '/') || (resettable >= 2)) {
-                    rsi -= 2;
-                    if (rsi < 0) rsi = 0;
-                    resettable -= 2;
-                    if (resettable < 1) resettable = 1;
-                    to = resets[rsi];
-                }
-                else {
-                    *to++ = '/';
-                }
-            }
-            else {
-                resettable++;
-                *to++ = '/';
-            }
-            slash_dot_state = 1;            /* We have the / */
-            slash_d_d_state = 1;            /* We have the / */
-            resets[rsi++] = to;             /* Will be ... */
+            if ((n_dots == 1) | (n_dots == 2)) handle_dots(n_dots);
+            at_slash = 1;
+            n_dots = 0;
+            slp[sli++] = db_len(fn_expd);
+            break;
+        case '.':
+            at_slash = 0;
+            n_dots++;
+            break;
+        default:
+            at_slash = 0;
+            n_dots = 0;
         }
-        else {
-/* Copy the character we've been processing */
-            prev_was_slash = 0;
-            *to++ = *from;
-/* Advance states on '.', clear on not '.' */
-            if (*from == '.') {
-               if (slash_dot_state == 1) slash_dot_state = 2;
-               if (slash_d_d_state == 2) slash_d_d_state = 3;
-               if (slash_d_d_state == 1) slash_d_d_state = 2;
-            }
-            else {
-                slash_dot_state = 0;
-                slash_d_d_state = 0;
-            }
-        }
+        db_addch(fn_expd, *cp++);
     }
-/* For "./" this next line goes to before start of buffer, but we
- * fix that with the to <= fn_expd check.
- */
-    if (prev_was_slash) to--;
-    if (slash_dot_state == 2) to -= 2;
-    if (slash_d_d_state == 3) {
-        if ((db_charat(fn_expd, 0) == '/') || (resettable >= 2)) {
-            rsi -= 2;
-            if (rsi < 0) rsi = 0;
-            resettable -= 2;
-            if (resettable < 1) resettable = 1;
-            to = resets[rsi] - 1;   /* Remove trailing / */
-        }
-    }
-/* Just have '/' or '.' left...keep it */
-    if (to <= db_val(fn_expd)) to = (char *)db_val(fn_expd)+1;
-
-/* Terminate it by writing in the trailing NUL (which sets len) */
-    db_setcharat(fn_expd, to-db_val(fn_expd), '\0');
-
+/* Need to handle any trailing dots too */
+    if ((n_dots == 1) | (n_dots == 2)) handle_dots(n_dots);
+    db_free(tfn);
     return db_val(fn_expd);
 }
 

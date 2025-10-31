@@ -8476,3 +8476,7 @@ efunc.h
     line.c, main.c]
 
 ----------
+
+file.c
+    Tidy up the "Convert any multiple consecutive" code in fixup_fname()
+    to not rely on the internal structure of a dyn_buf.
