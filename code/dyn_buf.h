@@ -9,36 +9,48 @@
  * The enum values are specifically set, as it reflects the additional
  * buffer size required beyond the valid stored bytes.
  */
-enum db_type { BUF = 0, STR = 1 };
+#define DB_STR 0x01
+#define DB_UPS 0x02
+
 typedef struct {
-    char *val;      /* The (NUL-terminated) string */
-    size_t len;     /* WITHOUT the NUL */
+    char *buf;      /* The (NUL-terminated) string/buffer */
+    char *asp;      /* The "actual start pointer" */
     size_t alloc;   /* What we've allocated */
-    enum db_type type;
+    size_t blen;    /* buf length WITHOUT any trailing NUL */
+    size_t alen;    /* The actual length from asp (no trailing NUL) */
+    int type;       /* Set of flags */
 } db;
 
 /* We need to define these (globally, or statically in a file body)
  * So we also need to be able to declare the global ones in other
  * files.
  */
-#define db_buf_initval { NULL, 0, 0, BUF }
-#define db_str_initval { NULL, 0, 0, STR }
+#define db_buf_initval { NULL, NULL, 0, 0, 0, 0 }
+#define db_str_initval { NULL, NULL, 0, 0, 0, DB_STR }
+#define db_upstr_initval { NULL, NULL, 0, 0, 0, DB_STR|DB_UPS }
 #define db_bufdef(a) db a = db_buf_initval
 #define db_strdef(a) db a = db_str_initval
+#define db_upstrdef(a) db a = db_str_initval
 #define db_dcl(a) db a
 #define dbp_dcl(a) db *a
 
 /* We need to access the entries for local/global entries (db_*)
  * and entries arriving as function parameters (dbp_*).
  */
-#define db_val(a)   ((const char *)(a).val)
-#define db_len(a)   ((const size_t)(a).len)
+#define db_buf(a)   ((const char *)(a).buf)
+#define db_val(a)   ((const char *)(a).asp)
+#define db_blen(a)  ((const size_t)(a).blen)
+#define db_len(a)   ((const size_t)(a).alen)
 #define db_max(a)   ((const size_t)(a).alloc)
-#define db_type(a)  ((const enum db_type)(a).type)
-#define dbp_val(a)  ((const char *)(a)->val)
-#define dbp_len(a)  ((const size_t)(a)->len)
-#define dbp_max(a)  ((const size_t)(a)->alloc)
-#define dbp_type(a) ((const enum db_type)(a)->type)
+#define db_type(a)  ((const int)(a).type)
+
+#define dbp_buf(a)  ((const char *)((a)->buf))
+#define dbp_val(a)  ((const char *)((a)->asp))
+#define dbp_blen(a) ((const size_t)((a)->blen))
+#define dbp_len(a)  ((const size_t)((a)->alen))
+#define dbp_max(a)  ((const size_t)((a)->alloc))
+#define dbp_type()  ((const int)((a)->type))
+
 
 /* The actual function calls (in dyn_str.c) to manipulate them.
  * Not expecting these to be called directly
@@ -99,8 +111,8 @@ void _dbp_free(db *);
 #define db_truncate(ds, n) _dbp_truncate(&(ds), n)
 #define dbp_truncate(ds, n) _dbp_truncate((ds), n)
 
-#define db_appendn(to_ds, add, alen) _dbp_appendn(&(to_ds), add, alen)
-#define dbp_appendn(to_ds, add, alen) _dbp_appendn((to_ds), add, alen)
+#define db_appendn(to_ds, add, applen) _dbp_appendn(&(to_ds), add, applen)
+#define dbp_appendn(to_ds, add, applen) _dbp_appendn((to_ds), add, applen)
 
 #define db_append(to_ds, add) _dbp_append(&(to_ds), add)
 #define dbp_append(to_ds, add) _dbp_append((to_ds), add)
