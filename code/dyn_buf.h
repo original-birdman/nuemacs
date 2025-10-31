@@ -5,6 +5,8 @@
 #ifndef DYN_BUF_H_
 #define DYN_BUF_H_
 
+#include <stddef.h>
+
 /* Define a Dynamic Buffer, and how to access its members
  * The enum values are specifically set, as it reflects the additional
  * buffer size required beyond the valid stored bytes.
@@ -49,7 +51,7 @@ typedef struct {
 #define dbp_blen(a) ((const size_t)((a)->blen))
 #define dbp_len(a)  ((const size_t)((a)->alen))
 #define dbp_max(a)  ((const size_t)((a)->alloc))
-#define dbp_type()  ((const int)((a)->type))
+#define dbp_type(a) ((const int)((a)->type))
 
 /* The actual function calls (in dyn_str.c) to manipulate them.
  * Not expecting these to be called directly
@@ -67,13 +69,13 @@ void _dbp_appendn(db *, const char *, size_t);
 void _dbp_append(db *, const char *);
 void _dbp_addch(db *, const char);
 char _dbp_charat(db *, size_t);
-int  _dbp_setcharat(db *, size_t, char c);
+void _dbp_setcharat(db *, size_t, char c);
 char _dbp_cmp(db *, const char *);
 char _dbp_cmpn(db *, const char *, size_t);
 char _dbp_casecmp(db *, const char *);
 char _dbp_casecmpn(db *, const char *, size_t);
 
-void _dbp_upval(db *, char *);
+void _dbp_upval(db *, const char *);
 
 void _dbp_sprintf(db *ds, const char *fmt, ...);
 

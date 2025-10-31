@@ -8422,3 +8422,13 @@ efunc.h
     [edef.h, efunc.h, exec.c, globals.c, main.c]
     Change temporary execstr saving to handle dyn_buf. [eval.c, exec.c,
     input.c, isearch.c. main.c, random.c, utf8.c]
+
+dyn_buf.c
+globals.c
+main.c
+dyn_buf.h
+edef.h
+    Change dyn_buf routines to raise a signal if they are performing an
+    "illegal" action rather then just returning. [dyn_buf.c, dyn_buf.h]
+    Display an error message on exit/in signal handler. [dyn_buf.c,
+    globals.c, main.c, edef.h]

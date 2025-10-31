@@ -226,6 +226,8 @@ int ggr_opts = 0;
 
 int pretend_size = FALSE;
 
+char *dump_message = NULL;
+
 /* A global db, for use in localized code.
  * Must NOT be used in calls to a function which might use it itself!!!
  * Must be db_free()d in quit() in main.c. when FREE is set.

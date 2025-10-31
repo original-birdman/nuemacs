@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <signal.h>
 
 #include "dyn_buf.h"
 #include "efunc.h"
@@ -24,6 +25,17 @@ static void _dbp_realloc(db *ds, size_t need) {
     ds->asp = ds->buf + offset;
     ds->alloc = want;
     return;
+}
+
+/* An internal routine to rasie a signal if we try to set a value
+ * at an illegal offset etc.
+ * Will set a message to be shown.
+ */
+
+static void illegal_dbaction(char *why) {
+    dump_message = why;
+    raise(SIGILL);
+    exit(127);  /* Just in case... */
 }
 
 /* Return the value, but check for NULL and return "" for that
@@ -58,8 +70,8 @@ void _dbp_set(db *ds, const char *str) {
 
 void _dbp_insertn_at(db *ds, const void *mp, size_t n, size_t offs) {
     int movers = ds->blen - offs;
-    if (movers < 0) return;   /* Offset too big */
-    if ((ds->blen - ds->alen) > offs) return;   /* No insert before valid */
+    if ((movers < 0) || ((ds->blen - ds->alen) > offs))
+        illegal_dbaction("Illegal db insertn");
     size_t need = ds->blen + n;
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
@@ -77,9 +89,9 @@ void _dbp_deleten_at(db *ds, int n, size_t offs) {
 /* Since we are deleting we must already have enough space
  * But we mustn't delete from before the "actual start pointer".
  */
-    if ((ds->blen - ds->alen) > offs) return;
     if ((n + offs) > ds->blen)  n = ds->blen - offs;
-    if (n < 0) return;
+    if (((ds->blen - ds->alen) > offs) || (n < 0))
+        illegal_dbaction("Illegal db deleten");
     int movers = ds->blen - offs - n;
     memmove(ds->buf+offs, ds->buf+offs+n, movers);
     ds->blen -= n;
@@ -94,8 +106,8 @@ void _dbp_deleten_at(db *ds, int n, size_t offs) {
 void _dbp_overwriten_at(db *ds, const void *mp, size_t n, size_t offs) {
 
 /* We mustn't change anything from before the "actual start pointer". */
-    if ((ds->blen - ds->alen) > offs) return;
-    if ((offs + n) > ds->blen) return;
+    if (((ds->blen - ds->alen) > offs) || ((offs + n) > ds->blen))
+        illegal_dbaction("Illegal db overwriten");
     memmove(ds->buf+offs, mp, n);
     return;
 }
@@ -118,8 +130,9 @@ void _dbp_clear(db *ds) {
  */
 void _dbp_truncate(db *ds, size_t n) {
 /* We mustn't change anything from before the "actual start pointer". */
-    if ((ds->blen - ds->alen) > n) return;
-    if (n >= ds->blen) return;
+    if (((ds->blen - ds->alen) > n) || (n > ds->blen)) {
+        illegal_dbaction("Illegal db truncate");
+    }
     size_t offset = ds->asp - ds->buf;
     ds->blen = n;
     ds->alen = n - offset;
@@ -180,12 +193,18 @@ char _dbp_charat(db *ds, size_t w) {
  * It DOES set the len iff we put a NUL into a DB_STR type.
  */
 
-int _dbp_setcharat(db *ds, size_t w, char c) {
-    if (w >= ds->blen) return 1;
+void _dbp_setcharat(db *ds, size_t w, char c) {
+/* We are allowed to overwrite the trailing NUL with a NUL in a DB_STR db */
+    int tadj = ((c == '\0') && (ds->type & DB_STR))? 1: 0;
+    if ((w >= ds->blen + tadj) || ((ds->buf + w) < ds->asp))
+        illegal_dbaction("Illegal db setcharat");
     *(ds->buf + w) = c;
 /* If we've written a NUL, change the stored length */
-    if ((ds->type & DB_STR) && (c == '\0')) ds->blen = w;
-    return 0;
+    if ((ds->type & DB_STR) && (c == '\0')) {
+        ds->blen = w;
+        ds->alen = w - (ds->asp - ds->buf);
+    }
+    return;
 }
 
 /* Compare a string.
@@ -210,11 +229,11 @@ char _dbp_casecmpn(db *ds, const char *str, size_t n) {
  * ONLY for UPS buffers.
  * Must be updated to a value within the vald buffer.
  */
-void _dbp_upval(db *ds, char *np) {
-    if (!(ds->type & DB_UPS)) return;
-    if (np < ds->buf) return;
-    if (np > ds->buf + ds->blen) return;
-    ds->asp = np;
+void _dbp_upval(db *ds, const char *np) {
+    if (!(ds->type & DB_UPS) || (np < ds->buf) || (np > ds->buf + ds->blen)) {
+        illegal_dbaction("Illegal db upval");
+    }
+    ds->asp = (char *)np;
     ds->alen = ds->blen - (ds->asp - ds->buf);
     return;
 }

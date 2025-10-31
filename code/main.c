@@ -478,6 +478,7 @@ static void do_stackdump(void) {
 
 /* Even if the INDEX isn't open we still try the stack dump */
 
+    if (dump_message) stk_printf("-*-*- %s -*-*-\n\n", dump_message);
     stk_printf("Traceback:\n");
 
     struct backtrace_state *state =
@@ -806,6 +807,8 @@ static void exit_via_signal(int signr) {
 /* Possibly a stack dump */
 #if defined(NUTRACE)
     do_stackdump();
+#else
+    if (dump_message) stk_printf("-*-*- %s -*-*-\n\n", dump_message);
 #endif
 
 /* Try to save any modified files. */
@@ -1947,7 +1950,7 @@ int main(int argc, char **argv) {
     sigact.sa_handler = exit_via_signal;
     sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
 /* The SIGTERM is there so you can trace a loop by sending one */
-    int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM, SIGABRT };
+    int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM, SIGABRT, SIGILL };
     for (unsigned int si = 0; si < ARRAY_SIZE(siglist); si++)
         sigaction(siglist[si], &sigact, NULL);
     called_as = argv[0];

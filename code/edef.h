@@ -332,6 +332,8 @@ extern udir_t udir;
 
 extern int pretend_size;
 
+extern char *dump_message;
+
 /* Ignored prefixes  - need to limit assignment... */
 
 extern const char *path_pfx_map;
