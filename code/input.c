@@ -1180,7 +1180,7 @@ loop:
     if (carg->c == (CONTROL|'I')) {
         if (ctype == CMPLT_SRCH) {
             rotate_sstr(carg->n);
-            goto loop;
+            goto post_exec;
         }
         lp = curwp->w.dotp;
         sp = ltext(lp);
@@ -1221,7 +1221,7 @@ loop:
             }
         }
         else TTbeep();
-        goto loop;
+        goto post_exec;
     }
 
 /* Some "hard-wired" key-bindings - aka minibuffer specials. */
@@ -1230,10 +1230,10 @@ loop:
     switch(carg->c) {           /* The default is to do nothing here */
     case META|CONTROL|'I':      /* Only act for CMPLT_SRCH */
         if (ctype == CMPLT_SRCH) rotate_sstr(-(carg->n));
-        goto loop;
+        goto post_exec;
     case CTLX|CONTROL|'I':      /* Only act for CMPLT_SRCH */
         if (ctype == CMPLT_SRCH) select_sstr();
-        goto loop;
+        goto post_exec;
     case CTLX|CONTROL|'M':      /* Evaluate before return */
         do_evaluate = TRUE;
         goto submit;
@@ -1254,6 +1254,7 @@ loop:
  */
     mpresf = FALSE;
     execute(carg->c, carg->f, carg->n);
+post_exec:
     if (mpresf) {
         sleep(1);
         mlerase();

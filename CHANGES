@@ -8390,7 +8390,7 @@ version.h
     Fix comment typos. [bind.c, input.c]
     Update to GGR4.190
 
-==========
+========== GGR4.191
 
 dyn_buf.c
 dyn_buf.h
@@ -8510,3 +8510,7 @@ line.h
 
 main.c
     Add -- description to help screen.
+
+input.c
+    Add post_exec label, and goto it rather than loop: after special key
+    handling, to ensure minibuffer is cleared.
