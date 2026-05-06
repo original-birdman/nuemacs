@@ -8514,3 +8514,7 @@ main.c
 input.c
     Add post_exec label, and goto it rather than loop: after special key
     handling, to ensure minibuffer is cleared.
+
+main.c
+    Put any command-line forced buffer modes into effect for "main" at
+    start-up after gmode is set.

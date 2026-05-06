@@ -2259,8 +2259,14 @@ do {
         zotbuf(bp);
         display_readin_msg = 1;
     }
-/* Set this for "main" now that init files have run */
-    else bp->b_mode |= gmode;
+/* Set this for "main" now that init files have run,
+ * but still honour forced settings from the command line.
+ */
+    else {
+        bp->b_mode |= gmode;
+        if (force_mode_on) bp->b_mode |= force_mode_on;
+        if (force_mode_off) bp->b_mode &= ~force_mode_off;
+    }
 
 /* Deal with startup gotos and searches */
     if (gotoflag && searchflag) {
