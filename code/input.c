@@ -146,8 +146,6 @@ static const char *getnfile(void) {
  * can get it...
  */
 static const char *getffile(const char *fspec_in) {
-    char *p;                /* handy pointers */
-
     dirptr = NULL;          /* Initialise things */
 
 /* "'getpwent' in statically linked applications requires at runtime the
@@ -203,10 +201,11 @@ static const char *getffile(const char *fspec_in) {
     if (fspec_eoff) db_addch(glb_db, '/');
     db_set(directory, db_val(glb_db));
 
-    if ((p = strrchr(db_val(directory), '/'))) {
+    const char *p = strrchr(db_val(directory), '/');
+    if (p) {
         p++;
         db_set(picture, p);
-        *p = 0;
+        db_truncate(directory, p - db_val(directory));
         db_set(fullname, db_val(directory));
     }
     else {
@@ -973,7 +972,6 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     char mbname[20];        /* Ample */
     int c;                  /* command character */
     struct line *lp;        /* line to copy */
-    int size;
     const char *sp;         /* string pointer into line */
     int status;
     int do_evaluate = FALSE;
@@ -1215,9 +1213,10 @@ loop:
  */
             if ((db_len(choices) > 0) && (kbdmode != PLAY)) {
                 mlwrite_one(db_val(choices));
-                size = (db_len(choices) < 42) ? 1 : 2;
-                sleep(size);
-                mberase();
+/* We're about to goto post_exec, which will pause as mpresf will
+ * be set, Add an extra pause if we're over a certainn length.
+ */
+                if (db_len(choices) >= 42) sleep(1);
             }
         }
         else TTbeep();

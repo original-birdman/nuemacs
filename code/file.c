@@ -483,7 +483,7 @@ static void handle_filehooks(const char *fname) {
     struct buffer *sb;
     run_filehooks = 0;                  /* reset flag */
     if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
-    char *sfx = strrchr(fname, '.');
+    const char *sfx = strrchr(fname, '.');
 /* Check we haven't found ../xxx or ./xxx */
     if (sfx && (*(sfx+1) != '/')) {
         sfx++;                          /* Skip over '.' */

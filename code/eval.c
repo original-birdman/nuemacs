@@ -233,7 +233,7 @@ static char *mklower(char *str) {
  */
 static int strindex(const char *source, const char *pattern) {
     if (pattern[0] == '\0') return 0;
-    char *locp = strstr(source, pattern);
+    const char *locp = strstr(source, pattern);
     int res;
     if (!locp) res = 0; /* Not found */
 /* For a non-zero result, convert to graphemes */

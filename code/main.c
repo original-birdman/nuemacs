@@ -1580,7 +1580,7 @@ int execute(int c, int f, int n) {
         case 'u':           /* Up to parent. Needs run_user_proc() */
            {db_strdef(fname);
             db_set(fname, curwp->w_bufp->b_rpname);
-            char *upp = strrchr(db_val(fname), '/');
+            const char *upp = strrchr(db_val(fname), '/');
             if (upp == db_val(fname)) upp++;
             db_setcharat(fname, upp-db_val(fname), '\0');
             userproc_arg = db_val(fname);

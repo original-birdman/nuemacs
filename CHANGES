@@ -8518,3 +8518,11 @@ input.c
 main.c
     Put any command-line forced buffer modes into effect for "main" at
     start-up after gmode is set.
+
+eval.c
+file.c
+input.c
+main.c
+    Minor changes to add const to some char* definitions for system
+    header file prototype changes at Ubuntu 26.04.
+    Also fix a double sleep() introduced above for input.c.
