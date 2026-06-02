@@ -8535,3 +8535,8 @@ edef.h
 search.c
     Change the Search and Replace text buffers into dynamic buffers.
 
+line.c
+eval.c
+    Remove some no longer extant variables from being freed in the
+    DO_FREE sections of code.
+

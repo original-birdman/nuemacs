@@ -920,7 +920,6 @@ void free_line(void) {
         }
     }
 
-    db_free(rline);
     return;
 }
 #endif

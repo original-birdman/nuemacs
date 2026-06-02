@@ -1940,7 +1940,6 @@ void free_eval(void) {
         if (uv[i].name[0] == '\0') break;   /* End of list */
         db_free(uv[i].value);
     }
-    db_free(kvalue);
     db_free(xlres);
     db_free(pttres);
     db_free(valres);
