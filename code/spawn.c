@@ -8,6 +8,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <limits.h>
 
 #define SPAWN_C
 
@@ -202,7 +206,7 @@ int pipecmd(int f, int n) {
     db_strdef(comfile);
 
 /* Get the command to pipe in */
-    if ((s = next_spawn_cmd(RXARG(pipecmd), "@", &line)) != TRUE) return s;
+    if ((s = next_spawn_cmd(RXARG(pipecmd), "@", &line)) != TRUE) goto exit;
 
 /* Find/create the PIPEBUF buffer, switch to it and ensure it is empty. */
     if ( ((bp = bfind(PIPEBUF, TRUE, 0)) == NULL) ||
@@ -212,8 +216,27 @@ int pipecmd(int f, int n) {
         goto exit;
     }
 
-    char *hp = udir.home? udir.home: ".";   /* Default if absent */
-    db_sprintf(comfile, "%s/.ue_%08x", hp, getpid());
+/* Create the tempfile via mkstemp() so the name is unpredictable.
+ * The old "$HOME/.ue_<pid>" pattern let a co-located attacker pre-create
+ * a symlink at that path; the shell's `>` redirection would then follow
+ * it and truncate an arbitrary file the user could write.
+ * mkstemp() creates the file owned-by-us with mode 0600 and a name an
+ * attacker can't predict; the subsequent shell `>` re-opens it, which is
+ * fine because the file already exists.
+ */
+    {
+        char *hp = udir.home? udir.home: ".";
+        char tmpl[PATH_MAX];
+        snprintf(tmpl, sizeof(tmpl), "%s/.ue_XXXXXX", hp);
+        int fd = mkstemp(tmpl);
+        if (fd < 0) {
+            mlwrite("Cannot create tempfile: %s", strerror(errno));
+            s = FALSE;
+            goto exit;
+        }
+        close(fd);
+        db_set(comfile, tmpl);
+    }
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
@@ -224,17 +247,14 @@ int pipecmd(int f, int n) {
     TTkopen();
     TTflush();
     sgarbf = TRUE;
-    s = TRUE;
 
     check_for_resize();
 
-    if (s != TRUE) goto exit;
-
 /* Split the current window to make room for the command output */
-    if (splitwind(FALSE, 1) == FALSE) goto exit;
+    if (splitwind(FALSE, 1) == FALSE) { s = FALSE; goto exit; }
 
 /* And read the stuff in */
-    if (readin(db_val(comfile), FALSE) != TRUE) return FALSE;
+    if (readin(db_val(comfile), FALSE) != TRUE) { s = FALSE; goto exit; }
     terminate_str(bp->b_dfname);    /* Zap temporary filename */
     terminate_str(bp->b_rpname);    /* Zap temporary filename */
 
@@ -246,11 +266,14 @@ int pipecmd(int f, int n) {
         wp = wp->w_wndp;
     }
 
-/* And get rid of the temporary file */
-    unlink(db_val(comfile));
     s = TRUE;
 
 exit:
+/* Always remove the tempfile on the way out, even on failure paths
+ * (mkstemp creates it before we know if system() succeeds, and the old
+ * "return FALSE" mid-function used to leak both the file and the dbs).
+ */
+    if (db_len(comfile) > 0) unlink(db_val(comfile));
     db_free(comfile);
     db_free(line);
     return s;
@@ -286,8 +309,39 @@ int filter_buffer(int f, int n) {
     db_set(tmpnam, bp->b_rpname);   /* Save the (full) original name */
     char *hp = udir.home;
     if (!hp) hp = ".";              /* Default if absent */
-    db_sprintf(fltin, "<%s/.ue_fin_%08x", hp, getpid());
-    db_sprintf(fltout, ">%s/.ue_fout_%08x", hp, getpid());
+
+/* Create the in/out tempfiles via mkstemp() so the names are
+ * unpredictable. The old "$HOME/.ue_f{in,out}_<pid>" pattern was a
+ * symlink hazard: an attacker could pre-create either path as a
+ * symlink, then have the shell's `<`/`>` redirection follow it.
+ * NOTE: the previous code baked the `<`/`>` redirection characters into
+ * fltin/fltout themselves and then passed db_val(fltin) to writeout(),
+ * which tried to open a file literally named "<HOME/...". That was
+ * broken — fltin/fltout now hold the path only; the redirection chars
+ * are added when building the shell command (below).
+ */
+    {
+        char tmpl[PATH_MAX];
+        int fd;
+
+        snprintf(tmpl, sizeof(tmpl), "%s/.ue_fin_XXXXXX", hp);
+        if ((fd = mkstemp(tmpl)) < 0) {
+            mlwrite("Cannot create filter input file: %s", strerror(errno));
+            s = FALSE;
+            goto exit;
+        }
+        close(fd);
+        db_set(fltin, tmpl);
+
+        snprintf(tmpl, sizeof(tmpl), "%s/.ue_fout_XXXXXX", hp);
+        if ((fd = mkstemp(tmpl)) < 0) {
+            mlwrite("Cannot create filter output file: %s", strerror(errno));
+            s = FALSE;
+            goto exit;
+        }
+        close(fd);
+        db_set(fltout, tmpl);
+    }
 
 /* Set this to our new one for */
     set_buffer_filenames(bp, db_val(fltin));
@@ -332,13 +386,15 @@ int filter_buffer(int f, int n) {
 
     if ((bp->b_type == BTPHON) && bp->ptt_headp) ptt_free(bp);
 
-/* And get rid of the temporary file */
-    unlink(db_val(fltin));
-    unlink(db_val(fltout));
-
 reset_bufname_exit:
     set_buffer_filenames(bp, db_val(tmpnam));
 exit:
+/* Always remove the tempfiles on the way out — including on any of the
+ * early-error paths above that goto exit. mkstemp() may have created
+ * one or both; len==0 means we never got that far.
+ */
+    if (db_len(fltin) > 0) unlink(db_val(fltin));
+    if (db_len(fltout) > 0) unlink(db_val(fltout));
     db_free(fltout);
     db_free(fltin);
     db_free(tmpnam);

@@ -8737,12 +8737,12 @@ fileio.c
 -----
 file.c
 
- Two issues in fixup_fname() (which is the path-normalisation entry  
+ Two issues in fixup_fname() (which is the path-normalisation entry
  point used by everything that touches a filename — find-file, the
  command-line argv, ~/macros, &exist, etc.).
 
 1. Dead 'special case for root' branch
-   
+
        if (fn[0]=='~') {
            if (fn[1]=='/' || fn[1]==0) {
                ...
@@ -8752,14 +8752,14 @@ file.c
                    i++;
                db_append(fn_expd, fn+i);
            }
-       
+
    Inside the fn[0]=='~' branch, fn[0]=='/' can never be true, so the
    "special case" never fires. The accompanying double-slash that
    would otherwise be produced is already collapsed by the slash-
    normalisation loop further down, so removing the dead code changes
    nothing observable. Dropped the unreachable branch and adjusted
    the surrounding comment to explain why the plain db_append is fine.
-               
+
 2. Stale buffer returned when ~-expansion fails
 
        if (fn[0]=='~') {
@@ -8772,14 +8772,14 @@ file.c
                if ((pwptr = getpwnam(...)) != NULL) { db_sprintf(...); }
                /* else: fn_expd holds just the user-name fragment */
            }
-           
+
    fn_expd is a file-scope static db; "do nothing" on the failure
    paths means the next call returns whatever the previous successful
    expansion left there. For ~/foo with HOME unset, callers got the
    previous file's expansion; for ~unknown/foo with no matching pw
    entry, callers got just "unknown" as the "expanded path" — which
    looks like a relative filename and is then *acted on* downstream.
-               
+
    Added the missing else branches to fall back to db_set(fn_expd, fn)
    (i.e. return the literal input). That matches the function's
    existing fallback for paths with no leading ~ and turns a "spookily
@@ -8838,3 +8838,80 @@ NULL was effectively being used as a sentinel by ffputline()'s API
 were a latent trap for any caller iterating buffer lines. Fixing it
 in ltext() keeps that sentinel meaningful while removing the bear
 trap from the line API.
+
+-----
+spawn.c
+
+ Three issues in spawn.c, all in the helpers that run a buffer or its
+ output through an external shell command.
+
+1. Predictable tempfile names through system() redirection (both
+   pipecmd() and filter_buffer())
+
+       db_sprintf(comfile, "%s/.ue_%08x", hp, getpid());
+       ...
+       db_append(line, ">");
+       db_append(line, db_val(comfile));
+       rval = system(db_val(line));
+
+   "$HOME/.ue_<pid>" is guessable. An attacker with write access to
+   $HOME (shared-account scenarios, an NFS-mounted home, or any prior
+   compromise) can pre-create that path as a symlink to an arbitrary
+   file the user can write. The shell's `>` redirection follows
+   symlinks; uemacs then truncates/overwrites the target.
+
+   Replaced both pipecmd() and filter_buffer() to use mkstemp(), which
+   creates the file with O_EXCL and a random 6-char tail (~57 billion
+   possibilities) so the name cannot be predicted. The file is then
+   owned by us with mode 0600; the subsequent shell `>` re-opens it,
+   which is fine because it already exists.
+
+2. pipecmd(): temp-file + memory leaks on failure paths
+
+   Two early returns bypassed the cleanup:
+
+       if (next_spawn_cmd(...) != TRUE) return s;
+       ...
+       if (readin(db_val(comfile), FALSE) != TRUE) return FALSE;
+
+   The first leaked both db_strdef()s. The second additionally left
+   the temp file on disk in $HOME. Reworked so every exit goes
+   through a single 'exit:' label that runs unlink (no-op when len==0
+   on the early paths) and frees the dbs. Also removed a now-dead
+   `if (s != TRUE) goto exit;` that immediately followed `s = TRUE;`.
+
+3. filter_buffer(): shell command had `<` / `>` baked into the
+   filenames, breaking redirection
+
+       db_sprintf(fltin, "<%s/.ue_fin_%08x", hp, getpid());
+       db_sprintf(fltout, ">%s/.ue_fout_%08x", hp, getpid());
+       set_buffer_filenames(bp, db_val(fltin));      /* "<HOME/..."  */
+       if (writeout(db_val(fltin)) != TRUE) {        /* opens "<HOME/..."! */
+           ...
+       }
+       ...
+       db_addch(line, '<');
+       db_append(line, db_val(fltin));               /* line gets "<<HOME/..." $
+       db_addch(line, '>');
+       db_append(line, db_val(fltout));              /* "...> >HOME/..." */
+
+   fltin/fltout each held the redirection character at position 0,
+   and that whole string was passed to writeout()/set_buffer_filenames
+   /readin() — which then literally tried to open a path starting
+   with `<`. Worse, the shell command construction below it also
+   prefixed its own `<` and `>` via db_addch(), so the resulting line
+   was `cmd <<HOME/... > >HOME/...` — `<<` is here-doc syntax in the
+   shell, not file redirection. filter_buffer() was non-functional.
+
+   Fixed by removing the `<`/`>` prefix from the names themselves
+   (now they hold only paths), letting the existing db_addch lines
+   below provide the redirection. Confirmed end-to-end:
+
+       filter-buffer "tr a-z A-Z"
+
+   round-trips correctly through the shell, with no leftover temp
+   files in $HOME.
+
+   Also unified filter_buffer()'s cleanup so the temp files are
+   unlinked on every exit path, including the mkstemp-creation
+   failure paths.
