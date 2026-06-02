@@ -1125,9 +1125,9 @@ loop:
  * If so, insert it into our buffer (which is the result buffer) now,
  * which inserts it at the "current location".
  */
-    if (prmpt_buf.preload) {
-        linstr(prmpt_buf.preload);
-        prmpt_buf.preload = NULL;   /* One-time usage */
+    if (db_blen(prmpt_buf.preload)) {
+        lins_dynbuf(&prmpt_buf.preload);
+        db_clear(prmpt_buf.preload);    /* One-time usage */
     }
 
 /* Prepend the prompt to the beginning of the visible line (i.e.

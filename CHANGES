@@ -8404,7 +8404,7 @@ search.c
 dyn_buf.c
 dyn_buf.h
     Fixes/changes for the "walking" along change.
-    Check DB_STR bit in type, don'y just add type.
+    Check DB_STR bit in type, don't just add type.
     Set ds->asp in _dbp_setn.
     Add _dbp_upval() to update the asp value for db_upstrdef vars.
 
@@ -8526,3 +8526,9 @@ main.c
     Minor changes to add const to some char* definitions for system
     header file prototype changes at Ubuntu 26.04.
     Also fix a double sleep() introduced above for input.c.
+
+globals.c
+input.c
+edef.h
+    Change the preload in the prompt into a dynamic buffer.
+

@@ -52,7 +52,7 @@ typedef struct {
 }  not_in_mb_st;
 
 typedef struct {
-    char *preload;              /* text to preload into getstring() result */
+    db_dcl(preload);            /* text to preload into getstring() result */
     int update;                 /* Set to make getstring() update its prompt */
     db_dcl(prompt);             /* The new prompt to use */
 } prmpt_buf_st;
