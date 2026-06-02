@@ -8915,3 +8915,17 @@ spawn.c
    Also unified filter_buffer()'s cleanup so the temp files are
    unlinked on every exit path, including the mkstemp-creation
    failure paths.
+
+End of Claude code-hardening.
+--------------------
+
+file.c
+main.c
+etc/uemacs.hlp
+version.h
+    Include alloca.h for Solaris. [file.c]
+    Remove a no-longer used variable. [file.c]
+    Fix a stk_printf() call to printf(). [main.c]
+    Update to GGR4.191
+
+==========

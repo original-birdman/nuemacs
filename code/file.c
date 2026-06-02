@@ -12,6 +12,9 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <libgen.h>
+#if __sun
+#include <alloca.h>
+#endif
 
 #define FILE_C
 
@@ -77,7 +80,6 @@ const char *fixup_fname(const char *fn) {
         if (fn[1]=='/' || fn[1]==0) {
             if (udir.home) {
                 db_set(tfn, udir.home);
-                int i = 1;
 /* udir.home ends with '/' (forced in main()). If fn[1]=='/' we
  * therefore produce a "//" join which the slash-normalisation
  * loop below collapses to a single '/'. fn[1]==0 appends nothing.

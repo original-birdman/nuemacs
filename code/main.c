@@ -810,7 +810,7 @@ static void exit_via_signal(int signr) {
 #if defined(NUTRACE)
     do_stackdump();
 #else
-    if (dump_message) stk_printf("-*-*- %s -*-*-\n\n", dump_message);
+    if (dump_message) printf("-*-*- %s -*-*-\n\n", dump_message);
 #endif
 
 /* Try to save any modified files. */
