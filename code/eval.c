@@ -13,6 +13,7 @@
 #include <math.h>
 #include <errno.h>
 #include <fenv.h>
+#include <limits.h>
 #if __sun
 #include <alloca.h>
 #endif
@@ -870,7 +871,16 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     }
     case UFRND: {
             seed = abs(seed * 1721 + 10007);
-            retval = ue_itoa(seed % llabs(ue_atoi(db_val(arg1))) + 1);
+/* Guard against div-by-zero (modulus == 0 -> SIGFPE) and against
+ * llabs(LLONG_MIN), which is undefined because +|LLONG_MIN| does not
+ * fit in long long.
+ */
+            long long modulus = ue_atoi(db_val(arg1));
+            if (modulus == 0 || modulus == LLONG_MIN) {
+                retval = errorm;
+                goto exit;
+            }
+            retval = ue_itoa(seed % llabs(modulus) + 1);
             goto exit;
     }
     case UFENV:
@@ -1369,6 +1379,8 @@ fvar:
                 break;
             }
         if (vnum < MAXVARS || !vcreate) break;
+/* Reject names that won't fit in the fixed-size name field. */
+        if (strlen(var+1) >= sizeof(uv[0].name)) break;
         for (vnum = 0; vnum < MAXVARS; vnum++)  /* Create a new one??? */
             if (uv[vnum].name[0] == 0) {
                 vtype = TKVAR;
@@ -1399,6 +1411,8 @@ fvar:
             if (vnum < BVALLOC) break;
         }
         if (!vcreate) break;
+/* Reject names that won't fit in the fixed-size name field. */
+        if (strlen(var+1) >= sizeof(execbp->bv[0].name)) break;
         for (vnum = 0; vnum < BVALLOC; vnum++)  /* Create a new one??? */
             if (execbp->bv[vnum].name[0] == '\0') {
                 vtype = TKBVR;

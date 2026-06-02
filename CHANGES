@@ -8546,6 +8546,7 @@ dyn_buf.h
 --------------------
 Now some code-hardening changes as a result of Claude looking at the code.
 
+-----
 pklock.c
  Four issues addressed in dolock()/undolock():
  
@@ -8600,3 +8601,41 @@ pklock.c
     explaining why) so a restrictive user umask doesn't strip the
     group/other read bits — without that, peers cannot discover who
     holds the lock.
+
+-----
+eval.c
+Two unrelated issues in eval.c, grouped because both are reachable
+from a single keystroke at the prompt or a one-line macro line.
+
+1. findvar(): unbounded strcpy into fixed-size name fields
+
+       strcpy(uv[vnum].name, var+1);          // line 1322
+       ...
+       strcpy(execbp->bv[vnum].name, var+1);  // line 1352
+
+   uv[].name is char[NVSIZE+1] (= 33 bytes); same for the per-buffer
+   bv[].name. The variable name comes from mlreply() with no length
+   limit, so e.g. running set-variable and typing "%" followed by 64
+   chars overflows a global array. The check happens on the "create a
+   new entry" path (only when vcreate is set), but that path is on the
+   primary set-variable code path.
+
+   Added a single length-guard before the create loop: if strlen(var+1)
+   wouldn't fit in the destination, leave vtype == -1 (the existing
+   "no such variable" sentinel) and return. The caller already handles
+   that uniformly (mlwrite "No such variable as '...'"), so the fix
+   needs no new error path.
+
+2. &rnd: divide-by-zero and llabs(LLONG_MIN) UB
+
+       retval = ue_itoa(seed % llabs(ue_atoi(db_val(arg1))) + 1);
+
+   &rnd 0 computes seed % 0, raising SIGFPE and killing the editor
+   from a one-line macro. &rnd <LLONG_MIN> takes a different undefined
+   path: llabs(LLONG_MIN) overflows because +|LLONG_MIN| does not fit
+   in long long.
+
+   Captured the argument into a typed local, rejected the two unsafe
+   values, and returned the conventional errorm sentinel that &rnd's
+   neighbouring cases already use for bad input. <limits.h> added for
+   LLONG_MIN.
