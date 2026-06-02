@@ -33,7 +33,13 @@ struct line {
 #define lputc(lp, n, c) (db_setcharat((lp->l_), n, c))
 #define lused(lp)       (db_len(lp->l_))
 #define lsize(lp)       (db_max(lp->l_))
-#define ltext(lp)       (db_val(lp->l_))
+/* Empty lines (lalloc()'d but never appended-to) have l_.val == NULL.
+ * Substitute "" so callers never see NULL and accidentally trip code
+ * paths that use NULL as a sentinel (e.g. ffputline's "final flush"
+ * mode), which would cause empty-line saves to sleep for one second
+ * each on this file.
+ */
+#define ltext(lp)       (db_val(lp->l_)? db_val(lp->l_): "")
 #define ldb(lp)         (lp->l_)
 
 /* Externally visible calls */

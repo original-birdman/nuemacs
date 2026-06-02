@@ -8784,3 +8784,57 @@ file.c
    (i.e. return the literal input). That matches the function's
    existing fallback for paths with no leading ~ and turns a "spookily
    succeed with wrong data" into a clean "the path didn't exist".
+
+-----
+line.h
+
+ Symptom: saving a file with empty lines was *very* slow — about one
+ second per empty line. A 1200-line export with ~200 empty lines took
+ just over three minutes to save; killing it midway truncated the file.
+
+Diagnosis: lalloc() initialises a struct line's dynamic-buffer field
+(l_) to db_buf_initval = { NULL, 0, 0, BUF }. For lines that are
+written to, db_appendn() reallocs and the val pointer becomes valid.
+For lines that are truly empty (e.g. blank lines in a text file),
+db_appendn() runs with n==0 and need == 0 + 0 + BUF(=0) == 0 — no
+realloc, and val stays NULL.
+
+writeout()'s line-walk does:
+
+    ffputline(ltext(lp), lused(lp))
+
+ltext(lp) was defined as (db_val(lp->l_)) which is (const char *)
+lp->l_.val — i.e. it returned NULL for empty lines. Then ffputline
+takes its buf==NULL "final flush" path:
+
+    if (buf == NULL) {
+        ... if (curbp->b_EOLmissing) { detect binary; reason="binary"; }
+        if (reason) {
+            mlforce("Removed \"added\" trailing newline for %s file", reason);
+            sleep(1);
+        }
+        ...
+
+So every empty line in a file that was (mis)classified as binary
+became its own sleep(1) — the user only saw the message once, but
+the sleep accumulated. (The companion fileio.c commit improves the
+binary heuristic so the misclassification stops happening; this
+commit fixes the underlying NULL-vs-empty confusion at its root.)
+
+Fix is a one-line change to the ltext() macro: substitute "" when
+val is NULL. The function-style accessor in dyn_buf.c already does
+this:
+
+    const char *_dbp_val(db *ds) {
+        return ds->val ? ds->val : "";
+    }
+
+The macro version (used by ltext()) was inconsistent. After the fix,
+empty lines pass ffputline an empty buf, which correctly just adds
+the inter-line newline and processes zero bytes of payload.
+
+NULL was effectively being used as a sentinel by ffputline()'s API
+("flush whatever is left"), so the asymmetric semantics in the macro
+were a latent trap for any caller iterating buffer lines. Fixing it
+in ltext() keeps that sentinel meaningful while removing the bear
+trap from the line API.
