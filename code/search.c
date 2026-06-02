@@ -324,7 +324,10 @@ static struct mg_info null_mg = { EGRP, 0, 0, 0, 0 };
 /* Search ring buffer code... */
 #define RING_SIZE 10
 
-static char *srch_txt[RING_SIZE], *repl_txt[RING_SIZE];
+/* These two must be the same size */
+static db_dcl(srch_txt[RING_SIZE]);
+static db_dcl(repl_txt[RING_SIZE]);
+
 /* This only needs to hold the Search/Query replace/etc. text */
 char current_base[16] = "";
 
@@ -364,10 +367,8 @@ void init_search_ringbuffers(void) {
  * update_ring() expects this.
  */
     for (int ix = 0; ix < RING_SIZE; ix++) {
-        srch_txt[ix] = Xmalloc(1);
-        terminate_str(srch_txt[ix]);
-        repl_txt[ix] = Xmalloc(1);
-        terminate_str(repl_txt[ix]);
+        db_set(srch_txt[ix], "");
+        db_set(repl_txt[ix], "");
     }
 
 /* Allocate and initialize the arrays for group info.
@@ -397,10 +398,10 @@ void init_search_ringbuffers(void) {
  * However - we don't want to push anything out if there is an empty entry.
  */
 int nring_free = RING_SIZE;
-static void update_ring(const char *str) {
-    char **txt;
-    if (this_rt == Search) txt = srch_txt;
-    else                   txt = repl_txt;
+static void update_ring(dbp_dcl(str)) {
+    dbp_dcl(txt);
+    if (this_rt == Search) txt = &srch_txt[0];
+    else                   txt = &repl_txt[0];
 
 /* Although for Search strings we do count down to 0 as items are added:
  * if there is a free one we don't know where it is, so have to look.
@@ -410,8 +411,8 @@ static void update_ring(const char *str) {
  */
     if (this_rt == Search && nring_free > 0) {
         for (int ix = 0; ix < RING_SIZE-1; ix++) { /* Can't move last one */
-            if (txt[ix][0] == '\0') {
-                char *tmp = txt[ix];
+            if (dbp_len(txt+ix) == 0) {
+                db_dcl(tmp) = txt[ix];
                 for (int jx = ix; jx < RING_SIZE-1; jx++) {
                     txt[jx] = txt[jx+1];
                 }
@@ -421,13 +422,12 @@ static void update_ring(const char *str) {
         }
         nring_free--;
     }
-    char *tmp = txt[RING_SIZE-1];
+    db_dcl(tmp) = txt[RING_SIZE-1];
     for (int ix = RING_SIZE-1; ix ; ix--) {
         txt[ix] = txt[ix-1];
     }
-    int slen = strlen(str);
-    txt[0] = Xrealloc(tmp, slen + 1);
-    strcpy(txt[0], str);
+    txt[0] = tmp;
+    dbp_setn(txt, dbp_val(str), dbp_len(str));
 
     return;
 }
@@ -504,8 +504,8 @@ static int boundry(struct line *curline, int curoff, int dir) {
  */
 void new_prompt(const char *dflt_str) {
     dbp_dcl(ep) = expandp(dflt_str);
-    db_sprintf(prmpt_buf.prompt, "%s " MLpre "%s" MLpost ": ",
-         current_base, dbp_val(ep));
+    db_sprintf(prmpt_buf.prompt, "%s " MLpre "%.*s" MLpost ": ",
+         current_base, (int)dbp_len(ep), dbp_val(ep));
     prmpt_buf.update = 1;
     return;
 }
@@ -525,8 +525,8 @@ void rotate_sstr(int n) {
 
 /* Rotate by <n> by mapping into a temp array then memcpy back */
 
-    char *tmp_txt[RING_SIZE];
-    char **txt;
+    db_dcl(tmp_txt[RING_SIZE]);
+    dbp_dcl(txt);
     db *t_db;
     if (this_rt == Search) {
         txt = srch_txt;
@@ -540,8 +540,17 @@ void rotate_sstr(int n) {
         rotator %= RING_SIZE;
         tmp_txt[rotator] = txt[ix];
     }
+fprintf(stderr, "Original ring:\n");
+for (int ix = 0; ix < RING_SIZE; ix++) {
+  fprintf(stderr, "%02d: %.*s\n", ix, (int)dbp_len(txt+ix), dbp_val(txt+ix));
+}
+fprintf(stderr, "Rotated ring:\n");
+for (int ix = 0; ix < RING_SIZE; ix++) {
+  fprintf(stderr, "%02d: %.*s\n", ix, (int)db_len(tmp_txt[ix]), db_val(tmp_txt[ix]));
+}
     memcpy(txt, tmp_txt, sizeof(tmp_txt));  /* Copy rotated array back */
-    dbp_set(t_db, txt[0]);                  /* Update (r)pat */
+
+    t_db = &txt[0];                         /* Update (r)pat */
 
 /* We need to make getstring() show this new value in its prompt.
  * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
@@ -2004,7 +2013,7 @@ void setpattern(db *apat, db *tap) {
     int i;
 
 /* Add pattern to search run if called during command line processing */
-    if (comline_processing) update_ring(dbp_val(apat));
+    if (comline_processing) update_ring(apat);
 
     patlenadd = srch_patlen - 1;
     for (i = 0; i < HICHAR; i++) {
@@ -2096,7 +2105,7 @@ static int readpattern(char *prompt, db *apat, int srch) {
         }
         else {                          /* Must be a Replace */
             db_set(tpat, db_val(rpat));
-            if (*repl_txt[0] == '\0')   /* If current top is also empty... */
+            if (db_len(repl_txt[0]) == 0) /* If current top is also empty... */
                 do_update_ring = 0;     /* ...don't save ths one */
             status = TRUE;              /* So we do the next section... */
         }
@@ -2110,7 +2119,7 @@ static int readpattern(char *prompt, db *apat, int srch) {
     if (status == TRUE) {
         dbp_set(apat, db_val(tpat));
 /* Save this latest string in the search buffer ring? */
-        if (do_update_ring) update_ring(db_val(tpat));
+        if (do_update_ring) update_ring(&tpat);
 
 /* Note that we always rebuild any meta-pattern from scratch even if
  * we used the default pattern (which is reasonable, since it might not
@@ -3762,8 +3771,8 @@ void free_search(void) {
     Xfree(match_grp_info);
     Xfree(grp_text);
     for (int ix = 0; ix < RING_SIZE; ix++) {
-        Xfree(srch_txt[ix]);
-        Xfree(repl_txt[ix]);
+        db_free(srch_txt[ix]);
+        db_free(repl_txt[ix]);
     }
     if (mc_alloc) mcclear();
     rmcclear();

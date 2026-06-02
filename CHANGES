@@ -8532,3 +8532,6 @@ input.c
 edef.h
     Change the preload in the prompt into a dynamic buffer.
 
+search.c
+    Change the Search and Replace text buffers into dynamic buffers.
+
