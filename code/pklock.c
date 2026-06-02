@@ -35,34 +35,52 @@ const char *dolock(const char *fname) {
     int mask;
     struct stat sbuf;
 
-    strcat(strcpy(lname, fname), ".lock~");
+    if (snprintf(lname, sizeof(lname), "%s.lock~", fname)
+        >= (int)sizeof(lname))
+        return "LOCK ERROR: filename too long";
 
-/* Check that we are not being cheated, qname must point to
- * a regular file - even this code leaves a small window of
- * vulnerability but it is rather hard to exploit it
+/* Open the lock file without following symlinks. This makes the
+ * "check that it is a regular file" race-free: any pre-existing
+ * symlink at this path causes open() to fail with ELOOP, and the
+ * fstat() below then verifies that what we did open is a regular
+ * file. There is no longer a window between an lstat() and the
+ * open() during which an attacker could swap the entry.
  */
 
-#if defined(S_IFLNK)
-    if (lstat(lname, &sbuf) == 0)
-#else
-    if (stat(lname, &sbuf) == 0)
-#endif
-#if defined(S_ISREG)
-    if (!S_ISREG(sbuf.st_mode))
-#else
-    if (!(((sbuf.st_mode) & 070000) == 0))  /* SysV R2 */
-#endif
-    return "LOCK ERROR: not a regular file";
-
+/* Lock file is readable by everyone (so other users can see who holds
+ * the lock) but writable only by the owner. umask(0) is set so a
+ * restrictive user umask doesn't strip the group/other read bits.
+ */
     mask = umask(0);
-    fd = open(lname, O_RDWR | O_CREAT, 0666);
+    int oflags = O_RDWR | O_CREAT;
+#ifdef O_NOFOLLOW
+    oflags |= O_NOFOLLOW;
+#endif
+    fd = open(lname, oflags, 0644);
     umask(mask);
     if (fd < 0) {
         if (errno == EACCES) return NULL;
 #ifdef EROFS
         if (errno == EROFS) return NULL;
 #endif
+#ifdef ELOOP
+        if (errno == ELOOP) return "LOCK ERROR: lock path is a symlink";
+#endif
         return "LOCK ERROR: cannot access lock file";
+    }
+/* Re-check the file type via the fd we actually opened. */
+    if (fstat(fd, &sbuf) != 0) {
+        close(fd);
+        return "LOCK ERROR: cannot stat lock file";
+    }
+#if defined(S_ISREG)
+    if (!S_ISREG(sbuf.st_mode))
+#else
+    if (!(((sbuf.st_mode) & 070000) == 0))  /* SysV R2 */
+#endif
+    {
+        close(fd);
+        return "LOCK ERROR: not a regular file";
     }
     if ((n = read(fd, locker, MAXNAME)) < 1) {
         lseek(fd, 0, SEEK_SET);
@@ -71,12 +89,16 @@ const char *dolock(const char *fname) {
  */
 #ifndef STANDALONE
         struct passwd *pwe = getpwuid(geteuid());
-        strcpy(locker, pwe->pw_name);
+        const char *user = (pwe && pwe->pw_name) ? pwe->pw_name : "?";
 #else
-        strcpy(locker, "You");
+        const char *user = "You";
 #endif
-        strcat(locker + strlen(locker), "@");
-        gethostname(locker + strlen(locker), 64);
+        char hostname[64];
+        if (gethostname(hostname, sizeof(hostname)) != 0)
+            hostname[0] = '\0';
+/* gethostname() may not NUL-terminate on truncation. */
+        hostname[sizeof(hostname) - 1] = '\0';
+        snprintf(locker, sizeof(locker), "%s@%s", user, hostname);
         int dnc __attribute__ ((unused)) = write(fd, locker, strlen(locker));
         close(fd);
         return NULL;
@@ -98,7 +120,9 @@ const char *dolock(const char *fname) {
 const char *undolock(const char *fname) {
     static char lname[MAXLOCK];
 
-    strcat(strcpy(lname, fname), ".lock~");
+    if (snprintf(lname, sizeof(lname), "%s.lock~", fname)
+        >= (int)sizeof(lname))
+        return "LOCK ERROR: filename too long";
     if (unlink(lname) != 0) {
         if (errno == EACCES || errno == ENOENT) return NULL;
 #ifdef EROFS

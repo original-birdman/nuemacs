@@ -8542,3 +8542,61 @@ eval.c
 
 dyn_buf.h
     Tidy up some defines.
+
+--------------------
+Now some code-hardening changes as a result of Claude looking at the code.
+
+pklock.c
+ Four issues addressed in dolock()/undolock():
+ 
+ 1. Buffer overflow on long file names
+ 
+    strcat(strcpy(lname, fname), ".lock~");
+ 
+    lname is a static 512-byte buffer (MAXLOCK). Linux pathnames can be
+    up to PATH_MAX (~4096). A long input quietly walks past the buffer.
+    Replaced with bounded snprintf() that returns an error string when
+    the name would not fit.
+ 
+ 2. Buffer overflow + NULL deref while composing the "locker" line
+ 
+        struct passwd *pwe = getpwuid(geteuid());
+        strcpy(locker, pwe->pw_name);
+        strcat(locker + strlen(locker), "@");
+        gethostname(locker + strlen(locker), 64);
+ 
+    getpwuid() may return NULL (no entry for the uid, etc.) and is
+    dereferenced unconditionally. Even when non-NULL, pw_name has no
+    bounded length on POSIX — combined with the 64-byte hostname suffix
+    it can overflow the 129-byte locker buffer. POSIX also allows
+    gethostname() to leave its output non-NUL-terminated on truncation.
+ 
+    Rewritten to:
+      - check pwe and pwe->pw_name and fall back to "?" if NULL,
+      - read the hostname into its own bounded buffer with an explicit
+        trailing-NUL,
+      - compose the final "user@host" string via a single snprintf().
+ 
+ 3. TOCTOU race between the regular-file check and the open()
+ 
+    Old code lstat()'d the path, then later open()'d O_RDWR O_CREAT
+    without O_NOFOLLOW. An attacker with write access to the directory
+    could replace the entry with a symlink in the gap and have uemacs
+    open and write through it. The pre-existing comment in the function
+    already acknowledged "this code leaves a small window of
+    vulnerability".
+ 
+    Replaced with an atomic open() carrying O_NOFOLLOW (so a symlink at
+    the path fails with ELOOP) plus a post-open fstat() to verify the
+    descriptor refers to a regular file. The pre-open lstat() is no
+    longer needed.
+ 
+ 4. Lock file created world-writable (0666)
+ 
+    The lock file is informational — other users only need to *read* it
+    to see who holds the lock. Allowing them to *write* it lets any
+    local user impersonate another or corrupt the contents. Changed to
+    0644. The pre-existing umask(0) is kept (and now has a comment
+    explaining why) so a restrictive user umask doesn't strip the
+    group/other read bits — without that, peers cannot discover who
+    holds the lock.
