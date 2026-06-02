@@ -8639,3 +8639,28 @@ from a single keystroke at the prompt or a one-line macro line.
    values, and returned the conventional errorm sentinel that &rnd's
    neighbouring cases already use for bad input. <limits.h> added for
    LLONG_MIN.
+
+-----
+bind.c
+show_key_binding() and buildlist() both built up a key/function-name
+display line via sprintf() + a chain of strcat() into a fixed 80-byte
+stack buffer:
+
+    char outseq[80];
+    sprintf(outseq, "%-12s", cmdstr(key));
+    ...
+    strcat(outseq, ktp->fi->n_name);
+    if (ktp->k_type == PROC_KMAP) {
+        strcat(outseq, " ");
+        strcat(outseq, ktp->hndlr.pbp);   /* user-supplied proc name */
+    }
+
+ktp->hndlr.pbp is the procedure-buffer name a user (or a startup file
+or .uerc) chose with store-procedure; cmdstr(key) can also exceed 80
+bytes for some key combinations. A long procedure name overflows the
+stack buffer when the user runs describe-bindings or describe-key.
+
+Bumped outseq to 256 bytes in both functions and replaced the sprintf
++ strcat chain with bounded snprintf() calls that include all the
+parts in a single format. snprintf() truncates safely rather than
+overflowing, and 256 is comfortable for any sensible naming.

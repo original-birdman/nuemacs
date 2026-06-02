@@ -943,22 +943,22 @@ int unbindkey(int f, int n) {
 
 /* Function used to show the binding of a key */
 static void show_key_binding(unicode_t key) {
-    char outseq[80];
+    char outseq[256];
     struct key_tab *ktp;
     if (!(ktp = getbind(key))) return;  /* No binding */
 
-    sprintf(outseq, "%-12s", cmdstr(key));
-    if (ktp->bk_multiplier != 1) {  /* Mention a non-default multiplier */
-        char tbuf[16];
-        sprintf(tbuf, "{%d}", ktp->bk_multiplier);
-        strcat(outseq, tbuf);
-    }
-    strcat(outseq, ktp->fi->n_name);
+    char mult[16];
+    mult[0] = '\0';
+    if (ktp->bk_multiplier != 1)        /* Mention a non-default multiplier */
+        snprintf(mult, sizeof(mult), "{%d}", ktp->bk_multiplier);
+
 /* Is this an execute-procedure? If so, say which procedure... */
-    if (ktp->k_type == PROC_KMAP) {
-        strcat(outseq, " ");
-        strcat(outseq, ktp->hndlr.pbp);
-    }
+    if (ktp->k_type == PROC_KMAP)
+        snprintf(outseq, sizeof(outseq), "%-12s%s%s %s",
+            cmdstr(key), mult, ktp->fi->n_name, ktp->hndlr.pbp);
+    else
+        snprintf(outseq, sizeof(outseq), "%-12s%s%s",
+            cmdstr(key), mult, ktp->fi->n_name);
     addstr_to_curb(outseq);
     return;
 }
@@ -971,7 +971,7 @@ static int buildlist(const char *mstring) {
     struct window *wp;      /* scanning pointer to windows */
     struct key_tab *ktp;    /* pointer into the command table */
     struct buffer *bp;      /* buffer to put binding list into */
-    char outseq[80];        /* output buffer for keystroke sequence */
+    char outseq[256];       /* output buffer for keystroke sequence */
 
 /* Split the current window to make room for the binding list */
     if (splitwind(FALSE, 1) == FALSE) return FALSE;
@@ -1018,7 +1018,8 @@ static int buildlist(const char *mstring) {
 /* Search down for any keys bound to this. */
         ktp = getbyfnc(names[ni].n_func);
         while (ktp) {
-            sprintf(outseq, "%-28s%s", np, cmdstr(ktp->k_code));
+            snprintf(outseq, sizeof(outseq), "%-28s%s",
+                np, cmdstr(ktp->k_code));
             addstr_to_curb(outseq);
             np = "";    /* For any fursther bindings */
 
