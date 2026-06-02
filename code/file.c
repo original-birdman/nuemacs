@@ -78,10 +78,18 @@ const char *fixup_fname(const char *fn) {
             if (udir.home) {
                 db_set(tfn, udir.home);
                 int i = 1;
-/* Special case for root (i.e just "/")! */
-                if (fn[0]=='/' && fn[1]==0 && db_len(tfn) > 1)
-                    i++;
-                db_append(tfn, fn+i);
+/* udir.home ends with '/' (forced in main()). If fn[1]=='/' we
+ * therefore produce a "//" join which the slash-normalisation
+ * loop below collapses to a single '/'. fn[1]==0 appends nothing.
+ */
+                db_append(tfn, fn+1);
+            }
+            else {
+/* No HOME set: fall back to the literal input rather than leaving
+ * fn_expd holding the previous call's expansion (it is a static
+ * buffer shared across calls).
+ */
+                db_set(fn_expd, fn);
             }
         }
 #ifndef STANDALONE
@@ -94,6 +102,14 @@ const char *fixup_fname(const char *fn) {
                 db_addch(tfn, *p++);
             if ((pwptr = getpwnam(db_val(tfn))) != NULL) {
                 db_sprintf(tfn, "%s%s", pwptr->pw_dir, p);
+            }
+            else {
+/* Unknown user: fall back to the literal input. Otherwise fn_expd
+ * is left holding just the user-name fragment we accumulated above,
+ * which is meaningless as a path and would otherwise be returned
+ * to the caller as the "expanded" name.
+ */
+                db_set(fn_expd, fn);
             }
         }
 #endif
