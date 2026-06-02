@@ -8549,51 +8549,51 @@ Now some code-hardening changes as a result of Claude looking at the code.
 -----
 pklock.c
  Four issues addressed in dolock()/undolock():
- 
+
  1. Buffer overflow on long file names
- 
+
     strcat(strcpy(lname, fname), ".lock~");
- 
+
     lname is a static 512-byte buffer (MAXLOCK). Linux pathnames can be
     up to PATH_MAX (~4096). A long input quietly walks past the buffer.
     Replaced with bounded snprintf() that returns an error string when
     the name would not fit.
- 
+
  2. Buffer overflow + NULL deref while composing the "locker" line
- 
+
         struct passwd *pwe = getpwuid(geteuid());
         strcpy(locker, pwe->pw_name);
         strcat(locker + strlen(locker), "@");
         gethostname(locker + strlen(locker), 64);
- 
+
     getpwuid() may return NULL (no entry for the uid, etc.) and is
     dereferenced unconditionally. Even when non-NULL, pw_name has no
     bounded length on POSIX — combined with the 64-byte hostname suffix
     it can overflow the 129-byte locker buffer. POSIX also allows
     gethostname() to leave its output non-NUL-terminated on truncation.
- 
+
     Rewritten to:
       - check pwe and pwe->pw_name and fall back to "?" if NULL,
       - read the hostname into its own bounded buffer with an explicit
         trailing-NUL,
       - compose the final "user@host" string via a single snprintf().
- 
+
  3. TOCTOU race between the regular-file check and the open()
- 
+
     Old code lstat()'d the path, then later open()'d O_RDWR O_CREAT
     without O_NOFOLLOW. An attacker with write access to the directory
     could replace the entry with a symlink in the gap and have uemacs
     open and write through it. The pre-existing comment in the function
     already acknowledged "this code leaves a small window of
     vulnerability".
- 
+
     Replaced with an atomic open() carrying O_NOFOLLOW (so a symlink at
     the path fails with ELOOP) plus a post-open fstat() to verify the
     descriptor refers to a regular file. The pre-open lstat() is no
     longer needed.
- 
+
  4. Lock file created world-writable (0666)
- 
+
     The lock file is informational — other users only need to *read* it
     to see who holds the lock. Allowing them to *write* it lets any
     local user impersonate another or corrupt the contents. Changed to
@@ -8664,3 +8664,69 @@ Bumped outseq to 256 bytes in both functions and replaced the sprintf
 + strcat chain with bounded snprintf() calls that include all the
 parts in a single format. snprintf() truncates safely rather than
 overflowing, and 256 is comfortable for any sensible naming.
+
+-----
+fileio.c
+
+Three related changes to the file-I/O layer, all about save-path
+robustness and UX.
+
+1. flush_write_cache(): silent truncation on short writes
+
+       written = write(ffp, cache.buf, cache.len);
+       ...
+       cache.len -= written;
+       return FIOSUC;
+
+   write() can legitimately return fewer bytes than requested — short
+   writes happen on signals, on near-full filesystems, and on some
+   FUSE / network backends. The old code subtracted whatever was
+   returned, returned FIOSUC, and the tail of the cache was silently
+   discarded. The user's file ended up truncated with no error
+   reported.
+
+   Rewritten as a proper loop over (cache.buf + off, cache.len - off),
+   retrying on EINTR, surfacing any other error, and only returning
+   success once off == cache.len. Also catches the should-never-happen
+   write()==0 case (the original would have spun forever there).
+
+2. file_is_binary(): include Unicode categories M and S as "text"
+
+       switch(cat_str[0]) {
+       case 'L':  case 'N':  case 'P':  case 'Z':
+           uc_text++;
+       }
+
+   The heuristic samples the first 100 bytes and flags the file as
+   binary if <80% of the Unicode code points fall in those four
+   categories. That misclassified any text file whose first 100 bytes
+   are dominated by symbols (Sm/Sc/Sk/So — math, currency, modifiers,
+   box-drawing, dingbats, emoji) or combining marks (Mn/Mc/Me, common
+   in non-Latin scripts).
+
+   A concrete case: saving a file that begins with a Unicode box-drawn
+   banner (e.g. a tool's output framed with ╭─│█...) was flagged as
+   binary, which triggered the "removed trailing newline for binary
+   file" path on save — leading to silent loss of the trailing newline
+   *and* (combined with bug 3) per-empty-line second-long pauses.
+
+   Added 'M' and 'S' to the text-counting set. Category 'C' (control,
+   format, surrogate, private use, unassigned) remains the genuine
+   binary-file signal.
+
+3. Drop sleep(1) after both "missing trailing newline" messages
+
+   Two informational messages each had a sleep(1) immediately after:
+
+       mlforce("Newline absent at end of file. Added....");
+       sleep(1);
+       ...
+       mlforce("Removed \"added\" trailing newline for %s file", reason);
+       sleep(1);
+
+   The sleep is there so the user can read the message before the next
+   minibuffer write overwrites it — but the message persists on the
+   mode line *anyway* until something else writes there, so the sleep
+   just blocks for a beat on every save and every open of a no-final-
+   newline file. With the ltext()/empty-line fix on top, a sleep per
+   empty line had cost ~3 minutes to save a 1200-line file. Removed.

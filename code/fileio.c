@@ -182,8 +182,14 @@ static int file_is_binary(void) {
             case 'N':       /* Number - ND, NL, NO */
             case 'P':       /* Punctuation - PC, PD, PS, PE, PI, PF, PO */
             case 'Z':       /* Separator, space */
+            case 'M':       /* Mark - Mn, Mc, Me (combining diacritics etc.) */
+            case 'S':       /* Symbol - Sm, Sc, Sk, So (math, currency,
+                             * modifier, *box-drawing*, dingbats, emoji) */
                 uc_text++;
             }
+/* Reject category C (control, format, surrogate, private use, unassigned)
+ * — its presence in the sample is the genuine binary-file signal.
+ */
         }
         uc_total++;
     }
@@ -191,20 +197,31 @@ static int file_is_binary(void) {
     return (uc_text < (4*uc_total)/5)? -1: 1;
 }
 
-/* Routine to flush the cache */
+/* Routine to flush the cache.
+ * write() can legitimately return fewer bytes than requested (short write
+ * on signals, full disk on some filesystems, network/FUSE backends). The
+ * old code subtracted whatever was returned and reported success, so the
+ * tail of the buffer was silently discarded and the user's file ended up
+ * truncated. We now loop until everything is written or write() fails.
+ */
 static int flush_write_cache(void) {
     if (cryptflag) myencrypt(cache.buf, cache.len);
-    int written = 0;
-    errno = 0;
-    while(1) {  /* Allow for interrupted writes */
-        written = write(ffp, cache.buf, cache.len);
-        if (errno != EINTR) break;
+    size_t off = 0;
+    while (off < (size_t)cache.len) {
+        errno = 0;
+        ssize_t written = write(ffp, cache.buf + off, cache.len - off);
+        if (written < 0) {
+            if (errno == EINTR) continue;       /* Interrupted; retry */
+            mlwrite("Write I/O error: %s", strerror(errno));
+            return FIOERR;
+        }
+        if (written == 0) {                     /* Shouldn't happen */
+            mlwrite_one("Write I/O error: zero-length write");
+            return FIOERR;
+        }
+        off += (size_t)written;
     }
-    if (written < 0) {
-        mlwrite("Write I/O error: %s", strerror(errno));
-        return FIOERR;
-    }
-    cache.len -= written;
+    cache.len = 0;
     return FIOSUC;
 }
 
@@ -238,8 +255,12 @@ int ffputline(const char *buf, int nbuf) {
             }
         }
         if (reason) {       /* Do we have a reason to skip the final NL? */
+/* The message stays on the mode-line until the next minibuffer write.
+ * No sleep — a blocking pause per save just to let the user read an
+ * informational line is a UX trap (saving a file with 195 of these
+ * once cost two minutes before the empty-line bug was fixed).
+ */
             mlforce("Removed \"added\" trailing newline for %s file", reason);
-            sleep(1);
         }
         else {
             if (cache.rst != 0 && !doing_newline) {
@@ -357,8 +378,11 @@ int ffgetline(void) {
                 if (!fline) return FIOEOF;
                 if (lused(fline)) {
                     curbp->b_EOLmissing = 1;
+/* Message stays on the mode-line until the next minibuffer write.
+ * See the matching note in ffputline; no blocking sleep just to let
+ * the user read an informational line.
+ */
                     mlforce("Newline absent at end of file. Added....");
-                    sleep(1);
                 }
                 return lused(fline)? FIOSUC: FIOEOF;
             }
