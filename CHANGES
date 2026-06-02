@@ -8540,3 +8540,5 @@ eval.c
     Remove some no longer extant variables from being freed in the
     DO_FREE sections of code.
 
+dyn_buf.h
+    Tidy up some defines.
