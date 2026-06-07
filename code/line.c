@@ -14,6 +14,7 @@
  */
 
 #include <stdio.h>
+#include <signal.h>
 #if __sun
 #include <alloca.h>
 #endif
@@ -122,81 +123,6 @@ void lchange(int flag) {
     if ((curbp->b_type == BTPHON) && curbp->ptt_headp) ptt_free(curbp);
 }
 
-/* Insert "n" copies of the character "c" at the current location of dot. In
- * the easy case all that happens is the text is stored in the line. In the
- * hard case, the line has to be Xreallocated. When the window list is updated,
- * take special care; I screwed it up once. You always update dot in the
- * current window. You update mark, and a dot in another window, if it is
- * greater than the place where you did the insert. Return TRUE if all is
- * well, and FALSE on errors.
- */
-int linsert_byte(int n, unsigned char c) {
-    struct line *lp1;
-    int doto;
-
-    if (n <= 0) return (n == 0);    /* So 0 is TRUE, but -ve is FALSE */
-    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
-        return rdonly();            /* we are in read only mode */
-    lchange(WFEDIT);
-    lp1 = curwp->w.dotp;            /* Current line */
-/* What we wish to insert */
-    char *tbuf = alloca(n+1);
-    memset(tbuf, c, n);
-    if (lp1 == curbp->b_linep) {    /* At the end: special */
-        if (curwp->w.doto != 0) {
-            mlwrite_one("bug: linsert");
-            return FALSE;
-        }
-/* We have a function to add a dyn_buf at the end of a buffer */
-        db_strdef(ibuf);
-        db_setn(ibuf, tbuf, n);
-        addline_to_curb(&ibuf);
-        db_free(ibuf);
-
-/* addline_to_curb will put dot on the dummy end line, effectively
- * adding a newline at the end of it.
- * So we move dot back 1 char, to the end of what we've added....
- */
-        backchar(0, 1);
-        return TRUE;
-    }
-    doto = curwp->w.doto;       /* Save for later. */
-/* Insert the new text */
-    db_insertn_at(lp1->l_, tbuf, n, doto);
-
-/* Update dot/mark/pins in windows
- * NOTE that the dot check is ">=", as we wish to move with dot as
- * we insert, but we want to leave mark and pin where they were if they
- * started at dot.
- */
-    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-        if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
-            wp->w.doto += n;
-        }
-        if ((wp->w.markp == lp1) && (wp->w.marko > doto)) {
-            wp->w.marko += n;
-        }
-    }
-    if ((sysmark.p == lp1) && (sysmark.o > doto)) sysmark.o += n;
-    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-        if (mmi(mp, lp) == lp1) {
-            if (mmi(mp, offset) > doto) mmi(mp, offset) += n;
-         }
-    }
-    return TRUE;
-}
-
-/* insert spaces forward into text
- *
- * int f, n;            default flag and numeric argument
- */
-int insspace(int f, int n) {
-    UNUSED(f);
-    if (!linsert_byte(n, ' ')) return FALSE;
-    back_grapheme(n);
-    return TRUE;
-}
-
 /* Insert a newline into the buffer at the current location of dot in the
  * current window.
  * Now done by splitting of the "excess" text beyond the newline into
@@ -298,6 +224,107 @@ int lnewline(void) {
             mmi(mp, offset) -= doto;
         }
     }
+    return TRUE;
+}
+
+/* Insert "n" copies of the character "c" at the current location of dot. In
+ * the easy case all that happens is the text is stored in the line. In the
+ * hard case, the line has to be Xreallocated. When the window list is updated,
+ * take special care; I screwed it up once. You always update dot in the
+ * current window. You update mark, and a dot in another window, if it is
+ * greater than the place where you did the insert. Return TRUE if all is
+ * well, and FALSE on errors.
+ *
+ * This is only intended by ASCII 8-bit bytes (linsert_uc is for unicode
+ * points), so this includes a check for that.
+ * This call is wrapped in a #defined to ensure that the incoming char
+ * is mapped to unsgined.
+ */
+static db_strdef(ibuf);
+#define IBUF_LEN 32
+
+int _linsert_byte(int n, unsigned int c) {
+    struct line *lp1;
+    int doto;
+
+    if (n <= 0) return (n == 0);    /* So 0 is TRUE, but -ve is FALSE */
+    if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
+        return rdonly();            /* we are in read only mode */
+    lchange(WFEDIT);
+
+/* Sanity check.
+ * There seems to be no way in C prototypes to get a compiler warning
+ * when passing an int into a char arg.
+ */
+    if (c > 0xff) {
+        db_strdef(lbm);
+        db_sprintf(lbm, "linsert_byte sent non-byte 0x%08x", c);
+        dump_message = db_val(lbm);
+        raise(SIGILL);
+        exit(127);  /* Just in case... */
+    }
+
+    int rc = n;                     /* Repeat counter */
+    lp1 = curwp->w.dotp;            /* Current line */
+
+/* If we are at the (dummy) end of buffer line then we need to add
+ * a newline ahead of it, then get back to that.
+ */
+    if (lp1 == curbp->b_linep) {
+        if (curwp->w.doto != 0) {
+            mlwrite_one("bug: linsert");
+            return FALSE;
+        }
+        lnewline();
+/* addline_to_curb will put dot on the dummy end line, effectively
+ * adding a newline at the end of it.
+ * So we move dot back 1 char, to the end of what we've added....
+ */
+        backchar(0, 1);
+        lp1 = curwp->w.dotp;        /* New current line */
+    }
+    doto = curwp->w.doto;       /* Save for later. */
+
+/* Insert the new text
+ * We only allow bytes here - create a filled dyn_buf for the 1-byte char
+ */
+    db_bufset(ibuf, c, IBUF_LEN);
+    while (rc) {
+        int fc = (rc > IBUF_LEN)? IBUF_LEN: rc;
+        db_insertn_at(lp1->l_, db_val(ibuf), fc, doto);
+        rc -= fc;
+    }
+
+/* Update dot/mark/pins in windows
+ * NOTE that the dot check is ">=", as we wish to move with dot as
+ * we insert, but we want to leave mark and pin where they were if they
+ * started at dot.
+ */
+    for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+        if ((wp->w.dotp == lp1) && (wp->w.doto >= doto)) {
+            wp->w.doto += n;
+        }
+        if ((wp->w.markp == lp1) && (wp->w.marko > doto)) {
+            wp->w.marko += n;
+        }
+    }
+    if ((sysmark.p == lp1) && (sysmark.o > doto)) sysmark.o += n;
+    for(linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+        if (mmi(mp, lp) == lp1) {
+            if (mmi(mp, offset) > doto) mmi(mp, offset) += n;
+         }
+    }
+    return TRUE;
+}
+
+/* insert spaces forward into text
+ *
+ * int f, n;            default flag and numeric argument
+ */
+int insspace(int f, int n) {
+    UNUSED(f);
+    if (!linsert_byte(n, ' ')) return FALSE;
+    back_grapheme(n);
     return TRUE;
 }
 
@@ -919,7 +946,7 @@ void free_line(void) {
             tp = np;
         }
     }
-
+    db_free(ibuf);
     return;
 }
 #endif
