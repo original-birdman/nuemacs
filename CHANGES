@@ -8937,3 +8937,11 @@ version.h
 CHANGES
     Correct a description for main.c in GGR4.128.
     The 2-byte charcet given was 1-byte, and the wrong byte.
+
+search.c
+etc/uemacs.hlp
+    Remove some debug statements for ring text display. [search.c]
+    Add is_safe_counter() to check that the counter format given for a 
+    ${@...} replace is valid. Ignore it if not. [search.c]
+    Free val.x.fmt before reassigning to stop memory leak [search.c]
+    Document the counter format validity check. [uemacs.hlp]

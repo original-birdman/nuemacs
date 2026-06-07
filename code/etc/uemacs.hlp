@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.191 Help Index     (02 Jun 2026)
+=>                   nuEmacs GGR4.192 Help Index     (08 Jun 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -474,7 +474,9 @@ ${@}
     formatted using %d.
     You can change these by using (any or all) of:
         ${@:start=m,incr=n,fmt=%..d}
-    The counter is an int, so any fmt option MUST use either u or d!
+    The counter is an int, so any fmt option MUST be a template that
+    mentions a single d/i/o/u/x/X conversion. Any invalid template is
+    ignored and the default %d used instead.
     The counter resets on each replace command.
     You may have more that one counter in a replace string.
 

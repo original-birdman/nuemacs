@@ -117,6 +117,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <limits.h>
+#include <string.h>
 
 #define SEARCH_C
 
@@ -540,14 +541,6 @@ void rotate_sstr(int n) {
         rotator %= RING_SIZE;
         tmp_txt[rotator] = txt[ix];
     }
-fprintf(stderr, "Original ring:\n");
-for (int ix = 0; ix < RING_SIZE; ix++) {
-  fprintf(stderr, "%02d: %.*s\n", ix, (int)dbp_len(txt+ix), dbp_val(txt+ix));
-}
-fprintf(stderr, "Rotated ring:\n");
-for (int ix = 0; ix < RING_SIZE; ix++) {
-  fprintf(stderr, "%02d: %.*s\n", ix, (int)db_len(tmp_txt[ix]), db_val(tmp_txt[ix]));
-}
     memcpy(txt, tmp_txt, sizeof(tmp_txt));  /* Copy rotated array back */
 
     t_db = &txt[0];                         /* Update (r)pat */
@@ -1563,6 +1556,74 @@ static struct func_call *new_fc(void) {
     return retval;
 }
 
+/* Validate a user-supplied counter format string (the "fmt=..." token of
+ * a ${@:...} replacement counter) before it is handed to snprintf().
+ *
+ * The counter value is a single "int" argument, so we only allow a format
+ * that contains exactly one conversion and that conversion must be a plain
+ * integer one (d/i/o/u/x/X) with optional flags, field width and precision
+ */
+static int is_safe_counter(const char *user_fmt) {
+    const char *cp = user_fmt;
+    int result = 0;
+
+/* A state machine */
+    enum fm_state { PREAMBLE, FLAG, WIDTH, PREC, IFMT, POSTAMBLE };
+    enum fm_state state = PREAMBLE;
+    int dot_seen = 0;
+    char width_low = '1';
+    while (*cp) {
+        switch(state) {
+        case PREAMBLE:      /* Allow anything until we get to the % */
+            if (*cp == '%') {
+                if (*(cp+1) == '%') {   /* Literal % */
+                    cp++;
+                }
+                else {
+                    state = FLAG;
+                }
+            }
+            break;
+        case FLAG:          /* May be absent */
+            if (!strchr("#0- +'I", *cp)) cp--;  /* Check again in WIDTH */
+            state = WIDTH;
+            break;
+        case WIDTH:         /* May be absent. Mustn't start with 0 */
+            if ((*cp < width_low) || (*cp > '9')) {
+                state = PREC;
+                cp--;       /* Check this again */
+            }
+            width_low = '0';
+            break;
+        case PREC:          /* Must start with "." May be absent. No * or m$ */
+            if (!dot_seen && (*cp == '.')) {
+                dot_seen = 1;
+            }
+            if (!dot_seen || (*cp < '0') || (*cp > '9')) {
+                state = IFMT;
+                cp--;       /* Check this again */
+            }
+            break;
+        case IFMT:          /* Must be an integer format char */
+            if (!strchr("diouxX", *cp)) return 0;
+            state = POSTAMBLE;
+            result = 1;     /* Format seen */
+            break;
+        case POSTAMBLE:     /* Must not contain a % field */
+            if (*cp == '%') {
+                if (*(cp+1) == '%') {   /* Literal % */
+                    cp++;
+                }
+                else {
+                    return 0;
+                }
+            }
+        }
+        cp++;
+    }
+    return result;
+}
+
 /* rmcstr -- Set up the replacement 'magic' array.  Note that if there
  *      are no meta-characters encountered in the replacement string,
  *      the array is never actually created - we will just use the
@@ -1658,7 +1719,10 @@ static int rmcstr(void) {
                             rmcptr->val.x.incr = atoi(ntp+5);
                         }
                         else if (0 == strncmp("fmt=", ntp, 4)) {
-                            rmcptr->val.x.fmt = Xstrdup(ntp+4);
+                            if (is_safe_counter(ntp+4)) {
+                                Xfree(rmcptr->val.x.fmt);
+                                rmcptr->val.x.fmt = Xstrdup(ntp+4);
+                            }
                         }
                     }
                 }
