@@ -1751,25 +1751,29 @@ etc/uemacs.hlp
 ========== GGR4.127
 
 main.c
-    Correct an horrendous bug when inserting a new character. These
-    arrive as unicode, but the code called linsert_byte() to insert this.
-    The attached comment said "We get utf-8, not Unicode" - why is a
-    mystery, as it was never inserting a string.
-    This was resulting in attempts to add things like ý (2-byte utf8 -
-    0xc3 0xbc) ending up as "extended ASCII" (0xfc) and hence non-utf8!
-    It also stopped any other extended characters from being entered at
-    the keyboard.
+    Correct an horrendous bug when inserting a new character.  These
+    arrive as unicode, but the code called linsert_byte() to insert
+    this.  The attached comment said "We get utf-8, not Unicode" - why
+    is a mystery, as it was never inserting a string.  This was
+    resulting in attempts to add things like Ã¼ (2-byte utf8 - 0xc3 0xbc,
+    arrives as U+00fc) ending up as "extended ASCII" (0xfc) and hence
+    non-utf8!  It also stopped any other extended characters from being
+    entered at the keyboard.
+
 eval.c
 exec.c
     Rename linsert() to linsert_uc().
+
 input.c
     Change linsert() of a char to be linsert_byte().
+
 line.c
 line.h
     Change linsert_byte() prototype to have a char as second parameter.
     Change linsert() to linsert_uc() and make the second parameter a
     unicode_t.
     Change lowrite() prototype to be a unicode_t.
+
 random.c
 word.c
     Change linsert() to linsert_uc().
@@ -8928,4 +8932,8 @@ version.h
     Fix a stk_printf() call to printf(). [main.c]
     Update to GGR4.191
 
-==========
+========== GGR4.192
+
+CHANGES
+    Correct a description for main.c in GGR4.128.
+    The 2-byte charcet given was 1-byte, and the wrong byte.
