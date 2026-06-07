@@ -64,6 +64,7 @@ void _dbp_set(db *, const char *);
 void _dbp_insertn_at(db *, const void *, size_t, size_t);
 void _dbp_deleten_at(db *, int, size_t);
 void _dbp_overwriten_at(db *, const void *, size_t, size_t);
+void _dbp_bufset(db *, const char, int);
 void _dbp_clear(db *);
 void _dbp_truncate(db *, size_t);
 void _dbp_appendn(db *, const char *, size_t);
@@ -150,5 +151,8 @@ void _dbp_free(db *);
 
 #define db_upval(ds, charp) _dbp_upval(&(ds), charp)
 #define dbp_upval(ds, charp) _dbp_upval((ds), charp)
+
+#define db_bufset(ds, ch, n) _dbp_bufset(&(ds), ch, n)
+#define dbp_bufset(ds, ch, n) _dbp_bufset((ds), ch, n)
 
 #endif

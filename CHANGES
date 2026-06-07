@@ -8945,3 +8945,9 @@ etc/uemacs.hlp
     ${@...} replace is valid. Ignore it if not. [search.c]
     Free val.x.fmt before reassigning to stop memory leak [search.c]
     Document the counter format validity check. [uemacs.hlp]
+
+dyn_buf.c
+dyn_buf.h
+    Add _dbp_bufset() and db_bufset/dbp_bufset macros for it.
+    Change _dbp_set to do nothing if incoming str is NULL [dyn_buf.c]
+

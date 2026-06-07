@@ -63,7 +63,8 @@ void _dbp_setn(db *ds, const void *mp, size_t n) {
 /* String copy-in a NUL-terminated string */
 
 void _dbp_set(db *ds, const char *str) {
-    return _dbp_setn(ds, str, strlen(str));
+    if (str) _dbp_setn(ds, str, strlen(str));
+    return;
 }
 
 /* Insert n chars into buffer */
@@ -109,6 +110,20 @@ void _dbp_overwriten_at(db *ds, const void *mp, size_t n, size_t offs) {
     if (((ds->blen - ds->alen) > offs) || ((offs + n) > ds->blen))
         illegal_dbaction("Illegal db overwriten");
     memmove(ds->buf+offs, mp, n);
+    return;
+}
+
+/* Set the buffer to n copies of char ch */
+
+void _dbp_bufset(db *ds, const char ch, int n) {
+    size_t need = n;
+    if (ds->type & DB_STR) need++;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
+    memset(ds->buf, ch, n);
+    ds->asp = ds->buf;
+    ds->blen = n;
+    ds->alen = n;
+    if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
     return;
 }
 
