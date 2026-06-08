@@ -8963,3 +8963,10 @@ edef.h
 main.c
     Fix the STANDALONE set_pathname() code to allocate the correct
     memory sizes (from Claude).
+
+eval.c
+line.c
+    Change _linsert_byte() to handle newline, so that callers do not
+    need to check [line.c]
+    Change linsert_byte() callers to not check for newline. [eval.c,
+    search.c]

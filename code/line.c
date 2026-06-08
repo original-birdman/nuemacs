@@ -265,6 +265,12 @@ int _linsert_byte(int n, unsigned int c) {
     }
 
     int rc = n;                     /* Repeat counter */
+    if (c == '\n') {                /* Newline is a special case */
+        int status = TRUE;
+        while (status && rc--) lnewline();
+        return status;
+    }
+
     lp1 = curwp->w.dotp;            /* Current line */
 
 /* If we are at the (dummy) end of buffer line then we need to add
@@ -344,8 +350,7 @@ int lins_dynbuf(dbp_dcl(instr)) {
     if (tmpc != NULL) {
         int nc = dbp_len(instr);
         while(nc--) {
-/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
-            status = (*tmpc == '\n' ? lnewline() : linsert_byte(1, *tmpc));
+            status = linsert_byte(1, *tmpc);
 
 /* Insertion error? */
             if (status != TRUE) {
@@ -376,8 +381,7 @@ static int lins_nc(char *instr, int nb) {
     if (instr != NULL)
         while (nb--) {
             tmpc = *instr;
-/* GGR - linsert inserts unicode....but we've been sent a (utf8) string! */
-            status = (tmpc == '\n' ? lnewline() : linsert_byte(1, tmpc));
+            status = linsert_byte(1, tmpc);
 /* Insertion error? */
             if (status != TRUE) {
                 mlwrite_one("Out of memory while inserting");

@@ -1535,8 +1535,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             srch_can_hunt = 0;
             ldelgrapheme(1, FALSE);     /* Delete 1 char-place */
             c = atoi(value);
-            if (c == '\n') lnewline();
-            else           linsert_uc(1, c);
+            linsert_uc(1, c);
             back_grapheme(1);
             break;
         case EVDISCMD:
