@@ -1560,7 +1560,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
         case EVREPLACE:
             db_set(rpat, value);
-            new_prompt(value);  /* Let getstring() know, via the search code */
+            new_prompt(&rpat);  /* Let getstring() know, via the search code */
             break;
         case EVCMODE:
             srch_can_hunt = 0;

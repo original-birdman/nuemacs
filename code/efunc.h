@@ -359,7 +359,7 @@ extern int widen(int, int);
 /* search.c */
 #ifndef SEARCH_C
 extern void init_search_ringbuffers(void);
-extern void new_prompt(const char *);
+extern void new_prompt(db *);
 extern void rotate_sstr(int);
 extern void select_sstr(void);
 extern int unicode_eq(unsigned int, unsigned);

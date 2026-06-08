@@ -8970,3 +8970,13 @@ line.c
     need to check [line.c]
     Change linsert_byte() callers to not check for newline. [eval.c,
     search.c]
+
+eval.c
+search.c
+efunc.h
+    Fix the broken search-ring code (which explains why the debug
+    statements had been left there).
+    new_prompt() now takes a db* arg [eval.c, search.c, efunc.h]
+    expandp() now takes a db* arg [search.c]
+    init_search_ringbuffers() now initializes srch_txt and repl_txt to
+    DB_STR values (should be DB_BUF, but that needs more work). [search.c]

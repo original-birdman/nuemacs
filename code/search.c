@@ -368,7 +368,9 @@ void init_search_ringbuffers(void) {
  * update_ring() expects this.
  */
     for (int ix = 0; ix < RING_SIZE; ix++) {
+        srch_txt[ix] = (db) db_str_initval;
         db_set(srch_txt[ix], "");
+        repl_txt[ix] = (db) db_str_initval;
         db_set(repl_txt[ix], "");
     }
 
@@ -436,18 +438,21 @@ static void update_ring(dbp_dcl(str)) {
 /* expandp -- Expand control key sequences for output.
  *            Assumes caller has sent a large enough buffer.
  *
- * char *srcstr;                string to expand
+ * char *newstr;                string to expand
  *  returns the expanded text in a dynamic buffer
  */
 static db_strdef(expbuf);
-static db *expandp(const char *srcstr) {
+static db *expandp(db *newstr) {
     unsigned char c;        /* current char to translate */
 
     db_set(expbuf, "");     /* NOT db_clear, to ensure val is not NULL */
 
 /* Scan through the string. */
 
-    while ((c = *srcstr++) != 0) {
+    int cc = dbp_len(newstr);   /* May contain NULs */
+    int ci = 0;
+    while (ci < cc) {
+        c = dbp_charat(newstr, ci++);
         if (c == '\n') {    /* It's a newline */
             db_append(expbuf, "<NL>");
         }
@@ -503,8 +508,8 @@ static int boundry(struct line *curline, int curoff, int dir) {
  * text as the default.
  * Also called from svar() if it sets $replace or $search
  */
-void new_prompt(const char *dflt_str) {
-    dbp_dcl(ep) = expandp(dflt_str);
+void new_prompt(db *new) {
+    dbp_dcl(ep) = expandp(new);
     db_sprintf(prmpt_buf.prompt, "%s " MLpre "%.*s" MLpost ": ",
          current_base, (int)dbp_len(ep), dbp_val(ep));
     prmpt_buf.update = 1;
@@ -549,7 +554,7 @@ void rotate_sstr(int n) {
  * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
  * to tell getstring() to use it.
  */
-    new_prompt(dbp_val(t_db));
+    new_prompt(t_db);
     return;
 }
 
@@ -2132,7 +2137,7 @@ static int readpattern(char *prompt, db *apat, int srch) {
  */
     strcpy(saved_base, current_base);
     strcpy(current_base, prompt);
-    dbp_dcl(ep) = expandp(dbp_val_nc(apat));
+    dbp_dcl(ep) = expandp(apat);
     db_sprintf(tpat, "%s " MLpre "%s" MLpost ": ", prompt, dbp_val(ep));
 
 /* Read a pattern.  Either we get one or we just get an empty result
@@ -3681,9 +3686,13 @@ pprompt:
 /* We need to take a copy of one expandp() result, as it uses
  * a static buffer for its results.
  */
-            dbp_dcl(ep) = expandp(match_p);
+            db_strdef(tp);
+            db_set(tp, match_p);
+            dbp_dcl(ep) = expandp(&tp);
             char *rt = strdupa(dbp_val(ep));
-            ep = expandp(repl_p);
+            db_set(tp, repl_p);
+            ep = expandp(&tp);
+            db_free(tp);
             mlwrite("Replace '%s' with '%s'? ", rt, dbp_val(ep));
 
 qprompt:
