@@ -1609,7 +1609,16 @@ static int goto_pin(int do_switch) {
 /* If we've been asked to switch position, remember where we are
  * so we can update the pin after the move.
  */
-    struct mac_pin old_pos;
+
+/* Add a fudge to stop a(n incorrect) "may be used unitialized" compiler
+ * warning on Centos6
+ */
+#if __GNUC__ > 4
+#define FUDGE
+#else
+#define FUDGE = { 0, 0, 0, 0, 0 }
+#endif
+    struct mac_pin old_pos FUDGE;
     if (do_switch) {
         old_pos.bp = curbp;
         old_pos.lp = curwp->w.dotp;

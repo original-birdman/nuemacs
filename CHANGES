@@ -8984,3 +8984,10 @@ efunc.h
 search.c
 etc/uemacs.hlp
     Treat invalid counter templates as errors, and report them.
+
+exec.c
+version.h
+    Added a FUDGE for a compiler warning on Centos6 (gcc4) [exec.c]
+    Update to GGR4.192
+
+==========
