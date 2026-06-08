@@ -8936,12 +8936,12 @@ version.h
 
 CHANGES
     Correct a description for main.c in GGR4.128.
-    The 2-byte charcet given was 1-byte, and the wrong byte.
+    The 2-byte character given was 1-byte, and the wrong byte.
 
 search.c
 etc/uemacs.hlp
     Remove some debug statements for ring text display. [search.c]
-    Add is_safe_counter() to check that the counter format given for a 
+    Add is_safe_counter() to check that the counter format given for a
     ${@...} replace is valid. Ignore it if not. [search.c]
     Free val.x.fmt before reassigning to stop memory leak [search.c]
     Document the counter format validity check. [uemacs.hlp]
@@ -8959,3 +8959,7 @@ edef.h
     The code now also checks that nothing is passing in a non byte (e.g.
     a Unicode char).
     Added const to dump_message declaration. [edef.h]
+
+main.c
+    Fix the STANDALONE set_pathname() code to allocate the correct
+    memory sizes (from Claude).

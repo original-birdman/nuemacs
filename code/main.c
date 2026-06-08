@@ -2001,15 +2001,24 @@ int main(int argc, char **argv) {
 #ifdef STANDALONE
 #include <libgen.h>
 do {
-    char exec_file[PATH_MAX];
-    ssize_t elen = readlink("/proc/self/exe", exec_file, PATH_MAX-1);
+    ssize_t bufsiz;
+    struct stat  sb;
+    if (lstat(argv[1], &sb) == -1) {
+        bufsiz = PATH_MAX + 1;
+    }
+    else {
+        bufsiz = sb.st_size + 1;
+    }
+    char *exec_file = Xmalloc(bufsiz);
+    ssize_t elen = readlink("/proc/self/exe", exec_file, bufsiz);
     if (elen < 0) break;
     terminate_str(exec_file + elen);
     char *exec_path = dirname(exec_file);
-    char *cpath = Xmalloc(strlen(exec_path) + 5);
+    char *cpath = Xmalloc(strlen(exec_path) + sizeof("/etc/"));
     strcpy(cpath, exec_path);
     strcat(cpath, "/etc/");
     set_pathname(cpath);
+    Xfree(exec_file);
     Xfree(cpath);
 } while(0);     /* One pass loop */
 #endif
