@@ -476,7 +476,7 @@ ${@}
         ${@:start=m,incr=n,fmt=%..d}
     The counter is an int, so any fmt option MUST be a template that
     mentions a single d/i/o/u/x/X conversion. Any invalid template is
-    ignored and the default %d used instead.
+    reported as an error.
     The counter resets on each replace command.
     You may have more that one counter in a replace string.
 

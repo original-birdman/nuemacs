@@ -8980,3 +8980,7 @@ efunc.h
     expandp() now takes a db* arg [search.c]
     init_search_ringbuffers() now initializes srch_txt and repl_txt to
     DB_STR values (should be DB_BUF, but that needs more work). [search.c]
+
+search.c
+etc/uemacs.hlp
+    Treat invalid counter templates as errors, and report them.

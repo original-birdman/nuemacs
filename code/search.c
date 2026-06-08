@@ -1724,10 +1724,12 @@ static int rmcstr(void) {
                             rmcptr->val.x.incr = atoi(ntp+5);
                         }
                         else if (0 == strncmp("fmt=", ntp, 4)) {
-                            if (is_safe_counter(ntp+4)) {
-                                Xfree(rmcptr->val.x.fmt);
-                                rmcptr->val.x.fmt = Xstrdup(ntp+4);
+                            if (!is_safe_counter(ntp+4)) {
+                                parse_error(patptr, "Invalid ${@..} counter");
+                                return FALSE;
                             }
+                            Xfree(rmcptr->val.x.fmt);
+                            rmcptr->val.x.fmt = Xstrdup(ntp+4);
                         }
                     }
                 }
