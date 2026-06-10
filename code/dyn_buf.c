@@ -67,6 +67,23 @@ void _dbp_set(db *ds, const char *str) {
     return;
 }
 
+/* Insert n copies of a char into buffer */
+
+void _dbp_replicatech_at(db *ds, char c, size_t n, size_t offs) {
+    int movers = ds->blen - offs;
+    if ((movers < 0) || ((ds->blen - ds->alen) > offs))
+        illegal_dbaction("Illegal db replicatech");
+    size_t need = ds->blen + n;
+    if (ds->type & DB_STR) need++;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
+    memmove(ds->buf+offs+n, ds->buf+offs, movers);
+    memset(ds->buf+offs, c, n);
+    ds->blen += n;
+    ds->alen += n;
+    if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
+    return;
+}
+
 /* Insert n chars into buffer */
 
 void _dbp_insertn_at(db *ds, const void *mp, size_t n, size_t offs) {

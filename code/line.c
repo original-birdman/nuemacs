@@ -240,9 +240,6 @@ int lnewline(void) {
  * This call is wrapped in a #defined to ensure that the incoming char
  * is mapped to unsgined.
  */
-static db_strdef(ibuf);
-#define IBUF_LEN 32
-
 int _linsert_byte(int n, unsigned int c) {
     struct line *lp1;
     int doto;
@@ -264,10 +261,9 @@ int _linsert_byte(int n, unsigned int c) {
         exit(127);  /* Just in case... */
     }
 
-    int rc = n;                     /* Repeat counter */
     if (c == '\n') {                /* Newline is a special case */
         int status = TRUE;
-        while (status && rc--) lnewline();
+        while (status && n--) lnewline();
         return status;
     }
 
@@ -291,15 +287,9 @@ int _linsert_byte(int n, unsigned int c) {
     }
     doto = curwp->w.doto;       /* Save for later. */
 
-/* Insert the new text
- * We only allow bytes here - create a filled dyn_buf for the 1-byte char
- */
-    db_bufset(ibuf, c, IBUF_LEN);
-    while (rc) {
-        int fc = (rc > IBUF_LEN)? IBUF_LEN: rc;
-        db_insertn_at(lp1->l_, db_val(ibuf), fc, doto);
-        rc -= fc;
-    }
+/* Insert the new text. We have a routine for this. */
+
+    db_replicatech_at(lp1->l_, c, n, doto);
 
 /* Update dot/mark/pins in windows
  * NOTE that the dot check is ">=", as we wish to move with dot as

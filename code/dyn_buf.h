@@ -61,6 +61,7 @@ typedef struct {
 const char *_dbp_val_nc(db *);
 void _dbp_setn(db *, const void *, size_t);
 void _dbp_set(db *, const char *);
+void _dbp_replicatech_at(db *, char, size_t, size_t);
 void _dbp_insertn_at(db *, const void *, size_t, size_t);
 void _dbp_deleten_at(db *, int, size_t);
 void _dbp_overwriten_at(db *, const void *, size_t, size_t);
@@ -96,6 +97,11 @@ void _dbp_free(db *);
 
 #define db_set(to_ds, from_str) _dbp_set(&(to_ds), from_str)
 #define dbp_set(to_ds, from_str) _dbp_set((to_ds), from_str)
+
+#define db_replicatech_at(to_ds, ch, flen, w) \
+     _dbp_replicatech_at(&(to_ds), ch, flen, w)
+#define dbp_replicatech_at(to_ds, ch, flen, w) \
+     _dbp_replicatech_at((to_ds), ch, flen, w)
 
 #define db_insertn_at(to_ds, from_buf, flen, w) \
      _dbp_insertn_at(&(to_ds), from_buf, flen, w)

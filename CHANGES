@@ -8990,4 +8990,10 @@ version.h
     Added a FUDGE for a compiler warning on Centos6 (gcc4) [exec.c]
     Update to GGR4.192
 
-==========
+========== GGR4.193
+
+dyn_buf.c
+line.c
+dyn_buf.h
+    Add _dbp_replicatech_at() [dyn_buf.c, dyn_buf.h]
+    Use it to remove the insertion loop in _linsert_byte() [line.c]
