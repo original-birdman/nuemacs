@@ -1,6 +1,8 @@
 #ifndef UTF8_H
 #define UTF8_H
 
+#include "utf8proc.h"
+
 /* Let's define an 8-byte integer type for use as a string/buffer/region
  * length. Now also for macro variable integers.
  * long may be 4- or 8-bytes
@@ -14,11 +16,11 @@ typedef long long ue64I_t;
 
 /* The maximum number of bytes in a utf8 sequence (since 2003) */
 #define MAX_UTF8_LEN  4
-#define MAX_UTF8_CHAR 0x0010FFFF
-typedef unsigned int unicode_t;
+#define MAX_UNICODE_CHAR 0x0010FFFF
+typedef utf8proc_int32_t unicode_t;
 
 int utf8_to_unicode(const char *line, int index, int len, unicode_t *res);
-int unicode_to_utf8(unsigned int c, char *utf8);
+int unicode_to_utf8(unicode_t c, char *utf8);
 
 /* GGR
  * Define a structure to hold the data for a single grapheme.

@@ -91,10 +91,10 @@
 #define NCOLORS 8               /* number of supported colors   */
 #define KBLOCK  250             /* sizeof kill buffer chunks    */
 
-#define CONTROL 0x10000000      /* Control flag, or'ed in       */
-#define META    0x20000000      /* Meta flag, or'ed in          */
-#define CTLX    0x40000000      /* ^X flag, or'ed in            */
-#define SPEC    0x80000000      /* special key (function keys)  */
+#define CONTROL ((unicode_t)0x10000000) /* Control flag, or'ed in       */
+#define META    ((unicode_t)0x20000000) /* Meta flag, or'ed in          */
+#define CTLX    ((unicode_t)0x40000000) /* ^X flag, or'ed in            */
+#define SPEC    ((unicode_t)0x80000000) /* special key (function keys)  */
 
 #ifdef  FALSE
 #undef  FALSE

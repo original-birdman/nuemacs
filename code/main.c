@@ -1622,7 +1622,7 @@ int execute(int c, int f, int n) {
     com_flag = 0;
 
     if ((c >= 0x20 && c <= 0x7E)    /* Self inserting.      */
-        || (c >= 0xA0 && c <= MAX_UTF8_CHAR)) {
+        || (c >= 0xA0 && c <= MAX_UNICODE_CHAR)) {
 
 /* GGR - Implement Phonetic Translation iff we are about to self-insert.
  * If the mode is active call the handler.

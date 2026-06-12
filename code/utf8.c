@@ -34,8 +34,8 @@ int utf8_to_unicode(const char *line, int index, int len,
 
     unsigned value;
     unsigned char c = line[index];
-    unsigned mask, i;
-    int bytes;
+    unsigned mask;
+    int i, bytes;
 
     *res = c;
     line += index;
@@ -67,7 +67,7 @@ int utf8_to_unicode(const char *line, int index, int len,
         if ((c & 0xc0) != 0x80) return 1;
         value = (value << 6) | (c & 0x3f);
     }
-    if (value > MAX_UTF8_CHAR) {
+    if (value > MAX_UNICODE_CHAR) {
         return 1;
     }
     *res = value;
@@ -116,10 +116,15 @@ int combining_type(unicode_t uc) {
  * possible sequence, while utf8_to_unicode() accepts both Latin1 and
  * overlong utf-8 sequences.
  */
-int unicode_to_utf8(unsigned int c, char *utf8) {
+int unicode_to_utf8(unicode_t c, char *utf8) {
     int bytes = 1;
 
     *utf8 = c;
+
+/* Anything over MAX_UNICODE_CHAR isn't Unicode, just return one byte. */
+
+    if ((c < 0) || c > MAX_UNICODE_CHAR) return bytes;
+
 /* We have a unicode point - anything over 0x7f is multi-byte */
     if (c >= 0x80) {
 /* The next two values will be the prefix and maximum values storable
@@ -419,7 +424,7 @@ exit:
  */
 unicode_t display_for(unicode_t uc) {
 
-    if (uc > MAX_UTF8_CHAR) return repchar;
+    if (uc > MAX_UNICODE_CHAR) return repchar;
     if (remap == NULL) return uc;
     for (int rc = 0; remap[rc].start != UEM_NOCHAR; rc++) {
         if (uc < remap[rc].start) return uc;

@@ -229,12 +229,12 @@ extern int fexist(const char *);
 
 /* input.c */
 #ifndef INPUT_C
-extern int tgetc(void);
-extern int get1key(void);
+extern unicode_t tgetc(void);
+extern unicode_t get1key(void);
 extern int mlyesno(const char *);
 extern int mlreply(const char *, db *, enum cmplt_type);
 extern struct name_bind *getname(const char *, int);
-extern int getcmd(void);
+extern unicode_t getcmd(void);
 extern void evaluate_cmdb(const char *, db *);
 extern int getstring(const char *, db *, enum cmplt_type);
 #endif
@@ -460,6 +460,14 @@ extern void *Xmalloc(size_t) MALLOC_ATTR;
 #define REALLOC_ATTR
 #endif
 extern void *Xrealloc(const void *, size_t) REALLOC_ATTR;
+#undef REALLOC_ATTR
+
+#if __GCC__ > 4
+#define REALLOC_ATTR __attribute__ (returns_nonnull))
+#else
+#define REALLOC_ATTR
+#endif
+extern void *Xreallocarray(const void *, int, size_t) REALLOC_ATTR;
 #undef REALLOC_ATTR
 
 extern void *Xfree(const void *);

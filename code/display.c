@@ -350,7 +350,7 @@ void vttidy(void) {
 static void vtputc(unsigned int c) {
     struct video *vp;   /* ptr to line being updated */
 
-    if (c > MAX_UTF8_CHAR) c = display_for(c);
+    if (c > MAX_UNICODE_CHAR) c = display_for(c);
 
     vp = vscreen[vtrow];
 
@@ -1184,7 +1184,7 @@ static const char *get_buffer_display_name(struct buffer *tbp, int w_want) {
         db_clear(last_display);
 
 /* Add up until scut */
-        char *cp = tbp->b_bname;
+        const char *cp = tbp->b_bname;
         int offs = 0;
         int max = strlen(tbp->b_bname);
         while (scut--) {

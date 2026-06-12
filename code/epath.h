@@ -16,10 +16,10 @@
 #endif
 
 static struct init_files {
-    char *startup;
-    char *help;
+    const char *startup;
+    const char *help;
 } init_files = {"uemacs.rc", "uemacs.hlp"};
 
-static char *pathname[] = { DFLT_PATH , NULL};
+static const char *pathname[] = { DFLT_PATH , NULL};
 
 #endif  /* EPATH_H_ */

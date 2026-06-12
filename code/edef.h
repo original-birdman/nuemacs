@@ -157,10 +157,10 @@ extern int ttrow;               /* Row location of HW cursor */
 extern int ttcol;               /* Column location of HW cursor */
 extern int lbound;              /* leftmost column of current line
                                    being displayed */
-extern int metac;               /* current meta character */
-extern int ctlxc;               /* current control X prefix char */
-extern int reptc;               /* current universal repeat char */
-extern int abortc;              /* current abort command char   */
+extern unicode_t metac;         /* current meta character */
+extern unicode_t ctlxc;         /* current control X prefix char */
+extern unicode_t reptc;         /* current universal repeat char */
+extern unicode_t abortc;        /* current abort command char   */
 
 extern int tabmask;
 extern const char *cname[];     /* names of colors              */

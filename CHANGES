@@ -9072,3 +9072,26 @@ crypt.c
 estruct.h
     Declare type as const [crypt.c]
     Remove const from b_key [estruct.h]
+
+bind.c
+display.c
+input.c
+main.c
+spawn.c
+utf8.c
+wrapper.c
+edef.h
+efunc.h
+epath.h
+estruct.h
+utf8.h
+    Rename MAX_UTF8_CHAR to MAX_UNICODE_CHAR [display.c, main,c, utf8.c,
+    utf8.h] 
+    Change unicode_t from unsigned int to utf8proc_int32_t [utf8.h]
+    Added Xreallocarray() [wrapper.c, efunc.h]
+    Added back const to pathname [epath.h]
+    Modify pathname handling in set_pathname [bind.c]
+    Prototype and definition changes to use unicode_t [input.c, utf8.c,
+    edef.h, efunc.h, utf8.h]
+    Add const to udir usage [spawn,c]
+    

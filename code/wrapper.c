@@ -18,8 +18,15 @@ void *Xmalloc(size_t size) {
 }
 
 void *Xrealloc(const void *optr, size_t size) {
-    void *ret = realloc(optr, size);
+    void *ret = realloc((void *)optr, size);
     if (!ret) die("realloc: Out of memory");
+    return ret;
+}
+
+/* We'll take an int, but pass on a size_t for number of elements */
+void *Xreallocarray(const void *optr, int n_elem, size_t size) {
+    void *ret = reallocarray((void *)optr, (size_t)n_elem, size);
+    if (!ret) die("reallocarray: Out of memory");
     return ret;
 }
 
@@ -28,12 +35,12 @@ void *Xrealloc(const void *optr, size_t size) {
  * If some other system is different then a test can be added here.
  */
 void Xfree(const void *ptr) {
-    free(ptr);
+    free((void *)ptr);
     return;
 }
 
 /* Will be used via the Xfree_setnull #define */
-void Xfree_and_set(const void **ptr) {
+void Xfree_and_set(void **ptr) {
     free(*ptr);
     *ptr = NULL;
     return;

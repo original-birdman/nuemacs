@@ -225,7 +225,7 @@ int pipecmd(int f, int n) {
  * fine because the file already exists.
  */
     {
-        char *hp = udir.home? udir.home: ".";
+        const char *hp = udir.home? udir.home: ".";
         char tmpl[PATH_MAX];
         snprintf(tmpl, sizeof(tmpl), "%s/.ue_XXXXXX", hp);
         int fd = mkstemp(tmpl);
@@ -307,7 +307,7 @@ int filter_buffer(int f, int n) {
 /* Setup the proper file names */
     bp = curbp;
     db_set(tmpnam, bp->b_rpname);   /* Save the (full) original name */
-    char *hp = udir.home;
+    const char *hp = udir.home;
     if (!hp) hp = ".";              /* Default if absent */
 
 /* Create the in/out tempfiles via mkstemp() so the names are

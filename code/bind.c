@@ -180,8 +180,8 @@ int help(int f, int n) {
  *
  * char *keyname;       name of key to translate to Command key from
  */
-static unsigned int stock(const char *given_keyname) {
-    unsigned int c; /* key sequence to return */
+static unicode_t stock(const char *given_keyname) {
+    unicode_t c; /* key sequence to return */
 
 /* Work with a copy so we can in-line edit the supplied arg */
 
@@ -190,7 +190,7 @@ static unsigned int stock(const char *given_keyname) {
 /* GGR - allow different bindings for 1char UPPER and lower.
  * If anyone wants to bind them...
  */
-    int kn_len = strlen(keyname);
+    int kn_len = (int)strlen(keyname);
     int noupper = (kn_len == 1);
     const char *kn_end = keyname + kn_len;
     int special = 0;
@@ -253,8 +253,8 @@ static unsigned int stock(const char *given_keyname) {
  * If the user can type it they may well wish to use it.
  */
     if (ch_as_uc(*keyname) >= 0x80) {   /* We have a utf-8 string... */
-        unsigned int uc;
-        int kn_left = kn_end - keyname;
+        unicode_t uc;
+        int kn_left = (int)(kn_end - keyname);
         keyname += utf8_to_unicode(keyname, 0, kn_left, &uc);
         uc = utf8proc_toupper(uc);      /* Unchanged if not lower/title case */
         c |= uc;        /* The final tagged char... */
@@ -274,13 +274,13 @@ static unsigned int stock(const char *given_keyname) {
  *
  * int mflag;           going for a meta sequence?
  */
-static unsigned int getckey(int mflag) {
+static unicode_t getckey(int mflag) {
 
 /* Check to see if we are executing a command line */
     if (clexec) {
         db_strdef(tok); /* command incoming */
         macarg(&tok);   /* get the next token */
-        unsigned int ck = stock(db_val(tok));
+        int ck = stock(db_val(tok));
         db_free(tok);
         return ck;
     }
@@ -300,7 +300,7 @@ static unsigned int getckey(int mflag) {
  */
 static char *cmdstr(int c) {
     static char result[16];
-    char *ptr;      /* pointer into current position in sequence */
+    char *ptr;          /* pointer into current position in sequence */
 
     ptr = result;
 
@@ -333,7 +333,7 @@ static char *cmdstr(int c) {
     }
     else {
 /* If we have a non-ASCII char we need to convert it to utf8.... */
-        if (c < 0x80)  *ptr++ = c & 255;
+        if (c < 0x80)  *ptr++ = c & 0x7f;
         else            ptr += unicode_to_utf8(c, ptr);
     }
     *ptr = 0;           /* terminate the string */
@@ -377,7 +377,7 @@ static int keystr_index_valid = 0;
  */
 static void index_bindings(void) {
     if (key_index_allocated < keytab_alloc_ents) {
-        key_index = Xrealloc(key_index, keytab_alloc_ents*sizeof(int));
+        key_index = Xreallocarray(key_index, keytab_alloc_ents, sizeof(int));
         key_index_allocated = keytab_alloc_ents;
     }
     struct fields fdef;
@@ -409,7 +409,7 @@ static void index_bindings(void) {
 static int *keystr_index = NULL;
 static int *next_keystr_index = NULL;
 static void index_keystr(void) {
-    keystr_index = Xrealloc(keystr_index, kt_ents*sizeof(int));
+    keystr_index = Xreallocarray(keystr_index, kt_ents, sizeof(int));
     struct fields fdef;
     fdef.offset = offsetof(struct key_tab, hndlr.k_fp);
     fdef.type = 'P';
@@ -425,7 +425,7 @@ static void index_keystr(void) {
  * We can generate this from the index we've just made.
  * The final entry has a next of -1 to indicate "no further entry".
  */
-    next_keystr_index = Xrealloc(next_keystr_index, kt_ents*sizeof(int));
+    next_keystr_index = Xreallocarray(next_keystr_index, kt_ents, sizeof(int));
     make_next_idx(keystr_index, next_keystr_index, kt_ents);
     keystr_index_valid = 1; /* This index is now usable */
     return;
@@ -441,7 +441,7 @@ static struct key_tab *next_getbyfnc(struct key_tab *cp) {
     if (!keystr_index_valid) index_keystr();
     if (cp == NULL) return &keytab[keystr_index[0]];
 /* Convert pointer to index and work from that... */
-    int ci = cp - keytab;
+    int ci = (int)(cp - keytab);
     if ((ci >= 0) && (ci < kt_ents)) {
         int ni = next_keystr_index[ci];
         if (ni >= 0) return &keytab[ni];
@@ -680,7 +680,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
         ktp += 2;
         if (ktp->k_type == ENDS_KMAP) {
             ktp->k_type = ENDL_KMAP;        /* Change to end-of-list */
-            int destp_offs = destp - keytab;
+            int destp_offs = (int)(destp - keytab);
             extend_keytab(0);
             destp = keytab + destp_offs;
         }
@@ -724,7 +724,7 @@ static int check_procbuf(struct buffer *cbp, const char *bufn) {
  */
 int buffertokey(int f, int n) {
     UNUSED(f); UNUSED(n);
-    unsigned int c;         /* command key to bind */
+    unicode_t c;            /* command key to bind */
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
 
@@ -848,7 +848,7 @@ exit:
  */
 int bindtokey(int f, int n) {
     UNUSED(f); UNUSED(n);
-    unsigned int c;         /* command key to bind */
+    unicode_t c;            /* command key to bind */
     fn_t kfunc;             /* ptr to the requested function to bind to */
     struct key_tab *ktp;    /* pointer into the command table */
     int mflag;              /* Are we handling a prefix key? */
@@ -1075,7 +1075,7 @@ static int buildlist(const char *mstring) {
 /* Note that getcmd() and stock() both prevent SPEC|META being set,
  * so mask any such as (internal)
  */
-static char* hdr[] = {
+static const char* hdr[] = {
     "Bare char", "Control",        "Meta",           "Meta+Ctrl",
     "CtlX",      "Ctlx+Ctrl",      "Ctlx+Meta",      "Ctlx+Meta+Ctrl",
     "SPEC",      "SPEC+Ctrl",      "Meta+SPEC(int)", "Meta+SPEC+Ctrl(int)",
@@ -1083,12 +1083,12 @@ static char* hdr[] = {
     "Ctlx+Meta+SPEC+Control(int)",
 };
 
-        unsigned int prev_cmask = -1;
+        unsigned int prev_cmask = 0xffffffff;
         for (int i = 0; i < kt_ents; i++) {
             unicode_t key = keytab[key_index[i]].k_code;
-            unsigned int cmask = 0xf0000000 & key;
+            unsigned int cmask = 0xf0000000 & (unsigned)key;
             if (cmask != prev_cmask) {
-                int hdri = cmask >> 28;
+                unsigned int hdri = cmask >> 28;
                 linstr(" > ");
                 linstr(hdr[hdri]);
                 lnewline();
@@ -1161,7 +1161,7 @@ int startup(const char *sfname) {
  */
 static int free_path_reqd = 0;
 void set_pathname(const char *cl_string) {
-    int slen;
+    size_t slen;
     int add_sep = 0;
     slen = strlen(cl_string);
     if ((slen > 0) && (cl_string[slen-1] != path_sep)) {
@@ -1174,13 +1174,14 @@ void set_pathname(const char *cl_string) {
  * The last one wins.
  */
     if (free_path_reqd) Xfree(pathname[0]);
-    pathname[0] = Xstrdup(cl_string);
+    char *np = Xstrdup(cl_string);
     free_path_reqd = 1;
     if (add_sep) {
-        pathname[0] = Xrealloc(pathname[0], slen+2); /* incl. NULL! */
-        pathname[0][slen] = path_sep;
-        pathname[0][slen+1] = '\0';
+        np = Xrealloc(np, slen+2);  /* incl. NULL! */
+        np[slen] = path_sep;
+        np[slen+1] = '\0';
     }
+    pathname[0] = (const char*)np;
     pathname[1] = NULL;
     return;
 }

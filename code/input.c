@@ -531,8 +531,8 @@ static int comp_gen(db *name, db *choices, enum cmplt_type mtype) {
 /* tgetc:   Get a key from the terminal driver.
  *          Resolve any keyboard macro action.
  */
-int tgetc(void) {
-    int c;              /* fetched character */
+unicode_t tgetc(void) {
+    unicode_t c;              /* fetched character */
 
 /* If we are playing a keyboard macro back, */
     if (kbdmode == PLAY) {
@@ -545,7 +545,7 @@ int tgetc(void) {
         else {
             kbdptr = kbdm;      /*` Reset macro to beginning for the next rep */
             f_arg = p_arg;      /* Restore original f_arg */
-            return (int) *kbdptr++;
+            return *kbdptr++;
         }
     }
 
@@ -608,8 +608,8 @@ static int comp_var(db *name, db *choices) {
 /* get1key: Get one keystroke.
  *          The only prefixes legal here are SPEC and CONTROL.
  */
-int get1key(void) {
-    int c;
+unicode_t get1key(void) {
+    unicode_t c;
 
     c = tgetc();                    /* get a keystroke */
     if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
@@ -699,7 +699,7 @@ exit:
  * We expect c to mostly be ASCII, so shortcut that case
  * Used several times in getcmd
  */
-static int ensure_uppercase(int c) {
+static unicode_t ensure_uppercase(unicode_t c) {
     if (c <= 0x7f) {
         if (c >= 'a' && c <= 'z') c ^= DIFCASE;
     }
@@ -715,8 +715,8 @@ static int ensure_uppercase(int c) {
 
 #define CSI 0x9b
 
-int getcmd(void) {
-    int c;              /* Fetched keystroke */
+unicode_t getcmd(void) {
+    unicode_t c;        /* Fetched keystroke */
     int ctlx = FALSE;
     int meta = FALSE;
     int cmask = 0;
