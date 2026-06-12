@@ -9064,3 +9064,6 @@ Unrelated fix....
 search.c
     Actually do update (r)pat at exit from rotate_sstr().
 ----------
+
+buffer.c
+    Declare cp2 as const.

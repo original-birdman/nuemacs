@@ -476,7 +476,7 @@ void addstr_to_anyb(const char *instr, struct buffer *bp) {
  */
 static int makelist(int iflag) {
     char *cp1;
-    char *cp2;
+    const char *cp2;
     int c;
     struct buffer *bp;
     struct line *lp;
