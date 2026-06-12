@@ -25,7 +25,7 @@
  *           So it can always return a +ve result, and a "valid" res.
  *  NOW CHANGED to return 0 and a unicode char of 0.
  */
-unsigned utf8_to_unicode(const char *line, unsigned index, unsigned len,
+int utf8_to_unicode(const char *line, int index, int len,
      unicode_t *res) {
     if (index >= len) {
         *res = UEM_NOCHAR;
@@ -34,7 +34,8 @@ unsigned utf8_to_unicode(const char *line, unsigned index, unsigned len,
 
     unsigned value;
     unsigned char c = line[index];
-    unsigned bytes, mask, i;
+    unsigned mask, i;
+    int bytes;
 
     *res = c;
     line += index;
@@ -115,7 +116,7 @@ int combining_type(unicode_t uc) {
  * possible sequence, while utf8_to_unicode() accepts both Latin1 and
  * overlong utf-8 sequences.
  */
-unsigned unicode_to_utf8(unsigned int c, char *utf8) {
+int unicode_to_utf8(unsigned int c, char *utf8) {
     int bytes = 1;
 
     *utf8 = c;

@@ -17,9 +17,8 @@ typedef long long ue64I_t;
 #define MAX_UTF8_CHAR 0x0010FFFF
 typedef unsigned int unicode_t;
 
-unsigned utf8_to_unicode(const char *line, unsigned index, unsigned len,
-     unicode_t *res);
-unsigned unicode_to_utf8(unsigned int c, char *utf8);
+int utf8_to_unicode(const char *line, int index, int len, unicode_t *res);
+int unicode_to_utf8(unsigned int c, char *utf8);
 
 /* GGR
  * Define a structure to hold the data for a single grapheme.
