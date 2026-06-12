@@ -9046,3 +9046,7 @@ utf8.c
 utf8.h
     Change utf8_to_unicode() and unicode_to_utf8() to use int args not
     unsigned.
+
+wrapper.c
+efunc.h
+    Add const to void * args for Xfree/Xrealloc().

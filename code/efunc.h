@@ -459,10 +459,10 @@ extern void *Xmalloc(size_t) MALLOC_ATTR;
 #else
 #define REALLOC_ATTR
 #endif
-extern void *Xrealloc(void *, size_t) REALLOC_ATTR;
+extern void *Xrealloc(const void *, size_t) REALLOC_ATTR;
 #undef REALLOC_ATTR
 
-extern void *Xfree(void *);
+extern void *Xfree(const void *);
 extern void *Xfree_and_set(void **);
 #define Xfree_setnull(a) Xfree_and_set((void **)&(a))
 

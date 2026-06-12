@@ -17,7 +17,7 @@ void *Xmalloc(size_t size) {
     return ret;
 }
 
-void *Xrealloc(void *optr, size_t size) {
+void *Xrealloc(const void *optr, size_t size) {
     void *ret = realloc(optr, size);
     if (!ret) die("realloc: Out of memory");
     return ret;
@@ -27,13 +27,13 @@ void *Xrealloc(void *optr, size_t size) {
  * So we can call Xfree/Xfree_and_set without first testing.
  * If some other system is different then a test can be added here.
  */
-void Xfree(void *ptr) {
+void Xfree(const void *ptr) {
     free(ptr);
     return;
 }
 
 /* Will be used via the Xfree_setnull #define */
-void Xfree_and_set(void **ptr) {
+void Xfree_and_set(const void **ptr) {
     free(*ptr);
     *ptr = NULL;
     return;
