@@ -9102,3 +9102,6 @@ estruct.h
     Add some casts and make c a char not int [buffer.c]
     Change _dbp_setn to take an int, not size_t [dyn_buf.c, dyn_buf.h]
     Change char items in struct buffer to be int [estruct.h]
+
+dyn_buf.h
+    Correct the alen/blen/max defines [dyn_buf.h]

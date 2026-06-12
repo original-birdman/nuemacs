@@ -42,16 +42,16 @@ typedef struct {
  */
 #define db_buf(a)   ((const char *)(a).buf)
 #define db_val(a)   ((const char *)(a).asp)
-#define db_blen(a)  ((const size_t)(a).blen)
-#define db_len(a)   ((const size_t)(a).alen)
+#define db_blen(a)  ((const int)(a).blen)
+#define db_len(a)   ((const int)(a).alen)
 #define db_max(a)   ((const size_t)(a).alloc)
 #define db_type(a)  ((const int)(a).type)
 
 #define dbp_buf(a)  ((const char *)((a)->buf))
 #define dbp_val(a)  ((const char *)((a)->asp))
-#define dbp_blen(a) ((const size_t)((a)->blen))
+#define dbp_blen(a) ((const int)((a)->blen))
 #define dbp_len(a)  ((const int)((a)->alen))
-#define dbp_max(a)  ((const int)((a)->alloc))
+#define dbp_max(a)  ((const size_t)((a)->alloc))
 #define dbp_type(a) ((const int)((a)->type))
 
 /* The actual function calls (in dyn_str.c) to manipulate them.
