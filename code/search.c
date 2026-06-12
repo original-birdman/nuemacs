@@ -548,7 +548,7 @@ void rotate_sstr(int n) {
     }
     memcpy(txt, tmp_txt, sizeof(tmp_txt));  /* Copy rotated array back */
 
-    t_db = &txt[0];                         /* Update (r)pat */
+    dbp_set(t_db, db_val(txt[0]));          /* Update (r)pat */
 
 /* We need to make getstring() show this new value in its prompt.
  * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update

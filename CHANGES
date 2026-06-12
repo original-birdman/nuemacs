@@ -9057,3 +9057,10 @@ estruct.h
     Add const to some char * declarations [bind.c]
     Remove const from some char * items which are not const. [epath.h,
     estruct.h] 
+
+----------
+Unrelated fix....
+
+search.c
+    Actually do update (r)pat at exit from rotate_sstr().
+----------
