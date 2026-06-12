@@ -9067,3 +9067,8 @@ search.c
 
 buffer.c
     Declare cp2 as const.
+
+crypt.c
+estruct.h
+    Declare type as const [crypt.c]
+    Remove const from b_key [estruct.h]

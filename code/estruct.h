@@ -324,7 +324,7 @@ struct buffer {
     char *b_dfname;         /* Display file name (may be ~/name) */
     char *b_rpname;         /* Real pathname                */
     const char *b_bname;    /* Buffer name                  */
-    const char *b_key;      /* current encrypted key        */
+    char *b_key;            /* current encrypted key        */
 
     struct locs b;
     struct func_opts btp_opt;   /* Only for b_type = BTPROC */

@@ -216,7 +216,8 @@ int set_encryption_key(int f, int n) {
 
 /* Get the string to use as an encryption string */
     char prompt[64];
-    char *type, *ukey;
+    const char *type;
+    char *ukey;
     int *klenp;
     if (crypt_mode & CRYPT_GLOBAL) {
         type = "Global";
