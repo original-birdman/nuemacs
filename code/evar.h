@@ -105,7 +105,7 @@ enum function_type {
 
 /* List of recognized user functions. */
 struct user_function {
-    char *f_name;
+    const char *f_name;
     enum function_type f_type;
     enum uf_val tag;
 };

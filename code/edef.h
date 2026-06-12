@@ -47,7 +47,7 @@ typedef struct {
 } mb_info_st;
 
 typedef struct {
-    char *funcname;             /* Name of function */
+    const char *funcname;       /* Name of function */
     int keystroke;              /* Keystroke(s) use to reach it */
 }  not_in_mb_st;
 
@@ -81,9 +81,9 @@ typedef struct {
 } sysmark_t;
 
 typedef struct {
-    char *current;
-    char *parent;
-    char *home;
+    const char *current;
+    const char *parent;
+    const char *home;
     int clen;
     int plen;
     int hlen;
@@ -134,7 +134,7 @@ extern dbp_dcl(execstr);        /* string in dyn_buf to execute */
 extern int eolexist;            /* does clear to EOL exist?     */
 extern int revexist;            /* does reverse video exist?    */
 extern int flickcode;           /* do flicker supression?       */
-extern char *mode2name[];       /* text names of modes          */
+extern const char *mode2name[]; /* text names of modes          */
 extern char modecode[];         /* letters to represent modes   */
 extern struct key_tab *keytab;  /* key bind to functions table  */
 extern int key_index_valid;     /* Whether idx index for keytab is valid */
@@ -163,7 +163,7 @@ extern int reptc;               /* current universal repeat char */
 extern int abortc;              /* current abort command char   */
 
 extern int tabmask;
-extern char *cname[];           /* names of colors              */
+extern const char *cname[];     /* names of colors              */
 extern struct kill *kbufp;      /* current kill buffer chunk pointer */
 extern struct kill *kbufh[KRING_SIZE];
                                 /* kill buffer header pointers  */
@@ -207,7 +207,7 @@ extern db_dcl(rpat);            /* Replacement pattern.         */
 
 extern unsigned int srch_patlen;
 
-extern char *dname[];           /* Directive name table.        */
+extern const char *dname[];     /* Directive name table.        */
 
 /* Terminal table defined only in term.c */
 extern struct terminal term;
@@ -250,7 +250,7 @@ extern int run_filehooks;       /* Set when we want them run */
 
 extern mb_info_st mb_info;
 extern not_in_mb_st not_in_mb;
-extern char *not_interactive_fname;
+extern const char *not_interactive_fname;
 
 extern int pause_key_index_update;  /* If set, don't update keytab index */
 
@@ -267,7 +267,7 @@ extern char regionlist_number[MAX_REGL_LEN];
 extern db_dcl(readin_mesg);
 
 extern int running_function;
-extern char *current_command;
+extern const char *current_command;
 
 extern func_arg f_arg, p_arg;
 extern struct rx_mask rx_mask[];
@@ -281,7 +281,7 @@ extern const char *userproc_arg;
 extern int comline_processing;
 
 /* The real status of the last command !force'd in a buffer macro */
-extern char *force_status;
+extern const char *force_status;
 
 /* The default Equiv function handler */
 extern utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *);

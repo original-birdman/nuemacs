@@ -9033,3 +9033,11 @@ dynbuf.h
 idxsorter.c
 idxsorter.h
     Various signed to unsigned changes to remove compiler warnings.
+
+globals.c
+edef.h
+epath.h
+estruct.h
+evar.h
+    Added const to those char* vars which are const.
+    Change w_flag, w_fcolor and w_bcolor to be init, not char [estruct.h]

@@ -234,10 +234,10 @@ struct window {
     int w_toprow;           /* Origin 0 top row of window   */
     int w_ntrows;           /* # of rows of text in window  */
     int w_force;            /* If NZ, forcing row.          */
-    char w_flag;            /* Flags.                       */
+    int w_flag;             /* Flags.                       */
 #if COLOR
-    char w_fcolor;          /* current forground color      */
-    char w_bcolor;          /* current background color     */
+    int w_fcolor;           /* current forground color      */
+    int w_bcolor;           /* current background color     */
 #endif
 };
 
@@ -323,8 +323,8 @@ struct buffer {
 
     char *b_dfname;         /* Display file name (may be ~/name) */
     char *b_rpname;         /* Real pathname                */
-    char *b_bname;          /* Buffer name                  */
-    char *b_key;            /* current encrypted key        */
+    const char *b_bname;    /* Buffer name                  */
+    const char *b_key;      /* current encrypted key        */
 
     struct locs b;
     struct func_opts btp_opt;   /* Only for b_type = BTPROC */
@@ -464,7 +464,7 @@ struct key_tab {
     int k_code;             /* Key code */
     union {
         fn_t k_fp;          /* Routine to handle it, or... */
-        char *pbp;          /* ...procedure buffer name */
+        const char *pbp;    /* ...procedure buffer name */
     } hndlr;
     struct name_bind *fi;   /* Function info */
     int bk_multiplier;      /* Binding multiplier */
@@ -476,7 +476,7 @@ struct key_tab_init {       /* Initializing data */
 
 /* Structure for the name binding table. */
 struct name_bind {
-    char *n_name;           /* name of function */
+    const char *n_name;     /* name of function */
     fn_t n_func;            /* function the name is bound to */
     struct func_opts opt;   /* Function options */
     int keep_flags;         /* Control flags to keep after command */
@@ -543,7 +543,7 @@ struct while_block {
 
 /* Used for mapping rexec args on/off */
 struct rx_mask {
-    char *entry;
+    const char *entry;
     int mask;
 };
 
@@ -569,7 +569,7 @@ enum ev_val {
 };
 
 struct evlist {
-    char *var;
+    const char *var;
     enum ev_val tag;
 };
 

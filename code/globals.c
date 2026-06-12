@@ -9,7 +9,7 @@
 
 int fillcol = 72;               /* Current fill column          */
 dbp_dcl(execstr) = NULL;        /* pointer to string to execute */
-char *mode2name[] = {           /* Display name of modes        */
+const char *mode2name[] = {     /* Display name of modes        */
                                 /* Also text when checking them */
         "Wrap",  "Cmode", "Phon",  "Exact", "View", "Over",
         "Magic", "Crypt", "Asave", "eQuiv", "Dos", "Report"
@@ -42,7 +42,7 @@ int reptc = CONTROL | 'U';      /* current universal repeat char */
 int abortc = CONTROL | 'G';     /* current abort command char   */
 
 int tabmask = 0x07;             /* tabulator mask */
-char *cname[] = {               /* names of colors              */
+const char *cname[] = {         /* names of colors              */
         "BLACK", "RED", "GREEN", "YELLOW", "BLUE",
         "MAGENTA", "CYAN", "WHITE"
 };
@@ -103,7 +103,7 @@ unsigned int srch_patlen = 0;
 /* directive name table:
         This holds the names of all the directives....  */
 
-char *dname[] = {
+const char *dname[] = {
         "if", "else", "endif",
         "goto", "return", "endm",
         "while", "endwhile", "break",
@@ -153,7 +153,7 @@ int run_filehooks = 0;
 mb_info_st mb_info = { NULL, NULL, NULL, 0 };
 
 not_in_mb_st not_in_mb = { NULL, 0 };
-char *not_interactive_fname = NULL;
+const char *not_interactive_fname = NULL;
 
 int pause_key_index_update = 0;
 
@@ -200,7 +200,7 @@ const char *userproc_arg = NULL;
 
 int comline_processing = 1;
 
-char *force_status = "UNSET";
+const char *force_status = "UNSET";
 
 utf8proc_uint8_t *(*equiv_handler)(const utf8proc_uint8_t *) = utf8proc_NFKC;
 
