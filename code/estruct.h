@@ -333,9 +333,9 @@ struct buffer {
     int b_mode;             /* editor mode of this buffer   */
     int b_EOLmissing;       /* When read in... */
     int b_keylen;           /* encrypted key len            */
-    char b_active;          /* window activated flag        */
-    char b_nwnd;            /* Count of windows on buffer   */
-    char b_flag;            /* Flags                        */
+    int b_active;           /* window activated flag        */
+    int b_nwnd;             /* Count of windows on buffer   */
+    int b_flag;             /* Flags                        */
 };
 
 #define BTNORM  0               /* A "normal" buffer            */

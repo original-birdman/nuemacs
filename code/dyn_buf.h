@@ -59,7 +59,7 @@ typedef struct {
  */
 
 const char *_dbp_val_nc(db *);
-void _dbp_setn(db *, const void *, size_t);
+void _dbp_setn(db *, const void *, int);
 void _dbp_set(db *, const char *);
 void _dbp_replicatech_at(db *, char, int, int);
 void _dbp_insertn_at(db *, const void *, int, int);

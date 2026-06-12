@@ -477,7 +477,7 @@ void addstr_to_anyb(const char *instr, struct buffer *bp) {
 static int makelist(int iflag) {
     char *cp1;
     const char *cp2;
-    int c;
+    char c;
     struct buffer *bp;
     struct line *lp;
     int s;
@@ -485,7 +485,7 @@ static int makelist(int iflag) {
     ue64I_t nbytes;     /* # of bytes in current buffer */
     int mcheck;
 
-    char *line = Xmalloc(term.t_mcol);
+    char *line = Xmalloc((size_t)term.t_mcol);
 
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
@@ -589,12 +589,12 @@ static int makelist(int iflag) {
         if (*cp2 != 0) {
 /* We know the current screen width, so use it...
  */
-            if (((cp1 - line) + strlen(cp2)) > (unsigned)term.t_ncol) {
+            if (((cp1 - line) + (int)strlen(cp2)) > term.t_ncol) {
                 *cp1++ = ' ';
-                *cp1++ = 0xe2;      /* Carriage return symbol */
-                *cp1++ = 0x86;      /* U+2185                 */
-                *cp1++ = 0xb5;      /* as utf-8               */
-                *cp1 = 0;           /* Add to the buffer.   */
+                *cp1++ = (char)0xe2;    /* Carriage return symbol */
+                *cp1++ = (char)0x86;    /* U+2185                 */
+                *cp1++ = (char)0xb5;    /* as utf-8               */
+                *cp1 = 0;               /* Add to the buffer.     */
                 addline(line);
                 cp1 = line;
                 for (i = 0; i < 5; i++) *cp1++ = ' ';

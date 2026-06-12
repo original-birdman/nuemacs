@@ -9094,4 +9094,11 @@ utf8.h
     Prototype and definition changes to use unicode_t [input.c, utf8.c,
     edef.h, efunc.h, utf8.h]
     Add const to udir usage [spawn,c]
-    
+
+buffer.c
+dyn_buf.c
+dyn_buf.h
+estruct.h
+    Add some casts and make c a char not int [buffer.c]
+    Change _dbp_setn to take an int, not size_t [dyn_buf.c, dyn_buf.h]
+    Change char items in struct buffer to be int [estruct.h]

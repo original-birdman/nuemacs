@@ -50,10 +50,10 @@ const char *_dbp_val_nc(db *ds) {
     return ds->asp? ds->asp: "";
 }
 
-/* Set value to the n bytes */
+/* Set value to the n bytes. Neverf more than an int for n */
 
-void _dbp_setn(db *ds, const void *mp, size_t n) {
-    size_t need = n;
+void _dbp_setn(db *ds, const void *mp, int n) {
+    size_t need = (size_t)n;
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     memcpy(ds->buf, mp, n);
