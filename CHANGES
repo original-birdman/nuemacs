@@ -9050,3 +9050,10 @@ utf8.h
 wrapper.c
 efunc.h
     Add const to void * args for Xfree/Xrealloc().
+
+bind.c
+epath.h
+estruct.h
+    Add const to some char * declarations [bind.c]
+    Remove const from some char * items which are not const. [epath.h,
+    estruct.h] 

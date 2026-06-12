@@ -528,8 +528,8 @@ struct key_tab *getbind(int c) {
  */
 int deskey(int f, int n) {
     UNUSED(f); UNUSED(n);
-    int c;          /* key to describe */
-    char *ptr;      /* string pointer to scan output strings */
+    int c;              /* key to describe */
+    const char *ptr;    /* string pointer to scan output strings */
 
 /* Prompt the user to type us a key to describe */
     mlwrite_one(": describe-key ");
@@ -1013,7 +1013,7 @@ static int buildlist(const char *mstring) {
         if (mstring && !strstr(names[ni].n_name, mstring)) continue;
 
 /* Add in the command name */
-        char *np = names[ni].n_name;
+        const char *np = names[ni].n_name;
 
 /* Search down for any keys bound to this. */
         ktp = getbyfnc(names[ni].n_func);
@@ -1189,7 +1189,7 @@ void set_pathname(const char *cl_string) {
  *
  * char *skey;          name of key to get binding for
  */
-char *transbind(const char *skey) {
+const char *transbind(const char *skey) {
     struct key_tab *ktp = getbind(stock(skey));
     if (!ktp) return "ERROR";
     return ktp->fi->n_name;

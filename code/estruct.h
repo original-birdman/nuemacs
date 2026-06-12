@@ -464,7 +464,7 @@ struct key_tab {
     int k_code;             /* Key code */
     union {
         fn_t k_fp;          /* Routine to handle it, or... */
-        const char *pbp;    /* ...procedure buffer name */
+        char *pbp;          /* ...procedure buffer name */
     } hndlr;
     struct name_bind *fi;   /* Function info */
     int bk_multiplier;      /* Binding multiplier */
