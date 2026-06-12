@@ -251,9 +251,17 @@ static int docmd(const char *cline) {
 
 /* Process leading argument */
     if (ttype == TKLIT) {
+        ue64I_t ln;             /* numeric repeat value */
         f = TRUE;
-        n = strtoll(db_val(tkn), NULL, 10);
+        ln = strtoll(db_val(tkn), NULL, 10);
 
+/* Functions only allow 32-bit ints as a repeat count. */
+
+        if ((ln > INT_MAX) || (ln < INT_MIN)) {
+            mlwrite_one("Numeric arg out of range for 32-bit integer");
+            goto final_exit;
+        }
+        n = ln;
 /* and now get the command to execute */
         if ((status = macarg(&tkn)) != TRUE) {
             goto final_exit;

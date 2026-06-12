@@ -8997,3 +8997,27 @@ line.c
 dyn_buf.h
     Add _dbp_replicatech_at() [dyn_buf.c, dyn_buf.h]
     Use it to remove the insertion loop in _linsert_byte() [line.c]
+
+----------------------------------------
+Decided to set a standard for:
+    the length of lines and number of lines in a buffer
+    the range used for numeric arguments to macros
+    ensure that string constants are marked as const
+to document this, then get the code to compile without warnings when
+    -Wconversion -Wwrite-strings
+is added to the gcc compilation options.
+
+The maximum buffer length (and hence line length) and number of lines in
+a file, and the range used for numeric arguments to macros are all "int"
+(so 32-bit)
+
+NOTE: that an integer constant or variable is an int64, so that needs to
+be checked before used as a repeat count.
+
+Buffer allocation is remembered as a size_t, but any attempt to allocate
+more than INT_MAX is an error.
+--------------------
+
+exec.c
+    Check that any variable or constant used as a report in docmd() is
+    between INT_MIN and INT_MAX.
