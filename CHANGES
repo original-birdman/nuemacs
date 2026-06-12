@@ -9029,3 +9029,7 @@ dynbuf.h
     Change offset and number of characters parameters to be int, not
     size_t.
     In _dbp_sprintf() use a cast to remove a compiler warning.
+
+idxsorter.c
+idxsorter.h
+    Various signed to unsigned changes to remove compiler warnings.

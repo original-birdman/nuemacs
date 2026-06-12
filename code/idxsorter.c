@@ -65,7 +65,7 @@
  */
 static inline unsigned char get_ibyte(
      unsigned char *records, int reclen, int link, int *cstr_done,
-     int offset, int start, int width, char type) {
+     unsigned int offset, unsigned int start, unsigned int width, char type) {
 
     unsigned char *ip = records + reclen*(link-1) + start;
     if (type == 'C' || type == 'S') width = 1;
@@ -76,7 +76,7 @@ static inline unsigned char get_ibyte(
 #define int_case(ivar, imin) \
     case sizeof(ivar): \
         memcpy(&ivar, ip, sizeof(ivar));    /* To ensure alignment */ \
-        if (type == 'I') ivar -= imin; \
+        if (type == 'I') ivar -= imin;      /* Convert to unsigned! */ \
         ivar >>= 8*(sizeof(ivar) - 1 - offset); \
         return (unsigned char)(ivar & 0xff)
 
@@ -84,19 +84,19 @@ static inline unsigned char get_ibyte(
     uint64_t size8;
     uint32_t size4;
     uint16_t size2;
-    int_case(size8, INT64_MIN);
-    int_case(size4, INT32_MIN);
-    int_case(size2, INT16_MIN);
+    int_case(size8, (uint64_t)INT64_MIN);
+    int_case(size4, (uint32_t)INT32_MIN);
+    int_case(size2, (uint16_t)INT16_MIN);
     case 1:
         if (type == 'S') {  /* NUL-terminated C-string */
             char *fp;
             memcpy(&fp, ip, sizeof(char *));
-            for (int ofs = 0; ofs <= offset; ofs++) {
+            for (unsigned int ofs = 0; ofs <= offset; ofs++) {
                 if (*(fp+ofs) == 0) return 0;
             }
 /* If we return a "real" character we need to reset the loop terminator */
             *cstr_done = 0;
-            return *(fp+offset);
+            return (unsigned char)*(fp+offset);
         }
         return *(ip+offset);    /* Index into char array */
     default:
@@ -196,13 +196,13 @@ int idxsort_fields(unsigned char *records, int index[],
 
 /* Each field is treated as a set of bytes, obtained and sorted in order */
 
-        int curfld_start = fields[fi].offset;
-        int curfld_width = fields[fi].len;
+        unsigned int curfld_start = fields[fi].offset;
+        unsigned int curfld_width = fields[fi].len;
         char curfld_type = fields[fi].type;
         if (curfld_type == 'S') curfld_width = INT32_MAX;   /* Let loop run */
 
         int c_strings_done = 0;
-        for (int this_co = 0; this_co < curfld_width; this_co++) {
+        for (unsigned int this_co = 0; this_co < curfld_width; this_co++) {
             if (c_strings_done) continue;   /* S fields finished */
             if (curfld_type == 'S') c_strings_done = 1;
             if (done) goto we_are_done;
