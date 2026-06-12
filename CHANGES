@@ -9021,3 +9021,11 @@ more than INT_MAX is an error.
 exec.c
     Check that any variable or constant used as a report in docmd() is
     between INT_MIN and INT_MAX.
+
+dynbuf.c
+dynbuf.h
+    Get _dbp_realloc() to check that any allocation is not greater then
+    INT_MAX.
+    Change offset and number of characters parameters to be int, not
+    size_t.
+    In _dbp_sprintf() use a cast to remove a compiler warning.

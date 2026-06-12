@@ -9,23 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
 #include <signal.h>
 
 #include "dyn_buf.h"
 #include "efunc.h"
-
-/* DYN_INCR MUST be a power of 2
- * This must update both ds->buf and ds->asp
- */
-#define DYN_INCR 64
-static void _dbp_realloc(db *ds, size_t need) {
-    size_t want = (need + DYN_INCR) & ~(DYN_INCR - 1);
-    size_t offset = ds->asp - ds->buf;
-    ds->buf = Xrealloc(ds->buf, want);
-    ds->asp = ds->buf + offset;
-    ds->alloc = want;
-    return;
-}
 
 /* An internal routine to rasie a signal if we try to set a value
  * at an illegal offset etc.
@@ -36,6 +24,22 @@ static void illegal_dbaction(char *why) {
     dump_message = why;
     raise(SIGILL);
     exit(127);  /* Just in case... */
+}
+
+/* DYN_INCR MUST be a power of 2
+ * This must update both ds->buf and ds->asp
+ */
+#define DYN_INCR 64
+static void _dbp_realloc(db *ds, size_t need) {
+    size_t want = (need + DYN_INCR) & ~(DYN_INCR - 1);
+    if (want > INT_MAX) {
+        illegal_dbaction("Attempt to allocate too long a buffer");
+    }
+    size_t offset = ds->asp - ds->buf;
+    ds->buf = Xrealloc(ds->buf, want);
+    ds->asp = ds->buf + offset;
+    ds->alloc = want;
+    return;
 }
 
 /* Return the value, but check for NULL and return "" for that
@@ -69,7 +73,7 @@ void _dbp_set(db *ds, const char *str) {
 
 /* Insert n copies of a char into buffer */
 
-void _dbp_replicatech_at(db *ds, char c, size_t n, size_t offs) {
+void _dbp_replicatech_at(db *ds, char c, int n, int offs) {
     int movers = ds->blen - offs;
     if ((movers < 0) || ((ds->blen - ds->alen) > offs))
         illegal_dbaction("Illegal db replicatech");
@@ -86,7 +90,7 @@ void _dbp_replicatech_at(db *ds, char c, size_t n, size_t offs) {
 
 /* Insert n chars into buffer */
 
-void _dbp_insertn_at(db *ds, const void *mp, size_t n, size_t offs) {
+void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
     int movers = ds->blen - offs;
     if ((movers < 0) || ((ds->blen - ds->alen) > offs))
         illegal_dbaction("Illegal db insertn");
@@ -103,7 +107,7 @@ void _dbp_insertn_at(db *ds, const void *mp, size_t n, size_t offs) {
 
 /* Delete n chars from buffer */
 
-void _dbp_deleten_at(db *ds, int n, size_t offs) {
+void _dbp_deleten_at(db *ds, int n, int offs) {
 /* Since we are deleting we must already have enough space
  * But we mustn't delete from before the "actual start pointer".
  */
@@ -121,7 +125,7 @@ void _dbp_deleten_at(db *ds, int n, size_t offs) {
 /* Overwrite n chars at offset.
  * The full length must already be valid for the target.
  */
-void _dbp_overwriten_at(db *ds, const void *mp, size_t n, size_t offs) {
+void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
 
 /* We mustn't change anything from before the "actual start pointer". */
     if (((ds->blen - ds->alen) > offs) || ((offs + n) > ds->blen))
@@ -160,7 +164,7 @@ void _dbp_clear(db *ds) {
  * If this is a DB_STR buffer, append a NUL.
  * We do not need any more space for this.
  */
-void _dbp_truncate(db *ds, size_t n) {
+void _dbp_truncate(db *ds, int n) {
 /* We mustn't change anything from before the "actual start pointer". */
     if (((ds->blen - ds->alen) > n) || (n > ds->blen)) {
         illegal_dbaction("Illegal db truncate");
@@ -174,7 +178,7 @@ void _dbp_truncate(db *ds, size_t n) {
 
 /* Append n bytes */
 
-void _dbp_appendn(db *ds, const char *str, size_t n) {
+void _dbp_appendn(db *ds, const char *str, int n) {
     size_t need = ds->blen + n;
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
@@ -215,7 +219,7 @@ void _dbp_addch(db *ds, const char ch) {
 
 /* Get char at offset (0-based) */
 
-char _dbp_charat(db *ds, size_t w) {
+char _dbp_charat(db *ds, int w) {
     if (w >= ds->blen) return '\0';
     return *(ds->buf + w);
 }
@@ -225,7 +229,7 @@ char _dbp_charat(db *ds, size_t w) {
  * It DOES set the len iff we put a NUL into a DB_STR type.
  */
 
-void _dbp_setcharat(db *ds, size_t w, char c) {
+void _dbp_setcharat(db *ds, int w, char c) {
 /* We are allowed to overwrite the trailing NUL with a NUL in a DB_STR db */
     int tadj = ((c == '\0') && (ds->type & DB_STR))? 1: 0;
     if ((w >= ds->blen + tadj) || ((ds->buf + w) < ds->asp))
@@ -247,13 +251,13 @@ void _dbp_setcharat(db *ds, size_t w, char c) {
 char _dbp_cmp(db *ds, const char *str) {
     return strcmp(ds->buf, str);
 }
-char _dbp_cmpn(db *ds, const char *str, size_t n) {
+char _dbp_cmpn(db *ds, const char *str, int n) {
     return strncmp(ds->buf, str, n);
 }
 char _dbp_casecmp(db *ds, const char *str) {
     return strcasecmp(ds->buf, str);
 }
-char _dbp_casecmpn(db *ds, const char *str, size_t n) {
+char _dbp_casecmpn(db *ds, const char *str, int n) {
     return strncasecmp(ds->buf, str, n);
 }
 
@@ -277,13 +281,23 @@ void _dbp_upval(db *ds, const char *np) {
 void _dbp_sprintf(db *ds, const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    ds->blen = vsnprintf(ds->buf, ds->alloc, fmt, ap);
+    int needed = vsnprintf(ds->buf, ds->alloc, fmt, ap);
     va_end(ap);
-    if (ds->blen >= ds->alloc) {  /* Go again */
-        _dbp_realloc(ds, ds->blen);
+    if (needed < 0) {   /* Error */
+        dbp_set(ds, "db(p)_sprintf error: ");
+        dbp_append(ds, strerror(errno));
+    }
+/* ds->buf not large enough. Go again.
+ * We know needed is not -ve, so can remove a compiler warnign with the cast.
+ */
+    else if ((unsigned)needed >= ds->alloc) {
+        _dbp_realloc(ds, needed);
         va_start(ap, fmt);
         ds->blen = vsnprintf(ds->buf, ds->alloc, fmt, ap);
         va_end(ap);
+    }
+    else {
+        ds->blen = needed;
     }
     ds->alen = ds->blen;
     ds->asp = ds->buf;

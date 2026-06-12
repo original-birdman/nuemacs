@@ -19,8 +19,8 @@ typedef struct {
     char *buf;      /* The (NUL-terminated) string/buffer */
     char *asp;      /* The "actual start pointer" */
     size_t alloc;   /* What we've allocated */
-    size_t blen;    /* buf length WITHOUT any trailing NUL */
-    size_t alen;    /* The actual length from asp (no trailing NUL) */
+    int blen;       /* buf length WITHOUT any trailing NUL */
+    int alen;       /* The actual length from asp (no trailing NUL) */
     int type;       /* Set of flags */
 } db;
 
@@ -50,8 +50,8 @@ typedef struct {
 #define dbp_buf(a)  ((const char *)((a)->buf))
 #define dbp_val(a)  ((const char *)((a)->asp))
 #define dbp_blen(a) ((const size_t)((a)->blen))
-#define dbp_len(a)  ((const size_t)((a)->alen))
-#define dbp_max(a)  ((const size_t)((a)->alloc))
+#define dbp_len(a)  ((const int)((a)->alen))
+#define dbp_max(a)  ((const int)((a)->alloc))
 #define dbp_type(a) ((const int)((a)->type))
 
 /* The actual function calls (in dyn_str.c) to manipulate them.
@@ -61,22 +61,22 @@ typedef struct {
 const char *_dbp_val_nc(db *);
 void _dbp_setn(db *, const void *, size_t);
 void _dbp_set(db *, const char *);
-void _dbp_replicatech_at(db *, char, size_t, size_t);
-void _dbp_insertn_at(db *, const void *, size_t, size_t);
-void _dbp_deleten_at(db *, int, size_t);
-void _dbp_overwriten_at(db *, const void *, size_t, size_t);
+void _dbp_replicatech_at(db *, char, int, int);
+void _dbp_insertn_at(db *, const void *, int, int);
+void _dbp_deleten_at(db *, int, int);
+void _dbp_overwriten_at(db *, const void *, int, int);
 void _dbp_bufset(db *, const char, int);
 void _dbp_clear(db *);
-void _dbp_truncate(db *, size_t);
-void _dbp_appendn(db *, const char *, size_t);
+void _dbp_truncate(db *, int);
+void _dbp_appendn(db *, const char *, int);
 void _dbp_append(db *, const char *);
 void _dbp_addch(db *, const char);
-char _dbp_charat(db *, size_t);
-void _dbp_setcharat(db *, size_t, char c);
+char _dbp_charat(db *, int);
+void _dbp_setcharat(db *, int, char c);
 char _dbp_cmp(db *, const char *);
-char _dbp_cmpn(db *, const char *, size_t);
+char _dbp_cmpn(db *, const char *, int);
 char _dbp_casecmp(db *, const char *);
-char _dbp_casecmpn(db *, const char *, size_t);
+char _dbp_casecmpn(db *, const char *, int);
 
 void _dbp_upval(db *, const char *);
 
