@@ -9151,3 +9151,6 @@ util.h
     Modified PC code to "standardize" it. [tcap.c]
     Added some convenience defines.
         istrlen()
+
+file.c
+    Fixed n_dots handling in fixup_fname() and handle_dots().

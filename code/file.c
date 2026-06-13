@@ -59,9 +59,7 @@ static int *slp;
 static int sli;
 
 static void handle_dots(int n) {
-    if (n == 1) sli= sli - 1;
-    else if (n == 2) sli= sli - 2;
-    else return;    /* Shouldn't be called,  but ... */
+    sli -= n;       /* We wil lonly be called with n==1 or n==2 */
     if (sli < 0) sli = 0;
     db_truncate(fn_expd, slp[sli]);
     return;
@@ -139,6 +137,10 @@ const char *fixup_fname(const char *fn) {
     const char *cp = db_val(tfn);
     int n_dots = 0;
     int at_slash = 0;
+/* Note that ndots can only ever be 0, 1 or 2.
+ * For ndots to be non-zero at_slash must have been set,
+ * which means slp[0] will have a value, so handle_dots() is OK.
+ */
     while(*cp) {
         switch(*cp) {
         case '/':
@@ -147,14 +149,16 @@ const char *fixup_fname(const char *fn) {
                 continue; /* Ignore consecutive slashes */
                 ;
             }
-            if ((n_dots == 1) | (n_dots == 2)) handle_dots(n_dots);
+            if (n_dots) handle_dots(n_dots);
             at_slash = 1;
             n_dots = 0;
             slp[sli++] = db_len(fn_expd);
             break;
         case '.':
+            if (at_slash || n_dots) {
+                if (n_dots++ > 2) n_dots = 0;   /* Can't be > 2 */
+            }
             at_slash = 0;
-            n_dots++;
             break;
         default:
             at_slash = 0;
@@ -163,7 +167,7 @@ const char *fixup_fname(const char *fn) {
         db_addch(fn_expd, *cp++);
     }
 /* Need to handle any trailing dots too */
-    if ((n_dots == 1) | (n_dots == 2)) handle_dots(n_dots);
+    if (n_dots) handle_dots(n_dots);
     db_free(tfn);
     return db_val(fn_expd);
 }
