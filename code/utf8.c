@@ -33,7 +33,7 @@ int utf8_to_unicode(const char *line, int index, int len,
     }
 
     unsigned value;
-    unsigned char c = line[index];
+    unsigned char c = (unsigned char)line[index];
     unsigned mask;
     int i, bytes;
 
@@ -63,14 +63,14 @@ int utf8_to_unicode(const char *line, int index, int len,
 
 /* OK, do the bytes */
     for (i = 1; i < bytes; i++) {
-        c = line[i];
+        c = (unsigned char)line[i];
         if ((c & 0xc0) != 0x80) return 1;
         value = (value << 6) | (c & 0x3f);
     }
     if (value > MAX_UNICODE_CHAR) {
         return 1;
     }
-    *res = value;
+    *res = (unicode_t)value;
     return bytes;
 }
 
@@ -119,7 +119,7 @@ int combining_type(unicode_t uc) {
 int unicode_to_utf8(unicode_t c, char *utf8) {
     int bytes = 1;
 
-    *utf8 = c;
+    *utf8 = (char)c;
 
 /* Anything over MAX_UNICODE_CHAR isn't Unicode, just return one byte. */
 
@@ -131,17 +131,17 @@ int unicode_to_utf8(unicode_t c, char *utf8) {
  * in the final (-> first) byte *after* we've shifted them.
  */
         unsigned int prefix = 0x80;
-        unsigned max = 0x3f;
+        int max = 0x3f;
         char *bp, *ep;
         bp = ep = utf8;
         do {
-            *ep++ = 0x80 + (c & 0x3f);
+            *ep++ = (char)0x80 + (c & 0x3f);
             bytes++;
             prefix = 0x80 | (prefix >> 1);
             max >>= 1;
-            c >>= 6;            /* We use 6-bits in each extension byte */
+            c >>= 6;                /* We use 6-bits in each extension byte */
         } while (c > max);
-        *ep = (prefix | c);     /* Add in the final byte */
+        *ep = ((char)prefix | (char)c); /* Add in the final byte */
 
 /* We now need to reverse the bytes we've put in.
  * So use two pointers (begin and end of the bytes to reverse)
@@ -198,20 +198,20 @@ int prev_utf8_offset(const char *buf, int offset, int grapheme_start) {
     unicode_t res = 0;
     int offs = offset;
     do {
-        unsigned char c = buf[--offs];
+        unsigned char c = (unsigned char)buf[--offs];
         res = c;
         unicode_t poss;
         int got_utf8 = 0;
         if ((c & 0xc0) == 0x80) {           /* Ext byte? */
             int trypos = offs;
             int tryb = MAX_UTF8_LEN;
-            signed char marker = 0xc0;      /* Extend sign-bit here */
+            signed char marker = (char)0xc0;    /* Extend sign-bit here */
             unsigned char valmask = 0x1f;
             int bits_sofar = 0;
             int addin;
             poss = c & 0x3f;                /* 6-bits */
             while ((--trypos >= 0) && (--tryb >= 0)) {
-                c = buf[trypos];
+                c = (unsigned char)buf[trypos];
                 if ((c & 0xc0) == 0x80) {   /* Ext byte */
                     marker >>= 1;           /* Shift right..*/
                     valmask >>= 1;          /* Fewer... */
@@ -261,7 +261,7 @@ int build_next_grapheme(const char *buf, int offs, int max,
     gc->ex = NULL;  /* ...before offset check returns. */
 
 /* Allow (buf, 0, -1, &gc) to work for NUL-terminated buf string */
-    if ((offs == 0) && (max == -1)) max = strlen(buf);
+    if ((offs == 0) && (max == -1)) max = istrlen(buf);
     if (offs >= max) {
         if (offs == max) gc->uc = '\n';
         else             gc->uc = UEM_NOCHAR;
@@ -286,7 +286,7 @@ int build_next_grapheme(const char *buf, int offs, int max,
             if (gc->ex != NULL) {
                 while(gc->ex[xc] != UEM_NOCHAR) xc++;
             }
-            gc->ex = Xrealloc(gc->ex, (xc+2)*sizeof(unicode_t));
+            gc->ex = Xreallocarray(gc->ex, xc+2, sizeof(unicode_t));
             gc->ex[xc] = c;
             gc->ex[xc+1] = UEM_NOCHAR;
 	}
@@ -346,24 +346,25 @@ int char_replace(int f, int n) {
                 ci = 2;
             else
                 ci = 0;
-            int newval = strtol(db_val(tok)+ci, NULL, 16);
+            int newval = (int)strtol(db_val(tok)+ci, NULL, 16);
             if (newval > 0 && newval <= 0x0010FFFF) repchar = newval;
         }
         else {  /* Assume a char to map (possibly a range) */
             const char *tp = db_val(tok);
             char *fp;       /* First non-digit - hopefully a range */
             if (*tp == 'U' && *(tp+1) == '+') tp += 2;
-            unsigned int lowval = strtoul(tp, &fp, 16);
-            if (lowval & 0x80000000) continue;  /* Ignore any such... */
-            unsigned int topval;
+            unicode_t lowval = (unicode_t)strtoul(tp, &fp, 16);
+            if (lowval & (unicode_t)0x80000000) continue;  /* Ignore such... */
+            unicode_t topval;
             if (*fp == '-') {                   /* We have a range */
                 fp++;                           /* Skip over the - */
                 if (*fp == 'U' && *(fp+1) == '+') fp += 2;
-                topval = strtol(fp, NULL, 16);
+                topval = (unicode_t)strtol(fp, NULL, 16);
                 if (topval <= 0) continue;      /* Ignore this... */
             }
             else topval = lowval;
-            if (lowval > topval || lowval > 0x0010FFFF || topval > 0x0010FFFF)
+            if ((lowval > topval) || (lowval > MAX_UNICODE_CHAR) ||
+                 (topval > MAX_UNICODE_CHAR))
                 continue;                       /* Error - just ignore */
 
 /* Get the current size - we want one more, or two more if it's
@@ -378,7 +379,7 @@ int char_replace(int f, int n) {
                 while (remap[need++].start != UEM_NOCHAR);
                 need++;
             }
-            remap = Xrealloc(remap, need*sizeof(struct repmap_t));
+            remap = Xreallocarray(remap, need, sizeof(struct repmap_t));
             if (need == 2)  {               /* Newly allocated */
                 remap[0].start = lowval;
                 remap[0].end = topval;
@@ -440,7 +441,7 @@ unsigned int utf8_to_uclen(const char *str, int count_graphemes,
      int maxlen) {
     unsigned int len = 0;
     int offs = 0;
-    if (maxlen < 0) maxlen = strlen(str);
+    if (maxlen < 0) maxlen = istrlen(str);
     while (maxlen > offs) {     /* Until we run out */
         len++;
         offs = next_utf8_offset(str, offs, maxlen, count_graphemes);
@@ -486,10 +487,10 @@ static void add_to_res(struct mstr *mstr, const char *buf, int nc, int incr) {
 
     if ((mstr->utf8c + nc) >= mstr->alloc) {    /* Allow for NUL we'll add */
         mstr->alloc += incr;
-        mstr->str = Xrealloc(mstr->str, mstr->alloc);
+        mstr->str = Xrealloc(mstr->str, (size_t)mstr->alloc);
     }
 /* We have to be able to copy NULs */
-    memcpy(mstr->str+mstr->utf8c, buf, nc);
+    memcpy(mstr->str+mstr->utf8c, buf, (size_t)nc);
     mstr->utf8c += nc;
     return;
 }
@@ -527,7 +528,7 @@ void utf8_recase(int want, const char *in, int len, struct mstr *mstr) {
 
 /* Have we been asked to determine the length? */
 
-    if (len < 1) len = strlen(in);
+    if (len < 1) len = istrlen(in);
 
 /* Now we know the length, Quickly handle this perverse case. */
 
@@ -646,27 +647,27 @@ static int grapheme_to_bytes(struct grapheme *gc, char **rp, int alen,
 
     if (ulen+1 > alen) {    /* Round up new allocation to multiple of 16 */
         alen = 16*(((ulen+1)/16)+1);
-        *rp = Xrealloc(*rp, alen);
+        *rp = Xrealloc(*rp, (size_t)alen);
     }
-    memcpy(*rp, ub, ulen);
+    memcpy(*rp, ub, (size_t)ulen);
     reslen = ulen;
     if (!gc->cdm) goto done;
 
     ulen = unicode_to_utf8(gc->cdm, ub);
     if (reslen+ulen+1 > alen) {
-        *rp = Xrealloc(*rp, alen+16);
+        *rp = Xrealloc(*rp, (size_t)(alen+16));
         alen += 16;
     }
-    memcpy(*rp+reslen, ub, ulen);
+    memcpy(*rp+reslen, ub, (size_t)ulen);
     reslen += ulen;
     unicode_t *uc_ex = gc->ex;
     while (*uc_ex != UEM_NOCHAR) {
         ulen = unicode_to_utf8(*uc_ex++, ub);
         if (reslen+ulen+1 > alen) {
-            *rp = Xrealloc(*rp, alen+16);
+            *rp = Xrealloc(*rp, (size_t)(alen+16));
             alen += 16;
         }
-        memcpy(*rp+reslen, ub, ulen);
+        memcpy(*rp+reslen, ub, (size_t)ulen);
         reslen += ulen;
     }
 done:

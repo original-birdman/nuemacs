@@ -62,19 +62,19 @@ void ttopen(void) {
 
 /* Raw CR/NL etc input handling, but keep ISTRIP if we're on a 7-bit line */
 #if XONXOFF
-    ntermios.c_iflag &= ~(IGNBRK | BRKINT | IGNPAR | PARMRK
+    ntermios.c_iflag &= ~(tcflag_t)(IGNBRK | BRKINT | IGNPAR | PARMRK
                          | INPCK | INLCR | IGNCR | ICRNL);
 #else
-    ntermios.c_iflag &= ~(IGNBRK | BRKINT | IGNPAR | PARMRK
+    ntermios.c_iflag &= ~(tcflag_t)(IGNBRK | BRKINT | IGNPAR | PARMRK
                          | INPCK | INLCR | IGNCR | ICRNL | IXON);
 #endif
 
 /* Raw CR/NR etc output handling */
-    ntermios.c_oflag &= ~(OPOST | ONLCR | OLCUC | OCRNL | ONOCR | ONLRET);
+    ntermios.c_oflag &= ~(tcflag_t)(OPOST | ONLCR | OLCUC | OCRNL | ONOCR | ONLRET);
 
 /* No signal handling, no echo etc */
 
-    ntermios.c_lflag &= ~(ISIG | ICANON | XCASE | ECHO | ECHOE | ECHOK
+    ntermios.c_lflag &= ~(tcflag_t)(ISIG | ICANON | XCASE | ECHO | ECHOE | ECHOK
                          | ECHONL | NOFLSH | TOSTOP | ECHOCTL |
                            ECHOPRT | ECHOKE | FLUSHO | PENDIN | IEXTEN);
 
@@ -110,7 +110,7 @@ int ttputc(int c) {
     int bytes;
 
     bytes = unicode_to_utf8(c, utf8);
-    fwrite(utf8, 1, bytes, stdout);
+    fwrite(utf8, 1, (size_t)bytes, stdout);
     return 0;
 }
 
@@ -159,7 +159,7 @@ int ttgetc(void) {
 
     count = pending;    /* So we don't update pending on error */
     if (!count) {
-        count = read(0, buffer, sizeof(buffer));
+        count = (int)read(0, buffer, sizeof(buffer));
         if (count <= 0) return 0;
         pending = count;
     }
@@ -178,7 +178,8 @@ int ttgetc(void) {
     while (pending < expected) {
         int chars_waiting = poll(&ue_wait, 1, 100);
         if (chars_waiting <= 0) break;
-        pending += read(0, buffer + pending, sizeof(buffer) - pending);
+        pending += (int)read(0, buffer + pending,
+             sizeof(buffer) - (size_t)pending);
     }
     if (pending > 1) {
         char second = buffer[1];

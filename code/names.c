@@ -250,19 +250,19 @@ void init_namelookup(void) {
     fdef.offset = offsetof(struct name_bind, n_func);
     fdef.type = 'P';
     fdef.len = sizeof(fn_t);
-    func_index = Xmalloc((needed+1)*sizeof(int));
+    func_index = Xmalloc((size_t)(needed+1)*sizeof(int));
     idxsort_fields((unsigned char *)names, func_index,
           sizeof(struct name_bind), needed, 1, &fdef);
 
     fdef.offset = offsetof(struct name_bind, n_name);
     fdef.type = 'S';
     fdef.len = 0;
-    name_index = Xmalloc((needed+1)*sizeof(int));
+    name_index = Xmalloc((size_t)(needed+1)*sizeof(int));
     idxsort_fields((unsigned char *)names, name_index,
           sizeof(struct name_bind), needed, 1, &fdef);
 
 /* We want to step through this one, so need a next index too */
-    next_name_index = Xmalloc((needed+1)*sizeof(int));
+    next_name_index = Xmalloc((size_t)(needed+1)*sizeof(int));
     make_next_idx(name_index, next_name_index, needed);
     return;
 }

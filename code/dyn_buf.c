@@ -20,7 +20,7 @@
  * Will set a message to be shown.
  */
 
-static void illegal_dbaction(char *why) {
+static void illegal_dbaction(const char *why) {
     dump_message = why;
     raise(SIGILL);
     exit(127);  /* Just in case... */
@@ -29,13 +29,13 @@ static void illegal_dbaction(char *why) {
 /* DYN_INCR MUST be a power of 2
  * This must update both ds->buf and ds->asp
  */
-#define DYN_INCR 64
+#define DYN_INCR (size_t)64
 static void _dbp_realloc(db *ds, size_t need) {
     size_t want = (need + DYN_INCR) & ~(DYN_INCR - 1);
     if (want > INT_MAX) {
         illegal_dbaction("Attempt to allocate too long a buffer");
     }
-    size_t offset = ds->asp - ds->buf;
+    size_t offset = (size_t)(ds->asp - ds->buf);
     ds->buf = Xrealloc(ds->buf, want);
     ds->asp = ds->buf + offset;
     ds->alloc = want;
@@ -56,7 +56,7 @@ void _dbp_setn(db *ds, const void *mp, int n) {
     size_t need = (size_t)n;
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
-    memcpy(ds->buf, mp, n);
+    memcpy(ds->buf, mp, (size_t)n);
     ds->blen = n;
     ds->alen = n;
     ds->asp = ds->buf;
@@ -67,7 +67,7 @@ void _dbp_setn(db *ds, const void *mp, int n) {
 /* String copy-in a NUL-terminated string */
 
 void _dbp_set(db *ds, const char *str) {
-    if (str) _dbp_setn(ds, str, strlen(str));
+    if (str) _dbp_setn(ds, str, istrlen(str));
     return;
 }
 
@@ -77,11 +77,11 @@ void _dbp_replicatech_at(db *ds, char c, int n, int offs) {
     int movers = ds->blen - offs;
     if ((movers < 0) || ((ds->blen - ds->alen) > offs))
         illegal_dbaction("Illegal db replicatech");
-    size_t need = ds->blen + n;
+    size_t need = (size_t)(ds->blen + n);
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
-    memmove(ds->buf+offs+n, ds->buf+offs, movers);
-    memset(ds->buf+offs, c, n);
+    memmove(ds->buf+offs+n, ds->buf+offs, (size_t)movers);
+    memset(ds->buf+offs, c, (size_t)n);
     ds->blen += n;
     ds->alen += n;
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
@@ -94,11 +94,11 @@ void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
     int movers = ds->blen - offs;
     if ((movers < 0) || ((ds->blen - ds->alen) > offs))
         illegal_dbaction("Illegal db insertn");
-    size_t need = ds->blen + n;
+    size_t need = (size_t)(ds->blen + n);
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
-    memmove(ds->buf+offs+n, ds->buf+offs, movers);
-    memcpy(ds->buf+offs, mp, n);
+    memmove(ds->buf+offs+n, ds->buf+offs, (size_t)movers);
+    memcpy(ds->buf+offs, mp, (size_t)n);
     ds->blen += n;
     ds->alen += n;
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
@@ -115,7 +115,7 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
     if (((ds->blen - ds->alen) > offs) || (n < 0))
         illegal_dbaction("Illegal db deleten");
     int movers = ds->blen - offs - n;
-    memmove(ds->buf+offs, ds->buf+offs+n, movers);
+    memmove(ds->buf+offs, ds->buf+offs+n, (size_t)movers);
     ds->blen -= n;
     ds->alen -= n;
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
@@ -130,17 +130,17 @@ void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
 /* We mustn't change anything from before the "actual start pointer". */
     if (((ds->blen - ds->alen) > offs) || ((offs + n) > ds->blen))
         illegal_dbaction("Illegal db overwriten");
-    memmove(ds->buf+offs, mp, n);
+    memmove(ds->buf+offs, mp, (size_t)n);
     return;
 }
 
 /* Set the buffer to n copies of char ch */
 
 void _dbp_bufset(db *ds, const char ch, int n) {
-    size_t need = n;
+    size_t need = (size_t)n;
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
-    memset(ds->buf, ch, n);
+    memset(ds->buf, ch, (size_t)n);
     ds->asp = ds->buf;
     ds->blen = n;
     ds->alen = n;
@@ -169,9 +169,9 @@ void _dbp_truncate(db *ds, int n) {
     if (((ds->blen - ds->alen) > n) || (n > ds->blen)) {
         illegal_dbaction("Illegal db truncate");
     }
-    size_t offset = ds->asp - ds->buf;
+    size_t offset = (size_t)(ds->asp - ds->buf);
     ds->blen = n;
-    ds->alen = n - offset;
+    ds->alen = n - (int)offset;
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
     return;
 }
@@ -179,13 +179,13 @@ void _dbp_truncate(db *ds, int n) {
 /* Append n bytes */
 
 void _dbp_appendn(db *ds, const char *str, int n) {
-    size_t need = ds->blen + n;
+    size_t need = (size_t)(ds->blen + n);
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* Append n chars, set length and terminate if needed */
 
-    memcpy(ds->buf + ds->blen, str, n);
+    memcpy(ds->buf + ds->blen, str, (size_t)n);
     ds->blen += n;
     ds->alen += n;
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
@@ -196,14 +196,14 @@ void _dbp_appendn(db *ds, const char *str, int n) {
  * Could this be a define?
  */
 void _dbp_append(db *ds, const char *str) {
-    _dbp_appendn(ds, str, strlen(str));
+    _dbp_appendn(ds, str, istrlen(str));
     return;
 }
 
 /* Append a character */
 
 void _dbp_addch(db *ds, const char ch) {
-    size_t need = ds->blen + 1;
+    size_t need = (size_t)(ds->blen + 1);
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
@@ -238,7 +238,7 @@ void _dbp_setcharat(db *ds, int w, char c) {
 /* If we've written a NUL, change the stored length */
     if ((ds->type & DB_STR) && (c == '\0')) {
         ds->blen = w;
-        ds->alen = w - (ds->asp - ds->buf);
+        ds->alen = w - (int)(ds->asp - ds->buf);
     }
     return;
 }
@@ -248,17 +248,17 @@ void _dbp_setcharat(db *ds, int w, char c) {
  * GML - MAKE THESE #defines?
  */
 
-char _dbp_cmp(db *ds, const char *str) {
+int _dbp_cmp(db *ds, const char *str) {
     return strcmp(ds->buf, str);
 }
-char _dbp_cmpn(db *ds, const char *str, int n) {
-    return strncmp(ds->buf, str, n);
+int _dbp_cmpn(db *ds, const char *str, int n) {
+    return strncmp(ds->buf, str, (size_t)n);
 }
-char _dbp_casecmp(db *ds, const char *str) {
+int _dbp_casecmp(db *ds, const char *str) {
     return strcasecmp(ds->buf, str);
 }
-char _dbp_casecmpn(db *ds, const char *str, int n) {
-    return strncasecmp(ds->buf, str, n);
+int _dbp_casecmpn(db *ds, const char *str, int n) {
+    return strncasecmp(ds->buf, str, (size_t)n);
 }
 
 /* Update the actual string pointer and, from it, the length left.
@@ -270,7 +270,7 @@ void _dbp_upval(db *ds, const char *np) {
         illegal_dbaction("Illegal db upval");
     }
     ds->asp = (char *)np;
-    ds->alen = ds->blen - (ds->asp - ds->buf);
+    ds->alen = ds->blen - (int)(ds->asp - ds->buf);
     return;
 }
 
@@ -291,7 +291,7 @@ void _dbp_sprintf(db *ds, const char *fmt, ...) {
  * We know needed is not -ve, so can remove a compiler warnign with the cast.
  */
     else if ((unsigned)needed >= ds->alloc) {
-        _dbp_realloc(ds, needed);
+        _dbp_realloc(ds, (size_t)needed);
         va_start(ap, fmt);
         ds->blen = vsnprintf(ds->buf, ds->alloc, fmt, ap);
         va_end(ap);

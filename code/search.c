@@ -190,9 +190,9 @@
 /* Typedefs that define the meta-character structure for MAGIC mode searching
  * (struct magic), and replacement (struct magic_replacement).
  */
-struct range {
-    unsigned int low;
-    unsigned int high;
+struct range {                  /* A range of (Unicode) characters */
+    unicode_t low;
+    unicode_t high;
 };
 struct mg_info {
     unsigned int type :8;
@@ -339,11 +339,11 @@ static enum call_type this_rt;
 #define NGRP_INCR 10
 static void increase_group_info(void) {
     max_grp += NGRP_INCR;
-    cntl_grp_info = Xrealloc(cntl_grp_info,
-         max_grp*sizeof(struct control_group_info));
-    match_grp_info = Xrealloc(match_grp_info,
-         max_grp*sizeof(struct match_group_info));
-    grp_text = Xrealloc(grp_text, max_grp*sizeof(char *));
+    cntl_grp_info = Xreallocarray(cntl_grp_info,
+         max_grp, sizeof(struct control_group_info));
+    match_grp_info = Xreallocarray(match_grp_info,
+         max_grp, sizeof(struct match_group_info));
+    grp_text = Xreallocarray(grp_text, max_grp, sizeof(char *));
     for (int gi = 0; gi < max_grp; gi++) grp_text[gi] = NULL;
 }
 
@@ -351,13 +351,13 @@ static void increase_group_info(void) {
 #define MAGIC_INCR 16
 static void increase_magic_info(void) {
     magic_size += MAGIC_INCR;
-    mcpat = Xrealloc(mcpat, magic_size*sizeof(struct magic));
+    mcpat = Xreallocarray(mcpat, magic_size, sizeof(struct magic));
     return;
 }
 static void increase_magic_repl_info(void) {
     magic_repl_size += MAGIC_INCR;
-    rmcpat = Xrealloc(rmcpat,
-         magic_repl_size*sizeof(struct magic_replacement));
+    rmcpat = Xreallocarray(rmcpat, magic_repl_size,
+         sizeof(struct magic_replacement));
     return;
 }
 
@@ -443,7 +443,7 @@ static void update_ring(dbp_dcl(str)) {
  */
 static db_strdef(expbuf);
 static db *expandp(db *newstr) {
-    unsigned char c;        /* current char to translate */
+    char c;                 /* current char to translate */
 
     db_set(expbuf, "");     /* NOT db_clear, to ensure val is not NULL */
 
@@ -634,11 +634,12 @@ static void setbit(int bc, char *cclmap) {
 }
 
 /* parse_error
+ * Helper routine
  * A simple routine to display where errors occur in patterns
  * Assumes that pptr arrives set to one beyond the error point AND
  * that this is a pointer into pat!
  */
-static void parse_error(char *pptr, char *message) {    /* Helper routine */
+static void parse_error(char *pptr, const char *message) {
     char byte_saved = *pptr;
     terminate_str(pptr);    /* Temporarily fudge in end-of-string */
     mlwrite("%s<-: %s!", db_val(pat), message);
@@ -654,12 +655,12 @@ static int uni_ccl_cnt;     /* add2_xt_cclmap isn't recursive... */
 static struct xccl *add2_xt_cclmap(struct magic *mp, int type) {
     uni_ccl_cnt++;
     struct xccl *xp =
-         Xrealloc(mp->x.xt_cclmap, (uni_ccl_cnt)*sizeof(struct xccl));
+         Xreallocarray(mp->x.xt_cclmap, uni_ccl_cnt, sizeof(struct xccl));
     mp->x.xt_cclmap = xp;
     xp += uni_ccl_cnt - 1;  /* Point to the last one */
     xp->xc = null_mg;       /* (re)Mark end of list */
     xp--;                   /* Where we want to add the new one */
-    xp->xc.type = type;
+    xp->xc.type = (unsigned char)type;  /* An 8-bit assignment */
     return xp;
 }
 
@@ -809,7 +810,7 @@ handle_prev:
                 return FALSE;
             }
             struct xccl *xp = add2_xt_cclmap(mcptr, UCLITL);
-            xp->xval.uchar = strtol(dbp_val(btext), NULL, 16);
+            xp->xval.uchar = (int)strtol(dbp_val(btext), NULL, 16);
 
 /* For the moment(?), don't validate we have a hex-only field) */
             patptr += dbp_len(btext);
@@ -884,19 +885,20 @@ handle_prev:
         }
         case 'w':                       /* Letter, _, 0-9 */
         case 'W': {
-            int negate_it = (gc.uc == 'W');
-            struct xccl *xp = add2_xt_cclmap(mcptr, UCPROP);
-            xp->xc.negate_test = negate_it;
+            struct {
+                unsigned int negate_it:1;
+            } wa;
+            wa.negate_it = (gc.uc == 'W');
             xp->xval.prop[0] = 'L';     /* Letter... */
             terminate_str(xp->xval.prop + 1);   /* Ensure NUL terminated */
 /* We can't really (un)set a bit pattern here for the negative case,
  * So set up some UCLITL tests instead.
  */
             xp = add2_xt_cclmap(mcptr, UCLITL);
-            xp->xc.negate_test = negate_it;     /* We have a new xp */
+            xp->xc.negate_test = wa.negate_it;      /* We have a new xp */
             xp->xval.uchar = ch_as_uc('_');
             xp = add2_xt_cclmap(mcptr, CCL);
-            xp->xc.negate_test = negate_it;     /* We have a new xp */
+            xp->xc.negate_test = wa.negate_it;      /* We have a new xp */
             xp->xval.cl_lim.low = ch_as_uc('0');
             xp->xval.cl_lim.high = ch_as_uc('9');
             goto invalidate_current;
@@ -919,11 +921,14 @@ handle_prev:
             static int wsp_ints[] =
                  { 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x20, 0x85,
                    0x200E, 0x200F, 0x2028, 0x2029, UEM_NOCHAR };
-            int negate_it = (gc.uc == 'S');
+            struct {
+                unsigned int negate_it:1;
+            } wa;
+            wa.negate_it = (gc.uc == 'S');
             struct xccl *xp;
             for (int *wsp = wsp_ints; *wsp != UEM_NOCHAR; wsp++) {
                 xp = add2_xt_cclmap(mcptr, UCLITL);
-                xp->xc.negate_test = negate_it;
+                xp->xc.negate_test = wa.negate_it;
                 xp->xval.uchar = *wsp;
             }
             goto invalidate_current;
@@ -1130,7 +1135,7 @@ static int mcstr(void) {
     struct magic *mcptr = mcpat;
     char *patptr = strdupa(db_val(pat));
     int mj;
-    int pchr;
+    char pchr;
     int status = TRUE;
     int repeat_allowed = FALSE; /* Set to can_repeat at end of each loop */
     dbp_dcl(btext);
@@ -1150,7 +1155,7 @@ static int mcstr(void) {
  */
     mcptr->mc = null_mg;            /* Initialize fields */
     mcptr->mc.type = SGRP;
-    mcptr->mc.group_num = group_cntr;
+    mcptr->mc.group_num = (unsigned char)group_cntr;
     mcptr->x.next_or_idx = 0;
     cntl_grp_info[0].next_choice_idx = 0;   /* Where to put the next CHOICE */
     mcptr++;
@@ -1162,7 +1167,7 @@ static int mcstr(void) {
     int can_repeat = TRUE;  /* Will be switched off as required */
     int possible_slow_scan = FALSE;     /* Not yet */
     mcptr->mc = null_mg;    /* Initialize fields */
-    mcptr->mc.group_num = curr_group;
+    mcptr->mc.group_num = (unsigned char)curr_group;
 /* Is the next character non-ASCII? */
     struct grapheme gc;
     int bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
@@ -1222,7 +1227,7 @@ static int mcstr(void) {
         cntl_grp_info[group_cntr].parent_group = curr_group;
         curr_group = group_cntr;
         mcptr->mc.type = SGRP;
-        mcptr->mc.group_num = group_cntr;               /* Set correct one */
+        mcptr->mc.group_num = (unsigned char)group_cntr; /* Set correct one */
         mcptr->x.next_or_idx = 0;                       /* No OR yet but... */
         cntl_grp_info[group_cntr].next_choice_idx = mj; /* it would go here */
         can_repeat = FALSE;
@@ -1383,7 +1388,7 @@ static int mcstr(void) {
                 }
                 mcptr->mc.type = UCLITL;
 /* For the moment(?), don't validate we have a hex-only field) */
-                mcptr->val.uchar = strtol(dbp_val(btext), NULL, 16);
+                mcptr->val.uchar = (int)strtol(dbp_val(btext), NULL, 16);
                 patptr += dbp_len(btext);
                 goto pchr_done;
             case 'k':       /* "kind of" char - just check base unicode */
@@ -1505,7 +1510,7 @@ pchr_done_noincr:
     mcptr++;
 /* Do we need to increase magic size? */
     if (mj >= magic_size) {
-        int ptr_offs = mcptr - mcpat;   /* Allow for mcpat moving */
+        int ptr_offs = (int)(mcptr-mcpat);  /* Allow for mcpat moving */
         increase_magic_info();
         mcptr = mcpat + ptr_offs;
     }
@@ -1698,7 +1703,7 @@ static int rmcstr(void) {
             case '.':
                 rmcptr->mc.type = REPL_VAR;
 /* Adding 1 for NUL */
-                rmcptr->val.varname = Xmalloc(dbp_len(btext)+1);
+                rmcptr->val.varname = Xmalloc((size_t)dbp_len(btext)+1);
                 strcpy(rmcptr->val.varname, dbp_val(btext));
                 break;
             case '@':   /* Replace with a counter - optional formatting */
@@ -1753,7 +1758,7 @@ static int rmcstr(void) {
                     if (!nxt) break;
                     if (nxt - bp) { /* Save previous text, if any */
                         wkfcp->type = LITCHAR;      /* Change type */
-                        wkfcp->val.ltext = strndup(bp, (nxt - bp));
+                        wkfcp->val.ltext = strndup(bp, (size_t)(nxt - bp));
                         wkfcp->next = new_fc();
                         wkfcp = wkfcp->next;
                     }
@@ -1799,14 +1804,14 @@ static int rmcstr(void) {
 /* Copy any trailing text */
                 if (ep - tr_start) {        /* Save trailing text, if any */
                     wkfcp->type = LITCHAR;  /* Change type */
-                    wkfcp->val.ltext = strndup(tr_start, (ep - tr_start));
+                    wkfcp->val.ltext = strndup(tr_start, (size_t)(ep-tr_start));
                     wkfcp->next = new_fc();
                     wkfcp = wkfcp->next;
                  }
                  break;
             default:    /* Assume a group number... */
                 rmcptr->mc.type = REPL_GRP;
-                rmcptr->mc.group_num = atoi(dbp_val(btext));
+                rmcptr->mc.group_num = (unsigned char)atoi(dbp_val(btext));
                 break;
             }
             rmagical = TRUE;
@@ -1846,7 +1851,7 @@ static int rmcstr(void) {
         rmj++;      /* Is now the 0-based index of rmcptr value */
 /* Do we need to increase magic_repl size? */
         if (rmj >= magic_repl_size) {
-            int ptr_offs = rmcptr - rmcpat; /* Allow for rmcpat moving */
+            off_t ptr_offs = rmcptr - rmcpat;   /* Allow for rmcpat moving */
             increase_magic_repl_info();
             rmcptr = rmcpat + ptr_offs;
         }
@@ -1857,23 +1862,26 @@ pchr_done_noincr:;
     return TRUE;
 }
 
+#if 0
+/* Not used anywhere?? */
 /* unicode_eq -- Compare two unicode characters.
  *  If we are not in EXACT mode, fold out the case.
  */
-int unicode_eq(unsigned int bc, unsigned int pc) {
+static int unicode_eq(unicode_t bc, unicode_t pc) {
     if (bc == pc) return TRUE;
     if ((curwp->w_bufp->b_mode & MDEXACT) != 0) return FALSE;
     return (utf8proc_toupper(bc) == utf8proc_toupper(pc));
 }
+#endif
 
-/* asceq -- Compare two bytes.  The "bc" comes from the buffer, "pc"
+/* asc_eq -- Compare two bytes.  The "bc" comes from the buffer, "pc"
  *      from the pattern.  If we are not in EXACT mode, fold out the case.
  * Used by fast_scanner, which will NOT be used for non-EXACT mode if
  * there are bytes >0x7f, so the simple case-change code is OK.
  */
 #define isASClower(c)  (('a' <= c) && (LASTLL >= c))
 
-int asceq(unsigned char bc, unsigned char pc) {
+static int asc_eq(char bc, char pc) {
     if ((curwp->w_bufp->b_mode & MDEXACT) == 0) {
         if (islower(bc)) bc ^= DIFCASE;
         if (islower(pc)) pc ^= DIFCASE;
@@ -1893,7 +1901,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
     case LITCHAR:
         if (gc->cdm) res = FALSE;               /* Can't have combining bits */
         else if (gc->uc > 0x7f) res = FALSE;    /* Can't match non-ASCII */
-        else res = asceq(gc->uc, mt->val.lchar);
+        else res = asc_eq((char)gc->uc, (char)mt->val.lchar);
         break;
 
     case ANY:                   /* Any EXCEPT newline or UEM_NOCHAR */
@@ -1983,8 +1991,8 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
 /* May have any combining bit, but only the base character is tested */
                 case UCPROP: {
                     const char *uccat = utf8proc_category_string(gc->uc);
-                    int testlen = strlen(xp->xval.prop); /* 1 or 2 */
-                    res = !strncmp(uccat, xp->xval.prop, testlen);
+                    int testlen = istrlen(xp->xval.prop);   /* 1 or 2 */
+                    res = !strncmp(uccat, xp->xval.prop, (size_t)testlen);
                     break;
                 }
                 default:        /* Nothing else can match */
@@ -2033,8 +2041,8 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
     }
     case UCPROP: {  /* Only tested against the base character...  */
         const char *uccat = utf8proc_category_string(gc->uc);
-        int testlen = strlen(mt->val.prop); /* 1 or 2 */
-        res = !strncmp(uccat, mt->val.prop, testlen);
+        int testlen = istrlen(mt->val.prop); /* 1 or 2 */
+        res = !strncmp(uccat, mt->val.prop, (size_t)testlen);
         break;
     }
     default:    /* Should never get here... */
@@ -2127,7 +2135,7 @@ void setpattern(db *apat, db *tap) {
  * Display the old pattern, in the style of Jeff Lomicka.
  * There is some do-it-yourself control expansion.
  */
-static int readpattern(char *prompt, db *apat, int srch) {
+static int readpattern(const char *prompt, db *apat, int srch) {
     int status;
     db_strdef(tpat);
 
@@ -2579,8 +2587,7 @@ try_next_choice:
         switch(mcptr->mc.type) {
         case BOL:
         case EOL:
-            if ((size_t)curoff ==
-                      ((mcptr->mc.type == BOL)? 0: lused(curline))) {
+            if (curoff == ((mcptr->mc.type == BOL)? 0: lused(curline))) {
                 goto next_entry;
             }
             else {
@@ -2815,7 +2822,7 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
                 if (curline == curbp->b_linep)
                     return TRUE;    /* hit end of buffer */
             }
-            if ((size_t)curoff == lused(curline)) {
+            if (curoff == lused(curline)) {
                 jump = deltab[ch_as_uc('\n')];
             }
             else {
@@ -2855,7 +2862,7 @@ static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
     curoff = *pcuroff;
 
     if (dir == FORWARD) {
-        if ((size_t)curoff == lused(curline)) { /* if at EOL */
+        if (curoff == lused(curline)) {     /* if at EOL */
             curline = lforw(curline);       /* skip to next line */
             curoff = 0;
             c = '\n';                       /* and return a <NL> */
@@ -2938,7 +2945,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
  fprintf(stderr, "fast1: moved to %c(%02x) at %d in %.*s\n", c, c, scanoff,
     (int)lused(scanline), ltext(scanline));
 #endif
-            if (!asceq(c, *patptr++)) {
+            if (!asc_eq(c, *patptr++)) {
                 jump = (direct == FORWARD)? lastchfjump: lastchbjump;
                 goto fail;
             }
@@ -2957,7 +2964,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 /* We know where we matched, and we know the byte length of the pattern
  * we matched, so advance that number of bytes to find the test char.
  */
-            int togo = strlen(patrn);
+            int togo = istrlen(patrn);
             while(togo > 0) {
                 int on_tline = lused(tline) - toff;
                 if (on_tline > togo) on_tline = togo;
@@ -3029,7 +3036,7 @@ const char *group_match(int grp) {
  */
     if (!grp_text[grp]) {
 
-        grp_text[grp] = Xmalloc(match_grp_info[grp].len + 1);
+        grp_text[grp] = Xmalloc((size_t)(match_grp_info[grp].len + 1));
 
 /* Create the match text for this group... */
 
@@ -3040,7 +3047,7 @@ const char *group_match(int grp) {
         while(togo > 0) {
             int on_cline = lused(cline) - coff;
             if (on_cline > togo) on_cline = togo;
-            memcpy(dp, ltext(cline)+coff, on_cline);
+            memcpy(dp, ltext(cline)+coff, (size_t)on_cline);
             dp += on_cline;
             togo -= on_cline;
 
@@ -3414,7 +3421,7 @@ static const char *getrepl(void) {
     while (rmcptr->mc.type != EGRP) {
         switch(rmcptr->mc.type) {
         case LITCHAR:
-            db_addch(repl, rmcptr->val.lchar);
+            db_addch(repl, (char)rmcptr->val.lchar);
             break;
         case UCLITL:
             nb = unicode_to_utf8(rmcptr->val.uchar, ucb);
@@ -3521,10 +3528,10 @@ static int delins(const char *repstr) {
 
 /* Remember what the replacement was */
 
-    last_match.rlen = strlen(repstr);
+    last_match.rlen = istrlen(repstr);
     int needed = last_match.rlen + 1;
     if (needed > last_match.r_alloc) {
-        last_match.replace = Xrealloc(last_match.replace, needed);
+        last_match.replace = Xrealloc(last_match.replace, (size_t)needed);
         last_match.r_alloc = needed;
     }
     strcpy(last_match.replace, repstr);
@@ -3536,7 +3543,7 @@ static int delins(const char *repstr) {
  */
     needed = match_grp_info[0].len + 1;
     if (needed > last_match.m_alloc) {
-        last_match.match = Xrealloc(last_match.match, needed);
+        last_match.match = Xrealloc(last_match.match, (size_t)needed);
         last_match.m_alloc = needed;
     }
 /* This does NOT change the current dotp and doto! */
@@ -3566,7 +3573,7 @@ static int delins(const char *repstr) {
  */
     if (status) {
         status = linstr(repstr);
-        last_match.rlen = strlen(repstr);
+        last_match.rlen = istrlen(repstr);
     }
     return status;
 }

@@ -204,7 +204,7 @@ int macarg(db *tok) {
  */
 static int docmd(const char *cline) {
     int f;                  /* default argument flag */
-    ue64I_t n;              /* numeric repeat value */
+    int n;                  /* numeric repeat value */
     int status;             /* return status of function */
     int oldcle;             /* old contents of clexec flag */
     db_strdef(tkn);         /* next token off of command line */
@@ -261,7 +261,7 @@ static int docmd(const char *cline) {
             mlwrite_one("Numeric arg out of range for 32-bit integer");
             goto final_exit;
         }
-        n = ln;
+        n = (int)ln;
 /* and now get the command to execute */
         if ((status = macarg(&tkn)) != TRUE) {
             goto final_exit;
@@ -498,10 +498,10 @@ void ptt_free(struct buffer *bp) {
 static const char* get_display_code(const char *buf) {
     static char ml_display_code[32];
 
-    int mlen = strlen(buf);
+    int mlen = istrlen(buf);
     int offs = next_utf8_offset(buf, 0, mlen, 1);
     offs = next_utf8_offset(buf, offs, mlen, 1);
-    strncpy(ml_display_code, buf, offs);
+    strncpy(ml_display_code, buf, (size_t)offs);
     terminate_str(ml_display_code+offs);
     return ml_display_code;
 }
@@ -588,13 +588,13 @@ static int ptt_compile(struct buffer *bp) {
                     mlwrite("Oxnn syntax is only for a single byte (%s)", db_val(tok));
                     continue;
                 }
-                db_addch(glb_db, add);
+                db_addch(glb_db, (char)add);
             }
             else if (db_charat(tok, 0) == 'U' &&
                      db_charat(tok, 1) == '+') {
-                int val = strtol(db_val(tok)+2, NULL, 16);
+                long val = strtol(db_val(tok)+2, NULL, 16);
                 char abuf[8];
-                int incr = unicode_to_utf8(val, abuf);
+                int incr = unicode_to_utf8((int)val, abuf);
                 db_appendn(glb_db, abuf, incr);
             }
             else {
@@ -627,7 +627,7 @@ static int ptt_compile(struct buffer *bp) {
             new->from_len_uc = ex_mstr.uc;
         }
         else {
-            new->from = Xmalloc(new->from_len+1);
+            new->from = Xmalloc((size_t)(new->from_len+1));
             strcpy(new->from, db_val(from_string));
             new->from_len_uc = uclen_utf8(new->from);
         }
@@ -639,8 +639,8 @@ static int ptt_compile(struct buffer *bp) {
         int start_at = prev_utf8_offset(new->from, new->from_len, FALSE);
         (void)utf8_to_unicode(new->from, start_at, new->from_len,
               &(new->final_uc));
-        new->to = Xmalloc(db_len(glb_db)+1);
-        strncpy(new->to, db_val(glb_db), db_len(glb_db));
+        new->to = Xmalloc((size_t)(db_len(glb_db)+1));
+        strncpy(new->to, db_val(glb_db), (size_t)db_len(glb_db));
         terminate_str(new->to + db_len(glb_db));
         new->to_len_uc = uclen_utf8(new->to);
         new->to_len_gph = glyphcount_utf8(new->to);
@@ -886,7 +886,7 @@ int ptt_handler(int c, int remove_on_no_match) {
  * just compare the bytes.
  */
             if (strncmp(ltext(curwp->w.dotp)+start_at,
-                 ptr->from, ptr->from_len)) continue;
+                 ptr->from, (size_t)ptr->from_len)) continue;
         }
         if (ptr->bow_only && (curwp->w.doto > ptr->from_len)) { /* Not BOL */
 /* Need to step back to the start of the preceding grapheme and get the
@@ -1036,7 +1036,7 @@ int dobuf(struct buffer *bp) {
     struct line *hlp;       /* pointer to line header */
     struct line *glp;       /* line to goto */
     int dirnum;             /* directive index */
-    size_t linlen;          /* length of line to execute */
+    int linlen;             /* length of line to execute */
     int i;                  /* index */
     int c;                  /* temp character */
     int force;              /* force TRUE result? */
@@ -1186,7 +1186,7 @@ nxtscan:                /* On to the next line */
  */
     hlp = bp->b_linep;
     lp = hlp->l_fp;
-    size_t eilen = 0;
+    int eilen = 0;
     while (lp != hlp) {
 /* Allocate eline and copy macro line to it.
  * We may edit it in this loop
@@ -1195,11 +1195,11 @@ nxtscan:                /* On to the next line */
         linlen = lused(lp);
         if (linlen == 0) goto onward;
         if (linlen > eilen) {
-            einit = Xrealloc(einit, linlen + 1);
+            einit = Xrealloc(einit, (size_t)(linlen+1));
             eilen = linlen;
         }
         eline = einit;
-        memcpy(eline, ltext(lp), linlen);
+        memcpy(eline, ltext(lp), (size_t)linlen);
         terminate_str(eline+linlen);    /* Make sure it ends */
 
 /* Trim leading whitespace */

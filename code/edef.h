@@ -205,7 +205,7 @@ extern db_dcl(pat);             /* Search pattern.              */
 extern db_dcl(tap);             /* Reversed pattern array.      */
 extern db_dcl(rpat);            /* Replacement pattern.         */
 
-extern unsigned int srch_patlen;
+extern int srch_patlen;
 
 extern const char *dname[];     /* Directive name table.        */
 

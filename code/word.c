@@ -41,7 +41,7 @@ static int zw_break = 0;
  *  S   Symbols
  *  Z   Separators
  */
-int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
+int class_check(struct inwbuf *inwp, const char *classes, int res_on_zwb) {
     struct grapheme gc;
     struct line *mylp;
     int myoffs;
@@ -57,7 +57,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
     }
 
     zw_break = 0;
-    if ((size_t)myoffs == lused(mylp)) {    /* Handle end of line */
+    if (myoffs == lused(mylp)) {    /* Handle end of line */
         gc.uc = '\n';
         if (inwp) {                 /* Switch caller to next one */
             inwp->offs = 0;
@@ -80,7 +80,7 @@ int class_check(struct inwbuf *inwp, char *classes, int res_on_zwb) {
  */
     const char *uc_class =
          utf8proc_category_string((utf8proc_int32_t)gc.uc);
-    for (char *mp = classes; *mp; mp++)
+    for (const char *mp = classes; *mp; mp++)
         if (uc_class[0] == *mp) return TRUE;
     return FALSE;
 }
@@ -334,7 +334,7 @@ int delfword(int f, int n) {
         while (n--) {
 
 /* If we are at EOL; skip to the beginning of the next */
-            while ((size_t)curwp->w.doto == lused(curwp->w.dotp)) {
+            while (curwp->w.doto == lused(curwp->w.dotp)) {
                 moved = forw_grapheme(1);
                 if (moved <= 0) return FALSE;
                 ++size;     /* Will move one to next line */
@@ -562,7 +562,7 @@ int wordcount(int f, int n) {
  */
     if (mywb.offs > orig_offset) ++nlines;
 /* And report on the info */
-    if (nwords > 0L) avgch = (int) ((100L * nchars) / nwords);
+    if (nwords > 0L) avgch = (int)((100L*nchars)/nwords);
     else             avgch = 0;
 
 /* GGR - we don't need nlines+1 here now */
@@ -692,7 +692,7 @@ int wrapword(int f, int n) {
  * This handles "mid-line" wraps and inability to wrap
  */
                 whitedelete(0, 0);
-                if (((size_t)curwp->w.doto != lused(curwp->w.dotp)) &&
+                if ((curwp->w.doto != lused(curwp->w.dotp)) &&
                     (curwp->w.doto != 0)) linsert_byte(1, ' ');
             }
 /* Back to where we were (which will have moved and been updated).
@@ -752,7 +752,7 @@ int eos_chars(int f, int n) {
  * Actually we'll allocate one extra and put an illegal value at the end.
  */
         int len = db_len(buf);
-        eos_list = Xrealloc(eos_list, sizeof(unicode_t)*(len + 1));
+        eos_list = Xreallocarray(eos_list, len + 1, sizeof(unicode_t));
         int i = 0;
         n_eos = 0;
         while (i < len) {
@@ -813,7 +813,7 @@ static int filler(int indent, int width, int justify) {
         if (!filler_fword()) return FALSE;          /* Next word */
         words_to_wrap++;
         whitedelete(0, 0);                          /* -> 0 spaces */
-        if ((size_t)curwp->w.doto == lused(curwp->w.dotp)) {    /* E-o-line */
+        if (curwp->w.doto == lused(curwp->w.dotp)) {    /* E-o-line */
             if (lforw(curwp->w.dotp) == end_line) {     /* At end of para? */
                 all_done = 1;       /* Time to wrap up - no more spaces... */
             }
@@ -1021,7 +1021,7 @@ static int region_listmaker(const char *lbl_fmt, int n) {
         flp = lforw(flp);
     }
     curwp->w.dotp = flp;                /* Fix up line and ... */
-    curwp->w.doto = togo;               /* ... offset for end-of-range */
+    curwp->w.doto = (int)togo;          /* ... offset for end-of-range */
 
 /* We want to get to EOP, but if we are at the end of the last line
  * (which is a likely marking scenario for a region) we don't want to go

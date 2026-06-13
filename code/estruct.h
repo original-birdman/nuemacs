@@ -23,6 +23,9 @@
  */
 #define ch_as_uc(bc) ((unsigned char)(bc))
 
+/* We have lots of strlen() calls wheer we want an int result */
+#define istrlen(a) ((int)strlen(a))
+
 /* The character with which to start/end message line info */
 #define MLpre  "["
 #define MLpost "]"

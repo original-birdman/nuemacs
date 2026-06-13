@@ -38,11 +38,14 @@ static int seed;
 /* We now want all uemacs "macro integers" to be 64-bit. */
 
 /* ue_atoi
- * This allows the integer to be expressed in hex ("0x"), octal (0..)
+ * These allows the integer to be expressed in hex ("0x"), octal (0..)
  * or decimal.
  * Replaced with a simple #define macro.
+ * If assigning to an int, use ue_atoi
+ * If assigning to a long, use ue_atol (lomg and long long are the same)
  */
-#define ue_atoi(ustr) (strtoll(ustr, NULL, 0))
+#define ue_atoi(ustr) ((int)strtol(ustr, NULL, 0))
+#define ue_atol(ustr) (strtoll(ustr, NULL, 0))
 
 /* ue_itoa:
  *      integer to ascii string.......... This is too
@@ -126,11 +129,11 @@ void init_envvar_index(void) {
     fdef.offset = offsetof(struct evlist, var);
     fdef.type = 'S';
     fdef.len = 0;
-    envvar_index = Xmalloc((evl_size+1)*sizeof(int));
+    envvar_index = Xmalloc((size_t)(evl_size+1)*sizeof(int));
     idxsort_fields((unsigned char *)evl, envvar_index,
           sizeof(struct evlist), evl_size, 1, &fdef);
 /* We want to step through this one, so need a next index too */
-    next_envvar_index = Xmalloc((evl_size+1)*sizeof(int));
+    next_envvar_index = Xmalloc((size_t)(evl_size+1)*sizeof(int));
     make_next_idx(envvar_index, next_envvar_index, evl_size);
     return;
 }
@@ -238,7 +241,7 @@ static int strindex(const char *source, const char *pattern) {
     int res;
     if (!locp) res = 0; /* Not found */
 /* For a non-zero result, convert to graphemes */
-    else res = glyphcount_utf8_array(source, locp - source) + 1;
+    else res = glyphcount_utf8_array(source, (int)(locp - source)) + 1;
     return res;
 }
 
@@ -261,7 +264,7 @@ static int rstrindex(const char *source, const char *pattern) {
     int res;
     if (!lastp) res = 0;    /* Not found */
 /* For a non-zero result, convert to graphemes */
-    else res = glyphcount_utf8_array(source, lastp - source) + 1;
+    else res = glyphcount_utf8_array(source, (int)(lastp - source)) + 1;
     return res;
 }
 
@@ -309,12 +312,12 @@ static const char *xlat(const char *source, const char *lookup,
 /* There cannot be more mappings than the number of bytes in the lookup.
  * So allocate a table of that size now.
  */
-    int llen = strlen(lookup);
-    int tlen = strlen(trans);
+    int llen = istrlen(lookup);
+    int tlen = istrlen(trans);
 /* alloca() allocates on the stack, so automatically de-allocates
  * when we leave.
  */
-    struct map_table *mtp = alloca(llen*sizeof(struct map_table));
+    struct map_table *mtp = alloca((size_t)llen*sizeof(struct map_table));
 
 /* Walk along lookup and trans filling in the mappings.
  * If we run out of trans, we mark them as removals.
@@ -340,7 +343,7 @@ static const char *xlat(const char *source, const char *lookup,
         }
         else {
 /* strndupa uses alloca, so no need for us to free() */
-            wmtp->from.utf8 = strndupa(lp, used);
+            wmtp->from.utf8 = strndupa(lp, (size_t)used);
             wmtp->fr_len = used;
         }
         lp += used;
@@ -358,7 +361,7 @@ static const char *xlat(const char *source, const char *lookup,
                 wmtp->to_len = 1;
             }
             else {
-                wmtp->to.utf8 = strndupa(tp, used);
+                wmtp->to.utf8 = strndupa(tp, (size_t)used);
                 wmtp->to_len = used;
             }
             tp += used;
@@ -389,7 +392,7 @@ static const char *xlat(const char *source, const char *lookup,
                 }
             }
             else {
-                if (strncmp(sp, mtp[i].from.utf8, mtp[i].fr_len) == 0) {
+                if (strncmp(sp, mtp[i].from.utf8, (size_t)mtp[i].fr_len) == 0) {
                     ri = i;
                     break;
                 }
@@ -510,12 +513,12 @@ static void dbp_uesprintf(dbp_dcl(ds), dbp_dcl(tmpl), ...) {
 #define TMPL_CHAR "diouxXeEfFgGaAcsp"
         const char *st_fmt = fmt - 1;   /* Remember the starting % */
         while(bytes_togo) {
-            char *tc_pos = strchr(TMPL_CHAR, *fmt);
+            const char *tc_pos = strchr(TMPL_CHAR, *fmt);
             fmt++;
             bytes_togo--;
             if (!tc_pos) continue;  /* Not a template character */
 
-            int nb = fmt - st_fmt;  /* Allows for a NULL */
+            int nb = (int)(fmt - st_fmt);   /* Allows for a NULL */
             db_clear(tfmt);
             db_appendn(tfmt, st_fmt, nb);
 
@@ -534,10 +537,10 @@ static void dbp_uesprintf(dbp_dcl(ds), dbp_dcl(tmpl), ...) {
                 if (db_len(tfmt) > 0) {
                     char *editable = strdup(db_val(tfmt));
                     char *tok = strtok(editable, ".");
-                    mf = atoi(tok);
+                    mf = ue_atoi(tok);
                     tok = strtok(NULL, ".");
                     if (tok) {
-                        int poss = atoi(tok);
+                        int poss = ue_atoi(tok);
                         if (poss < nf) nf = poss;
                     }
                 }
@@ -650,7 +653,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFTIMES:
     case UFDIV:
     case UFMOD: {
-        int2 = ue_atoi(db_val(arg2));
+        int2 = ue_atol(db_val(arg2));
         if ((tag == UFDIV) || (tag == UFMOD)) {
             if (int2 == 0) {    /* The only "illegal" case for integer maths */
                 retval = "ZDIV";
@@ -660,7 +663,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     }   /* Falls through */
     case UFNEG:
     case UFABS: {
-        int1 = ue_atoi(db_val(arg1));
+        int1 = ue_atol(db_val(arg1));
         switch(tag) {
         case UFADD:   retval = ue_itoa(int1 + int2); break;
         case UFSUB:   retval = ue_itoa(int1 - int2); break;
@@ -677,8 +680,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFEQUAL:
     case UFLESS:
     case UFGREATER: {
-        int1 = ue_atoi(db_val(arg1));
-        int2 = ue_atoi(db_val(arg2));
+        int1 = ue_atol(db_val(arg1));
+        int2 = ue_atol(db_val(arg2));
         switch(tag) {
         case UFEQUAL:   retval = ltos(int1 == int2); break;
         case UFLESS:    retval = ltos(int1 < int2); break;
@@ -702,10 +705,10 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFBAND:
     case UFBOR:
     case UFBXOR:
-        int2 = ue_atoi(db_val(arg2));   /* Falls through */
+        int2 = ue_atol(db_val(arg2));   /* Falls through */
     case UFBNOT:
     case UFBLIT:
-        int1 = ue_atoi(db_val(arg1));
+        int1 = ue_atol(db_val(arg1));
         switch(tag) {
         case UFBAND:    retval = ue_itoa(int1 & int2); break;
         case UFBOR:     retval = ue_itoa(int1 | int2); break;
@@ -730,7 +733,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFMID: {
         const char *rp; /* Where the return value starts */
         int offs;       /* Eventually, how much to return */
-        int inbytes = strlen(db_val(arg1));
+        int inbytes = istrlen(db_val(arg1));
         int gph_count = ue_atoi(db_val(arg2));
         if (gph_count <= 0) {
             retval = "";
@@ -840,7 +843,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
         goto exit;
     case UFASCII: {     /* Returns base unicode char - but keep old name... */
         unicode_t uc_res;
-        (void)utf8_to_unicode(db_val(arg1), 0, strlen(db_val(arg1)), &uc_res);
+        (void)utf8_to_unicode(db_val(arg1), 0, istrlen(db_val(arg1)),
+             &uc_res);
         retval = ue_itoa(uc_res);
         goto exit;
     }
@@ -859,7 +863,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
             tsp = db_val(arg1);
         }
         char temp[8];
-        int nb = unicode_to_utf8(strtol(tsp, NULL, 0), temp);
+        int nb = unicode_to_utf8(ue_atoi(tsp), temp);
         terminate_str(temp+nb);
         dbp_set(res, temp);
         goto set_exit;
@@ -875,12 +879,12 @@ static void gtfun(dbp_dcl(res), const char *fname) {
  * llabs(LLONG_MIN), which is undefined because +|LLONG_MIN| does not
  * fit in long long.
  */
-            long long modulus = ue_atoi(db_val(arg1));
-            if (modulus == 0 || modulus == LLONG_MIN) {
+            long modulus = ue_atol(db_val(arg1));
+            if (modulus == 0 || modulus == LONG_MIN) {
                 retval = errorm;
                 goto exit;
             }
-            retval = ue_itoa(seed % llabs(modulus) + 1);
+            retval = ue_itoa(seed % labs(modulus) + 1);
             goto exit;
     }
     case UFENV:
@@ -1090,7 +1094,7 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVLASTKEY:         setval(ue_itoa(lastkey));
     case EVCURCHAR: {   /* Make this setval the current Unicode base char */
         unicode_t uc_res;
-        if (lused(curwp->w.dotp) == (size_t)curwp->w.doto) uc_res = '\n';
+        if (lused(curwp->w.dotp) == curwp->w.doto) uc_res = '\n';
         else
             (void)utf8_to_unicode(ltext(curwp->w.dotp), curwp->w.doto,
                  lused(curwp->w.dotp), &uc_res);
@@ -1356,8 +1360,8 @@ have_error:
  */
 static void findvar(const char *var, struct variable_description *vd,
      int vcreate) {
-    unsigned int vnum;  /* subscript in variable arrays */
-    int vtype;          /* type to return */
+    int vnum;       /* subscript in variable arrays */
+    int vtype;      /* type to return */
 
     vnum = -1;
 fvar:
@@ -1490,21 +1494,21 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
 
         case EVFILLCOL:
-            fillcol = atoi(value);
+            fillcol = ue_atoi(value);
             break;
         case EVPAGELEN:
-            status = newsize(atoi(value));
+            status = newsize(ue_atoi(value));
             break;
         case EVCURCOL:
             srch_can_hunt = 0;
-            status = setccol(atoi(value) - 1);
+            status = setccol(ue_atoi(value) - 1);
             break;
         case EVCURLINE:
             srch_can_hunt = 0;
-            status = gotoline(TRUE, atoi(value));
+            status = gotoline(TRUE, ue_atoi(value));
             break;
         case EVCURWIDTH:
-            status = newwidth(atoi(value));
+            status = newwidth(ue_atoi(value));
             break;
         case EVCBUFNAME:
             if (set_buffer_name(value))
@@ -1523,18 +1527,18 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             cmdstatus = stol(value);
             break;
         case EVASAVE:
-            gasave = atoi(value);
+            gasave = ue_atoi(value);
             break;
         case EVACOUNT:
-            gacount = atoi(value);
+            gacount = ue_atoi(value);
             break;
         case EVLASTKEY:
-            lastkey = atoi(value);
+            lastkey = ue_atoi(value);
             break;
         case EVCURCHAR:
             srch_can_hunt = 0;
             ldelgrapheme(1, FALSE);     /* Delete 1 char-place */
-            c = atoi(value);
+            c = ue_atoi(value);
             linsert_uc(1, c);
             back_grapheme(1);
             break;
@@ -1542,20 +1546,20 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             discmd = stol(value);
             break;
         case EVSEED:
-            seed = atoi(value);
+            seed = ue_atoi(value);
             break;
         case EVDISINP:
             disinp = stol(value);
             break;
         case EVWLINE:
-            status = resize(TRUE, atoi(value));
+            status = resize(TRUE, ue_atoi(value));
             break;
         case EVCWLINE:
             srch_can_hunt = 0;
-            status = forwline(TRUE, atoi(value) - getwpos());
+            status = forwline(TRUE, ue_atoi(value) - getwpos());
             break;
         case EVTARGET:
-            curgoal = atoi(value);
+            curgoal = ue_atoi(value);
             com_flag |= CFCPCN; /* Set this flag */
             break;
         case EVREPLACE:
@@ -1564,11 +1568,11 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
         case EVCMODE:
             srch_can_hunt = 0;
-            curbp->b_mode = (int)ue_atoi(value);
+            curbp->b_mode = ue_atoi(value);
             upmode(curbp);
             break;
         case EVGMODE:
-            gmode = (int)ue_atoi(value);
+            gmode = ue_atoi(value);
             break;
         case EVLINE:
             srch_can_hunt = 0;
@@ -1578,27 +1582,27 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             curwp->w.doto = 0;      /* Has to go somewhere */
             break;
         case EVTAB:
-            tabmask = atoi(value) - 1;
+            tabmask = ue_atoi(value) - 1;
 /* tab can only be set to 8 or 4 */
             if (tabmask != 0x07 && tabmask != 0x03) tabmask = 0x07;
             curwp->w_flag |= WFHARD;
             break;
         case EVOVERLAP:
-            overlap = atoi(value);
+            overlap = ue_atoi(value);
             break;
         case EVSCROLLJUMP:
-            scrolljump = atoi(value);
+            scrolljump = ue_atoi(value);
             break;
         case EVSCROLL:
             if (!stol(value)) term.t_scroll = NULL;
             break;
         case EVFCOL:
-            curwp->w.fcol = atoi(value) - 1;
+            curwp->w.fcol = ue_atoi(value) - 1;
             if (curwp->w.fcol < 0) curwp->w.fcol = 0;
             curwp->w_flag |= WFHARD | WFMODE;
             break;
         case EVHJUMP:
-            hjump = atoi(value);
+            hjump = ue_atoi(value);
             if (hjump < 1) hjump = 1;
             if (hjump > term.t_ncol - 1) hjump = term.t_ncol - 1;
             break;
@@ -1625,7 +1629,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;      /* For anything else, leave unset */
         case EVAUTOCLEAN:
            {int old_autoclean = autoclean;
-            autoclean = atoi(value);
+            autoclean = ue_atoi(value);
             if (autoclean >= 0 && autoclean < old_autoclean) dumpdir_tidy();
            }
             break;
@@ -1643,7 +1647,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             autodos = stol(value);
             break;
         case EVSDTKSKIP:
-            showdir_tokskip = atoi(value);
+            showdir_tokskip = ue_atoi(value);
             break;
         case EVUPROCOPTS:
             uproc_opts = ue_atoi(value);
@@ -1665,7 +1669,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
         }
         case EVSRCHCANHUNT:
-            srch_can_hunt = atoi(value);
+            srch_can_hunt = ue_atoi(value);
             break;
 /* There are only 5 (MAX_SD_OPTS) options, so any attempt to set more
  * is an error.
@@ -1734,10 +1738,10 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         }
         case EVBRKTMS: {
 /* We deal in ms, so need to convert to the s + ns of timespec */
-            int bracket_ms = atoi(value);
+            int bracket_ms = ue_atoi(value);
             if (bracket_ms >= 1000) {
                 pause_time.tv_sec = bracket_ms/1000;
-                bracket_ms -= pause_time.tv_sec*1000;
+                bracket_ms -= (int)pause_time.tv_sec*1000;
             }
             else pause_time.tv_sec = 0;
             pause_time.tv_nsec = bracket_ms*1000000;
@@ -1751,8 +1755,9 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
  * convert to NULs here.
  * We store the orifinal string and work with a copy.
  */
-            path_pfx_map = Xrealloc((char *)path_pfx_map, dbp_len(val)+1);
-            memcpy((char *)path_pfx_map, dbp_val(val), dbp_len(val));
+            path_pfx_map = Xrealloc((char *)path_pfx_map,
+                 (size_t)(dbp_len(val)+1));
+            memcpy((char *)path_pfx_map, dbp_val(val), (size_t)dbp_len(val));
             int max_off = dbp_len(val);
 
             int offs = 0;
@@ -1764,13 +1769,13 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
                 if (path_pfx_map_to[pi_ind])
                      Xfree((void *)path_pfx_map_to[pi_ind]);
                 path_pfx_map_from[pi_ind] = strdup(ntp);
-                path_pfx_map_from_len[pi_ind] = strlen(ntp);
-                offs += strlen(ntp) + 1;
+                path_pfx_map_from_len[pi_ind] = istrlen(ntp);
+                offs += istrlen(ntp) + 1;
                 if (offs < max_off) {   /* Check there is still some... */
                     ntp += strlen(ntp) + 1;
                     path_pfx_map_to[pi_ind] = strdup(ntp);
-                    path_pfx_map_to_len[pi_ind] = strlen(ntp);
-                    offs += strlen(ntp) + 1;
+                    path_pfx_map_to_len[pi_ind] = istrlen(ntp);
+                    offs += istrlen(ntp) + 1;
                     ntp += strlen(ntp) + 1;
                 }
                 pi_ind++;

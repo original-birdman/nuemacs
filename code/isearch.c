@@ -52,7 +52,7 @@ static int cmd_reexecute = -1;          /* > 0 if re-executing command */
 
 /* Routine to prompt for I-Search string.
  */
-static int promptpattern(char *prompt) {
+static int promptpattern(const char *prompt) {
     db_strdef(tpat);
 
 /* check to see whether we are executing a command line */
@@ -84,8 +84,8 @@ static int promptpattern(char *prompt) {
  * int c;               character to be echoed
  * int col;             column to be echoed in
  */
-static int echo_str(char *str) {
-    int cw = strlen(str);
+static int echo_str(const char *str) {
+    int cw = istrlen(str);
     while(*str) TTputc(*str++);
     return cw;
 }
@@ -113,7 +113,7 @@ static int echo_char(int c, int col) {
 
         default: {                  /* Vanilla control char        */
             static char gen_ctl[3] = "^ ";
-            gen_ctl[1] = c | 0x40;
+            gen_ctl[1] = (char)c | 0x40;
             cw = echo_str(gen_ctl);
         }
         }
@@ -202,7 +202,8 @@ int simulate_incr(int f, int n) {
 /* Will we need more space? */
     ii->np++;
     if (ii->np > ii->mp) {
-        ii = Xrealloc(ii, sizeof(struct incr_input) + ii->np*sizeof(struct pending));
+        ii = Xrealloc(ii,
+             sizeof(struct incr_input) + (size_t)ii->np*sizeof(struct pending));
         ii->mp = ii->np;
     }
 
@@ -213,7 +214,7 @@ int simulate_incr(int f, int n) {
 /* Allocate as many unicode_t entries as we have bytes */
     struct pending *iip = &(ii->pdg[ii->np-1]);
     int mlen = db_len(ntok);
-    iip->input = Xmalloc(mlen*sizeof(unicode_t));
+    iip->input = Xmalloc((size_t)mlen*sizeof(unicode_t));
     int dbc = 0;
     int offs = 0;
     while (mlen > offs) {
@@ -525,7 +526,7 @@ start_over:
         }
         else {
             nb = 1;
-            ucb[0] = c;
+            ucb[0] = (char)c;
         }
         db_appendn(pat, ucb, nb);
         col = echo_char(c, col);    /* Echo the character         */

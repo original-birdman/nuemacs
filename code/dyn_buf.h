@@ -73,10 +73,10 @@ void _dbp_append(db *, const char *);
 void _dbp_addch(db *, const char);
 char _dbp_charat(db *, int);
 void _dbp_setcharat(db *, int, char c);
-char _dbp_cmp(db *, const char *);
-char _dbp_cmpn(db *, const char *, int);
-char _dbp_casecmp(db *, const char *);
-char _dbp_casecmpn(db *, const char *, int);
+int _dbp_cmp(db *, const char *);
+int _dbp_cmpn(db *, const char *, int);
+int _dbp_casecmp(db *, const char *);
+int _dbp_casecmpn(db *, const char *, int);
 
 void _dbp_upval(db *, const char *);
 

@@ -32,7 +32,6 @@
 const char *dolock(const char *fname) {
     int fd, n;
     static char lname[MAXLOCK], locker[MAXNAME + 1];
-    int mask;
     struct stat sbuf;
 
     if (snprintf(lname, sizeof(lname), "%s.lock~", fname)
@@ -51,7 +50,7 @@ const char *dolock(const char *fname) {
  * the lock) but writable only by the owner. umask(0) is set so a
  * restrictive user umask doesn't strip the group/other read bits.
  */
-    mask = umask(0);
+    mode_t mask = umask(0);
     int oflags = O_RDWR | O_CREAT;
 #ifdef O_NOFOLLOW
     oflags |= O_NOFOLLOW;
@@ -82,7 +81,7 @@ const char *dolock(const char *fname) {
         close(fd);
         return "LOCK ERROR: not a regular file";
     }
-    if ((n = read(fd, locker, MAXNAME)) < 1) {
+    if ((n = (int)read(fd, locker, MAXNAME)) < 1) {
         lseek(fd, 0, SEEK_SET);
 /* cuserid() is deprecated - its Linux man pages says, "Do not use cuserid()."
                 cuserid(locker);
@@ -99,7 +98,7 @@ const char *dolock(const char *fname) {
 /* gethostname() may not NUL-terminate on truncation. */
         hostname[sizeof(hostname) - 1] = '\0';
         snprintf(locker, sizeof(locker), "%s@%s", user, hostname);
-        int dnc __attribute__ ((unused)) = write(fd, locker, strlen(locker));
+        ssize_t dnc __attribute__ ((unused)) = write(fd, locker, strlen(locker));
         close(fd);
         return NULL;
     }

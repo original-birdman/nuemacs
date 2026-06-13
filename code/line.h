@@ -50,7 +50,7 @@ extern struct line *lalloc(void);           /* Allocate a line. */
 extern void lfree(struct line *lp);
 extern void lchange(int flag);
 extern int insspace(int f, int n);
-extern int _linsert_byte(int, unsigned int);
+extern int linsert_byte(int, char c);
 extern int lins_dynbuf(db *);
 extern int linstr(const char *instr);
 extern int linsert_uc(int n, unicode_t c);
@@ -63,13 +63,12 @@ extern int lputgrapheme(struct grapheme *gp);
 
 extern void kdelete(void);
 extern void addto_lastmb_ring(const char *);
-extern int kinsert(int c);
+extern int kinsert(char c);
 extern int yank(int f, int n);
 extern int yank_replace(int, int);
 extern int yankmb(int f, int n);
 
 #endif
-#define linsert_byte(n, c) _linsert_byte(n, ch_as_uc(c))
 
 /* A macro to determine the effect on the "display column" of adding a
  * given character.

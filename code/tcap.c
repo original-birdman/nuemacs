@@ -49,14 +49,14 @@ static void tcapscroll_delins(int from, int to, int linestoscroll);
 
 #define TCAPSLEN 315
 static char tcapbuf[TCAPSLEN];
-static char *UP, PC, *CM, *CE, *CL, *SO, *SE;
+static const char *UP, *PC, *CM, *CE, *CL, *SO, *SE;
 
 static char *TI, *TE;
 #if USE_BROKEN_OPTIMIZATION
 static int term_init_ok = 0;
 #endif
 
-static char *_CS, *DL, *AL, *SF, *SR;
+static const char *_CS, *DL, *AL, *SF, *SR;
 
 struct terminal term = {
 /* Functions */
@@ -131,8 +131,8 @@ static void tcapopen(void) {
 
     p = tcapbuf;
     t = tgetstr("pc", &p);
-    if (t) PC = *t;
-    else   PC = 0;
+    if (t) PC = t;
+    else   PC = "";             /* So *PC is NUL */
 
     CL = tgetstr("cl", &p);
     CM = tgetstr("cm", &p);
@@ -281,7 +281,7 @@ static void tcapscroll_delins(int from, int to, int howmanylines) {
 
 /* cs is set up just like cm, so we use tgoto... */
 static void tcapscrollregion(int top, int bot) {
-    ttputc(PC);
+    ttputc(*PC);
     putp(tgoto(_CS, bot, top));
 }
 

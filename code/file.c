@@ -133,7 +133,7 @@ const char *fixup_fname(const char *fn) {
 
 /* Allocate an array for remembering /s */
 
-    slp = alloca(sizeof(int)*(1 + db_len(tfn)/2));
+    slp = alloca(sizeof(int)*(size_t)(1+db_len(tfn)/2));
     sli = 0;
 
     const char *cp = db_val(tfn);
@@ -252,10 +252,10 @@ const char *get_uniqpath(const char *fn) {
 
         for (int i = 0; i < path_pfx_map_valid; i++) {
             if (strncmp(db_val(rp_res),
-                  path_pfx_map_from[i], path_pfx_map_from_len[i]) == 0) {
+                  path_pfx_map_from[i], (size_t)path_pfx_map_from_len[i]) == 0) {
                 int nlen = db_len(rp_res) - path_pfx_map_from_len[i]
                     + path_pfx_map_to_len[i] + 1;
-                char *trp = Xmalloc(nlen);
+                char *trp = Xmalloc((size_t)nlen);
                 strcpy(trp, path_pfx_map_to[i]);
                 strcpy(trp+path_pfx_map_to_len[i],
                      db_val(rp_res)+path_pfx_map_from_len[i]);
@@ -308,9 +308,9 @@ const char *get_uniqpath(const char *fn) {
 
 static char *ensure_trailing_slash(char *inp) {
     if (inp) {
-        int slen = strlen(inp);
+        int slen = istrlen(inp);
         if (*(inp+slen-1) != '/') {
-            inp = Xrealloc(inp, slen+2);
+            inp = Xrealloc(inp, (size_t)(slen+2));
             strcat(inp, "/");
         }
     }
@@ -343,11 +343,10 @@ void udir_init(void) {
     char *tp;
     tp = strdup(get_uniqpath("."));
     udir.current = ensure_trailing_slash(tp);
-    udir.clen = strlen(udir.current);
-//    tp = strdup(get_uniqpath(".."));
+    udir.clen = istrlen(udir.current);
     tp = strdup(dirname(strdupa(udir.current)));
     udir.parent = ensure_trailing_slash(tp);
-    udir.plen = strlen(udir.parent);
+    udir.plen = istrlen(udir.parent);
 
     force_full = 1;
     udir.home = NULL;
@@ -366,7 +365,7 @@ void udir_init(void) {
         tp = strdup(get_uniqpath(udir.home));
         Xfree(udir.home);
         udir.home = ensure_trailing_slash(tp);
-        udir.hlen = strlen(udir.home);
+        udir.hlen = istrlen(udir.home);
     }
     else udir.hlen = 0;
     force_full = 0;
@@ -455,7 +454,7 @@ static int resetkey(void) { /* Reset the encryption key if needed */
  *  whether it is a dos_file in dos_file.
  */
 static int nlines, dos_file;
-static int file2buf(struct line *iline, char *mode, int goto_end,
+static int file2buf(struct line *iline, const char *mode, int goto_end,
      int check_dos) {
     int s;
     struct line *lp0, *lp1, *lp2;
@@ -599,13 +598,13 @@ int readin(const char *fname, int lockfl) {
     s = file2buf(curbp->b_linep, "Reading", FALSE, autodos);
     if (dos_file) curbp->b_mode |= MDDOSLE;
     else          curbp->b_mode &= ~MDDOSLE;
-    char *emg = "";
+    const char *emg = "";
     if (s == FIOERR) {
         emg = "I/O ERROR, ";
         curbp->b_flag |= BFTRUNC;
     }
     if (!silent) {                      /* GGR */
-        char *dmg = "";
+        const char *dmg = "";
         if (dos_file) dmg = " - from DOS file!";
         db_sprintf(readin_mesg, MLbkt("%sRead %d line%s%s"), emg, nlines,
              (nlines > 1)? "s": "", dmg);
@@ -700,12 +699,12 @@ static int ifile(const char *fname) {
 
     s = file2buf(curwp->w.dotp, "Inserting", TRUE, TRUE);
     curwp->w.markp = lforw(curwp->w.markp);     /* Restore original mark */
-    char *emg = "";
+    const char *emg = "";
     if (s == FIOERR) {
         emg = "I/O ERROR, ";
         curbp->b_flag |= BFTRUNC;
     }
-    char *dmg = "";
+    const char *dmg = "";
     if (dos_file) dmg = " - from DOS file!";
 /* This doesn't need to set readin_mesg - which is only for start-up */
     mlwrite(MLbkt("%sInserted %d line%s%s"), emg, nlines,

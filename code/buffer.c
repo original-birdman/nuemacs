@@ -589,7 +589,7 @@ static int makelist(int iflag) {
         if (*cp2 != 0) {
 /* We know the current screen width, so use it...
  */
-            if (((cp1 - line) + (int)strlen(cp2)) > term.t_ncol) {
+            if (((cp1 - line) + istrlen(cp2)) > term.t_ncol) {
                 *cp1++ = ' ';
                 *cp1++ = (char)0xe2;    /* Carriage return symbol */
                 *cp1++ = (char)0x86;    /* U+2185                 */

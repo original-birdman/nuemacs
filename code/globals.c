@@ -98,7 +98,7 @@ struct line *fline;             /* dynamic return line */
 
 /* The variable srch_patlen holds the length of the search pattern
  */
-unsigned int srch_patlen = 0;
+int srch_patlen = 0;
 
 /* directive name table:
         This holds the names of all the directives....  */

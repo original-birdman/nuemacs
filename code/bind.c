@@ -190,7 +190,7 @@ static unicode_t stock(const char *given_keyname) {
 /* GGR - allow different bindings for 1char UPPER and lower.
  * If anyone wants to bind them...
  */
-    int kn_len = (int)strlen(keyname);
+    int kn_len = istrlen(keyname);
     int noupper = (kn_len == 1);
     const char *kn_end = keyname + kn_len;
     int special = 0;

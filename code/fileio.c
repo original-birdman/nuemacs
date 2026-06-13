@@ -168,7 +168,7 @@ static int file_is_binary(void) {
         }
 /* We have a possible Unicode character */
         else {
-            unsigned int ub = utf8_to_unicode(cache.buf, bi, cache.len, &uc);
+            int ub = utf8_to_unicode(cache.buf, bi, cache.len, &uc);
             if (ub <= 0) break;
             bi += ub;
             uc_total++;
@@ -209,7 +209,7 @@ static int flush_write_cache(void) {
     size_t off = 0;
     while (off < (size_t)cache.len) {
         errno = 0;
-        ssize_t written = write(ffp, cache.buf + off, cache.len - off);
+        ssize_t written = write(ffp, cache.buf + off, (size_t)cache.len - off);
         if (written < 0) {
             if (errno == EINTR) continue;       /* Interrupted; retry */
             mlwrite("Write I/O error: %s", strerror(errno));
@@ -243,7 +243,7 @@ int ffputline(const char *buf, int nbuf) {
  * note that we are doing it, so don't continue to do so...
  */
     if (buf == NULL) {      /* Just flush what is left... */
-        char *reason = NULL;
+        const char *reason = NULL;
         if (curbp->b_EOLmissing) {
             if (cryptflag) reason = "crypt";
             else {
@@ -292,7 +292,7 @@ int ffputline(const char *buf, int nbuf) {
         int to_fill;
         if ((cache.len + nbuf) <= CSIZE) to_fill = nbuf;
         else to_fill = CSIZE - cache.len;
-        memcpy(cache.buf+cache.len, buf, to_fill);
+        memcpy(cache.buf+cache.len, buf, (size_t)to_fill);
 
 /* Check the first FILE_START_LEN bytes once we have them.
  * Once the chekc has run file_type will be set to non-zero.
@@ -350,14 +350,14 @@ int ffgetline(void) {
 
     char *nlp = NULL;
     while (!nlp) {
-        nlp = memchr(cache.buf+cache.rst, '\n', cache.len);
+        nlp = memchr(cache.buf+cache.rst, '\n', (size_t)cache.len);
         if (!nlp) {                 /* No newline found */
 /* If we already have something, add it to fline */
             if (cache.len > 0) add_to_fline(cache.len);
 /* Get some more of the file. */
             errno = 0;
             while(1) {  /* Allow for interrupted reads */
-                cache.len = read(ffp, cache.buf, sizeof(cache.buf));
+                cache.len = (int)read(ffp, cache.buf, sizeof(cache.buf));
                 if (errno != EINTR) break;
             }
             if (cache.len < 0) {
@@ -389,7 +389,7 @@ int ffgetline(void) {
             if (cryptflag) myencrypt(cache.buf, cache.len);
         }
     }
-    int cc = nlp - (cache.buf+cache.rst);
+    int cc = (int)(nlp - (cache.buf+cache.rst));
     add_to_fline(cc);
     cache.rst++;        /* Step over newline */
     cache.len--;        /* Step over newline */

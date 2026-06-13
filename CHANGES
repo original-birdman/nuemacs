@@ -9019,7 +9019,7 @@ more than INT_MAX is an error.
 --------------------
 
 exec.c
-    Check that any variable or constant used as a report in docmd() is
+    Check that any variable or constant used as a repeat in docmd() is
     between INT_MIN and INT_MAX.
 
 dynbuf.c
@@ -9056,7 +9056,7 @@ epath.h
 estruct.h
     Add const to some char * declarations [bind.c]
     Remove const from some char * items which are not const. [epath.h,
-    estruct.h] 
+    estruct.h]
 
 ----------
 Unrelated fix....
@@ -9086,7 +9086,7 @@ epath.h
 estruct.h
 utf8.h
     Rename MAX_UTF8_CHAR to MAX_UNICODE_CHAR [display.c, main,c, utf8.c,
-    utf8.h] 
+    utf8.h]
     Change unicode_t from unsigned int to utf8proc_int32_t [utf8.h]
     Added Xreallocarray() [wrapper.c, efunc.h]
     Added back const to pathname [epath.h]
@@ -9108,5 +9108,46 @@ dyn_buf.h
 
 Makefile
     Added -Wconversion -Wsign-conversion -Wwrite-strings
-    to the options.
+    to the options (actually doen for some previous commits).
     Then set about removing all warnings (next commit).
+
+bind.c
+buffer.c
+crypt.c
+display.c
+dyn_buf.c
+eval.c
+exec.c
+file.c
+fileio.c
+globals.c
+input.c
+isearch.c
+line.c
+main.c
+names.c
+pklock.c
+posix.c
+random.c
+region.c
+search.c
+spawn.c
+tcap.c
+utf8.c
+word.c
+charset.h
+dyn_buf.h
+edef.h
+efunc.h
+estruct.h
+line.h
+util.h
+    Casting and const to remove compiler conversion warnings.
+    Changed some signed/unsgned types for consistency.
+    Replaced all atoi() with ue_atoi() [eval.c]
+    Changed linsert_byte to take a char, now that I've found gcc
+    compilation options to warn about callers not using char.
+    Removed _linsert_byte wrapping. [line.c, line.h]
+    Modified PC code to "standardize" it. [tcap.c]
+    Added some convenience defines.
+        istrlen()

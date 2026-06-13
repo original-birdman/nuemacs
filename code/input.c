@@ -83,7 +83,7 @@ static char *id_finder(void) {
     struct passwd *pwe;
     errno = 0;
     while ((pwe = getpwent())) {
-        if (!strncmp(pwe->pw_name, id_to_find, id_to_find_len)) {
+        if (!strncmp(pwe->pw_name, id_to_find, (size_t)id_to_find_len)) {
             snprintf(exp_id, sizeof(exp_id), "~%s", pwe->pw_name);
             return exp_id;
         }
@@ -119,8 +119,8 @@ static const char *getnfile(void) {
     if ((dp = readdir(dirptr)) == NULL) return NULL;
 
     if ((allfiles ||
-         ((strlen(dp->d_name) >= db_len(picture)) &&
-         (!strncmp(dp->d_name, db_val(picture), db_len(picture))))) &&
+         ((istrlen(dp->d_name) >= db_len(picture)) &&
+         (!strncmp(dp->d_name, db_val(picture), (size_t)db_len(picture))))) &&
          (strcmp(dp->d_name, ".")) &&
          (strcmp(dp->d_name, ".."))) {
 /* catenate fullname and d_name in glb_db */
@@ -162,7 +162,7 @@ static const char *getffile(const char *fspec_in) {
     if ((*fspec_in == '~') && (!strchr(fspec_in, '/'))) {
         strncpy(id_to_find, fspec_in+1, 39);
         terminate_str(id_to_find+39);   /* Ensure NUL terminated */
-        id_to_find_len = strlen(id_to_find);
+        id_to_find_len = istrlen(id_to_find);
         run_id_finder = 1;
         setpwent();                 /* Start it off */
         char *res = id_finder();
@@ -187,7 +187,7 @@ static const char *getffile(const char *fspec_in) {
  * NOTE: that we check for the end offset being > 0, as that means "/" isn't
  * treated as a trailing slash.
  */
-    int fspec_eoff = strlen(fspec) - 1;
+    int fspec_eoff = istrlen(fspec) - 1;
     if (fspec_eoff && (fspec[fspec_eoff] == '/'))
         terminate_str(fspec + fspec_eoff);
     else
@@ -205,7 +205,7 @@ static const char *getffile(const char *fspec_in) {
     if (p) {
         p++;
         db_set(picture, p);
-        db_truncate(directory, p - db_val(directory));
+        db_truncate(directory, (int)(p - db_val(directory)));
         db_set(fullname, db_val(directory));
     }
     else {
@@ -252,7 +252,7 @@ static const char *getnbuffer(const char *bpic, int bpiclen,
                expandbp->b_bname[1] == '/')) || /* Catch //kbd_macro */
             (mtype == CMPLT_PHON &&
               (expandbp->b_type != BTPHON || expandbp->b_bname[0] != '/')) ||
-            (strncmp(bpic, expandbp->b_bname + offset, bpiclen)) ||
+            (strncmp(bpic, expandbp->b_bname + offset, (size_t)bpiclen)) ||
             (!strncmp(expandbp->b_bname, "//minib", 7)) ||
             ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
 
@@ -285,7 +285,7 @@ static int n_nidx;
 static const char *getnname(const char *name, int namelen) {
     int noname_on_nomatch = (n_nidx != -1);
     while ((n_nidx = nxti_name_info(n_nidx)) >= 0) {
-        if (strncmp(name, names[n_nidx].n_name, namelen) == 0)
+        if (strncmp(name, names[n_nidx].n_name, (size_t)namelen) == 0)
             return names[n_nidx].n_name;
         if (noname_on_nomatch) break;
     }
@@ -335,13 +335,13 @@ static const char *getnvar(const char *name, int namelen) {
     if (name[0] == '$') {
 /* -1 at end of list */
         while ((n_evidx = nxti_envvar(n_evidx)) >= 0) {
-            if (strncmp(mp, evl[n_evidx].var, namelen) == 0)
+            if (strncmp(mp, evl[n_evidx].var, (size_t)namelen) == 0)
                 return varcat('$', evl[n_evidx].var);
         }
     }
     if (name[0] == '%') {
         while ((n_uvidx = nxti_usrvar(n_uvidx)) >= 0) {
-            if (strncmp(mp, uvnames[n_uvidx], namelen) == 0)
+            if (strncmp(mp, uvnames[n_uvidx], (size_t)namelen) == 0)
                 return varcat('%', uvnames[n_uvidx]);
         }
     }
@@ -422,7 +422,7 @@ static int matcher(const char *name, int namelen, db *choices,
             match_length++;
         db_setcharat(so_far, match_length, 0);
 
-        l = strlen(next);
+        l = istrlen(next);
         if (max == 0) {
             if (match_length == 0)
                 break;
@@ -574,7 +574,7 @@ unicode_t tgetc(void) {
             *kbdptr++ = c;
             if (kbdptr == &kbdm[n_kbdm - 1]) {  /* Don't overrun buffer */
                 n_kbdm += 256;
-                kbdm = Xrealloc(kbdm, n_kbdm*sizeof(int));
+                kbdm = Xrealloc(kbdm, (size_t)n_kbdm*sizeof(int));
                 kbdptr = &kbdm[n_kbdm - 1];     /* Might have moved */
             }
             kbdend = kbdptr;
@@ -942,7 +942,7 @@ void evaluate_cmdb(const char *input, db *result) {
     dbp_set(result, "");                /* Empty it */
     dbp_dcl(orig_execstr) = execstr;
     int orig_clexec = clexec;
-    char *sep = "";
+    const char *sep = "";
 
 /* We take a copy of the input, so that we don't overwrite
  * the user input.
@@ -977,7 +977,7 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     int do_evaluate = FALSE;
     func_arg sav;
 
-    short savdoto;
+    int savdoto;
     int prolen;
 
     db_strdef(procopy);

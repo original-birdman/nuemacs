@@ -128,7 +128,7 @@ int bktoshell(int f, int n) {   /* Suspend MicroEMACS and wait to wake up */
  * the prev_spawn_cmd setting.
  */
 static db_strdef(prev_spawn_cmd);
-static int next_spawn_cmd(int rxtest, char *prompt, db *line) {
+static int next_spawn_cmd(int rxtest, const char *prompt, db *line) {
     if (inreex && (db_len(prev_spawn_cmd) > 0) && rxtest) {
         dbp_set(line, db_val(prev_spawn_cmd));
     }
@@ -139,7 +139,7 @@ static int next_spawn_cmd(int rxtest, char *prompt, db *line) {
     }
     return TRUE;
 }
-static int run_one_liner(int rxcopy, int wait, char *prompt) {
+static int run_one_liner(int rxcopy, int wait, const char *prompt) {
     int s;
     db_strdef(line);
 

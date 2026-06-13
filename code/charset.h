@@ -5,7 +5,7 @@
 
 /* A description of control characters for the status command */
 
-static char *charset[] =
+static const char *charset[] =
 {
     "nul",
     "soh",

@@ -143,7 +143,7 @@ static void extend_grapheme(struct grapheme *gp, unicode_t uc) {
     if (gp->ex != NULL) {
         while(gp->ex[xc] != UEM_NOCHAR) xc++;
     }
-    gp->ex = Xrealloc(gp->ex, (xc+2)*sizeof(unicode_t));
+    gp->ex = Xreallocarray(gp->ex, xc+2, sizeof(unicode_t));
     gp->ex[xc] = uc;
     gp->ex[xc+1] = UEM_NOCHAR;
     return;
@@ -239,17 +239,17 @@ void vtinit(void) {
     if ((term.t_mrow <= prev_mrow) && (term.t_mcol <= prev_mcol)) return;
 
 /* Allocate the 2 screen arrays */
-    new_vscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
-    new_pscreen = Xmalloc(term.t_mrow * sizeof(struct video *));
+    new_vscreen = Xmalloc((unsigned)term.t_mrow*sizeof(struct video *));
+    new_pscreen = Xmalloc((unsigned)term.t_mrow*sizeof(struct video *));
 
 /* Allocate the data for these 2 arrays in one go and
  * assign the array elements in loops.
  */
     size_t row_size =
-         sizeof(struct video) + term.t_mcol*sizeof(struct grapheme);
-    new_vdata = Xmalloc(2 * term.t_mrow * row_size);
+         sizeof(struct video) + (unsigned)term.t_mcol*sizeof(struct grapheme);
+    new_vdata = Xmalloc(2 * (unsigned)term.t_mrow*row_size);
     void *vdp = new_vdata;
-    void *pdp = new_vdata + (term.t_mrow * row_size);
+    void *pdp = new_vdata + ((unsigned)term.t_mrow*row_size);
 
     for (i = 0; i < term.t_mrow; i++) {
         new_vscreen[i] = vdp;
@@ -289,7 +289,7 @@ void vtinit(void) {
         memcpy(new_vscreen[i], vp, row_size);
     }
 /* Set new_pscreen to zeroes */
-    memset(new_pscreen[0], 0, term.t_mrow * row_size);
+    memset(new_pscreen[0], 0, (unsigned)term.t_mrow*row_size);
 
 /* Now free any previous data (NOTE that any gc->ex parts have already been
  * freed) and move the new allocations to the live ones.
@@ -305,7 +305,7 @@ void vtinit(void) {
 /* The current set will be the previous values if we return here. */
     prev_mrow = term.t_mrow;
     prev_mcol = term.t_mcol;
-    prev_size = row_size;
+    prev_size = (int)row_size;
 
 /* Ensure any visible windows get redrawn from scratch.... */
 
@@ -330,7 +330,7 @@ void vttidy(void) {
     TTflush();
     TTclose();
     TTkclose();
-    int dnc __attribute__ ((unused)) = write(1, "\r", 1);
+    ssize_t dnc __attribute__ ((unused)) = write(1, "\r", 1);
 }
 
 /* Set the virtual cursor to the specified row and column on the virtual
@@ -347,7 +347,7 @@ void vttidy(void) {
  * This routine only puts printing characters into the virtual
  * terminal buffers. Only column overflow is checked.
  */
-static void vtputc(unsigned int c) {
+static void vtputc(unicode_t c) {
     struct video *vp;   /* ptr to line being updated */
 
     if (c > MAX_UNICODE_CHAR) c = display_for(c);
@@ -598,7 +598,7 @@ static void show_line(struct line *lp) {
  * for vtputc.
  */
 static void show_utf8(const char *utf8p) {
-    int i = 0, len = strlen(utf8p);
+    int i = 0, len = istrlen(utf8p);
     while (i < len) {
         unicode_t c;
         i += utf8_to_unicode(utf8p, i, len, &c);
@@ -786,7 +786,8 @@ static int scrolls(int inserts) {   /* returns true if it does something */
         for (i = 0; i < count; i++) {
             vpp = pscreen[to + i];
             vpv = vscreen[to + i];
-            memcpy(vpp->v_text, vpv->v_text, sizeof(struct grapheme)*cols);
+            memcpy(vpp->v_text, vpv->v_text,
+                 sizeof(struct grapheme)*(unsigned)cols);
             vpp->v_flag = vpv->v_flag;  /* XXX */
             if (vpp->v_flag & VFREV) {
                 vpp->v_flag &= ~VFREV;
@@ -922,7 +923,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
             cp5 = cp3;              /* fewer characters. */
     }
 
-    movecursor(row, cp1 - &vp1->v_text[0]); /* Go to start of line. */
+    movecursor(row, (int)(cp1 - &vp1->v_text[0]));  /* Go to start of line. */
 #if REVSTA
     TTrev(rev);
 #endif
@@ -1186,7 +1187,7 @@ static const char *get_buffer_display_name(struct buffer *tbp, int w_want) {
 /* Add up until scut */
         const char *cp = tbp->b_bname;
         int offs = 0;
-        int max = strlen(tbp->b_bname);
+        int max = istrlen(tbp->b_bname);
         while (scut--) {
             offs = next_utf8_offset(cp, offs, max, TRUE);
         }
@@ -1197,7 +1198,7 @@ static const char *get_buffer_display_name(struct buffer *tbp, int w_want) {
         while (ncut--) {
             offs = next_utf8_offset(cp, offs, max, TRUE);
         }
-        static char MHE[3] = { 0xe2, 0x8b, 0xaf };
+        static char MHE[3] = { (char)0xe2, (char)0x8b, (char)0xaf };
         db_appendn(last_display, MHE, 3);
 
 /* Add the rest */
@@ -1435,7 +1436,7 @@ next_mode:
     }
     if (!msg) {
         struct line *lp;
-        int numlines, predlines, ratio;
+        int numlines, predlines;
 
         lp = lforw(bp->b_linep);
         numlines = 0;
@@ -1450,8 +1451,9 @@ next_mode:
         if (wp->w.dotp == bp->b_linep) {
             msg = " Bot ";
         } else {
-            ratio = 0;
-            if (numlines != 0) ratio = (100L * predlines) / numlines;
+            int ratio = 0;
+/* Use long long to avoid overfflow */
+            if (numlines != 0) ratio = (int)((100LL*predlines)/numlines);
             if (ratio > 99)    ratio = 99;
             db_sprintf(glb_db, " %2d%% ", ratio);
             msg = db_val(glb_db);
@@ -1623,7 +1625,7 @@ typedef union {
  */
 static void mlputli(ue64I_t l, int r) {
     char tbuf[32];
-    char *fmt;
+    const char *fmt;
 
     switch(r) {
     case  8: fmt = "%llo"; break;
@@ -1700,7 +1702,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     if (mlw_level == 1) mlerase();  /* Leaves us at col0 of mbline */
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
-    int bytes_togo = strlen(fmt);
+    int bytes_togo = istrlen(fmt);
     while (bytes_togo > 0) {
 /* If we are about to go into the last column, put a $ there and stop,
  * otherwise we get wrap-around and the display messes up.
@@ -1724,7 +1726,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             case 'f':   mlputf(va_arg(ap.ap, int));         break;
             case 'c':   TTput_1uc(va_arg(ap.ap, int));      break;
             case 's':
-               {char *tp = va_arg(ap.ap, char *);
+               {const char *tp = va_arg(ap.ap, char *);
                 if (tp == NULL) tp = "(nil)";
                 mlwrite_one(tp);        /* Recurse */
                 break;

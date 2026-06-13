@@ -148,7 +148,7 @@ int lnewline(void) {
     }
 /* Are we at the end of the text on the last "real" line? */
     else if (lused(curwp->w.dotp)
-             && (size_t)curwp->w.doto == lused(curwp->w.dotp)
+             && curwp->w.doto == lused(curwp->w.dotp)
              && lforw(curwp->w.dotp) == curbp->b_linep) {
         curwp->w.dotp = lforw(curwp->w.dotp);
         curwp->w.doto = 0;
@@ -240,7 +240,7 @@ int lnewline(void) {
  * This call is wrapped in a #defined to ensure that the incoming char
  * is mapped to unsgined.
  */
-int _linsert_byte(int n, unsigned int c) {
+int linsert_byte(int n, char c) {
     struct line *lp1;
     int doto;
 
@@ -248,18 +248,6 @@ int _linsert_byte(int n, unsigned int c) {
     if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
         return rdonly();            /* we are in read only mode */
     lchange(WFEDIT);
-
-/* Sanity check.
- * There seems to be no way in C prototypes to get a compiler warning
- * when passing an int into a char arg.
- */
-    if (c > 0xff) {
-        db_strdef(lbm);
-        db_sprintf(lbm, "linsert_byte sent non-byte 0x%08x", c);
-        dump_message = db_val(lbm);
-        raise(SIGILL);
-        exit(127);  /* Just in case... */
-    }
 
     if (c == '\n') {                /* Newline is a special case */
         int status = TRUE;
@@ -389,14 +377,14 @@ int linsert_uc(int n, unicode_t c) {
 
 /* Short-cut the most-likely case - an ASCII char */
 
-    if (c <= 0x7f) return linsert_byte(n, c);
+    if (c <= 0x7f) return linsert_byte(n, (char)c);
 
     int bytes = unicode_to_utf8(c, utf8);
     if (bytes == 1)     /* Extended Latin1... */
-        return linsert_byte(n, ch_as_uc(utf8[0]));
+        return linsert_byte(n, utf8[0]);
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < bytes; j++) {
-            if (!linsert_byte(1, ch_as_uc(utf8[j]))) return FALSE;
+            if (!linsert_byte(1, utf8[j])) return FALSE;
         }
     }
     return TRUE;
@@ -511,7 +499,7 @@ int lover(char *ostr) {
     int status = TRUE;
 
     if (ostr != NULL) {
-        int maxlen = strlen(ostr);
+        int maxlen = istrlen(ostr);
         int offs = 0;
         while (*ostr && status == TRUE) {
             int bc = next_utf8_offset(ostr, offs, maxlen, TRUE);
@@ -520,7 +508,7 @@ int lover(char *ostr) {
  * If we are at end-of-line we don't delete (so the line is extended)
  * and if we're at a tab-stop we may not need to do the delete.
  */
-            if ((size_t)curwp->w.doto < lused(curwp->w.dotp) &&
+            if (curwp->w.doto < lused(curwp->w.dotp) &&
                  (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
                  ((curwp->w.doto) & tabmask) == tabmask)) {
                 status = ldelgrapheme(1, FALSE);
@@ -546,7 +534,7 @@ int lover(char *ostr) {
  *
  * int c;                       character to insert in the kill buffer
  */
-int kinsert(int c) {
+int kinsert(char c) {
     struct kill *nchunk;    /* ptr to newly Xmalloced chunk */
 
 /* Check to see if we need a new chunk */
@@ -586,7 +574,7 @@ int ldelete(ue64I_t n, int kflag) {
         if (dotp == curbp->b_linep) /* Hit end of buffer.   */
             return FALSE;
         chunk = lused(dotp) - doto; /* Size of chunk.       */
-        if (chunk > n) chunk = n;
+        if ((ue64I_t)chunk > n) chunk = (int)n;
         if (chunk == 0) {       /* End of line, merge.  */
             lchange(WFHARD | WFKILLS);
             if (ldelnewline() == FALSE
@@ -752,7 +740,7 @@ static void setup_for_yank(void) {
  * final (dummy) line.
  */
     if (((curwp->w.doto == 0) && (curwp->w.dotp == curbp->b_linep)) ||
-        (((size_t)curwp->w.doto == lused(curwp->w.dotp)) &&
+        ((curwp->w.doto == lused(curwp->w.dotp)) &&
              (lforw(curwp->w.dotp) == curbp->b_linep))) {
         do_force = 0;
     }
@@ -858,7 +846,7 @@ int yankmb(int f, int n) {
     }
 
 /* Make sure there is something to yank */
-    if (lastmb[0] && strlen(lastmb[0]) == 0) {
+    if (lastmb[0] && istrlen(lastmb[0]) == 0) {
         com_flag |= CFYANK;         /* It's still a yank... */
         last_yank = MiniBufferYank; /* Save the type */
         return TRUE;                /* not an error, just nothing */
@@ -940,7 +928,6 @@ void free_line(void) {
             tp = np;
         }
     }
-    db_free(ibuf);
     return;
 }
 #endif

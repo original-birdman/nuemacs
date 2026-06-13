@@ -125,7 +125,7 @@ enum KBDM_direction { GetTo_KBDM, OutOf_KBDM };
  * Internal routine to get to/from the keyboard macro buffer.
  * Remembers whence it came.
  */
-static int kbdmac_buffer_toggle(enum KBDM_direction mode, char *who) {
+static int kbdmac_buffer_toggle(enum KBDM_direction mode, const char *who) {
     static enum KBDM_direction last_mode = OutOf_KBDM;  /* This must toggle */
     static struct buffer *obp;
     static int saved_nw;
@@ -214,7 +214,7 @@ static int start_kbdmacro(void) {
  */
 void addchar_kbdmacro(char addch) {
 
-    char cc = addch & 0xff;
+    char cc = addch & (char)0xff;
     char xc = 0;
     switch(cc) {        /* Handle what token in exec.c handles */
     case 8:   xc = 'b'; break;
@@ -249,7 +249,7 @@ static void flush_kbd_text(void) {
     int added = 0;
     while(1) {
         linstr(kbd_text+added);
-        added += strlen(kbd_text+added);
+        added += istrlen(kbd_text+added);
         if (added >= kbd_idx) break;
         if (must_quote) linsert_byte(1, '"');
         linstr("\nmacro-helper 0\ninsert-string ");
@@ -322,7 +322,7 @@ int addto_kbdmacro(const char *text, int new_command, int do_quote) {
         }
         if (qreq) linsert_byte(1, '"');
         for (const char *tp = text; *tp; tp++) {
-            char cc = *tp & 0xff;
+            char cc = *tp & (char)0xff;
             char xc = 0;
             switch(cc) {
             case 8:   xc = 'b'; break;
@@ -388,7 +388,7 @@ static int ts_len = 0;
 static char time_stamp[20]; /* There is only one time_stamp at a time... */
 static int set_time_stamp(int days_back) {
     time_t t = time(NULL) - days_back*86400;;
-    return strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
+    return (int)strftime(time_stamp, 20, "%Y%m%d-%H%M%S.", localtime(&t));
 }
 static FILE *index_fp = NULL;   /* File open if not NULL */
 static int can_dump_files = 0;
@@ -619,7 +619,7 @@ static void dump_modified_buffers(void) {
         else
             printf("\n");
         if (index_fp) {         /* Did get_to_dumpdir() open it? */
-            char *dir, *sep;
+            const char *dir, *sep;
             if (add_cwd) {
                 dir = cwd;
                 sep = "/";
@@ -712,13 +712,13 @@ void dumpdir_tidy(void) {
     ts_len = set_time_stamp(autoclean);
     off_t rewrite_from = 0;             /* Only if there is a deletion */
     while (getline(&lp, &blen, index_tidy_fp) >= 0) {
-        if (strncmp(lp, time_stamp, ts_len - 1) < 0) { /* Too old... */
+        if (strncmp(lp, time_stamp, (size_t)(ts_len-1)) < 0) { /* Too old... */
 /* Original filename is for reporting ONLY */
             char *orig_fn = strstr(lp, " <= ");
-            if (!orig_fn) continue;     /* Just in case... */
-            int dfn_len = orig_fn - lp; /* Length of filename */
-            terminate_str(lp+dfn_len);  /* Null terminate it */
-            orig_fn += 4;               /* Step over " <= " for original */
+            if (!orig_fn) continue;             /* Just in case... */
+            int dfn_len = (int)(orig_fn-lp);    /* Length of filename */
+            terminate_str(lp+dfn_len);          /* Null terminate it */
+            orig_fn += 4;                   /* Step over " <= " for original */
             status = unlink(lp);
             if (status) {
                 snprintf(info_message, 4096,
@@ -754,8 +754,8 @@ void dumpdir_tidy(void) {
             if (rc) {
                 status = fseeko(index_tidy_fp, new_offs, SEEK_SET);
                 size_t wc = fwrite(cbuf, sizeof(char), rc, index_tidy_fp);
-                new_offs += wc;
                 if (wc != rc) break;    /* We have a problem... */
+                new_offs += (off_t)wc;
                 status = fflush(index_tidy_fp);       /* See man fopen */
             }
         }
@@ -946,7 +946,7 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
     int count = 1;
     int in_quote = 0;   /* May not be true, though best guess */
     while (1) {
-        if (!((size_t)curwp->w.doto == lused(curwp->w.dotp))) { /* Not e-o-l */
+        if (!(curwp->w.doto == lused(curwp->w.dotp))) { /* Not e-o-l */
             char c = lgetc(curwp->w.dotp, curwp->w.doto);
             if ((c == '"') || (c == '\'')) in_quote = 1 - in_quote;
             else if (!in_quote) {
@@ -972,9 +972,9 @@ static int brkt_search(char this, char other, int (*mover)(int)) {
  * NOTE: that if the repeat count is >1, it still only looks for one
  * matching reverse-brace.
  */
-static int insbracket(int n, int brkt) {
+static int insbracket(int n, char brkt) {
     char ch;                /* Last character before input */
-    int ob;                 /* The reverse-facing brkt */
+    char ob;                /* The reverse-facing brkt */
     int i, count;
     int target;             /* Column brkt should go after */
     struct line *oldlp;
@@ -1045,7 +1045,7 @@ static int insbracket(int n, int brkt) {
 
 /* NOTE that in this loop, lused is varying (decreasing)! */
             while (at_wspace(NULL) &&
-                   ((size_t)curwp->w.doto < lused(curwp->w.dotp)))
+                   (curwp->w.doto < lused(curwp->w.dotp)))
                  forwdel(0, 1);
         }
     }
@@ -1075,7 +1075,7 @@ int getfence(int f, int n) {
  * We only have ASCII braces, so no need to handle Unicode here.
  * A combining-char on a brace is meaningless.
  */
-    if ((size_t)oldoff == lused(oldlp)) ch = '\n';
+    if (oldoff == lused(oldlp)) ch = '\n';
     else                                ch = lgetc(oldlp, oldoff);
 
 /* Setup proper matching fence */
@@ -1125,7 +1125,7 @@ static int backgr_on_screen(int n) {
  *
  * char ch;                     fence type to match against
  */
-static int fmatch(int ch) {
+static int fmatch(char ch) {
     struct line *oldlp;     /* original line pointer */
     int oldoff;             /* and offset */
     int count;              /* current fence level count */
@@ -1192,14 +1192,14 @@ int macro_helper(int f, int n) {
  * as an argument, because the main routine may have been told to read in a
  * file by default, and we want the buffer name to be right.
  */
-static void edinit(char *bname) {
+static void edinit(const char *bname) {
     struct buffer *bp;
     struct window *wp;
 
 /* Allocate the macro buffer */
 
     n_kbdm = 256;
-    kbdm = Xmalloc(n_kbdm*sizeof(int));
+    kbdm = Xmalloc((size_t)n_kbdm*sizeof(int));
     kbdend = kbdm;
 
     bp = bfind(bname, TRUE, 0);             /* First buffer         */
@@ -1549,7 +1549,7 @@ int execute(int c, int f, int n) {
             }
 /* Move to start of name, and get the length to end-of-data (no NUL here) */
             lp++;   /* Step over next space */
-            int fnlen = ltext(curwp->w.dotp) + lused(curwp->w.dotp) - lp;
+            int fnlen = (int)(ltext(curwp->w.dotp) + lused(curwp->w.dotp) - lp);
 
 /* Now build up the full pathname
  * Start with the current buffer filename, and append "/", unless we
@@ -1582,7 +1582,7 @@ int execute(int c, int f, int n) {
             db_set(fname, curwp->w_bufp->b_rpname);
             const char *upp = strrchr(db_val(fname), '/');
             if (upp == db_val(fname)) upp++;
-            db_setcharat(fname, upp-db_val(fname), '\0');
+            db_setcharat(fname, (int)(upp-db_val(fname)), '\0');
             userproc_arg = db_val(fname);
             (void)run_user_proc("showdir", 0, 1);
             userproc_arg = NULL;
@@ -1641,14 +1641,14 @@ int execute(int c, int f, int n) {
  * or we are at a tab stop, delete a char forward
  */
         if (curwp->w_bufp->b_mode & MDOVER &&
-            (size_t)curwp->w.doto < lused(curwp->w.dotp) &&
+            curwp->w.doto < lused(curwp->w.dotp) &&
             (lgetc(curwp->w.dotp, curwp->w.doto) != '\t' ||
             (curwp->w.doto) % 8 == 7))
                 ldelgrapheme(1, FALSE);
 
 /* Do the appropriate insertion */
         if (c == '}' && (curbp->b_mode & MDCMOD) != 0) {
-            status = insbracket(n, c);
+            status = insbracket(n, '}');
             if (!inmb && kbdmode == RECORD) {
                 if ((f > 0) && (n != 1))    /* Record any count */
                     set_narg_kbdmacro(n);
@@ -1668,14 +1668,20 @@ int execute(int c, int f, int n) {
             if (!inmb && kbdmode == RECORD) {
                 int nc = 1;
                 if ((f > 0) && (n > 1)) nc = n;
-                while(nc--) addchar_kbdmacro(c);
+                char utf8[6];
+                int nbytes = unicode_to_utf8(c, utf8);
+                while(nc--) {
+                    for (int j = 0; j < nbytes; j++) {
+                        addchar_kbdmacro(utf8[j]);
+                    }
+                }
 	    }
 	}
 
 /* Check for CMODE fence matching */
          if ((c == '}' || c == ')' || c == ']') &&
             (curbp->b_mode & MDCMOD) != 0)
-                fmatch(c);
+                fmatch((char)c);
 
 /* Check auto-save mode */
         if (curbp->b_mode & MDASAVE)
@@ -1905,7 +1911,7 @@ void extend_keytab(int n_ents) {
         init_from = 0;
         keytab_alloc_ents = n_ents;
     }
-    keytab = Xrealloc(keytab, keytab_alloc_ents*sizeof(struct key_tab));
+    keytab = Xrealloc(keytab, (size_t)keytab_alloc_ents*sizeof(struct key_tab));
     if (init_from == 0) {   /* Add in starting data */
         int n_init_keys = ARRAY_SIZE(init_keytab);
         struct key_tab *ktp = keytab;
@@ -1945,12 +1951,12 @@ int main(int argc, char **argv) {
     sigemptyset(&sigact.sa_mask);
 
     sigact.sa_handler = sizesignal;
-    sigact.sa_flags = SA_RESTART;
+    sigact.sa_flags = (int)SA_RESTART;
     sigaction(SIGWINCH, &sigact, NULL);
 
 /* Add a handler for other signals, which will exit */
     sigact.sa_handler = exit_via_signal;
-    sigact.sa_flags = SA_RESETHAND; /* So we can't loop into our handler */
+    sigact.sa_flags = (int)SA_RESETHAND; /* So we can't loop into our handler */
 /* The SIGTERM is there so you can trace a loop by sending one */
     int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM, SIGABRT, SIGILL };
     for (unsigned int si = 0; si < ARRAY_SIZE(siglist); si++)
@@ -2014,7 +2020,7 @@ do {
     if (elen < 0) break;
     terminate_str(exec_file + elen);
     char *exec_path = dirname(exec_file);
-    char *cpath = Xmalloc(strlen(exec_path) + sizeof("/etc/"));
+    char *cpath = Xmalloc(istrlen(exec_path) + sizeof("/etc/"));
     strcpy(cpath, exec_path);
     strcat(cpath, "/etc/");
     set_pathname(cpath);
@@ -2057,7 +2063,7 @@ do {
                  usage(EXIT_FAILURE);
             }
             if (strncmp("version", arg, strlen(arg)) == 0)
-                 verflag = strlen(arg);
+                 verflag = istrlen(arg);
             key1 = *arg;
 /* Allow options to be given as separate tokens */
             if (strchr("CDFGKMSX", key1 & (char)~0x20)) {
@@ -2106,7 +2112,7 @@ do {
                 break;
             case 'K': {     /* -k<key> for code key */
                 /* GGR only if given a key.. */
-                int olen = strlen(opt);
+                int olen = istrlen(opt);
                 if (olen > 0 && olen < NKEY) {
                     cryptflag = TRUE;
                     strcpy(ekey, opt);
@@ -2246,10 +2252,10 @@ do {
             if (viewflag) bp->b_mode |= MDVIEW;
             if (cryptflag) {
                 bp->b_mode |= MDCRYPT;
-                bp->b_keylen = strlen(ekey);
+                bp->b_keylen = istrlen(ekey);
                 myencrypt(NULL, 0);
                 myencrypt(ekey, bp->b_keylen);
-                memcpy(bp->b_key, ekey, bp->b_keylen);
+                memcpy(bp->b_key, ekey, (size_t)bp->b_keylen);
             }
         }
         argv++;

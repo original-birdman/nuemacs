@@ -123,8 +123,8 @@ static int mod95(int val) {
  * unsigned len;        number of characters in the buffer
  *
  **********/
-void myencrypt(char *bptr, unsigned len) {
-    int cc; /* current character being considered */
+void myencrypt(char *bptr, int len) {
+    int cc;                 /* current character being considered */
 
     static int key = 0;     /* 29 bit encipherment key */
     static int salt = 0;    /* salt to spice up key with */
@@ -187,7 +187,7 @@ void myencrypt(char *bptr, unsigned len) {
  */
             key = key + key + (cc ^ ch_as_uc(*bptr)) + salt;
         }
-        *bptr++ = cc;   /* put character back into buffer */
+        *bptr++ = (char)cc;     /* put character back into buffer */
     }
 
     return;
@@ -241,7 +241,7 @@ int set_encryption_key(int f, int n) {
  * at most NKEY to ukey (including the NUL).
  */
     int clen = (db_len(given) >= NKEY)? NKEY -1: db_len(given);
-    strncpy(ukey, db_val(given), clen);
+    strncpy(ukey, db_val(given), (size_t)clen);
     terminate_str(ukey+clen);
     db_free(given);
 
@@ -257,7 +257,7 @@ int set_encryption_key(int f, int n) {
         break;
     case CRYPT_FILL63: {
         char keycop[NKEY];      /* GGR */
-        int lcop = strlen(ukey);
+        int lcop = istrlen(ukey);
         strcpy(keycop, ukey);
         while (lcop < 63) {
             strcpy(keycop, ukey);   /* Can't strcat to itself, so... */
@@ -271,7 +271,7 @@ int set_encryption_key(int f, int n) {
  * value, according to the *klenp setting above) and encrypt the key
  * on itself.
  */
-    *klenp = strlen(ukey);
+    *klenp = istrlen(ukey);
     myencrypt(NULL, 0);
     myencrypt(ukey, *klenp);
     return TRUE;

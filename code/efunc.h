@@ -86,7 +86,7 @@ extern int setforcemode(int, int);
 
 /* crypt.c */
 #ifndef CRYPT_C
-extern void myencrypt(char *, unsigned int);
+extern void myencrypt(char *, int);
 extern int set_encryption_key(int, int);
 #endif
 
@@ -362,8 +362,6 @@ extern void init_search_ringbuffers(void);
 extern void new_prompt(db *);
 extern void rotate_sstr(int);
 extern void select_sstr(void);
-extern int unicode_eq(unsigned int, unsigned);
-extern int asceq(unsigned char, unsigned char);
 extern void rvstrcpy(db *, db *);
 extern void setpattern(db *, db *);
 extern const char *group_match(int);
@@ -413,7 +411,7 @@ extern int getwpos(void);
 
 /* word.c */
 #ifndef WORD_C
-extern int class_check(struct inwbuf *, char *, int);
+extern int class_check(struct inwbuf *, const char *, int);
 
 extern int backword(int, int);
 extern int forwword(int, int);

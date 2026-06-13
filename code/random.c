@@ -65,7 +65,7 @@ int showcpos(int f, int n) {
         if (lp == curwp->w.dotp) {
             predlines = numlines;
             predchars = numchars + curwp->w.doto;
-            if (((size_t)curwp->w.doto) == lused(lp)) curchar = '\n';
+            if (curwp->w.doto == lused(lp)) curchar = '\n';
             else {
                 struct grapheme glyi;   /* Full data */
                 bytes_used = lgetgrapheme(&glyi, FALSE);
@@ -107,7 +107,7 @@ int showcpos(int f, int n) {
     }
 
     ratio = 0;              /* Ratio before dot. */
-    if (numchars != 0) ratio = (100L * predchars)/numchars;
+    if (numchars != 0) ratio = (int)((100L*predchars)/numchars);
 
 /* summarize and report the info.
  * NOTE that this reports the current base character *only*, but the byte
@@ -125,7 +125,7 @@ int showcpos(int f, int n) {
                 strcpy(temp, charset[curchar]);
             }
             else {                      /* printable ASCII */
-                temp[0] = curchar;
+                temp[0] = (char)curchar;
                 terminate_str(temp + 1);
             }
         snprintf(descr, 40 ,"char = U+%04x (%s)", curchar, temp);
@@ -300,7 +300,15 @@ int quote(int f, int n) {
         } while (s == TRUE && --n);
         return s;
     }
-    if (!inmb && kbdmode == RECORD) addchar_kbdmacro(c);
+    if (!inmb && kbdmode == RECORD) {
+        char utf8[6];
+        int nbytes = unicode_to_utf8(c, utf8);
+        while(n--) {
+            for (int j = 0; j < nbytes; j++) {
+                addchar_kbdmacro(utf8[j]);
+            }
+        }
+    }
     return linsert_uc(n, c);
 }
 
@@ -366,7 +374,7 @@ int detab(int f, int n) {
         curwp->w.doto = 0;      /* start at the beginning */
 
 /* Detab the entire current line */
-        while ((size_t)curwp->w.doto < lused(curwp->w.dotp)) {
+        while (curwp->w.doto < lused(curwp->w.dotp)) {
 /* If we have a tab */
             if (lgetc(curwp->w.dotp, curwp->w.doto) == '\t') {
                 ldelgrapheme(1, FALSE);
@@ -406,7 +414,7 @@ int entab(int f, int n) {
 /* Entab the entire current line */
         fspace = -1;
         ccol = 0;
-        while ((size_t)curwp->w.doto < lused(curwp->w.dotp)) {
+        while (curwp->w.doto < lused(curwp->w.dotp)) {
 /* See if it is time to compress */
             if ((fspace >= 0) && (nextab(fspace) <= ccol)) {
                 if (ccol - fspace < 2) fspace = -1;
@@ -670,17 +678,15 @@ int deblank(int f, int n) {
  */
 int indent(int f, int n) {
     UNUSED(f);
-    int nicol;
-    char c;
-    size_t i;
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
     if (n < 0) return FALSE;
     while (n--) {
-        nicol = 0;
+        int i;
+        int nicol = 0;
         for (i = 0; i < lused(curwp->w.dotp); ++i) {
-            c = lgetc(curwp->w.dotp, i);
+            char c = lgetc(curwp->w.dotp, i);
             if (c != ' ' && c != '\t') break;
             if (c == '\t') nicol |= tabmask;
             ++nicol;
@@ -964,7 +970,7 @@ int writemsg(int f, int n) {
         goto exit;
 
 /* Write the message out */
-    if (n == 2) fwrite(db_val(buf), 1, db_len(buf), stderr);
+    if (n == 2) fwrite(db_val(buf), 1, (size_t)db_len(buf), stderr);
     else {
         mlforce_one(db_val(buf));
         if (kbdmode == PLAY) mline_persist = TRUE;
@@ -981,7 +987,7 @@ enum istr_type { RAW_STR, COOKED_STR };
 
 static int string_getter(int f, int n, enum istr_type call_type) {
     int status;             /* status return code */
-    char *prompt;
+    const char *prompt;
 
     db_strdef(tstring);     /* string to add */
     db_strdef(tok);
@@ -1021,10 +1027,10 @@ static int string_getter(int f, int n, enum istr_type call_type) {
                          db_val(tok));
                     break;
                 }
-                db_addch(tstring, add);
+                db_addch(tstring, (char)add);
             }
             else if (*vp == 'U' && *(vp+1) == '+') {
-                int val = strtol(vp+2, NULL, 16);
+                int val = (int)strtol(vp+2, NULL, 16);
                 char utf[8];
                 int incr = unicode_to_utf8(val, utf);
                 db_appendn(tstring, utf, incr);
@@ -1161,10 +1167,10 @@ int whitedelete(int f, int n) {
  * When there is nothing to remove return TRUE if we have been given an
  * arg of -1, otherwise return FALSE.
  */
-    int to_delete = rp - lp;
+    int to_delete = (int)(rp - lp);
     if (to_delete <= 0) return (n == -1);
-    curwp->w.doto = lp - stp;       /* Move dot to left-most space */
-    ldelete(to_delete, FALSE);      /* Delete them in one go */
+    curwp->w.doto = (int)(lp - stp);    /* Move dot to left-most space */
+    ldelete(to_delete, FALSE);          /* Delete them in one go */
     return TRUE;
 }
 
@@ -1210,8 +1216,8 @@ int quotedcount(int f, int n) {
  */
 int ggr_style(int f, int n) {
     UNUSED(f);
-    if (n > 1)  ggr_opts = 0xffffffff;  /* All on */
-    else        ggr_opts = 0;           /* All off */
+    if (n > 1)  ggr_opts = (int)0xffffffff; /* All on */
+    else        ggr_opts = 0;               /* All off */
     return TRUE;
 }
 
@@ -1310,7 +1316,7 @@ int simulate(int f, int n) {
     nextarg("", &input, CMPLT_NONE);
     int status = FALSE;     /* In case n <= 0 */
     while (n-- > 0) {
-        size_t offs = 0;
+        int offs = 0;
         unicode_t c;
         int mask = 0;
         while (offs < db_len(input)) {

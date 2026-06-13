@@ -1,6 +1,8 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+/* Always used in an int context */
+
+#define ARRAY_SIZE(a) (int)(sizeof(a) / sizeof(a[0]))
 
 #endif  /* UTIL_H_ */
