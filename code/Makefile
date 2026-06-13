@@ -297,6 +297,9 @@ endif
 #
 CC = $(MYCC)
 WARNINGS = -Wall -Wstrict-prototypes -Wextra
+WARNINGS += -Wconversion -Wsign-conversion -Wwrite-strings
+# GML??? += -Wtraditional-conversion
+
 CFLAGS = $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) $(WARNINGS) \
     -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL) -fno-inline-functions
 
