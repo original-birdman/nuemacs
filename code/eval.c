@@ -624,7 +624,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
 /* Retrieve the required arguments */
 
     do {
-        int ft = funcs[fnum].f_type;
+        enum function_type ft = funcs[fnum].f_type;
         if (ft == NILNAMIC) {
             status = TRUE;
             break;
@@ -644,8 +644,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
  * The switch statements are grouped by functionality type so they
  * can share the initial arg1/(arg2/arg3 conversions.
  */
-    int tag = funcs[fnum].tag;  /* Useful for internal switches */
-    switch(funcs[fnum].tag) {   /* enum checks all values are handled */
+    enum uf_val tag = funcs[fnum].tag;  /* Useful for internal switches */
+    switch(funcs[fnum].tag) {       /* enum checks all values are handled */
 
 /* Integer arithmetic*/
     case UFADD:

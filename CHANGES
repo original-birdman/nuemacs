@@ -9176,3 +9176,8 @@ search.c
 utf8.c
     Changes after reviewing warnings on Asus Entware compilation.
     Increase gcc test for switching -Wconversion off to 8 [idxsorter.c]
+
+eval.c
+line.c
+    Changes after reviewing warnings on FreeBSD (clang) compilation.
+    Use enum types in declarations, not int.

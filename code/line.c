@@ -754,7 +754,7 @@ static void setup_for_yank(void) {
     return;
 }
 
-static void finish_for_yank(int yank_type) {
+static void finish_for_yank(enum yank_type yank_type) {
 
     force_newline = 0;
 
