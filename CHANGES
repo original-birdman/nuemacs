@@ -9181,3 +9181,6 @@ eval.c
 line.c
     Changes after reviewing warnings on FreeBSD (clang) compilation.
     Use enum types in declarations, not int.
+
+tcap.c
+    Redeclare tgetstr(), tgetnum(), tgoto() and putp() for SunOS. [tcap.c]

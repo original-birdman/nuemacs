@@ -20,22 +20,32 @@
  * Well, it does sort-off, but NCURSES_CONST is set to nothing in the
  * header files, and you can't do anything to get it set to const.
  * So get them out of the way, and define "const" versions later.
+ * SunOS is similar, but worse.
  */
 
 #include <curses.h>
-#if __GNUC__ <= 4
+#if (__GNUC__ <= 4) || __sun__
 #define tgetstr     tgetstr_OOTW
 #define tgetnum     tgetnum_OOTW
+#endif
+#if __sun__
+#define tgoto       tgoto_OOTW
+#define putp        putp_OOTW
 #endif
 
 #include <term.h>
 
-#if __GNUC__ <= 4
+#if (__GNUC__ <= 4) || __sun__
 #undef tgetstr
 extern char *tgetstr(const char *, char **);
 #undef tgetnum
 extern int tgetnum(const char *);
-
+#endif
+#if __sun__
+#undef tgoto
+extern char *tgoto(const char *, int, int);
+#undef putp
+extern int putp(const char *);
 #endif
 
 #include "estruct.h"
