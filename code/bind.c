@@ -793,7 +793,8 @@ int switch_internal(int f, int n) {
         s = FALSE;
         goto exit;
     }
-    char set_char = db_charat(btry, 0) & ~DIFCASE;   /* Quick ASCII upcase */
+/* Quick ASCII uppercase */
+    char set_char = db_charat(btry, 0) & (char)~DIFCASE;
     switch(set_char) {
     case 'C':       /* Start of each "loop" in getstring()/main() */
     case 'R':       /* Before reading a file into a buffer (readin()) */

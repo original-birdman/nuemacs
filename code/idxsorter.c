@@ -60,7 +60,7 @@
 /* gcc on Centos6 warns about the int_case(size2,...., and no amount
  * of casting seems to be able to stop that.
  */
-#if __GNUC__ <= 4
+#if __GNUC__ <= 8
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
 /* get_ibyte:
@@ -112,7 +112,7 @@ static inline unsigned char get_ibyte(
         return 0;
     }
 }
-#if __GNUC__ <= 4
+#if __GNUC__ <= 8
 #pragma GCC diagnostic warning "-Wconversion"
 #endif
 

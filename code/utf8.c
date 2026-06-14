@@ -205,7 +205,7 @@ int prev_utf8_offset(const char *buf, int offset, int grapheme_start) {
         if ((c & 0xc0) == 0x80) {           /* Ext byte? */
             int trypos = offs;
             int tryb = MAX_UTF8_LEN;
-            signed char marker = (char)0xc0;    /* Extend sign-bit here */
+            signed char marker = (signed char)0xc0; /* Extend sign-bit here */
             unsigned char valmask = 0x1f;
             int bits_sofar = 0;
             int addin;

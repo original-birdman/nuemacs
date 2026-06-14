@@ -171,7 +171,7 @@
 #define MC_ESC          '\\'    /* Escape - suppress meta-meaning. */
 
 #define BIT(n)          (1 << (n))      /* An integer with one bit set. */
-#define CHCASE(c)       ((c) ^ DIFCASE) /* Toggle the case of a letter. */
+#define CHCASE(c)       ((c) ^ (char)DIFCASE)   /* Toggle case of a letter. */
 
 /* MAXASCII is the largest character we will deal with "simply" in CCLs.
  * BMBYTES represents the number of bytes in the bitmap.
@@ -869,9 +869,9 @@ handle_prev:
             xp->xval.prop[0] = '?';     /* Unknown default */
             terminate_str(xp->xval.prop + 1);
             if (dbp_charat(btext, 0))
-                 xp->xval.prop[0] = dbp_charat(btext, 0) & (~DIFCASE);
+                 xp->xval.prop[0] = dbp_charat(btext, 0) & (char)(~DIFCASE);
             if (dbp_charat(btext, 1))
-                 xp->xval.prop[1] = dbp_charat(btext, 1) | DIFCASE;
+                 xp->xval.prop[1] = dbp_charat(btext, 1) | (char)DIFCASE;
             terminate_str(xp->xval.prop + 2);   /* Ensure NUL terminated */
             patptr += dbp_len(btext);
             goto invalidate_current;
@@ -1444,9 +1444,9 @@ static int mcstr(void) {
                 mcptr->val.prop[0] = '?';     /* Fail by default */
                 terminate_str(mcptr->val.prop + 1);
                 if (dbp_charat(btext, 0))
-                     mcptr->val.prop[0] = dbp_charat(btext, 0) & (~DIFCASE);
+                     mcptr->val.prop[0] = dbp_charat(btext, 0) & (char)(~DIFCASE);
                 if (dbp_charat(btext, 1))
-                     mcptr->val.prop[1] = dbp_charat(btext, 1) | DIFCASE;
+                     mcptr->val.prop[1] = dbp_charat(btext, 1) | (char)DIFCASE;
                 terminate_str(mcptr->val.prop + 2); /* Ensure NUL terminated */
                 mcptr->mc.negate_test = (pchr == 'P');
                 patptr += dbp_len(btext);
@@ -1470,7 +1470,7 @@ static int mcstr(void) {
                 SETTER[2] = (pchr | DIFCASE);   /* Quick lowercase ASCII */
                 char *dpatptr = SETTER;
                 (void)cclmake(&dpatptr, mcptr);
-                mcptr->mc.negate_test = !(pchr & DIFCASE);  /* If UPPER */
+                mcptr->mc.negate_test = !(pchr & (char)DIFCASE); /* If UPPER */
                 goto pchr_done;
             }
 
@@ -1884,8 +1884,8 @@ static int unicode_eq(unicode_t bc, unicode_t pc) {
 
 static int asc_eq(char bc, char pc) {
     if ((curwp->w_bufp->b_mode & MDEXACT) == 0) {
-        if (islower(bc)) bc ^= DIFCASE;
-        if (islower(pc)) pc ^= DIFCASE;
+        if (islower(bc)) bc ^= (char)DIFCASE;
+        if (islower(pc)) pc ^= (char)DIFCASE;
     }
     return bc == pc;
 }
@@ -2107,10 +2107,10 @@ void setpattern(db *apat, db *tap) {
     for (i = 0; i < patlenadd; i++) {
         deltaf[ch_as_uc(dbp_charat(apat, i))] = patlenadd - i;
         if (nocase && isalpha(ch_as_uc(dbp_charat(apat, 1))))
-            deltaf[ch_as_uc(dbp_charat(apat, i) ^ DIFCASE)] = patlenadd - i;
+            deltaf[ch_as_uc(dbp_charat(apat, i) ^ (char)DIFCASE)] = patlenadd - i;
         deltab[ch_as_uc(dbp_charat(tap, i))] = patlenadd - i;
         if (nocase && isalpha(ch_as_uc(dbp_charat(tap, i))))
-            deltab[ch_as_uc(dbp_charat(tap, i) ^ DIFCASE)] = patlenadd - i;
+            deltab[ch_as_uc(dbp_charat(tap, i) ^ (char)DIFCASE)] = patlenadd - i;
     }
 
 /* The last character will have the pattern length unless there are
@@ -2120,11 +2120,11 @@ void setpattern(db *apat, db *tap) {
     lastchfjump = patlenadd + deltaf[ch_as_uc(dbp_charat(apat, patlenadd))];
     deltaf[ch_as_uc(dbp_charat(apat, patlenadd))] = 0;
     if (nocase && isalpha(ch_as_uc(dbp_charat(apat, patlenadd))))
-        deltaf[ch_as_uc(dbp_charat(apat, patlenadd) ^ DIFCASE)] = 0;
+        deltaf[ch_as_uc(dbp_charat(apat, patlenadd) ^ (char)DIFCASE)] = 0;
     lastchbjump = patlenadd + deltab[ch_as_uc(dbp_charat(apat, 0))];
     deltab[ch_as_uc(dbp_charat(apat, 0))] = 0;
     if (nocase && isalpha(ch_as_uc(dbp_charat(apat, 0))))
-        deltab[ch_as_uc(dbp_charat(apat, 0) ^ DIFCASE)] = 0;
+        deltab[ch_as_uc(dbp_charat(apat, 0) ^ (char)DIFCASE)] = 0;
 }
 
 /* readpattern -- Read a pattern.  Stash it in apat.

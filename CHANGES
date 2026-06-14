@@ -9164,7 +9164,15 @@ tcap.c
 utf8.c
 wrapper.c
     Changes after reviewing warnings on Centos6 compilation.
-    Put {} around case block which declare variables. [eval.c, search.c]
+    Put {} around case block which declare variables to avoid
+    unintended variable scope leakage. [eval.c, search.c]
     Switch -Wconversion off for get_ibyte() for gcc <= 4 [idxsorter.c]
     Redeclare tgetstr() and tgetnum() to add "const" for gcc <= 4 [tcap.c]
     Define a reallocarray() for gcc <= 4 [wrapper.c]
+
+bind.c
+idxsorter.c
+search.c
+utf8.c
+    Changes after reviewing warnings on Asus Entware compilation.
+    Increase gcc test for switching -Wconversion off to 8 [idxsorter.c]
