@@ -506,7 +506,8 @@ static int makelist(int iflag) {
 
     mcheck = 1;
     for (i = 0; i < NUMMODES; i++) {
-        *cp1++ = (gmode & mcheck)? modecode[i]: '.';
+        if (gmode & mcheck) *cp1++ = modecode[i];
+        else                *cp1++ = '.';
         mcheck <<= 1;
     }
     strcpy(cp1, ".           Global Modes");
@@ -561,7 +562,10 @@ static int makelist(int iflag) {
         mcheck = 1;
         char mc = '-';  /* Will stay as this for not-yet-active) */
         for (i = 0; i < NUMMODES; i++) {
-            if (bp->b_active) mc = (bp->b_mode & mcheck)? modecode[i]: '.';
+            if (bp->b_active) {
+                if (bp->b_mode & mcheck) mc = modecode[i];
+                else                     mc = '.';
+            }
             *cp1++ = mc;
             mcheck <<= 1;
         }

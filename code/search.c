@@ -629,8 +629,8 @@ static db *brace_text(char *fp) {
  * This is used for all 256 values in non-Magic (fast_scanner) mode.
  */
 static void setbit(int bc, char *cclmap) {
-    bc = bc & 0xFF;
-    if (bc < HICHAR) *(cclmap + (bc >> 3)) |= BIT(bc & 7);
+    bc = bc & 0xFF;     /* So range is now 0 -> 255 */
+    *(cclmap + (bc >> 3)) |= (char)BIT(bc & 7);
 }
 
 /* parse_error
@@ -817,7 +817,7 @@ handle_prev:
             goto invalidate_current;
         }
         case 'k':       /* "kind of" char - just check base unicode */
-        case 'K':       /* Not "kind of" ... */
+        case 'K': {     /* Not "kind of" ... */
             if (*(patptr) != '{') { /* } balancer */
                 parse_error(patptr, "\\k/K{} not started");
                 return FALSE;
@@ -841,11 +841,13 @@ handle_prev:
                      "\\k{} must only contain a base character");
                 return FALSE;
             }
-            struct xccl *xp = add2_xt_cclmap(mcptr, UCKIND);
+            struct xccl *xp = NULL;
+            xp = add2_xt_cclmap(mcptr, UCKIND);
             xp->xval.uchar = kgc.uc;
             xp->xc.negate_test = (gc.uc == 'K');
             patptr += dbp_len(btext);
             goto invalidate_current;
+        }
         case 'p':
         case 'P': {
             if (*patptr != '{') {       /* balancer: } */
@@ -889,6 +891,7 @@ handle_prev:
                 unsigned int negate_it:1;
             } wa;
             wa.negate_it = (gc.uc == 'W');
+            struct xccl *xp = add2_xt_cclmap(mcptr, UCPROP);
             xp->xval.prop[0] = 'L';     /* Letter... */
             terminate_str(xp->xval.prop + 1);   /* Ensure NUL terminated */
 /* We can't really (un)set a bit pattern here for the negative case,
@@ -1002,9 +1005,7 @@ error_exit:
 /* biteq -- is the character in the bitmap?
  */
 static int biteq(int bc, char *cclmap) {
-    bc = bc & 0xFF;
-    if (bc >= HICHAR) return FALSE;
-
+    bc = bc & 0xFF;     /* So range is now 0 -> 255 */
     return (*(cclmap + (bc >> 3)) & BIT(bc & 7)) ? TRUE : FALSE;
 }
 

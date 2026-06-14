@@ -23,6 +23,15 @@ void *Xrealloc(const void *optr, size_t size) {
     return ret;
 }
 
+/* Centos doesn't have reallocarray, so we'll need to write one.
+ * But we''l dispense with the n*isz overflow check.
+ */
+#if __GNUC__ <= 4
+void *reallocarray(void *op, size_t n, size_t isz) {
+    return realloc(op, n*isz);
+}
+#endif
+
 /* We'll take an int, but pass on a size_t for number of elements */
 void *Xreallocarray(const void *optr, int n_elem, size_t size) {
     void *ret = reallocarray((void *)optr, (size_t)n_elem, size);

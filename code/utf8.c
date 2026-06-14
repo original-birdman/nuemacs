@@ -135,7 +135,7 @@ int unicode_to_utf8(unicode_t c, char *utf8) {
         char *bp, *ep;
         bp = ep = utf8;
         do {
-            *ep++ = (char)0x80 + (c & 0x3f);
+            *ep++ = (char)((c & 0x3f) | 0x80);
             bytes++;
             prefix = 0x80 | (prefix >> 1);
             max >>= 1;

@@ -224,7 +224,7 @@ int stol(const char *val) {
  */
 static char *mklower(char *str) {
     for (char *sp = str; *sp; sp++) {
-        if ('A' <= *sp && *sp <= 'Z') *sp += 'a' - 'A';
+        if ('A' <= *sp && *sp <= 'Z') *sp |= 0x20;
     }
     return str;
 }
@@ -690,7 +690,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
         goto exit;
     }
     case UFAND:
-    case UFOR:
+    case UFOR: {
         int2 = stol(db_val(arg2));      /* Falls through */
     case UFNOT:
         int1 = stol(db_val(arg1));
@@ -700,11 +700,12 @@ static void gtfun(dbp_dcl(res), const char *fname) {
         default:    retval =  ltos(int1 || int2);   /* UFOR */
         }
         goto exit;
+    }
 
 /* Bitwise functions */
     case UFBAND:
     case UFBOR:
-    case UFBXOR:
+    case UFBXOR: {
         int2 = ue_atol(db_val(arg2));   /* Falls through */
     case UFBNOT:
     case UFBLIT:
@@ -717,6 +718,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
         default:        retval = ue_itoa(int1); /* UFBLIT */
         }
         goto exit;
+    }
 
 /* String functions */
     case UFCAT:
@@ -853,7 +855,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
  *      hex codepoint   (0x...)
  *      U+hex           [0x must be chars 1 and 2]
  */
-    case UFCHR:
+    case UFCHR: {
         if ((db_charat(arg1, 0) == 'U') && (db_charat(arg1, 1) == '+')) {
             static char targ[20] = "0x";    /* Fudge to 0x instead */
             strcpy(targ+2, db_val(arg1)+2); /* strtol then handles it */
@@ -867,6 +869,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
         terminate_str(temp+nb);
         dbp_set(res, temp);
         goto set_exit;
+    }
     case UFGTKEY: {     /* Allow for unicode input. -> utf-8 */
         char temp[8];
         int nb = unicode_to_utf8(tgetc(), temp);

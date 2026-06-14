@@ -14,9 +14,29 @@
 #define termdef 1 /* Don't define "term" external. */
 
 #include <stdio.h>
-#include <curses.h>
-#include <term.h>
 #include <signal.h>
+
+/* Old Centos doesn't have const in the header files.
+ * Well, it does sort-off, but NCURSES_CONST is set to nothing in the
+ * header files, and you can't do anything to get it set to const.
+ * So get them out of the way, and define "const" versions later.
+ */
+
+#include <curses.h>
+#if __GNUC__ <= 4
+#define tgetstr     tgetstr_OOTW
+#define tgetnum     tgetnum_OOTW
+#endif
+
+#include <term.h>
+
+#if __GNUC__ <= 4
+#undef tgetstr
+extern char *tgetstr(const char *, char **);
+#undef tgetnum
+extern int tgetnum(const char *);
+
+#endif
 
 #include "estruct.h"
 #include "edef.h"

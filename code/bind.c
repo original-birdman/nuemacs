@@ -246,7 +246,7 @@ static unicode_t stock(const char *given_keyname) {
 /* Make sure we are not lower case with only Control or Meta */
     if (ch_as_uc(*keyname) >= 'a' && ch_as_uc(*keyname) <= 'z' &&
          !(noupper))                /* GGR */
-        *keyname -= 32;
+        *keyname &= 0x57;           /* Switch off "lowercase bit" */
 
 /* NOTE that any char beyond the ASCII range is NO LONGER disallowed
  * by bindtokey() and buffertokey().

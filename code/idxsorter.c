@@ -57,6 +57,12 @@
  */
 #define INDEX_ADJUST 1
 
+/* gcc on Centos6 warns about the int_case(size2,...., and no amount
+ * of casting seems to be able to stop that.
+ */
+#if __GNUC__ <= 4
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
 /* get_ibyte:
  *  An internal, inline routine to get the specified byte for a field.
  *  Done this way as there has to be some logic as to which that byte is
@@ -106,6 +112,9 @@ static inline unsigned char get_ibyte(
         return 0;
     }
 }
+#if __GNUC__ <= 4
+#pragma GCC diagnostic warning "-Wconversion"
+#endif
 
 /* The ACTUAL FUNCTION!! */
 
