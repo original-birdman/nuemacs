@@ -9184,3 +9184,13 @@ line.c
 
 tcap.c
     Redeclare tgetstr(), tgetnum(), tgoto() and putp() for SunOS. [tcap.c]
+
+eval.c
+main.c
+wrapper.c
+    Changes to remove warnings on various other systems.
+    Use strtol() not strtoll() in ue_atol. [eval.c]
+    Assign 0|SA_RESETHAND, not (int)SA_RESETHAND, to int. [main.c]
+    Fix some sizes in teh STANDALONE section [main.c]
+    Changed gcc limit for reallocarray() to be <= 6. [wrapper.c]
+

@@ -1956,7 +1956,16 @@ int main(int argc, char **argv) {
 
 /* Add a handler for other signals, which will exit */
     sigact.sa_handler = exit_via_signal;
-    sigact.sa_flags = (int)SA_RESETHAND; /* So we can't loop into our handler */
+/* SA_RESETHAND is 0x80000000, and we're assigning to an int.
+ * Some system need (int) to avoid a warning.
+ * Debain Mips 8 must NOT have (int).
+ */
+#if __mips__ && (__GNUC__ <= 4)
+#define FCAST
+#else
+#define FCAST (int)
+#endif
+    sigact.sa_flags = FCAST SA_RESETHAND;   /* So we can't loop in handler */
 /* The SIGTERM is there so you can trace a loop by sending one */
     int siglist[] = { SIGBUS, SIGFPE, SIGSEGV, SIGTERM, SIGABRT, SIGILL };
     for (unsigned int si = 0; si < ARRAY_SIZE(siglist); si++)
@@ -2007,20 +2016,20 @@ int main(int argc, char **argv) {
 #ifdef STANDALONE
 #include <libgen.h>
 do {
-    ssize_t bufsiz;
-    struct stat  sb;
+    size_t bufsiz;
+    struct stat sb;
     if (lstat(argv[1], &sb) == -1) {
         bufsiz = PATH_MAX + 1;
     }
     else {
-        bufsiz = sb.st_size + 1;
+        bufsiz = (size_t)sb.st_size + 1;
     }
     char *exec_file = Xmalloc(bufsiz);
     ssize_t elen = readlink("/proc/self/exe", exec_file, bufsiz);
     if (elen < 0) break;
     terminate_str(exec_file + elen);
     char *exec_path = dirname(exec_file);
-    char *cpath = Xmalloc(istrlen(exec_path) + sizeof("/etc/"));
+    char *cpath = Xmalloc(strlen(exec_path) + sizeof("/etc/"));
     strcpy(cpath, exec_path);
     strcat(cpath, "/etc/");
     set_pathname(cpath);

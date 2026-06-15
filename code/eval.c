@@ -42,10 +42,10 @@ static int seed;
  * or decimal.
  * Replaced with a simple #define macro.
  * If assigning to an int, use ue_atoi
- * If assigning to a long, use ue_atol (lomg and long long are the same)
+ * If assigning to a long, use ue_atol (long and long long are the same)
  */
 #define ue_atoi(ustr) ((int)strtol(ustr, NULL, 0))
-#define ue_atol(ustr) (strtoll(ustr, NULL, 0))
+#define ue_atol(ustr) (strtol(ustr, NULL, 0))
 
 /* ue_itoa:
  *      integer to ascii string.......... This is too
