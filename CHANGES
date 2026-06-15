@@ -9196,3 +9196,9 @@ wrapper.c
 
 file.c
     Correct the n_dots increment in fixup_fname().
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.193
+    
+==========
