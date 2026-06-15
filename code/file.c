@@ -59,7 +59,7 @@ static int *slp;
 static int sli;
 
 static void handle_dots(int n) {
-    sli -= n;       /* We wil lonly be called with n==1 or n==2 */
+    sli -= n;       /* We will only be called with n==1 or n==2 */
     if (sli < 0) sli = 0;
     db_truncate(fn_expd, slp[sli]);
     return;
@@ -156,7 +156,7 @@ const char *fixup_fname(const char *fn) {
             break;
         case '.':
             if (at_slash || n_dots) {
-                if (n_dots++ > 2) n_dots = 0;   /* Can't be > 2 */
+                if (++n_dots > 2) n_dots = 0;   /* Can't be > 2 */
             }
             at_slash = 0;
             break;

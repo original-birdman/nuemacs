@@ -9194,3 +9194,5 @@ wrapper.c
     Fix some sizes in teh STANDALONE section [main.c]
     Changed gcc limit for reallocarray() to be <= 6. [wrapper.c]
 
+file.c
+    Correct the n_dots increment in fixup_fname().
