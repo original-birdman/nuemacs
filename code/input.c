@@ -26,218 +26,249 @@
 #include "line.h"
 static int remap_c_on_intr = 0;
 
-/* A set of functions to do with filename/buffer/name completions.
- * Part of the GGR additions.
+/* A set of functions (cmplt_*) to do with filename/buffer/name completions.
+ * Part of the GGR additions (but now using loops, not recursion).
+ * Looks for things starting with name, and if there are multiple choices
+ * builds a catenated string of them in choices.
+ * Returns a ptr to a malloc'ed struct cmpl_info.
+ * It is the CALLERS RESPONSIBILITY to free both this AND its members.
  */
 
 #include <string.h>
-
-static db_strdef(picture);
-static db_strdef(directory);
-
-static struct buffer *expandbp;
-
-/* Static variable shared by comp_file(), comp_buff() and matcher() */
-
-static db_strdef(so_far);   /* Maximal match so far */
-
-/* getnfile() and getffile()
- * Handle file name completion
- *
- * Here is what getffile() should do.
- * o Parse out any directory and file parts.
- * o Open that directory, if necessary.
- * o Build a wildcard from the file part.
- * o Call getnfile() to return the first match.
- * o If the system is not case-sensitive, force lower case.
- */
 #include <sys/types.h>
 #include <dirent.h>
-
 #include <sys/stat.h>
-
-static DIR *dirptr;
-static short allfiles;
-static db_strdef(fullname);
-
-static void close_dir(void) {
-    if (dirptr != NULL) {
-        closedir(dirptr);
-        dirptr = NULL;
-    }
-}
-
-#ifndef STANDALONE
-/* We need to remember these across successive calls to getnfile
- * 40 chars should be enough for login names.
- */
-static char exp_id[40];
-static char id_to_find[40];
-static int id_to_find_len;
-static int run_id_finder = 0;
-
-static char *id_finder(void) {
-/* Handle ~xxx by looking up all matching login ids.
- * If we come here we know we have an id to handle...
- */
-    struct passwd *pwe;
-    errno = 0;
-    while ((pwe = getpwent())) {
-        if (!strncmp(pwe->pw_name, id_to_find, (size_t)id_to_find_len)) {
-            snprintf(exp_id, sizeof(exp_id), "~%s", pwe->pw_name);
-            return exp_id;
-        }
-    }
-    if (errno) mlwrite("passwd lookup: %s", strerror(errno));
-    endpwent();
-    return NULL;
-}
-#endif
 
 /* What to show in the minibuffer if completion doesn't find anything */
 
 #define NOMATCH "No match"
 
-/* Get the next matching file name
+/* Handle internal env/user variable completions.
+ *
+ * We build the env variable sort index in getfvar once
+ * We build the user variable sort index in getfvar each time.
+ * However iff the incoming text is blank we just want to show
+ * $... %..., and if it doesn't start with $ or % we want to show no match.
  */
-static db_strdef(suggestion);
-static const char *getnfile(void) {
-    unsigned short type;    /* file type */
+extern int *envvar_index;
+extern char *uvnames[];
+extern struct evlist evl[];
 
-/* Handle ~xxx by looking up all matching login ids.
- * NOTE that ~xxx/ has specified a full id, and so is handled by
- * fixup_fname() when we drop into the filename code.
+/* The screen width will be constant for each completion run */
+static struct cmpl_info {
+    db_dcl(match);
+    db_dcl(choices);    /* matches, OR error text */
+    db_dcl(mprefix);
+    int found;          /* -1 (error), 0, 1 or > 1 */
+    int choices_max;    /* In colums, not chars */
+    int full;
+} res = { db_str_initval, db_str_initval, db_str_initval, 0, 0, 0 };
+
+/* The 4 cmplt_* routines cannot run at the same time, so
+ * declare some control information to be static and initialize
+ * it for each one, which saves passign this around and alloc/freeing
+ * things.
  */
-#ifndef STANDALONE
-    if (run_id_finder) return id_finder();
-#endif
-
-    struct dirent *dp;
-    struct stat statbuf;
-
-/* Get the next directory entry, if no more, we finish */
-    if ((dp = readdir(dirptr)) == NULL) return NULL;
-
-    if ((allfiles ||
-         ((istrlen(dp->d_name) >= db_len(picture)) &&
-         (!strncmp(dp->d_name, db_val(picture), (size_t)db_len(picture))))) &&
-         (strcmp(dp->d_name, ".")) &&
-         (strcmp(dp->d_name, ".."))) {
-/* catenate fullname and d_name in glb_db */
-        db_set(glb_db, db_val(fullname));
-        db_append(glb_db, dp->d_name);
-        stat(db_val(glb_db), &statbuf);
-        type = (statbuf.st_mode & S_IFMT);
-        if ((type == S_IFREG)
-#ifdef S_IFLNK
-             || (type == S_IFLNK)
-#endif
-             || (type == S_IFDIR)) {
-            db_set(suggestion, dp->d_name);
-            if (type == S_IFDIR) db_append(suggestion, "/");
-            return db_val(suggestion);
-        }
-    }
-    return getnfile();
+static void init_cmplt(void) {
+    res.choices_max = term.t_ncol - 1;
+    db_set(res.mprefix, "");
+    db_set(res.choices, "");
+    res.found = 0;
+    res.full = 0;
 }
 
-/* Get the first matching filename.
- * Actually just sets things up so that getnfile() or id_finder()
- * can get it...
+/* All 4 completion functions have a common way to work out the maximum
+ * matching prefix, and the choices prompt.
  */
-static const char *getffile(const char *fspec_in) {
-    dirptr = NULL;          /* Initialise things */
+static int update_prompts(const char *np) {
 
-/* "'getpwent' in statically linked applications requires at runtime the
- * shared libraries from the glibc version used for linking"
- * But that can't happen and in the likely setting for a STANDALONE
- * version you won't be trying to lookup by id.
+    if (res.full < 0) return res.full;  /* In case caller forgot to check */
+
+/* Work out the maximum matching prefix with this one found */
+
+    if (res.found == 0) {
+        db_set(res.mprefix, np);
+    }
+    else if (db_len(res.mprefix) > 0) {
+        const char *ap = db_val(res.mprefix);
+        const char *bp = np;
+        while (*ap == *bp) {
+            if (!*++ap) break;
+            if (!*++bp) break;
+        }
+        db_truncate(res.mprefix, (int)(ap - db_val(res.mprefix)));
+    }
+    res.found++;
+
+/* Add to choices, unless that is full */
+    if (!res.full) {
+        db_append(res.choices, np);
+        db_append(res.choices, " ");
+        if (utf8_to_uclen(db_val(res.choices),  TRUE,
+            db_len(res.choices)) > res.choices_max) {
+            db_uctruncate(res.choices, res.choices_max);
+/* Append … elipsis */
+            char utf8[6];
+            int uclen = unicode_to_utf8(0x2026, utf8);
+            db_appendn(res.choices, utf8, uclen);
+            res.full = 1;
+        }
+    }
+
+/* Iff mprefix is now empty (no common prefix) AND the choices list
+ * is full then there is no point in looking at any other entries,
+ * as they can't change anything (excpet the res.found counter,
+ * which really only has a 0, 1, many value.
+ * So note this by returning -1.
+ * NOTE that this means all callers MUST check for this.
  */
+    if (res.full && (db_len(res.mprefix) == 0)) {
+        res.full = -1;
+    }
+    return res.full;
+}
+
+/* Entry point for filename completion
+ */
+static db_strdef(dirmark);
+#include <libgen.h>
+static void cmplt_file(db *name) {
+    int allents = 0;
+
+    init_cmplt();
+
 #ifndef STANDALONE
 
 /* Handle ~xxx by looking up all matching login ids.
  * NOTE that ~xxx/ has specified a full id, and that is handled by
- * fixup_fname().
+ * fixup_fname() later.
  */
-    if ((*fspec_in == '~') && (!strchr(fspec_in, '/'))) {
-        strncpy(id_to_find, fspec_in+1, 39);
-        terminate_str(id_to_find+39);   /* Ensure NUL terminated */
-        id_to_find_len = istrlen(id_to_find);
-        run_id_finder = 1;
+    if ((*dbp_val(name) == '~') && (!strchr(dbp_val(name), '/'))) {
+        char *id_to_find = strdupa(dbp_val(name)+1);
+        int id_to_find_len = istrlen(id_to_find);
+        allents = (id_to_find_len == 0);
+
+/* Handle ~xxx by looking up all login ids that match the prefix. */
+        struct passwd *pwe;
         setpwent();                 /* Start it off */
-        char *res = id_finder();
-/* If we don't find anything in pwd, drop into the file code
- * so we can find a file of that name, if one is there...
- * Since there is no matching id, fixup_fname() will leave it unchanged.
- */
-        if (res) return res;
+        errno = 0;
+        while ((pwe = getpwent())) {
+            if (allents ||
+                 !strncmp(pwe->pw_name, id_to_find, (size_t)id_to_find_len)) {
+                if (update_prompts(pwe->pw_name) < 0) break;
+            }
+        }
+        endpwent();
+        if (errno) {
+            db_sprintf(res.choices, "passwd lookup: %s", strerror(errno));
+            db_set(res.match, dbp_val(name));
+            res.found = -1;
+            return;
+        }
+        db_set(res.match, "~");
+        db_append(res.match, db_val(res.mprefix));
+        return;
     }
-    if (run_id_finder) endpwent();  /* In case it was opened earlier */
-    run_id_finder = 0;
 #endif
 
-/* From here on we need an editable copy */
-
-    char *fspec = strdupa(fspec_in);
-
-/* fixup_fname will strip any trailing '/'
- * This leads to a "loop", as the rest of this code would just add it back
- * and so we never get to the point of looking for entries within it.
- * So, if one is there on entry, put it back after fixup_fname does its work.
- * NOTE: that we check for the end offset being > 0, as that means "/" isn't
- * treated as a trailing slash.
+/* Is the user denoting name as a directory?.
+ * i.e, does it end with /, /. or /..
  */
-    int fspec_eoff = istrlen(fspec) - 1;
-    if (fspec_eoff && (fspec[fspec_eoff] == '/'))
-        terminate_str(fspec + fspec_eoff);
-    else
-        fspec_eoff = 0;         /* Just forget it... */
-/* fixup_fname now expands into an internal buffer.
- * Which is fine for us - all we do is (perhaps) append "/" and move one...
- * We can't just use fspec_eoff as the place to put put back a '/' as
- * the length may have changed!
- */
-    db_set(glb_db, fixup_fname(fspec));
-    if (fspec_eoff) db_addch(glb_db, '/');
-    db_set(directory, db_val(glb_db));
 
-    const char *p = strrchr(db_val(directory), '/');
-    if (p) {
-        p++;
-        db_set(picture, p);
-        db_truncate(directory, (int)(p - db_val(directory)));
-        db_set(fullname, db_val(directory));
+    int want_dir = FALSE;
+    const char *ep = dbp_val(name) + dbp_len(name) - 1;
+    int count = 3;
+    while (count-- && ep >= dbp_val(name)) {
+        if (*ep == '.') {
+            ep--;
+            continue;
+        }
+        if (*ep == '/') want_dir = TRUE;
+    }
+
+/* Canonicalize what we have. */
+
+    db_strdef(lookat);
+    db_set(lookat, fixup_fname(dbp_val(name)));
+
+/* Did the user say this was a directory?
+ * If so, append /., as fixup_fname will have stripped any trailing marker
+ */
+    if (want_dir) db_append(lookat, "/.");
+
+    char *dir = dirname(strdupa(db_val(lookat)));
+    char *stem = basename(strdupa(db_val(lookat)));
+
+    DIR *dirptr  = opendir(dir);
+    if (!dirptr) {
+        db_set(res.match, dir);
+        db_set(res.choices, strerror(errno));
+        res.found = -1;
+        return;
+    }
+    if (0 == strcmp(stem, ".")) {
+        stem = strdupa("");
+        allents = 1;
+    }
+    if (0 == strcmp(dir, ".")) {
+        db_set(res.match, "");
     }
     else {
-        db_set(picture, db_val(directory));
-        db_set(directory, "");
-        db_set(fullname,  "");
+        db_set(res.match, dir);
+        db_append(res.match, "/");
     }
 
-    if (db_len(directory) == 0) dirptr = opendir(".");
-    else                        dirptr = opendir(db_val(directory));
-    if (dirptr == NULL) return NULL;
+/* We now have the directory open, so loop through the entries
+ * finding matches to "stem".
+ * Once choices is more then the line length we can stop:
+ * if we have found more than one entry AND
+ * the longest common prefix is "".
+ */
+    struct dirent *dp;
+    struct stat statbuf;
+    int dir_found = 0;
+    int dfd = dirfd(dirptr);
+    while ((dp = readdir(dirptr)) != NULL) {
+        if ( (strcmp(dp->d_name, ".") == 0) ||
+             (strcmp(dp->d_name, "..") == 0) ) continue;
+        if (!allents &&
+             (strncmp(dp->d_name, stem, strlen(stem)))) continue;
 
-    allfiles = (db_len(picture) == 0);
+/* If this is a directory append / to the name that will show in choices */
 
-/* And return the first match (we return ONLY matches, for speed) */
-    return getnfile();
+        const char *np;
+        if (fstatat(dfd, dp->d_name, &statbuf, 0) == 0) {
+            if (S_ISDIR(statbuf.st_mode)) {
+                db_set(dirmark, dp->d_name);
+                db_append(dirmark, "/");
+                np = db_val(dirmark);
+            }
+            else {
+                np = dp->d_name;
+            }
+            if (update_prompts(np) < 0) break;
+        }
+    }
+    closedir(dirptr);
+    if (res.found == 0) db_set(res.choices, NOMATCH);
+    else                db_append(res.match, db_val(res.mprefix));
+
+/* This allows us to find a directory and then expand it with one <tab>,
+ * rather than needing two.
+ */
+    if (dir_found && (res.found == 1)) db_append(res.match, "/");
+    return;
 }
 
-/* getnbuffer() and getfbuffer()
- * Handle buffer name completion
- * Also handles userproc name completion, as those are just buffers with
- * names starting '/' and a type of BTPROC.
- * and phonetic translation table name completion, which are just buffers
- * with names starting '/' and a type of BTPHON.
+/* Entry point for buffer name (etc.) completion.
  */
+static void cmplt_buffer(db *name, enum cmplt_type mtype) {
 
-static const char *getnbuffer(const char *bpic, int bpiclen,
-     enum cmplt_type mtype) {
-    const char *retptr;
+    init_cmplt();
 
-    if (expandbp) {
-/* We NEVER return minibuffer buffers (//minibnnnn), and we return internal
+    for (struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+
+/* We NEVER match minibuffer buffers (//minibnnnn), and we return internal
  * /xx buffers only if the user asked for them by specifying a picture
  * starting with /.
  * For a type of CMPLT_PROC we only consider buffer-names starting with '/'
@@ -248,284 +279,108 @@ static const char *getnbuffer(const char *bpic, int bpiclen,
                 (mtype == CMPLT_PHON)) offset = 1;
             else                       offset = 0;
         if ((mtype == CMPLT_PROC &&
-              (expandbp->b_type != BTPROC || expandbp->b_bname[0] != '/' ||
-               expandbp->b_bname[1] == '/')) || /* Catch //kbd_macro */
+              (bp->b_type != BTPROC || bp->b_bname[0] != '/' ||
+               bp->b_bname[1] == '/')) ||   /* Catch //kbd_macro */
             (mtype == CMPLT_PHON &&
-              (expandbp->b_type != BTPHON || expandbp->b_bname[0] != '/')) ||
-            (strncmp(bpic, expandbp->b_bname + offset, (size_t)bpiclen)) ||
-            (!strncmp(expandbp->b_bname, "//minib", 7)) ||
-            ((expandbp->b_bname[0] == '[') && bpiclen == 0)) {
+              (bp->b_type != BTPHON || bp->b_bname[0] != '/')) ||
+            (strncmp(dbp_val(name), bp->b_bname + offset, (size_t)dbp_len(name))) ||
+            (!strncmp(bp->b_bname, "//minib", 7)) ||
+            ((bp->b_bname[0] == '[') && dbp_len(name) == 0)) {
+             continue;
+        }
 
-            expandbp = expandbp->b_bufp;
-            return getnbuffer(bpic, bpiclen, mtype);
-        }
-        else {
-            retptr = expandbp->b_bname + offset;
-            expandbp = expandbp->b_bufp;
-            return retptr;
-        }
+        const char *np = bp->b_bname + offset;
+        if (update_prompts(np) < 0) break;
     }
-    else
-        return NULL;
+    if (res.found == 0) db_set(res.choices, NOMATCH);
+    else                db_set(res.match, db_val(res.mprefix));
+    return;
 }
-/* getfbuffer is now a #define */
-#define getfbuffer(bpic, len, mtype) \
-    (expandbp = bheadp, getnbuffer(bpic, len, mtype))
 
-/* getnname() and getfname()
- * Handle internal command name completions.
- *
- * Just uses the sorted index to step through the names in order.
- * So for getfname() we just set things up then call getnname(), and
- * that keeps going until it finds the first match, if there.
- * On successive getnname() calls we return NULL as soon as we have no
- * match.
+/* Entry point for name and var completion.
+ * These are very similar.
+ * In particular they look through sorted values by index.
  */
-static int n_nidx;
-static const char *getnname(const char *name, int namelen) {
-    int noname_on_nomatch = (n_nidx != -1);
-    while ((n_nidx = nxti_name_info(n_nidx)) >= 0) {
-        if (strncmp(name, names[n_nidx].n_name, (size_t)namelen) == 0)
-            return names[n_nidx].n_name;
-        if (noname_on_nomatch) break;
-    }
-    return NULL;
-}
-/* First call has to find first match */
-#define getfname(name, len) (n_nidx = -1, getnname(name, len))
+static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
+    init_cmplt();
 
-/* getnvar() and getfvar()
- * Handle internal env/user variable completions.
- *
- * We build the env variable sort index in getfvar once
- * We build the user variable sort index in getfvar each time.
- * However iff the incoming text is blank we just want to show
- * $... %..., and if it doesn't start with $ or % we want to show no match.
- */
-extern int *envvar_index;
-extern int *usrvar_index;
-extern char *uvnames[];
-extern struct evlist evl[];
-
-/* Since we know the string will be copied immediately after return we
- * can just put it into a static buffer here
- */
-
-static char *varcat(char pfx, const char *name) {
-    static char pfxd_name[NVSIZE + 1];
-    pfxd_name[0] = pfx;
-    strcpy(pfxd_name+1, name);
-    return pfxd_name;
-}
-
-static int nul_state;   /* 0 = doing $, 1 = doing %, 2 = done */
-static int n_evidx, n_uvidx;
-static const char *getnvar(const char *name, int namelen) {
-    if (namelen == 0) {
-        if (nul_state == 1) {
-            nul_state = 2;
-            return "%...";
+    const char *np;
+    int nlen;
+    char first_ch;
+    if (ctype == CMPLT_VAR) {
+        first_ch = dbp_charat(name, 0);
+        if ((dbp_len(name) == 0) ||
+             ((first_ch != '$') && (first_ch != '%'))) {
+            db_set(res.match, "");
+            db_set(res.choices, "Input must start with $ or %");
+            res.found = -1;
+            return;
         }
-        else {
-            return NULL;
-        }
-    }
-    namelen--;      /* We don't compare the leading $ or % */
-    const char *mp = name + 1;
-    if (name[0] == '$') {
-/* -1 at end of list */
-        while ((n_evidx = nxti_envvar(n_evidx)) >= 0) {
-            if (strncmp(mp, evl[n_evidx].var, (size_t)namelen) == 0)
-                return varcat('$', evl[n_evidx].var);
-        }
-    }
-    if (name[0] == '%') {
-        while ((n_uvidx = nxti_usrvar(n_uvidx)) >= 0) {
-            if (strncmp(mp, uvnames[n_uvidx], (size_t)namelen) == 0)
-                return varcat('%', uvnames[n_uvidx]);
-        }
-    }
-    return NULL;
-}
 
-static const char *getfvar(const char *name, int namelen) {
-    nul_state = 0;
-    if (namelen == 0) {
-        nul_state = 1;
-        return "$...";
-    }
 /* Set up sort index and array */
-    if (name[0] == '$') {
-        if (envvar_index == NULL) init_envvar_index();
-        n_evidx = -1;
-    }
-    if (name[0] == '%') {
-        sort_user_var();
-        n_uvidx = -1;
-    }
-    return getnvar(name, namelen);
-}
-
-/* matcher()
- * A routine to do the matching for completion code.
- * The routine to get the next item to check is determined by mtype.
- */
-static int matcher(const char *name, int namelen, db *choices,
-      enum cmplt_type mtype) {
-    const char *next;           /* Next filename to look at */
-    int match_length;           /* Maximal match length     */
-    const char *p, *q;          /* Handy pointers           */
-    int max, l, unique;
-
-    match_length = db_len(so_far);
-
-/* Restrict length of returned string to number of columns, so that we
- * don't end up wrapping in the minibuffer line.
- */
-    max = term.t_ncol - 1;
-
-    l = (match_length < max) ? match_length : max;
-
-/* We also need to check we are not going to overflow the
- * destination buffer, and we have to allow for the final NUL
- */
-    dbp_set(choices, db_val(so_far));
-    max -= l;
-    unique = TRUE;
-    while (1) {         /* Rather than try to put the switch in there. */
-        switch(mtype) {
-        case CMPLT_FILE:
-            next = getnfile();
-            break;
-        case CMPLT_BUF:
-        case CMPLT_PROC:
-        case CMPLT_PHON:
-            next = getnbuffer(name, namelen, mtype);
-            break;
-        case CMPLT_NAME:
-            next = getnname(name, namelen);
-            break;
-        case CMPLT_VAR:
-            next = getnvar(name, namelen);
-            break;
-        default:        /* If mtype arrives oddly? */
-            next = NULL;
+        if (first_ch == '$') {
+            if (envvar_index == NULL) init_envvar_index();
         }
-        if (next == NULL) break;
-
-        unique = FALSE;
-/* This loop updates the maximum common prefix "so far" by comparing
- * it with this latest match.
- */
-        for (p = db_val(so_far), q = next, match_length = 0;
-            (*p && *q && (*p == *q)); p++, q++)
-            match_length++;
-        db_setcharat(so_far, match_length, 0);
-
-        l = istrlen(next);
-        if (max == 0) {
-            if (match_length == 0)
-                break;
+        else {  /* Sorted so we can exit loop early */
+            sort_user_var();
         }
-        else if (l < max) {
-            dbp_append(choices, " ");
-            dbp_append(choices, next);
-            max -= (l + 1);
+        np = dbp_val(name) + 1; /* Don't compare the leading $ or % */
+        nlen = (dbp_len(name) - 1);
+    }
+    else {  /* So CMPLT_NAME */
+        np = dbp_val(name);     /* Compare all of name */
+        nlen = dbp_len(name);
+    }
+
+/* nxti_* returns -1 at end of list.
+ * Variable names can take any value of character.
+ * But, if we increment the final byte of the stem we are looking for then
+ * anything >= to that cannot match the stem, as the names are sorted.
+ * A byte of 0xff is illegal in utf8...
+ */
+    char *limit;
+    if (nlen != 0) {    /* Fudge code to increment the final character. */
+        limit = strdupa(np);
+        char *lp = limit + nlen - 1;
+        (*lp)++;
+    }
+
+    int (*nvar_get)(int);
+    db_strdef(vn);      /* We have to prepend $ or % for update_prompts() */
+    if (ctype == CMPLT_VAR) {   /* first_ch already set */
+        if (first_ch == '$') nvar_get = nxti_envvar;
+        else                 nvar_get = nxti_usrvar;
+        db_set(vn, "");
+        db_addch(vn, first_ch);
+    }
+    else {
+                             nvar_get = nxti_name_info;
+    }
+    int vidx = -1;
+    while ((vidx = nvar_get(vidx)) >= 0) {
+        const char *vp;
+        if (ctype == CMPLT_VAR) {
+            if (nvar_get == nxti_envvar) vp = evl[vidx].var;
+            else                         vp = uvnames[vidx];
         }
         else {
-            l = (max - 1);
-            dbp_append(choices, " ");
-            dbp_appendn(choices, next, l);
-            max = 0;
+                                         vp = names[vidx].n_name;
         }
-    }
-    return unique;
-}
-
-/* Entry point for filename completion
- * Looks for things starting with name, and if there are multiple choices
- * builds a catenated string of them in choices.
- */
-static int comp_file(db *name, db *choices) {
-    const char *p;      /* Handy pointer */
-    int unique;
-
-    dbp_set(choices, "");
-
-    if ((p = getffile(dbp_val(name))) == NULL) {
-        close_dir();
-        mlwrite_one(NOMATCH);
-        sleep(1);
-        return FALSE;
-    }
-    else
-        db_set(so_far, p);
-
-    unique = matcher(dbp_val(name), 0, choices, CMPLT_FILE);
-    close_dir();
-
-    if (db_len(directory) > 0) {
-        dbp_set(name, db_val(directory));
-        dbp_append(name, db_val(so_far));
-    }
-    else dbp_set(name, db_val(so_far));
-
-/* If we found a single entry that begins with '~' and contains no '/'
- * pass it to fixup_fname() so that it can expand any login id to its
- * HOME dir. This mean that ~id gets expanded to $HOME, rather than just
- * looping with ~id in the buffer.
- * If this does happen (the leading ~ goes away) we append a '/'.
- */
-    if (unique) {
-        if ((dbp_charat(name, 0) == '~') && (!strchr(dbp_val(name), '/'))) {
-/* Make copy from fixup_fname()'s internal buffer back to the incoming
- * buffer.
- */
-            dbp_set(name, fixup_fname(dbp_val(name)));
-            if (dbp_charat(name, 0) != '~') dbp_addch(name, '/');
+        if ((nlen != 0) && (strcmp(vp , limit) > 0)) break;
+        if (strncmp(np, vp, (size_t)nlen) != 0) continue;
+        const char *upstr;
+        if (ctype == CMPLT_VAR) {
+            db_retailstr_at(vn, vp, 1);
+            upstr = db_val(vn);
         }
+        else {
+            upstr = vp;
+        }
+        if (update_prompts(upstr) < 0) break;
     }
-    return TRUE;
-}
-
-/* Generic entry point for completions where the getf* function selects
- * names from an internal list.
- * Use by mtype CMPLT_BUF/CMPLT_PROC and CMPLT_NAME.
- * The getf* function to use is determined by mtype.
- * Looks for things starting with name, and if there are multiple choices
- * builds a catenated string of them in choices.
- */
-static int comp_gen(db *name, db *choices, enum cmplt_type mtype) {
-    const char *p;      /* Handy pointer */
-    int namelen;
-
-    dbp_set(choices, "");
-    namelen = dbp_len(name);
-    switch(mtype) {
-    case CMPLT_BUF:
-    case CMPLT_PROC:
-    case CMPLT_PHON:
-        p = getfbuffer(dbp_val(name), namelen, mtype);
-        break;
-    case CMPLT_NAME:
-        p = getfname(dbp_val(name), namelen);
-        break;
-    case CMPLT_VAR:
-        p = getfvar(dbp_val(name), namelen);
-        break;
-    default:            /* If mtype arrives oddly? */
-        p = NULL;
-    }
-    if (p == NULL) {
-	mlwrite_one(NOMATCH);
-        sleep(1);
-        return FALSE;
-    }
-    db_set(so_far, p);
-    (void)matcher(dbp_val(name), namelen, choices, mtype);
-    dbp_set(name, db_val(so_far));
-
-    return TRUE;
+    if (res.found == 0) db_set(res.choices, NOMATCH);
+    else                db_set(res.match, db_val(res.mprefix));
+    return;
 }
 
 /* tgetc:   Get a key from the terminal driver.
@@ -582,27 +437,6 @@ unicode_t tgetc(void) {
 
 /* And finally give the char back */
     return c;
-}
-
-/* Entry point for buffer name completion. And userprocs.
- * Front-end to comp_gen().
- */
-static int comp_buffer(db *name, db *choices, enum cmplt_type mtype) {
-    return comp_gen(name, choices, mtype);
-}
-
-/* Entry point for internal command name completion
- * Front-end to comp_gen().
- */
-static int comp_name(db *name, db *choices) {
-    return comp_gen(name, choices, CMPLT_NAME);
-}
-
-/* Entry point for internal environment/user var completion
- * Front-end to comp_gen().
- */
-static int comp_var(db *name, db *choices) {
-    return comp_gen(name, choices, CMPLT_VAR);
 }
 
 /* get1key: Get one keystroke.
@@ -1001,6 +835,7 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
 
 /* We need to block SIGWINCH until we have set-up all of the variables
  * we need after the longjmp.
+ * NOTE that this means we need to restore thigs on EVERY return!
  */
     sigset_t sigwinch_set, incoming_set;
     sigemptyset(&sigwinch_set);
@@ -1079,7 +914,10 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     if (mpresf) mlerase();
     mberase();
 
-    if (!swbuffer(bp, 0)) return FALSE;
+    if (!swbuffer(bp, 0)) {
+        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
+        return FALSE;
+    }
 
     curwp->w_toprow = term.t_mbline;
     curwp->w_ntrows = 1;
@@ -1158,7 +996,7 @@ loop:
 
     remap_c_on_intr = 1;
     c = getcmd();
-/* We get UEM_NOCHAR back on a sigwin signal. */
+/* We get UEM_NOCHAR back on a SIGWINCH signal. */
     remap_c_on_intr = 0;
     if (c == UEM_NOCHAR) goto loop;
 
@@ -1169,64 +1007,65 @@ loop:
  */
     com_arg *carg = multiplier_check(c);
 
-/* Various completion code options
- * Usually a list of matches is temporarily displayed in the minibuffer.
- * THIS ONLY USES THE TEXT ON THE CURRENT LINE, and uses ALL OF IT.
- * (The CMPLT_SRCH handling is a little different. Not really a
- * completion, but it fits nicely into this placement.
- */
-    if (carg->c == (CONTROL|'I')) {
+/* Some "hard-wired" key-bindings - aka minibuffer specials. */
+
+    do_evaluate = FALSE;
+    switch(carg->c) {           /* The default is to do nothing here */
+    case CONTROL|'I': {
         if (ctype == CMPLT_SRCH) {
             rotate_sstr(carg->n);
             goto post_exec;
         }
+/* Various completion code options
+ * Usually a list of matches is temporarily displayed in the minibuffer.
+ * THIS ONLY USES THE TEXT ON THE CURRENT LINE, and uses ALL OF IT.
+ */
         lp = curwp->w.dotp;
         sp = ltext(lp);
-/* NSTRING-1, as we need to add a trailing NUL */
-        int expanded;
         db_setn(tstring, sp, lused(lp));
+        int do_display = 1;
         switch(ctype) {
-        case CMPLT_FILE:
-            expanded = comp_file(&tstring, &choices);
+        case CMPLT_FILE: {
+            cmplt_file(&tstring);
             break;
+        }
         case CMPLT_BUF:
         case CMPLT_PROC:
-        case CMPLT_PHON:
-            expanded = comp_buffer(&tstring, &choices, ctype);
+        case CMPLT_PHON: {
+            cmplt_buffer(&tstring, ctype);
             break;
-        case CMPLT_NAME:
-            expanded = comp_name(&tstring, &choices);
-            break;
-        case CMPLT_VAR:
-            expanded = comp_var(&tstring, &choices);
-            break;
-        default:            /* Do nothing... */
-            expanded = 0;
         }
-        if (expanded) {
-            savdoto = curwp->w.doto;
-            curwp->w.doto = 0;
-            ldelete((ue64I_t) lused(lp), FALSE);
-            linstr(db_val(tstring));
+        case CMPLT_NAME:
+        case CMPLT_VAR: {
+            cmplt_name_or_var(&tstring, ctype);
+            break;
+        }
+        default:            /* Do nothing... */
+            do_display = 0;
+            break;
+        }
+        if (do_display) {
+/* NOTE that we leave what was there if nothing matches */
+            if (res.found != 0) {
+                savdoto = curwp->w.doto;
+                curwp->w.doto = 0;
+                ldelete((ue64I_t)lused(lp), FALSE);
+                linstr(db_val(res.match));
+            }
 /* Don't bother with this when playing a macro - that just results
  * in an unnecessary pause from the sleep().
  */
-            if ((db_len(choices) > 0) && (kbdmode != PLAY)) {
-                mlwrite_one(db_val(choices));
+            if ((db_len(res.choices) > 0) && (kbdmode != PLAY)) {
+                mlwrite_one(db_val(res.choices));
 /* We're about to goto post_exec, which will pause as mpresf will
- * be set, Add an extra pause if we're over a certainn length.
+ * be set, Add an extra pause if we're over a certain length.
  */
-                if (db_len(choices) >= 42) sleep(1);
+                if (db_len(res.choices) >= 42) sleep(1);
             }
         }
         else TTbeep();
         goto post_exec;
     }
-
-/* Some "hard-wired" key-bindings - aka minibuffer specials. */
-
-    do_evaluate = FALSE;
-    switch(carg->c) {           /* The default is to do nothing here */
     case META|CONTROL|'I':      /* Only act for CMPLT_SRCH */
         if (ctype == CMPLT_SRCH) rotate_sstr(-(carg->n));
         goto post_exec;
@@ -1312,18 +1151,24 @@ abort:
  */
     sigprocmask(SIG_BLOCK, &sigwinch_set, NULL);
 
-    if (!swbuffer(bp, 0))   /* Make sure we're still in our minibuffer */
-        return FALSE;
+    if (!swbuffer(bp, 0)) { /* Make sure we're still in our minibuffer */
+        status = FALSE;
+        goto rewinch_and_exit;
+    }
     unmark(TRUE, 1);
 
     if (--mb_info.mbdepth) {    /* Back to previous mini-buffer */
-        if (!swbuffer(cb, 0))   /* Switch to its buffer... */
-            return FALSE;
+        if (!swbuffer(cb, 0)) { /* Switch to its buffer... */
+            status = FALSE;
+            goto rewinch_and_exit;
+        }
         *curwp = wsave;         /* ...and its window info */
     }
     else {                      /* Leaving minibuffer */
-        if (!swbuffer(mb_info.main_bp, 0))  /* Switch back to main buffer */
-            return FALSE;
+        if (!swbuffer(mb_info.main_bp, 0)) {/* Switch back to main buffer */
+            status = FALSE;
+            goto rewinch_and_exit;
+        }
         curwp = mb_info.main_wp;    /* Reset window info ptr */
         wheadp = mb_info.wheadp;    /* Reset window list */
         inmb = FALSE;               /* Note we have left mb */
@@ -1341,23 +1186,27 @@ abort:
         TTflush();
     }
 
-/* We need to re-instate the original handler now... */
-    sigaction(SIGWINCH, &oldact, NULL);
-    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
-
     db_free(procopy);
     db_free(choices);
     db_free(tstring);
 
 /* If this is a CMPLT_FILE type then we have a filename.
  * So run fixup_fname() on  it for consistent returns - if no
- * tabbing was done it won't have ever been expanded and we might
- * have something like ~/x/test.
+ * tabbing was done (or text was added after the last tabbing) then it
+ * won't have ever been expanded and we might have something like ~/x/test.
+ * This does mean that any "/" we've appended to indicate a directory
+ * will disappear, but that's OK as that is only for visual marking in the
+ * minibuffer.
  */
     if (ctype == CMPLT_FILE) {
         db_set(glb_db, fixup_fname(dbp_val(buf)));
         dbp_set(buf, db_val(glb_db));
     }
+
+rewinch_and_exit:
+/* We need to re-instate the original handler now... */
+    sigaction(SIGWINCH, &oldact, NULL);
+    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 
     return status;
 }
@@ -1369,12 +1218,11 @@ abort:
 void free_input(void) {
     Xfree(mb_winp);
 
-    db_free(directory);
-    db_free(picture);
-    db_free(so_far);
-    db_free(fullname);
-    db_free(suggestion);
     db_free(prmpt_buf.prompt);
+
+    db_free(res.match);
+    db_free(res.choices);
+    db_free(res.mprefix);
 
     return;
 }

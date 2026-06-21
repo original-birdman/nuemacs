@@ -9228,3 +9228,13 @@ line.c
     Remove incorrect comment about argument checking for linsert_byte()
     now that -Wconversion -Wsign-conversion -Wwrite-strings flags are
     used).
+
+input.c
+    Complete re-write of completion code to use loops rather than
+    recusrion. New code is much simpler to understand.
+    Removed id_finder(), getffile(), getnbuffer(), getfbuffer(),
+    getnname(), getfname(), varcat(), getnvar(), getfvar(), matcher(),
+    comp_file(), comp_gen(), comp_buffer(), comp_name() and comp_var().
+    Added init_cmplt(), update_prompts(), cmplt_file(), cmplt_buffer()
+    and cmplt_name_or_var().
+    Also ensured that SIGWINCH is reenabled on all exits from getstring().
