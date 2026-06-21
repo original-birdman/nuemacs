@@ -236,9 +236,7 @@ int lnewline(void) {
  * well, and FALSE on errors.
  *
  * This is only intended by ASCII 8-bit bytes (linsert_uc is for unicode
- * points), so this includes a check for that.
- * This call is wrapped in a #defined to ensure that the incoming char
- * is mapped to unsgined.
+ * points)
  */
 int linsert_byte(int n, char c) {
     struct line *lp1;

@@ -9223,3 +9223,8 @@ eval.c
 evar.h
     Declare next_envvar_index as static. [eval.c]
     Extend comment to mention how evlist is used. [evar.h]
+
+line.c
+    Remove incorrect comment about argument checking for linsert_byte()
+    now that -Wconversion -Wsign-conversion -Wwrite-strings flags are
+    used).
