@@ -8,8 +8,11 @@
 #ifndef EVAR_H_
 #define EVAR_H_
 
-/* List of recognized environment variables. */
-
+/* List of recognized environment variables.
+ * This file is only included into eval.c.
+ * However, evlist is declared as external in input.c for
+ * environment variable completion.
+ */
 struct evlist evl[] = {
  { "fillcol",   EVFILLCOL },    /* current fill column */
  { "pagelen",   EVPAGELEN },    /* number of lines used by editor */

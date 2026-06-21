@@ -9218,3 +9218,8 @@ dyn_buf.h
     (glyphs). [dynbuf.c, dynbuf.h]
     Change the db(p)_(case)cmp(n) functions into #defines. [dynbuf.c,
     dynbuf.h]
+
+eval.c
+evar.h
+    Declare next_envvar_index as static. [eval.c]
+    Extend comment to mention how evlist is used. [evar.h]

@@ -118,7 +118,7 @@ void varinit(void) {
  */
 
 int *envvar_index = NULL;
-int *next_envvar_index;
+static int *next_envvar_index;
 static int evl_size = ARRAY_SIZE(evl);
 
 /* env var ($...) sorting */
