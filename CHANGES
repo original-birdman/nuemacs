@@ -9201,4 +9201,8 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.193
     
-==========
+========== GGR4.194
+
+bind.c
+    Fix output in deskey() to use a buffer, output once.
+    Otherwise each mlwrite_one() overwrites the previous one.

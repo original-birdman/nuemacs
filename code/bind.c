@@ -529,7 +529,6 @@ struct key_tab *getbind(int c) {
 int deskey(int f, int n) {
     UNUSED(f); UNUSED(n);
     int c;              /* key to describe */
-    const char *ptr;    /* string pointer to scan output strings */
 
 /* Prompt the user to type us a key to describe */
     mlwrite_one(": describe-key ");
@@ -545,27 +544,29 @@ int deskey(int f, int n) {
     mlwrite_one(cmdstr(c));
     mlwrite_one(" ");
 
+    db_strdef(op);
 /* Find the right function */
     struct key_tab *ktp = getbind(c);
-    if (!ktp) ptr = "Not Bound";
+    if (!ktp) {
+        db_set(op, "Not Bound");
+    }
     else {
-        ptr = ktp->fi->n_name;
+        db_set(op, "");
 /* Display a possible multiplier */
         if (ktp->bk_multiplier != 1) {
-            char tbuf[16];
-            sprintf(tbuf, "{%d}", ktp->bk_multiplier);
-            mlwrite_one(tbuf);
+            db_sprintf(op, "{%d} ", ktp->bk_multiplier);
+        }
+        db_append(op, ktp->fi->n_name);
+/* Add buffer-name, if relevant */
+        if (ktp->k_type == PROC_KMAP) {
+            db_append(op, " ");
+            db_append(op, (ktp->hndlr.pbp));
         }
     }
 
 /* Output the function name */
-    mlwrite_one(ptr);
-
-/* Add buffer-name, if relevant */
-    if (ktp && ktp->k_type == PROC_KMAP) {
-        mlwrite_one(" ");
-        mlwrite_one(ktp->hndlr.pbp);
-    }
+    mlwrite_one(db_val(op));
+    db_free(op);
     if (inmb) TTflush();    /* Need this if we are in the minibuffer */
     mpresf = TRUE;          /* GGR */
     return TRUE;
