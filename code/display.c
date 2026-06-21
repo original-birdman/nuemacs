@@ -281,7 +281,9 @@ void vtinit(void) {
     vp->v_flag = 0;
 #if COLOR
 /* GGR - use defined colors */
+    vp->v_fcolor = gfcolor;
     vp->v_rfcolor = gfcolor;
+    vp->v_bcolor = gbcolor;
     vp->v_rbcolor = gbcolor;
 #endif
     for (i = 0; i < term.t_mcol; i++) vp->v_text[i] = blank_gph;

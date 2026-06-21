@@ -9200,7 +9200,7 @@ file.c
 etc/uemacs.hlp
 version.h
     Update to GGR4.193
-    
+
 ========== GGR4.194
 
 bind.c
@@ -9212,12 +9212,12 @@ dyn_buf.h
     Disable SIGWINCH around Xrealloc() call and ds->buf/asp setting.
     [dyn_buf.c]
     Add _dbp_retailstr_at() to overwrite the tail of a string with
-    extending or truncating. [dynbuf.c, dynbuf.h]
+    extending or truncating. [dyn_buf.c, dyn_buf.h]
     Correct the range check in _dbp_truncate(). [dyn_buf.c]
     Add _dbp_uctruncate(), to truncate at <n> Unicode characters
-    (glyphs). [dynbuf.c, dynbuf.h]
-    Change the db(p)_(case)cmp(n) functions into #defines. [dynbuf.c,
-    dynbuf.h]
+    (glyphs). [dyn_buf.c, dyn_buf.h]
+    Change the db(p)_(case)cmp(n) functions into #defines. [dyn_buf.c,
+    dyn_buf.h]
 
 eval.c
 evar.h
@@ -9231,10 +9231,14 @@ line.c
 
 input.c
     Complete re-write of completion code to use loops rather than
-    recusrion. New code is much simpler to understand.
+    recursion. New code is much simpler to understand.
     Removed id_finder(), getffile(), getnbuffer(), getfbuffer(),
     getnname(), getfname(), varcat(), getnvar(), getfvar(), matcher(),
     comp_file(), comp_gen(), comp_buffer(), comp_name() and comp_var().
     Added init_cmplt(), update_prompts(), cmplt_file(), cmplt_buffer()
     and cmplt_name_or_var().
     Also ensured that SIGWINCH is reenabled on all exits from getstring().
+
+display.c
+    Set the vscreen v_fcolor and v_bcolor values in vtinit, after seeing
+    a valgrind warning when testing completion after window resizing.
