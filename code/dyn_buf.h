@@ -65,18 +65,22 @@ void _dbp_replicatech_at(db *, char, int, int);
 void _dbp_insertn_at(db *, const void *, int, int);
 void _dbp_deleten_at(db *, int, int);
 void _dbp_overwriten_at(db *, const void *, int, int);
+void _dbp_retailstr_at(db *, const char *, int);
 void _dbp_bufset(db *, const char, int);
 void _dbp_clear(db *);
 void _dbp_truncate(db *, int);
+void _dbp_uctruncate(db *, int);
 void _dbp_appendn(db *, const char *, int);
 void _dbp_append(db *, const char *);
 void _dbp_addch(db *, const char);
 char _dbp_charat(db *, int);
 void _dbp_setcharat(db *, int, char c);
-int _dbp_cmp(db *, const char *);
-int _dbp_cmpn(db *, const char *, int);
-int _dbp_casecmp(db *, const char *);
-int _dbp_casecmpn(db *, const char *, int);
+
+/* Currently just simple defines */
+#define _dbp_cmp(ds, str) strcmp((ds)->buf, str)
+#define _dbp_cmpn(ds, str, n) strncmp((ds)->buf, str, (size_t)(n))
+#define _dbp_casecmp(ds, str) strcasecmp((ds)->buf, str)
+#define _dbp_casecmpn(ds, str, n) strncasecmp((ds)->buf, str, (size_t)(n))}
 
 void _dbp_upval(db *, const char *);
 
@@ -116,11 +120,19 @@ void _dbp_free(db *);
 #define dbp_overwriten_at(to_ds, from_buf, flen, w) \
      _dbp_overwriten_at((to_ds), from_buf, flen, w)
 
+#define db_retailstr_at(to_ds, ntail, nlen) \
+     _dbp_retailstr_at(&(to_ds), ntail, nlen)
+#define dbp_retailstr_at(to_ds, ntail, nlen) \
+     _dbp_retailstr_at((to_ds), ntail, nlen)
+
 #define db_clear(ds) _dbp_clear(&(ds))
 #define dbp_clear(ds) _dbp_clear((ds))
 
 #define db_truncate(ds, n) _dbp_truncate(&(ds), n)
 #define dbp_truncate(ds, n) _dbp_truncate((ds), n)
+
+#define db_uctruncate(ds, n) _dbp_uctruncate(&(ds), n)
+#define dbp_uctruncate(ds, n) _dbp_uctruncate((ds), n)
 
 #define db_appendn(to_ds, add, applen) _dbp_appendn(&(to_ds), add, applen)
 #define dbp_appendn(to_ds, add, applen) _dbp_appendn((to_ds), add, applen)

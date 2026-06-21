@@ -36,9 +36,24 @@ static void _dbp_realloc(db *ds, size_t need) {
         illegal_dbaction("Attempt to allocate too long a buffer");
     }
     size_t offset = (size_t)(ds->asp - ds->buf);
+
+/* Wish to ensure that buf, asp and alloc are updated correctly
+ * even if a SIGWINCH signal arrives after the realloc but
+ * before the settings.
+ * Unlikely, but...
+ */
+    sigset_t sigwinch_set, incoming_set;
+    sigemptyset(&sigwinch_set);
+    sigaddset(&sigwinch_set, SIGWINCH);
+    sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
+
     ds->buf = Xrealloc(ds->buf, want);
     ds->asp = ds->buf + offset;
     ds->alloc = want;
+
+/* Now we can re-enable the signal */
+
+    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
     return;
 }
 
@@ -50,7 +65,7 @@ const char *_dbp_val_nc(db *ds) {
     return ds->asp? ds->asp: "";
 }
 
-/* Set value to the n bytes. Neverf more than an int for n */
+/* Set value to the n bytes. Never more than an int for n */
 
 void _dbp_setn(db *ds, const void *mp, int n) {
     size_t need = (size_t)n;
@@ -123,7 +138,7 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
 }
 
 /* Overwrite n chars at offset.
- * The full length must already be valid for the target.
+ * The full length MUST ALREADY be valid for the target!
  */
 void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
 
@@ -131,6 +146,29 @@ void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
     if (((ds->blen - ds->alen) > offs) || ((offs + n) > ds->blen))
         illegal_dbaction("Illegal db overwriten");
     memmove(ds->buf+offs, mp, (size_t)n);
+    return;
+}
+
+/* Update the "tail" from an offset.
+ * Used when you want a standard prefix, but want to change the
+ * rest of the buffer (in a loop?).
+ * This can extend the length of the buffer.
+ */
+void _dbp_retailstr_at(db *ds, const char *ntail, int offs) {
+
+/* We mustn't change anything from before the "actual start pointer". */
+    if ((ds->blen - ds->alen) > offs) illegal_dbaction("Illegal db retailstr");
+
+    size_t tlen = strlen(ntail);
+    size_t need = tlen + (size_t)offs;
+    if (ds->type & DB_STR) need++;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
+
+    memmove(ds->buf+offs, ntail, tlen);
+    int diff = (int)(ds->asp - ds->buf);
+    ds->blen = offs + (int)tlen;
+    ds->alen = ds->blen - diff;
+    if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
     return;
 }
 
@@ -166,12 +204,31 @@ void _dbp_clear(db *ds) {
  */
 void _dbp_truncate(db *ds, int n) {
 /* We mustn't change anything from before the "actual start pointer". */
-    if (((ds->blen - ds->alen) > n) || (n > ds->blen)) {
+    int offset = ds->alen - ds->blen;
+    if ((offset > n) || (n > ds->blen)) {
         illegal_dbaction("Illegal db truncate");
     }
-    size_t offset = (size_t)(ds->asp - ds->buf);
     ds->blen = n;
-    ds->alen = n - (int)offset;
+    ds->alen = n - offset;
+    if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
+    return;
+}
+
+/* Truncate a value after n Unicode chars.
+ * We do not need any more space for this.
+ */
+void _dbp_uctruncate(db *ds, int n) {
+
+    int bpos = 0;;
+    while (n--) {
+        bpos = next_utf8_offset(ds->buf, bpos, ds->blen, TRUE);
+        if (bpos < 0) illegal_dbaction("Illegal db Unicode truncate");
+    }
+/* We mustn't change anything from before the "actual start pointer". */
+    ds->alen = bpos - (int)(ds->asp - ds->buf);
+    ds->blen = bpos;
+    if ((ds->alen < 0) || (ds->blen < 0))
+         illegal_dbaction("Illegal db Unicode truncate");
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
     return;
 }
@@ -241,24 +298,6 @@ void _dbp_setcharat(db *ds, int w, char c) {
         ds->alen = w - (int)(ds->asp - ds->buf);
     }
     return;
-}
-
-/* Compare a string.
- * The non-n versions only make sense for DB_STR buffers.
- * GML - MAKE THESE #defines?
- */
-
-int _dbp_cmp(db *ds, const char *str) {
-    return strcmp(ds->buf, str);
-}
-int _dbp_cmpn(db *ds, const char *str, int n) {
-    return strncmp(ds->buf, str, (size_t)n);
-}
-int _dbp_casecmp(db *ds, const char *str) {
-    return strcasecmp(ds->buf, str);
-}
-int _dbp_casecmpn(db *ds, const char *str, int n) {
-    return strncasecmp(ds->buf, str, (size_t)n);
 }
 
 /* Update the actual string pointer and, from it, the length left.

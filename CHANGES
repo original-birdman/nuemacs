@@ -9206,3 +9206,15 @@ version.h
 bind.c
     Fix output in deskey() to use a buffer, output once.
     Otherwise each mlwrite_one() overwrites the previous one.
+
+dyn_buf.c
+dyn_buf.h
+    Disable SIGWINCH around Xrealloc() call and ds->buf/asp setting.
+    [dyn_buf.c]
+    Add _dbp_retailstr_at() to overwrite the tail of a string with
+    extending or truncating. [dynbuf.c, dynbuf.h]
+    Correct the range check in _dbp_truncate(). [dyn_buf.c]
+    Add _dbp_uctruncate(), to truncate at <n> Unicode characters
+    (glyphs). [dynbuf.c, dynbuf.h]
+    Change the db(p)_(case)cmp(n) functions into #defines. [dynbuf.c,
+    dynbuf.h]
