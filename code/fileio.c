@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 
 #define FILEIO_C
 
@@ -145,7 +146,7 @@ int ffwopen(const char *fn) {
  *     => We do not want to add a newline if there wasn't one originally.
  *
  * We can detect 2. by checking for cryptflag && curbp->b_EOLmissing.
- * We also need to code make a heuristic check between a text and binary file.
+ * We also need code to make a heuristic check between a text and binary file.
  * file_is_binary() is only called when we are writing the first cache block,
  * so rst is still 0 and len is the real valid length.
  */
@@ -238,11 +239,12 @@ int ffputline(const char *buf, int nbuf) {
     static int doing_newline = 0;
     int status;
 
-/* Now add the newline, which we won't have been sent
- * It's convenient to do this via a recursive call, provided we
- * note that we are doing it, so don't continue to do so...
+/* If we've been called with this specific value for buf (an invalid pointer,
+ * used by mmap() to indicate an error), just flush what is left.
+ * This allows us to be called with buf == NULL and nbuf == 0 for
+ * an empty line.
  */
-    if (buf == NULL) {      /* Just flush what is left... */
+    if (buf == MAP_FAILED) {    /* Just flush what is left... */
         const char *reason = NULL;
         if (curbp->b_EOLmissing) {
             if (cryptflag) reason = "crypt";
@@ -261,6 +263,7 @@ int ffputline(const char *buf, int nbuf) {
  * once cost two minutes before the empty-line bug was fixed).
  */
             mlforce("Removed \"added\" trailing newline for %s file", reason);
+            sleep(1);   /* "Wrote <n> lines" will overwrite minibuffer */
         }
         else {
             if (cache.rst != 0 && !doing_newline) {
@@ -276,7 +279,11 @@ int ffputline(const char *buf, int nbuf) {
         return flush_write_cache();
     }
 
-/* If not the first call for an output file, add a newline */
+/* If not the first call for an output file add a newline,
+ * which we won't have been sent
+ * It's convenient to do this via a recursive call, provided we
+ * note that we are doing it, so don't continue to do so..
+ */
     if (cache.rst != 0 && !doing_newline) {
         doing_newline = 1;
         if ((curbp->b_mode & MDDOSLE) == 0)
@@ -295,7 +302,7 @@ int ffputline(const char *buf, int nbuf) {
         memcpy(cache.buf+cache.len, buf, (size_t)to_fill);
 
 /* Check the first FILE_START_LEN bytes once we have them.
- * Once the chekc has run file_type will be set to non-zero.
+ * Once the check has run file_type will be set to non-zero.
  */
         if (!file_type && (cache.len >= FILE_START_LEN)) {
             file_type = file_is_binary();

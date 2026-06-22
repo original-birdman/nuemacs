@@ -15,6 +15,7 @@
 #if __sun
 #include <alloca.h>
 #endif
+#include <sys/mman.h>
 
 #define FILE_C
 
@@ -1013,7 +1014,7 @@ int writeout(const char *fn) {
         lp = lforw(lp);
     }
     if (s == FIOSUC) {                      /* No write error.      */
-        ffputline(NULL, 0);                 /* Must flush write cache!! */
+        ffputline(MAP_FAILED, 0);           /* Must flush write cache!! */
         s = ffclose();
         if (s == FIOSUC) {                  /* No close error.      */
             mlwrite(MLbkt("Wrote %d line%s"), nline, (nline == 1)? "": "s");

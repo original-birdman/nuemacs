@@ -34,12 +34,12 @@ struct line {
 #define lused(lp)       (db_len(lp->l_))
 #define lsize(lp)       (db_max(lp->l_))
 /* Empty lines (lalloc()'d but never appended-to) have l_.val == NULL.
- * Substitute "" so callers never see NULL and accidentally trip code
- * paths that use NULL as a sentinel (e.g. ffputline's "final flush"
- * mode), which would cause empty-line saves to sleep for one second
- * each on this file.
+ * Any users of this define MUST be aware of that.
+ * If in doubt, use ltext_chk(), but be aware that this means you might
+ * end up using the constant "" (or that's what the compiler thinks).
  */
-#define ltext(lp)       (db_val(lp->l_)? db_val(lp->l_): "")
+#define ltext(lp)       (db_val(lp->l_))
+#define ltext_chk(lp)   (db_val(lp->l_)? db_val(lp->l_): "")
 #define ldb(lp)         (lp->l_)
 
 /* Externally visible calls */

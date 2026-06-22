@@ -9242,3 +9242,16 @@ input.c
 display.c
     Set the vscreen v_fcolor and v_bcolor values in vtinit, after seeing
     a valgrind warning when testing completion after window resizing.
+
+file.c
+fileio.c
+line.h
+    Redid Claude's ltext define change for slow empty-line write-out
+    to set ltext() back to what it was, and change the buf mark for
+    flushing to be the mmap() MAP_FAILED setting.
+    This avoids the possibility of generating ""+1 via the ltext
+    expansion.
+    Change NULL to MAP_FAILED [file.c, fileio.c]
+    Readded the sleep() aftre noting a trailing newline was removed
+    [fileio.c]
+    Revert the ltext() define and add an ltext_chk() one. [line.h]
