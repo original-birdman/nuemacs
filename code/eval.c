@@ -447,10 +447,23 @@ static const char *ptt_expand(db *str) {
     struct buffer *sbp = curbp; /* save the old buffer */
     swbuffer(bp, 0);
     bp->b_mode = curbp->b_mode; /* Set mode to my original mode */
-    linstr(dbp_val(str));       /* Add string */
-    backdel(0, 1);              /* Remove last grapheme */
-                                /* Re-add via handler */
-    ptt_handler(dbp_charat(str, dbp_len(str)-1), FALSE);
+
+/* Any ptt handling will happen when the last Unicode character arrives
+ * as that is how text arrives you cannot type a multi-uchar grapheme
+ * as a single entity)
+ * So we need to remove the final Unicode char (NOGT grapheme!), insert
+ * what we have left, then add the removed char using the ptt_handler()
+ * We currently have utf8.
+ */
+
+    int offs = prev_utf8_offset(dbp_val(str), dbp_len(str), FALSE);
+    if (offs < 0) return db_val(pttres);    /* ?? */
+    char *final_unicodep = strdupa(dbp_val(str)+offs);  /* Copy final char */
+    dbp_truncate(str, offs);
+    linstr(dbp_val(str));       /* Add what is left of string */
+    unicode_t fuc;
+    (void)utf8_to_unicode(final_unicodep, 0, 4, &fuc);
+    ptt_handler(fuc, FALSE);    /* Add final char using handler */
 
 /* Allow for the expansion being multi-line */
 

@@ -58,6 +58,10 @@ store-pttable test
     caseset-off
     f`  f-backquote
     f'  f-apostrophe
+    caseset-off
+    £   UK~ Pound
+    ñ   n+combining-diacritic-~~
+
 !endm
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
@@ -183,8 +187,17 @@ set %expected .test
 set %got &ptx .test
 run check-expansion
 
+set .test "£"
+set %curtest &cat "£ (unicode) expand: " .test
+set %expected "UK Pound"
+set %got &ptx .test
+run check-expansion
 
-
+set .test "ñ"
+set %curtest &cat "Combining diaresis expand (n+~): " .test
+set %expected "n+combining-diacritic-~~"
+set %got &ptx .test
+run check-expansion
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 select-buffer test-reports

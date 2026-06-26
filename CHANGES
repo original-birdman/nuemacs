@@ -9273,3 +9273,10 @@ word.c
     In group_match(), only copy line text if there is some [search.c]
     Handle incoming NULL, len args in _dbp_setn(0 and _dbp_appendn()
     [dyn_buf.c]
+
+eval.c
+exec.c
+autotest/ptt_tables.sh
+    Fix ptt_expand() to handle a final Unicode char, not a (byte) char
+    and add additonal tests to check this. [eval.c. ptt_tables.sh]
+    Updated comment in ptt_handler() [exec.c]

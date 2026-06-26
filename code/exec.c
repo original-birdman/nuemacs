@@ -866,6 +866,10 @@ int ptt_handler(int c, int remove_on_no_match) {
     for (struct ptt_ent *ptr = ptt->ptt_headp; ptr; ptr = ptr->nextp) {
         unicode_t wc = c;       /* A working copy */
         if (ptr->caseset != CASESET_OFF) wc = utf8proc_tolower(wc);
+
+/* If the Unicode char given is NOT the final character of a
+ * translation key, then it cannot match.
+ */
         if (ptr->final_uc != wc) continue;
 
 /* We need to know where <n> unicode chars back starts.
