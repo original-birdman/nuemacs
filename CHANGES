@@ -9294,3 +9294,9 @@ edef.h
     Remove the no longer needed final NULL entry from names. [names.c]
     Make names_size and name_index global, [names.c, edef.h]
     Make evl_size global. [eval.c, edef.h]
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.194
+
+==========
