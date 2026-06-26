@@ -9252,7 +9252,7 @@ line.h
     This avoids the possibility of generating ""+1 via the ltext
     expansion.
     Change NULL to MAP_FAILED [file.c, fileio.c]
-    Readded the sleep() aftre noting a trailing newline was removed
+    Readded the sleep() after noting a trailing newline was removed
     [fileio.c]
     Revert the ltext() define and add an ltext_chk() one. [line.h]
 
@@ -9271,15 +9271,26 @@ word.c
     Audit of ltext() usage.
     Changed some to ltext_chk() [eval.c, input,c, word.c]
     In group_match(), only copy line text if there is some [search.c]
-    Handle incoming NULL, len args in _dbp_setn(0 and _dbp_appendn()
+    Handle incoming NULL, len args in _dbp_setn() and _dbp_appendn()
     [dyn_buf.c]
 
 eval.c
 exec.c
 autotest/ptt_tables.sh
     Fix ptt_expand() to handle a final Unicode char, not a (byte) char
-    and add additonal tests to check this. [eval.c. ptt_tables.sh]
+    and add additional tests to check this. [eval.c. ptt_tables.sh]
     Updated comment in ptt_handler() [exec.c]
 
 display.c
     Add ltext() usage comments.
+
+eval.c
+input.c
+names.c
+edef.h
+    Add binary chop search routine to find where to start when
+    auto-completing environment variable and function names. [input.c]
+    Rename needed to names_size, as it is now external. [names.c]
+    Remove the no longer needed final NULL entry from names. [names.c]
+    Make names_size and name_index global, [names.c, edef.h]
+    Make evl_size global. [eval.c, edef.h]

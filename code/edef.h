@@ -123,6 +123,10 @@ enum yank_style { Old, GNU };
 
 #ifndef GLOBALS_C
 
+extern int evl_size;
+extern int names_size;
+extern int *name_index;
+
 extern linked_items *macro_pin_headp;
 
 /* Initialized global external declarations. */

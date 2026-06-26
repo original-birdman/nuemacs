@@ -223,10 +223,6 @@ struct name_bind names[] = {
     {"yank", yank, {0, 0, 0, 0, 0, 0}, CFYANK},
     {"yank-minibuffer", yankmb, {0, 0, 0, 0, 0, 0}, CFYANK},
     {"yank-replace", yank_replace, {0, 0, 0, 0, 0, 0}, CFYANK},
-/* Must be last!!!
- * getname() does a serial search and stops at a NULL function pointer
- */
-    {"", NULL, {0, 0, 0, 0, 0, 0}, CFNONE},
 };
 
 /* Routine to produce an array index for names sorted by:
@@ -238,10 +234,9 @@ struct name_bind names[] = {
 #include <stddef.h>
 #include "idxsorter.h"
 
-/* We can ignore the final NULL entry for the index searching */
-static int needed = ARRAY_SIZE(names) - 1;
+int names_size = ARRAY_SIZE(names);
 static int *func_index = NULL;
-static int *name_index = NULL;
+int *name_index = NULL;
 static int *next_name_index = NULL;
 
 void init_namelookup(void) {
@@ -250,20 +245,20 @@ void init_namelookup(void) {
     fdef.offset = offsetof(struct name_bind, n_func);
     fdef.type = 'P';
     fdef.len = sizeof(fn_t);
-    func_index = Xmalloc((size_t)(needed+1)*sizeof(int));
+    func_index = Xmalloc((size_t)(names_size+1)*sizeof(int));
     idxsort_fields((unsigned char *)names, func_index,
-          sizeof(struct name_bind), needed, 1, &fdef);
+          sizeof(struct name_bind), names_size, 1, &fdef);
 
     fdef.offset = offsetof(struct name_bind, n_name);
     fdef.type = 'S';
     fdef.len = 0;
-    name_index = Xmalloc((size_t)(needed+1)*sizeof(int));
+    name_index = Xmalloc((size_t)(names_size+1)*sizeof(int));
     idxsort_fields((unsigned char *)names, name_index,
-          sizeof(struct name_bind), needed, 1, &fdef);
+          sizeof(struct name_bind), names_size, 1, &fdef);
 
 /* We want to step through this one, so need a next index too */
-    next_name_index = Xmalloc((size_t)(needed+1)*sizeof(int));
-    make_next_idx(name_index, next_name_index, needed);
+    next_name_index = Xmalloc((size_t)(names_size+1)*sizeof(int));
+    make_next_idx(name_index, next_name_index, names_size);
     return;
 }
 
@@ -273,7 +268,7 @@ void init_namelookup(void) {
  */
 struct name_bind *func_info(fn_t func) {
     int first = 0;
-    int last = needed - 1;
+    int last = names_size - 1;
     int middle;
 
     while (first != last) {
@@ -294,7 +289,7 @@ struct name_bind *func_info(fn_t func) {
  */
 struct name_bind *name_info(const char *name) {
     int first = 0;
-    int last = needed - 1;
+    int last = names_size - 1;
 
     int middle;
     while (first <= last) {
@@ -316,7 +311,7 @@ struct name_bind *name_info(const char *name) {
  */
 int nxti_name_info(int ci) {
     if (ci == -1) return name_index[0];
-    if ((ci >= 0) && (ci < needed)) {
+    if ((ci >= 0) && (ci < names_size)) {
         int ni = next_name_index[ci];
         if (ni >= 0) return ni;
         return -1;

@@ -17,8 +17,8 @@
 #include "estruct.h"
 #include "edef.h"
 #include "efunc.h"
-
 #include "utf8proc.h"
+#include "util.h"
 
 /* GGR - some needed things for minibuffer handling */
 
@@ -299,14 +299,51 @@ static void cmplt_buffer(db *name, enum cmplt_type mtype) {
 
 /* Entry point for name and var completion.
  * These are very similar.
- * In particular they look through sorted values by index.
+ * In particular they both look through sorted values by index.
+ *
+ * The environment variable and function names are sorted, so
+ * we can use a binary chop to find out where to start for the linear
+ * prefix search, rather than always start at the beginning.
+ * We need to send in details of how to find the match-text within
+ * the structure.
  */
+static int start_check_at(const char *look4, void *bp, int *ip, int nelem,
+     int esize, int offs) {
+
+    int low = 0;
+    int high = nelem - 1;
+    int test = 0;
+    int res = 0;
+    while (low <= high) {
+        test = (low + high)/2;
+        const char **te = bp + (ip[test]*esize) + offs;
+        res = strcmp(look4, *te);
+        if (res < 0) high = test - 1;
+        else if (res == 0) break;
+        else low = test + 1;
+    }
+/* Now need to find out what the last test was.
+ * If res < 0 then what we are looking for is before the test item, which
+ * is OK, as it could be the start of it.
+ * If res == 0 then we found the exact match and again that is the
+ * correct place to start.
+ * But if res > 0 then what we are looking at is beyond the test item
+ * so cannot even be the start of it. So increment test to the next item.
+ * Then, if we have gone beyond the array extent then we can't stem-match
+ * anything, so return -1 (which will stop us even entering the linear
+ * search loop).
+ */
+    if (res > 0) test++;
+    if (test >= nelem) return -1;
+    return ip[test];
+}
+
 static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     init_cmplt();
 
     const char *np;
     int nlen;
-    char first_ch;
+    char first_ch = first_ch; /* Avoid "may be used uninitialized" in gcc4.x */
     if (ctype == CMPLT_VAR) {
         first_ch = dbp_charat(name, 0);
         if ((dbp_len(name) == 0) ||
@@ -338,7 +375,7 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
  * anything >= to that cannot match the stem, as the names are sorted.
  * A byte of 0xff is illegal in utf8...
  */
-    char *limit;
+    char *limit = limit;    /* Avoid "may be used uninitialized" in gcc4.x */
     if (nlen != 0) {    /* Fudge code to increment the final character. */
         limit = strdupa(np);
         char *lp = limit + nlen - 1;
@@ -347,17 +384,34 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
 
     int (*nvar_get)(int);
     db_strdef(vn);      /* We have to prepend $ or % for update_prompts() */
+
+/* We'll be doing a binary search for envvar_index and name_index to
+ * find a string index, so we also need to set starting index for the
+ * (linear) usrvar values.
+ */
+    int vidx;
     if (ctype == CMPLT_VAR) {   /* first_ch already set */
-        if (first_ch == '$') nvar_get = nxti_envvar;
-        else                 nvar_get = nxti_usrvar;
+        if (first_ch == '$') {
+            nvar_get = nxti_envvar;
+            vidx = start_check_at(np, evl, envvar_index, evl_size,
+                 sizeof(struct evlist), offsetof(struct evlist, var));
+        }
+        else {
+            nvar_get = nxti_usrvar;
+            vidx = nxti_usrvar(-1);
+        }
         db_set(vn, "");
         db_addch(vn, first_ch);
     }
     else {
-                             nvar_get = nxti_name_info;
+         nvar_get = nxti_name_info;
+	 vidx = start_check_at(np, names, name_index, names_size,
+                 sizeof(struct name_bind), offsetof(struct name_bind, n_name));
     }
-    int vidx = -1;
-    while ((vidx = nvar_get(vidx)) >= 0) {
+/* We now have a starting index (probably not -1) so use that first value
+ * and get the next one at the end of the loop.
+ */
+    while (vidx >= 0) {
         const char *vp;
         if (ctype == CMPLT_VAR) {
             if (nvar_get == nxti_envvar) vp = evl[vidx].var;
@@ -367,7 +421,7 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
                                          vp = names[vidx].n_name;
         }
         if ((nlen != 0) && (strcmp(vp , limit) > 0)) break;
-        if (strncmp(np, vp, (size_t)nlen) != 0) continue;
+        if (strncmp(np, vp, (size_t)nlen) != 0) goto next_index;
         const char *upstr;
         if (ctype == CMPLT_VAR) {
             db_retailstr_at(vn, vp, 1);
@@ -377,6 +431,8 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
             upstr = vp;
         }
         if (update_prompts(upstr) < 0) break;
+next_index:
+        vidx = nvar_get(vidx);
     }
     if (res.found == 0) db_set(res.choices, NOMATCH);
     else                db_set(res.match, db_val(res.mprefix));
