@@ -175,6 +175,7 @@ int getccol(void) {
     col = i = 0;
     while (i < byte_offset) {
         unicode_t c;
+/* Only get here if we have text on the line, so ltext() is OK */
         i += utf8_to_unicode(ltext(dlp), i, len, &c);
         update_screenpos_for_char(col, c);
     }
@@ -199,6 +200,7 @@ int setccol(int pos) {
     while (i < len) {
         if (col >= pos) break;  /* Upon reaching the target, drop out */
         unicode_t c;
+/* Only get here if we have text on the line, so ltext() is OK */
         i += utf8_to_unicode(ltext(dlp), i, len, &c);
         update_screenpos_for_char(col, c);
     }
@@ -223,6 +225,9 @@ int twiddle(int f, int n) {
 
     dotp = curwp->w.dotp;
     int maxlen = lused(dotp);
+/* letxt() OK as, on an empyt line, doto == maxlen and we return after
+ * the prev_utf8_offset() call.
+ */
     const char *l_buf = ltext(dotp);
 
     while (n-- > 0) {
@@ -535,7 +540,9 @@ static int cinsert(void) {
 /* GGR fix - nothing fancy if we're at left hand edge */
     if (curwp->w.doto == 0) return(lnewline());
 
-/* Grab a pointer to text to copy indentation from */
+/* Grab a pointer to text to copy indentation from.
+ * We know there is text there, so ltext() is OK.
+ */
     cptr = ltext(curwp->w.dotp);
 
 /* Check for a brace - check for last non-blank character! */
@@ -1133,6 +1140,8 @@ int whitedelete(int f, int n) {
     UNUSED(f);
 
     const char *lp, *rp, *stp, *etp;
+
+/* This code works for an empty line (ltext() == NULL, lused() == 0) */
     stp = ltext(curwp->w.dotp);         /* Start of line text */
     etp = stp + lused(curwp->w.dotp);   /* End of line text */
     lp = rp = stp + curwp->w.doto;      /* Working pointers */

@@ -169,6 +169,7 @@ int copyregion(int f, int n) {
 
 /* Turns out a macro (replicating code) is more efficient in terms
  * of executable size than a function...
+ * ltext() is OK as we check there is something to move.
  */
 #define ccr_Tail_Copy \
     if (b_end < lused(linep)) {     /* Shuffle chars along... */ \

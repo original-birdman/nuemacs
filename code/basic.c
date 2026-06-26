@@ -27,11 +27,13 @@
  * It's not empty if we have any *byte* other than a space or tab
  */
 static int curline_empty(void) {
-    const char *cp = ltext(curwp->w.dotp);
-    const char *ep = cp + lused(curwp->w.dotp);
-    while (cp < ep) {
-        if ((*cp != ' ') && (*cp != '\t')) return FALSE;
-        cp++;
+    const char *cp;
+    if ((cp = ltext(curwp->w.dotp)) != NULL) {  /* May be NULL (== empty) */
+        const char *ep = cp + lused(curwp->w.dotp);
+        while (cp < ep) {
+            if ((*cp != ' ') && (*cp != '\t')) return FALSE;
+            cp++;
+        }
     }
     return TRUE;
 }

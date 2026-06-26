@@ -9255,3 +9255,21 @@ line.h
     Readded the sleep() aftre noting a trailing newline was removed
     [fileio.c]
     Revert the ltext() define and add an ltext_chk() one. [line.h]
+
+basic.c
+dyn_buf.c
+eval.c
+exec.c
+file.c
+input.c
+line.c
+main.c
+random.c
+region.c
+search.c
+word.c
+    Audit of ltext() usage.
+    Changed some to ltext_chk() [eval.c, input,c, word.c]
+    In group_match(), only copy line text if there is some [search.c]
+    Handle incoming NULL, len args in _dbp_setn(0 and _dbp_appendn()
+    [dyn_buf.c]

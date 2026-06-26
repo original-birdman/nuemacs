@@ -397,6 +397,7 @@ int lgetgrapheme(struct grapheme *gp, int no_ex_alloc) {
     int len = lused(curwp->w.dotp);
 
     int spos = curwp->w.doto;
+/* build_next_grapheme(0 is OK for ltext() on empty line (== NULL) */
     int epos = build_next_grapheme(ltext(curwp->w.dotp), spos, len, gp,
          no_ex_alloc);
     return (epos - spos);
@@ -583,6 +584,7 @@ int ldelete(ue64I_t n, int kflag) {
         }
         lchange(WFEDIT);
         if (kflag != FALSE) {                       /* Kill? */
+/* We have text` when we get here, so ltext() is OK */
             const char *cp1 = ltext(dotp) + doto;   /* Scrunch text. */
             const char *cp2 = cp1 + chunk;
             while (cp1 != cp2) {

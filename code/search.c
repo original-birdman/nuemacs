@@ -2305,6 +2305,7 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
     }
     else {
         if (pos_only) { /* Just get the position in the current line */
+/* next/prev_utf8_offset() handle NULL (check length first) so ltext() is OK. */
             if (dir == FORWARD)
                 nextoff = next_utf8_offset(ltext(curline), curoff,
                      lused(curline), TRUE);
@@ -2980,7 +2981,9 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
             }
         }
         struct grapheme gct;
-/* Don't build any ex... */
+/* Don't build any ex...
+ * build_next_grapheme() will handle ltext() == NULL and lused() == 0
+ */
         (void)build_next_grapheme(ltext(tline), toff, lused(tline), &gct, 1);
         if (combining_type(gct.uc)) {
             jump = (direct == FORWARD)? lastchfjump: lastchbjump;
@@ -3048,7 +3051,8 @@ const char *group_match(int grp) {
         while(togo > 0) {
             int on_cline = lused(cline) - coff;
             if (on_cline > togo) on_cline = togo;
-            memcpy(dp, ltext(cline)+coff, (size_t)on_cline);
+/* Only copy if there is something to copy */
+            if (on_cline > 0) memcpy(dp, ltext(cline)+coff, (size_t)on_cline);
             dp += on_cline;
             togo -= on_cline;
 

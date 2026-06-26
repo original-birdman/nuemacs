@@ -1007,6 +1007,7 @@ int writeout(const char *fn) {
     lp = lforw(curbp->b_linep);             /* First line.          */
     nline = 0;                              /* Number of lines.     */
     while (lp != curbp->b_linep) {
+/* ffputline() handles ltext(lp) == NULL correctly */
         if ((s = ffputline(ltext(lp), lused(lp))) != FIOSUC) break;
         ++nline;
         if (!(nline % 300) && !silent)      /* GGR */

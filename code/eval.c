@@ -1098,7 +1098,7 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVCURCHAR: {   /* Make this setval the current Unicode base char */
         unicode_t uc_res;
         if (lused(curwp->w.dotp) == curwp->w.doto) uc_res = '\n';
-        else
+        else    /* Must be something on line, so ltext() is OK */
             (void)utf8_to_unicode(ltext(curwp->w.dotp), curwp->w.doto,
                  lused(curwp->w.dotp), &uc_res);
         setval(ue_itoa(uc_res));
@@ -1126,7 +1126,8 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVPENDING:         setval(ltos(typahead()));
     case EVLWIDTH:          setval(ue_itoa(lused(curwp->w.dotp)));
     case EVLINE:
-        dbp_setn(res, ltext(curwp->w.dotp), lused(curwp->w.dotp));
+/* ltext_chk() to cater for it being an empty line */
+        dbp_setn(res, ltext_chk(curwp->w.dotp), lused(curwp->w.dotp));
         return;
     case EVRVAL:            setval(ue_itoa(rval));
     case EVTAB:             setval(ue_itoa(tabmask + 1));
@@ -1306,9 +1307,9 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
 /* Make sure we are not at the end */
         if (bp->b_linep == bp->b.dotp) goto have_error;
 
-/* Grab the line as an argument - then */
+/* Grab the line (which may be empty) as an argument - then */
         int blen = lused(bp->b.dotp) - bp->b.doto;
-        dbp_setn(res, ltext(bp->b.dotp) + bp->b.doto, blen);
+        dbp_setn(res, ltext_chk(bp->b.dotp) + bp->b.doto, blen);
 
 /* And step the buffer's line ptr ahead a line */
         bp->b.dotp = bp->b.dotp->l_fp;

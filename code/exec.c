@@ -529,6 +529,7 @@ static int ptt_compile(struct buffer *bp) {
     struct ptt_ent *lastp = NULL;
     for (struct line *lp = hlp->l_fp; lp != hlp; lp = lp->l_fp) {
 /* The rest of the handling expects text, not binary, so no bcopy here */
+        if (lused(lp) == 0) continue;   /* Ignore blank lines */
         db_setn(lbuf, ltext(lp), lused(lp));
         token(&lbuf, &tok);
 /* Ignore any entry with a newline in the from text */
@@ -867,7 +868,9 @@ int ptt_handler(int c, int remove_on_no_match) {
         if (ptr->caseset != CASESET_OFF) wc = utf8proc_tolower(wc);
         if (ptr->final_uc != wc) continue;
 
-/* We need to know where <n> unicode chars back starts */
+/* We need to know where <n> unicode chars back starts.
+ * unicode_back_utf8 uses length before checking char *, so ltext() is OK.
+ */
         int start_at = unicode_back_utf8(ptr->from_len_uc,
              ltext(curwp->w.dotp), curwp->w.doto);
         if (start_at < 0) continue; /* Insufficient chars */
@@ -876,6 +879,7 @@ int ptt_handler(int c, int remove_on_no_match) {
  * Also, since we can't guarantee that a case-changed string will be
  * the same length, we need to step back the right number of unicode
  * chars first.
+ * We know we have some text , so ltext() is OK.
  */
             if (nocasecmp_utf8(ltext(curwp->w.dotp),
                  start_at, lused(curwp->w.dotp),
@@ -1093,7 +1097,7 @@ int dobuf(struct buffer *bp) {
     int in_store_mode = FALSE;
     while (lp != hlp) {
 /* Scan the current line */
-        const char *eline = ltext(lp);
+        const char *eline = ltext(lp);  /* ltext() OK as i will be 0 */
         i = lused(lp);
 
 /* Trim leading whitespace */
@@ -1199,6 +1203,7 @@ nxtscan:                /* On to the next line */
             eilen = linlen;
         }
         eline = einit;
+/* ltext() OK as we know we have text */
         memcpy(eline, ltext(lp), (size_t)linlen);
         terminate_str(eline+linlen);    /* Make sure it ends */
 

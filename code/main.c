@@ -1515,7 +1515,7 @@ int execute(int c, int f, int n) {
  * Then advance a space and take the rest of the line as the entry name
  * since we're only looking for space we can just use ASCII.
  */
-           {const char *lp = ltext(curwp->w.dotp);
+           {const char *lp = ltext_chk(curwp->w.dotp);  /* Allow for empty */
 /* Check that we can handle this type of entry.
  * The showdir command will have followed all symlinks, so
  * we're only interested in directories and files.
@@ -1547,7 +1547,8 @@ int execute(int c, int f, int n) {
                 mlwrite_one("Can't parse line");
                 break;
             }
-/* Move to start of name, and get the length to end-of-data (no NUL here) */
+/* Move to start of name, and get the length to end-of-data (no NUL here).
+ * We also know we have text on the line, so ltext() is OK. */
             lp++;   /* Step over next space */
             int fnlen = (int)(ltext(curwp->w.dotp) + lused(curwp->w.dotp) - lp);
 

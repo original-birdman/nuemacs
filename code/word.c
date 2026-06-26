@@ -65,7 +65,9 @@ int class_check(struct inwbuf *inwp, const char *classes, int res_on_zwb) {
         }
     }
     else {
-/* Don't build any ex... */
+/* Don't build any ex...
+ * build_next_grapheme() will handle ltext() == NULL and lused() == 0
+ */
         myoffs =
              build_next_grapheme(ltext(mylp), myoffs, lused(mylp), &gc, 1);
         if (inwp) inwp->offs = myoffs;
@@ -885,7 +887,9 @@ static int filler(int indent, int width, int justify) {
             int nsp = 1;
             if (eos_list) {     /* Some eos defined */
                 struct grapheme gi;
-/* Don't build any ex... */
+/* Don't build any ex...
+ * build_next_grapheme() will handle ltext() == NULL and lused() == 0
+ */
                 (void)build_prev_grapheme(ltext(curwp->w.dotp),
                  curwp->w.doto, lused(curwp->w.dotp), &gi, 1);
                 for (unicode_t *eosch = eos_list;

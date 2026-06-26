@@ -65,9 +65,11 @@ const char *_dbp_val_nc(db *ds) {
     return ds->asp? ds->asp: "";
 }
 
-/* Set value to the n bytes. Never more than an int for n */
-
+/* Set value to the n bytes. Never more than an int for n.
+ * Cater for being called with mp == NULL and n == 0 (from ltext()?).
+ */
 void _dbp_setn(db *ds, const void *mp, int n) {
+    if (!mp && (n == 0)) mp = "";
     size_t need = (size_t)n;
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
@@ -233,9 +235,11 @@ void _dbp_uctruncate(db *ds, int n) {
     return;
 }
 
-/* Append n bytes */
-
+/* Append n bytes
+ * Cater for being called with mp == NULL and n == 0 (from ltext()?).
+ */
 void _dbp_appendn(db *ds, const char *str, int n) {
+    if (!str && (n == 0)) str = "";
     size_t need = (size_t)(ds->blen + n);
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
