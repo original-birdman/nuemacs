@@ -9280,3 +9280,6 @@ autotest/ptt_tables.sh
     Fix ptt_expand() to handle a final Unicode char, not a (byte) char
     and add additonal tests to check this. [eval.c. ptt_tables.sh]
     Updated comment in ptt_handler() [exec.c]
+
+display.c
+    Add ltext() usage comments.

@@ -589,6 +589,7 @@ static int reframe(struct window *wp) {
 
 static void show_line(struct line *lp) {
     int i = 0, len = lused(lp);
+/* Only runs through loop if there is text, so ltext() is OK. */
     while (i < len) {
         unicode_t c;
         i += utf8_to_unicode(ltext(lp), i, len, &c);
@@ -1015,6 +1016,7 @@ static void updext(void) {
 static int cline_display_overlong(void) {
     int dcol = 0;       /* Display column */
     int offs = 0;       /* Offset into line buffer */
+/* cp is only used if we have text on the line, so ltext() is OK. */
     unsigned char *cp = (unsigned char *)ltext(curwp->w.dotp);
     int max_offs = lused(curwp->w.dotp);
     while (offs < max_offs) {
@@ -1057,6 +1059,7 @@ static void updpos(void) {
     i = 0;
     while (i < curwp->w.doto) {
         unicode_t c;
+/* Only reached if we have text on the line, so ltext() is OK. */
         int bytes = utf8_to_unicode(ltext(lp), i, curwp->w.doto, &c);
         i += bytes;
         update_screenpos_for_char(curcol, c);
