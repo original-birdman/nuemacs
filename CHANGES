@@ -9321,3 +9321,9 @@ eval.c
 eval.c
     Create a user_function index in init_envvar_index() and change
     gtfun() to use start_check_at() for user function lookup.
+
+eval.c
+input.c
+efunc.h
+    Move start_check_at code from input.c to eval.c and make it static.
+    Front-end it with start_item().

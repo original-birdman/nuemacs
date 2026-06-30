@@ -205,6 +205,103 @@ int nxti_usrvar(int ci) {
     return -1;
 }
 
+/* Entry point for name and var completion.
+ * These are very similar.
+ * In particular they both look through sorted values by index.
+ * The values are all char* items within a structure.
+ *
+ * NOTE that this works out where an item would need to be inserted
+ * (-1 if it would need to be after the last element).
+ * It returns multiple bits of info via a structuyre, so tha the caller
+ * can also work outy whether then item is actually there and, if so,
+ * where.
+ *
+ * Called via start_item()
+ */
+struct sca_info {
+    void *bp;
+    int *ip;
+    int nelem;
+    int esize;
+    int offs;
+};
+static struct bc_res *start_check_at(const char *look4,
+ const struct sca_info *arg) {
+
+    static struct bc_res bci;
+
+    int low = 0;
+    int high = arg->nelem - 1;
+    int test = 0;
+
+    bci.test_res = 0;
+
+    const char **te = NULL;;
+    while (low <= high) {
+        test = (low + high)/2;
+        te = arg->bp + (arg->ip[test]*arg->esize) + arg->offs;
+        bci.test_res = strcmp(look4, *te);
+        if (bci.test_res < 0) high = test - 1;
+        else if (bci.test_res == 0) break;
+        else low = test + 1;
+    }
+    if (*te) bci.last_ctest = *te;
+    else     bci.last_ctest = NULL;
+
+/* Now need to find out what the last test was.
+ * If bci.test_res < 0 then what we are looking for is before the test item, which
+ * is OK, as it could be the start of it.
+ * If bci.test_res == 0 then we found the exact match and again that is the
+ * correct place to start.
+ * But if bci.test_res > 0 then what we are looking at is beyond the test item
+ * so cannot even be the start of it. So increment test to the next item.
+ * Then, if we have gone beyond the array extent then we can't stem-match
+ * anything, so return -1 (which will stop us even entering the linear
+ * search loop).
+ */
+    if (bci.test_res > 0) test++;
+    if (test >= arg->nelem) bci.idx = -1;
+    else                    bci.idx =  arg->ip[test];
+    return &bci;
+}
+
+/* External calls for start_check_at() come here, where they get the
+ * data array info set based on the type.
+ */
+struct bc_res *start_item(const char *look4, enum bc_array_t bc_array) {
+
+    struct sca_info info;
+    switch(bc_array) {
+    case SYS_ENVAR: {
+        info.bp = evl;
+        info.ip = envvar_index;
+        info.nelem = evl_size;
+        info.esize = sizeof(struct evlist);
+        info.offs = offsetof(struct evlist, var);
+        break;
+    }
+    case PRC_NAMES: {
+        info.bp = names;
+        info.ip = name_index;
+        info.nelem = names_size;
+        info.esize = sizeof(struct name_bind);
+        info.offs = offsetof(struct name_bind, n_name);
+        break;
+    }
+    case UFC_INDEX: {
+        info.bp = funcs;
+        info.ip = uf_index;
+        info.nelem = ufi_size;
+        info.esize = sizeof(struct user_function);
+        info.offs = offsetof(struct user_function, f_name);
+        break;
+    }
+    default:    /* Will actually never happen */
+        return NULL;
+    }
+    return start_check_at(look4, &info);
+}
+
 /* Convert a string to a numeric logical
  * Used by exec.c
  *
@@ -636,8 +733,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     strncpy(lfname, fname, 4);
     lfname[3] = 0;          /* only first 3 chars significant */
     mklower(lfname);        /* and let it be upper or lower case */
-    struct bc_res *tp = start_check_at(lfname, funcs, uf_index, ufi_size,
-        user_function, f_name);
+    struct bc_res *tp = start_item(lfname, UFC_INDEX);
     if (tp->test_res == 0) {
         fnum = tp->idx;
     }
@@ -1398,8 +1494,7 @@ fvar:
     switch (var[0]) {
 
     case '$': {         /* Check for legal enviromnent var */
-        struct bc_res *tp = start_check_at(var+1, evl, envvar_index, evl_size,
-             evlist, var);
+        struct bc_res *tp = start_item(var+1, SYS_ENVAR);
         if (tp->test_res == 0) {
             vtype = TKENV;   /* Found it */
             vnum = tp->idx;

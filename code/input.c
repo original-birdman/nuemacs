@@ -50,7 +50,6 @@ static int remap_c_on_intr = 0;
  * However iff the incoming text is blank we just want to show
  * $... %..., and if it doesn't start with $ or % we want to show no match.
  */
-extern int *envvar_index;
 extern char *uvnames[];
 extern struct evlist evl[];
 
@@ -297,64 +296,6 @@ static void cmplt_buffer(db *name, enum cmplt_type mtype) {
     return;
 }
 
-/* Entry point for name and var completion.
- * These are very similar.
- * In particular they both look through sorted values by index.
- *
- * The environment variable and function names are sorted, so
- * we can use a binary chop to find out where to start for the linear
- * prefix search, rather than always start at the beginning.
- * We need to send in details of how to find the match-text within
- * the structure.
- *
- * NOTE that this works out where an item would need to be inserted
- * (-1 if it would need to be after the last element).
- * It returns multiple bits of info via a structuyre, so tha the caller
- * can also work outy whether then item is actually there and, if so,
- * where.
- *
- * Called via a start_check_at() define, to simplify arg list
- */
-struct bc_res *_start_check_at(const char *look4, void *bp, int *ip, int nelem,
-     int esize, int offs) {
-
-    static struct bc_res bci;
-
-    int low = 0;
-    int high = nelem - 1;
-    int test = 0;
-
-    bci.test_res = 0;
-
-    const char **te = NULL;;
-    while (low <= high) {
-        test = (low + high)/2;
-        te = bp + (ip[test]*esize) + offs;
-        bci.test_res = strcmp(look4, *te);
-        if (bci.test_res < 0) high = test - 1;
-        else if (bci.test_res == 0) break;
-        else low = test + 1;
-    }
-    if (*te) bci.last_ctest = *te;
-    else     bci.last_ctest = NULL;
-
-/* Now need to find out what the last test was.
- * If bci.test_res < 0 then what we are looking for is before the test item, which
- * is OK, as it could be the start of it.
- * If bci.test_res == 0 then we found the exact match and again that is the
- * correct place to start.
- * But if bci.test_res > 0 then what we are looking at is beyond the test item
- * so cannot even be the start of it. So increment test to the next item.
- * Then, if we have gone beyond the array extent then we can't stem-match
- * anything, so return -1 (which will stop us even entering the linear
- * search loop).
- */
-    if (bci.test_res > 0) test++;
-    if (test >= nelem)  bci.idx = -1;
-    else                bci.idx =  ip[test];
-    return &bci;
-}
-
 static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     init_cmplt();
 
@@ -399,16 +340,18 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     int (*nvar_get)(int);
     db_strdef(vn);      /* We have to prepend $ or % for update_prompts() */
 
-/* We'll be doing a binary search for envvar_index and name_index to
- * find a string index, so we also need to set starting index for the
- * (linear) usrvar values.
+/* The environment variable and function names are sorted by index, so
+ * we can use a binary chop to find out where to start for the linear
+ * prefix search, rather than always start at the beginning.
+ * We need to send in details of how to find the match-text within
+ * the structure.
+ * So we also need to set starting index for the (linear) usrvar values.
  */
     int vidx;
     if (ctype == CMPLT_VAR) {   /* first_ch already set */
         if (first_ch == '$') {
             nvar_get = nxti_envvar;
-            vidx = (start_check_at(np, evl, envvar_index, evl_size,
-                 evlist, var))->idx;;
+            vidx = (start_item(np, SYS_ENVAR))->idx;;
         }
         else {
             nvar_get = nxti_usrvar;
@@ -419,8 +362,7 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     }
     else {
          nvar_get = nxti_name_info;
-	 vidx = (start_check_at(np, names, name_index, names_size,
-                 name_bind, n_name))->idx;
+	 vidx = (start_item(np, PRC_NAMES))->idx;
     }
 /* We now have a starting index (probably not -1) so use that first value
  * and get the next one at the end of the loop.

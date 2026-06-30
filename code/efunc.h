@@ -114,6 +114,11 @@ extern void mbupdate(void);
 #endif
 
 /* eval.c */
+enum bc_array_t {
+    SYS_ENVAR,      /* System environment variables */
+    PRC_NAMES,      /* Procedure names */
+    UFC_INDEX,      /* Use function names (&...) */
+};
 #ifndef EVAL_C
 extern const char *ue_itoa(int);
 extern void varinit(void);
@@ -121,6 +126,7 @@ extern void init_envvar_index(void);
 extern int nxti_envvar(int);
 extern void sort_user_var(void);
 extern int nxti_usrvar(int);
+extern struct bc_res *start_item(const char *, enum bc_array_t);
 extern int stol(const char *);
 extern int gettyp(const char *);
 extern void getval(db *, db *);
@@ -228,10 +234,7 @@ extern int fexist(const char *);
 #endif
 
 /* input.c */
-#define start_check_at(l, bp, ip, n, str, var) \
- _start_check_at(l, bp, ip, n, sizeof(struct str), offsetof(struct str, var))
 #ifndef INPUT_C
-struct bc_res *_start_check_at(const char *, void *, int *, int, int, int);
 extern unicode_t tgetc(void);
 extern unicode_t get1key(void);
 extern int mlyesno(const char *);
