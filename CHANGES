@@ -9299,4 +9299,10 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.194
 
-==========
+========== GGR4.194
+
+input.c
+main.c
+    Initialize the environment variable index at startup, not on first
+    tab-completion. 
+

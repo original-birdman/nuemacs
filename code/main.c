@@ -2004,9 +2004,10 @@ int main(int argc, char **argv) {
     init_ents *= KEYTAB_INCR;
     extend_keytab(init_ents);
 
-/* Set up the search ring buffers */
+/* Set up the search ring buffers and environment variable sort index */
 
     init_search_ringbuffers();
+    init_envvar_index();
 
 /* If we are building a standalone version, set the config/help directory
  * location to be the directory containing the executable.

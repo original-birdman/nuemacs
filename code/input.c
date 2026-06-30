@@ -354,13 +354,10 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
             return;
         }
 
-/* Set up sort index and array */
-        if (first_ch == '$') {
-            if (envvar_index == NULL) init_envvar_index();
-        }
-        else {  /* Sorted so we can exit loop early */
-            sort_user_var();
-        }
+/* Set up sort index for user vars so we can exit loop early.
+ * Environment vars are sorted at start-up.
+ */
+        if (first_ch == '%') sort_user_var();
         np = dbp_val(name) + 1; /* Don't compare the leading $ or % */
         nlen = (dbp_len(name) - 1);
     }
