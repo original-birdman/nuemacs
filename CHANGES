@@ -9314,3 +9314,6 @@ estruct.h
     Change prototype and call via a define (to simplify parameters)
     [efunc.h]
     Add struct bc_res definition [estruct.h]
+
+eval.c
+    Change findvar() to use start_check_at() for environment variables.

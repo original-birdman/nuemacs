@@ -1386,11 +1386,12 @@ fvar:
     switch (var[0]) {
 
     case '$':           /* Check for legal enviromnent var */
-        for (vnum = 0; vnum < ARRAY_SIZE(evl); vnum++)
-            if (strcmp(var+1, evl[vnum].var) == 0) {
-                vtype = TKENV;
-                break;
-            }
+        struct bc_res *tp = start_check_at(var+1, evl, envvar_index, evl_size,
+             evlist, var);
+        if (tp->test_res == 0) {
+            vtype = TKENV;   /* Found it */
+            vnum = tp->idx;
+        }
         break;
 
     case '%':           /* Check for existing legal user variable */
