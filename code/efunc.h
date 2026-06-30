@@ -228,7 +228,10 @@ extern int fexist(const char *);
 #endif
 
 /* input.c */
+#define start_check_at(l, bp, ip, n, str, var) \
+ _start_check_at(l, bp, ip, n, sizeof(struct str), offsetof(struct str, var))
 #ifndef INPUT_C
+struct bc_res *_start_check_at(const char *, void *, int *, int, int, int);
 extern unicode_t tgetc(void);
 extern unicode_t get1key(void);
 extern int mlyesno(const char *);

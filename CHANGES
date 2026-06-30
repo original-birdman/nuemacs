@@ -9299,10 +9299,18 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.194
 
-========== GGR4.194
+========== GGR4.195
 
 input.c
 main.c
     Initialize the environment variable index at startup, not on first
-    tab-completion. 
+    tab-completion.
 
+input.c
+efunc.h
+estruct.h
+    Change start_check_at() to return multiple values via a structure
+    pointer and modify callers [input.c]
+    Change prototype and call via a define (to simplify parameters)
+    [efunc.h]
+    Add struct bc_res definition [estruct.h]

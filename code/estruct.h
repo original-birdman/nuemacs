@@ -580,4 +580,13 @@ struct evlist {
 
 #define UPROC_FIXUP 0x0000001
 
+/* A "binary chop information" structure for start_check_at() etc. */
+
+struct bc_res {
+    const char *last_ctest; /* Last char field looked at */
+    int test_res;           /* Result of last char-strinf check */
+    int idx;                /* Sorted index of last test (-1 on no match) */
+};
+
+
 #endif
