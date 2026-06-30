@@ -9317,3 +9317,7 @@ estruct.h
 
 eval.c
     Change findvar() to use start_check_at() for environment variables.
+
+eval.c
+    Create a user_function index in init_envvar_index() and change
+    gtfun() to use start_check_at() for user function lookup.

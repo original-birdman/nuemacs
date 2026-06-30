@@ -121,6 +121,9 @@ int *envvar_index = NULL;
 static int *next_envvar_index;
 int evl_size = ARRAY_SIZE(evl);
 
+static int *uf_index;
+static int ufi_size = ARRAY_SIZE(funcs);
+
 /* env var ($...) sorting */
 
 void init_envvar_index(void) {
@@ -135,6 +138,14 @@ void init_envvar_index(void) {
 /* We want to step through this one, so need a next index too */
     next_envvar_index = Xmalloc((size_t)(evl_size+1)*sizeof(int));
     make_next_idx(envvar_index, next_envvar_index, evl_size);
+
+/* Also provide a user_function index */
+
+    fdef.offset = offsetof(struct user_function, f_name);
+    uf_index = Xmalloc((size_t)(ufi_size+1)*sizeof(int));
+    idxsort_fields((unsigned char *)funcs, uf_index,
+          sizeof(struct user_function), ufi_size, 1, &fdef);
+
     return;
 }
 
@@ -611,7 +622,7 @@ exit:
  */
 static void gtfun(dbp_dcl(res), const char *fname) {
     char lfname[4];         /* What we lookup */
-    unsigned int fnum;      /* index to function to eval */
+    int fnum;               /* index to function to eval */
     int status;             /* status */
     const char *tsp;        /* Temporary string pointer */
     db_strdef(arg1);        /* Value of first argument */
@@ -625,11 +636,12 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     strncpy(lfname, fname, 4);
     lfname[3] = 0;          /* only first 3 chars significant */
     mklower(lfname);        /* and let it be upper or lower case */
-    for (fnum = 0; fnum < ARRAY_SIZE(funcs); fnum++)
-        if (strcmp(lfname, funcs[fnum].f_name) == 0) break;
-
-/* Return errorm on a bad reference */
-    if (fnum == ARRAY_SIZE(funcs)) {
+    struct bc_res *tp = start_check_at(lfname, funcs, uf_index, ufi_size,
+        user_function, f_name);
+    if (tp->test_res == 0) {
+        fnum = tp->idx;
+    }
+    else {  /* Return errorm on a bad reference */
         retval = errorm;
         goto exit;
     }
@@ -1385,7 +1397,7 @@ fvar:
     vtype = -1;
     switch (var[0]) {
 
-    case '$':           /* Check for legal enviromnent var */
+    case '$': {         /* Check for legal enviromnent var */
         struct bc_res *tp = start_check_at(var+1, evl, envvar_index, evl_size,
              evlist, var);
         if (tp->test_res == 0) {
@@ -1393,8 +1405,8 @@ fvar:
             vnum = tp->idx;
         }
         break;
-
-    case '%':           /* Check for existing legal user variable */
+    }
+    case '%': {         /* Check for existing legal user variable */
         for (vnum = 0; vnum < MAXVARS; vnum++)
             if (strcmp(var+1, uv[vnum].name) == 0) {
                 vtype = TKVAR;
@@ -1410,8 +1422,8 @@ fvar:
                 break;
             }
         break;
-
-    case '.':               /* A buffer variable - only for execbp! */
+    }
+    case '.': {         /* A buffer variable - only for execbp! */
         if (!execbp) break;
         if (!execbp->bv) {  /* Need to create a set...free()d in bclear() */
             execbp->bv = Xmalloc(BVALLOC*sizeof(struct simple_variable));
@@ -1442,14 +1454,15 @@ fvar:
                 break;
             }
         break;
-
-    case '&':               /* A function to generate the name? */
+    }
+    case '&': {         /* A function to generate the name? */
         db_set(valres, var);
         db_strdef(tbuf);
         getval(&valres, &tbuf);
         var = db_val(tbuf);
         db_free(tbuf);
         goto fvar;
+    }
     }
 
 /* Return the results */
