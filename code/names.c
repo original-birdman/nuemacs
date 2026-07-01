@@ -265,6 +265,9 @@ void init_namelookup(void) {
 /* Lookup by function call address.
  * NOTE: that we use a binary chop that ensures we find the first
  * entry of any multiple ones.
+ * Since we might have multiple values with the same key AND that key
+ * is a pointer, not a char*, we can't use the start_check_at() code
+ * via start_item() here.
  */
 struct name_bind *func_info(fn_t func) {
     int first = 0;
@@ -286,21 +289,13 @@ struct name_bind *func_info(fn_t func) {
 /* Lookup by function name.
  * NOTE: that we don't need a binary chop that ensures we find the first
  * entry of any multiple ones, as there can't be such entries!
+ * So we just use the start_check_at() version via start_item() and
+ * check we found something.
  */
 struct name_bind *name_info(const char *name) {
-    int first = 0;
-    int last = names_size - 1;
-
-    int middle;
-    while (first <= last) {
-        middle = (first + last)/2;
-        int res = strcmp(names[name_index[middle]].n_name, name);
-        if (res < 0) first = middle + 1;
-        else if (res == 0) break;
-        else last = middle - 1;
-    }
-    if (first > last) return NULL;
-    return &names[name_index[middle]];
+    struct bc_res *rp = start_item(name, PRC_NAMES);
+    if (rp->test_res != 0) return NULL;
+    return &names[rp->idx];
 }
 
 /* A function to allow you to step through the index in order.

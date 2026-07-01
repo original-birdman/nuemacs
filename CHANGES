@@ -9327,3 +9327,6 @@ input.c
 efunc.h
     Move start_check_at code from input.c to eval.c and make it static.
     Front-end it with start_item().
+
+names.c
+    Modify name_info() to use start_item() for its binary chop.
