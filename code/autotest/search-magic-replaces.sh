@@ -91,22 +91,22 @@ run report-status
 
 ; Do the work
 beginning-of-file
-replace-string "^(...)" "${1}-${@}"
+replace-string "^(...)" "${1} ->${@:start=0,incr=2,fmt=Repl:%02d}<-"
 
 ; Check what we have...
 ;
 beginning-of-file
 set %curtest "Counter replace"
-set %expline "ABC-1"
+set %expline "ABC ->Repl:00<-"
 run check-line
 next-line
-set %expline "XYZ-2"
+set %expline "XYZ ->Repl:02<-"
 run check-line
 next-line
-set %expline "GML-3"
+set %expline "GML ->Repl:04<-"
 run check-line
 next-line
-set %expline "7UP-4"
+set %expline "7UP ->Repl:06<-"
 run check-line
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-

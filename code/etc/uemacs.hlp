@@ -477,6 +477,7 @@ ${@}
     The counter is an int, so any fmt option MUST be a template that
     mentions a single d/i/o/u/x/X conversion. Any invalid template is
     reported as an error.
+    The fmt field, if present, must follow any start and incr fields.
     The counter resets on each replace command.
     You may have more that one counter in a replace string.
 

@@ -643,6 +643,7 @@ static void parse_error(char *pptr, const char *message) {
     char byte_saved = *pptr;
     terminate_str(pptr);    /* Temporarily fudge in end-of-string */
     mlwrite("%s<-: %s!", db_val(pat), message);
+    sleep(2);
     *pptr = byte_saved;
     return;
 }
@@ -1576,7 +1577,7 @@ static struct func_call *new_fc(void) {
  */
 static int is_safe_counter(const char *user_fmt) {
     const char *cp = user_fmt;
-    int result = 0;
+    int result = FALSE;
 
 /* A state machine */
     enum fm_state { PREAMBLE, FLAG, WIDTH, PREC, IFMT, POSTAMBLE };
@@ -1618,7 +1619,7 @@ static int is_safe_counter(const char *user_fmt) {
         case IFMT:          /* Must be an integer format char */
             if (!strchr("diouxX", *cp)) return 0;
             state = POSTAMBLE;
-            result = 1;     /* Format seen */
+            result = TRUE;  /* Format seen */
             break;
         case POSTAMBLE:     /* Must not contain a % field */
             if (*cp == '%') {
@@ -1626,13 +1627,58 @@ static int is_safe_counter(const char *user_fmt) {
                     cp++;
                 }
                 else {
-                    return 0;
+                    return FALSE;
                 }
             }
         }
         cp++;
     }
     return result;
+}
+
+/* An internal routine to handle the ${@} counter syntax */
+static int handle_counter(struct magic_counter *mcp, db *tp) {
+/* Defaults... */
+    mcp->curval = 1;
+    mcp->incr = 1;
+    mcp->fmt = Xstrdup("%d");
+/* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
+ * NOTE that the format spec MUST be for an integer item!!!
+ * It also must be last (so it can contain a ",").
+ */
+    if (dbp_charat(tp, 1) == ':') {
+        const char *ntp = dbp_val(tp)+2;
+        while (ntp) {
+/* atoi() will stop parsing at any "," */
+            if (0 == strncmp("start=", ntp, 6)) {
+                mcp->curval = atoi(ntp+6);
+            }
+            else if (0 == strncmp("incr=", ntp, 5)) {
+                mcp->incr = atoi(ntp+5);
+            }
+            else if (0 == strncmp("fmt=", ntp, 4)) {
+                if (!is_safe_counter(ntp+4)) {
+                    mlforce_one("Invalid ${@..} counter");
+                    sleep(2);
+                    return FALSE;
+                }
+                Xfree(mcp->fmt);
+                mcp->fmt = Xstrdup(ntp+4);
+                break;  /* Hence fmt must be last */
+            }
+/* Advance past any "," to the next token */
+            ntp = strchr(ntp, ',');
+            if (ntp) ntp++;
+        }
+    }
+    return TRUE;
+}
+
+/* Internal routine to insert the text of a counter into a db */
+static void insert_counter(db *bp, struct magic_counter *mcp) {
+    db_sprintf(glb_db, mcp->fmt, mcp->curval);
+    dbp_append(bp, db_val(glb_db));
+    mcp->curval += mcp->incr;
 }
 
 /* rmcstr -- Set up the replacement 'magic' array.  Note that if there
@@ -1686,12 +1732,12 @@ static int rmcstr(void) {
             patptr++;
             if (*patptr != '{') {   /* balancer: } */
                 parse_error(patptr, "$ without {...}");
-                return FALSE;
+                return ABORT;
             }
             btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "${} not ended");
-                return FALSE;
+                return ABORT;
             }
             int patptr_advance = dbp_len(btext);
 
@@ -1709,36 +1755,7 @@ static int rmcstr(void) {
                 break;
             case '@':   /* Replace with a counter - optional formatting */
                 rmcptr->mc.type = REPL_CNT;
-/* Defaults... */
-                rmcptr->val.x.curval = 1;
-                rmcptr->val.x.incr = 1;
-                rmcptr->val.x.fmt = Xstrdup("%d");
-/* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
- * NOTE that the format spec MUST be for a d (or u) item!!!
- * We've already got the length of btext for advancing, so the fact that
- * strtok will write NULs into it doesn't worry us.
- */
-                if (dbp_charat(btext, 1) == ':') {
-                    char *tokp = strdupa(dbp_val(btext)+2);
-                    char *ntp;
-                    while ((ntp = strtok(tokp, ","))) {
-                        tokp = NULL;
-                        if (0 == strncmp("start=", ntp, 6)) {
-                            rmcptr->val.x.curval = atoi(ntp+6);
-                        }
-                        else if (0 == strncmp("incr=", ntp, 5)) {
-                            rmcptr->val.x.incr = atoi(ntp+5);
-                        }
-                        else if (0 == strncmp("fmt=", ntp, 4)) {
-                            if (!is_safe_counter(ntp+4)) {
-                                parse_error(patptr, "Invalid ${@..} counter");
-                                return FALSE;
-                            }
-                            Xfree(rmcptr->val.x.fmt);
-                            rmcptr->val.x.fmt = Xstrdup(ntp+4);
-                        }
-                    }
-                }
+                if (!handle_counter(&(rmcptr->val.x), btext)) return ABORT;
                 break;
             case '&':   /* Evaluate a function. May contain ${n} and ${@}. */
                 rmcptr->mc.type = REPL_FNC;
@@ -1766,32 +1783,9 @@ static int rmcstr(void) {
                     dbp_dcl(cnt);
                     cnt = brace_text(nxt+2);
                     if (dbp_charat(cnt, 0) == '@') {    /* A counter */
-/* Defaults... */
                         wkfcp->type = REPL_CNT;
-                        wkfcp->val.x.curval = 1;
-                        wkfcp->val.x.incr = 1;
-                        wkfcp->val.x.fmt = Xstrdup("%d");
-/* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
- * NOTE that the format spec MUST be for a d (or u) item!!!
- * We've already got the length of btext for advancing, so the fact that
- * strtok will write NULs into it doesn't worry us.
- */
-                        if (dbp_charat(cnt, 1) == ':') {
-                            char *tokp = strdupa(dbp_val(cnt)+2);
-                            char *ntp;
-                            while ((ntp = strtok(tokp, ","))) {
-                                tokp = NULL;
-                                if (0 == strncmp("start=", ntp, 6)) {
-                                    wkfcp->val.x.curval = atoi(ntp+6);
-                                }
-                                else if (0 == strncmp("incr=", ntp, 5)) {
-                                    wkfcp->val.x.incr = atoi(ntp+5);
-                                }
-                                else if (0 == strncmp("fmt=", ntp, 4)) {
-                                    wkfcp->val.x.fmt = Xstrdup(ntp+4);
-                                }
-                            }
-                        }
+                        if (!handle_counter(&(wkfcp->val.x), btext))
+                             return ABORT;
                     }
                     else {                  /* Group */
                         wkfcp->type = REPL_GRP;
@@ -1821,7 +1815,7 @@ static int rmcstr(void) {
         case MC_ESC:            /* Just insert the next grapheme! */
             if (!*(++patptr)) { /* Can't be last char */
                 parse_error(patptr, "dangling \\ at end");
-                return FALSE;
+                return ABORT;
 	    }
             rmagical = TRUE;    /* Can't do literal now... */
 	    /* Fall through - to handle next char... */
@@ -3456,13 +3450,7 @@ static const char *getrepl(void) {
             break;
         }
         case REPL_CNT: {
-#define MAX_COUNTER_LEN 128
-            char mc_text[MAX_COUNTER_LEN];
-            int nlen = snprintf(mc_text, MAX_COUNTER_LEN, rmcptr->val.x.fmt,
-                 rmcptr->val.x.curval);
-            if (nlen >= MAX_COUNTER_LEN) nlen = MAX_COUNTER_LEN - 1;
-            rmcptr->val.x.curval += rmcptr->val.x.incr;
-            db_appendn(repl, mc_text, nlen);
+            insert_counter(&repl, &(rmcptr->val.x));
             break;
         }
         case REPL_FNC: {
@@ -3478,11 +3466,7 @@ static const char *getrepl(void) {
                     db_append(fnc_buf, group_match(fcp->val.group_num));
                     break;
                 case REPL_CNT: {
-                    char mc_text[MAX_COUNTER_LEN];
-                    (void)snprintf(mc_text, MAX_COUNTER_LEN, fcp->val.x.fmt,
-                         fcp->val.x.curval);
-                    fcp->val.x.curval += fcp->val.x.incr;
-                    db_append(fnc_buf, mc_text);
+                    insert_counter(&fnc_buf, &(fcp->val.x));
                     break;
                 }
                 default:

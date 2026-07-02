@@ -9330,3 +9330,18 @@ efunc.h
 
 names.c
     Modify name_info() to use start_item() for its binary chop.
+
+search.c
+autotest/search-magic-replaces.sh
+etc/uemacs.hlp
+    Add a sleep in parse_error().
+    Add an internal function, handle_counter(), to handle replacement
+    counter syntax, as it actually occurs twice.
+    Add an internal function, insert_counter(), to handle inserting
+    the current counter value, as it actually occurs twice, and remove
+    the length restriction on the replaced text.
+    Change "failure" returns in rmcstr() to return ABORT not FALSE, so
+    that the replacement is abandoned.
+    Change is_safe_counter(0 to use TRUE/FALSE not 1/0.
+    Change a magic replacement test to use fmt= [search-magic-replaces.sh]
+    Document that fmt must be last (if present) in a counter. [uemacs.hlp]
