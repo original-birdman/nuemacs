@@ -9433,3 +9433,7 @@ bind.c
 exec.c
     Check that we have some "from" text (not a bare ^) in ptt_compile().
     Strip trailing spaces in token().
+
+dyn_buf.c
+    Change _dbp_replicatech_at() and _dbp_insertn_at() to both use a
+    common backend for their very similar code.

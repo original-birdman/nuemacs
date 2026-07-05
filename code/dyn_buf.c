@@ -88,37 +88,40 @@ void _dbp_set(db *ds, const char *str) {
     return;
 }
 
-/* Insert n copies of a char into buffer */
-
-void _dbp_replicatech_at(db *ds, char c, int n, int offs) {
+/* _dbp_replicatech_at() and _dbp_insertn_at() only differ in how they
+ * fill the created gap, so route through common code.
+ */
+enum repins_call_t { DBP_REPLICATE, DBP_INSERTN };
+static void _dbp_ri_at(db *ds, const char *cp, int n, int offs,
+     enum repins_call_t method) {
     int movers = ds->blen - offs;
     if ((movers < 0) || ((ds->blen - ds->alen) > offs))
-        illegal_dbaction("Illegal db replicatech");
+        illegal_dbaction("Illegal db replicatech/insertn");
     size_t need = (size_t)(ds->blen + n);
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     memmove(ds->buf+offs+n, ds->buf+offs, (size_t)movers);
-    memset(ds->buf+offs, c, (size_t)n);
+    if (method == DBP_REPLICATE)
+        memset(ds->buf+offs, *cp, (size_t)n);
+    else        /* DBP_INSERTN */
+        memcpy(ds->buf+offs, cp, (size_t)n);
     ds->blen += n;
     ds->alen += n;
     if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
     return;
 }
 
+/* Insert n copies of a char into buffer */
+
+void _dbp_replicatech_at(db *ds, char c, int n, int offs) {
+    _dbp_ri_at(ds, &c, n, offs, DBP_REPLICATE);
+    return;
+}
+
 /* Insert n chars into buffer */
 
 void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
-    int movers = ds->blen - offs;
-    if ((movers < 0) || ((ds->blen - ds->alen) > offs))
-        illegal_dbaction("Illegal db insertn");
-    size_t need = (size_t)(ds->blen + n);
-    if (ds->type & DB_STR) need++;
-    if (need > ds->alloc) _dbp_realloc(ds, need);
-    memmove(ds->buf+offs+n, ds->buf+offs, (size_t)movers);
-    memcpy(ds->buf+offs, mp, (size_t)n);
-    ds->blen += n;
-    ds->alen += n;
-    if (ds->type & DB_STR) *(ds->buf+ds->blen) = '\0';
+    _dbp_ri_at(ds, mp, n, offs, DBP_INSERTN);
     return;
 }
 
