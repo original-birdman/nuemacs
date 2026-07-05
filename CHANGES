@@ -9420,3 +9420,6 @@ display.c
 
 main.c
     Ignore -s option if it is given an empty search pattern.
+
+globals.c
+    Mark current_command as const char *, to match edef.h.

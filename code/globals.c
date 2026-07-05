@@ -172,7 +172,7 @@ char regionlist_number[MAX_REGL_LEN] = " %2d. ";
 db_strdef(readin_mesg);
 
 int running_function = 0;
-char *current_command = NULL;
+const char *current_command = NULL;
 
 func_arg f_arg = { NULL, { META|SPEC|'C', TRUE, 1 } }, p_arg;
 
