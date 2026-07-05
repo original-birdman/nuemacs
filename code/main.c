@@ -114,8 +114,7 @@ printf( \
 
 /* KBD Macro in buffer code */
 
-static char kbd_text[1024];
-static int kbd_idx;
+static db_bufdef(kbd_text);
 static int must_quote;
 static int ctlxe_togo = 0;  /* This is for the kbdm[] version */
 
@@ -198,7 +197,8 @@ static int start_kbdmacro(void) {
     }
 
     bclear(kbdmac_bp);
-    kbd_idx = must_quote = 0;
+    must_quote = 0;
+    db_set(kbd_text, "");
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "start")) return FALSE;
     addstr_to_curb("; keyboard macro");
     return kbdmac_buffer_toggle(OutOf_KBDM, "start");
@@ -228,10 +228,10 @@ void addchar_kbdmacro(char addch) {
     case ' ': must_quote = 1; break;
     }
     if (xc != 0) {
-        kbd_text[kbd_idx++] = '~';
+        db_addch(kbd_text, '~');
         cc = xc;
     }
-    kbd_text[kbd_idx++] = cc;
+    db_addch(kbd_text, '~');
     return;
 }
 
@@ -240,25 +240,28 @@ void addchar_kbdmacro(char addch) {
  * Needs to handle spaces, token()'s special characters and NULs.
  */
 static void flush_kbd_text(void) {
+    if (db_len(kbd_text) <= 0) return;  /* Nothing to do */
     linstr("\ninsert-string ");
     if (must_quote) linsert_byte(1, '"');
-    terminate_str(kbd_text+kbd_idx);    /* Terminate current text */
+
 /* This loop may look odd, but if we have NUL bytes to insert it means
  * that it works, as if we haven't yet added enough it must be because
  * we've hit a NUL, so process that and continue on from there.
  */
     int added = 0;
+    const char *sp = db_val(kbd_text);
     while(1) {
-        linstr(kbd_text+added);
-        added += istrlen(kbd_text+added);
-        if (added >= kbd_idx) break;
+        linstr(sp+added);
+        added += istrlen(sp+added);
+        if (added >= db_len(kbd_text)) break;
         if (must_quote) linsert_byte(1, '"');
         linstr("\nmacro-helper 0\ninsert-string ");
         added++;
         if (must_quote) linsert_byte(1, '"');
     }
     if (must_quote) linsert_byte(1, '"');
-    kbd_idx = must_quote = 0;
+    must_quote = 0;
+    db_clear(kbd_text);
     return;
 }
 
@@ -286,7 +289,7 @@ int addto_kbdmacro(const char *text, int new_command, int do_quote) {
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "addto")) return FALSE;
 
 /* If there is any pending text we need to flush it first */
-    if (kbd_idx) flush_kbd_text();
+    flush_kbd_text();
     if (new_command) {
         lnewline();
         if (func_rpt.valid) {
@@ -358,7 +361,7 @@ static int end_kbdmacro(void) {
     if (!kbdmac_buffer_toggle(GetTo_KBDM, "end")) return FALSE;
 
 /* If there is any pending text we need to flush it first */
-    if (kbd_idx) flush_kbd_text();
+    flush_kbd_text();
     lnewline();
 
 /* If we were in PLAY mode, restore the current c/f/n-last.
@@ -1668,12 +1671,27 @@ int execute(int c, int f, int n) {
 	}
         else {
             status = linsert_uc(n, c);  /* We get Unicode, not utf-8 */
+
+/* Do we need to record it in //kbd_macro?
+ * If so, do so using a numeric prefix for insert-string rather
+ * that ading <n> chars to the holding buffer.
+ * <n> could be large....
+ */
             if (!inmb && kbdmode == RECORD) {
                 int nc = 1;
                 if ((f > 0) && (n > 1)) nc = n;
                 char utf8[6];
                 int nbytes = unicode_to_utf8(c, utf8);
-                while(nc--) {
+                if (nc > 1) {       /* Multiple copies to add */
+                    char tbuf[64];
+                    snprintf(tbuf, 64, "%d insert-string", nc);
+/* Add as a new command (to force any pending kbd_text to be flushed) */
+                    addto_kbdmacro(tbuf, TRUE, FALSE);
+/* Add the char (which may be a utf8 string) with quoting */
+                    utf8[nbytes] = '\0';
+                    addto_kbdmacro(utf8, FALSE, TRUE);
+                }
+                else {
                     for (int j = 0; j < nbytes; j++) {
                         addchar_kbdmacro(utf8[j]);
                     }

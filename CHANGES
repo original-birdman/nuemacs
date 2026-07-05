@@ -9376,3 +9376,11 @@ main.c
     Add handling of 0 byte to addchar_kbdmacro() and addto_kbdmacro().
     exec.c got this in GGR4.191.
     NOTE that other parts of the code still do no handles NUL bytes!
+
+--------------------
+More Claude hardening.
+
+main.c
+    Modify the self-insert code to use the repeat count for //kbd_macro
+    if there is one, rather than insert <n> chars in a loop.
+    Change kbd_text to be a dyn_buf, to avoid overflow.
