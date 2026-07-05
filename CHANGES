@@ -9371,3 +9371,8 @@ estruct.h
     Change/add prototypes for start_item() and start_func_item(). [efunc.h]
     Change start_item() calls to use the new parameters. [input.c]
     Remove the no longer used enum bc_array_t [efunc.h]
+
+main.c
+    Add handling of 0 byte to addchar_kbdmacro() and addto_kbdmacro().
+    exec.c got this in GGR4.191.
+    NOTE that other parts of the code still do no handles NUL bytes!

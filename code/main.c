@@ -217,6 +217,7 @@ void addchar_kbdmacro(char addch) {
     char cc = addch & (char)0xff;
     char xc = 0;
     switch(cc) {        /* Handle what token in exec.c handles */
+    case 0:   xc = '0'; break;
     case 8:   xc = 'b'; break;
     case 9:   xc = 't'; break;
     case 10:  xc = 'n'; break;
@@ -325,6 +326,7 @@ int addto_kbdmacro(const char *text, int new_command, int do_quote) {
             char cc = *tp & (char)0xff;
             char xc = 0;
             switch(cc) {
+            case 0:   xc = '0'; break;
             case 8:   xc = 'b'; break;
             case 9:   xc = 't'; break;
             case 10:  xc = 'n'; break;
