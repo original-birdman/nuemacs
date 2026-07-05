@@ -225,7 +225,6 @@ static void cmplt_file(db *name) {
  */
     struct dirent *dp;
     struct stat statbuf;
-    int dir_found = 0;
     int dfd = dirfd(dirptr);
     while ((dp = readdir(dirptr)) != NULL) {
         if ( (strcmp(dp->d_name, ".") == 0) ||
@@ -252,10 +251,6 @@ static void cmplt_file(db *name) {
     if (res.found == 0) db_set(res.choices, NOMATCH);
     else                db_append(res.match, db_val(res.mprefix));
 
-/* This allows us to find a directory and then expand it with one <tab>,
- * rather than needing two.
- */
-    if (dir_found && (res.found == 1)) db_append(res.match, "/");
     return;
 }
 

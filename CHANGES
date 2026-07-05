@@ -9423,3 +9423,6 @@ main.c
 
 globals.c
     Mark current_command as const char *, to match edef.h.
+
+input.c
+    Remove dir_found usage. No longer used.
