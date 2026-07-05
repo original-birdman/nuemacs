@@ -351,7 +351,7 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     if (ctype == CMPLT_VAR) {   /* first_ch already set */
         if (first_ch == '$') {
             nvar_get = nxti_envvar;
-            vidx = (start_item(np, SYS_ENVAR))->idx;;
+            vidx = (start_item(np, &evl_info))->idx;;
         }
         else {
             nvar_get = nxti_usrvar;
@@ -362,7 +362,7 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     }
     else {
          nvar_get = nxti_name_info;
-	 vidx = (start_item(np, PRC_NAMES))->idx;
+	 vidx = (start_item(np, &nfc_info))->idx;
     }
 /* We now have a starting index (probably not -1) so use that first value
  * and get the next one at the end of the loop.

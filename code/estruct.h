@@ -582,6 +582,16 @@ struct evlist {
 
 /* A "binary chop information" structure for start_check_at() etc. */
 
+struct bc_info {
+    void *bp;       /* The data array (of struct) */
+    int *ip;        /* The index */
+    int nelem;      /* Num of elements in array */
+    int esize;      /* The size of each element */
+    int offs;       /* The offset within each struct item of the sort field */
+};
+
+/* A "binary chop result" structure for start_check_at() etc. */
+
 struct bc_res {
     const char *last_ctest; /* Last char field looked at */
     int test_res;           /* Result of last char-strinf check */

@@ -234,6 +234,15 @@ char *dump_message = NULL;
  */
 db_strdef(glb_db);
 
+/* Index info for binary chop indexes */
+
+struct bc_info key_info;    /* Lookup key bind(s) for a function */
+struct bc_info evl_info;    /* Lookup environment variables */
+struct bc_info ufc_info;    /* Lookup user functions (&...) */
+
+struct bc_info nfc_info;    /* Lookup command functions by name */
+struct bc_info fcn_info;    /* Lookup command functions by func */
+
 /* A system-wide mark for temporarily saving the current location.
  * p MUST be reset to NULL after every restore!!!
  */

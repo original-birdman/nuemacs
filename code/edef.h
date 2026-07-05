@@ -352,6 +352,17 @@ extern int path_pfx_map_valid;
  */
 extern db_dcl(glb_db);
 
+/* Index info for binary chop indexes (start_item) */
+
+extern struct bc_info nfc_info;     /* Lookup command functions by name */
+extern struct bc_info evl_info;     /* Lookup environment variables */
+extern struct bc_info ufc_info;     /* Lookup user functions (&...) */
+
+/* Index info for binary chop indexes (start_func_at) */
+
+extern struct bc_info fcn_info;     /* Lookup command functions by func */
+extern struct bc_info key_info;     /* Lookup key bind(s) for a function */
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

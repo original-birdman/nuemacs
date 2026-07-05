@@ -234,56 +234,65 @@ struct name_bind names[] = {
 #include <stddef.h>
 #include "idxsorter.h"
 
-int names_size = ARRAY_SIZE(names);
-static int *func_index = NULL;
-int *name_index = NULL;
 static int *next_name_index = NULL;
 
 void init_namelookup(void) {
     struct fields fdef;
 
+/* We need to set this to NULL, so that teh Xrealloc() in index_keystr()
+ * in bind.c will work.
+ */
+    key_info.ip = NULL;
+
+/* Index to lookup function info given a name */
+
     fdef.offset = offsetof(struct name_bind, n_func);
     fdef.type = 'P';
     fdef.len = sizeof(fn_t);
-    func_index = Xmalloc((size_t)(names_size+1)*sizeof(int));
-    idxsort_fields((unsigned char *)names, func_index,
-          sizeof(struct name_bind), names_size, 1, &fdef);
+
+/* Set values for binary chop */
+
+    fcn_info.bp = names;
+    fcn_info.nelem = ARRAY_SIZE(names);
+    fcn_info.ip = Xmalloc((size_t)(fcn_info.nelem+1)*sizeof(int));
+    fcn_info.esize = sizeof(struct name_bind);
+    fcn_info.offs = offsetof(struct name_bind, n_func);
+    idxsort_fields((unsigned char *)names, fcn_info.ip,
+          sizeof(struct name_bind), fcn_info.nelem, 1, &fdef);
+
+/* Index to lookup function info given a function */
 
     fdef.offset = offsetof(struct name_bind, n_name);
     fdef.type = 'S';
     fdef.len = 0;
-    name_index = Xmalloc((size_t)(names_size+1)*sizeof(int));
-    idxsort_fields((unsigned char *)names, name_index,
-          sizeof(struct name_bind), names_size, 1, &fdef);
+
+/* Set values for binary chop */
+
+    nfc_info.bp = names;
+    nfc_info.nelem = ARRAY_SIZE(names);
+    nfc_info.ip = Xmalloc((size_t)(nfc_info.nelem+1)*sizeof(int));
+    nfc_info.esize = sizeof(struct name_bind);
+    nfc_info.offs = offsetof(struct name_bind, n_name);
+    idxsort_fields((unsigned char *)names, nfc_info.ip,
+          sizeof(struct name_bind), nfc_info.nelem, 1, &fdef);
 
 /* We want to step through this one, so need a next index too */
-    next_name_index = Xmalloc((size_t)(names_size+1)*sizeof(int));
-    make_next_idx(name_index, next_name_index, names_size);
+    next_name_index = Xmalloc((size_t)(nfc_info.nelem+1)*sizeof(int));
+    make_next_idx(nfc_info.ip, next_name_index, nfc_info.nelem);
     return;
 }
 
 /* Lookup by function call address.
  * NOTE: that we use a binary chop that ensures we find the first
- * entry of any multiple ones.
+ * entry of any multiple ones (or -1 if not found).
  * Since we might have multiple values with the same key AND that key
  * is a pointer, not a char*, we can't use the start_check_at() code
  * via start_item() here.
  */
 struct name_bind *func_info(fn_t func) {
-    int first = 0;
-    int last = names_size - 1;
-    int middle;
-
-    while (first != last) {
-        middle = (first + last)/2;
-/* middle is too low, so try from middle + 1 */
-        if ((void*)names[func_index[middle]].n_func < (void*)func)
-             first = middle + 1;
-/* middle is at or beyond start, so set last here */
-        else last = middle;
-    }
-    if (names[func_index[first]].n_func != func) return NULL;
-    return &names[func_index[first]];
+    int res = start_func_item(func, &fcn_info);
+    if (res < 0) return NULL;
+    return &names[fcn_info.ip[res]];
 }
 
 /* Lookup by function name.
@@ -293,7 +302,7 @@ struct name_bind *func_info(fn_t func) {
  * check we found something.
  */
 struct name_bind *name_info(const char *name) {
-    struct bc_res *rp = start_item(name, PRC_NAMES);
+    struct bc_res *rp = start_item(name, &nfc_info);
     if (rp->test_res != 0) return NULL;
     return &names[rp->idx];
 }
@@ -305,8 +314,8 @@ struct name_bind *name_info(const char *name) {
  * If the index is out of range it will return -2.
  */
 int nxti_name_info(int ci) {
-    if (ci == -1) return name_index[0];
-    if ((ci >= 0) && (ci < names_size)) {
+    if (ci == -1) return nfc_info.ip[0];
+    if ((ci >= 0) && (ci < nfc_info.nelem)) {
         int ni = next_name_index[ci];
         if (ni >= 0) return ni;
         return -1;
@@ -319,8 +328,8 @@ int nxti_name_info(int ci) {
  * valgrind usage.
  */
 void free_names(void) {
-    Xfree(func_index);
-    Xfree(name_index);
+    Xfree(fcn_info.ip);
+    Xfree(nfc_info.ip);
     Xfree(next_name_index);
     return;
 }

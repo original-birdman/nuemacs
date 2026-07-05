@@ -9345,3 +9345,29 @@ etc/uemacs.hlp
     Change is_safe_counter(0 to use TRUE/FALSE not 1/0.
     Change a magic replacement test to use fmt= [search-magic-replaces.sh]
     Document that fmt must be last (if present) in a counter. [uemacs.hlp]
+
+bind.c
+eval.c
+globals.c
+input.c
+names.c
+edef.h
+efunc.h
+estruct.h
+    Simplify the binary chop interludes by setting up a common control
+    structure that includes all relevant data.
+    Remove the
+    Change index_keystr() to use this for keytab indexing. [bind.c]
+    Change init_envvar_index() to use this for evl and funcs indexing.
+    [eval.c]
+    Change init_namelookup() to use this names indexing. [names.c]
+    Added start_func_item() to binary chop indexes sorted by function
+    value. [eval.c]
+    Removed start_check_at() as start_item() now does all of the work.
+    [eval.c]
+    Use start_func_item() in getbyfnc(). [bind.c]
+    Define and declare the common control structures. [globals.c,
+    edef.h, estruct.h]
+    Change/add prototypes for start_item() and start_func_item(). [efunc.h]
+    Change start_item() calls to use the new parameters. [input.c]
+    Remove the no longer used enum bc_array_t [efunc.h]

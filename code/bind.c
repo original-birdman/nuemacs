@@ -401,21 +401,31 @@ static void index_bindings(void) {
     return;
 }
 
-/* Dumping the key bindings needs to map the function to the keystroke
+/* Dumping the key bindings that are mapped to a function.
  * We'll index it rather than it having to do a linear search of each
  * item for every function.
  * Once we get here we know there are kt_ents entries.
  */
-static int *keystr_index = NULL;
 static int *next_keystr_index = NULL;
 static void index_keystr(void) {
-    keystr_index = Xreallocarray(keystr_index, kt_ents, sizeof(int));
+
     struct fields fdef;
+
+/* Index to lookup a function and find keys mapped to it */
+
     fdef.offset = offsetof(struct key_tab, hndlr.k_fp);
     fdef.type = 'P';
     fdef.len = sizeof(fn_t);
 
-    idxsort_fields((unsigned char *)keytab, keystr_index,
+/* Set values for binary chop.
+ * key_info.ip is set to NULL in init_namelookup() in names.c.
+ */
+    key_info.bp = keytab;
+    key_info.nelem = kt_ents;
+    key_info.ip = Xreallocarray(key_info.ip, kt_ents, sizeof(int));
+    key_info.esize = sizeof(struct key_tab);
+    key_info.offs = offsetof(struct key_tab, hndlr.k_fp);
+    idxsort_fields((unsigned char *)keytab, key_info.ip,
              sizeof(struct key_tab), kt_ents, 1, &fdef);
 
 /* Having the index lets you find a matching entry. But we also want to
@@ -426,7 +436,7 @@ static void index_keystr(void) {
  * The final entry has a next of -1 to indicate "no further entry".
  */
     next_keystr_index = Xreallocarray(next_keystr_index, kt_ents, sizeof(int));
-    make_next_idx(keystr_index, next_keystr_index, kt_ents);
+    make_next_idx(key_info.ip, next_keystr_index, kt_ents);
     keystr_index_valid = 1; /* This index is now usable */
     return;
 }
@@ -439,7 +449,7 @@ static void index_keystr(void) {
  */
 static struct key_tab *next_getbyfnc(struct key_tab *cp) {
     if (!keystr_index_valid) index_keystr();
-    if (cp == NULL) return &keytab[keystr_index[0]];
+    if (cp == NULL) return &keytab[key_info.ip[0]];
 /* Convert pointer to index and work from that... */
     int ci = (int)(cp - keytab);
     if ((ci >= 0) && (ci < kt_ents)) {
@@ -453,25 +463,17 @@ static struct key_tab *next_getbyfnc(struct key_tab *cp) {
  */
 struct key_tab *getbyfnc(fn_t func) {
     if (!keystr_index_valid) index_keystr();
-
 /* Lookup by function call.
  * NOTE: that we use a binary chop that ensures we find the first
- * entry of any multiple ones.
+ * entry of any multiple ones (or -1 if not found).
+ * Now done via start_func_item() in eval.c
+ * Since we might have multiple values with the same key AND that key
+ * is a pointer, not a char*, we can't use the start_check_at() code
+ * via start_item() here.
  */
-    int first = 0;
-    int last = kt_ents - 1;
-    int middle;
-
-    while (first != last) {
-        middle = (first + last)/2;
-/* middle is too low, so try from middle + 1 */
-        if ((void*)keytab[keystr_index[middle]].hndlr.k_fp < (void*)func)
-            first = middle + 1;
-/* middle is at or beyond start, so set last here */
-        else last = middle;
-    }
-    if (keytab[keystr_index[first]].hndlr.k_fp != func) return NULL;
-    return &keytab[keystr_index[first]];
+    int res = start_func_item(func, &fcn_info);
+    if (res < 0) return NULL;
+    return &keytab[key_info.ip[res]];
 }
 
 /* This function looks a key binding up in the binding table
@@ -504,6 +506,8 @@ struct key_tab *getbind(int c) {
 /* Look through the key table. We can now binary-chop this...
  * NOTE: that we don't do a binary chop that ensures we find the first
  * entry of any multiple ones, as there can't be such entries!
+ * Since there is only one of these "U" binary chops, it isn't wrapped
+ * in a struct bc_info.
  */
     int first = 0;
     int middle = 0;     /* Keep the gcc analyzer happy */
@@ -1211,7 +1215,7 @@ void free_bind(void) {
     }
     Xfree(keytab);
     Xfree(key_index);
-    Xfree(keystr_index);
+    Xfree(key_info.ip);
     Xfree(next_keystr_index);
     if (free_path_reqd) Xfree(pathname[0]);
 

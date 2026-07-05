@@ -117,34 +117,46 @@ void varinit(void) {
  * Some parts are external for use by completion code in input.c
  */
 
-int *envvar_index = NULL;
 static int *next_envvar_index;
-int evl_size = ARRAY_SIZE(evl);
-
-static int *uf_index;
-static int ufi_size = ARRAY_SIZE(funcs);
 
 /* env var ($...) sorting */
 
 void init_envvar_index(void) {
     struct fields fdef;
 
+/* Index to lookup environment variables by name */
+
     fdef.offset = offsetof(struct evlist, var);
     fdef.type = 'S';
     fdef.len = 0;
-    envvar_index = Xmalloc((size_t)(evl_size+1)*sizeof(int));
-    idxsort_fields((unsigned char *)evl, envvar_index,
-          sizeof(struct evlist), evl_size, 1, &fdef);
-/* We want to step through this one, so need a next index too */
-    next_envvar_index = Xmalloc((size_t)(evl_size+1)*sizeof(int));
-    make_next_idx(envvar_index, next_envvar_index, evl_size);
 
-/* Also provide a user_function index */
+/* Set values for binary chop */
+
+    evl_info.bp = evl;
+    evl_info.nelem = ARRAY_SIZE(evl);
+    evl_info.ip = Xmalloc((size_t)(evl_info.nelem+1)*sizeof(int));
+    evl_info.esize = sizeof(struct evlist);
+    evl_info.offs = offsetof(struct evlist, var);
+    idxsort_fields((unsigned char *)evl, evl_info.ip,
+          sizeof(struct evlist), evl_info.nelem, 1, &fdef);
+
+/* We want to step through this one, so need a next index too */
+    next_envvar_index = Xmalloc((size_t)(evl_info.nelem+1)*sizeof(int));
+    make_next_idx(evl_info.ip, next_envvar_index, evl_info.nelem);
+
+/* Also provide a user_function (&...) index */
 
     fdef.offset = offsetof(struct user_function, f_name);
-    uf_index = Xmalloc((size_t)(ufi_size+1)*sizeof(int));
-    idxsort_fields((unsigned char *)funcs, uf_index,
-          sizeof(struct user_function), ufi_size, 1, &fdef);
+
+/* Set values for binary chop */
+
+    ufc_info.bp = funcs;
+    ufc_info.nelem = ARRAY_SIZE(funcs);
+    ufc_info.ip = Xmalloc((size_t)(ufc_info.nelem+1)*sizeof(int));
+    ufc_info.esize = sizeof(struct user_function);
+    ufc_info.offs = offsetof(struct user_function, f_name);
+    idxsort_fields((unsigned char *)funcs, ufc_info.ip,
+          sizeof(struct user_function), ufc_info.nelem, 1, &fdef);
 
     return;
 }
@@ -156,8 +168,8 @@ void init_envvar_index(void) {
  * If the index is out of range it will return -2.
  */
 int nxti_envvar(int ci) {
-    if (ci == -1) return envvar_index[0];
-    if ((ci >= 0) && (ci < evl_size)) {
+    if (ci == -1) return evl_info.ip[0];
+    if ((ci >= 0) && (ci < evl_info.nelem)) {
         int ni = next_envvar_index[ci];
         if (ni >= 0) return ni;
         return -1;
@@ -213,33 +225,26 @@ int nxti_usrvar(int ci) {
  * NOTE that this works out where an item would need to be inserted
  * (-1 if it would need to be after the last element).
  * It returns multiple bits of info via a structuyre, so tha the caller
- * can also work outy whether then item is actually there and, if so,
+ * can also work out whether the item is actually there and, if so,
  * where.
  *
  * Called via start_item()
  */
-struct sca_info {
-    void *bp;
-    int *ip;
-    int nelem;
-    int esize;
-    int offs;
-};
-static struct bc_res *start_check_at(const char *look4,
- const struct sca_info *arg) {
+struct bc_res *start_item(const char *look4, const struct bc_info *dp) {
 
     static struct bc_res bci;
 
     int low = 0;
-    int high = arg->nelem - 1;
+    int high = dp->nelem - 1;
     int test = 0;
 
     bci.test_res = 0;
 
-    const char **te = NULL;;
+    const char **te = NULL;
+    const char *bp = dp->bp + dp->offs;
     while (low <= high) {
         test = (low + high)/2;
-        te = arg->bp + (arg->ip[test]*arg->esize) + arg->offs;
+        te = (const char **)(bp + (dp->ip[test]*dp->esize));
         bci.test_res = strcmp(look4, *te);
         if (bci.test_res < 0) high = test - 1;
         else if (bci.test_res == 0) break;
@@ -249,8 +254,8 @@ static struct bc_res *start_check_at(const char *look4,
     else     bci.last_ctest = NULL;
 
 /* Now need to find out what the last test was.
- * If bci.test_res < 0 then what we are looking for is before the test item, which
- * is OK, as it could be the start of it.
+ * If bci.test_res < 0 then what we are looking for is before the test item,
+ * which is OK, as it could be the start of it.
  * If bci.test_res == 0 then we found the exact match and again that is the
  * correct place to start.
  * But if bci.test_res > 0 then what we are looking at is beyond the test item
@@ -260,46 +265,36 @@ static struct bc_res *start_check_at(const char *look4,
  * search loop).
  */
     if (bci.test_res > 0) test++;
-    if (test >= arg->nelem) bci.idx = -1;
-    else                    bci.idx =  arg->ip[test];
+    if (test >= dp->nelem) bci.idx = -1;
+    else                    bci.idx =  dp->ip[test];
     return &bci;
 }
 
-/* External calls for start_check_at() come here, where they get the
- * data array info set based on the type.
+/* Entry point for binary chop on function addresses.
+ * Used by getbyfnc() (in bind.c) and func_info() (in names.c).
+ * Since we might have multiple values with the same key AND that key
+ * is a pointer, not a char*, we can't use the start_check_at() code
+ * via start_item() here.
+ * We have to return the first (lowest) item as there may be multiple
+ * matches, or -1 if no match is found.
  */
-struct bc_res *start_item(const char *look4, enum bc_array_t bc_array) {
+int start_func_item(fn_t func, const struct bc_info *dp) {
 
-    struct sca_info info;
-    switch(bc_array) {
-    case SYS_ENVAR: {
-        info.bp = evl;
-        info.ip = envvar_index;
-        info.nelem = evl_size;
-        info.esize = sizeof(struct evlist);
-        info.offs = offsetof(struct evlist, var);
-        break;
+    int first = 0;
+    int last = dp->nelem - 1;
+    int test;
+
+    char *bp = dp->bp + dp->offs;
+    while (first != last) {
+        test = (first + last)/2;
+/* test is too low, so try from test + 1 */
+        if (*((fn_t *)(bp + (dp->ip[test]*dp->esize))) < func)
+             first = test + 1;
+/* test is at or beyond start, so set last here */
+        else last = test;
     }
-    case PRC_NAMES: {
-        info.bp = names;
-        info.ip = name_index;
-        info.nelem = names_size;
-        info.esize = sizeof(struct name_bind);
-        info.offs = offsetof(struct name_bind, n_name);
-        break;
-    }
-    case UFC_INDEX: {
-        info.bp = funcs;
-        info.ip = uf_index;
-        info.nelem = ufi_size;
-        info.esize = sizeof(struct user_function);
-        info.offs = offsetof(struct user_function, f_name);
-        break;
-    }
-    default:    /* Will actually never happen */
-        return NULL;
-    }
-    return start_check_at(look4, &info);
+    if (*((fn_t *)(bp + (dp->ip[first]*dp->esize))) != func) return -1;
+    return first;
 }
 
 /* Convert a string to a numeric logical
@@ -733,7 +728,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     strncpy(lfname, fname, 4);
     lfname[3] = 0;          /* only first 3 chars significant */
     mklower(lfname);        /* and let it be upper or lower case */
-    struct bc_res *tp = start_item(lfname, UFC_INDEX);
+    struct bc_res *tp = start_item(lfname, &ufc_info);
     if (tp->test_res == 0) {
         fnum = tp->idx;
     }
@@ -1494,7 +1489,7 @@ fvar:
     switch (var[0]) {
 
     case '$': {         /* Check for legal enviromnent var */
-        struct bc_res *tp = start_item(var+1, SYS_ENVAR);
+        struct bc_res *tp = start_item(var+1, &evl_info);
         if (tp->test_res == 0) {
             vtype = TKENV;   /* Found it */
             vnum = tp->idx;
@@ -2078,7 +2073,8 @@ void free_eval(void) {
 /* Just the variable indexes.
  * Buffer vars are freed in free_buffer.
  */
-    Xfree(envvar_index);
+    Xfree(evl_info.ip);
+    Xfree(ufc_info.ip);
     Xfree(next_envvar_index);
     for (int i = 0; i < MAXVARS; i++) {
         if (uv[i].name[0] == '\0') break;   /* End of list */

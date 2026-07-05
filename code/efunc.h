@@ -114,11 +114,6 @@ extern void mbupdate(void);
 #endif
 
 /* eval.c */
-enum bc_array_t {
-    SYS_ENVAR,      /* System environment variables */
-    PRC_NAMES,      /* Procedure names */
-    UFC_INDEX,      /* Use function names (&...) */
-};
 #ifndef EVAL_C
 extern const char *ue_itoa(int);
 extern void varinit(void);
@@ -126,7 +121,8 @@ extern void init_envvar_index(void);
 extern int nxti_envvar(int);
 extern void sort_user_var(void);
 extern int nxti_usrvar(int);
-extern struct bc_res *start_item(const char *, enum bc_array_t);
+extern struct bc_res *start_item(const char *, const struct bc_info *);
+extern int start_func_item(fn_t, const struct bc_info *);
 extern int stol(const char *);
 extern int gettyp(const char *);
 extern void getval(db *, db *);
