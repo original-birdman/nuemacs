@@ -281,6 +281,11 @@ static int docmd(const char *cline) {
  */
     if (strcmp(db_val(tkn), "reexecute") == 0) {
         Xfree(this_line_seen);  /* Drop the "reexecute" */
+/* Make sure we have a previous line.... */
+        if (prev_line_seen == NULL) {
+            prev_line_seen = Xmalloc(1);
+            prev_line_seen[0] = '\0';   /* Make it empty */
+        }
         this_line_seen = Xstrdup(prev_line_seen);
         status = TRUE;
         while (n-- && status) status = docmd(prev_line_seen);

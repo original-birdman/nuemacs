@@ -9400,3 +9400,6 @@ exec.c
 
 eval.c
     Fix string template handling in dbp_uesprintf().
+
+exec.c
+    Handle there being no prev_line_seen yet.
