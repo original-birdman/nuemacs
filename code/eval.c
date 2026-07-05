@@ -287,10 +287,14 @@ int start_func_item(fn_t func, const struct bc_info *dp) {
     char *bp = dp->bp + dp->offs;
     while (first != last) {
         test = (first + last)/2;
-/* test is too low, so try from test + 1 */
-        if (*((fn_t *)(bp + (dp->ip[test]*dp->esize))) < func)
+/* We cast things to void* to stop Clang warning about ordered comparison
+ * of function pointers (-Wordered-compare-function-pointers).
+ * It's fine here.
+ */
+/* If test is too low, so try from test + 1 ... */
+        if ((void*)*((fn_t *)(bp + (dp->ip[test]*dp->esize))) < (void*)func)
              first = test + 1;
-/* test is at or beyond start, so set last here */
+/* ... or test is at or beyond start, so set last here */
         else last = test;
     }
     if (*((fn_t *)(bp + (dp->ip[first]*dp->esize))) != func) return -1;

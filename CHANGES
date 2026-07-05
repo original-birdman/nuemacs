@@ -9437,3 +9437,6 @@ exec.c
 dyn_buf.c
     Change _dbp_replicatech_at() and _dbp_insertn_at() to both use a
     common backend for their very similar code.
+
+eval.c
+    Cast fn_t to (void *) in start_func_item() to avoid warning from Clang.
