@@ -112,8 +112,8 @@ void _dbp_free(db *);
 #define dbp_insertn_at(to_ds, from_buf, flen, w) \
      _dbp_insertn_at((to_ds), from_buf, flen, w)
 
-#define db_deleten_at(to_ds, n, w) _dbp_deleten_at(&(to_ds), n, w);
-#define dbp_deleten_at(to_ds, n, w) _dbp_deleten_at((to_ds), n, w);
+#define db_deleten_at(to_ds, n, w) _dbp_deleten_at(&(to_ds), n, w)
+#define dbp_deleten_at(to_ds, n, w) _dbp_deleten_at((to_ds), n, w)
 
 #define db_overwriten_at(to_ds, from_buf, flen, w) \
      _dbp_overwriten_at(&(to_ds), from_buf, flen, w)

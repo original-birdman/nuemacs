@@ -9403,3 +9403,8 @@ eval.c
 
 exec.c
     Handle there being no prev_line_seen yet.
+
+file.c
+dyn_buf.h
+    Remove erroneous trailing ; on db(p)_deleten_at defines. [dyn_buf.h]
+    Add missing ; at end of staement [file.c]

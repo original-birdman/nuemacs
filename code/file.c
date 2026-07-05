@@ -488,7 +488,7 @@ static int file2buf(struct line *iline, const char *mode, int goto_end,
              (db_charat(ldb(lp1), lused(lp1)-1) == '\r')) dos_file = TRUE;
         if (dos_file && (lused(lp1) > 0) &&
              (db_charat(ldb(lp1), lused(lp1)-1) == '\r'))
-            db_deleten_at(ldb(lp1), 1, lused(lp1)-1)    /* Remove trailing CR */
+            db_deleten_at(ldb(lp1), 1, lused(lp1)-1);   /* Remove trailing CR */
         if (!(++nlines % 300) && !silent)   /* GGR */
              mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
     }
