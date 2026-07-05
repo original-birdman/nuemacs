@@ -1822,9 +1822,21 @@ void sizesignal(int signr) {
 
     getscreensize(&w, &h);
 
-    if (h && w && (h != term.t_nrow || w != term.t_ncol))
-         newscreensize(h, w, 0);
+    if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
 
+/* We wish to prevent another SIGWINCH arriving whilst we are working on
+ * this one in newscreensize().
+ * Any other signal is OK, as it will cause uemacs to exit anyway.
+ */
+        sigset_t sigwinch_set, incoming_set;
+        sigemptyset(&sigwinch_set);
+        sigaddset(&sigwinch_set, SIGWINCH);
+        sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
+
+        newscreensize(h, w, 0);
+
+        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
+    }
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
     sigact.sa_handler = sizesignal;

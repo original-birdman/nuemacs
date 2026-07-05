@@ -9414,3 +9414,6 @@ search.c
 
 dyn_buf.c
     Fix the want calculation in _dbp_realloc().
+
+display.c
+    Disable SIGWINCH during the newscreensize() call in sizesignal().
