@@ -9411,3 +9411,6 @@ dyn_buf.h
 
 search.c
     Modify rvstrcpy() to cater for an empty ("") input.
+
+dyn_buf.c
+    Fix the want calculation in _dbp_realloc().

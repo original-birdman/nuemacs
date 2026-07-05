@@ -31,7 +31,7 @@ static void illegal_dbaction(const char *why) {
  */
 #define DYN_INCR (size_t)64
 static void _dbp_realloc(db *ds, size_t need) {
-    size_t want = (need + DYN_INCR) & ~(DYN_INCR - 1);
+    size_t want = (need + DYN_INCR - 1) & ~(DYN_INCR - 1);
     if (want > INT_MAX) {
         illegal_dbaction("Attempt to allocate too long a buffer");
     }
