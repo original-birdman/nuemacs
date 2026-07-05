@@ -618,7 +618,7 @@ static void dbp_uesprintf(dbp_dcl(ds), dbp_dcl(tmpl), ...) {
 
 /* We now need to get the format character for the %.
  * This may be preceded by m.n, where any of the 3 parts may be absent
- * (although if the . is absent, there is onluy m).
+ * (although if the . is absent, there is only m).
  * Since all we are looking for is ASCII we can do this byte-wise.
  * We just continue looking along the format string.
  *
@@ -651,18 +651,21 @@ static void dbp_uesprintf(dbp_dcl(ds), dbp_dcl(tmpl), ...) {
                 int mf = db_len(atoken);
                 int nf = db_len(atoken);
                 if (db_len(tfmt) > 0) {
-                    char *editable = strdup(db_val(tfmt));
-                    char *tok = strtok(editable, ".");
+                    char *editable = strdupa(db_val(tfmt));
+/* strsep(), as strtok() doesn't handle empty fields(!) */
+                    char *tok = strsep(&editable, ".");
                     mf = ue_atoi(tok);
-                    tok = strtok(NULL, ".");
+                    tok = strsep(&editable, ".");
                     if (tok) {
                         int poss = ue_atoi(tok);
                         if (poss < nf) nf = poss;
                     }
                 }
-                int pad = abs(mf) - db_len(atoken);
+                int p_width = db_len(atoken);
+                if (nf < p_width) p_width = nf;
+                int pad = abs(mf) - p_width;
                 if (mf < 0) while (pad--) dbp_addch(ds, ' ');
-                dbp_appendn(ds, db_val(atoken), nf);
+                dbp_appendn(ds, db_val(atoken), p_width);
                 if (mf > 0) while (pad--) dbp_addch(ds, ' ');
             }
             else {          /* "Normal" case */

@@ -9397,3 +9397,6 @@ search.c
 
 exec.c
     Set b_type to BTNORM on errors. This is not a bit pattern.
+
+eval.c
+    Fix string template handling in dbp_uesprintf().
