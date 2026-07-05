@@ -85,7 +85,6 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
     dbp_clear(tok); /* Start with nothing */
 
 /* First scan past any whitespace in the source string.
- * Since we're getting tokens we know we won't have NULs within the buffer
  */
     char *src = (char *)dbp_val(lbuf);
     while (*src == ' ' || *src == '\t') ++src;
@@ -140,6 +139,8 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
         dbp_addch(tok, c);
     }
 
+/* Skip any trailing space */
+    while (*src == ' ' || *src == '\t') ++src;
 /* Update the lbuf values - THIS FUNCTION can do this */
     dbp_upval(lbuf, src);
     return;
@@ -550,6 +551,7 @@ static int ptt_compile(struct buffer *bp) {
             from_start = db_val(tok);
         }
         db_set(from_string, from_start);
+        if (db_len(from_string) == 0) continue; /* Bare ^ (?) */
         if (!db_cmpn(from_string, "caseset-", strlen("caseset-"))) {
             const char *test_opt = db_val(from_string) + strlen("caseset-");
             if (!strcmp("on", test_opt)) {
@@ -629,7 +631,7 @@ static int ptt_compile(struct buffer *bp) {
             utf8_recase(UTF8_LOWER, db_val(from_string), new->from_len,
                  &ex_mstr);
             new->from = ex_mstr.str;        /* malloc()ed, so OK */
-            new->from_len = ex_mstr.utf8c;
+            new->from_len = ex_mstr.utf8c;  /* May have changed */
             new->from_len_uc = ex_mstr.uc;
         }
         else {
