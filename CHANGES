@@ -9446,3 +9446,9 @@ eval.c
 
 bind.c
     Change ~0x20 to be (char)0xdf, to stop compiler warning on Arm64.
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.195
+
+==========
