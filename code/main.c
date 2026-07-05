@@ -2164,11 +2164,13 @@ do {
                 restflag = TRUE;
                 break;
             case 'S':       /* -s for initial search string */
-                searchflag = TRUE;
-                db_set(pat, opt);
+                if (istrlen(opt) > 0) { /* Ignore an empty search */
+                    searchflag = TRUE;
+                    db_set(pat, opt);
 /* GGR - set-up some more things for the FAST search algorithm */
-                rvstrcpy(&tap, &pat);
-                srch_patlen = db_len(pat);
+                    rvstrcpy(&tap, &pat);
+                    srch_patlen = db_len(pat);
+                }
                 break;
             case 'V':       /* -v for View File */
                 if (!verflag) verflag = 1;  /* could be version or */

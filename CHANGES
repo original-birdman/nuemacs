@@ -9417,3 +9417,6 @@ dyn_buf.c
 
 display.c
     Disable SIGWINCH during the newscreensize() call in sizesignal().
+
+main.c
+    Ignore -s option if it is given an empty search pattern.
