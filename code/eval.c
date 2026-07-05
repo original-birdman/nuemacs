@@ -973,15 +973,10 @@ static void gtfun(dbp_dcl(res), const char *fname) {
  */
     case UFCHR: {
         if ((db_charat(arg1, 0) == 'U') && (db_charat(arg1, 1) == '+')) {
-            static char targ[20] = "0x";    /* Fudge to 0x instead */
-            strcpy(targ+2, db_val(arg1)+2); /* strtol then handles it */
-            tsp = targ;
-        }
-        else {
-            tsp = db_val(arg1);
+            db_overwriten_at(arg1, "0x", 2, 0);
         }
         char temp[8];
-        int nb = unicode_to_utf8(ue_atoi(tsp), temp);
+        int nb = unicode_to_utf8(ue_atoi(db_val(arg1)), temp);
         terminate_str(temp+nb);
         dbp_set(res, temp);
         goto set_exit;

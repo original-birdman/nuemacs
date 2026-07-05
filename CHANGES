@@ -9387,3 +9387,7 @@ main.c
 
 search.c
     Restore pat at start of IS_FORWARD||IS_REVERSE code.
+
+eval.c
+    Modify UFCHR handling to use db_overwriten_at() rather than copying
+    to a temporary buffer, with potential overflow.
