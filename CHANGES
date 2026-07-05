@@ -9391,3 +9391,6 @@ search.c
 eval.c
     Modify UFCHR handling to use db_overwriten_at() rather than copying
     to a temporary buffer, with potential overflow.
+
+search.c
+    Fix typo - a 1 when it should be an i.

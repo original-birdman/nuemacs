@@ -2100,7 +2100,7 @@ void setpattern(db *apat, db *tap) {
     int nocase = !(curwp->w_bufp->b_mode & MDEXACT);
     for (i = 0; i < patlenadd; i++) {
         deltaf[ch_as_uc(dbp_charat(apat, i))] = patlenadd - i;
-        if (nocase && isalpha(ch_as_uc(dbp_charat(apat, 1))))
+        if (nocase && isalpha(ch_as_uc(dbp_charat(apat, i))))
             deltaf[ch_as_uc(dbp_charat(apat, i) ^ (char)DIFCASE)] = patlenadd - i;
         deltab[ch_as_uc(dbp_charat(tap, i))] = patlenadd - i;
         if (nocase && isalpha(ch_as_uc(dbp_charat(tap, i))))
