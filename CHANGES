@@ -9438,5 +9438,11 @@ dyn_buf.c
     Change _dbp_replicatech_at() and _dbp_insertn_at() to both use a
     common backend for their very similar code.
 
+End of Claude hardening.
+--------------------
+
 eval.c
     Cast fn_t to (void *) in start_func_item() to avoid warning from Clang.
+
+bind.c
+    Change ~0x20 to be (char)0xdf, to stop compiler warning on Arm64.
