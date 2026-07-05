@@ -9384,3 +9384,6 @@ main.c
     Modify the self-insert code to use the repeat count for //kbd_macro
     if there is one, rather than insert <n> chars in a loop.
     Change kbd_text to be a dyn_buf, to avoid overflow.
+
+search.c
+    Restore pat at start of IS_FORWARD||IS_REVERSE code.

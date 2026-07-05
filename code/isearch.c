@@ -429,6 +429,7 @@ start_over:
     c = get_char();         /* Get the first character    */
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
 /* Reuse old search string?   */
+        db_set(pat, db_val(pat_save));  /* Restore old search str */
 /* Yup, find the grapheme length and re-echo the string. */
         cpos = 0;
         int plen = db_len(pat);
