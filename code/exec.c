@@ -1483,9 +1483,9 @@ failexit:
 
 /* If this was (meant to be) a procedure buffer, we must switch that off
  * so that we don't try to run it...
- * Just set the bit off for all errors...
+ * Just mark teh buffer type as "normal".
  */
-    if (bstore) bstore->b_type |= ~BTPROC;  /* Forcibly unmark macro type */
+    if (bstore) bstore->b_type = BTNORM;    /* Forcibly unmark macro type */
 
 single_exit:
 

@@ -9394,3 +9394,6 @@ eval.c
 
 search.c
     Fix typo - a 1 when it should be an i.
+
+exec.c
+    Set b_type to BTNORM on errors. This is not a bit pattern.
