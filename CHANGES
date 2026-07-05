@@ -9408,3 +9408,6 @@ file.c
 dyn_buf.h
     Remove erroneous trailing ; on db(p)_deleten_at defines. [dyn_buf.h]
     Add missing ; at end of staement [file.c]
+
+search.c
+    Modify rvstrcpy() to cater for an empty ("") input.

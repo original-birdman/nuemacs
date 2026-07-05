@@ -2068,11 +2068,11 @@ void rvstrcpy(db *rvstr, db *str) {
 
     char *bp = wp;
     char *ep = wp + dbp_len(str) - 1;
-    do {
+    while (bp <= ep) {
         char a = *bp;   /* Original begin */
         *bp++ = *ep;    /* Copy end to begin */
         *ep-- = a;      /* Original begin into end */
-    } while (bp < ep);
+    };
 
 /* Now set the result */
     dbp_set(rvstr, wp);
