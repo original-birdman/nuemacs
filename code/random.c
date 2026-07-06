@@ -286,7 +286,6 @@ int twiddle(int f, int n) {
 static int last_qchar = 0;
 int quote(int f, int n) {
     UNUSED(f);
-    int s;
     int c;
 
     if (curbp->b_mode & MDVIEW)     /* Don't allow this command if */
@@ -299,21 +298,25 @@ int quote(int f, int n) {
     }
     if (n < 0) return FALSE;
     if (n == 0) return TRUE;
-    if (c == '\n') {
-        do {
-            s = lnewline();
-        } while (s == TRUE && --n);
-        return s;
-    }
+
     if (!inmb && kbdmode == RECORD) {
         char utf8[6];
         int nbytes = unicode_to_utf8(c, utf8);
-        while(n--) {
+        int nc = n;
+/* We can't use a numeric arg to insert-string for nc > 1 (as we do for
+ * self-insert code) as at this point we might be entering the text of
+ * and argument to a commnd.
+ */
+        while(nc--) {
             for (int j = 0; j < nbytes; j++) {
                 addchar_kbdmacro(utf8[j]);
             }
         }
     }
+/* linsert_uc kows how ot handle '\n' (insert a newline)
+ * NOTE that you get \n' by quoting ctl-J
+ * quoting a <return> gives you a ctl-M
+ */
     return linsert_uc(n, c);
 }
 

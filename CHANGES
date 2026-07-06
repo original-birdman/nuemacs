@@ -9143,7 +9143,7 @@ estruct.h
 line.h
 util.h
     Casting and const to remove compiler conversion warnings.
-    Changed some signed/unsgned types for consistency.
+    Changed some signed/unsigned types for consistency.
     Replaced all atoi() with ue_atoi() [eval.c]
     Changed linsert_byte to take a char, now that I've found gcc
     compilation options to warn about callers not using char.
@@ -9453,9 +9453,16 @@ version.h
 
 ========== GGR4.196
 
+More Claude comments:
+
 bind.c
     Use the correct bc_info index data in getbyfnc().
 
 main.c
     Add correct (current) character to macro in addchar_kbdmacro().
 
+random.c
+    Fix quote() to use a separate variable for the count-down
+    addchar_kbdmacro() loop.
+    Just call linsert_uc() for all chars, as it knows about \n.
+    This also adds \n to the kbd macro (which was not happening).
