@@ -471,7 +471,7 @@ struct key_tab *getbyfnc(fn_t func) {
  * is a pointer, not a char*, we can't use the start_check_at() code
  * via start_item() here.
  */
-    int res = start_func_item(func, &fcn_info);
+    int res = start_func_item(func, &key_info);
     if (res < 0) return NULL;
     return &keytab[key_info.ip[res]];
 }

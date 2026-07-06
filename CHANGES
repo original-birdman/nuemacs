@@ -9268,8 +9268,8 @@ random.c
 region.c
 search.c
 word.c
-    Audit of ltext() usage.
-    Changed some to ltext_chk() [eval.c, input,c, word.c]
+    Audit of ltext() usage. Updated comments about usage.
+    Changed some to ltext_chk() [eval.c, input,c]
     In group_match(), only copy line text if there is some [search.c]
     Handle incoming NULL, len args in _dbp_setn() and _dbp_appendn()
     [dyn_buf.c]
@@ -9342,7 +9342,7 @@ etc/uemacs.hlp
     the length restriction on the replaced text.
     Change "failure" returns in rmcstr() to return ABORT not FALSE, so
     that the replacement is abandoned.
-    Change is_safe_counter(0 to use TRUE/FALSE not 1/0.
+    Change is_safe_counter() to use TRUE/FALSE not 1/0.
     Change a magic replacement test to use fmt= [search-magic-replaces.sh]
     Document that fmt must be last (if present) in a counter. [uemacs.hlp]
 
@@ -9375,7 +9375,7 @@ estruct.h
 main.c
     Add handling of 0 byte to addchar_kbdmacro() and addto_kbdmacro().
     exec.c got this in GGR4.191.
-    NOTE that other parts of the code still do no handles NUL bytes!
+    NOTE that other parts of the code still do not handles NUL bytes!
 
 --------------------
 More Claude hardening.
@@ -9451,4 +9451,8 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.195
 
-==========
+========== GGR4.196
+
+bind.c
+    Use the correct bc_info index data in getbyfnc().
+
