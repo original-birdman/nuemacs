@@ -209,7 +209,7 @@ void _dbp_clear(db *ds) {
  */
 void _dbp_truncate(db *ds, int n) {
 /* We mustn't change anything from before the "actual start pointer". */
-    int offset = ds->alen - ds->blen;
+    int offset = ds->blen - ds->alen;
     if ((offset > n) || (n > ds->blen)) {
         illegal_dbaction("Illegal db truncate");
     }

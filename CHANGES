@@ -9473,3 +9473,6 @@ main.c
 
 input.c
     In getstring() completion check for res.found > 0 not != 0.
+
+dyn_buf.c
+    Correct the offset calculation in _dbp_truncate.
