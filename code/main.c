@@ -231,7 +231,7 @@ void addchar_kbdmacro(char addch) {
         db_addch(kbd_text, '~');
         cc = xc;
     }
-    db_addch(kbd_text, '~');
+    db_addch(kbd_text, cc);
     return;
 }
 

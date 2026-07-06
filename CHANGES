@@ -9456,3 +9456,6 @@ version.h
 bind.c
     Use the correct bc_info index data in getbyfnc().
 
+main.c
+    Add correct (current) character to macro in addchar_kbdmacro().
+
