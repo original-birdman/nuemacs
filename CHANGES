@@ -9466,3 +9466,7 @@ random.c
     addchar_kbdmacro() loop.
     Just call linsert_uc() for all chars, as it knows about \n.
     This also adds \n to the kbd macro (which was not happening).
+
+main.c
+    Change flush_kbd_text() to just call lins_dynbuf() now that
+    addto_kbdmacro uses ~0 for NULs.

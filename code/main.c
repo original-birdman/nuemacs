@@ -244,21 +244,11 @@ static void flush_kbd_text(void) {
     linstr("\ninsert-string ");
     if (must_quote) linsert_byte(1, '"');
 
-/* This loop may look odd, but if we have NUL bytes to insert it means
- * that it works, as if we haven't yet added enough it must be because
- * we've hit a NUL, so process that and continue on from there.
+/* Since addto_kbdmacro now uses ~0 for NULs we won;t have any in
+ * kbd_text, so we can just dump it in one go.
+ * Although some commands (e.g. insert-string) cannot yet handle this.
  */
-    int added = 0;
-    const char *sp = db_val(kbd_text);
-    while(1) {
-        linstr(sp+added);
-        added += istrlen(sp+added);
-        if (added >= db_len(kbd_text)) break;
-        if (must_quote) linsert_byte(1, '"');
-        linstr("\nmacro-helper 0\ninsert-string ");
-        added++;
-        if (must_quote) linsert_byte(1, '"');
-    }
+    lins_dynbuf(&kbd_text);
     if (must_quote) linsert_byte(1, '"');
     must_quote = 0;
     db_clear(kbd_text);
