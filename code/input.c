@@ -1053,7 +1053,7 @@ loop:
         }
         if (do_display) {
 /* NOTE that we leave what was there if nothing matches */
-            if (res.found != 0) {
+            if (res.found > 0) {
                 savdoto = curwp->w.doto;
                 curwp->w.doto = 0;
                 ldelete((ue64I_t)lused(lp), FALSE);

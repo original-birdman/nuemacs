@@ -9470,3 +9470,6 @@ random.c
 main.c
     Change flush_kbd_text() to just call lins_dynbuf() now that
     addto_kbdmacro uses ~0 for NULs.
+
+input.c
+    In getstring() completion check for res.found > 0 not != 0.
