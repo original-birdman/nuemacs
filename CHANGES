@@ -9482,3 +9482,6 @@ file.c
 
 main.c
     Use udir.current rather than getcwd() in get_to_dumpdir().
+
+eval.c
+    Add comment about te usage, and change its definition.

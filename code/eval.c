@@ -240,7 +240,12 @@ struct bc_res *start_item(const char *look4, const struct bc_info *dp) {
 
     bci.test_res = 0;
 
-    const char **te = NULL;
+/* Since we will never call this routine for an empty index the loop
+ * will always be entered and te will get a value.
+ * So use this declaration to avoid compiler warnings about "may be
+ * used uninitialized".
+ */
+    const char **te = te;
     const char *bp = dp->bp + dp->offs;
     while (low <= high) {
         test = (low + high)/2;
