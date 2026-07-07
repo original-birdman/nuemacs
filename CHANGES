@@ -9510,4 +9510,7 @@ version.h
     Minor comment update and code tidying. [input.c, line.c]
     Update to GGR4.196
 
-==========
+========== GGR4.197
+
+dyn_buf.c
+    Correct the requested extra allocation in _dbp_sprintf.

@@ -339,10 +339,11 @@ void _dbp_sprintf(db *ds, const char *fmt, ...) {
         dbp_append(ds, strerror(errno));
     }
 /* ds->buf not large enough. Go again.
- * We know needed is not -ve, so can remove a compiler warnign with the cast.
+ * We know needed is not -ve, so can remove a compiler warning with the cast.
+ * Add the 1 for the trailing NUL.
  */
     else if ((unsigned)needed >= ds->alloc) {
-        _dbp_realloc(ds, (size_t)needed);
+        _dbp_realloc(ds, (size_t)needed + 1);
         va_start(ap, fmt);
         ds->blen = vsnprintf(ds->buf, ds->alloc, fmt, ap);
         va_end(ap);
