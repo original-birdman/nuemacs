@@ -59,7 +59,7 @@ static struct cmpl_info {
     db_dcl(choices);    /* matches, OR error text */
     db_dcl(mprefix);
     int found;          /* -1 (error), 0, 1 or > 1 */
-    int choices_max;    /* In colums, not chars */
+    int choices_max;    /* In columns, not chars */
     int full;
 } res = { db_str_initval, db_str_initval, db_str_initval, 0, 0, 0 };
 
@@ -819,7 +819,6 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     int prolen;
 
     db_strdef(procopy);
-    db_strdef(choices);
     db_strdef(tstring);
 
 /* We are about to enter the minibuffer, so all com_flags must
@@ -1192,7 +1191,6 @@ abort:
     }
 
     db_free(procopy);
-    db_free(choices);
     db_free(tstring);
 
 /* If this is a CMPLT_FILE type then we have a filename.

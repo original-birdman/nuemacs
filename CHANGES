@@ -9491,3 +9491,6 @@ input.c
 
 eval.c
     Add a flag to show that uvnames is already sorted.
+
+input.c
+    Remove unused db_strdef(choices).
