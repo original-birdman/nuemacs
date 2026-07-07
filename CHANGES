@@ -9488,3 +9488,6 @@ eval.c
 
 input.c
     Simplify cmplt_buffer() name checks.
+
+eval.c
+    Add a flag to show that uvnames is already sorted.

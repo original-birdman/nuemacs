@@ -179,11 +179,14 @@ int nxti_envvar(int ci) {
 
 /* User var (%...) sorting. Different - just build a sorted name array
  * of the names which exist.
- * We don't actually need the values for getf/nvar() in input.c
+ * We don't actually need the values for cmplt_name_or_var() in input.c
+ * NOTE that this is just a sort of the names - the actual data in uv
+ * is still unsorted.
  */
 static int n_uvn;
-
+static int user_var_sorted = FALSE;
 void sort_user_var(void) {
+    if (user_var_sorted) return;
     n_uvn = 0;
     for (int i = 0; i < MAXVARS; i++) {
 
@@ -205,6 +208,7 @@ void sort_user_var(void) {
         uvnames[n_uvn] = toadd;
         uvnames[++n_uvn] = NULL;
     }
+    user_var_sorted = TRUE;
     return;
 }
 
@@ -1516,6 +1520,7 @@ fvar:
             if (uv[vnum].name[0] == 0) {
                 vtype = TKVAR;
                 strcpy(uv[vnum].name, var+1);
+                user_var_sorted = FALSE;    /* Needs a sort for completion */
                 break;
             }
         break;
