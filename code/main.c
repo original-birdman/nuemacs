@@ -491,19 +491,12 @@ static void do_stackdump(void) {
 #endif
 /* ===================== END OF NUTRACE ONLY CODE ======================= */
 
-static char cwd[1024];
 /* ======================================================================
  * get_to_dumpdir
  * get to the Dump_Dir - the return value is whether it makes it
  * Also open the INDEX file,if possible.
  */
 static int get_to_dumpdir(void) {
-
-/* Get the current dir name - possibly needed for the index */
-
-    char *dnc = getcwd(cwd, 1024);
-    UNUSED(dnc);    /* To avoid "warn_unused_result" message */
-    strcpy(cwd, get_uniqpath(cwd));
 
 /* Get to the dump directory */
 
@@ -616,7 +609,7 @@ static void dump_modified_buffers(void) {
         if (index_fp) {         /* Did get_to_dumpdir() open it? */
             const char *dir, *sep;
             if (add_cwd) {
-                dir = cwd;
+                dir = udir.current;
                 sep = "/";
             }
             else {

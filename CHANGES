@@ -9479,3 +9479,6 @@ dyn_buf.c
 
 file.c
     More fixes to fixup_fname().
+
+main.c
+    Use udir.current rather than getcwd() in get_to_dumpdir().
