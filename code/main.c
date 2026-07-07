@@ -1984,6 +1984,7 @@ int main(int argc, char **argv) {
     db_set(savnam, "main");
     varinit();              /* initialise user variables */
     udir_init();
+    db_init();
     int viewflag = FALSE;   /* view mode defaults off in command line */
     int gotoflag = FALSE;   /* set to off to begin with */
     int searchflag = FALSE; /* set to off to begin with */

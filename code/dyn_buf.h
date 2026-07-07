@@ -58,6 +58,7 @@ typedef struct {
  * Not expecting these to be called directly
  */
 
+void db_init(void);
 const char *_dbp_val_nc(db *);
 void _dbp_setn(db *, const void *, int);
 void _dbp_set(db *, const char *);

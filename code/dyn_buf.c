@@ -26,6 +26,13 @@ static void illegal_dbaction(const char *why) {
     exit(127);  /* Just in case... */
 }
 
+static sigset_t sigwinch_set;
+
+void db_init(void) {
+    sigemptyset(&sigwinch_set);
+    sigaddset(&sigwinch_set, SIGWINCH);
+}
+
 /* DYN_INCR MUST be a power of 2
  * This must update both ds->buf and ds->asp
  */
@@ -42,9 +49,7 @@ static void _dbp_realloc(db *ds, size_t need) {
  * before the settings.
  * Unlikely, but...
  */
-    sigset_t sigwinch_set, incoming_set;
-    sigemptyset(&sigwinch_set);
-    sigaddset(&sigwinch_set, SIGWINCH);
+    sigset_t incoming_set;
     sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
 
     ds->buf = Xrealloc(ds->buf, want);

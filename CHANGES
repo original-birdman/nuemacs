@@ -9497,3 +9497,8 @@ input.c
 
 dyn_buf.h
     Remove extraneous } at end of _dbp_casecmpn define.
+
+main.c
+dyn_buf.c
+dyn_buf.h
+    Added db_init() to set sigwinch_set and call it at start-up.
