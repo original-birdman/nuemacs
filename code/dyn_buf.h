@@ -80,7 +80,7 @@ void _dbp_setcharat(db *, int, char c);
 #define _dbp_cmp(ds, str) strcmp((ds)->buf, str)
 #define _dbp_cmpn(ds, str, n) strncmp((ds)->buf, str, (size_t)(n))
 #define _dbp_casecmp(ds, str) strcasecmp((ds)->buf, str)
-#define _dbp_casecmpn(ds, str, n) strncasecmp((ds)->buf, str, (size_t)(n))}
+#define _dbp_casecmpn(ds, str, n) strncasecmp((ds)->buf, str, (size_t)(n))
 
 void _dbp_upval(db *, const char *);
 

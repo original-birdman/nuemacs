@@ -9494,3 +9494,6 @@ eval.c
 
 input.c
     Remove unused db_strdef(choices).
+
+dyn_buf.h
+    Remove extraneous } at end of _dbp_casecmpn define.
