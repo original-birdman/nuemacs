@@ -247,6 +247,9 @@ int linsert_byte(int n, char c) {
         return rdonly();            /* we are in read only mode */
     lchange(WFEDIT);
 
+/* NOTE that you get '\n' by quoting ctl-J
+ * Quoting a <return> gives you a ctl-M
+ */
     if (c == '\n') {                /* Newline is a special case */
         int status = TRUE;
         while (status && n--) lnewline();

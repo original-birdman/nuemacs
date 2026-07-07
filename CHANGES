@@ -9502,3 +9502,12 @@ main.c
 dyn_buf.c
 dyn_buf.h
     Added db_init() to set sigwinch_set and call it at start-up.
+
+input.c
+line.c
+etc/uemacs.hlp
+version.h
+    Minor comment update and code tidying. [input.c, line.c]
+    Update to GGR4.196
+
+==========

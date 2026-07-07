@@ -343,7 +343,7 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     if (ctype == CMPLT_VAR) {   /* first_ch already set */
         if (first_ch == '$') {
             nvar_get = nxti_envvar;
-            vidx = (start_item(np, &evl_info))->idx;;
+            vidx = (start_item(np, &evl_info))->idx;
         }
         else {
             nvar_get = nxti_usrvar;
