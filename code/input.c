@@ -268,22 +268,19 @@ static void cmplt_buffer(db *name, enum cmplt_type mtype) {
  * For a type of CMPLT_PROC we only consider buffer-names starting with '/'
  * with a b_type of BTPROC. We return the name *without* the leading '/'.
  */
-        int offset;
-            if ((mtype == CMPLT_PROC) ||
-                (mtype == CMPLT_PHON)) offset = 1;
-            else                       offset = 0;
+        const char *np = bp->b_bname;
+        if ((mtype == CMPLT_PROC) || (mtype == CMPLT_PHON)) np++;
         if ((mtype == CMPLT_PROC &&
               (bp->b_type != BTPROC || bp->b_bname[0] != '/' ||
                bp->b_bname[1] == '/')) ||   /* Catch //kbd_macro */
             (mtype == CMPLT_PHON &&
               (bp->b_type != BTPHON || bp->b_bname[0] != '/')) ||
-            (strncmp(dbp_val(name), bp->b_bname + offset, (size_t)dbp_len(name))) ||
+              (dbp_cmpn(name, np, dbp_len(name))) ||
             (!strncmp(bp->b_bname, "//minib", 7)) ||
             ((bp->b_bname[0] == '[') && dbp_len(name) == 0)) {
              continue;
         }
 
-        const char *np = bp->b_bname + offset;
         if (update_prompts(np) < 0) break;
     }
     if (res.found == 0) db_set(res.choices, NOMATCH);

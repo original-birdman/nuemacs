@@ -9485,3 +9485,6 @@ main.c
 
 eval.c
     Add comment about te usage, and change its definition.
+
+input.c
+    Simplify cmplt_buffer() name checks.
