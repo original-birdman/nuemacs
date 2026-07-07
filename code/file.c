@@ -49,8 +49,7 @@
 #include <libgen.h>
 #include <pwd.h>
 
-/*
- * fixup_fname
+/* fixup_fname
  */
 static db_strdef(fn_expd);
 
@@ -58,12 +57,18 @@ static db_strdef(fn_expd);
 
 static int *slp;
 static int sli;
+static int abs_path;
 
-static void handle_dots(int n) {
+static int handle_dots(int n) {
     sli -= n;       /* We will only be called with n==1 or n==2 */
-    if (sli < 0) sli = 0;
+    if (sli < 0) {
+/* Signal to caller that we need to prepend current dir to proceed */
+        if (!abs_path) return FALSE;
+        sli = 0;
+        slp[sli] = 0;
+    }
     db_truncate(fn_expd, slp[sli]);
-    return;
+    return TRUE;
 }
 
 const char *fixup_fname(const char *fn) {
@@ -115,34 +120,36 @@ const char *fixup_fname(const char *fn) {
         }
 #endif
     }
-    else if (udir.current &&
-        ((fn[0] == '.' && fn[1] == '.' && (fn[2] == '/' || fn[2] == '\0')) ||
-         (fn[0] == '.' && (fn[1] == '/' || fn[1] == '\0')))) {
-/* Just prepend $PWD - the slash_* loop at the end will fix up '.' and ".." */
-            db_sprintf(tfn, "%s/%s", udir.current, fn);
-    }
     else db_set(tfn, fn);
+
+/* Allocate an array for remembering /s */
+
+    slp = alloca(sizeof(int)*(size_t)(1+db_len(tfn)/2));
 
 /* Convert any multiple consecutive "/" to "/" and strip any
  * trailing "/"...
  * Change any "/./" entries to "/".
  * Strip out ".." entries and their parent  (xxx/../yyy -> yyy)
+ * If we do not have an absolute path then a starting .. will take us up
+ * to our parent, so we have to prepend teh current dir and start again.
+ * But ensure we don't loop.
  */
+    int redo_done = FALSE;
+do_again:
     db_clear(fn_expd);
-
-/* Allocate an array for remembering /s */
-
-    slp = alloca(sizeof(int)*(size_t)(1+db_len(tfn)/2));
     sli = 0;
-
     const char *cp = db_val(tfn);
     int n_dots = 0;
     int at_slash = 0;
+    abs_path = (db_charat(tfn, 0) == '/');
+
 /* Note that ndots can only ever be 0, 1 or 2.
  * For ndots to be non-zero at_slash must have been set,
  * which means slp[0] will have a value, so handle_dots() is OK.
  */
+    int redo = FALSE;
     while(*cp) {
+        redo = FALSE;
         switch(*cp) {
         case '/':
             if (at_slash) {
@@ -150,7 +157,26 @@ const char *fixup_fname(const char *fn) {
                 continue; /* Ignore consecutive slashes */
                 ;
             }
-            if (n_dots) handle_dots(n_dots);
+            if (n_dots) {
+                if (!handle_dots(n_dots)) {
+/* We should never get here with redo_done TRUE, but bale out if we do... */
+                    if (redo_done) {
+                        db_set(fn_expd, fn);
+                        goto FU_exit;
+                    }
+/* We've been asked to go "above the startng point" for a non-absolute
+ * path, so prepend the current dir to the original path and
+ * start again.
+ */
+                    db_sprintf(tfn, "%s/%s", udir.current, fn);
+                    redo = TRUE;
+                    redo_done = TRUE;
+                    break;
+                }
+            }
+/* If we've wiped out all of fn_expd (a/..) then we pretend to be
+ * at a slash.
+ */
             at_slash = 1;
             n_dots = 0;
             slp[sli++] = db_len(fn_expd);
@@ -165,10 +191,22 @@ const char *fixup_fname(const char *fn) {
             at_slash = 0;
             n_dots = 0;
         }
+        if (redo) break;
         db_addch(fn_expd, *cp++);
     }
+    if (redo) goto do_again;
+
 /* Need to handle any trailing dots too */
     if (n_dots) handle_dots(n_dots);
+
+/* if the last thing we added was a slash, remove it. */
+    if (at_slash) db_truncate(fn_expd, db_len(fn_expd)-1);
+
+/* An absolute path with ".."s in may have collapsed to an empy string,
+ * so fix that.
+ */
+    if (abs_path && (db_len(fn_expd) == 0)) db_set(fn_expd, "/");
+FU_exit:
     db_free(tfn);
     return db_val(fn_expd);
 }
@@ -203,7 +241,7 @@ const char *fixup_full(const char *fn) {
 static db_strdef(rp_res);
 
 /* Two INTERNAL markers so that set_buffer_filenames() can call here
- * twice to get short an full names, without calling realpath() twice.
+ * twice to get short and full names, without calling realpath() twice.
  */
 static int fn_is_full = 0;
 static int force_full = 0;
@@ -271,11 +309,11 @@ const char *get_uniqpath(const char *fn) {
     }
 
 /* See whether we can use ., .. or ~ to shorten this.
- * We have to cater for (and ignore) an udir entry being just "/"
+ * We have to cater for (and ignore) a udir entry being just "/"
  * as matching that would mean lengthening, not shortening, and the
  * code here assumes it can copy strings "leftwards" char by char.
  * Files in the current directory end up as ./file so that we
- * can use ~/ for a file in HOME withput clashing with a local
+ * can use ~/ for a file in HOME without clashing with a local
  * directory called "~".
  */
     if (!force_full) {

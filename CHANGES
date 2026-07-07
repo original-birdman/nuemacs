@@ -9476,3 +9476,6 @@ input.c
 
 dyn_buf.c
     Correct the offset calculation in _dbp_truncate.
+
+file.c
+    More fixes to fixup_fname().
