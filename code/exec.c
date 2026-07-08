@@ -506,7 +506,8 @@ static const char* get_display_code(const char *buf) {
 
     int mlen = istrlen(buf);
     int offs = next_utf8_offset(buf, 0, mlen, 1);
-    offs = next_utf8_offset(buf, offs, mlen, 1);
+    int offs2 = next_utf8_offset(buf, offs, mlen, 1); /* Might be absent */
+    if (offs2 > 0) offs = offs2;
     strncpy(ml_display_code, buf, (size_t)offs);
     terminate_str(ml_display_code+offs);
     return ml_display_code;

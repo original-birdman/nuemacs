@@ -9525,7 +9525,3 @@ eval.c
 
 exec.c
     Cater for pttable buffers with 1 character names.
-
-utf8.c
-    Fix Combining modifiers loop in next_utf8_offset() to handle such a
-    character at the end of a line/buffer.
