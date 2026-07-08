@@ -175,9 +175,9 @@ int next_utf8_offset(const char *buf, int offs, int max_offset,
     if (grapheme_start) {
         while(1) {      /* Look for any attached Combining modifiers */
             int next_incr = utf8_to_unicode(buf, offs, max_offset, &c);
+            if (c == UEM_NOCHAR) break; /* Now beyond buffer */
             if (!combining_type(c)) break;
             offs += next_incr;
-            if (offs >= max_offset) return -1;
         }
     }
     return offs;
