@@ -9550,3 +9550,6 @@ search.c
 
 pklock.c
     Stop file-handle leak for already-locked files.
+
+random.c
+    Return correct status from re_args_exec().

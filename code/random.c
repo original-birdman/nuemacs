@@ -1290,7 +1290,7 @@ int re_args_exec(int f, int n) {
 exit:
     db_free(buf);
     db_free(tok);
-    return TRUE;
+    return status;
 }
 
 /* Open the directory where the file in the current buffer lives.
