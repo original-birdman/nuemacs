@@ -796,19 +796,19 @@ handle_prev:
         if ((gc.uc > MAXASCII) || (gc.cdm)) {
             parse_error(patptr, "Attempt to quote non-ASCII");
             Xfree(gc.ex);
-            return FALSE;
+            goto error_exit;
         }
 /* So from here on we know there is no gc.ex to free */
         switch (gc.uc) {     /* All MUST finish with goto!! */
         case 'u': {
             if (*patptr != '{') {
                 parse_error(patptr, "\\u{} not started");
-                return FALSE;
+                goto error_exit;
             }
             btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "\\u{} not ended");
-                return FALSE;
+                goto error_exit;
             }
             struct xccl *xp = add2_xt_cclmap(mcptr, UCLITL);
             xp->xval.uchar = (int)strtol(dbp_val(btext), NULL, 16);
@@ -821,12 +821,12 @@ handle_prev:
         case 'K': {     /* Not "kind of" ... */
             if (*(patptr) != '{') { /* } balancer */
                 parse_error(patptr, "\\k/K{} not started");
-                return FALSE;
+                goto error_exit;
             }
             btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "\\k/K{} not ended");
-                return FALSE;
+                goto error_exit;
             }
             struct grapheme kgc;
             int klen = dbp_len(btext);
@@ -835,12 +835,12 @@ handle_prev:
             if (bc != klen) {
                 parse_error(patptr,
                      "\\k{} must only contain one unicode char");
-                return FALSE;
+                goto error_exit;
             }
             if (kgc.cdm) {
                 parse_error(patptr,
                      "\\k{} must only contain a base character");
-                return FALSE;
+                goto error_exit;
             }
             struct xccl *xp = NULL;
             xp = add2_xt_cclmap(mcptr, UCKIND);
@@ -853,12 +853,12 @@ handle_prev:
         case 'P': {
             if (*patptr != '{') {       /* balancer: } */
                 parse_error(patptr, "\\p/P{} not started");
-                return FALSE;
+                goto error_exit;
             }
             btext = brace_text(++patptr);
             if (!btext) {
                 parse_error(patptr, "\\p/P{} not ended");
-                return FALSE;
+                goto error_exit;
             }
             struct xccl *xp = add2_xt_cclmap(mcptr, UCPROP);
             xp->xc.negate_test = (gc.uc == 'P');

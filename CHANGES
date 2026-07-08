@@ -9544,3 +9544,6 @@ bind.c
 
 search.c
     Fix handle_counter() call in nested function.
+
+search.c
+    Make all errors exit via error_exit to clear up allocations.
