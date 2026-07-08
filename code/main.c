@@ -1860,8 +1860,7 @@ int quit(int f, int n) {
         db_free(main_execstr);
 #endif
 
-        if (f) exit(n);
-        else   exit(0);
+        exit(n);
     }
     mlwrite_one("");
     return s;

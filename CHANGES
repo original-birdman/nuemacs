@@ -9583,3 +9583,8 @@ exec.c
 
 spawn.c
     Put SHELL and home-derived filenames within '' for system().
+
+display.c
+main.c
+    Call quit() not exit() in getscreensize(). [display.c]
+    Always exit(n) from quit(), regardless of f [main.c]

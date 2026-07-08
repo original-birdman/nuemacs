@@ -1,4 +1,4 @@
-s/*      display.c
+/*      display.c
  *
  *      The functions in this file handle redisplay. There are two halves, the
  *      ones that update the virtual display screen, and the ones that make the
@@ -1809,7 +1809,7 @@ void getscreensize(int *widthp, int *heightp) {
         *heightp = 24;
     }
     else {
-        if (ioctl(1, TIOCGWINSZ, &size) < 0) exit(ENXIO);
+        if (ioctl(1, TIOCGWINSZ, &size) < 0) quit(1, ENXIO);
         *widthp = size.ws_col;
         *heightp = size.ws_row;
     }
