@@ -344,6 +344,7 @@ int nextbuffer(int f, int n) {
         int nb = 0;
         for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
             if (!(bp->b_flag & BFINVS)) nb++;
+        if (nb == 0) return FALSE;
         n %= nb;
         if (n == 0) return FALSE;
         if (n < 0) n += nb;     /* Ensure it is +ve - modulus does not */

@@ -9560,3 +9560,6 @@ random.c
 
 main.c
     lstat() the correct pathname in STANDALONE code.
+
+buffer.c
+    Check nb before doing n %= nb.
