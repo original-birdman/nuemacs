@@ -151,7 +151,7 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
  * The full length MUST ALREADY be valid for the target!
  */
 void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
-
+    if (n <= 0) return;     /* General case */
 /* We mustn't change anything from before the "actual start pointer". */
     if (((ds->blen - ds->alen) > offs) || ((offs + n) > ds->blen))
         illegal_dbaction("Illegal db overwriten");

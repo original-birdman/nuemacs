@@ -9594,4 +9594,7 @@ search.c
     Expand the comment about current_base[] size.
 
 idxsorter.c
-    Check for a positive nents in make_next_idx()
+    Check for a positive nents in make_next_idx().
+
+dyn_buf.c
+    Check for a positive n in _dbp_overwriten_at().
