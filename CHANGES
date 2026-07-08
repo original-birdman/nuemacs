@@ -9534,3 +9534,7 @@ utf8.c
 
 main.c
     Change dumpdir_tidy() to use db_sprintf().
+
+tcap.c
+    Replace unneeded &p in tgetstr() with NULL.
+    Allow for over-long TERM setting in error message.

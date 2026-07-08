@@ -77,8 +77,6 @@ static void tcapbcol(int);
 static void tcapscroll_reg(int from, int to, int linestoscroll);
 static void tcapscroll_delins(int from, int to, int linestoscroll);
 
-#define TCAPSLEN 315
-static char tcapbuf[TCAPSLEN];
 static const char *UP, *PC, *CM, *CE, *CL, *SO, *SE;
 
 static char *TI, *TE;
@@ -122,7 +120,7 @@ struct terminal term = {
 };
 
 static void tcapopen(void) {
-    char *t, *p;
+    char *t;
     char tcbuf[1024];
     char *tv_stype;
     char err_str[72];
@@ -137,7 +135,10 @@ static void tcapopen(void) {
     }
 
     if ((tgetent(tcbuf, tv_stype)) != 1) {
-        sprintf(err_str, "Unknown terminal type %s!", tv_stype);
+/* Handle overlong TERM settings. Only print the first 40 chars */
+        const char *xtra = "";
+        if (strlen(tv_stype) > 40) xtra = "...";
+        sprintf(err_str, "Unknown terminal type: %.40s%s!", tv_stype, xtra);
         puts(err_str);
         exit(1);
     }
@@ -159,25 +160,24 @@ static void tcapopen(void) {
 
     set_scrarray_size(term.t_nrow, term.t_ncol);
 
-    p = tcapbuf;
-    t = tgetstr("pc", &p);
+    t = tgetstr("pc", NULL);
     if (t) PC = t;
     else   PC = "";             /* So *PC is NUL */
 
-    CL = tgetstr("cl", &p);
-    CM = tgetstr("cm", &p);
-    CE = tgetstr("ce", &p);
-    UP = tgetstr("up", &p);
-    SE = tgetstr("se", &p);
-    SO = tgetstr("so", &p);
+    CL = tgetstr("cl", NULL);
+    CM = tgetstr("cm", NULL);
+    CE = tgetstr("ce", NULL);
+    UP = tgetstr("up", NULL);
+    SE = tgetstr("se", NULL);
+    SO = tgetstr("so", NULL);
     revexist = (SO != NULL);
     if (tgetnum("sg") > 0) {    /* Can reverse be used? P.K. */
         revexist = FALSE;
         SE = NULL;
         SO = NULL;
     }
-    TI = tgetstr("ti", &p);     /* terminal init and exit */
-    TE = tgetstr("te", &p);
+    TI = tgetstr("ti", NULL);     /* terminal init and exit */
+    TE = tgetstr("te", NULL);
 
     if (CL == NULL || CM == NULL || UP == NULL) {
         puts("Incomplete termcap entry\n");
@@ -186,11 +186,11 @@ static void tcapopen(void) {
 
 /* will we be able to use clear to EOL? */
     eolexist = (CE != NULL);
-    _CS = tgetstr("cs", &p);
-    SF = tgetstr("sf", &p);
-    SR = tgetstr("sr", &p);
-    DL = tgetstr("dl", &p);
-    AL = tgetstr("al", &p);
+    _CS = tgetstr("cs", NULL);
+    SF = tgetstr("sf", NULL);
+    SR = tgetstr("sr", NULL);
+    DL = tgetstr("dl", NULL);
+    AL = tgetstr("al", NULL);
 
     if (_CS && SR) {
         if (SF == NULL) /* assume '\n' scrolls forward */
@@ -204,10 +204,6 @@ static void tcapopen(void) {
         term.t_scroll = NULL;
     }
 
-    if (p >= &tcapbuf[TCAPSLEN]) {
-        puts("Terminal description too big!\n");
-        exit(1);
-    }
 #if USE_BROKEN_OPTIMIZATION
     term_init_ok = 1;
     }
