@@ -1,4 +1,4 @@
-/*      display.c
+s/*      display.c
  *
  *      The functions in this file handle redisplay. There are two halves, the
  *      ones that update the virtual display screen, and the ones that make the
@@ -794,7 +794,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
             vpp->v_flag = vpv->v_flag;  /* XXX */
             if (vpp->v_flag & VFREV) {
                 vpp->v_flag &= ~VFREV;
-                vpp->v_flag |= ~VFREQ;
+                vpp->v_flag &= ~VFREQ;
             }
         }
         if (inserts) {

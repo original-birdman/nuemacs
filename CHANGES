@@ -9566,3 +9566,6 @@ buffer.c
 
 file.c
     If ffropen() returns FIOERR just return, don't jump to near the end.
+
+display.c
+    Change (very wrong looking) "|= ~VFREQ" to "&= ~VFREQ".
