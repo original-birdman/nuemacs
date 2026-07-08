@@ -9572,3 +9572,7 @@ display.c
 
 display.c
     Add () to correct a precedence bug.
+
+eval.c
+    Check for LONG_MIN in UFDIV, UFMOD, UFNEG and UFABS.
+    Don't allocate mtp on the stack.

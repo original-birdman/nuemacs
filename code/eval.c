@@ -433,10 +433,10 @@ static const char *xlat(const char *source, const char *lookup,
  */
     int llen = istrlen(lookup);
     int tlen = istrlen(trans);
-/* alloca() allocates on the stack, so automatically de-allocates
- * when we leave.
+/* Since we have no idea how large llen is, don't use teh stack for this
+ * So we need to free mtp as we exit.
  */
-    struct map_table *mtp = alloca((size_t)llen*sizeof(struct map_table));
+    struct map_table *mtp = Xmalloc((size_t)llen*sizeof(struct map_table));
 
 /* Walk along lookup and trans filling in the mappings.
  * If we run out of trans, we mark them as removals.
@@ -494,7 +494,8 @@ static const char *xlat(const char *source, const char *lookup,
 /* Out of lookup - check that trans has run out too... */
     if (*tp) {
         mlforce("Translation table longer than lookup table.");
-        return "ERROR";
+        db_set(xlres, "ERROR");
+        goto free_and_exit;
     }
 
 /* Now copy the source to the result, mapping any matching bytes/strings */
@@ -532,6 +533,8 @@ static const char *xlat(const char *source, const char *lookup,
         else            /* Just copy the source byte to the result */
             db_addch(xlres, *sp++);
     }
+free_and_exit:
+    Xfree(mtp);
     return db_val_nc(xlres);
 }
 
@@ -790,8 +793,12 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFMOD: {
         int2 = ue_atol(db_val(arg2));
         if ((tag == UFDIV) || (tag == UFMOD)) {
-            if (int2 == 0) {    /* The only "illegal" case for integer maths */
+            if (int2 == 0) {        /* An "illegal" case for integer maths */
                 retval = "ZDIV";
+                goto exit;
+            }
+            if (int2 == LONG_MIN) { /* This is not OK either */
+                retval = "UNDEFINED";
                 goto exit;
             }
         }
@@ -799,6 +806,12 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFNEG:
     case UFABS: {
         int1 = ue_atol(db_val(arg1));
+        if ((tag == UFNEG) || (tag == UFABS)) {
+            if (int1 == LONG_MIN) {  /* Not OK for these */
+                retval = "UNDEFINED";
+                goto exit;
+            }
+        }
         switch(tag) {
         case UFADD:   retval = ue_itoa(int1 + int2); break;
         case UFSUB:   retval = ue_itoa(int1 - int2); break;
