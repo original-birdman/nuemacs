@@ -9541,3 +9541,6 @@ tcap.c
 
 bind.c
     Fix along_path().
+
+search.c
+    Fix handle_counter() call in nested function.

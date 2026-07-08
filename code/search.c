@@ -1645,6 +1645,7 @@ static int handle_counter(struct magic_counter *mcp, db *tp) {
 /* ...but can expand on this using @:start=n,incr=m,fmt=%aad.
  * NOTE that the format spec MUST be for an integer item!!!
  * It also must be last (so it can contain a ",").
+ * We will be called with the string including the starting @.
  */
     if (dbp_charat(tp, 1) == ':') {
         const char *ntp = dbp_val(tp)+2;
@@ -1784,7 +1785,7 @@ static int rmcstr(void) {
                     cnt = brace_text(nxt+2);
                     if (dbp_charat(cnt, 0) == '@') {    /* A counter */
                         wkfcp->type = REPL_CNT;
-                        if (!handle_counter(&(wkfcp->val.x), btext))
+                        if (!handle_counter(&(wkfcp->val.x), cnt))
                              return ABORT;
                     }
                     else {                  /* Group */
