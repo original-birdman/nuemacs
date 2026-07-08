@@ -9598,3 +9598,6 @@ idxsorter.c
 
 dyn_buf.c
     Check for a positive n in _dbp_overwriten_at().
+
+posix.c
+    Put loop limit around terminal flush.

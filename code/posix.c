@@ -130,13 +130,20 @@ void ttflush(void) {
  *
  */
     int status;
+    int count = 60;     /* Arbitrary linit */
 
-    status = fflush(stdout);
-    while (status < 0 && errno == EAGAIN) {
-        sleep(1);
+    do {
         status = fflush(stdout);
-    }
-    if (status < 0) exit(15);
+        if ((status < 0) && (errno == EAGAIN)) {
+            sleep(1);
+            continue;
+        }
+        else break;
+    } while (count-- > 0);
+/* If we can't flush the termninal, there's no point in posting an
+ * error message!
+ */
+    if (status != 0) quit(1, ENOTTY);  /* Any better exit code? */
 }
 
 /* Read a character from the terminal, performing no editing and doing no
