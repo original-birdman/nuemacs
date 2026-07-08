@@ -9518,3 +9518,14 @@ dyn_buf.c
 file.c
     Check the handle_dots result after the loop also.
     Pretend to start having seen a / for non-empty relative paths.
+
+eval.c
+    Declare an extra entry for uvnames, uv[] and execbp->bv, so that the
+    sort_user_var () and del_simple_var() loops have a sentinel entry.
+
+exec.c
+    Cater for pttable buffers with 1 character names.
+
+utf8.c
+    Fix Combining modifiers loop in next_utf8_offset() to handle such a
+    character at the end of a line/buffer.

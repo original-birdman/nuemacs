@@ -91,17 +91,20 @@ static char showdir_opts[MAX_SD_OPTS+1] = "";
 /* User variables. External as used by completion code in input.c */
 
 #define MAXVARS 64
-char *uvnames[MAXVARS];
+char *uvnames[MAXVARS+1];
 
-/* This bit is internal. We keep a separate list of the names (uvnames) */
-
+/* This bit is internal. We keep a separate list of the names (uvnames)
+ * We need one more than MAXVARS to keep an empty sentinel value at the
+ * end of the list for sort_user_var(uvnames) and del_simple_var (uv)  code.
+ */
 static db new_db = db_str_initval;
-static struct simple_variable uv[MAXVARS];
+static struct simple_variable uv[MAXVARS+1];
 
-/* Initialize the user variable list. */
+/* Initialize the user variable list.
+ * +1 as we want a sentinel value at the end.
+ */
 void varinit(void) {
-    int i;
-    for (i = 0; i < MAXVARS; i++) {
+    for (int i = 0; i < MAXVARS+1; i++) {   /* Initialize the +1 as well */
         uv[i].value = new_db;
         uv[i].name[0] = 0;
     }
@@ -188,7 +191,7 @@ static int user_var_sorted = FALSE;
 void sort_user_var(void) {
     if (user_var_sorted) return;
     n_uvn = 0;
-    for (int i = 0; i < MAXVARS; i++) {
+    for (int i = 0; i < MAXVARS; i++) { /* Only MAXVARS values can be used */
 
 /* When user vars are deleted (del_simple_var) the remaining ones are
  * moved to fill in the gap. So a null name is always the end of the list.
@@ -1126,7 +1129,7 @@ static void gtusr(dbp_dcl(res), const char *vname) {
     int vnum;       /* Ordinal number of user var */
 
 /* Scan the list looking for the user var name */
-    for (vnum = 0; vnum < MAXVARS; vnum++) {
+    for (vnum = 0; vnum < MAXVARS; vnum++) {    /* Only MAXVARS can be used */
         if (uv[vnum].name[0] == 0) break;
 /* If a user var is being used in the same statement as it is being set
  *      set %test &add %test 1
@@ -1163,7 +1166,7 @@ static void gtbvr(dbp_dcl(res), const char *vname) {
 
 /* Scan the list looking for the user var name */
     struct simple_variable *tp = execbp->bv;
-    for (vnum = 0; vnum < BVALLOC; vnum++, tp++) {
+    for (vnum = 0; vnum < BVALLOC; vnum++, tp++) {  /* Only BVALLOC used */
         if ((strcmp(vname, tp->name) == 0)) {
             if (db_val(tp->value))  {
                 dbp_setn(res, db_val(tp->value), db_len(tp->value));
@@ -1508,7 +1511,7 @@ fvar:
         break;
     }
     case '%': {         /* Check for existing legal user variable */
-        for (vnum = 0; vnum < MAXVARS; vnum++)
+        for (vnum = 0; vnum < MAXVARS; vnum++)  /* Only for MAXVARS */
             if (strcmp(var+1, uv[vnum].name) == 0) {
                 vtype = TKVAR;
                 break;
@@ -1527,10 +1530,13 @@ fvar:
     }
     case '.': {         /* A buffer variable - only for execbp! */
         if (!execbp) break;
-        if (!execbp->bv) {  /* Need to create a set...free()d in bclear() */
-            execbp->bv = Xmalloc(BVALLOC*sizeof(struct simple_variable));
+/* Need to create a set...free()d in bclear().
+ * We need an extra 9empty) value at the end for the del-simple_var code.
+ */
+        if (!execbp->bv) {
+            execbp->bv = Xmalloc((BVALLOC+1)*sizeof(struct simple_variable));
             struct simple_variable *tp = execbp->bv;
-            int count = BVALLOC;
+            int count = BVALLOC+1;
             while(count--) {
                 terminate_str(tp->name);    /* Makes it empty */
                 tp->value = new_db;
@@ -1538,7 +1544,7 @@ fvar:
             }
         }
         else {              /* ...or check whether it is there */
-            for (vnum = 0; vnum < BVALLOC; vnum++) {
+            for (vnum = 0; vnum < BVALLOC; vnum++) {    /* Only BVALLOC used */
                 if (!strcmp(var+1, execbp->bv[vnum].name)) {
                     vtype = TKBVR;
                     break;
@@ -2010,22 +2016,28 @@ exit:
  *
  * delvar has already successfully run findvar for us
  */
-static void del_simple_var(struct variable_description *vd,
-     struct simple_variable *op, int listlen) {
+static void del_simple_var(int idx, struct simple_variable *op, int listlen) {
 
 /* We know where it is, so just move the rest of the array down 1.
  * Since there are never gaps, we can stop as soon as we get to an
  * empty variable name.
  */
     struct simple_variable *np = op+1;
+fprintf(stderr, "dsv start:  op: %p, np; %p\n", op, np);
     db_free(op->value);
-    for (int vnum = vd->v_num; vnum < listlen; vnum++, op++, np++) {
+    int vnum;
+    for (vnum = idx; vnum < listlen; vnum++, op++, np++) {
         strcpy(op->name, np->name);
         op->value = np->value;
         if (op->name[0] == '\0') break;     /* All done */
     }
     terminate_str(np->name);                /* Makes it empty */
     np->value = new_db;
+fprintf(stderr, "dsv end:  vnum: %d, np: %p\n", vnum, np);
+for (int i = 0; i < listlen; i++) {
+    fprintf(stderr, " v[%02d] name: %s, value: %s\n",
+     i, uv[i].name, db_val_nc(uv[i].value));
+}
 }
 
 /* Delete a variable
@@ -2056,11 +2068,11 @@ int delvar(int f, int n) {
 /* Delete by type, or complain about the type */
     switch(vd.v_type) {
     case TKVAR:
-        del_simple_var(&vd, uv+(vd.v_num), MAXVARS);
+        del_simple_var(vd.v_num, uv+(vd.v_num), MAXVARS);
         status = TRUE;
         goto exit;
     case TKBVR:
-        del_simple_var(&vd, &(execbp->bv[vd.v_num]), BVALLOC);
+        del_simple_var(vd.v_num, &(execbp->bv[vd.v_num]), BVALLOC);
         status = TRUE;
         goto exit;
     case -1:
@@ -2088,7 +2100,7 @@ void free_eval(void) {
     Xfree(evl_info.ip);
     Xfree(ufc_info.ip);
     Xfree(next_envvar_index);
-    for (int i = 0; i < MAXVARS; i++) {
+    for (int i = 0; i < MAXVARS; i++) { /* MAXVARS+1 never allocates */
         if (uv[i].name[0] == '\0') break;   /* End of list */
         db_free(uv[i].value);
     }
