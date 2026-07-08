@@ -102,6 +102,7 @@ const char *dolock(const char *fname) {
         close(fd);
         return NULL;
     }
+    close(fd);
     locker[n > MAXNAME ? MAXNAME : n] = 0;
     return locker;
 }

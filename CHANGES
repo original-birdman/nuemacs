@@ -9547,3 +9547,6 @@ search.c
 
 search.c
     Make all errors exit via error_exit to clear up allocations.
+
+pklock.c
+    Stop file-handle leak for already-locked files.
