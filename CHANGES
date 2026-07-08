@@ -9591,3 +9591,7 @@ main.c
 
 search.c
     Add a check for reaching the maximum group count (255).
+    Expand the comment about current_base[] size.
+
+idxsorter.c
+    Check for a positive nents in make_next_idx()

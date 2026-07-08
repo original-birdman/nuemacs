@@ -360,6 +360,7 @@ we_are_done:
  */
 
 void make_next_idx(int *index, int *next_index, int nents) {
+    if (nents <= 0) return;     /* A general case */
     for (int i = 0; i < (nents - 1); i++)
         next_index[index[i]] = index[i+1];
     next_index[index[nents - 1]] = -1;
