@@ -9514,3 +9514,7 @@ version.h
 
 dyn_buf.c
     Correct the requested extra allocation in _dbp_sprintf.
+
+file.c
+    Check the handle_dots result after the loop also.
+    Pretend to start having seen a / for non-empty relative paths.

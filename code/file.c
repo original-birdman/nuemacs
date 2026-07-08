@@ -122,10 +122,6 @@ const char *fixup_fname(const char *fn) {
     }
     else db_set(tfn, fn);
 
-/* Allocate an array for remembering /s */
-
-    slp = alloca(sizeof(int)*(size_t)(1+db_len(tfn)/2));
-
 /* Convert any multiple consecutive "/" to "/" and strip any
  * trailing "/"...
  * Change any "/./" entries to "/".
@@ -136,16 +132,34 @@ const char *fixup_fname(const char *fn) {
  */
     int redo_done = FALSE;
 do_again:
+/* Allocate an array for remembering /s
+ * We may end up doing this twice (for a redo) but both will disappear
+ * from the stack as we return.
+ */
+    slp = alloca(sizeof(int)*(size_t)(1+db_len(tfn)/2));
+
     db_clear(fn_expd);
     sli = 0;
     const char *cp = db_val(tfn);
     int n_dots = 0;
-    int at_slash = 0;
     abs_path = (db_charat(tfn, 0) == '/');
+/* For non-empty paths that do not start with / we pretend we
+ * are already at a /, so that leadin , and .. get handled.
+ */
+    int at_slash;
+    if (abs_path || (db_len(tfn) == 0)) {
+        at_slash = 0; /* So we copy the opening / */
+    }
+    else {
+        at_slash = 1; /* So we handle leading . or .. */
+    }
 
 /* Note that ndots can only ever be 0, 1 or 2.
  * For ndots to be non-zero at_slash must have been set,
  * which means slp[0] will have a value, so handle_dots() is OK.
+ * But it will not be set for teh leading dots at_slash fudge above.
+ * But this is OK as any such case will drop sli below 0 in handle_dots()
+ * and force a redo with the full path.
  */
     int redo = FALSE;
     while(*cp) {
@@ -196,13 +210,23 @@ do_again:
     }
     if (redo) goto do_again;
 
-/* Need to handle any trailing dots too */
-    if (n_dots) handle_dots(n_dots);
+/* Need to handle any trailing dots here too */
+    if (n_dots) {
+        if (!handle_dots(n_dots)) {
+            if (redo_done) {
+                db_set(fn_expd, fn);
+                goto FU_exit;
+            }
+            db_sprintf(tfn, "%s/%s", udir.current, fn);
+            redo_done = TRUE;
+            goto do_again;
+        }
+    }
 
 /* if the last thing we added was a slash, remove it. */
     if (at_slash) db_truncate(fn_expd, db_len(fn_expd)-1);
 
-/* An absolute path with ".."s in may have collapsed to an empy string,
+/* An absolute path with ".."s in may have collapsed to an empty string,
  * so fix that.
  */
     if (abs_path && (db_len(fn_expd) == 0)) db_set(fn_expd, "/");
@@ -940,7 +964,7 @@ int getfile(const char *fname, int lockfl, int check_dir) {
     }
     if (moved_to) {
         mlwrite_one((found == 1)? MLbkt("Old buffer"):
-             MLbkt("Old buffer (from multiple choices"));
+             MLbkt("Old buffer (from multiple choices)"));
         s = TRUE;
         goto exit;
     }
