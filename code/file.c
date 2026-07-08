@@ -746,8 +746,8 @@ static int ifile(const char *fname) {
 
     pathexpand = FALSE;     /* GGR */
 
-    if ((s = ffropen(fname)) == FIOERR) goto out;   /* Hard file open */
-    if (s == FIOFNF) {                              /* File not found */
+    if ((s = ffropen(fname)) == FIOERR) return FALSE;   /* Hard file open */
+    if (s == FIOFNF) {                                  /* File not found */
         mlwrite_one(MLbkt("No such file"));
         return FALSE;
     }

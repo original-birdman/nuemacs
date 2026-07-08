@@ -9563,3 +9563,6 @@ main.c
 
 buffer.c
     Check nb before doing n %= nb.
+
+file.c
+    If ffropen() returns FIOERR just return, don't jump to near the end.
