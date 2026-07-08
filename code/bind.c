@@ -31,9 +31,10 @@ static int along_path(const char *fname, db *fspec) {
 
 /* Get the PATH variable */
     const char *path = getenv("PATH");
-    if (path != NULL)
-        while (*path) {
+    dbp_clear(fspec);       /* Start empty */
+    if (path != NULL) {
 
+        while (*path) {
 /* Build next possible file spec */
             while (*path && (*path != PATHCHR)) dbp_addch(fspec, *path++);
 
@@ -48,7 +49,9 @@ static int along_path(const char *fname, db *fspec) {
             }
 
             if (*path == PATHCHR) ++path;
+            dbp_clear(fspec);   /* Empty before repeat */
         }
+    }
     return FALSE;
 }
 
@@ -103,7 +106,6 @@ const char *flook(const char *fname, int hflag, int mode) {
  * The caller knows which...
  */
     if (mode == ONPATH) {
-        db_clear(fspec);        /* Empty it */
         if (along_path(fname, &fspec) == TRUE) {
             pathexpand = TRUE;  /* GGR */
             return db_val(fspec);

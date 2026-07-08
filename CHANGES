@@ -9538,3 +9538,6 @@ main.c
 tcap.c
     Replace unneeded &p in tgetstr() with NULL.
     Allow for over-long TERM setting in error message.
+
+bind.c
+    Fix along_path().
