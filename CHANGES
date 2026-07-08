@@ -9512,6 +9512,8 @@ version.h
 
 ========== GGR4.197
 
+More from Claude...
+
 dyn_buf.c
     Correct the requested extra allocation in _dbp_sprintf.
 
@@ -9529,3 +9531,6 @@ exec.c
 utf8.c
     Fix Combining modifiers loop in next_utf8_offset() to handle such a
     character at the end of a line/buffer.
+
+main.c
+    Change dumpdir_tidy() to use db_sprintf().

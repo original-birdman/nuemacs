@@ -636,6 +636,8 @@ static void dump_modified_buffers(void) {
  */
 void dumpdir_tidy(void) {
     int status;
+    db_strdef(info_message);
+    db_strdef(dd_name);
 
     struct buffer *saved_bp = curbp;
     struct buffer *auto_bp = bfind(AutoClean_Buffer, TRUE, BFINVS);
@@ -653,14 +655,12 @@ void dumpdir_tidy(void) {
         goto revert_buffer;
     }
 
-    char info_message[4096]; /* Hopefully large enough */
-
 /* Open the current directory on a file-unit for ease of return */
     int start_fd = open(".", O_DIRECTORY);
     if (start_fd < 0) {
-        snprintf(info_message, 4096,
-              "Can't open current location: %s", strerror(errno));
-        addstr_to_curb(info_message);
+        db_sprintf(info_message, "Can't open current location: %s",
+             strerror(errno));
+        addline_to_curb(&info_message);
         goto revert_buffer;
     }
 
@@ -671,12 +671,11 @@ void dumpdir_tidy(void) {
         goto revert_buffer;
     }
 
-    char dd_name[2048]; /* Hopefully large enough */
-    sprintf(dd_name, "%s" "/" Dumpdir_Name, udir.home);
-    if (chdir(dd_name) < 0) {
-        snprintf(info_message, 4096,
-              "Can't get to ~/%s: %s", Dumpdir_Name, strerror(errno));
-        addstr_to_curb(info_message);
+    db_sprintf(dd_name, "%s/" Dumpdir_Name, udir.home);
+    if (chdir(db_val(dd_name)) < 0) {
+        db_sprintf(info_message, "Can't get to %s: %s", db_val(dd_name),
+             strerror(errno));
+        addline_to_curb(&info_message);
         goto close_start_fd;
     }
 
@@ -684,10 +683,9 @@ void dumpdir_tidy(void) {
 
     FILE *index_tidy_fp = fopen(Dump_Index, "r+");
     if (index_tidy_fp == NULL) {
-        snprintf(info_message, 4096,
-              "Can't open ~/%s/" Dump_Index ": %s",
-              Dumpdir_Name, strerror(errno));
-        addstr_to_curb(info_message);
+        db_sprintf(info_message, "Can't open %s/" Dump_Index ": %s",
+              db_val(dd_name), strerror(errno));
+        addline_to_curb(&info_message);
         goto revert_to_start_fd;
     }
 
@@ -709,16 +707,15 @@ void dumpdir_tidy(void) {
             orig_fn += 4;                   /* Step over " <= " for original */
             status = unlink(lp);
             if (status) {
-                snprintf(info_message, 4096,
+                db_sprintf(info_message,
                       "Delete of %s (<= %s)failed: %s", lp, orig_fn,
                       strerror(errno));
-                addstr_to_curb(info_message);
             }
             else {
-                snprintf(info_message, 4096,
+                db_sprintf(info_message,
                       "Deleted %s (<= %s)", lp, orig_fn);
-                addstr_to_curb(info_message);
             }
+            addline_to_curb(&info_message);
             rewrite_from = ftello(index_tidy_fp);
         }
         else
@@ -753,9 +750,9 @@ void dumpdir_tidy(void) {
 /* Close files and free buffers */
 
     if (fclose(index_tidy_fp)) {
-        snprintf(info_message, 4096,
+        db_sprintf(info_message,
               Dump_Index " rewrite error: %s", strerror(errno));
-        addstr_to_curb(info_message);
+        addline_to_curb(&info_message);
     }
     Xfree(lp);
 
@@ -765,6 +762,8 @@ revert_to_start_fd:
 close_start_fd:
     close(start_fd);
 revert_buffer:
+    db_free(dd_name);
+    db_free(info_message);
     swbuffer(saved_bp, 0);  /* Assume it succeeds... */
     return;
 }
