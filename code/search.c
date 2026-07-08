@@ -329,22 +329,32 @@ static struct mg_info null_mg = { EGRP, 0, 0, 0, 0 };
 static db_dcl(srch_txt[RING_SIZE]);
 static db_dcl(repl_txt[RING_SIZE]);
 
-/* This only needs to hold the Search/Query replace/etc. text */
-char current_base[16] = "";
+/* This only needs to hold the prompt for readpattern:
+ *  "Search", "Query replace", "Replace" or "with"
+ * If readpattern() is ever called with anything longer, change this.
+ */
+#define MAX_PROMPT 16
+char current_base[MAX_PROMPT] = "";
 
 enum call_type {Search, Replace};  /* So we know the current call type */
 static enum call_type this_rt;
 
-/* Function to increase allocated sizes for group control info */
+/* Function to increase allocated sizes for group control info
+ * The group counter is an 8-bit field - so max is 255
+ */
 #define NGRP_INCR 10
-static void increase_group_info(void) {
+#define NGRP_MAX 255
+static int increase_group_info(void) {
+    if (max_grp == NGRP_MAX) return ABORT;
     max_grp += NGRP_INCR;
+    if (max_grp > NGRP_MAX) max_grp = NGRP_MAX;
     cntl_grp_info = Xreallocarray(cntl_grp_info,
          max_grp, sizeof(struct control_group_info));
     match_grp_info = Xreallocarray(match_grp_info,
          max_grp, sizeof(struct match_group_info));
     grp_text = Xreallocarray(grp_text, max_grp, sizeof(char *));
     for (int gi = 0; gi < max_grp; gi++) grp_text[gi] = NULL;
+    return TRUE;
 }
 
 /* Functions to increase allocated sizes for magic patterns */
@@ -377,7 +387,7 @@ void init_search_ringbuffers(void) {
 /* Allocate and initialize the arrays for group info.
  * Also initialize magic structures.
  */
-    increase_group_info();
+    increase_group_info();  /* We know this will work */
     increase_magic_info();
     increase_magic_repl_info();
 
@@ -1224,7 +1234,13 @@ static int mcstr(void) {
         break;
     case MC_SGRP:
         group_cntr++;       /* Create a "new" group */
-        if (group_cntr >= max_grp) increase_group_info();
+        if (group_cntr >= max_grp) {
+            if (increase_group_info() != TRUE) {
+                mlwrite_one("Too many groups. Max is 255");
+                sleep(2);
+                return FALSE;
+            }
+        }
         cntl_grp_info[group_cntr].state = GPOPEN;
         cntl_grp_info[group_cntr].parent_group = curr_group;
         curr_group = group_cntr;
@@ -2135,7 +2151,7 @@ static int readpattern(const char *prompt, db *apat, int srch) {
     int status;
     db_strdef(tpat);
 
-    char saved_base[16];        /* Same size as current_base */
+    char saved_base[MAX_PROMPT];    /* Same size as current_base */
 
 /* We save the base of the prompt for previn_ring to use.
  * Since this code can be re-entered we have to save (and restore at

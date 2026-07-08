@@ -9588,3 +9588,6 @@ display.c
 main.c
     Call quit() not exit() in getscreensize(). [display.c]
     Always exit(n) from quit(), regardless of f [main.c]
+
+search.c
+    Add a check for reaching the maximum group count (255).
