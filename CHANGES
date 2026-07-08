@@ -9557,3 +9557,6 @@ random.c
 random.c
     Ignore numeric arg to twiddle and do nothing for 0 arg in
     detab(), entab() and trim().
+
+main.c
+    lstat() the correct pathname in STANDALONE code.

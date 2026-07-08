@@ -2021,16 +2021,17 @@ int main(int argc, char **argv) {
 #ifdef STANDALONE
 #include <libgen.h>
 do {
+#define EXE "/proc/self/exe"
     size_t bufsiz;
     struct stat sb;
-    if (lstat(argv[1], &sb) == -1) {
+    if (lstat(EXE, &sb) == -1) {
         bufsiz = PATH_MAX + 1;
     }
     else {
         bufsiz = (size_t)sb.st_size + 1;
     }
     char *exec_file = Xmalloc(bufsiz);
-    ssize_t elen = readlink("/proc/self/exe", exec_file, bufsiz);
+    ssize_t elen = readlink(EXE, exec_file, bufsiz);
     if (elen < 0) break;
     terminate_str(exec_file + elen);
     char *exec_path = dirname(exec_file);
