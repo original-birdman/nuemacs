@@ -9576,3 +9576,7 @@ display.c
 eval.c
     Check for LONG_MIN in UFDIV, UFMOD, UFNEG and UFABS.
     Don't allocate mtp on the stack.
+
+main.c
+exec.c
+    Don't allow INT_MIN as a numeric arg to function calls.

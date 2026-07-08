@@ -1339,6 +1339,15 @@ int ctlxrp(int f, int n) {
 int execute(int c, int f, int n) {
     int status;
 
+/* Several command handle a -ve n arg by passien -n to there inverse
+ * function.
+ * This is a problem if n == INT_MIN).
+ */
+    if (n == INT_MIN) {
+        mlwrite_one(MLbkt("Illegal numeric argument")); /* Complain */
+        return FALSE;
+    }
+
 /* If the keystroke is a bound function...do it.
  * However, we'll handle Space and B/b as special in VIEW mode
  * and <Return> as special in VIEW and dir_browsing mode (which is only

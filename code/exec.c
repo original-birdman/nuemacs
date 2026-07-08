@@ -256,10 +256,11 @@ static int docmd(const char *cline) {
         f = TRUE;
         ln = strtoll(db_val(tkn), NULL, 10);
 
-/* Functions only allow 32-bit ints as a repeat count. */
-
-        if ((ln > INT_MAX) || (ln < INT_MIN)) {
-            mlwrite_one("Numeric arg out of range for 32-bit integer");
+/* Functions only allow 32-bit ints as a repeat count.
+ * Don't allow INT_MIN, as some funcs send -n to their reverse.
+ */
+        if ((ln > INT_MAX) || (ln <= INT_MIN)) {
+            mlwrite_one("Numeric arg out of range for numeric parameter");
             goto final_exit;
         }
         n = (int)ln;
