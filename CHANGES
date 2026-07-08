@@ -9580,3 +9580,6 @@ eval.c
 main.c
 exec.c
     Don't allow INT_MIN as a numeric arg to function calls.
+
+spawn.c
+    Put SHELL and home-derived filenames within '' for system().

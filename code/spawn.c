@@ -63,9 +63,14 @@ int spawncli(int f, int n) {
     TTflush();
     TTclose();                      /* stty to old settings */
     TTkclose();                     /* Close "keyboard" */
-    if ((cp = getenv("SHELL")) != NULL && *cp != '\0')
-        rval = system(cp);
-    else
+    if ((cp = getenv("SHELL")) != NULL && *cp != '\0') {
+/* SHELL should be a simple command with no args.
+ * So run it within ''.
+ */
+        db_sprintf(glb_db, "exec '%s'", cp);
+        rval = system(db_val(glb_db));
+    }
+    else {
 #ifdef SYSSHELL
 /* Stringify macros... */
 #define xstr(s) str(s)
@@ -75,6 +80,7 @@ int spawncli(int f, int n) {
 #else
         rval = system("exec /bin/sh");
 #endif
+    }
     sgarbf = TRUE;
     sleep(2);
     TTopen();
@@ -224,24 +230,27 @@ int pipecmd(int f, int n) {
  * attacker can't predict; the subsequent shell `>` re-opens it, which is
  * fine because the file already exists.
  */
-    {
-        const char *hp = udir.home? udir.home: ".";
-        char tmpl[PATH_MAX];
-        snprintf(tmpl, sizeof(tmpl), "%s/.ue_XXXXXX", hp);
-        int fd = mkstemp(tmpl);
-        if (fd < 0) {
-            mlwrite("Cannot create tempfile: %s", strerror(errno));
-            s = FALSE;
-            goto exit;
-        }
-        close(fd);
-        db_set(comfile, tmpl);
+    const char *hp = udir.home? udir.home: ".";
+    db_sprintf(comfile, "%s/.ue_XXXXXX", hp);
+/* The text will only be overwritten - which is OK */
+    int fd = mkstemp((char *)db_val(comfile));
+    if (fd < 0) {
+        mlwrite("Cannot create tempfile: %s", strerror(errno));
+        s = FALSE;
+        goto exit;
     }
+    close(fd);
+
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
-    db_append(line, ">");
+/* We put the outfile filename into '', to prevent any active chars
+ * being introduced via HOME setting.
+ * Does mean that you can't have a ' in HOME.
+ */
+    db_append(line, ">'");
     db_append(line, db_val(comfile));
+    db_addch(line, '\'');
     rval = system(db_val(line));
     TTopen();
     TTkopen();
@@ -320,28 +329,24 @@ int filter_buffer(int f, int n) {
  * broken — fltin/fltout now hold the path only; the redirection chars
  * are added when building the shell command (below).
  */
-    {
-        char tmpl[PATH_MAX];
-        int fd;
-
-        snprintf(tmpl, sizeof(tmpl), "%s/.ue_fin_XXXXXX", hp);
-        if ((fd = mkstemp(tmpl)) < 0) {
-            mlwrite("Cannot create filter input file: %s", strerror(errno));
-            s = FALSE;
-            goto exit;
-        }
-        close(fd);
-        db_set(fltin, tmpl);
-
-        snprintf(tmpl, sizeof(tmpl), "%s/.ue_fout_XXXXXX", hp);
-        if ((fd = mkstemp(tmpl)) < 0) {
-            mlwrite("Cannot create filter output file: %s", strerror(errno));
-            s = FALSE;
-            goto exit;
-        }
-        close(fd);
-        db_set(fltout, tmpl);
+    int fd;
+    db_sprintf(fltin, "%s/.ue_fin_XXXXXX", hp);
+/* The text will only be overwritten - which is OK */
+    if ((fd = mkstemp((char *)db_val(fltin))) < 0) {
+        mlwrite("Cannot create filter input file: %s", strerror(errno));
+        s = FALSE;
+        goto exit;
     }
+    close(fd);
+
+    db_sprintf(fltout, "%s/.ue_fout_XXXXXX", hp);
+/* The text will only be overwritten - which is OK */
+    if ((fd = mkstemp((char *)db_val(fltout))) < 0) {
+        mlwrite("Cannot create filter output file: %s", strerror(errno));
+        s = FALSE;
+        goto exit;
+    }
+    close(fd);
 
 /* Set this to our new one for */
     set_buffer_filenames(bp, db_val(fltin));
@@ -356,10 +361,15 @@ int filter_buffer(int f, int n) {
     TTflush();
     TTclose();              /* stty to old modes    */
     TTkclose();
-    db_addch(line, '<');
+/* We put the infile and outfile filenames into '', to prevent any
+ * active chars being introduced via HOME setting.
+ * Does mean that you can't have a ' in HOME.
+  */
+    db_append(line, "<'");
     db_append(line, db_val(fltin));
-    db_addch(line, '>');
+    db_append(line, "' > '");
     db_append(line, db_val(fltout));
+    db_addch(line, '\'');
     rval = system(db_val(line));
     TTopen();
     TTkopen();
