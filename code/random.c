@@ -225,14 +225,13 @@ int twiddle(int f, int n) {
 
     dotp = curwp->w.dotp;
     int maxlen = lused(dotp);
-/* letxt() OK as, on an empyt line, doto == maxlen and we return after
+/* ltext() OK as, on an empty line, doto == maxlen and we return after
  * the prev_utf8_offset() call.
  */
     const char *l_buf = ltext(dotp);
 
-    while (n-- > 0) {
-        int reset_col = 0;
-        doto = curwp->w.doto;
+    int reset_col = 0;
+    doto = curwp->w.doto;
 /* GGR
  * twiddle here (and, e.g.,  bash) seems to act on the chars before and
  * after point -  except when you are at the end of a line....
@@ -247,19 +246,19 @@ int twiddle(int f, int n) {
  * But once we know where the right-hand character is the left-hand one
  * is always the one preceding it.
  */
-        if ((ggr_opts&GGR_TWIDDLE) || doto == maxlen) {
-            rch_st = prev_utf8_offset(l_buf, doto, TRUE);
-            if (rch_st < 0) return (FALSE);
-            rch_nb = doto - rch_st;
-        }
-        else {  /* Need to get back to where we are in this mode...*/
-            reset_col = 1;
-            rch_st = doto;
-            rch_nb = next_utf8_offset(l_buf, rch_st, maxlen, TRUE) - rch_st;
-        }
-        lch_st = prev_utf8_offset(l_buf, rch_st, TRUE);
-        if (lch_st < 0) return (FALSE);
-        lch_nb = rch_st - lch_st;
+    if ((ggr_opts&GGR_TWIDDLE) || doto == maxlen) {
+        rch_st = prev_utf8_offset(l_buf, doto, TRUE);
+        if (rch_st < 0) return (FALSE);
+        rch_nb = doto - rch_st;
+    }
+    else {  /* Need to get back to where we are in this mode...*/
+        reset_col = 1;
+        rch_st = doto;
+        rch_nb = next_utf8_offset(l_buf, rch_st, maxlen, TRUE) - rch_st;
+    }
+    lch_st = prev_utf8_offset(l_buf, rch_st, TRUE);
+    if (lch_st < 0) return (FALSE);
+    lch_nb = rch_st - lch_st;
 
 /* We know where the two characters start, and how many bytes each has.
  * So we copy them into a buffer in the reverse order and then
@@ -268,12 +267,12 @@ int twiddle(int f, int n) {
  * at eol) we might now be in the "middle" of a character, so we move to
  * the end of the pair (meaning we advance as we twiddle).
  */
-        db_setn(glb_db, l_buf+rch_st, rch_nb);
-        db_appendn(glb_db, l_buf+lch_st, lch_nb);
-        db_overwriten_at(ldb(dotp), db_val(glb_db), db_len(glb_db), lch_st);
+    db_setn(glb_db, l_buf+rch_st, rch_nb);
+    db_appendn(glb_db, l_buf+lch_st, lch_nb);
+    db_overwriten_at(ldb(dotp), db_val(glb_db), db_len(glb_db), lch_st);
 
-        if (reset_col) curwp->w.doto = lch_st + lch_nb + rch_nb;
-    }
+    if (reset_col) curwp->w.doto = lch_st + lch_nb + rch_nb;
+
     lchange(WFEDIT);
     return TRUE;
 }
@@ -375,6 +374,7 @@ int detab(int f, int n) {
           return rdonly();          /* we are in read only mode    */
 
     if (f == FALSE) n = 1;
+    if (n == 0) return TRUE;        /* Do nothing */
 
 /* Loop thru detabbing n lines */
     inc = ((n > 0) ? 1 : -1);
@@ -413,6 +413,7 @@ int entab(int f, int n) {
           return rdonly();      /* we are in read only mode    */
 
     if (f == FALSE) n = 1;
+    if (n == 0) return TRUE;        /* Do nothing */
 
 /* Loop thru entabbing n lines */
     inc = ((n > 0) ? 1 : -1);
@@ -481,6 +482,7 @@ int trim(int f, int n) {
           return rdonly();      /* we are in read only mode    */
 
     if (f == FALSE) n = 1;
+    if (n == 0) return TRUE;        /* Do nothing */
 
 /* Loop thru trimming n lines */
     inc = ((n > 0) ? 1 : -1);
