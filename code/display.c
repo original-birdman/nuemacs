@@ -1398,8 +1398,8 @@ next_mode:
  * For the minibuffer this will be the main buffer name .
  */
     if ( (*bp->b_dfname != 0) &&
-         ( (*bp->b_dfname != '.') ||
-           (*bp->b_dfname+1 != '/') ||
+         ( (*(bp->b_dfname) != '.') ||
+           (*(bp->b_dfname+1) != '/') ||
            (strcmp(bp->b_bname, bp->b_dfname+2) != 0))) {
         db_append(glb_db, bp->b_dfname);
         db_addch(glb_db, ' ');

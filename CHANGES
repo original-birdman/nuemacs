@@ -9569,3 +9569,6 @@ file.c
 
 display.c
     Change (very wrong looking) "|= ~VFREQ" to "&= ~VFREQ".
+
+display.c
+    Add () to correct a precedence bug.
