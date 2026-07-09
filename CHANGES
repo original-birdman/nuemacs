@@ -9604,3 +9604,9 @@ posix.c
 
 file.c
     Stop loop on a path-prefix substitution. Simplify with db_sprintf.
+
+file.c
+etc/uemacs.rc
+    handle_filehooks() should look at filenames, not full pathnames, and
+    ignore files whose last "." is part of initial "."s. [file.c]
+    file-hooks should make similar checks to find the suffix. [uemacs.rc]

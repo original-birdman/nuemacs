@@ -562,9 +562,22 @@ static void handle_filehooks(const char *fname) {
     struct buffer *sb;
     run_filehooks = 0;                  /* reset flag */
     if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
-    const char *sfx = strrchr(fname, '.');
-/* Check we haven't found ../xxx or ./xxx */
-    if (sfx && (*(sfx+1) != '/')) {
+
+/* May have a full pathname, so first need to extract the filename */
+
+    const char *ent = basename(strdupa(fname));
+    const char *sfx = strrchr(ent, '.');
+
+/* We only have a suffix if there is a char before this that is not a "." */
+
+    int sfx_ok = 0;
+    for (const char *cp = ent; cp < sfx; cp++) {
+        if (*cp != '.') {
+            sfx_ok = 1;
+            break;
+        }
+    }
+    if (sfx_ok) {
         sfx++;                          /* Skip over '.' */
         db_sprintf(glb_db, "/file-hooks-%s", sfx);
         if ((sb = bfind(db_val(glb_db), FALSE, 0)) != NULL) dobuf(sb);
