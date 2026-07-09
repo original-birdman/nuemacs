@@ -847,7 +847,9 @@ com_arg *multiplier_check(int c) {
                 mflag = -1;
             }
             else {
-                ca.n = ca.n * 10 + (ca.c - '0');
+/* Overflow check */
+                if ((ca.n >= 0) == ((ca.n * 10 + (ca.c - '0')) >= 0))
+                     ca.n = ca.n * 10 + (ca.c - '0');
             }
             if ((ca.n == 0) && (mflag == -1))  /* lonely - */
                 mlwrite_one("Arg:");
@@ -1485,7 +1487,7 @@ int execute(int c, int f, int n) {
         input_waiting = NULL;
         com_flag &= ktp->fi->keep_flags;
 /* GGR - abort running/collecting keyboard macro at point of error */
-        if ((kbdmode != STOP) & !status) end_kbdmacro();
+        if ((kbdmode != STOP) && !status) end_kbdmacro();
         return status;
     }
 
@@ -1603,7 +1605,7 @@ int execute(int c, int f, int n) {
  */
         if (!meta_spec_active.W) {
             meta_spec_active.W = 1;
-            execute(META|SPEC|'W', FALSE, (ggr_opts&GGR_FULLWRAP)? 2: 1);
+            execute(META|SPEC|'W', FALSE, (ggr_opts & GGR_FULLWRAP)? 2: 1);
             meta_spec_active.W = 0;
 /* If the result of the wrap is that we are at the start of a line then
  * we don't want to add a space.
