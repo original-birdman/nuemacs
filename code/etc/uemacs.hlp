@@ -747,9 +747,11 @@ Bit operations
 
 Substring
     &lef s len      Leftmost len graphemes from string s
-    &rig s pos      Rightmost graphemes starting from pos in string s
+    &rig s len      Rightmost len graphemes from string s
+    &tai s pos      Rightmost graphemes starting from pos in string s
     &mid s pos len  Rightmost len graphemes from string s staring at pos
         These only copy up to end-of-string if len/pos is too big.
+        pos counts from 0.
 
 Other string operations
     &cat s1 s2  Catenate s1 and s2

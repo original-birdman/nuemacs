@@ -9613,7 +9613,7 @@ etc/uemacs.rc
 
 eval.c
     UFRIGHT (&rig) code was returning the pos rightmost graphemes,
-    rather then the graphemes aftre pos into the string.
+    rather than the graphemes after pos into the string.
     The section needs tidying up - this is just a quick fix.
 
 buffer.c
@@ -9631,3 +9631,15 @@ exec.c
 
 fileio,c
     Exit the read loop in ffgetline() if read() returns > 0.
+
+eval.c
+evar.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Redid the UFRIGHT (&rig) fix from earlier.
+    Reverted &rig to return the len rightmost graphemes (as it always
+    had) [eval.c]
+    Update the documentation to note what the code actually does [uemacs.hlp]
+    Add a UFTAIL (&tai) function to retunr the rightmost graphems start
+    from a position [eval.c, evar.h]
+    Update file-hooks to use &tai [uemacs.rc]

@@ -89,9 +89,9 @@ enum uf_val {
     UFADD,      UFSUB,      UFTIMES,    UFDIV,      UFMOD,  UFNEG,  UFABS,
     UFEQUAL,    UFLESS,     UFGREATER,  UFNOT,      UFAND,  UFOR,
     UFBAND,     UFBOR,      UFBXOR,     UFBNOT,     UFBLIT,
-    UFCAT,      UFLEFT,     UFRIGHT,    UFMID,      UFSEQUAL,   UFSLESS,
-    UFSGREAT,   UFLENGTH,   UFUPPER,    UFLOWER,    UFESCAPE,
-    UFSINDEX,   UFRINDEX,
+    UFCAT,      UFLEFT,     UFRIGHT,    UFTAIL,     UFMID,
+    UFSEQUAL,   UFSLESS,    UFSGREAT,   UFLENGTH,   UFUPPER,    UFLOWER,
+    UFESCAPE,   UFSINDEX,   UFRINDEX,
     UFIND,      UFTRUTH,    UFASCII,    UFCHR,      UFGTKEY,    UFRND,
     UFENV,      UFBIND,     UFEXIST,    UFBXIST,    UFFIND,     UFXLATE,
     UFGRPTEXT,  UFPRINTF,   UFPTTEX,
@@ -141,7 +141,8 @@ static struct user_function funcs[] = {
 /* String functions */
  { "cat", DINAMIC,  UFCAT },    /* concatenate string */
  { "lef", DINAMIC,  UFLEFT },   /* left string(string, len) */
- { "rig", DINAMIC,  UFRIGHT },  /* right string(string, pos) */
+ { "rig", DINAMIC,  UFRIGHT },  /* right string(string, len) */
+ { "tai", DINAMIC,  UFTAIL },   /* tail of string(string, pos) */
  { "mid", TRINAMIC, UFMID },    /* mid string(string, pos, len) */
  { "seq", DINAMIC,  UFSEQUAL }, /* string logical equality check */
  { "sle", DINAMIC,  UFSLESS },  /* string logical less than */

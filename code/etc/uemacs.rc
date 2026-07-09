@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       Version - GGR4.189 (requires GGR4.173+)
-;                       Last Update: 31 Mar 2025
+;                       Last Update: 09 July 2026
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -34,17 +34,15 @@ store-procedure file-hooks
     !if &equ .pthidx 0
         set .pthtmp $cfname
     !else
-        set .pthtmp &rig $cfname .pthidx
+        set .pthtmp &tai $cfname .pthidx
     !endif
     set .rctmp &rin .pthtmp "."
     !if &equ .rctmp 0
         !goto fh_exit
     !endif
 ; Pick up everything after the last .
-; The last number just needs to be at least 1 more than the longest
-; suffix we check for.
 ;
-    set .rctmp &mid .pthtmp &add .rctmp 1 5
+    set .rctmp &tai .pthtmp &add .rctmp 1
     set .rctmp &lower .rctmp
 ; A quick "is it in list" check.  Assumes no-one uses "c cc" as a suffix..
     !if &les 0 &sin "c cc cpp c++ h pl js php" .rctmp

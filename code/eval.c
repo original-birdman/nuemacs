@@ -880,7 +880,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
  */
     case UFLEFT:
     case UFRIGHT:
-    case UFMID: {
+    case UFMID:
+    case UFTAIL: {
         const char *rp; /* Where the return value starts */
         int offs;       /* Eventually, how much to return */
         int inbytes = istrlen(db_val(arg1));
@@ -895,7 +896,9 @@ static void gtfun(dbp_dcl(res), const char *fname) {
  * UFLEFT needs us to go just beyond the last char, but UFMID needs us
  * end up just before it.
  */
-        if (tag != UFRIGHT) {   /* So it's UFLEFT or UFMID */
+        switch(tag) {
+        case UFLEFT:
+        case UFMID: {
             int reloop = FALSE;
             if (tag == UFMID) {
                 gph_count--;    /* So we get start pos... */
@@ -925,11 +928,22 @@ static void gtfun(dbp_dcl(res), const char *fname) {
                     goto exit;
                 }
             }
+            break;
         }
-/* The UFRIGHT scan runs backwards....NO IT DOESN'T!!!!
- */
-        else {                  /* So is UFRIGHT */
+/* The UFRIGHT scan runs backwards... */
+        case UFRIGHT: {
+            offs = inbytes;     /* Start at other end */
+            while (gph_count--) {
+                offs = prev_utf8_offset(db_val(arg1), offs, TRUE);
+                if (offs == 0) break;   /* No bytes left */
+            }
+            rp = db_val(arg1)+offs;
+            offs = inbytes - offs;
+            break;
+        }
+        default: {      /* i.e. UFTAIL */
             offs = 0;
+            gph_count--;    /* So we get start pos... */
             while (gph_count--) {
                 int next_offs = next_utf8_offset(db_val(arg1), offs,
                      inbytes, TRUE);
@@ -944,6 +958,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
                 rp = db_val(arg1)+offs;
                 offs = inbytes - offs;
             }
+        }
         }
         dbp_setn(res, rp, offs);
         goto set_exit;
