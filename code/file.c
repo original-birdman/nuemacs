@@ -320,14 +320,9 @@ const char *get_uniqpath(const char *fn) {
         for (int i = 0; i < path_pfx_map_valid; i++) {
             if (strncmp(db_val(rp_res),
                   path_pfx_map_from[i], (size_t)path_pfx_map_from_len[i]) == 0) {
-                int nlen = db_len(rp_res) - path_pfx_map_from_len[i]
-                    + path_pfx_map_to_len[i] + 1;
-                char *trp = Xmalloc((size_t)nlen);
-                strcpy(trp, path_pfx_map_to[i]);
-                strcpy(trp+path_pfx_map_to_len[i],
+                db_sprintf(rp_res, "%s%s", path_pfx_map_to[i],
                      db_val(rp_res)+path_pfx_map_from_len[i]);
-                db_set(rp_res, trp);
-                Xfree(trp);
+                break;      /* Don't continue the check after a match */
             }
         }
     }
@@ -778,7 +773,6 @@ static int ifile(const char *fname) {
         (nlines > 1)? "s": "", dmg);
     if (s == FIOERR) sleep(1);  /* Let it be seen */
 
-out:
 /* Advance to the next line and mark the window for changes */
     curwp->w.dotp = lforw(curwp->w.dotp);
     curwp->w_flag |= WFHARD | WFMODE;

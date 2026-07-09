@@ -9601,3 +9601,6 @@ dyn_buf.c
 
 posix.c
     Put loop limit around terminal flush.
+
+file.c
+    Stop loop on a path-prefix substitution. Simplify with db_sprintf.
