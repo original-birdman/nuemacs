@@ -9615,3 +9615,6 @@ eval.c
     UFRIGHT (&rig) code was returning the pos rightmost graphemes,
     rather then the graphemes aftre pos into the string.
     The section needs tidying up - this is just a quick fix.
+
+buffer.c
+    Use a dyn_buf for line in makelist().

@@ -464,7 +464,7 @@ void addstr_to_anyb(const char *instr, struct buffer *bp) {
 };
 
 /* This is for internal use to add to the //List buffer. */
-#define addline(line) addstr_to_anyb(line, blistp)
+#define addline(line) addline_to_anyb(&line, blistp)
 
 /* This routine rebuilds the text in the special secret buffer
  * that holds the buffer list.
@@ -476,9 +476,7 @@ void addstr_to_anyb(const char *instr, struct buffer *bp) {
  * int iflag;           list hidden buffer flag
  */
 static int makelist(int iflag) {
-    char *cp1;
     const char *cp2;
-    char c;
     struct buffer *bp;
     struct line *lp;
     int s;
@@ -486,39 +484,39 @@ static int makelist(int iflag) {
     ue64I_t nbytes;     /* # of bytes in current buffer */
     int mcheck;
 
-    char *line = Xmalloc((size_t)term.t_mcol);
+    db_strdef(line);
 
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
         return s;
     terminate_str(blistp->b_dfname);    /* Makes it empty */
 
-    addline("ACT MODES   Type↴      Size Buffer        File");
-    addline("--- ------------.      ---- ------        ----");
+    db_set(line, "ACT MODES   Type↴      Size Buffer        File");
+    addline(line);
+    db_set(line, "--- ------------.      ---- ------        ----");
+    addline(line);
 
     bp = bheadp;                        /* For all buffers      */
 
 /* Build line to report global mode settings */
 
-    cp1 = line;
-    for (i = 0; i < 4; i++) *cp1++ = ' ';
+    db_set(line, "    ");
 
 /* Output the mode codes */
 
     mcheck = 1;
     for (i = 0; i < NUMMODES; i++) {
-        if (gmode & mcheck) *cp1++ = modecode[i];
-        else                *cp1++ = '.';
+        if (gmode & mcheck) db_addch(line, modecode[i]);
+        else                db_addch(line, '.');
         mcheck <<= 1;
     }
-    strcpy(cp1, ".           Global Modes");
+    db_append(line, ".           Global Modes");
     addline(line);
 
 /* Build line to report any mode settings forced on/off */
 
     if (force_mode_on || force_mode_on) {
-        cp1 = line;
-        for (i = 0; i < 4; i++) *cp1++ = ' ';
+        db_set(line, "    ");
 
 /* Output the mode codes */
 
@@ -528,10 +526,10 @@ static int makelist(int iflag) {
             if (force_mode_on & mcheck) cset = modecode[i];
             else if (force_mode_off & mcheck) cset = DIFCASE | modecode[i];
             else cset = '-';
-            *cp1++ = cset;
+            db_addch(line, cset);
             mcheck <<= 1;
         }
-        strcpy(cp1, ".           Forced modes (U==on, l==off)");
+        db_append(line, ".           Forced modes (U==on, l==off)");
         addline(line);
     }
 
@@ -543,20 +541,20 @@ static int makelist(int iflag) {
             bp = bp->b_bufp;
             continue;
         }
-        cp1 = line;                 /* Start at left edge   */
+        db_clear(line);
 
 /* Output status of ACTIVE flag (has the file been read in? */
 
-        *cp1++ = (bp->b_active == TRUE)? '@': ' ';
+        db_addch(line, (bp->b_active == TRUE)? '@': ' ');
 
 /* Output status of changed flag */
 
-        *cp1++ = ((bp->b_flag & BFCHG) != 0)? '*': ' ';
+        db_addch(line, ((bp->b_flag & BFCHG) != 0)? '*': ' ');
 
 /* Report if the file is truncated */
 
-        *cp1++ = ((bp->b_flag & BFTRUNC) != 0)? '#': ' ';
-        *cp1++ = ' ';                   /* space */
+        db_addch(line, ((bp->b_flag & BFTRUNC) != 0)? '#': ' ');
+        db_addch(line, ' ');                    /* space */
 
 /* Output the mode codes - unknown for not-yet-active buffers */
 
@@ -567,16 +565,18 @@ static int makelist(int iflag) {
                 if (bp->b_mode & mcheck) mc = modecode[i];
                 else                     mc = '.';
             }
-            *cp1++ = mc;
+            db_addch(line, mc);
             mcheck <<= 1;
         }
 
 /* Append p or x to denote whether it is set to BTPHON or BTPROC */
-        if (bp->b_type == BTPHON) *cp1++ = 'p';
-        else if (bp->b_type == BTPROC) *cp1++ = 'x';
-        else *cp1++ = '.';
+        char ac;
+        if (bp->b_type == BTPHON) ac = 'p';
+        else if (bp->b_type == BTPROC) ac = 'x';
+        else ac = '.';
+        db_addch(line, ac);
 
-        *cp1++ = ' ';                   /* Gap.                 */
+        db_addch(line, ' ');            /* Gap.                 */
         nbytes = 0L;                    /* Count bytes in buf.  */
         ue64I_t nlc = (bp->b_mode & MDDOSLE)? 2: 1;
         for (lp = lforw(bp->b_linep); lp != bp->b_linep; lp = lforw(lp)) {
@@ -586,35 +586,31 @@ static int makelist(int iflag) {
         sprintf(nb, "%20lld", nbytes);  /* Need 8 byte formatter */
         if (nb[11] != ' ') nb[11] = '+';    /* The last 9 chars */
         cp2 = nb + 11;
-        while ((c = *cp2++) != 0) *cp1++ = c;
-        *cp1++ = ' ';                   /* Gap.                 */
+        db_append(line, cp2);
+        db_addch(line, ' ');            /* Gap.                 */
         cp2 = bp->b_bname;              /* Buffer name          */
-        while ((c = *cp2++) != 0) *cp1++ = c;
+        db_append(line, cp2);
         cp2 = bp->b_dfname;             /* File name            */
         if (*cp2 != 0) {
 /* We know the current screen width, so use it...
  */
-            if (((cp1 - line) + istrlen(cp2)) > term.t_ncol) {
-                *cp1++ = ' ';
-                *cp1++ = (char)0xe2;    /* Carriage return symbol */
-                *cp1++ = (char)0x86;    /* U+2185                 */
-                *cp1++ = (char)0xb5;    /* as utf-8               */
-                *cp1 = 0;               /* Add to the buffer.     */
+            if ((db_len(line) + istrlen(cp2)) > term.t_ncol) {
+                db_addch(line, ' ');
+                db_addch(line, (char)0xe2); /* Carriage return symbol */
+                db_addch(line, (char)0x86); /* U+2185                 */
+                db_addch(line, (char)0xb5); /* as utf-8               */
                 addline(line);
-                cp1 = line;
-                for (i = 0; i < 5; i++) *cp1++ = ' ';
+                db_set(line, "     ");
             }
             else {
 /* The header line is 3+1+13+1+9+1+13+1 to get to File
  * do...while ensures at least 1 space
  */
-                do { *cp1++ = ' '; } while (cp1 < line+42);
+                int pad  = 42 - db_len(line);
+                do { db_addch(line, ' '); } while (--pad > 0);
             }
-            while ((c = *cp2++) != 0) {
-                if (cp1 < line+term.t_mcol) *cp1++ = c;
-            }
+            db_append(line, cp2);
         }
-        *cp1 = 0;       /* Add to the buffer.   */
         addline(line);
 
 /* This next section (SHOW_RPNAMES) is only for checking
@@ -623,21 +619,20 @@ static int makelist(int iflag) {
  */
 
 #if SHOW_RPNAMES
-        sprintf(line, "  rpname: ");
+        db_sprintf(line, "  rpname: ");
         cp2 = bp->b_rpname;             /* Resolved pathname */
         cp1 = line+strlen(line);
         if (*cp2 != 0) {
             while ((c = *cp2++) != 0) {
-                if (cp1 < line+term.t_mcol) *cp1++ = c;
+                if (cp1 < line+term.t_mcol) db_addch(line, c);
             }
         }
-        *cp1 = 0;       /* Add to the buffer.   */
         addline(line);
 #endif
 
         bp = bp->b_bufp;
     }
-    Xfree(line);
+    db_free(line);
     return TRUE;        /* All done             */
 }
 
