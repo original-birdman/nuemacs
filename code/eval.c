@@ -926,16 +926,24 @@ static void gtfun(dbp_dcl(res), const char *fname) {
                 }
             }
         }
-/* The UFRIGHT scan runs backwards....
+/* The UFRIGHT scan runs backwards....NO IT DOESN'T!!!!
  */
         else {                  /* So is UFRIGHT */
-            offs = inbytes;     /* Start at other end */
+            offs = 0;
             while (gph_count--) {
-                offs = prev_utf8_offset(db_val(arg1), offs, TRUE);
-                if (offs == 0) break;   /* No bytes left */
+                int next_offs = next_utf8_offset(db_val(arg1), offs,
+                     inbytes, TRUE);
+                if (next_offs < 0) break;   /* No bytes left */
+                offs = next_offs;
             }
-            rp = db_val(arg1)+offs;
-            offs = inbytes - offs;
+            if (offs < 0) {
+                rp = db_val(arg1);
+                offs = 0;
+            }
+            else {
+                rp = db_val(arg1)+offs;
+                offs = inbytes - offs;
+            }
         }
         dbp_setn(res, rp, offs);
         goto set_exit;
@@ -2036,7 +2044,6 @@ static void del_simple_var(int idx, struct simple_variable *op, int listlen) {
  * empty variable name.
  */
     struct simple_variable *np = op+1;
-fprintf(stderr, "dsv start:  op: %p, np; %p\n", op, np);
     db_free(op->value);
     int vnum;
     for (vnum = idx; vnum < listlen; vnum++, op++, np++) {
@@ -2046,11 +2053,6 @@ fprintf(stderr, "dsv start:  op: %p, np; %p\n", op, np);
     }
     terminate_str(np->name);                /* Makes it empty */
     np->value = new_db;
-fprintf(stderr, "dsv end:  vnum: %d, np: %p\n", vnum, np);
-for (int i = 0; i < listlen; i++) {
-    fprintf(stderr, " v[%02d] name: %s, value: %s\n",
-     i, uv[i].name, db_val_nc(uv[i].value));
-}
 }
 
 /* Delete a variable

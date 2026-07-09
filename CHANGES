@@ -9610,3 +9610,8 @@ etc/uemacs.rc
     handle_filehooks() should look at filenames, not full pathnames, and
     ignore files whose last "." is part of initial "."s. [file.c]
     file-hooks should make similar checks to find the suffix. [uemacs.rc]
+
+eval.c
+    UFRIGHT (&rig) code was returning the pos rightmost graphemes,
+    rather then the graphemes aftre pos into the string.
+    The section needs tidying up - this is just a quick fix.
