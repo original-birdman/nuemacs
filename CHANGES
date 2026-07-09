@@ -9643,3 +9643,6 @@ etc/uemacs.rc
     Add a UFTAIL (&tai) function to retunr the rightmost graphems start
     from a position [eval.c, evar.h]
     Update file-hooks to use &tai [uemacs.rc]
+
+fileio.c
+    Correct the ASCII check in file_is_binary().

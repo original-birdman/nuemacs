@@ -160,9 +160,10 @@ static int file_is_binary(void) {
     if (ccount == 0) return FALSE;  /* Prevent 0 division at end. */
     while (bi < ccount) {
         unicode_t uc;
-        if (*(cache.buf+bi) < 0x7f) {   /* Could be ASCII */
-            if ((*(cache.buf+bi) >= ' ') || (*(cache.buf+bi) == '\n')
-                 || (*(cache.buf+bi) == '\t')) {
+        char tc = *(cache.buf+bi);
+        if (!(tc & 0x80)) {    /* Could be ASCII */
+            if (((tc >= ' ') && (tc < 0x7f)) ||
+                 (tc == '\n') || (tc == '\t')) {
                 uc_text++;              /* Printing char... */
             }
             bi++;
