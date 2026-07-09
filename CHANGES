@@ -9622,3 +9622,6 @@ buffer.c
 main.c
     Check for overflow accumulating digits in multiplier_check().
     Correct an & where && was intended in an if.
+
+autotest/*.sh
+    Change exit-emacs to 1 exit-emacs, to ensure we shutdown.

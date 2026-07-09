@@ -132,7 +132,7 @@ if [ "$1" = FULL-RUN ]; then
 !else
     unmark-buffer
 !endif
-exit-emacs
+1 exit-emacs
 EOD
 # Just leave display showing if being run singly.
 else
