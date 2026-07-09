@@ -365,7 +365,7 @@ int ffgetline(void) {
             errno = 0;
             while(1) {  /* Allow for interrupted reads */
                 cache.len = (int)read(ffp, cache.buf, sizeof(cache.buf));
-                if (errno != EINTR) break;
+                if ((cache.len > 0) || (errno != EINTR)) break;
             }
             if (cache.len < 0) {
                 mlwrite("Read I/O error: %s", strerror(errno));

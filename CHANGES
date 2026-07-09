@@ -9628,3 +9628,6 @@ autotest/*.sh
 
 exec.c
     Ensure that a goto label is a full match, not just a prefix.
+
+fileio,c
+    Exit the read loop in ffgetline() if read() returns > 0.
