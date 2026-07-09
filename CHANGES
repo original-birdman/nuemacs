@@ -9625,3 +9625,6 @@ main.c
 
 autotest/*.sh
     Change exit-emacs to 1 exit-emacs, to ensure we shutdown.
+
+exec.c
+    Ensure that a goto label is a full match, not just a prefix.

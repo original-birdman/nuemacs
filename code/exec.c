@@ -1368,10 +1368,27 @@ nxtscan:                /* On to the next line */
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
 /* We need at least 2 chars on the line for a label... */
                         if (lused(glp) < 2) continue;
-                        if (*ltext(glp) == '*' &&
+                        if ((*ltext(glp) == '*') &&
                             (db_cmpn(golabel, ltext(glp)+1, linlen) == 0)) {
-                            lp = glp;
-                            goto onward;
+/* Also need to check that this is not a prefix match */
+                            int full_match = 0;
+                            if (lused(glp) == (linlen+1)) { /* End of line */
+                                full_match = 1;
+                            }
+                            else {      /* Is the next char whitespace? */
+                                switch (*(ltext(glp)+1+linlen)) {
+                                case ' ':
+                                case '\t':
+                                    full_match = 1;
+                                    break;
+                                default:
+                                    ;
+                                }
+                            }
+                            if (full_match) {
+                                lp = glp;
+                                goto onward;
+                            }
                         }
                     }
                     mlwrite("No such label: %s", db_val(golabel));
