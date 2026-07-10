@@ -622,9 +622,25 @@ int newwidth(int n) {
     term.t_margin = 2 + n/40;
     term.t_scrsiz = n - (2*term.t_margin);
 
-/* Force all windows to redraw */
+/* If the //List buffer is being shown, recalculate it for the new width */
+
+    int update_blistp = 0;
+    if (blistp && (blistp->b_nwnd > 0)) {
+        makelist(-1); /* -1 == use last iflag */
+        blistp->b_flag |= BFCHG;
+        update_blistp = 1;
+    }
+
+/* Force all windows to redraw. Update blistp when we hit it */
     wp = wheadp;
     while (wp) {
+        if (update_blistp && (wp->w_bufp == blistp)) {
+            wp->w_linep = lforw(blistp->b_linep);
+            wp->w.dotp = lforw(blistp->b_linep);
+            wp->w.doto = 0;
+            wp->w.markp = NULL;
+            wp->w.marko = 0;
+        }
         wp->w_flag |= WFHARD | WFMOVE | WFMODE;
         wp = wp->w_wndp;
     }

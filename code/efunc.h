@@ -77,6 +77,7 @@ extern int killbuffer(int, int);
 extern int namebuffer(int, int);
 extern void addline_to_anyb(db *, struct buffer *);
 extern void addstr_to_anyb(const char *, struct buffer *);
+extern int makelist(int);
 extern int listbuffers(int, int);
 extern int anycb(void);
 extern int unmark(int, int);

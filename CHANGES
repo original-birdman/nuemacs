@@ -9650,6 +9650,7 @@ fileio.c
 display.c
 dyn_buf.c
 exec.c
+file.c
 globals.c
 input.c
 main.c
@@ -9661,8 +9662,17 @@ estruct.h
     Add checking for requested deferral at the start of SIGWINCH
     handlers. Just set defer data and return if request is there.
     [display.c, input.c]
-    Set sigwin_dfr.do_defer to FALSE when in getcmd() [input.c]
+    Set sigwin_dfr.do_defer to FALSE when in get1key() [input.c]
     Check for sigwin_dfr.is_deferred at start of execute() and call
     the saved signal handler if set. [main.c]
-    Check for sigwin_dfr.is_deferred at start of dobuf() and call
-    the saved signal handler if set. [exec.c]
+    Check for sigwin_dfr.is_deferred at the 300 line marker in
+    file2buf() and call the saved signal handler if set.[file.c]
+
+buffer.c
+globals.c
+window.c
+efunc.h
+    Make makelist() non-static and remember last iflag. [buffer.c,
+    efunc.h]
+    Initialize blistp to NULL. [globals.c]
+    Re-calculate //List on a new window width [window.c]

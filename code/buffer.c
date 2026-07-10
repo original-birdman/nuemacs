@@ -475,7 +475,8 @@ void addstr_to_anyb(const char *instr, struct buffer *bp) {
  *
  * int iflag;           list hidden buffer flag
  */
-static int makelist(int iflag) {
+static int last_iflag = FALSE;
+int makelist(int iflag) {
     const char *cp2;
     struct buffer *bp;
     struct line *lp;
@@ -497,6 +498,11 @@ static int makelist(int iflag) {
     addline(line);
 
     bp = bheadp;                        /* For all buffers      */
+
+/* Remember the last value of iflag. Used by the call from newwidth() */
+
+    if (iflag < 0)  iflag = last_iflag;
+    else            last_iflag = iflag;
 
 /* Build line to report global mode settings */
 

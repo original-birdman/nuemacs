@@ -86,7 +86,7 @@ int curgoal;                    /* Display column goal for C-P, C-N */
 struct window *curwp;           /* Current window               */
 struct buffer *curbp;           /* Current buffer               */
 struct buffer *bheadp;          /* Head of list of buffers      */
-struct buffer *blistp;          /* Buffer for C-X C-B           */
+struct buffer *blistp = NULL;   /* Buffer for C-X C-B           */
 struct buffer *bdbgp;           /* Buffer for macro debug info  */
 
 /* GGR - Add one to these three to allow for trailing NULs      */
