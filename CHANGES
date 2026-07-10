@@ -9685,3 +9685,11 @@ wrapper.c
 
 buffer.c
     Rewrote per_macro_level_remove() to work correctly.
+
+tools/read-speed.sh
+etc/uemacs.hlp
+version.h
+    Change exit-emacs to 1 exit-emacs, to ensure we shutdown. [read-speed.sh]
+    Update to GGR4.197
+
+==========

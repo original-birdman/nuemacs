@@ -18,7 +18,7 @@ cat >uetest.rc <<'EOD'
 
 find-file read-speed.tfile
 
-exit-emacs
+1 exit-emacs
 EOD
 
 [ -z "$UE2RUN" ] && UE2RUN=./uemacs
