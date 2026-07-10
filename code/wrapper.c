@@ -23,12 +23,15 @@ void *Xrealloc(const void *optr, size_t size) {
     return ret;
 }
 
-/* Centos and Debian Mips 8/9d o have reallocarray, so we'll need to write one.
- * But we''l dispense with the n*isz overflow check.
+/* Centos and Debian Mips 8/9 do not have reallocarray, so we'll need
+ * to write one.
+ * We'll show good faith and test for overflow.
  */
 #if __GNUC__ <= 6
 void *reallocarray(void *op, size_t n, size_t isz) {
-    return realloc(op, n*isz);
+    size_t total = n*isz;
+    if ((total/n) != isz) die("reallocarray: Overlarge request");
+    return realloc(op, total);
 }
 #endif
 

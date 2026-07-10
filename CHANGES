@@ -9679,3 +9679,6 @@ efunc.h
 
 idxsorter.c
     Change a continue to a break in a loop.
+
+wrapper.c
+    Added an overflow check in the reallocarray() code for old systems.
