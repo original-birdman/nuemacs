@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <limits.h>
 #include <string.h>
 
 #include "idxsorter.h"
@@ -208,11 +209,11 @@ int idxsort_fields(unsigned char *records, int index[],
         unsigned int curfld_start = fields[fi].offset;
         unsigned int curfld_width = fields[fi].len;
         char curfld_type = fields[fi].type;
-        if (curfld_type == 'S') curfld_width = INT32_MAX;   /* Let loop run */
+        if (curfld_type == 'S') curfld_width = INT_MAX; /* Let loop run */
 
         int c_strings_done = 0;
         for (unsigned int this_co = 0; this_co < curfld_width; this_co++) {
-            if (c_strings_done) continue;   /* S fields finished */
+            if (c_strings_done) break;      /* S fields finished */
             if (curfld_type == 'S') c_strings_done = 1;
             if (done) goto we_are_done;
             done = 1;                       /* Assume records already ordered */

@@ -9676,3 +9676,6 @@ efunc.h
     efunc.h]
     Initialize blistp to NULL. [globals.c]
     Re-calculate //List on a new window width [window.c]
+
+idxsorter.c
+    Change a continue to a break in a loop.
