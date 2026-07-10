@@ -9682,3 +9682,6 @@ idxsorter.c
 
 wrapper.c
     Added an overflow check in the reallocarray() code for old systems.
+
+buffer.c
+    Rewrote per_macro_level_remove() to work correctly.

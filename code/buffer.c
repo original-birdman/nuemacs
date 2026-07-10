@@ -100,19 +100,22 @@ int bclear(struct buffer *bp) {
 }
 
 /* Remove any entries from the list referring to buffer */
-
 static void per_macro_level_remove(struct buffer *btogo) {
-    if (!macro_pin_headp) return;  /* None there */
-    linked_items **prev_p = &macro_pin_headp;
+    if (!macro_pin_headp) return;                   /* None there */
+
+    linked_items *prev_p = NULL; /* Location to update  */
     linked_items *mp = macro_pin_headp;
     while (mp) {
-        linked_items *next_p = mp->next;
-        if (mmi(mp, bp) == btogo) {
-            Xfree(mp);
-            (*prev_p)->next = next_p;
+        linked_items *next_p = mp->next;            /* Where to go next */
+        if (mmi(mp, bp) == btogo) {                 /* Found a match? */
+            if (prev_p) prev_p->next = mp->next;    /* Update prev's next */
+            else macro_pin_headp = mp->next;        /* ...special case */
+            Xfree(mp);                              /* Free this one */
         }
-        mp = next_p;
-        *prev_p = (*prev_p)->next;
+        else {
+            prev_p = mp;                            /* This is next prev */
+        }
+        mp = next_p;                                /* On to the next one */
     }
 }
 
