@@ -1341,6 +1341,12 @@ int ctlxrp(int f, int n) {
 int execute(int c, int f, int n) {
     int status;
 
+    if (sigwin_dfr.is_deferred) {
+        sigwin_dfr.do_defer = FALSE;
+        sigwin_dfr.hndlr_func(SIGWINCH);
+        sigwin_dfr.do_defer = TRUE;
+    }
+
 /* Several command handle a -ve n arg by passien -n to there inverse
  * function.
  * This is a problem if n == INT_MIN).

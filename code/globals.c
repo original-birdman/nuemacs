@@ -261,6 +261,10 @@ linked_items *macro_pin_headp = NULL;
 
 udir_t udir;
 
+/* Info for deferred SIGWINCH handling */
+
+struct sigdefer sigwin_dfr = {TRUE, FALSE, NULL};
+
 /* Ignored prefixes  - need to limit assignment... */
 
 const char *path_pfx_map = NULL;

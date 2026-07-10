@@ -9466,7 +9466,7 @@ random.c
     addchar_kbdmacro() loop.
     Just call linsert_uc() for all chars, as it knows about \n.
     This also adds \n to the kbd macro (which was not happening).
-
+OB
 main.c
     Change flush_kbd_text() to just call lins_dynbuf() now that
     addto_kbdmacro uses ~0 for NULs.
@@ -9640,9 +9640,29 @@ etc/uemacs.rc
     Reverted &rig to return the len rightmost graphemes (as it always
     had) [eval.c]
     Update the documentation to note what the code actually does [uemacs.hlp]
-    Add a UFTAIL (&tai) function to retunr the rightmost graphems start
+    Add a UFTAIL (&tai) function to return the rightmost graphemes start
     from a position [eval.c, evar.h]
     Update file-hooks to use &tai [uemacs.rc]
 
 fileio.c
     Correct the ASCII check in file_is_binary().
+
+display.c
+dyn_buf.c
+exec.c
+globals.c
+input.c
+main.c
+edef.h
+estruct.h
+    Remove the disabling of SIGWINCH around Xrealloc() calls. [dyn_buf.c]
+    Declare a structure for deferred SIGWINCH data and initialize the
+    do_defer flag to TRUE. [globals.c, edef.h, estruct.h]
+    Add checking for requested deferral at the start of SIGWINCH
+    handlers. Just set defer data and return if request is there.
+    [display.c, input.c]
+    Set sigwin_dfr.do_defer to FALSE when in getcmd() [input.c]
+    Check for sigwin_dfr.is_deferred at start of execute() and call
+    the saved signal handler if set. [main.c]
+    Check for sigwin_dfr.is_deferred at start of dobuf() and call
+    the saved signal handler if set. [exec.c]

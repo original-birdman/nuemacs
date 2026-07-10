@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <libgen.h>
 #if __sun
 #include <alloca.h>
@@ -546,8 +547,14 @@ static int file2buf(struct line *iline, const char *mode, int goto_end,
         if (dos_file && (lused(lp1) > 0) &&
              (db_charat(ldb(lp1), lused(lp1)-1) == '\r'))
             db_deleten_at(ldb(lp1), 1, lused(lp1)-1);   /* Remove trailing CR */
-        if (!(++nlines % 300) && !silent)   /* GGR */
-             mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
+        if (!(++nlines % 300)) {    /* GGR */
+            if (sigwin_dfr.is_deferred) {
+                sigwin_dfr.do_defer = FALSE;
+                sigwin_dfr.hndlr_func(SIGWINCH);
+                sigwin_dfr.do_defer = TRUE;
+            }
+            if (!silent) mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
+        }
     }
     if (goto_end) curwp->w.dotp = iline;
     ffclose();              /* Ignore errors. */
@@ -1079,8 +1086,14 @@ int writeout(const char *fn) {
 /* ffputline() handles ltext(lp) == NULL correctly */
         if ((s = ffputline(ltext(lp), lused(lp))) != FIOSUC) break;
         ++nline;
-        if (!(nline % 300) && !silent)      /* GGR */
-            mlwrite(MLbkt("Writing...") " : %d lines", nline);
+        if (!(nline % 300)) {   /* GGR */
+            if (sigwin_dfr.is_deferred) {
+                sigwin_dfr.do_defer = FALSE;
+                sigwin_dfr.hndlr_func(SIGWINCH);
+                sigwin_dfr.do_defer = TRUE;
+            }
+            if (!silent) mlwrite(MLbkt("Writing...") " : %d lines", nline);
+        }
         lp = lforw(lp);
     }
     if (s == FIOSUC) {                      /* No write error.      */

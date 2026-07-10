@@ -43,22 +43,9 @@ static void _dbp_realloc(db *ds, size_t need) {
         illegal_dbaction("Attempt to allocate too long a buffer");
     }
     size_t offset = (size_t)(ds->asp - ds->buf);
-
-/* Wish to ensure that buf, asp and alloc are updated correctly
- * even if a SIGWINCH signal arrives after the realloc but
- * before the settings.
- * Unlikely, but...
- */
-    sigset_t incoming_set;
-    sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
-
     ds->buf = Xrealloc(ds->buf, want);
     ds->asp = ds->buf + offset;
     ds->alloc = want;
-
-/* Now we can re-enable the signal */
-
-    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
     return;
 }
 

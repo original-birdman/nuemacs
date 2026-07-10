@@ -598,5 +598,12 @@ struct bc_res {
     int idx;                /* Sorted index of last test (-1 on no match) */
 };
 
+/* Info for deferred SIGWINCH handling */
+
+struct sigdefer{
+    int do_defer;
+    int is_deferred;
+    void (*hndlr_func)(int);    /* What to call later */
+};
 
 #endif

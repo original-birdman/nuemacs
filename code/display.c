@@ -1817,6 +1817,14 @@ void getscreensize(int *widthp, int *heightp) {
 
 void sizesignal(int signr) {
     UNUSED(signr);
+
+    if (sigwin_dfr.do_defer) {
+        sigwin_dfr.is_deferred = TRUE;
+        sigwin_dfr.hndlr_func = sizesignal;
+        return;
+    }
+    sigwin_dfr.is_deferred = FALSE;
+
     int w, h;
     int old_errno = errno;
 

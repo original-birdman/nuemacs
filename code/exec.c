@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 
 #define EXEC_C
 
@@ -1075,6 +1076,12 @@ int dobuf(struct buffer *bp) {
     if (bp->b_exec_level > MAX_RECURSE) {
         mlwrite("Maximum recursion level, %d, exceeded!", MAX_RECURSE);
         return FALSE;
+    }
+
+    if (sigwin_dfr.is_deferred) {
+        sigwin_dfr.do_defer = FALSE;
+        sigwin_dfr.hndlr_func(SIGWINCH);
+        sigwin_dfr.do_defer = TRUE;
     }
 
     macro_level++;

@@ -449,9 +449,12 @@ unicode_t tgetc(void) {
 unicode_t get1key(void) {
     unicode_t c;
 
+/* Let the SIGWINCH handlers run whilst we wait for input */
+    sigwin_dfr.do_defer = FALSE;
     c = tgetc();                    /* get a keystroke */
     if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
         c = CONTROL | (c + '@');
+    sigwin_dfr.do_defer = TRUE;
     return c;
 }
 
@@ -727,8 +730,14 @@ static struct window *mb_winp = NULL;
 typedef void (*sighandler_t)(int);
 
 static void sigwinch_handler(int signr) {
-
     UNUSED(signr);
+
+    if (sigwin_dfr.do_defer) {
+        sigwin_dfr.is_deferred = TRUE;
+        sigwin_dfr.hndlr_func = sigwinch_handler;
+        return;
+    }
+    sigwin_dfr.is_deferred = FALSE;
 
 /* We need to get back to how things were before we arrived in the
  * minibuffer.

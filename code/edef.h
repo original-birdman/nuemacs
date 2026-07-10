@@ -363,6 +363,10 @@ extern struct bc_info ufc_info;     /* Lookup user functions (&...) */
 extern struct bc_info fcn_info;     /* Lookup command functions by func */
 extern struct bc_info key_info;     /* Lookup key bind(s) for a function */
 
+/* Info for deferred SIGWINCH handling */
+
+extern struct sigdefer sigwin_dfr;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */
