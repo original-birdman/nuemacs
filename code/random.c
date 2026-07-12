@@ -793,14 +793,16 @@ int backdel(int f, int n) {
 /* Kill text. If called without an argument, it kills from dot to the end of
  * the line, unless it is at the end of the line, when it kills the newline.
  * If called with an argument of 0, it kills from the start of the line to dot.
- * If called with a positive argument, it kills from dot forward over that
- * number of newlines. If called with a negative argument it kills backwards
- * that number of newlines. Normally bound to "C-K".
+ * If called with a positive argument (including 1), it kills from dot forward
+ * over that number of newlines.
+ * If called with a negative argument it kills backwards that number of
+ * newlines.
+ * Normally bound to "C-K".
  */
 static int last_done = FALSE;
 int killtext(int f, int n) {
     struct line *nextp;
-    ue64I_t chunk;
+    int chunk;      /* dyn_buf blen is int */
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */
@@ -809,6 +811,7 @@ int killtext(int f, int n) {
           com_flag |= CFKILL;
           last_done = FALSE;
     }
+    int newline_kill = FALSE;
     if (f == FALSE) {
         chunk = lused(curwp->w.dotp) - curwp->w.doto;
         if (chunk == 0) {
@@ -818,14 +821,14 @@ int killtext(int f, int n) {
  * The flag is reset any time we arrive here with the previous command being
  * a non-kill.
  */
-            if (last_done & (lforw(curwp->w.dotp) == curbp->b_linep)) {
+            if (last_done && (lforw(curwp->w.dotp) == curbp->b_linep)) {
                 return FALSE;
             }
-            else {
-                last_done = TRUE;
-                chunk = 1;
-            }
+            chunk = 1;  /* kill the newline */
+            newline_kill = TRUE;
         }
+        else last_done = FALSE;     /* Have text, so assume this for now */
+
     }
     else if (n == 0) {
         chunk = curwp->w.doto;
@@ -850,7 +853,16 @@ int killtext(int f, int n) {
         curwp->w.dotp = nextp;
         curwp->w.doto = 0;
     }
-    return ldelete(chunk, TRUE);
+    int res = ldelete(chunk, TRUE);
+
+/* Check whether the delete puts us on the last line. */
+
+    if ((newline_kill &&
+             (lforw(curwp->w.dotp) == curbp->b_linep)) ||
+        (curwp->w.dotp == curbp->b_linep)) {
+        last_done = TRUE;
+    }
+    return res;
 }
 
 /* change the editor mode status

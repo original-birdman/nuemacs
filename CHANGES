@@ -9698,3 +9698,8 @@ random.c
     Change trim() to remove all trailing white-space on a line, not just
     that beyond point.
     This now matches the documentation.
+
+random.c
+    Fix killtext when adding the final newline to the kill ring.
+    It now actually tests for the newline being killed.
+    (see GGR4.184)
