@@ -9692,4 +9692,9 @@ version.h
     Change exit-emacs to 1 exit-emacs, to ensure we shutdown. [read-speed.sh]
     Update to GGR4.197
 
-==========
+========== GGR4.198
+
+random.c
+    Change trim() to remove all trailing white-space on a line, not just
+    that beyond point.
+    This now matches the documentation.

@@ -468,15 +468,18 @@ int entab(int f, int n) {
     return TRUE;
 }
 
-/* trim trailing whitespace from the point to eol
+/* trim any trailing whitespace on the line
+ * (was "trim trailing whitespace from the point to eol"
+ *  but:
+ *    o that makes no real sense for a command that runs over
+ *      n lines,
+ *    o it took no account of Unicode characters,
+ *    o it didn't check the mark - or pins - on trimmmed text,
+ *    o the documentation made no reference to the current point.
  *
  * int f, n;            default flag and numeric repeat count
  */
 int trim(int f, int n) {
-    struct line *lp;        /* current line pointer */
-    int offset;             /* original line offset position */
-    int length;             /* current length */
-    int inc;                /* increment to next line [sgn(n)] */
 
     if (curbp->b_mode & MDVIEW) /* don't allow this command if */
           return rdonly();      /* we are in read only mode    */
@@ -484,26 +487,44 @@ int trim(int f, int n) {
     if (f == FALSE) n = 1;
     if (n == 0) return TRUE;        /* Do nothing */
 
-/* Loop thru trimming n lines */
-    inc = ((n > 0) ? 1 : -1);
+/* Loop through trimming n lines.
+ * Since we are only trimming trailing spaces or tabs we don't
+ * need to worry about utf8 chars.
+ */
+    int inc = ((n > 0) ? 1 : -1);   /* increment to next line [sgn(n)] */
     while (n) {
-        lp = curwp->w.dotp;     /* find current line text */
-        offset = curwp->w.doto; /* save original offset */
-        length = lused(lp);     /* find current length */
+        struct line *lp = curwp->w.dotp;    /* find current line text */
+        int length = lused(lp);             /* find current length */
+        int do_truncate = FALSE;            /* Do we need to do anything? */
 
 /* Trim the current line */
-        while (length > offset) {
+        while (length > 0) {
             switch(lgetc(lp, length - 1)) {
                 case ' ':
                 case '\t':
                     length--;
+                    do_truncate = TRUE;
                     continue;   /* Keep going... */
                 default:
                     break;
             }
             break;
         }
-        db_truncate(ldb(lp), length);
+/* If we do truncate a line we need to check whether we have removed
+ * the location of mark or a pin.
+ * If so, we set that to the end of the line
+ */
+        if (do_truncate) {
+            db_truncate(ldb(lp), length);
+            if (lp == curwp->w.markp) {
+                if (curwp->w.marko > length) curwp->w.marko = length;
+            }
+            for (linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
+                if (mmi(mp, lp) == lp) {    /* No need to check which buffer */
+                    if (mmi(mp, offset) > length) mmi(mp, offset) = length;
+                }
+            }
+        }
 
 /* Advance/or back to the next line */
         forwline(TRUE, inc);
