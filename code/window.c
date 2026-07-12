@@ -610,7 +610,7 @@ int newwidth(int n) {
 /* Ensure we have sufficient v/pscreen space.
  * vtinit needs term.t_mcol/term.t_mrow set first.
  */
-    if (term.t_mrow < n) {
+    if (term.t_mcol < n) {
         set_scrarray_size(term.t_nrow, n);
         vtinit();
     }

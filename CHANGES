@@ -9718,3 +9718,6 @@ etc/uemacs.rc
     to the file-hooks user-proc via userproc_arg. [file.c]
     Use the userproc_arg if present [uemacs.rc]
     Remove an extraneous "." from "delete-var ..pthtmp" [uemacs.rc]
+
+window.c
+    Check the correct variable in newwidth().
