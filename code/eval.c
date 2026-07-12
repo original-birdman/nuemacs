@@ -1444,6 +1444,9 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
         if (userproc_arg) {
             db_set(valres, userproc_arg);
         }
+        else if (db_cmp(tok1, "@")) {   /* @:"@" returns "" */
+            db_set(valres, "");
+        }
         else {
 /* GGR - There is the possibility (actually, certainty) of an illegal
  * overlap of args here. So it must be done to a temporary buffer.

@@ -9707,3 +9707,7 @@ random.c
 main,c
     Reinstate the check for f before passing n to exit().
     Without this uemacs always exits with a status of 1!
+
+eval.c
+    If a userval prompt is @"@" and there is no userproc_arg set, just
+    return "".
