@@ -9703,3 +9703,7 @@ random.c
     Fix killtext when adding the final newline to the kill ring.
     It now actually tests for the newline being killed.
     (see GGR4.184)
+
+main,c
+    Reinstate the check for f before passing n to exit().
+    Without this uemacs always exits with a status of 1!

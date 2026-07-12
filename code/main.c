@@ -1868,7 +1868,8 @@ int quit(int f, int n) {
         db_free(main_execstr);
 #endif
 
-        exit(n);
+        if (f) exit(n);
+        else   exit(0);
     }
     mlwrite_one("");
     return s;
