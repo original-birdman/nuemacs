@@ -9711,3 +9711,10 @@ main,c
 eval.c
     If a userval prompt is @"@" and there is no userproc_arg set, just
     return "".
+
+file.c
+etc/uemacs.rc
+    Since handle_filehooks() already calculates the suffix, pass it on
+    to the file-hooks user-proc via userproc_arg. [file.c]
+    Use the userproc_arg if present [uemacs.rc]
+    Remove an extraneous "." from "delete-var ..pthtmp" [uemacs.rc]

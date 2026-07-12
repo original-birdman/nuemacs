@@ -568,7 +568,6 @@ static int file2buf(struct line *iline, const char *mode, int goto_end,
 static void handle_filehooks(const char *fname) {
     struct buffer *sb;
     run_filehooks = 0;                  /* reset flag */
-    if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
 
 /* May have a full pathname, so first need to extract the filename */
 
@@ -584,8 +583,17 @@ static void handle_filehooks(const char *fname) {
             break;
         }
     }
+
+/* If we have suffix, pass it to file-hooks to save it working it
+ * all out again.
+ */
     if (sfx_ok) {
         sfx++;                          /* Skip over '.' */
+        userproc_arg = sfx;
+    }
+    if ((sb = bfind("/file-hooks", FALSE, 0)) != NULL) dobuf(sb);
+    userproc_arg = NULL;
+    if (sfx_ok) {
         db_sprintf(glb_db, "/file-hooks-%s", sfx);
         if ((sb = bfind(db_val(glb_db), FALSE, 0)) != NULL) dobuf(sb);
     }

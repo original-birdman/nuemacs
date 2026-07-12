@@ -29,20 +29,29 @@ set $overlap 2          ; What it used to be
 ; Procedure run when a new file is opened
 ;
 store-procedure file-hooks
+; handle_filehooks should have set the suffix for us, so get it
+; If not, we will get an empty @ result, when we'll fall back to the
+; original code to get it from the current filename
+;
+    set .rctmp @"@"         ; @"@" returns userproc_arg or "". No prompt
+    !if &seq .rctmp ""
 ; Get the filename from the pathname
-    set .pthidx &rin $cfname "/"
-    !if &equ .pthidx 0
-        set .pthtmp $cfname
-    !else
-        set .pthtmp &tai $cfname .pthidx
-    !endif
-    set .rctmp &rin .pthtmp "."
-    !if &equ .rctmp 0
-        !goto fh_exit
-    !endif
+        set .pthidx &rin $cfname "/"
+        !if &equ .pthidx 0
+            set .pthtmp $cfname
+        !else
+            set .pthtmp &tai $cfname .pthidx
+        !endif
+        set .rctmp &rin .pthtmp "."
+        !if &equ .rctmp 0
+            !goto fh_exit
+        !endif
 ; Pick up everything after the last .
 ;
-    set .rctmp &tai .pthtmp &add .rctmp 1
+        set .rctmp &tai .pthtmp &add .rctmp 1
+    !endif
+
+; Make the suffix check case insensitive
     set .rctmp &lower .rctmp
 ; A quick "is it in list" check.  Assumes no-one uses "c cc" as a suffix..
     !if &les 0 &sin "c cc cpp c++ h pl js php" .rctmp
@@ -59,7 +68,7 @@ store-procedure file-hooks
     !endif
 *fh_exit
 delete-var .pthidx
-delete-var ..pthtmp
+delete-var .pthtmp
 delete-var .rctmp
 !endm
 ;
