@@ -2158,7 +2158,14 @@ do {
             case 'P':       /* Pretend size and close stdout */
                 pretend_size = TRUE;
                 int nu = open("/dev/null", O_WRONLY);
-                (void)dup2(nu, 1);
+                if (nu < 0) {
+                    perror("Opening /dev/null");
+                    quit(TRUE, errno);
+                }
+                if (dup2(nu, 1)) {
+                    perror("dup2 of /dev/null");
+                    quit(TRUE, errno);
+                }
                 close(nu);
                 break;
             case 'R':       /* -r restrictive use */

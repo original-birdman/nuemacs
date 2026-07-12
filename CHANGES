@@ -9725,3 +9725,6 @@ window.c
 wrapper.c
     Check for a 0 reallocation in Xreallocarray() and move the old
     gcc code into the function.
+
+main.c
+    Check statuses when opening /dev/null for -P.
