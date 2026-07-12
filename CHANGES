@@ -9721,3 +9721,7 @@ etc/uemacs.rc
 
 window.c
     Check the correct variable in newwidth().
+
+wrapper.c
+    Check for a 0 reallocation in Xreallocarray() and move the old
+    gcc code into the function.

@@ -23,21 +23,31 @@ void *Xrealloc(const void *optr, size_t size) {
     return ret;
 }
 
+/* We'll take an int, but pass on a size_t for number of elements */
+void *Xreallocarray(const void *optr, int n_elem, size_t size) {
+
+/* See man realloc and
+ *  https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3621.txt
+ */
+    if ((n_elem == 0) || (size == 0))
+        die("reallocarray: reallocation of 0 is undefined");
+
 /* Centos and Debian Mips 8/9 do not have reallocarray, so we'll need
  * to write one.
  * We'll show good faith and test for overflow.
+ * We could use __builtin_mul_overflow for gcc5 and ggc6, but this
+ * needs to work for gcc4 too.
+ * And the old code isn't for real work - just for different compiler
+ * warnings.
  */
+    void *ret;
 #if __GNUC__ <= 6
-void *reallocarray(void *op, size_t n, size_t isz) {
-    size_t total = n*isz;
-    if ((total/n) != isz) die("reallocarray: Overlarge request");
-    return realloc(op, total);
-}
+    size_t total = n_elem*size;
+    if ((total/n_elem) != size) die("reallocarray: Overlarge request");
+    ret = realloc(op, total);
+#else
+    ret = reallocarray((void *)optr, (size_t)n_elem, size);
 #endif
-
-/* We'll take an int, but pass on a size_t for number of elements */
-void *Xreallocarray(const void *optr, int n_elem, size_t size) {
-    void *ret = reallocarray((void *)optr, (size_t)n_elem, size);
     if (!ret) die("reallocarray: Out of memory");
     return ret;
 }
