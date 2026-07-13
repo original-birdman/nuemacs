@@ -2082,28 +2082,33 @@ int main(int argc, char **argv) {
  */
 #ifdef STANDALONE
 #include <libgen.h>
-do {
+{
 #define EXE "/proc/self/exe"
-    size_t bufsiz;
-    struct stat sb;
-    if (lstat(EXE, &sb) == -1) {
-        bufsiz = PATH_MAX + 1;
+/* It turns out that the /proc file system doesn't return the length
+ * of a symbolic link target.
+ * So we can't use the struct stat st_size from an lstat() call.
+ * Loop until the length of the result is less than the size of
+ * teh buffer we gave it to fill.
+ */
+    size_t bufsiz = 0;
+    char *exec_file = NULL;
+    ssize_t elen;
+    do {
+        bufsiz += 128;
+        exec_file = Xrealloc(exec_file, bufsiz);
+        elen = readlink(EXE, exec_file, bufsiz);
+    } while (elen == (ssize_t)bufsiz);
+    if (elen > 0) { /* Check that we did actually get soemthing */
+        terminate_str(exec_file + elen);
+        char *exec_path = dirname(exec_file);
+        char *cpath = Xmalloc(strlen(exec_path) + sizeof("/etc/"));
+        strcpy(cpath, exec_path);
+        strcat(cpath, "/etc/");
+        set_pathname(cpath);
+        Xfree(cpath);
     }
-    else {
-        bufsiz = (size_t)sb.st_size + 1;
-    }
-    char *exec_file = Xmalloc(bufsiz);
-    ssize_t elen = readlink(EXE, exec_file, bufsiz);
-    if (elen < 0) break;
-    terminate_str(exec_file + elen);
-    char *exec_path = dirname(exec_file);
-    char *cpath = Xmalloc(strlen(exec_path) + sizeof("/etc/"));
-    strcpy(cpath, exec_path);
-    strcat(cpath, "/etc/");
-    set_pathname(cpath);
     Xfree(exec_file);
-    Xfree(cpath);
-} while(0);     /* One pass loop */
+}
 #endif
 
 /* GGR Command line parsing substantially reorganised. It now consists of two

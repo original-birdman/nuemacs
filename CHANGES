@@ -9746,3 +9746,7 @@ main.c
 main.c
 wrapper.c
     Minor fixes for old GCC compilation code.
+
+main.c
+    Can't use lstat() to get /proc/self/exe length. So loop with a
+    growing buffer until we succeed.
