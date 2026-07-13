@@ -9728,3 +9728,8 @@ wrapper.c
 
 main.c
     Check statuses when opening /dev/null for -P.
+
+main.c
+    In multiplier_check() use the __builtin_*_overflow() functions to
+    check for overflow, if possible.
+    On overflow, reset the multipler to (-)1.

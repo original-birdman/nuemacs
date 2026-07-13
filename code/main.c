@@ -847,9 +847,32 @@ com_arg *multiplier_check(int c) {
                 mflag = -1;
             }
             else {
-/* Overflow check */
-                if ((ca.n >= 0) == ((ca.n * 10 + (ca.c - '0')) >= 0))
-                     ca.n = ca.n * 10 + (ca.c - '0');
+/* Overflow check  - _builtin_*_overflow only from gcc5+ (and Clang 3.8)
+ * On overflow reset the counter to 1, to avoid any unintentional
+ * insertion of 2billion+ characters or newline if teh next input is
+ * not ctl-G.
+ */
+#if __GNUC__ >= 5
+                int res1, res2;
+                int oflw = 0;
+                if (__builtin_mul_overflow(ca.n, 10, &res1)) oflw = 1;
+                else if (__builtin_add_overflow(res1, (ca.c - '0'), &res2))
+                     oflw = 1;
+                if (oflw) {
+                    mlwrite_one("Overflow!");
+                    sleep(1);
+                    ca.n = 1;
+                }
+                else {
+                    ca.n = res2;
+#else
+/* The original code */
+                int newval = ca.n*10 + (ca.c - '0');
+                if ((ca.n >= 0) == (newval >= 0))   /* Same sign */
+                     ca.n = newval;
+                else ca.n = 1;
+#endif
+                }
             }
             if ((ca.n == 0) && (mflag == -1))  /* lonely - */
                 mlwrite_one("Arg:");
@@ -870,14 +893,32 @@ com_arg *multiplier_check(int c) {
         mlwrite_one("Arg: 4");
         while (((ca.c = getcmd()) >= '0' && ca.c <= '9') ||
                  ca.c == reptc || ca.c == '-') {
-            if (ca.c == reptc)
-/* This odd-looking statement is checking for integer overflow by testing
- * that the sign of the result would be the same sign as the starting value.
+            if (ca.c == reptc) {
+/* Overflow check  - _builtin_*_overflow only from gcc5+ (and Clang 3.8)
+ * On overflow reset the counter to 1, to avoid any unintentional
+ * insertion of 2billion+ characters or newline if teh next input is
+ * not ctl-G.
  */
-                if ((ca.n > 0) == ((ca.n * 4) > 0))
-                    ca.n = ca.n * 4;
-                else
+#if __GNUC__ >= 5
+                int res1;
+                int oflw = 0;
+                if (__builtin_mul_overflow(ca.n, 4, &res1)) oflw = 1;
+                if (oflw) {
+                    mlwrite_one("Overflow!");
+                    sleep(1);
                     ca.n = 1;
+                }
+                else {
+                    ca.n = ca.n * 4;
+                }
+#else
+/* The original code */
+                int newval = ca.n * 4;
+                if ((ca.n > 0) == (newval > 0)) ca.n = newval;
+                else                            ca.n = 1;
+#endif
+            }
+
 /* If dash, and start of argument string, set arg.
  * to -1.  Otherwise, insert it.
  */
