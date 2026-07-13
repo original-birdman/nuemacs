@@ -9736,3 +9736,9 @@ main.c
 
 eval.c
     Remove redundant code in UFTAIL handling.
+
+autotest/*.sh
+    Change 1 exit-emacs to 0 exit-emacs, to exit with a 0 status.
+
+main.c
+    Only run the free()s under DO_FREE for f of FALSE or 0 exit status.

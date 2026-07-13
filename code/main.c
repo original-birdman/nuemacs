@@ -1869,44 +1869,48 @@ int quit(int f, int n) {
 
 #ifdef DO_FREE
 
-/* Explicitly free things in debug mode, to help things like valgrind. */
-        free_bind();
-        free_buffer();
-        free_display();
-        free_eval();
-        free_exec();
-        free_file();
-        free_input();
-        free_line();
-        free_names();
-        free_search();
-        free_spawn();
-        free_utf8();
-        free_word();
+/* Only run this lot of we arrive with no forced arror code */
 
-        if (filock) free_lock();
+        if (!f || (n == 0)) {
+/* Explicitly free things in debug mode, to help things like valgrind. */
+            free_bind();
+            free_buffer();
+            free_display();
+            free_eval();
+            free_exec();
+            free_file();
+            free_input();
+            free_line();
+            free_names();
+            free_search();
+            free_spawn();
+            free_utf8();
+            free_word();
+
+            if (filock) free_lock();
 
 /* Remove all windows */
 
-        struct window *nextwp;
-        for (struct window *wp = wheadp; wp; wp = nextwp) {
-            nextwp = wp->w_wndp;
-            Xfree(wp);
-        }
-        Xfree(eos_list);
-        Xfree(udir.current);
-        Xfree(udir.parent);
-        Xfree(udir.home);
-        Xfree(rcfile);
-        for (size_t i = 0; i < ARRAY_SIZE(rcextra); i++) {
-            Xfree(rcextra[i]);
-        }
-        Xfree(kbdm);
+            struct window *nextwp;
+            for (struct window *wp = wheadp; wp; wp = nextwp) {
+                nextwp = wp->w_wndp;
+                Xfree(wp);
+            }
+            Xfree(eos_list);
+            Xfree(udir.current);
+            Xfree(udir.parent);
+            Xfree(udir.home);
+            Xfree(rcfile);
+            for (size_t i = 0; i < ARRAY_SIZE(rcextra); i++) {
+                Xfree(rcextra[i]);
+            }
+            Xfree(kbdm);
 
-        db_free(savnam);
-        db_free(readin_mesg);
-        db_free(glb_db);
-        db_free(main_execstr);
+            db_free(savnam);
+            db_free(readin_mesg);
+            db_free(glb_db);
+            db_free(main_execstr);
+        }
 #endif
 
         if (f) exit(n);
