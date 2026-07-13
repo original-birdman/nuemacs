@@ -950,14 +950,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
                 if (next_offs < 0) break;   /* No bytes left */
                 offs = next_offs;
             }
-            if (offs < 0) {
-                rp = db_val(arg1);
-                offs = 0;
-            }
-            else {
-                rp = db_val(arg1)+offs;
-                offs = inbytes - offs;
-            }
+            rp = db_val(arg1)+offs;         /* offs cannot be -ve here */
+            offs = inbytes - offs;
         }
         }
         dbp_setn(res, rp, offs);

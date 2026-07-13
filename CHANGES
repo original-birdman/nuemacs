@@ -9733,3 +9733,6 @@ main.c
     In multiplier_check() use the __builtin_*_overflow() functions to
     check for overflow, if possible.
     On overflow, reset the multipler to (-)1.
+
+eval.c
+    Remove redundant code in UFTAIL handling.
