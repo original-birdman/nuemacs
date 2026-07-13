@@ -9742,3 +9742,7 @@ autotest/*.sh
 
 main.c
     Only run the free()s under DO_FREE for f of FALSE or 0 exit status.
+
+main.c
+wrapper.c
+    Minor fixes for old GCC compilation code.

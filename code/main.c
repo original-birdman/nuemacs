@@ -865,6 +865,7 @@ com_arg *multiplier_check(int c) {
                 }
                 else {
                     ca.n = res2;
+                }
 #else
 /* The original code */
                 int newval = ca.n*10 + (ca.c - '0');
@@ -872,7 +873,6 @@ com_arg *multiplier_check(int c) {
                      ca.n = newval;
                 else ca.n = 1;
 #endif
-                }
             }
             if ((ca.n == 0) && (mflag == -1))  /* lonely - */
                 mlwrite_one("Arg:");
