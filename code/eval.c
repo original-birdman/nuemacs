@@ -1254,7 +1254,7 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVSTATUS:          setval(ltos(cmdstatus));
     case EVASAVE:           setval(ue_itoa(gasave));
     case EVACOUNT:          setval(ue_itoa(gacount));
-    case EVLASTKEY:         setval(ue_itoa(lastkey));
+    case EVLASTKEY:         setval(ue_itoa(inkey.last));
     case EVCURCHAR: {   /* Make this setval the current Unicode base char */
         unicode_t uc_res;
         if (lused(curwp->w.dotp) == curwp->w.doto) uc_res = '\n';
@@ -1705,7 +1705,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             gacount = ue_atoi(value);
             break;
         case EVLASTKEY:
-            lastkey = ue_atoi(value);
+            inkey.last = ue_atoi(value);
             break;
         case EVCURCHAR:
             srch_can_hunt = 0;

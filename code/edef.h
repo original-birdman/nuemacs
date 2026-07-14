@@ -180,6 +180,10 @@ extern int kbdmode;             /* current keyboard macro mode  */
 extern int kbdrep;              /* number of repetitions        */
 extern int restflag;            /* restricted use?              */
 extern int lastkey;             /* last keystoke                */
+extern struct {
+    unicode_t last;             /* Last key entered */
+    int count;                  /* Total key entered count */
+} inkey;
 extern int macbug;              /* macro debugging flag         */
 extern int macbug_off;          /* macro debug global-off flag  */
 extern char errorm[];           /* error literal                */

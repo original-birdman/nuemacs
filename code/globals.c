@@ -57,7 +57,10 @@ int *kbdptr;                    /* current position in keyboard buf */
 int kbdmode = STOP;             /* current keyboard macro mode  */
 int kbdrep = 0;                 /* number of repetitions        */
 int restflag = FALSE;           /* restricted use?              */
-int lastkey = 0;                /* last keystoke                */
+struct {
+    unicode_t last;             /* Last key entered */
+    int count;                  /* Total key entered count */
+} inkey = { 0, 0 };
 int macbug = 0;                 /* macro debuging flag          */
 int macbug_off = 0;             /* macro debug global-off flag  */
 char errorm[] = "ERROR";        /* error literal                */

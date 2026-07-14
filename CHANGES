@@ -9780,3 +9780,12 @@ eval.c
 window.c
 efunc.h
     Change the name newsize to newheight. (No functional change).
+
+eval.c
+globals.c
+input.c
+edef.h
+    Create an input character counter, putting it and lastkey into a
+    structure. [globals.c, edef.h]
+    Add code to increment counter [input.c]
+    Updated $lastkey retrieve and set. [eval.c]

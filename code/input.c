@@ -422,8 +422,12 @@ unicode_t tgetc(void) {
         sigact.sa_flags = SA_RESTART;
         sigaction(SIGWINCH, &sigact, NULL);
     }
-/* Record it for $lastkey */
-    lastkey = c;
+/* Record it for $lastkey
+ * We won't worry about potential overflow on count, as it should only
+ * be checked for equality ("has the user entered anything more").
+ */
+    inkey.last = c;
+    inkey.count++;
 
     if (c == 0 && errno == EINTR && remap_c_on_intr)
         c = UEM_NOCHAR;         /* Note illegal char */
