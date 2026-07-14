@@ -407,7 +407,7 @@ extern int scrnextup(int, int);
 extern int scrnextdw(int, int);
 extern int savewnd(int, int);
 extern int restwnd(int, int);
-extern int newsize(int);
+extern int newheight(int);
 extern int newwidth(int);
 extern int getwpos(void);
 #endif

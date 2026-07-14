@@ -529,7 +529,7 @@ int restwnd(int f, int n) {
  */
 static int skip;
 static int nsdir = 0;   /* Unknown */
-int newsize(int n) {
+int newheight(int n) {
     struct window *wp;      /* current window being examined */
 
 /* Make sure it's reasonable */

@@ -1669,7 +1669,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             fillcol = ue_atoi(value);
             break;
         case EVPAGELEN:
-            status = newsize(ue_atoi(value));
+            status = newheight(ue_atoi(value));
             break;
         case EVCURCOL:
             srch_can_hunt = 0;

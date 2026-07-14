@@ -9774,3 +9774,9 @@ main.c
 
 window.c
     Spread the effect of window size changes (lines) across all windows.
+
+display.c
+eval.c
+window.c
+efunc.h
+    Change the name newsize to newheight. (No functional change).

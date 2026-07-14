@@ -1501,7 +1501,7 @@ int newscreensize(int h, int w, int no_update_needed) {
     set_scrarray_size(h, w);
     vtinit();
 
-    if (h != old_nrow) newsize(h);
+    if (h != old_nrow) newheight(h);
     if (w != old_ncol) newwidth(w);
 
     if (!no_update_needed) update(TRUE);
