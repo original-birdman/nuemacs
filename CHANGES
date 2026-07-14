@@ -9797,3 +9797,10 @@ etc/uemacs.rc
     new method optional based on a ggr_opts option. [window.c]
     Add a new ggr_opts bit value (GGR_NEWHEIGHT). [estruct.h]
     Add a Height option to change-ggr-opts to (un)set the value. [uemacs.rc]
+
+etc/uemacs.hlp
+etc/uemacs.rc
+version.h
+    Update to GGR4.198
+
+==========
