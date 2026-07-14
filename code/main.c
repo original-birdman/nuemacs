@@ -1382,11 +1382,9 @@ int ctlxrp(int f, int n) {
 int execute(int c, int f, int n) {
     int status;
 
-    if (sigwin_dfr.is_deferred) {
-        sigwin_dfr.do_defer = FALSE;
-        sigwin_dfr.hndlr_func(SIGWINCH);
-        sigwin_dfr.do_defer = TRUE;
-    }
+/* if we have a pending SIGWINCH - run the handler */
+
+    if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
 
 /* Several command handle a -ve n arg by passien -n to there inverse
  * function.
@@ -2015,6 +2013,11 @@ int main(int argc, char **argv) {
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
 
+/* We set this here, even though vtinit() has not yet been called.
+ * If a SIGWINCH arrives early in start-up it will be deferred
+ * in sizesignal() and vtinit() will have been called by the time the
+ * real work is done.
+ */
     sigact.sa_handler = sizesignal;
     sigact.sa_flags = (int)SA_RESTART;
     sigaction(SIGWINCH, &sigact, NULL);
@@ -2023,7 +2026,7 @@ int main(int argc, char **argv) {
     sigact.sa_handler = exit_via_signal;
 /* SA_RESETHAND is 0x80000000, and we're assigning to an int.
  * Some system need (int) to avoid a warning.
- * Debain Mips 8 must NOT have (int).
+ * Debian Mips 8 must NOT have (int).
  */
 #if __mips__ && (__GNUC__ <= 4)
 #define FCAST

@@ -548,11 +548,8 @@ static int file2buf(struct line *iline, const char *mode, int goto_end,
              (db_charat(ldb(lp1), lused(lp1)-1) == '\r'))
             db_deleten_at(ldb(lp1), 1, lused(lp1)-1);   /* Remove trailing CR */
         if (!(++nlines % 300)) {    /* GGR */
-            if (sigwin_dfr.is_deferred) {
-                sigwin_dfr.do_defer = FALSE;
-                sigwin_dfr.hndlr_func(SIGWINCH);
-                sigwin_dfr.do_defer = TRUE;
-            }
+/* if we have a pending SIGWINCH - run the handler */
+            if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
             if (!silent) mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
         }
     }
@@ -1095,11 +1092,8 @@ int writeout(const char *fn) {
         if ((s = ffputline(ltext(lp), lused(lp))) != FIOSUC) break;
         ++nline;
         if (!(nline % 300)) {   /* GGR */
-            if (sigwin_dfr.is_deferred) {
-                sigwin_dfr.do_defer = FALSE;
-                sigwin_dfr.hndlr_func(SIGWINCH);
-                sigwin_dfr.do_defer = TRUE;
-            }
+/* if we have a pending SIGWINCH - run the handler */
+            if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
             if (!silent) mlwrite(MLbkt("Writing...") " : %d lines", nline);
         }
         lp = lforw(lp);

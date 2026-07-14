@@ -449,7 +449,10 @@ unicode_t tgetc(void) {
 unicode_t get1key(void) {
     unicode_t c;
 
-/* Let the SIGWINCH handlers run whilst we wait for input */
+/* Run any deferred SIGWINCH handler before we wait and run any that
+ * are called whilst we wait for input.
+ */
+    if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
     sigwin_dfr.do_defer = FALSE;
     c = tgetc();                    /* get a keystroke */
     if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
@@ -730,14 +733,20 @@ static struct window *mb_winp = NULL;
 typedef void (*sighandler_t)(int);
 
 static void sigwinch_handler(int signr) {
-    UNUSED(signr);
 
-    if (sigwin_dfr.do_defer) {
+/* If this is being called as a signal handler then signr will be
+ * non-zero (actually SIGWINCH), which we might defer.
+ * But if this is us making a deferred call then signr will be 0
+ * and then we just continue.
+ */
+    if (signr == 0) {
+        sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
+    }
+    else if (sigwin_dfr.do_defer) {
         sigwin_dfr.is_deferred = TRUE;
         sigwin_dfr.hndlr_func = sigwinch_handler;
         return;
     }
-    sigwin_dfr.is_deferred = FALSE;
 
 /* We need to get back to how things were before we arrived in the
  * minibuffer.
@@ -758,8 +767,17 @@ static void sigwinch_handler(int signr) {
     int w, h;
 
     getscreensize(&w, &h);
-    if (h && w && (h != term.t_nrow || w != term.t_ncol))
+    if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
+
+/* Any SIGWINCH arriving whilst we are working on this one in
+ * newscreensize() can be deferred by us setting do_defer
+ * around it.
+ * Any other signal is OK, as it will cause uemacs to exit anyway.
+ */
+        int orig_defer = sigwin_dfr.do_defer;
         newscreensize(h, w, 0);
+        sigwin_dfr.do_defer = orig_defer;
+    }
 
 /* Need to reget the mb_info data now */
 
@@ -845,14 +863,12 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
  */
     struct window wsave = wsave;
 
-/* We need to block SIGWINCH until we have set-up all of the variables
- * we need after the longjmp.
- * NOTE that this means we need to restore thigs on EVERY return!
+/* We need to block async SIGWINCH until we have set-up all of the
+ * variables we need after the longjmp.
+ * But the only time that an async SIGWINCH is allowed to run is in
+ * get1key(), and we are not there.
+ * So any SIGWINCH arriving now will be deferred.
  */
-    sigset_t sigwinch_set, incoming_set;
-    sigemptyset(&sigwinch_set);
-    sigaddset(&sigwinch_set, SIGWINCH);
-    sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
 
 /* Create a minibuffer window for use by all minibuffers */
     if (!mb_winp) {
@@ -891,7 +907,6 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     dbp_set(buf, "");           /* Ensure we never return garbage */
 
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
-        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
         return FALSE;
     }
 
@@ -927,7 +942,6 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     mberase();
 
     if (!swbuffer(bp, 0)) {
-        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
         return FALSE;
     }
 
@@ -936,13 +950,12 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     curbp->b_mode = new_bmode;
 
 /* The oldact is restored on exit. */
+
     struct sigaction sigact, oldact;
     sigact.sa_handler = sigwinch_handler;
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
-/* Now we can enable the signal */
-    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
@@ -1158,12 +1171,9 @@ submit:     /* Tidy up */
 
 abort:
 
-/* If we get here "normally" SIGWINCH will still be enabled, so we need
- * to block it while we tidy up, otherwise we might run through this end
- * code twice.
+/* If we get here "normally" SIGWINCH will still be handled by deferring it,
+ * as the only async handling that actuall runs is in get1key.
  */
-    sigprocmask(SIG_BLOCK, &sigwinch_set, NULL);
-
     if (!swbuffer(bp, 0)) { /* Make sure we're still in our minibuffer */
         status = FALSE;
         goto rewinch_and_exit;
@@ -1216,9 +1226,8 @@ abort:
     }
 
 rewinch_and_exit:
-/* We need to re-instate the original handler now... */
+/* We need to re-instate the original SIGWINCH handler now... */
     sigaction(SIGWINCH, &oldact, NULL);
-    sigprocmask(SIG_SETMASK, &incoming_set, NULL);
 
     return status;
 }

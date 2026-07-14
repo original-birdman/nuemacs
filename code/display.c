@@ -1816,41 +1816,35 @@ void getscreensize(int *widthp, int *heightp) {
 }
 
 void sizesignal(int signr) {
-    UNUSED(signr);
 
-    if (sigwin_dfr.do_defer) {
+/* If this is being called as a signal handler then signr will be
+ * non-zero (actually SIGWINCH), which we might defer.
+ * But if this is us making a deferred call then signr will be 0
+ * and then we just continue.
+ */
+    if (signr == 0) {
+        sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
+    }
+    else if (sigwin_dfr.do_defer) {
         sigwin_dfr.is_deferred = TRUE;
         sigwin_dfr.hndlr_func = sizesignal;
         return;
     }
-    sigwin_dfr.is_deferred = FALSE;
 
     int w, h;
-    int old_errno = errno;
-
     getscreensize(&w, &h);
 
     if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
 
-/* We wish to prevent another SIGWINCH arriving whilst we are working on
- * this one in newscreensize().
+/* Any SIGWINCH arriving whilst we are working on this one in
+ * newscreensize() can be deferred by us setting do_defer
+ * around it, and restore the previous setting afterrwards.
  * Any other signal is OK, as it will cause uemacs to exit anyway.
  */
-        sigset_t sigwinch_set, incoming_set;
-        sigemptyset(&sigwinch_set);
-        sigaddset(&sigwinch_set, SIGWINCH);
-        sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
-
+        int orig_defer = sigwin_dfr.do_defer;
         newscreensize(h, w, 0);
-
-        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
+        sigwin_dfr.do_defer = orig_defer;
     }
-    struct sigaction sigact;
-    sigemptyset(&sigact.sa_mask);
-    sigact.sa_handler = sizesignal;
-    sigact.sa_flags = SA_RESTART;
-    sigaction(SIGWINCH, &sigact, NULL);
-    errno = old_errno;
 }
 
 /* GGR

@@ -1078,11 +1078,9 @@ int dobuf(struct buffer *bp) {
         return FALSE;
     }
 
-    if (sigwin_dfr.is_deferred) {
-        sigwin_dfr.do_defer = FALSE;
-        sigwin_dfr.hndlr_func(SIGWINCH);
-        sigwin_dfr.do_defer = TRUE;
-    }
+/* if we have a pending SIGWINCH - run the handler */
+
+    if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
 
     macro_level++;
 

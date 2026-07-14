@@ -9750,3 +9750,24 @@ wrapper.c
 main.c
     Can't use lstat() to get /proc/self/exe length. So loop with a
     growing buffer until we succeed.
+
+display.c
+exec.c
+file.c
+input.c
+main.c
+    Simplify SIGWINCH handling.
+    The only time the handlers can run asynchronously is when we are in
+    get1key(). At any other time do_defer must already be set.
+    Call the hndlr_func() with an arg of 0 for deferred calls [exec.c,
+    file.c, input.c, main.c]
+    Remove an unneeded saving of errno in sizesignal() [display.c]
+    Change SIGWINCH handlers (sizesignal, sigwinch_handler) to handle an
+    arg of 0 to indicate a synchronous call of the code. [display.c,
+    input.c]
+    Remove sigprocmask blocks of SIGWINCH - the defers handle this now.
+    [display.c, input.c]
+    Remove an unneeded reinstating of the signal handler in sizesignal()
+    [display.c]
+    Set and restore do_defer flag around newscreensize() calls in
+    sigwinch_handler() [input.c]
