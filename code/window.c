@@ -522,38 +522,93 @@ int restwnd(int f, int n) {
  * int n;       new screen height to set
  */
 
-/* If we grap a border and drag it we'll get consecutive
+/* Two potential methods.
+ * The old way, which modifies the bottom window(s) size for the change.
+ * The new way, which spreads the change across all windows.
+ */
+static void old_sizer(int n) {
+    struct window *wp;      /* current window being examined */
+    struct window *nextwp;  /* next window to scan */
+    struct window *lastwp;  /* last window scanned */
+    int lastline;           /* screen line of last line of current window */
+
+    if (term.t_nrow < n) {
+
+/* Find the bottom window... */
+        wp = wheadp;
+        while (wp->w_wndp != NULL) wp = wp->w_wndp;
+
+/* Now enlarge the bottom window and force a redraw */
+        wp->w_flag |= WFHARD | WFMODE;
+        wp->w_ntrows = n - wp->w_toprow - 2;
+    } else {
+/* Rebuild the window structure */
+        nextwp = wheadp;
+        wp = NULL;
+        lastwp = NULL;
+        while (nextwp != NULL) {
+            wp = nextwp;
+            nextwp = wp->w_wndp;
+
+/* Get rid of it if it is too low */
+            if (wp->w_toprow > n - 2) {
+
+/* Save the point/mark if needed */
+                if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
+
+/* Update curwp and lastwp if needed */
+                if (wp == curwp) curwp = wheadp;
+                curbp = curwp->w_bufp;
+                if (lastwp != NULL) lastwp->w_wndp = NULL;
+
+/* Free the structure */
+                Xfree_setnull(wp);
+            } else {
+/* Need to change this window size? */
+                lastline = wp->w_toprow + wp->w_ntrows - 1;
+                if (lastline >= n - 2) {
+                    wp->w_ntrows = n - wp->w_toprow - 2;
+                    wp->w_flag |= WFHARD | WFMODE;
+                }
+            }
+            lastwp = wp;
+        }
+    }
+    return;
+}
+
+/* The new method of screen height changing.
+ * If we grap a border and drag it we'll get consecutive
  * in/decrements by 1. Which would all be applied to the first
  * window in the list. So remember increments-by-1 and add a skip if
  * we're still going in the same direction.
  */
-static int skip;
+static int skip = 0;
 static int nsdir = 0;   /* Unknown */
-int newheight(int n) {
+static int last_count = 0;
+static void new_sizer(int to_add) {
     struct window *wp;      /* current window being examined */
 
-/* Make sure it's reasonable */
-    if (n < 3 ) {
-        mlwrite_one("Screen size too small");
-        return FALSE;
-    }
-
-    int to_add = n - term.t_nrow;
-    if (to_add == 0) return TRUE;   /* No change */
-
-/* If the direction of change has changed we reset skip */
-
-    int skip_more = 0;
+/* If the direction has changed, or the user has typed more input then
+ * has changed we reset skip. Otherwise we remember the current skip
+ * to work with and set skip to 1 (ie.e non-zero).
+ * Then, at the end of each while (wp != NULL) pass through the windows we
+ * update skip to this_skip if both are non-zero
+ * This means we end up with skip set to this_skip%n_of_windows
+ * (without having to count the windows)
+ */
     int thisdir = (to_add > 0)? 1: -1;
     if (nsdir == 0) nsdir = thisdir;            /* Initialize */
-    if ((to_add == 1) || (to_add -1)) {
-        if (nsdir == thisdir) skip_more = 1;    /* More in same direction */
-    }
+    if (skip == 0) last_count = inkey.count;    /* First skip in series? */
+/* More in same direction? */
+    int skip_more = 0;
+    if ((last_count == inkey.count) && (nsdir == thisdir)) skip_more = 1;
     nsdir = thisdir;
+
     int this_skip;
     if (skip_more) {
-        this_skip = skip;
-        skip++;
+        this_skip = skip;                       /* Starts at 0 */
+        skip += (to_add > 0)? to_add: -to_add;  /* Increment for next call */
     }
     else {
         this_skip = 0;
@@ -565,18 +620,12 @@ int newheight(int n) {
  * back to the top, if required) until we have added to_add lines.
  */
 
-/* Since we're growing we need to ensure we have sufficient v/pscreen space.
- * vtinit needs term.t_mcol/term.t_mrow set first.
- */
-        set_scrarray_size(n, term.t_ncol);
-        vtinit();       /* Sets WFHARD and WFMODE flags on windows */
-
 /* Loop through windows adding 1 line to each until we've added
  * the requested number of lines.
  */
         while (to_add > 0) {
             wp = wheadp;
-            int w_seen = 0;
+            int w_resized = 0;
             while (wp != NULL) {
                 if (this_skip > 0) {
                     this_skip--;
@@ -585,16 +634,18 @@ int newheight(int n) {
 /* Enlarge this window by 1 line and push the top line down by
  * the number of windows above that have had a line added
  */
-                    wp->w_toprow += w_seen;
+                    wp->w_toprow += w_resized;
                     if (to_add) {
                         wp->w_ntrows++;
                         to_add--;
-                        w_seen++;
+                        w_resized++;
                     }
                     wp->w_flag |= WFHARD | WFMODE;
                 }
                 wp = wp->w_wndp;
             }
+/* If a loop-pass leaves us with something to do, update next calls skip */
+            if ((to_add > 0) && (this_skip > 0)) skip = this_skip + 1;
         }
     }
     else {
@@ -610,7 +661,7 @@ int newheight(int n) {
 
         while (to_go > 0) {
             wp = wheadp;
-            int w_seen = 0;
+            int w_resized = 0;
             int some_skips = (this_skip > 0);
             while (wp != NULL) {
                 if (this_skip > 0) {
@@ -620,18 +671,20 @@ int newheight(int n) {
 /* Shrink this window by 1 line and raise the top line up by
  * the number of windows above which have had a line removed.
  */
-                    wp->w_toprow -= w_seen;
-                    if (to_go && wp->w_ntrows >= 3) {   /* 2 lines + modeline */
+                    wp->w_toprow -= w_resized;
+                    if (to_go && wp->w_ntrows >= 2) { /* 1 buffer + modeline */
                         wp->w_ntrows--;
-                        w_seen++;
+                        w_resized++;
                         to_go--;
                     }
                     wp->w_flag |= WFHARD | WFMODE;
                 }
                 wp = wp->w_wndp;
             }
-            if (some_skips) continue;   /* Avoid next exit */
-            if (w_seen == 0) break;     /* Unable to remove lines in pass */
+/* If a loop-pass leaves us with something to do, update next calls skip */
+            if ((to_go > 0) && (this_skip > 0)) skip = this_skip + 1;
+            if (some_skips) continue;   /* Avoid next exit too early */
+            if (w_resized == 0) break;  /* Unable to remove lines in pass */
         }
 
 /* Did we handle all of to_go?
@@ -641,7 +694,8 @@ int newheight(int n) {
  * NOTE that for the removal above to fail we must have at least 2
  * windows visible, so the wp->w_wndp loop will set a valid pwp and wp.
  */
-        while (to_go > 0) {
+        if (to_go > 0) skip = 0;    /* Top windows at min size anyway */
+        while (to_go > 0) {         /* Might need multiple removals */
             struct window *pwp = NULL;
             wp = wheadp;
             while (wp->w_wndp) {    /* This loop *will* run */
@@ -668,14 +722,44 @@ int newheight(int n) {
             to_go -= wp->w_ntrows + 1;  /* +1 for modeline */
             Xfree_setnull(wp);
 
-/* Now, this means we may have removed (1)too many lines.
+/* Now, this means we may have removed too many lines.
  * If so, add this to the final window (which is pwp)
  */
             if (to_go < 0) {
+                pwp->w_ntrows -= to_go; /* -, since to_go -s -ve */
                 to_go = 0;
                 pwp->w_flag |= WFHARD | WFMODE;
             }
         }
+    }
+    return;
+}
+
+/* The common entry point to old_sizer() and new_sizer() */
+
+int newheight(int n) {
+
+/* Make sure it's reasonable */
+    if (n < 3 ) {
+        mlwrite_one("Screen size too small");
+        return FALSE;
+    }
+
+    int to_add = n - term.t_nrow;
+    if (to_add == 0) return TRUE;   /* No change */
+
+/* If we're growing we need to ensure we have sufficient v/pscreen space.
+ * vtinit needs term.t_mcol/term.t_mrow set first.
+ */
+    if (n > term.t_mrow) {
+        set_scrarray_size(n, term.t_ncol);
+        vtinit();       /* Sets WFHARD and WFMODE flags on windows */
+    }
+    if (ggr_opts&GGR_NEWHEIGHT) {   /* NOTE the methods take different args */
+        new_sizer(to_add);
+    }
+    else {
+        old_sizer(n);
     }
 
 /* Set term.t_nrow and all related vars now */

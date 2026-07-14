@@ -74,6 +74,8 @@
 #define GGR_FULLWRAP    0x0004
 /* Allow overlapping matches while searching */
 #define GGR_SRCHOLAP    0x0008
+/* Use the old method for resizing windows on screen height change */
+#define GGR_NEWHEIGHT    0x0010
 
 /* Internal constants. */
 

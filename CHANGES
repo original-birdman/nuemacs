@@ -9789,3 +9789,11 @@ edef.h
     structure. [globals.c, edef.h]
     Add code to increment counter [input.c]
     Updated $lastkey retrieve and set. [eval.c]
+
+window.c
+estruct.h
+etc/uemacs.rc
+    Readd the old window size change code and make the use of the old or
+    new method optional based on a ggr_opts option. [window.c]
+    Add a new ggr_opts bit value (GGR_NEWHEIGHT). [estruct.h]
+    Add a Height option to change-ggr-opts to (un)set the value. [uemacs.rc]

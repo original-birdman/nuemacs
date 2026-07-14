@@ -393,7 +393,7 @@ store-procedure change-ggr-opts one_pass
       set .action "Toggle"
       set .how "-toggle"
     !endif
-    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap):" .action
+    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap, Height):" .action
     delete-var .action
     set .report " "
     set .optsel &upper &gtkey
@@ -401,7 +401,7 @@ store-procedure change-ggr-opts one_pass
         write-message "[Aborted]"
         !finish
     !endif
-    !if &eq 0 &sin "TFWO" .optsel
+    !if &eq 0 &sin "TFWOH" .optsel
         write-message "Unknown mode"
         !finish
     !endif
@@ -421,6 +421,10 @@ store-procedure change-ggr-opts one_pass
 *changeO
     set .bit 0x08
     set .what "SrchOlap"
+    !goto &cat doit .how
+*changeH
+    set .bit 0x10
+    set .what "Height"
     !goto &cat doit .how
 ;
 *doit-on
