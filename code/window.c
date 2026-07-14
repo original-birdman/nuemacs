@@ -521,68 +521,160 @@ int restwnd(int f, int n) {
  *
  * int n;       new screen height to set
  */
+
+/* If we grap a border and drag it we'll get consecutive
+ * in/decrements by 1. Which would all be applied to the first
+ * window in the list. So remember increments-by-1 and add a skip if
+ * we're still going in the same direction.
+ */
+static int skip;
+static int nsdir = 0;   /* Unknown */
 int newsize(int n) {
     struct window *wp;      /* current window being examined */
-    struct window *nextwp;  /* next window to scan */
-    struct window *lastwp;  /* last window scanned */
-    int lastline;           /* screen line of last line of current window */
 
-/* make sure it's reasonable */
+/* Make sure it's reasonable */
     if (n < 3 ) {
         mlwrite_one("Screen size too small");
         return FALSE;
     }
 
-    if (term.t_nrow == n)
-        return TRUE;
-    else if (term.t_nrow < n) {
+    int to_add = n - term.t_nrow;
+    if (to_add == 0) return TRUE;   /* No change */
 
-/* Find the bottom window... */
-        wp = wheadp;
-        while (wp->w_wndp != NULL) wp = wp->w_wndp;
+/* If the direction of change has changed we reset skip */
 
-/* Ensure we have sufficient v/pscreen space.
+    int skip_more = 0;
+    int thisdir = (to_add > 0)? 1: -1;
+    if (nsdir == 0) nsdir = thisdir;            /* Initialize */
+    if ((to_add == 1) || (to_add -1)) {
+        if (nsdir == thisdir) skip_more = 1;    /* More in same direction */
+    }
+    nsdir = thisdir;
+    int this_skip;
+    if (skip_more) {
+        this_skip = skip;
+        skip++;
+    }
+    else {
+        this_skip = 0;
+        skip = 0;
+    }
+
+    if (to_add > 0) {
+/* Add a line to each window from the top down, and keep going
+ * back to the top, if required) until we have added to_add lines.
+ */
+
+/* Since we're growing we need to ensure we have sufficient v/pscreen space.
  * vtinit needs term.t_mcol/term.t_mrow set first.
  */
-        if (term.t_mrow < n) {
-            set_scrarray_size(n, term.t_ncol);
-            vtinit();       /* Sets WFHARD and WFMODE flags on windows */
-        }
-        else                /* Nust Force redraw bottom window */
-            wp->w_flag |= WFHARD | WFMODE;
-/* Now enlarge the bottom window */
-        wp->w_ntrows = n - wp->w_toprow - 2;
-    } else {
-/* Rebuild the window structure */
-        nextwp = wheadp;
-        wp = NULL;
-        lastwp = NULL;
-        while (nextwp != NULL) {
-            wp = nextwp;
-            nextwp = wp->w_wndp;
+        set_scrarray_size(n, term.t_ncol);
+        vtinit();       /* Sets WFHARD and WFMODE flags on windows */
 
-/* Get rid of it if it is too low */
-            if (wp->w_toprow > n - 2) {
-
-/* Save the point/mark if needed */
-                if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
-
-/* Update curwp and lastwp if needed */
-                if (wp == curwp) curwp = wheadp;
-                curbp = curwp->w_bufp;
-                if (lastwp != NULL) lastwp->w_wndp = NULL;
-
-/* Free the structure */
-                Xfree_setnull(wp);
-            } else {
-/* Need to change this window size? */
-                lastline = wp->w_toprow + wp->w_ntrows - 1;
-                if (lastline >= n - 2) {
-                    wp->w_ntrows = n - wp->w_toprow - 2;
+/* Loop through windows adding 1 line to each until we've added
+ * the requested number of lines.
+ */
+        while (to_add > 0) {
+            wp = wheadp;
+            int w_seen = 0;
+            while (wp != NULL) {
+                if (this_skip > 0) {
+                    this_skip--;
+                }
+                else {
+/* Enlarge this window by 1 line and push the top line down by
+ * the number of windows above that have had a line added
+ */
+                    wp->w_toprow += w_seen;
+                    if (to_add) {
+                        wp->w_ntrows++;
+                        to_add--;
+                        w_seen++;
+                    }
                     wp->w_flag |= WFHARD | WFMODE;
                 }
+                wp = wp->w_wndp;
             }
-            lastwp = wp;
+        }
+    }
+    else {
+/* Have to remove lines (to_add is -ve). Harder....
+ * We'll loop through windows removing a line from each if it has
+ * at least 3 lines (so we always leave 2).
+ * If that doesn't finish the job we'll then remove windows from the
+ * bottom up.
+ * No need for set_scrarray_size()/vtinit() as we're getting smaller.
+ */
+        int to_go = -to_add;        /* Just reads better... */
+/* Loop through windows removing 1 line from each */
+
+        while (to_go > 0) {
+            wp = wheadp;
+            int w_seen = 0;
+            int some_skips = (this_skip > 0);
+            while (wp != NULL) {
+                if (this_skip > 0) {
+                    this_skip--;
+                }
+                else {
+/* Shrink this window by 1 line and raise the top line up by
+ * the number of windows above which have had a line removed.
+ */
+                    wp->w_toprow -= w_seen;
+                    if (to_go && wp->w_ntrows >= 3) {   /* 2 lines + modeline */
+                        wp->w_ntrows--;
+                        w_seen++;
+                        to_go--;
+                    }
+                    wp->w_flag |= WFHARD | WFMODE;
+                }
+                wp = wp->w_wndp;
+            }
+            if (some_skips) continue;   /* Avoid next exit */
+            if (w_seen == 0) break;     /* Unable to remove lines in pass */
+        }
+
+/* Did we handle all of to_go?
+ * If not then we've shrunk all windows as far as possible, but that
+ * still wasn't sufficient.
+ * Now start removing windows from the end of the list.
+ * NOTE that for the removal above to fail we must have at least 2
+ * windows visible, so the wp->w_wndp loop will set a valid pwp and wp.
+ */
+        while (to_go > 0) {
+            struct window *pwp = NULL;
+            wp = wheadp;
+            while (wp->w_wndp) {    /* This loop *will* run */
+                pwp = wp;
+                wp = wp->w_wndp;
+            }
+            if (pwp == NULL) break; /* Shouldn't happen, but... */
+
+/* Now wp is the last window and pwp the penultimate one.
+ * We'll remove wp
+ */
+
+/* Save the point/mark if needed */
+            if (--wp->w_bufp->b_nwnd == 0) wp->w_bufp->b = wp->w;
+
+/* Update curwp and fix the penultimate pointer to be the last */
+            if (wp == curwp) curwp = pwp;
+            curbp = curwp->w_bufp;
+            pwp->w_wndp = NULL;
+
+/* Update the lines gone count to include this removed  window
+ * and free the window structure.
+ */
+            to_go -= wp->w_ntrows + 1;  /* +1 for modeline */
+            Xfree_setnull(wp);
+
+/* Now, this means we may have removed (1)too many lines.
+ * If so, add this to the final window (which is pwp)
+ */
+            if (to_go < 0) {
+                to_go = 0;
+                pwp->w_flag |= WFHARD | WFMODE;
+            }
         }
     }
 

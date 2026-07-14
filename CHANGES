@@ -9771,3 +9771,6 @@ main.c
     [display.c]
     Set and restore do_defer flag around newscreensize() calls in
     sigwinch_handler() [input.c]
+
+window.c
+    Spread the effect of window size changes (lines) across all windows.
