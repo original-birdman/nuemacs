@@ -9809,3 +9809,10 @@ main.c
 tools/read-speed.sh
     Fix the inverted dup2() test for -P. [main.c]
     Check that the uemacs command succeeded. [read-speed.sh]
+
+idxsorter.c
+main.c
+tcap.c
+wrapper.c
+    Added checks for __clang__ or __clang_major__ to __GNUC__ checks
+    as clang sets __GNUC__ to 4.

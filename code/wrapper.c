@@ -41,7 +41,7 @@ void *Xreallocarray(const void *optr, int n_elem, size_t size) {
  * warnings.
  */
     void *ret;
-#if __GNUC__ <= 6
+#if !__clang__ && __GNUC__ <= 6
     size_t total = (size_t)n_elem*size;
     if ((total/(size_t)n_elem) != size) die("reallocarray: Overlarge request");
     ret = realloc((void *)optr, total);

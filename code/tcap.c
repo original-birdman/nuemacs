@@ -24,7 +24,7 @@
  */
 
 #include <curses.h>
-#if (__GNUC__ <= 4) || __sun__
+#if (!__clang__ &&__GNUC__ <= 4) || __sun__
 #define tgetstr     tgetstr_OOTW
 #define tgetnum     tgetnum_OOTW
 #endif
@@ -35,7 +35,7 @@
 
 #include <term.h>
 
-#if (__GNUC__ <= 4) || __sun__
+#if (!__clang__ &&__GNUC__ <= 4) || __sun__
 #undef tgetstr
 extern char *tgetstr(const char *, char **);
 #undef tgetnum
