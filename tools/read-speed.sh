@@ -24,8 +24,14 @@ EOD
 [ -z "$UE2RUN" ] && UE2RUN=./uemacs
 $UE2RUN -v
 etime=`/usr/bin/time -f "%E" $UE2RUN -P -x  ./uetest.rc 2>&1`
+status=$?
 
 rm -f read-speed.tfile
+
+if [ $status -ne 0 ]; then
+    echo "uemacs read failed: $status"
+    exit 1
+fi
 
 (echo $etime; echo $lines) | perl -e '
     chomp (my $etime = <>);

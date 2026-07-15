@@ -2215,9 +2215,9 @@ int main(int argc, char **argv) {
                     perror("Opening /dev/null");
                     quit(TRUE, errno);
                 }
-                if (dup2(nu, 1)) {
+                if (dup2(nu, 1) < 0) {
                     perror("dup2 of /dev/null");
-                    quit(TRUE, errno);
+                    exit(errno);    /* vtinit() not yet called */
                 }
                 close(nu);
                 break;

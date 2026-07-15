@@ -9803,4 +9803,9 @@ etc/uemacs.rc
 version.h
     Update to GGR4.198
 
-==========
+========== GGR4.199
+
+main.c
+tools/read-speed.sh
+    Fix the inverted dup2() test for -P. [main.c]
+    Check that the uemacs command succeeded. [read-speed.sh]
