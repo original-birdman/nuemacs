@@ -9822,3 +9822,6 @@ etc/uemacs.rc
 
 random.c
     Revert chunk to a ue64I_t type.
+
+random.c
+    Check all locations and marks in trim().

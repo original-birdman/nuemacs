@@ -516,12 +516,35 @@ int trim(int f, int n) {
  */
         if (do_truncate) {
             db_truncate(ldb(lp), length);
-            if (lp == curwp->w.markp) {
-                if (curwp->w.marko > length) curwp->w.marko = length;
+/* Active window marks/locations */
+            for (struct window *wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+                if ((wp->w.dotp == lp) && (wp->w.doto > length)) {
+                    wp->w.doto = length;
+                }
+                if ((wp->w.markp == lp) && (wp->w.marko > length)) {
+                    wp->w.marko = length;
+                }
             }
+/* Buffer (inactive window) marks/locations */
+            for (struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
+                if (bp->b_nwnd == 0) {  /* wp loop covers visible ones */
+                    if ((bp->b.dotp == lp) && (bp->b.doto > length)) {
+                        bp->b.doto = length;
+                    }
+                    if ((bp->b.markp == lp) && (bp->b.marko > length)) {
+                        bp->b.marko = length;
+                    }
+                }
+            }
+/* System mark */
+            if ((sysmark.p == lp) && (sysmark.o > length)) {
+                sysmark.o = length;
+            }
+/* Pins */
             for (linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-                if (mmi(mp, lp) == lp) {    /* No need to check which buffer */
-                    if (mmi(mp, offset) > length) mmi(mp, offset) = length;
+                if (mmi(mp, lp) == lp) {
+                    mmi(mp, lp) = mmi(mp, lp)->l_fp;
+                    mmi(mp, offset) = 0;
                 }
             }
         }
