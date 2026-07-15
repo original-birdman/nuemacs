@@ -9816,3 +9816,6 @@ tcap.c
 wrapper.c
     Added checks for __clang__ or __clang_major__ to __GNUC__ checks
     as clang sets __GNUC__ to 4.
+
+etc/uemacs.rc
+    Move .pthidx and .pthtmp deletion into the block they are used.

@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.198 (requires GGR4.198+)
-;                       Last Update: 14 July 2026
+;                       Version - GGR4.199 (requires GGR4.198+)
+;                       Last Update: 15 July 2026
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -49,6 +49,8 @@ store-procedure file-hooks
 ; Pick up everything after the last .
 ;
         set .rctmp &tai .pthtmp &add .rctmp 1
+        delete-var .pthidx
+        delete-var .pthtmp
     !endif
 
 ; Make the suffix check case insensitive
@@ -67,8 +69,6 @@ store-procedure file-hooks
         !endif
     !endif
 *fh_exit
-delete-var .pthidx
-delete-var .pthtmp
 delete-var .rctmp
 !endm
 ;
