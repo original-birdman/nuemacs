@@ -802,7 +802,7 @@ int backdel(int f, int n) {
 static int last_done = FALSE;
 int killtext(int f, int n) {
     struct line *nextp;
-    int chunk;      /* dyn_buf blen is int */
+    ue64I_t chunk;  /* dyn_buf blen is int, but we have multiples in a chunk */
 
     if (curbp->b_mode & MDVIEW)     /* don't allow this command if */
           return rdonly();          /* we are in read only mode    */

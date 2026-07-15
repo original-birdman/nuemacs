@@ -9819,3 +9819,6 @@ wrapper.c
 
 etc/uemacs.rc
     Move .pthidx and .pthtmp deletion into the block they are used.
+
+random.c
+    Revert chunk to a ue64I_t type.
