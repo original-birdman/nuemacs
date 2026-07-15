@@ -9825,3 +9825,8 @@ random.c
 
 random.c
     Check all locations and marks in trim().
+
+display.c
+input.c
+    Save and restore errno in signal handlers. [display.c, input.c]
+    If we can't get a terminal size, use exit() not quit(). [display.c]

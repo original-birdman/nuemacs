@@ -752,6 +752,8 @@ static void sigwinch_handler(int signr) {
         return;
     }
 
+    int old_errno = errno;  /* We might overwrite this for an async call */
+
 /* We need to get back to how things were before we arrived in the
  * minibuffer.
  * So we save the current settings, restore the originals, let the
@@ -799,6 +801,7 @@ static void sigwinch_handler(int signr) {
 /* Ensure the minibuffer is redrawn */
     mbupdate();
 
+    errno = old_errno;
     return;
 }
 

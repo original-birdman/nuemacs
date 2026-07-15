@@ -1809,7 +1809,7 @@ void getscreensize(int *widthp, int *heightp) {
         *heightp = 24;
     }
     else {
-        if (ioctl(1, TIOCGWINSZ, &size) < 0) quit(1, ENXIO);
+        if (ioctl(1, TIOCGWINSZ, &size) < 0) exit(ENXIO);
         *widthp = size.ws_col;
         *heightp = size.ws_row;
     }
@@ -1832,6 +1832,7 @@ void sizesignal(int signr) {
     }
 
     int w, h;
+    int old_errno = errno;  /* We might overwrite this for an async call */
     getscreensize(&w, &h);
 
     if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
@@ -1845,6 +1846,7 @@ void sizesignal(int signr) {
         newscreensize(h, w, 0);
         sigwin_dfr.do_defer = orig_defer;
     }
+    errno = old_errno;
 }
 
 /* GGR
