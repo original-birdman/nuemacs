@@ -9852,3 +9852,8 @@ input.c
 display.c
 input.c
     Set sigwin_dfr.is_deferred = FALSE on any complete run.
+
+input.c
+    Check sigwin_dfr.is_deferred on entry/exit from getstring().
+    (i.e entering and leaving a minibuffer)
+    Call the correct handler according to the current state.

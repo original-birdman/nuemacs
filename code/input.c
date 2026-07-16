@@ -968,6 +968,11 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
 
+/* If there is a deferred SIGWINCH we can now call the sigwinch_handler
+ * even if the hndlr_func set is something else.
+ */
+    if (sigwin_dfr.is_deferred) sigwinch_handler(0);
+
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
  *
@@ -1240,6 +1245,18 @@ rewinch_and_exit:
 /* We need to re-instate the original SIGWINCH handler now... */
     sigaction(SIGWINCH, &oldact, NULL);
 
+/* If there is a deferred SIGWINCH set from within getring() then
+ * the handler will be set to sigwinch_handler(0
+ * But calling that may no longer valid, as we've left the current
+ * minibuffer.
+ * If we were in a minibuffer within a minibuffer then inmb will
+ * still be set.
+ * So run it with size
+ */
+    if (sigwin_dfr.is_deferred) {
+        if (inmb)   sigwinch_handler(0);
+        else        sizesignal(0);
+    }
     return status;
 }
 
