@@ -9868,3 +9868,8 @@ estruct.h
 
 autotest/nul-handling.sh
     Removed a "2 write-message %str" debug statement.
+
+random.c
+    Remove the bheadp list scan for dot and mark - it isn't needed.
+    Added a comment explaining why.
+    Fixed the pin search (which was assuming line deletion, not truncation).

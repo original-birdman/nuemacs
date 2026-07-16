@@ -525,26 +525,24 @@ int trim(int f, int n) {
                     wp->w.marko = length;
                 }
             }
-/* Buffer (inactive window) marks/locations */
-            for (struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
-                if (bp->b_nwnd == 0) {  /* wp loop covers visible ones */
-                    if ((bp->b.dotp == lp) && (bp->b.doto > length)) {
-                        bp->b.doto = length;
-                    }
-                    if ((bp->b.markp == lp) && (bp->b.marko > length)) {
-                        bp->b.marko = length;
-                    }
-                }
-            }
+
+/* We do NOT need to check the struct buffer bheadp list!
+ * trim() works on the current active window, so the window must be visible
+ * and hence the buffer must be displayed (here, possible elsewhere).
+ * If the buffer is opened again, then dot and mark will be copied from
+ * the first open window for that buffer found in the wheadp list.
+ * When the last window of a buffer is closed, then the dot and mark
+ * are written to the struct buffer in the bheadp list.
+ */
+
 /* System mark */
             if ((sysmark.p == lp) && (sysmark.o > length)) {
                 sysmark.o = length;
             }
 /* Pins */
             for (linked_items *mp = macro_pin_headp; mp; mp = mp->next) {
-                if (mmi(mp, lp) == lp) {
-                    mmi(mp, lp) = mmi(mp, lp)->l_fp;
-                    mmi(mp, offset) = 0;
+                if (mmi(mp, lp) == lp) {    /* No need to check which buffer */
+                    if (mmi(mp, offset) > length) mmi(mp, offset) = length;
                 }
             }
         }
