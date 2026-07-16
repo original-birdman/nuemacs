@@ -17,9 +17,8 @@
 
 typedef struct {
     char *buf;      /* The (NUL-terminated) string/buffer */
-    char *asp;      /* The "actual start pointer" */
+    char *asp;      /* The "actual start pointer" (may be beyond buf) */
     size_t alloc;   /* What we've allocated */
-    int blen;       /* buf length WITHOUT any trailing NUL */
     int alen;       /* The actual length from asp (no trailing NUL) */
     int type;       /* Set of flags */
 } db;
@@ -28,9 +27,9 @@ typedef struct {
  * So we also need to be able to declare the global ones in other
  * files.
  */
-#define db_buf_initval { NULL, NULL, 0, 0, 0, DB_BUF }
-#define db_str_initval { NULL, NULL, 0, 0, 0, DB_STR }
-#define db_upstr_initval { NULL, NULL, 0, 0, 0, DB_STR|DB_UPS }
+#define db_buf_initval { NULL, NULL, 0, 0, DB_BUF }
+#define db_str_initval { NULL, NULL, 0, 0, DB_STR }
+#define db_upstr_initval { NULL, NULL, 0, 0, DB_STR|DB_UPS }
 #define db_bufdef(a) db (a) = db_buf_initval
 #define db_strdef(a) db (a) = db_str_initval
 #define db_upstrdef(a) db (a) = db_upstr_initval
@@ -42,14 +41,12 @@ typedef struct {
  */
 #define db_buf(a)   ((const char *)(a).buf)
 #define db_val(a)   ((const char *)(a).asp)
-#define db_blen(a)  ((const int)(a).blen)
 #define db_len(a)   ((const int)(a).alen)
 #define db_max(a)   ((const size_t)(a).alloc)
 #define db_type(a)  ((const int)(a).type)
 
 #define dbp_buf(a)  ((const char *)((a)->buf))
 #define dbp_val(a)  ((const char *)((a)->asp))
-#define dbp_blen(a) ((const int)((a)->blen))
 #define dbp_len(a)  ((const int)((a)->alen))
 #define dbp_max(a)  ((const size_t)((a)->alloc))
 #define dbp_type(a) ((const int)((a)->type))
@@ -58,37 +55,37 @@ typedef struct {
  * Not expecting these to be called directly
  */
 
+/* The buf/asp comment refers to which buffer pointer is used.
+ * For the buf ones, the entire buffer is reinitialized, and the
+ * asp field is set equal to the buf field.
+ */
 void db_init(void);
-const char *_dbp_val_nc(db *);
-void _dbp_setn(db *, const void *, int);
-void _dbp_set(db *, const char *);
-void _dbp_replicatech_at(db *, char, int, int);
-void _dbp_insertn_at(db *, const void *, int, int);
-void _dbp_deleten_at(db *, int, int);
-void _dbp_overwriten_at(db *, const void *, int, int);
-void _dbp_retailstr_at(db *, const char *, int);
-void _dbp_bufset(db *, const char, int);
-void _dbp_clear(db *);
-void _dbp_truncate(db *, int);
-void _dbp_uctruncate(db *, int);
-void _dbp_appendn(db *, const char *, int);
-void _dbp_append(db *, const char *);
-void _dbp_addch(db *, const char);
-char _dbp_charat(db *, int);
-void _dbp_setcharat(db *, int, char c);
+const char *_dbp_val_nc(db *);                              /* asp */
+void _dbp_setn(db *, const void *, int);                    /* buf */
+void _dbp_set(db *, const char *);                          /* buf */
+void _dbp_replicatech_at(db *, char, int, int);             /* asp */
+void _dbp_insertn_at(db *, const void *, int, int);         /* asp */
+void _dbp_deleten_at(db *, int, int);                       /* asp */
+void _dbp_overwriten_at(db *, const void *, int, int);      /* asp */
+void _dbp_retailstr_at(db *, const char *, int);            /* asp */
+void _dbp_bufset(db *, const char, int);                    /* buf */
+void _dbp_clear(db *);                                      /* buf */
+void _dbp_truncate(db *, int);                              /* asp */
+void _dbp_uctruncate(db *, int);                            /* asp */
+void _dbp_appendn(db *, const char *, int);                 /* asp */
+void _dbp_append(db *, const char *);                       /* asp */
+void _dbp_addch(db *, const char);                          /* asp */
+char _dbp_charat(db *, int);                                /* asp */
+void _dbp_setcharat(db *, int, char c);                     /* asp */
+void _dbp_upval(db *, const char *);                        /* asp */
+void _dbp_sprintf(db *ds, const char *fmt, ...);            /* buf */
+void _dbp_free(db *);                                       /* buf */
 
 /* Currently just simple defines */
-#define _dbp_cmp(ds, str) strcmp((ds)->buf, str)
-#define _dbp_cmpn(ds, str, n) strncmp((ds)->buf, str, (size_t)(n))
-#define _dbp_casecmp(ds, str) strcasecmp((ds)->buf, str)
-#define _dbp_casecmpn(ds, str, n) strncasecmp((ds)->buf, str, (size_t)(n))
-
-void _dbp_upval(db *, const char *);
-
-void _dbp_sprintf(db *ds, const char *fmt, ...);
-
-void _dbp_free(db *);
-
+#define _dbp_cmp(ds, str) strcmp((ds)->asp, str)
+#define _dbp_cmpn(ds, str, n) strncmp((ds)->asp, str, (size_t)(n))
+#define _dbp_casecmp(ds, str) strcasecmp((ds)->asp, str)
+#define _dbp_casecmpn(ds, str, n) strncasecmp((ds)->asp, str, (size_t)(n))
 
 /* Defines for actual use in user code
  * The db_* calls are for "local" usage whereas

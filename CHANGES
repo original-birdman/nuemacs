@@ -9830,3 +9830,11 @@ display.c
 input.c
     Save and restore errno in signal handlers. [display.c, input.c]
     If we can't get a terminal size, use exit() not quit(). [display.c]
+
+dyn_info.c
+dyn_info.h
+input.c
+    Remove blen from struct db, make asp and alen the items used to get
+    and modify values.  buf is only used on setting "full" values.
+    Add comments to indicate which function uses asp and which buf.
+    Change a db_blen() call to db_len() [input.c]

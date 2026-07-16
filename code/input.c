@@ -995,7 +995,7 @@ loop:
  * If so, insert it into our buffer (which is the result buffer) now,
  * which inserts it at the "current location".
  */
-    if (db_blen(prmpt_buf.preload)) {
+    if (db_len(prmpt_buf.preload)) {
         lins_dynbuf(&prmpt_buf.preload);
         db_clear(prmpt_buf.preload);    /* One-time usage */
     }
