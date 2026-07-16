@@ -9848,3 +9848,7 @@ eval.c
 display.c
 input.c
     Set sigwin_dfr.do_defer = TRUE before newscreensize() call.
+
+display.c
+input.c
+    Set sigwin_dfr.is_deferred = FALSE on any complete run.

@@ -1822,17 +1822,16 @@ void sizesignal(int signr) {
  * But if this is us making a deferred call then signr will be 0
  * and then we just continue.
  */
-    if (signr == 0) {
-        sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
-    }
-    else if (sigwin_dfr.do_defer) {
+    if ((signr > 0) && sigwin_dfr.do_defer) {   /* signr == 0 forces run */
         sigwin_dfr.is_deferred = TRUE;
         sigwin_dfr.hndlr_func = sizesignal;
         return;
     }
+    sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
+
+    int old_errno = errno;  /* We might overwrite this for an async call */
 
     int w, h;
-    int old_errno = errno;  /* We might overwrite this for an async call */
     getscreensize(&w, &h);
 
     if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
