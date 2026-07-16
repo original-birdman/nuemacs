@@ -9865,3 +9865,6 @@ display.c
 window.c
 estruct.h
     Updated some misleading comments.
+
+autotest/nul-handling.sh
+    Removed a "2 write-message %str" debug statement.

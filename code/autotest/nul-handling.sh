@@ -78,7 +78,6 @@ set %test "ptf with a NUL"
 set %str &ptf "%s%s%s" "ABC " "~0" " DEF"
 set %expect 9
 set %val &len %str
-2 write-message %str
 run run-test
 insert-string "===~n"
 insert-string %str
