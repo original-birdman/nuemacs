@@ -1843,6 +1843,7 @@ void sizesignal(int signr) {
  * Any other signal is OK, as it will cause uemacs to exit anyway.
  */
         int orig_defer = sigwin_dfr.do_defer;
+        sigwin_dfr.do_defer = TRUE;
         newscreensize(h, w, 0);
         sigwin_dfr.do_defer = orig_defer;
     }

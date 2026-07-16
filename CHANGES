@@ -9844,3 +9844,7 @@ input.c
 
 eval.c
     Correct the inverted logic when testing for "@".
+
+display.c
+input.c
+    Set sigwin_dfr.do_defer = TRUE before newscreensize() call.
