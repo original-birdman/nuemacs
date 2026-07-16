@@ -109,7 +109,6 @@ extern void mlforce(const char *, ...);
 extern void mlwrite_one(const char *);
 extern void mlforce_one(const char *);
 extern void getscreensize(int *, int *);
-extern void sizesignal(int);
 extern void mberase(void);
 extern void mbupdate(void);
 #endif
@@ -238,6 +237,7 @@ extern int mlyesno(const char *);
 extern int mlreply(const char *, db *, enum cmplt_type);
 extern struct name_bind *getname(const char *, int);
 extern unicode_t getcmd(void);
+extern void sigwinch_handler(int);
 extern void evaluate_cmdb(const char *, db *);
 extern int getstring(const char *, db *, enum cmplt_type);
 #endif

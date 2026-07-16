@@ -605,7 +605,6 @@ struct bc_res {
 struct sigdefer{
     int do_defer;
     int is_deferred;
-    void (*hndlr_func)(int);    /* What to call later */
 };
 
 #endif

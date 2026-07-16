@@ -549,7 +549,7 @@ static int file2buf(struct line *iline, const char *mode, int goto_end,
             db_deleten_at(ldb(lp1), 1, lused(lp1)-1);   /* Remove trailing CR */
         if (!(++nlines % 300)) {    /* GGR */
 /* if we have a pending SIGWINCH - run the handler */
-            if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
+            if (sigwin_dfr.is_deferred) sigwinch_handler(0);
             if (!silent) mlwrite(MLbkt("%s file") " : %d lines", mode, nlines);
         }
     }
@@ -1093,7 +1093,7 @@ int writeout(const char *fn) {
         ++nline;
         if (!(nline % 300)) {   /* GGR */
 /* if we have a pending SIGWINCH - run the handler */
-            if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
+            if (sigwin_dfr.is_deferred) sigwinch_handler(0);
             if (!silent) mlwrite(MLbkt("Writing...") " : %d lines", nline);
         }
         lp = lforw(lp);

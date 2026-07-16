@@ -387,6 +387,110 @@ next_index:
     return;
 }
 
+/* If the window size changes whilst getstring is running in the
+ * minibuffer the display will end up incorrect (as the code reckons we
+ * are in this minibuffer, not the one we arrived from).
+ * The standard SIGWINCH handler (sigwinch_handler) can check what
+ * to do by looking at the value of inmb.
+ */
+
+static struct window *mb_winp = NULL;
+
+/* The "mini-buffer" sigwinch actual handler */
+static void inmb_sigwinch(void) {
+
+/* We need to get back to how things were before we arrived in the
+ * minibuffer.
+ * So we save the current settings, restore the originals, let the
+ * resize code run, re-fetch the original (in case they have changed)
+ * the restore the ones we arrived with.
+ */
+    struct buffer *mb_bp = curbp;
+    struct window *mb_wp = curwp;
+    struct window *mb_hp = wheadp;
+
+    curbp = mb_info.main_bp;
+    curwp = mb_info.main_wp;
+    wheadp = mb_info.wheadp;
+    inmb = FALSE;
+
+/* Do the bits from sizesignal() in display.c that do the work */
+    int w, h;
+
+    getscreensize(&w, &h);
+    if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
+
+/* Any SIGWINCH arriving whilst we are working on this one in
+ * newscreensize() can be deferred by us setting do_defer
+ * around it and restoring the previous setting afterwards.
+ * Any other signal is OK, as it will cause uemacs to exit anyway.
+ */
+        int orig_defer = sigwin_dfr.do_defer;
+        sigwin_dfr.do_defer = TRUE;
+        newscreensize(h, w, 0);
+        sigwin_dfr.do_defer = orig_defer;
+    }
+
+/* Need to reget the mb_info data now */
+
+    mb_info.main_bp = curbp;
+    mb_info.main_wp = curwp;
+    mb_info.wheadp = wheadp;
+
+/* Now get back to how we arrived */
+
+    curbp = mb_bp;
+    curwp = mb_wp;
+    wheadp = mb_hp;
+    curwp->w_toprow = term.t_mbline;    /* Set new value */
+    inmb = TRUE;
+/* Ensure the minibuffer is redrawn */
+    mbupdate();
+
+    return;
+}
+
+/* The "usual" sigwinch actual handler */
+static void main_sigwinch(void) {
+
+    int w, h;
+    getscreensize(&w, &h);
+
+    if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
+
+/* Any SIGWINCH arriving whilst we are working on this one in
+ * newscreensize() can be deferred by us setting do_defer
+ * around it and restoring the previous setting afterwards.
+ * Any other signal is OK, as it will cause uemacs to exit anyway.
+ */
+        int orig_defer = sigwin_dfr.do_defer;
+        sigwin_dfr.do_defer = TRUE;
+        newscreensize(h, w, 0);
+        sigwin_dfr.do_defer = orig_defer;
+    }
+}
+
+void sigwinch_handler(int signr) {
+
+/* If this is being called as a signal handler then signr will be
+ * non-zero (actually SIGWINCH), which we might defer.
+ * But if this is us making a deferred call then signr will be 0
+ * and then we just continue.
+ */
+    if ((signr > 0) && sigwin_dfr.do_defer) {   /* signr == 0 forces run */
+        sigwin_dfr.is_deferred = TRUE;
+        return;
+    }
+    sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
+
+    int old_errno = errno;  /* We might overwrite this for an async call */
+    if (inmb)   inmb_sigwinch();
+    else        main_sigwinch();
+
+    errno = old_errno;
+    return;
+}
+
 /* tgetc:   Get a key from the terminal driver.
  *          Resolve any keyboard macro action.
  */
@@ -422,6 +526,10 @@ unicode_t tgetc(void) {
         errno = 0;
     }
     sigwin_dfr.do_defer = FALSE;
+/* If there is a deferred SIGWINCH we can now call the sigwinch_handler
+ * Otherwise we may wait in TTgetc() with one pending....
+ */
+    if (sigwin_dfr.is_deferred) sigwinch_handler(0);
     c = TTgetc();
     sigwin_dfr.do_defer = TRUE;
     if (remap_c_on_intr) {
@@ -460,10 +568,6 @@ unicode_t tgetc(void) {
 unicode_t get1key(void) {
     unicode_t c;
 
-/* Run any deferred SIGWINCH handler before we wait and run any that
- * are called whilst we wait for input.
- */
-    if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
     c = tgetc();                    /* get a keystroke */
     if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
         c = CONTROL | (c + '@');
@@ -730,85 +834,6 @@ unicode_t getcmd(void) {
  * loop: label.
  */
 
-/* If the window size changes whilst this is running the display will end
- * up incorrect (as the code reckons we are in this buffer, not the one we
- * arrived from).
- * So set up a SIGWINCH handler to get us out the minibuffer before
- * display::newscreensize() runs.
- */
-
-static struct window *mb_winp = NULL;
-
-typedef void (*sighandler_t)(int);
-
-static void sigwinch_handler(int signr) {
-
-/* If this is being called as a signal handler then signr will be
- * non-zero (actually SIGWINCH), which we might defer.
- * But if this is us making a deferred call then signr will be 0
- * and then we just continue.
- */
-    if ((signr > 0) && sigwin_dfr.do_defer) {   /* signr == 0 forces run */
-        sigwin_dfr.is_deferred = TRUE;
-        sigwin_dfr.hndlr_func = sigwinch_handler;
-        return;
-    }
-    sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
-
-    int old_errno = errno;  /* We might overwrite this for an async call */
-
-/* We need to get back to how things were before we arrived in the
- * minibuffer.
- * So we save the current settings, restore the originals, let the
- * resize code run, re-fetch the original (in case they have changed)
- * the restore the ones we arrived with.
- */
-    struct buffer *mb_bp = curbp;
-    struct window *mb_wp = curwp;
-    struct window *mb_hp = wheadp;
-
-    curbp = mb_info.main_bp;
-    curwp = mb_info.main_wp;
-    wheadp = mb_info.wheadp;
-    inmb = FALSE;
-
-/* Do the bits from sizesignal() in display.c that do the work */
-    int w, h;
-
-    getscreensize(&w, &h);
-    if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
-
-/* Any SIGWINCH arriving whilst we are working on this one in
- * newscreensize() can be deferred by us setting do_defer
- * around it.
- * Any other signal is OK, as it will cause uemacs to exit anyway.
- */
-        int orig_defer = sigwin_dfr.do_defer;
-        sigwin_dfr.do_defer = TRUE;
-        newscreensize(h, w, 0);
-        sigwin_dfr.do_defer = orig_defer;
-    }
-
-/* Need to reget the mb_info data now */
-
-    mb_info.main_bp = curbp;
-    mb_info.main_wp = curwp;
-    mb_info.wheadp = wheadp;
-
-/* Now get back to how we arrived */
-
-    curbp = mb_bp;
-    curwp = mb_wp;
-    wheadp = mb_hp;
-    curwp->w_toprow = term.t_mbline;    /* Set new value */
-    inmb = TRUE;
-/* Ensure the minibuffer is redrawn */
-    mbupdate();
-
-    errno = old_errno;
-    return;
-}
-
 /* Evaluate a string as a command.
  * Done by saving the current command buffer, replacing it with what
  * we have then running token() before replacing things.
@@ -960,18 +985,14 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     curwp->w_ntrows = 1;
     curbp->b_mode = new_bmode;
 
-/* The oldact is restored on exit. */
-
+/* The oldact (with no SA_RESTART?) is restored on exit.
+ * NOTE that the actual handler is unchanged here.
+ */
     struct sigaction sigact, oldact;
     sigact.sa_handler = sigwinch_handler;
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
-
-/* If there is a deferred SIGWINCH we can now call the sigwinch_handler
- * even if the hndlr_func set is something else.
- */
-    if (sigwin_dfr.is_deferred) sigwinch_handler(0);
 
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
@@ -1242,21 +1263,12 @@ abort:
     }
 
 rewinch_and_exit:
-/* We need to re-instate the original SIGWINCH handler now... */
+/* We need to re-instate the original action (with no SA_RESTART?) for
+ * the SIGWINCH handler now.
+ * NOTE that the actual handler is unchanged.
+ */
     sigaction(SIGWINCH, &oldact, NULL);
 
-/* If there is a deferred SIGWINCH set from within getring() then
- * the handler will be set to sigwinch_handler(0
- * But calling that may no longer valid, as we've left the current
- * minibuffer.
- * If we were in a minibuffer within a minibuffer then inmb will
- * still be set.
- * So run it with size
- */
-    if (sigwin_dfr.is_deferred) {
-        if (inmb)   sigwinch_handler(0);
-        else        sizesignal(0);
-    }
     return status;
 }
 

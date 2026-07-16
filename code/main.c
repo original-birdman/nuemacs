@@ -1384,7 +1384,7 @@ int execute(int c, int f, int n) {
 
 /* if we have a pending SIGWINCH - run the handler */
 
-    if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
+    if (sigwin_dfr.is_deferred) sigwinch_handler(0);
 
 /* Several command handle a -ve n arg by passien -n to there inverse
  * function.
@@ -2018,7 +2018,7 @@ int main(int argc, char **argv) {
  * in sizesignal() and vtinit() will have been called by the time the
  * real work is done.
  */
-    sigact.sa_handler = sizesignal;
+    sigact.sa_handler = sigwinch_handler;
     sigact.sa_flags = (int)SA_RESTART;
     sigaction(SIGWINCH, &sigact, NULL);
 

@@ -9873,3 +9873,22 @@ random.c
     Remove the bheadp list scan for dot and mark - it isn't needed.
     Added a comment explaining why.
     Fixed the pin search (which was assuming line deletion, not truncation).
+
+display.c
+exec.c
+file.c
+globals.c
+input.c
+main.c
+efunc.h
+estruct.h
+    Change SIGWINCH handling to have a single front-end handler
+    (sigwinch_handler) that calls either main_handler() or
+    inmb_handler() to do the real work. [main.c, display.c, input.c]
+    Removed sizesignal() [display.c, efunc.h]
+    Made sigwinch_handler() extern [input.c, efunc.h]
+    Added main_handler() and inmb_handler(). [input.c]
+    Made sigwinch_handler() a front-end. [input.c]
+    Removed hndlr_func from struct sigdefer. [estruct.h, globals.c]
+    Call sigwinch_handler() not sigwin_dfr.hndlr_func() [exec.c, file.c,
+    main.c

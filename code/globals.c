@@ -266,7 +266,7 @@ udir_t udir;
 
 /* Info for deferred SIGWINCH handling */
 
-struct sigdefer sigwin_dfr = {TRUE, FALSE, NULL};
+struct sigdefer sigwin_dfr = {TRUE, FALSE};
 
 /* Ignored prefixes  - need to limit assignment... */
 

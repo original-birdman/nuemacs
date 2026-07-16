@@ -1819,40 +1819,6 @@ void getscreensize(int *widthp, int *heightp) {
     }
 }
 
-void sizesignal(int signr) {
-
-/* If this is being called as a signal handler then signr will be
- * non-zero (actually SIGWINCH), which we might defer.
- * But if this is us making a deferred call then signr will be 0
- * and then we just continue.
- */
-    if ((signr > 0) && sigwin_dfr.do_defer) {   /* signr == 0 forces run */
-        sigwin_dfr.is_deferred = TRUE;
-        sigwin_dfr.hndlr_func = sizesignal;
-        return;
-    }
-    sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
-
-    int old_errno = errno;  /* We might overwrite this for an async call */
-
-    int w, h;
-    getscreensize(&w, &h);
-
-    if (h && w && (h != term.t_nrow || w != term.t_ncol)) {
-
-/* Any SIGWINCH arriving whilst we are working on this one in
- * newscreensize() can be deferred by us setting do_defer
- * around it, and restore the previous setting afterrwards.
- * Any other signal is OK, as it will cause uemacs to exit anyway.
- */
-        int orig_defer = sigwin_dfr.do_defer;
-        sigwin_dfr.do_defer = TRUE;
-        newscreensize(h, w, 0);
-        sigwin_dfr.do_defer = orig_defer;
-    }
-    errno = old_errno;
-}
-
 /* GGR
  *    function to erase the mapped minibuffer line
  *    (so different from mlerase()
