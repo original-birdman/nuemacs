@@ -408,7 +408,12 @@ unicode_t tgetc(void) {
         }
     }
 
-/* Fetch a character from the terminal driver */
+/* Fetch a character from the terminal driver
+ * We turn off RESTARTs across the character get
+ * So we can get errno == EINTR and send back UEM_NOCHAR (see below)
+ * which indicates a SIGWINCH occurred and we need a redraw of any
+ * minibuffer.
+ */
     struct sigaction sigact;
     if (remap_c_on_intr) {
         sigaction(SIGWINCH, NULL, &sigact);
@@ -416,7 +421,9 @@ unicode_t tgetc(void) {
         sigaction(SIGWINCH, &sigact, NULL);
         errno = 0;
     }
+    sigwin_dfr.do_defer = FALSE;
     c = TTgetc();
+    sigwin_dfr.do_defer = TRUE;
     if (remap_c_on_intr) {
         sigaction(SIGWINCH, NULL, &sigact);
         sigact.sa_flags = SA_RESTART;
@@ -457,11 +464,9 @@ unicode_t get1key(void) {
  * are called whilst we wait for input.
  */
     if (sigwin_dfr.is_deferred) sigwin_dfr.hndlr_func(0);
-    sigwin_dfr.do_defer = FALSE;
     c = tgetc();                    /* get a keystroke */
     if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
         c = CONTROL | (c + '@');
-    sigwin_dfr.do_defer = TRUE;
     return c;
 }
 
