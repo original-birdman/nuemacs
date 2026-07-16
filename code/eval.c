@@ -1438,7 +1438,7 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
         if (userproc_arg) {
             db_set(valres, userproc_arg);
         }
-        else if (db_cmp(tok1, "@")) {   /* @:"@" returns "" */
+        else if (0 == db_cmp(tok1, "@")) {  /* @:"@" returns "" */
             db_set(valres, "");
         }
         else {
