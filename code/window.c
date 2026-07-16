@@ -651,7 +651,7 @@ static void new_sizer(int to_add) {
     else {
 /* Have to remove lines (to_add is -ve). Harder....
  * We'll loop through windows removing a line from each if it has
- * at least 3 lines (so we always leave 2).
+ * at least 2 lines (so we always leave 1 buffer line + a modeline).
  * If that doesn't finish the job we'll then remove windows from the
  * bottom up.
  * No need for set_scrarray_size()/vtinit() as we're getting smaller.

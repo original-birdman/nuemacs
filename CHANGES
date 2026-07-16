@@ -9861,3 +9861,7 @@ input.c
 display.c
     Check that getscreensize() found non-zero width and height.
     Exit if it did not.
+
+window.c
+estruct.h
+    Updated some misleading comments.
