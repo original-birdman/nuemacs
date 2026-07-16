@@ -1812,6 +1812,10 @@ void getscreensize(int *widthp, int *heightp) {
         if (ioctl(1, TIOCGWINSZ, &size) < 0) exit(ENXIO);
         *widthp = size.ws_col;
         *heightp = size.ws_row;
+        if ((*widthp == 0) || (*heightp == 0)) {
+            fprintf(stderr, "Invalid terminal size\n");
+            exit(ENXIO);
+        }
     }
 }
 

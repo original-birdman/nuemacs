@@ -9857,3 +9857,7 @@ input.c
     Check sigwin_dfr.is_deferred on entry/exit from getstring().
     (i.e entering and leaving a minibuffer)
     Call the correct handler according to the current state.
+
+display.c
+    Check that getscreensize() found non-zero width and height.
+    Exit if it did not.
