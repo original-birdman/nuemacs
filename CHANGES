@@ -9896,3 +9896,9 @@ estruct.h
 line.c
     Remove the bheadp list scan for dot/mark in lfree() - it isn't needed.
     Added a comment explaining why.
+
+etc/uemacs.hlp
+version.h
+    Update to GGR4.199
+
+==========
