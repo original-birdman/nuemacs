@@ -9870,7 +9870,7 @@ autotest/nul-handling.sh
     Removed a "2 write-message %str" debug statement.
 
 random.c
-    Remove the bheadp list scan for dot and mark - it isn't needed.
+    Remove the bheadp list scan for dot/mark in trim() - it isn't needed.
     Added a comment explaining why.
     Fixed the pin search (which was assuming line deletion, not truncation).
 
@@ -9892,3 +9892,7 @@ estruct.h
     Removed hndlr_func from struct sigdefer. [estruct.h, globals.c]
     Call sigwinch_handler() not sigwin_dfr.hndlr_func() [exec.c, file.c,
     main.c
+
+line.c
+    Remove the bheadp list scan for dot/mark in lfree() - it isn't needed.
+    Added a comment explaining why.

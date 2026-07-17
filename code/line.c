@@ -65,6 +65,12 @@ void lfree(struct line *lp) {
             wp->w.marko = 0;
         }
     }
+/* The only calls to lfree() are from ldelnewline(), which works on the
+ * curwp (so this buffer must be in a window and hance b_nwnd is not 0)
+ * and bclear() (which will set dot and mark to be on line1, char 1)
+ * So it is not needed here.
+ */
+#if 0
     for (struct buffer *bp = bheadp; bp != NULL; bp = bp->b_bufp) {
         if (bp->b_nwnd == 0) {
             if (bp->b.dotp == lp) {
@@ -77,6 +83,7 @@ void lfree(struct line *lp) {
             }
         }
     }
+#endif
     if (sysmark.p == lp) {
         sysmark.p = lp->l_fp;
         sysmark.o = 0;
