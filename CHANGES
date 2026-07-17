@@ -9892,6 +9892,9 @@ estruct.h
     Removed hndlr_func from struct sigdefer. [estruct.h, globals.c]
     Call sigwinch_handler() not sigwin_dfr.hndlr_func() [exec.c, file.c,
     main.c
+    Removed the deferred sigwinch check at the start and end of
+    getsrting() [input.c]
+
 
 line.c
     Remove the bheadp list scan for dot/mark in lfree() - it isn't needed.
@@ -9902,3 +9905,6 @@ version.h
     Update to GGR4.199
 
 ==========
+
+dyn_buf.c
+    Reinstate some length checks missed on the move to using asp.

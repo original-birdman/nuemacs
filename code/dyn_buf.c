@@ -88,7 +88,8 @@ enum repins_call_t { DBP_REPLICATE, DBP_INSERTN };
 static void _dbp_ri_at(db *ds, const char *cp, int n, int offs,
      enum repins_call_t method) {
     int movers = ds->alen - offs;
-    if (movers < 0) illegal_dbaction("Illegal db replicatech/insertn");
+    if ((movers < 0) || (offs < 0))
+         illegal_dbaction("Illegal db replicatech/insertn");
     size_t need = (size_t)((ds->asp - ds->buf) + ds->alen + n);
     if (ds->type & DB_STR) need++;
     if (need > ds->alloc) _dbp_realloc(ds, need);
@@ -117,15 +118,19 @@ void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
 }
 
 /* Delete n chars from buffer
+ * If n chars takes you past the end of the buffer, just delete
+ * to end of buffer.
  * Acts on the asp value.
  */
 void _dbp_deleten_at(db *ds, int n, int offs) {
 /* Since we are deleting we must already have enough space
- * But we mustn't delete from before the "actual start pointer".
+ * But we mustn't delete from before the "actual start pointer"
  */
-    if ((n + offs) > ds->alen)  n = ds->alen - offs;
-    if (n < 0) illegal_dbaction("Illegal db deleten");
-    int movers = ds->alen - offs - n;
+    if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db deleten");
+    int end = n + offs;
+    if (end <= 0) illegal_dbaction("end overflow in deleten");
+    if (end > ds->alen)  n = ds->alen - offs;
+    int movers = ds->alen - end;
     memmove(ds->asp+offs, ds->asp+offs+n, (size_t)movers);
     ds->alen -= n;
     if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
@@ -139,7 +144,10 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
 void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
     if (n <= 0) return;     /* General case */
 /* We mustn't change anything from before the "actual start pointer". */
-    if ((offs + n) > ds->alen) illegal_dbaction("Illegal db overwriten");
+
+    int end = n + offs;
+    if (end <= 0) illegal_dbaction("end overflow in deleten");
+    if (end > ds->alen) illegal_dbaction("Illegal db overwriten");
     memmove(ds->asp+offs, mp, (size_t)n);
     return;
 }
@@ -190,13 +198,12 @@ void _dbp_clear(db *ds) {
 }
 
 /* Truncate a value.
- * Do nothing if the current length is less than or equal to the request.
  * If this is a DB_STR buffer, append a NUL.
  * We do not need any more space for this.
  * Acts on the asp value.
  */
 void _dbp_truncate(db *ds, int n) {
-    if (n < 0) illegal_dbaction("Illegal db truncate");
+    if ((n < 0) || (n > ds->alen)) illegal_dbaction("Illegal db truncate");
     ds->alen = n;
     if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
     return;
