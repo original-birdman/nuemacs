@@ -9908,3 +9908,7 @@ version.h
 
 dyn_buf.c
     Reinstate some length checks missed on the move to using asp.
+
+idxsorter.c
+main.c
+    Change "__clang_major__ < 19" to defined(__clang__).

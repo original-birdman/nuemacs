@@ -852,7 +852,7 @@ com_arg *multiplier_check(int c) {
  * insertion of 2billion+ characters or newline if teh next input is
  * not ctl-G.
  */
-#if __clang_major__ >= 19 || __GNUC__ >= 5
+#if defined(__clang__) || __GNUC__ >= 5
                 int res1, res2;
                 int oflw = 0;
                 if (__builtin_mul_overflow(ca.n, 10, &res1)) oflw = 1;
@@ -899,7 +899,7 @@ com_arg *multiplier_check(int c) {
  * insertion of 2billion+ characters or newline if teh next input is
  * not ctl-G.
  */
-#if __clang_major__ >= 19 || __GNUC__ >= 5
+#if defined(__clang__) || __GNUC__ >= 5
                 int res1;
                 int oflw = 0;
                 if (__builtin_mul_overflow(ca.n, 4, &res1)) oflw = 1;
