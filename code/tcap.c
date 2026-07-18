@@ -144,7 +144,7 @@ static void tcapopen(void) {
     }
 
 /* Get screen size from system, or else from termcap.  */
-    getscreensize(&int_col, &int_row);
+    getscreensize(&int_col, &int_row, TRUE);
     term.t_ncol = int_col;
     SET_t_nrow(int_row);
 

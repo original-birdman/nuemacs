@@ -1794,10 +1794,11 @@ void mlforce_one(const char *fmt) {
 
 /* Get terminal size from system.
  * Store number of lines into *heightp and width into *widthp.
- * If zero or a negative number is stored, the value is not valid.
+ * If zero or a negative number is stored, the value is not valid, so
+ * exit unless the caller said zeroes are OK.
  */
 
-void getscreensize(int *widthp, int *heightp) {
+void getscreensize(int *widthp, int *heightp, int zero_ok) {
     struct winsize size;
     *widthp = 0;
     *heightp = 0;
@@ -1809,14 +1810,33 @@ void getscreensize(int *widthp, int *heightp) {
         *heightp = 24;
     }
     else {
-        if (ioctl(1, TIOCGWINSZ, &size) < 0) exit(ENXIO);
+/* If this call fails, just exit */
+        if (ioctl(1, TIOCGWINSZ, &size) < 0) {
+            if (prev_mrow == 0) exit(errno);    /* vtinit() not yet run */
+            else quickexit(TRUE, errno);        /* vtinit() has run */
+        }
+
+/* Claude/Fable reckons "transient" zeroes can arrive here, so
+ * if we got 0, but had previously got an answer, use that and hope,
+ * which is done by returning with widthp and heightp set to the
+ * values currently set in currently in the term structure.
+ * However, a call from tcapopen() in tcap.c uses termcap info
+ * if it gets 0 back, so allow that too., via zero_ok.
+ */
         *widthp = size.ws_col;
         *heightp = size.ws_row;
-        if ((*widthp == 0) || (*heightp == 0)) {
-            fprintf(stderr, "Invalid terminal size\n");
-            exit(ENXIO);
+        for (int tl = 0; tl < 2; tl++) {
+            if ((*widthp > 0) && (*heightp > 0)) return;
+            if (zero_ok) return;
+/* If still here, fill in the current value and run the loop again */
+            if (*widthp == 0) *widthp = term.t_ncol;
+            if (*heightp == 0) *heightp = term.t_nrow;
         }
+/* If we exit the loop we have unwanted zero(es).  Exit */
+        if (prev_mrow == 0) exit(errno);
+        else quickexit(TRUE, errno);
     }
+    return;
 }
 
 /* GGR

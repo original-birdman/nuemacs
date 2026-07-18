@@ -9904,7 +9904,7 @@ etc/uemacs.hlp
 version.h
     Update to GGR4.199
 
-==========
+========== GGR4.200
 
 dyn_buf.c
     Reinstate some length checks missed on the move to using asp.
@@ -9912,3 +9912,20 @@ dyn_buf.c
 idxsorter.c
 main.c
     Change "__clang_major__ < 19" to defined(__clang__).
+
+display.c
+input.c
+main.c
+spawn.c
+tcap.c
+efunc.h
+    Add a 3rd arg to getcreensize() to allow it to return 0 for a size,
+    and enable it for the call from tcapopen().
+    Change getcreensize() to call quickexit() on failure if vtinit() has
+    already been called. [display.c]
+    If the ioctl() returns 0 width or height, return this if allowed
+    else use the current values if non-zero.  [display.c]
+    Change getscreensize callers to not check for zero on return. [input.c]
+
+input.c
+    Remove a small timing

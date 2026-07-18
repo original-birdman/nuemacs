@@ -108,7 +108,7 @@ extern void mlwrite(const char *, ...);
 extern void mlforce(const char *, ...);
 extern void mlwrite_one(const char *);
 extern void mlforce_one(const char *);
-extern void getscreensize(int *, int *);
+extern void getscreensize(int *, int *, int);
 extern void mberase(void);
 extern void mbupdate(void);
 #endif

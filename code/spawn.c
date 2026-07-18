@@ -28,11 +28,11 @@
  * Call this at the end of any function that calls system().
  */
 static int orig_width, orig_height;
-#define get_orig_size() (getscreensize(&orig_width, &orig_height))
+#define get_orig_size() (getscreensize(&orig_width, &orig_height, FALSE))
 
 static void check_for_resize(void) {
     int lwidth, lheight;
-    getscreensize(&lwidth, &lheight);
+    getscreensize(&lwidth, &lheight, FALSE);
     if ((lwidth != orig_width) || (lheight != orig_height)) {
         chg_width = lwidth;
         chg_height = lheight;

@@ -2266,7 +2266,7 @@ int main(int argc, char **argv) {
  */
 {
     int w, h;
-    getscreensize(&w, &h);
+    getscreensize(&w, &h, FALSE);
     newscreensize(h, w, 1);
 }
     edinit("main"); /* Buffers, windows - must be after vtinit */
