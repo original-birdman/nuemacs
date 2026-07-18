@@ -9929,3 +9929,7 @@ efunc.h
 
 input.c
     Remove a small timing re-entrancy window in SIGWINCH handling.
+
+Makefile
+    Add a node to produce an etc.tar file for installs.
+    Enable libbacktrace usage on FreeeBSD.

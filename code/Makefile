@@ -159,14 +159,15 @@ ifeq ($(strip $(UTF8LIB)),)
 endif
 
 # Does the user want stacktraceing enabled?
-# It's only available on 64-bit Intel (x86_64) as arm and mips
-# don't produce any useful output.
-# On x86_64 it is enabled if the include file is found, but you can
-# manully disable it.
+# It's only really useful on 64-bit Intel Linux (x86_64).
+# FreeBSD, arm and mips don't produce much useful output.
+# On suitable systems it is enabled if the include file is found, but
+# you can manually disable it.
 #
-NOTRACE =
+NOTRACE ?=
 ifeq ($(strip $(NOTRACE)),)
     ifeq ($(uname_M), x86_64)
+    else ifeq ($(uname_M), amd64)       # FreeBSD
     else ifeq ($(uname_M), i86pc)       # Solaris11
     else ifeq ($(uname_M), aarch64)     # Arm64
     else
@@ -385,6 +386,10 @@ vgstrip:
 .c.o:
 	$(E) "  CC      " $@
 	$(Q) ${CC} ${CFLAGS} ${DEFINES} -c $*.c
+
+etc.tar: etc/*
+	tar --owner=0 --group=0 -cvf etc.tar etc/*
+
 
 # Add STAT_LIB and BUILDER definitions for version.c
 # For STANDALONE == all we are going to load the static lib, so
