@@ -525,11 +525,44 @@ unicode_t tgetc(void) {
         sigaction(SIGWINCH, &sigact, NULL);
         errno = 0;
     }
-    sigwin_dfr.do_defer = FALSE;
-/* If there is a deferred SIGWINCH we can now call the sigwinch_handler
- * Otherwise we may wait in TTgetc() with one pending....
+
+/* We wish to allow any SIGWINCH signal to actually run whilst waiting
+ * for input, so we set do_defer FALSE here.
+ * And we also want to check for any deferred signal waiting before we
+ * wait.
+ * If we test for a deferred signal before undeferring there is a (small)
+ * gap betwene the two command running when a new SIGWINCH could arrive
+ * and be deferred.
+ * BUT if we turn off deferring before we check for a waiting SIGWINCH
+ * then we are allowing an async one to run whilst we are running the
+ * deferred one.
+ * So....
  */
-    if (sigwin_dfr.is_deferred) sigwinch_handler(0);
+    sigwin_dfr.do_defer = FALSE;
+
+/* If there is a deferred SIGWINCH we must now call the sigwinch_handler
+ * Otherwise we may wait in TTgetc() with one pending....
+ * BUT first we need to mask any new SIGWINCH arriving whilst we're
+ * running, as we've just disabled deferring.
+ */
+    if (sigwin_dfr.is_deferred) {
+        sigset_t sigwinch_set, incoming_set;
+        sigemptyset(&sigwinch_set);
+        sigaddset(&sigwinch_set, SIGWINCH);
+        sigprocmask(SIG_BLOCK, &sigwinch_set, &incoming_set);
+
+/* We can now safely call the handler synchronously, then reenable
+ * the original signals, including SIGWINCH.
+ * If one did arrive whilst we were running then it will be sent
+ * at the reenable and handled with no deferring.
+ */
+        sigwinch_handler(0);
+        sigprocmask(SIG_SETMASK, &incoming_set, NULL);
+    }
+
+/* Now we can wait on the character arriving.
+ * Any SIGWINCH will be handled immediately.
+ */
     c = TTgetc();
     sigwin_dfr.do_defer = TRUE;
     if (remap_c_on_intr) {

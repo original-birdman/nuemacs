@@ -9831,8 +9831,8 @@ input.c
     Save and restore errno in signal handlers. [display.c, input.c]
     If we can't get a terminal size, use exit() not quit(). [display.c]
 
-dyn_info.c
-dyn_info.h
+dyn_buf.c
+dyn_buf.h
 input.c
     Remove blen from struct db, make asp and alen the items used to get
     and modify values.  buf is only used on setting "full" values.
@@ -9928,4 +9928,4 @@ efunc.h
     Change getscreensize callers to not check for zero on return. [input.c]
 
 input.c
-    Remove a small timing
+    Remove a small timing re-entrancy window in SIGWINCH handling.
