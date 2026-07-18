@@ -9892,7 +9892,7 @@ estruct.h
     Removed hndlr_func from struct sigdefer. [estruct.h, globals.c]
     Call sigwinch_handler() not sigwin_dfr.hndlr_func() [exec.c, file.c,
     main.c
-    Removed the deferred sigwinch check at the start and end of
+    Removed the deferred SIGWINCH check at the start and end of
     getsrting() [input.c]
 
 
@@ -9919,9 +9919,9 @@ main.c
 spawn.c
 tcap.c
 efunc.h
-    Add a 3rd arg to getcreensize() to allow it to return 0 for a size,
+    Add a 3rd arg to getscreensize() to allow it to return 0 for a size,
     and enable it for the call from tcapopen().
-    Change getcreensize() to call quickexit() on failure if vtinit() has
+    Change getscreensize() to call quickexit() on failure if vtinit() has
     already been called. [display.c]
     If the ioctl() returns 0 width or height, return this if allowed
     else use the current values if non-zero.  [display.c]
@@ -9933,3 +9933,10 @@ input.c
 Makefile
     Add a node to produce an etc.tar file for installs.
     Enable libbacktrace usage on FreeeBSD.
+
+etc/uemacs.hlp
+version.c
+version.h
+    Update to GGR4.200
+
+==========

@@ -8,8 +8,9 @@
 void version(void) {
     printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);
 #if defined(__clang_version__)
-    printf("Compiled on %s, by %s, on %s at %s\n",
-        xstr(BUILDER), __VERSION__, __DATE__, __TIME__);
+    printf("Compiled on %s, by Clang %d.%d.%d, on %s at %s\n",
+        xstr(BUILDER), __clang_major__, __clang_minor__, __clang_patchlevel__,
+        __DATE__, __TIME__);
 #elif defined(__GNUC__)
     printf("Compiled on %s, by GCC %s, on %s at %s\n",
         xstr(BUILDER), __VERSION__, __DATE__, __TIME__);
