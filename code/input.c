@@ -531,7 +531,7 @@ unicode_t tgetc(void) {
  * And we also want to check for any deferred signal waiting before we
  * wait.
  * If we test for a deferred signal before undeferring there is a (small)
- * gap betwene the two command running when a new SIGWINCH could arrive
+ * gap between the two command running when a new SIGWINCH could arrive
  * and be deferred.
  * BUT if we turn off deferring before we check for a waiting SIGWINCH
  * then we are allowing an async one to run whilst we are running the
@@ -584,9 +584,10 @@ unicode_t tgetc(void) {
         if (kbdmode == RECORD) {
             *kbdptr++ = c;
             if (kbdptr == &kbdm[n_kbdm - 1]) {  /* Don't overrun buffer */
-                n_kbdm += 256;
-                kbdm = Xrealloc(kbdm, (size_t)n_kbdm*sizeof(int));
+                int new_size = n_kbdm + 256;
+                kbdm = Xrealloc(kbdm, (size_t)new_size*sizeof(int));
                 kbdptr = &kbdm[n_kbdm - 1];     /* Might have moved */
+                n_kbdm = new_size;
             }
             kbdend = kbdptr;
         }

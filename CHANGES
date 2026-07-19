@@ -9949,3 +9949,6 @@ display.c
 
 main.c
     Tidy up multiplier code in multiplier_check().
+
+input.c
+    Fix the kbdptr setting on kbdm[] expansion.
