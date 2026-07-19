@@ -1919,6 +1919,8 @@ int quit(int f, int n) {
 /* ======================================================================
  * Fancy quit command, as implemented by Norm. If any buffer has changed
  * do a write on that buffer and exit uemacs, otherwise simply exit.
+ * NOTE that if this gets called from within a signal handler it may
+ * fail, but at least we tried...
  */
 int quickexit(int f, int n) {
     struct buffer *bp;      /* scanning pointer to buffers */
@@ -1939,7 +1941,8 @@ int quickexit(int f, int n) {
                 curbp = oldcb;              /* restore curbp */
                 sleep(1);
                 redraw(FALSE, 0);           /* Redraw - remove filenames */
-                return status;
+/* If we called quickexit(ABORT, ...) we do NOT want to return... */
+                if (f != ABORT) return status;
             }
         }
         bp = bp->b_bufp;            /* On to the next buffer */

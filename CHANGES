@@ -9952,3 +9952,8 @@ main.c
 
 input.c
     Fix the kbdptr setting on kbdm[] expansion.
+
+display.c
+main.c
+    Change quickexit() to never return if f == ABORT. [main.c]
+    Call quickexit() with ABORT in getscreensize() [display.c]

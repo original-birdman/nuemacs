@@ -1813,15 +1813,15 @@ void getscreensize(int *widthp, int *heightp, int zero_ok) {
 /* If this call fails, just exit */
         if (ioctl(1, TIOCGWINSZ, &size) < 0) {
             if (prev_mrow == 0) exit(errno);    /* vtinit() not yet run */
-            else quickexit(TRUE, errno);        /* vtinit() has run */
+            else quickexit(ABORT, errno);       /* vtinit() has run */
         }
 
 /* Claude/Fable reckons "transient" zeroes can arrive here, so
  * if we got 0, but had previously got an answer, use that and hope,
  * which is done by returning with widthp and heightp set to the
- * values currently set in currently in the term structure.
+ * values currently set in the term structure.
  * However, a call from tcapopen() in tcap.c uses termcap info
- * if it gets 0 back, so allow that too., via zero_ok.
+ * if it gets 0 back, so allow that too, via zero_ok.
  */
         *widthp = size.ws_col;
         *heightp = size.ws_row;
@@ -1834,7 +1834,7 @@ void getscreensize(int *widthp, int *heightp, int zero_ok) {
         }
 /* If we exit the loop we have unwanted zero(es).  Exit */
         if (prev_mrow == 0) exit(ENXIO);
-        else quickexit(TRUE, ENXIO);
+        else quickexit(ABORT, ENXIO);
     }
     return;
 }
