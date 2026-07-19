@@ -119,19 +119,23 @@ void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
 
 /* Delete n chars from buffer
  * If n chars takes you past the end of the buffer, just delete
- * to end of buffer.
+ * to end of buffer (i.e. truncate at n).
  * Acts on the asp value.
  */
 void _dbp_deleten_at(db *ds, int n, int offs) {
+    if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db deleten");
 /* Since we are deleting we must already have enough space
  * But we mustn't delete from before the "actual start pointer"
  */
-    if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db deleten");
     int end = n + offs;
-    if (end <= 0) illegal_dbaction("end overflow in deleten");
-    if (end > ds->alen)  n = ds->alen - offs;
-    int movers = ds->alen - end;
-    memmove(ds->asp+offs, ds->asp+offs+n, (size_t)movers);
+    if (end == 0) return;   /* n and offs are both 0 - a no-op */
+    if (end < 0) illegal_dbaction("end overflow in deleten");
+    if (end > ds->alen)  {
+        n = ds->alen - offs;    /* Nothing to move - just a truncate */
+    }
+    else {
+        memmove(ds->asp+offs, ds->asp+offs+n, (size_t)(ds->alen - end));
+    }
     ds->alen -= n;
     if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
     return;
@@ -142,11 +146,11 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
  * Acts on the asp value.
  */
 void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
-    if (n <= 0) return;     /* General case */
-/* We mustn't change anything from before the "actual start pointer". */
-
-    int end = n + offs;
-    if (end <= 0) illegal_dbaction("end overflow in deleten");
+    if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db overwriten");
+    if (n == 0) return;     /* Nothing to do */
+/* We mustn't change anything beyond the current end of data */
+    int end = n + offs;     /* Must be > 0, as n == 0 has returned */
+    if (end <= 0) illegal_dbaction("end overflow in overwriten");
     if (end > ds->alen) illegal_dbaction("Illegal db overwriten");
     memmove(ds->asp+offs, mp, (size_t)n);
     return;

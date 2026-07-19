@@ -9893,7 +9893,7 @@ estruct.h
     Call sigwinch_handler() not sigwin_dfr.hndlr_func() [exec.c, file.c,
     main.c
     Removed the deferred SIGWINCH check at the start and end of
-    getsrting() [input.c]
+    getstring() [input.c]
 
 
 line.c
@@ -9932,11 +9932,14 @@ input.c
 
 Makefile
     Add a node to produce an etc.tar file for installs.
-    Enable libbacktrace usage on FreeeBSD.
+    Enable libbacktrace usage on FreeBSD.
 
 etc/uemacs.hlp
 version.c
 version.h
     Update to GGR4.200
 
-==========
+========== GGR4.201
+
+dyn_buf.c
+    Improve argument checking in _dbp_deleten_at() and _dbp_overwriten_at().
