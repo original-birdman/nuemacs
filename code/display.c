@@ -1833,8 +1833,8 @@ void getscreensize(int *widthp, int *heightp, int zero_ok) {
             if (*heightp == 0) *heightp = term.t_nrow;
         }
 /* If we exit the loop we have unwanted zero(es).  Exit */
-        if (prev_mrow == 0) exit(errno);
-        else quickexit(TRUE, errno);
+        if (prev_mrow == 0) exit(ENXIO);
+        else quickexit(TRUE, ENXIO);
     }
     return;
 }

@@ -9943,3 +9943,6 @@ version.h
 
 dyn_buf.c
     Improve argument checking in _dbp_deleten_at() and _dbp_overwriten_at().
+
+display.c
+    Set exit code to ENXIO in getscreensize() as errno is 0.
