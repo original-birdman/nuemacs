@@ -875,7 +875,7 @@ com_arg *multiplier_check(int c) {
 #endif
             }
             if ((ca.n == 0) && (mflag == -1))  /* lonely - */
-                mlwrite_one("Arg:");
+                mlwrite("Arg: %s", (mflag == -1)? " -": "");
             else
                 mlwrite("Arg: %d", ca.n * mflag);
 
@@ -901,15 +901,13 @@ com_arg *multiplier_check(int c) {
  */
 #if defined(__clang__) || __GNUC__ >= 5
                 int res1;
-                int oflw = 0;
-                if (__builtin_mul_overflow(ca.n, 4, &res1)) oflw = 1;
-                if (oflw) {
+                if (__builtin_mul_overflow(ca.n, 4, &res1)) {
                     mlwrite_one("Overflow!");
                     sleep(1);
                     ca.n = 1;
                 }
                 else {
-                    ca.n = ca.n * 4;
+                    ca.n = res1;
                 }
 #else
 /* The original code */

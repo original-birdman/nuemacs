@@ -9946,3 +9946,6 @@ dyn_buf.c
 
 display.c
     Set exit code to ENXIO in getscreensize() as errno is 0.
+
+main.c
+    Tidy up multiplier code in multiplier_check().
