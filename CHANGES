@@ -9957,3 +9957,6 @@ display.c
 main.c
     Change quickexit() to never return if f == ABORT. [main.c]
     Call quickexit() with ABORT in getscreensize() [display.c]
+
+etc/uemacs.rc
+    Correct the location of variable deletion in file-hooks.
