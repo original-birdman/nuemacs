@@ -9963,3 +9963,7 @@ etc/uemacs.rc
 
 Makefile
     Use gtar on Solaris for etc.tar node.
+
+dyn_buf.c
+main.c
+    Remove db_init(), as it is no longer used.
