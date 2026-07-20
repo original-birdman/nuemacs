@@ -9960,3 +9960,6 @@ main.c
 
 etc/uemacs.rc
     Correct the location of variable deletion in file-hooks.
+
+Makefile
+    Use gtar on Solaris for etc.tar node.

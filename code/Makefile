@@ -260,6 +260,9 @@ endif
 #
 MYCC = gcc
 
+# Assume GNU tar by default
+TAR=tar
+
 # Linux
 #
 ifeq ($(uname_S),Linux)
@@ -283,6 +286,7 @@ else ifeq ($(uname_S),Darwin)
 #
 else ifeq ($(uname_S),SunOS)
  DEFINES=-D__EXTENSIONS__ -DSYS_TERMIOS_H
+ TAR=gtar
  ifneq ($(strip $(STANDALONE)),)
     .DEFAULT_GOAL := no_STANDALONE
  endif
@@ -388,7 +392,7 @@ vgstrip:
 	$(Q) ${CC} ${CFLAGS} ${DEFINES} -c $*.c
 
 etc.tar: etc/*
-	tar --owner=0 --group=0 -cvf etc.tar etc/*
+	$(TAR) --owner=0 --group=0 -cvf etc.tar etc/*
 
 
 # Add STAT_LIB and BUILDER definitions for version.c
