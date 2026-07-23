@@ -9967,3 +9967,29 @@ Makefile
 dyn_buf.c
 main.c
     Remove db_init(), as it is no longer used.
+
+basic.c
+bind.c
+buffer.c
+crypt.c
+display.c
+dyn_buf.c
+eval.c
+exec.c
+file.c
+globals.c
+input.c
+isearch.c
+line.c
+main.c
+random.c
+search.c
+spawn.c
+utf8.c
+word.c
+dyn_buf.h
+    Remove the db_buf and db_str distinction.
+    Always append an NUL and make the str/buf distinction be based on
+    caller's actual usage of the data.
+    Change _dbp_setcharat() to write any char (byte) without changing
+    the length, even if it is a NUL. [dyn_buf.c]

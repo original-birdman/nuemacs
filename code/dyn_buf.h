@@ -11,27 +11,23 @@
  * The enum values are specifically set, as it reflects the additional
  * buffer size required beyond the valid stored bytes.
  */
-#define DB_BUF 0x00
-#define DB_STR 0x01
-#define DB_UPS 0x02
+#define DB_UPS 0x01
 
 typedef struct {
     char *buf;      /* The (NUL-terminated) string/buffer */
     char *asp;      /* The "actual start pointer" (may be beyond buf) */
     size_t alloc;   /* What we've allocated */
     int alen;       /* The actual length from asp (no trailing NUL) */
-    int type;       /* Set of flags */
+    int flags;      /* Set of flags */
 } db;
 
 /* We need to define these (globally, or statically in a file body)
  * So we also need to be able to declare the global ones in other
  * files.
  */
-#define db_buf_initval { NULL, NULL, 0, 0, DB_BUF }
-#define db_str_initval { NULL, NULL, 0, 0, DB_STR }
-#define db_upstr_initval { NULL, NULL, 0, 0, DB_STR|DB_UPS }
+#define db_buf_initval { NULL, NULL, 0, 0, 0 }
+#define db_upstr_initval { NULL, NULL, 0, 0, DB_UPS }
 #define db_bufdef(a) db (a) = db_buf_initval
-#define db_strdef(a) db (a) = db_str_initval
 #define db_upstrdef(a) db (a) = db_upstr_initval
 #define db_dcl(a) db (a)
 #define dbp_dcl(a) db (*a)

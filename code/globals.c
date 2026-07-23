@@ -93,9 +93,9 @@ struct buffer *blistp = NULL;   /* Buffer for C-X C-B           */
 struct buffer *bdbgp;           /* Buffer for macro debug info  */
 
 /* GGR - Add one to these three to allow for trailing NULs      */
-db_strdef(pat);                    /* Search pattern               */
-db_strdef(tap);                    /* Reversed pattern array.      */
-db_strdef(rpat);                   /* replacement pattern          */
+db_bufdef(pat);                    /* Search pattern               */
+db_bufdef(tap);                    /* Reversed pattern array.      */
+db_bufdef(rpat);                   /* replacement pattern          */
 
 struct line *fline;             /* dynamic return line */
 
@@ -121,7 +121,7 @@ int  allow_current   = 0;
 unicode_t *eos_list  = NULL;
 int  inmb            = FALSE;
 int  pathexpand      = TRUE;
-db_strdef(savnam);
+db_bufdef(savnam);
 int do_savnam        = 1;
 
 int  silent          = FALSE;
@@ -172,7 +172,7 @@ int autoclean = 7;
 char regionlist_text[MAX_REGL_LEN] = " o ";
 char regionlist_number[MAX_REGL_LEN] = " %2d. ";
 
-db_strdef(readin_mesg);
+db_bufdef(readin_mesg);
 
 int running_function = 0;
 const char *current_command = NULL;
@@ -235,7 +235,7 @@ char *dump_message = NULL;
  * Must NOT be used in calls to a function which might use it itself!!!
  * Must be db_free()d in quit() in main.c. when FREE is set.
  */
-db_strdef(glb_db);
+db_bufdef(glb_db);
 
 /* Index info for binary chop indexes */
 

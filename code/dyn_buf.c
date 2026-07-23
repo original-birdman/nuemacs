@@ -56,13 +56,12 @@ const char *_dbp_val_nc(db *ds) {
  */
 void _dbp_setn(db *ds, const void *mp, int n) {
     if (!mp && (n == 0)) mp = "";
-    size_t need = (size_t)n;
-    if (ds->type & DB_STR) need++;
+    size_t need = (size_t)n + 1;    /* Always append a NUL */
     if (need > ds->alloc) _dbp_realloc(ds, need);
     memcpy(ds->buf, mp, (size_t)n);
     ds->alen = n;
     ds->asp = ds->buf;
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
@@ -83,8 +82,7 @@ static void _dbp_ri_at(db *ds, const char *cp, int n, int offs,
     int movers = ds->alen - offs;
     if ((movers < 0) || (offs < 0))
          illegal_dbaction("Illegal db replicatech/insertn");
-    size_t need = (size_t)((ds->asp - ds->buf) + ds->alen + n);
-    if (ds->type & DB_STR) need++;
+    size_t need = (size_t)((ds->asp - ds->buf) + ds->alen + n) + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     memmove(ds->asp+offs+n, ds->asp+offs, (size_t)movers);
     if (method == DBP_REPLICATE)
@@ -92,7 +90,7 @@ static void _dbp_ri_at(db *ds, const char *cp, int n, int offs,
     else        /* DBP_INSERTN */
         memcpy(ds->asp+offs, cp, (size_t)n);
     ds->alen += n;
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
@@ -130,7 +128,7 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
         memmove(ds->asp+offs, ds->asp+offs+n, (size_t)(ds->alen - end));
     }
     ds->alen -= n;
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
@@ -158,13 +156,12 @@ void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
 void _dbp_retailstr_at(db *ds, const char *ntail, int offs) {
 
     size_t tlen = strlen(ntail);
-    size_t need = tlen + (size_t)offs;
-    if (ds->type & DB_STR) need++;
+    size_t need = tlen + (size_t)offs + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
     memmove(ds->asp+offs, ntail, tlen);
     ds->alen = offs + (int)tlen;
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
@@ -173,36 +170,34 @@ void _dbp_retailstr_at(db *ds, const char *ntail, int offs) {
  */
 
 void _dbp_bufset(db *ds, const char ch, int n) {
-    size_t need = (size_t)n;
-    if (ds->type & DB_STR) need++;
+    size_t need = (size_t)n + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     ds->asp = ds->buf;
     ds->alen = n;
     memset(ds->asp, ch, (size_t)n);
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
 /* Clear a value.
- * Set the length to 0 and, for DB_STR, if val is allocated ensure byte 0 is 0.
+ * Set the length to 0 and, if buf is allocated, ensure byte 0 is 0.
  * Sets asp == buf.
  */
 void _dbp_clear(db *ds) {
     ds->alen = 0;
     ds->asp = ds->buf;
-    if ((ds->buf) && (ds->type & DB_STR)) *(ds->asp) = '\0';
+    if (ds->buf) *(ds->asp) = '\0';
     return;
 }
 
-/* Truncate a value.
- * If this is a DB_STR buffer, append a NUL.
+/* Truncate a value, appending a NUL.
  * We do not need any more space for this.
  * Acts on the asp value.
  */
 void _dbp_truncate(db *ds, int n) {
     if ((n < 0) || (n > ds->alen)) illegal_dbaction("Illegal db truncate");
     ds->alen = n;
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
@@ -219,7 +214,7 @@ void _dbp_uctruncate(db *ds, int n) {
     }
 /* We mustn't change anything from before the "actual start pointer". */
     ds->alen = bpos;
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
@@ -229,15 +224,14 @@ void _dbp_uctruncate(db *ds, int n) {
  */
 void _dbp_appendn(db *ds, const char *str, int n) {
     if (!str && (n == 0)) str = "";
-    size_t need = (size_t)(ds->alen + n);
-    if (ds->type & DB_STR) need++;
+    size_t need = (size_t)(ds->alen + n) + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* Append n chars, set length and terminate if needed */
 
     memcpy(ds->asp + ds->alen, str, (size_t)n);
     ds->alen += n;
-    if (ds->type & DB_STR) *(ds->asp+ds->alen) = '\0';
+    *(ds->asp+ds->alen) = '\0';
     return;
 }
 
@@ -254,8 +248,7 @@ void _dbp_append(db *ds, const char *str) {
  * Acts on the asp value.
  */
 void _dbp_addch(db *ds, const char ch) {
-    size_t need = (size_t)(ds->alen + 1);
-    if (ds->type & DB_STR) need++;
+    size_t need = (size_t)(ds->alen + 2);   /* 2 for new char + NUL */
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* We know the destination length, so just drop the new char at the end. */
@@ -263,7 +256,7 @@ void _dbp_addch(db *ds, const char ch) {
     char *eloc = ds->asp + ds->alen;
     *eloc = ch;
     ds->alen++;
-    if (ds->type & DB_STR) *(++eloc) = '\0';
+    *(++eloc) = '\0';
     return;
 }
 
@@ -276,30 +269,26 @@ char _dbp_charat(db *ds, int w) {
 }
 
 /* Set char at offset (0-based)
- * This DOES NOT APPEND ANY NUL - it assumes it is already there if needed.
- * It DOES set the len iff we put a NUL into a DB_STR type.
+ * This DOES NOT APPEND ANY NUL - it assumes it is already there.
+ * It DOES NOT change alen, even if you set a NUL.
  * Acts on the asp value.
  */
 void _dbp_setcharat(db *ds, int w, char c) {
-/* We are allowed to overwrite the trailing NUL with a NUL in a DB_STR db */
-    int tadj = ((c == '\0') && (ds->type & DB_STR))? 1: 0;
-    if (w >= (ds->alen + tadj)) illegal_dbaction("Illegal db setcharat");
+/* We can only overwrite data that is already there */
+    if ((w < 0) || (w >= ds->alen)) illegal_dbaction("Illegal db setcharat");
     *(ds->asp + w) = c;
-/* If we've written a NUL, change the stored length */
-    if ((ds->type & DB_STR) && (c == '\0')) {
-        ds->alen = w;
-    }
     return;
 }
 
 /* Update the actual string pointer and, from it, the length left.
  * ONLY for UPS buffers.
+ * For use in code where a function grabs successive tokens .
  * This does not change anything in the buffer.
  * Must be updated to a valid value within the buffer.
  * Acts on the asp value.
  */
 void _dbp_upval(db *ds, const char *np) {
-    if (!(ds->type & DB_UPS) || (np < ds->buf) || (np > ds->asp + ds->alen)) {
+    if (!(ds->flags & DB_UPS) || (np < ds->buf) || (np > ds->asp + ds->alen)) {
         illegal_dbaction("Illegal db upval");
     }
     ds->alen -= (int)(np - ds->asp);    /* Decrease by how much ptr moves */

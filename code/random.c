@@ -609,7 +609,7 @@ static int cinsert(void) {
 
 /* Save the indent of the previous line */
     i = 0;
-    db_strdef(ichar);  /* buffer to hold indent of last line */
+    db_bufdef(ichar);  /* buffer to hold indent of last line */
     while ((i < tptr) && (cptr[i] == ' ' || cptr[i] == '\t')) {
         db_addch(ichar, cptr[i]);
         ++i;
@@ -898,7 +898,7 @@ static int adjustmode(int kind, int global) {
     int uflag;      /* was modename uppercase?      */
 #endif
     char prompt[50];    /* string to prompt user with */
-    db_strdef(cbuf);    /* buffer to recieve mode name into */
+    db_bufdef(cbuf);    /* buffer to recieve mode name into */
 
 /* Build the proper prompt string */
     sprintf(prompt, "%sode to %s: ", (global)? "Global m": "M",
@@ -1029,7 +1029,7 @@ int clrmes(int f, int n) {
 int writemsg(int f, int n) {
     UNUSED(f);
     int status;
-    db_strdef(buf);     /* buffer to receive message into */
+    db_bufdef(buf);     /* buffer to receive message into */
 
     if ((status =
      mlreply("Message to write: ", &buf, CMPLT_NONE)) != TRUE)
@@ -1055,8 +1055,8 @@ static int string_getter(int f, int n, enum istr_type call_type) {
     int status;             /* status return code */
     const char *prompt;
 
-    db_strdef(tstring);     /* string to add */
-    db_strdef(tok);
+    db_bufdef(tstring);     /* string to add */
+    db_bufdef(tok);
 
 /* Ask for string to insert, using the requested function.
  * If we are reading a macro just use the rest of the line (execstr).
@@ -1079,7 +1079,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
     db_clear(tstring);
     if (call_type == COOKED_STR) {
         const char *vp;
-        db_strdef(tbuf);
+        db_bufdef(tbuf);
         while(dbp_len(execstr) > 0) {
             token(execstr, &tok);
             if (db_len(tok) == 0) break;
@@ -1164,7 +1164,7 @@ int istring(int f, int n) {
  */
 int ovstring(int f, int n) {
     int status;     /* status return code */
-    db_strdef(tstring); /* string to add */
+    db_bufdef(tstring); /* string to add */
 
 /* Ask for string to insert */
     status = mlreply("String to overwrite: ", &tstring, CMPLT_NONE);
@@ -1297,7 +1297,7 @@ int re_args_exec(int f, int n) {
     int status;
 
     db_upstrdef(buf);
-    db_strdef(tok);
+    db_bufdef(tok);
 
     status = mlreply("exec set: ", &buf, CMPLT_NONE);
     if (status != TRUE) goto exit;  /* Only act on +ve response */
@@ -1377,7 +1377,7 @@ int open_parent(int f, int n) {
 int simulate(int f, int n) {
     UNUSED(f); UNUSED(n);
 
-    db_strdef(input);
+    db_bufdef(input);
 
 /* Grab the next token and advance past */
 

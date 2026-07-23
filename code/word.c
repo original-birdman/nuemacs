@@ -729,13 +729,13 @@ int wrapword(int f, int n) {
  * int f, n;            arguments ignored
  */
 static int n_eos = 0;
-static db_strdef(eos_str);       /* String given by user */
+static db_bufdef(eos_str);       /* String given by user */
 int eos_chars(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
 
-    db_strdef(prompt);
-    db_strdef(buf);
+    db_bufdef(prompt);
+    db_bufdef(buf);
 
     if (n_eos == 0) db_set(eos_str, "none"); /* Clearer for user? */
     db_sprintf(prompt,

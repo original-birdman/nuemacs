@@ -247,7 +247,7 @@ int backline(int f, int n) {
  */
 int gotoline(int f, int n) {
     int status;
-    db_strdef(arg);  /* Buffer to hold argument. */
+    db_bufdef(arg);  /* Buffer to hold argument. */
 
 /* Get an argument if one doesn't exist. */
     if (f == FALSE) {

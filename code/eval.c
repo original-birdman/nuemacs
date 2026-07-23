@@ -97,7 +97,7 @@ char *uvnames[MAXVARS+1];
  * We need one more than MAXVARS to keep an empty sentinel value at the
  * end of the list for sort_user_var(uvnames) and del_simple_var (uv)  code.
  */
-static db new_db = db_str_initval;
+static db new_db = db_buf_initval;
 static struct simple_variable uv[MAXVARS+1];
 
 /* Initialize the user variable list.
@@ -424,7 +424,7 @@ struct map_table {
     int to_len;
 };
 
-static db_strdef(xlres);
+static db_bufdef(xlres);
 static const char *xlat(const char *source, const char *lookup,
      const char *trans) {
 
@@ -545,7 +545,7 @@ free_and_exit:
  * Meant for use by test scripts, but might have other uses as
  * a lookup method?
  */
-static db_strdef(pttres);
+static db_bufdef(pttres);
 static const char *ptt_expand(db *str) {
     struct buffer *bp;
 
@@ -604,9 +604,9 @@ static const char *ptt_expand(db *str) {
     return db_val(pttres);
 }
 
-static db_strdef(tfmt);
-static db_strdef(tres);
-static db_strdef(atoken);
+static db_bufdef(tfmt);
+static db_bufdef(tres);
+static db_bufdef(atoken);
 static void dbp_uesprintf(dbp_dcl(ds), dbp_dcl(tmpl), ...) {
     unicode_t c;                /* current char in format string */
 
@@ -739,9 +739,9 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     int fnum;               /* index to function to eval */
     int status;             /* status */
     const char *tsp;        /* Temporary string pointer */
-    db_strdef(arg1);        /* Value of first argument */
-    db_strdef(arg2);        /* Value of second argument */
-    db_strdef(arg3);        /* Value of third argument */
+    db_bufdef(arg1);        /* Value of first argument */
+    db_bufdef(arg2);        /* Value of second argument */
+    db_bufdef(arg3);        /* Value of third argument */
     const char *retval;     /* Value to return */
     struct mstr csinfo;     /* Casing info structure */
     ue64I_t int1, int2 = 0;
@@ -1404,7 +1404,7 @@ int gettyp(const char *token) {
  *
  * char *token;         token to evaluate
  */
-static db_strdef(valres);       /* static temporary val */
+static db_bufdef(valres);       /* static temporary val */
 
 /* Incoming token is a dyn_buf, so that strings may contan NULs */
 
@@ -1420,7 +1420,7 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
 
     db_dcl(tok1);
     tok1 = *token;
-    tok1.type = DB_STR|DB_UPS;  /* Make the val ptr updateable */
+    tok1.flags |= DB_UPS;   /* Make the val ptr updateable */
     db_upval(tok1, db_val(tok1)+1);
 
     switch (gettyp(dbp_val(token))) {   /* First char won't be NUL */
@@ -1598,7 +1598,7 @@ fvar:
     }
     case '&': {         /* A function to generate the name? */
         db_set(valres, var);
-        db_strdef(tbuf);
+        db_bufdef(tbuf);
         getval(&valres, &tbuf);
         var = db_val(tbuf);
         db_free(tbuf);
@@ -1974,8 +1974,8 @@ int setvar(int f, int n) {
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
 
-    db_strdef(var);         /* name of variable to set */
-    db_strdef(varval);      /* value to set */
+    db_bufdef(var);         /* name of variable to set */
+    db_bufdef(varval);      /* value to set */
 
 /* First get the variable to set.. */
     if (clexec == FALSE) {
@@ -2078,7 +2078,7 @@ int delvar(int f, int n) {
     int status;                     /* status return */
     struct variable_description vd; /* variable num/type */
 
-    db_strdef(var);         /* Variable to delete */
+    db_bufdef(var);         /* Variable to delete */
 
 /* First get the variable to delete.. */
     if (clexec == FALSE) {

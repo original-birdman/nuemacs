@@ -1153,8 +1153,8 @@ static void upddex(void) {
  * display, so we need to know which we are looking at.
  */
 
-static db_strdef(last_display);
-static db_strdef(last_bname);
+static db_bufdef(last_display);
+static db_bufdef(last_bname);
 static int last_width = -1;
 static struct buffer *last_bp = NULL;
 

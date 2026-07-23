@@ -378,9 +378,9 @@ void init_search_ringbuffers(void) {
  * update_ring() expects this.
  */
     for (int ix = 0; ix < RING_SIZE; ix++) {
-        srch_txt[ix] = (db) db_str_initval;
+        srch_txt[ix] = (db) db_buf_initval;
         db_set(srch_txt[ix], "");
-        repl_txt[ix] = (db) db_str_initval;
+        repl_txt[ix] = (db) db_buf_initval;
         db_set(repl_txt[ix], "");
     }
 
@@ -451,7 +451,7 @@ static void update_ring(dbp_dcl(str)) {
  * char *newstr;                string to expand
  *  returns the expanded text in a dynamic buffer
  */
-static db_strdef(expbuf);
+static db_bufdef(expbuf);
 static db *expandp(db *newstr) {
     char c;                 /* current char to translate */
 
@@ -598,7 +598,7 @@ static char *clearbits(void) {
  * Since this returns the result in a static buffer the caller
  * must use this before calling here again.
  */
-static db_strdef(btbuf);
+static db_bufdef(btbuf);
 static db *brace_text(char *fp) {
     int escaping = 0;
     int level = 0;
@@ -2149,7 +2149,7 @@ void setpattern(db *apat, db *tap) {
  */
 static int readpattern(const char *prompt, db *apat, int srch) {
     int status;
-    db_strdef(tpat);
+    db_bufdef(tpat);
 
     char saved_base[MAX_PROMPT];    /* Same size as current_base */
 
@@ -3196,7 +3196,7 @@ int forwsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible) we will have a pattern to use.
  */
-        db_strdef(opat);
+        db_bufdef(opat);
         int could_hunt = srch_can_hunt;
         db_set(opat, db_val_nc(pat));
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
@@ -3312,7 +3312,7 @@ int backsearch(int f, int n) {
 /* Ask the user for the text of a pattern.  If the response is TRUE
  * (responses other than FALSE are possible), we will have a pattern to use.
  */
-        db_strdef(opat);
+        db_bufdef(opat);
         int could_hunt = srch_can_hunt;
         db_set(opat, db_val_nc(pat));
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
@@ -3425,7 +3425,7 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
 /* Work out the replacement text for the current match.
  * The working buffer is never freed - only grows as needed.
  */
-static db_strdef(repl);
+static db_bufdef(repl);
 
 static const char *getrepl(void) {
 
@@ -3471,7 +3471,7 @@ static const char *getrepl(void) {
             break;
         }
         case REPL_FNC: {
-            db_strdef(fnc_buf);
+            db_bufdef(fnc_buf);
             db_set(fnc_buf, "");   /* Start with nothing */
             for (struct func_call *fcp = rmcptr->val.fc; fcp->type != EOL;
                     fcp = fcp->next) {
@@ -3494,7 +3494,7 @@ static const char *getrepl(void) {
  * command-line text and return the resulting string
  * We have a function to do that...
  */
-            db_strdef(result);
+            db_bufdef(result);
             evaluate_cmdb(db_val(fnc_buf), &result);
             db_free(fnc_buf);
             db_append(repl, db_val(result));
@@ -3701,7 +3701,7 @@ pprompt:
 /* We need to take a copy of one expandp() result, as it uses
  * a static buffer for its results.
  */
-            db_strdef(tp);
+            db_bufdef(tp);
             db_set(tp, match_p);
             dbp_dcl(ep) = expandp(&tp);
             char *rt = strdupa(dbp_val(ep));

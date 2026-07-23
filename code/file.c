@@ -52,7 +52,7 @@
 
 /* fixup_fname
  */
-static db_strdef(fn_expd);
+static db_bufdef(fn_expd);
 
 /* Allocate an array for remembering /s and add the code for . and .. */
 
@@ -77,7 +77,7 @@ const char *fixup_fname(const char *fn) {
 /* Start with a temporary value, so we can run the "multiple consecutive"
  * check into the result buffer.
  */
-    db_strdef(tfn);
+    db_bufdef(tfn);
 
 /* Look for a ~ at the start. */
 
@@ -240,7 +240,7 @@ FU_exit:
  * fixup_full
  */
 const char *fixup_full(const char *fn) {
-    db_strdef(l_fn_expd);
+    db_bufdef(l_fn_expd);
 
 /* If the filename doesn't start with '/' or '~' we prepend "$PWD/".
  * Then we call fixup_fname() to do what it can do, which includes
@@ -263,7 +263,7 @@ const char *fixup_full(const char *fn) {
 /* get_uniqpath
  * This can generate a shortened name.
  */
-static db_strdef(rp_res);
+static db_bufdef(rp_res);
 
 /* Two INTERNAL markers so that set_buffer_filenames() can call here
  * twice to get short and full names, without calling realpath() twice.
@@ -725,7 +725,7 @@ out:
 int fileread(int f, int n) {
     UNUSED(f); UNUSED(n);
     int s;
-    db_strdef(fname);
+    db_bufdef(fname);
 
     if (restflag)           /* don't allow this command if restricted */
         return resterr();
@@ -822,7 +822,7 @@ int insfile(int f, int n) {
     if (curbp->b_mode & MDVIEW) /* don't allow this command if */
         return rdonly();        /* we are in read only mode */
 
-    db_strdef(fname);
+    db_bufdef(fname);
     if ((s = mlreply("Insert file: ", &fname, CMPLT_FILE)) != TRUE)
         goto exit;
 
@@ -942,7 +942,7 @@ int getfile(const char *fname, int lockfl, int check_dir) {
     int s;
     char *lfn;          /* Don't overwrite callers version */
 
-    db_strdef(bname);      /* buffer name to put file */
+    db_bufdef(bname);      /* buffer name to put file */
 
     lfn = strdupa(fixup_fname(fname));
 
@@ -1030,7 +1030,7 @@ int filefind(int f, int n) {
     if (restflag)           /* don't allow this command if restricted */
         return resterr();
 
-    db_strdef(fname);          /* file user wishes to find */
+    db_bufdef(fname);          /* file user wishes to find */
     if ((s = mlreply("Find file: ", &fname, CMPLT_FILE)) != TRUE) {
         goto exit;
     }
@@ -1049,7 +1049,7 @@ int viewfile(int f, int n) {    /* Visit a file in VIEW mode */
 
     if (restflag)               /* Don't allow this command if restricted */
         return resterr();
-    db_strdef(fname);              /* File user wishes to find */
+    db_bufdef(fname);              /* File user wishes to find */
     if ((s = mlreply("View file: ", &fname, CMPLT_FILE)) != TRUE)
         goto exit;
     run_filehooks = 1;          /* Set flag */
@@ -1124,7 +1124,7 @@ int filewrite(int f, int n) {
 
     if (restflag)           /* Don't allow this command if restricted */
         return resterr();
-    db_strdef(fname);
+    db_bufdef(fname);
     if ((s = mlreply("Write file: ", &fname, CMPLT_FILE)) != TRUE)
         goto exit;
     if ((s = writeout(db_val(fname))) == TRUE) {
@@ -1202,7 +1202,7 @@ int filename(int f, int n) {
     if (restflag)           /* Don't allow this command if restricted */
         return resterr();
 
-    db_strdef(fname);
+    db_bufdef(fname);
     if ((s = mlreply("Name: ", &fname, CMPLT_FILE)) == ABORT)
         goto exit;
     set_buffer_filenames(curbp, (s == FALSE)? "": db_val(fname));

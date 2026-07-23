@@ -310,7 +310,7 @@ int usebuffer(int f, int n) {
     int s;
     const char *fbuf;
 
-    db_strdef(bufn);
+    db_bufdef(bufn);
 
     if (f) fbuf = db_val(savnam);
     else {
@@ -377,7 +377,7 @@ int killbuffer(int f, int n) {
     struct buffer *bp;
     int s;
 
-    db_strdef(bufn);
+    db_bufdef(bufn);
 
     if ((s = mlreply("Kill buffer: ", &bufn, CMPLT_BUF)) != TRUE)
         goto exit;
@@ -414,7 +414,7 @@ int namebuffer(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
 
-    db_strdef(bufn);
+    db_bufdef(bufn);
 /* Prompt for and get the new buffer name */
 ask:
     if (mlreply("Change buffer name to: ", &bufn, CMPLT_BUF) != TRUE) {
@@ -459,7 +459,7 @@ void addline_to_anyb(dbp_dcl(dbtext), struct buffer *bp) {
         bp->b.dotp = lp;                /* to new line (doto will be 0)  */
     return;
 }
-static db_strdef(addbuf);
+static db_bufdef(addbuf);
 void addstr_to_anyb(const char *instr, struct buffer *bp) {
     db_set(addbuf, instr);
     addline_to_anyb(&addbuf, bp);
@@ -488,7 +488,7 @@ int makelist(int iflag) {
     ue64I_t nbytes;     /* # of bytes in current buffer */
     int mcheck;
 
-    db_strdef(line);
+    db_bufdef(line);
 
     blistp->b_flag &= ~BFCHG;           /* Don't complain!      */
     if ((s = bclear(blistp)) != TRUE)   /* Blow old text away   */
@@ -751,7 +751,7 @@ char do_force_mode(const char *opt) {    /* Returns 0 if all OK */
 }
 int setforcemode(int f, int n) {
     UNUSED(f); UNUSED(n);
-    db_strdef(cbuf);
+    db_bufdef(cbuf);
 
 /* Prompt the user and get an answer */
 

@@ -61,7 +61,7 @@ static struct cmpl_info {
     int found;          /* -1 (error), 0, 1 or > 1 */
     int choices_max;    /* In columns, not chars */
     int full;
-} res = { db_str_initval, db_str_initval, db_str_initval, 0, 0, 0 };
+} res = { db_buf_initval, db_buf_initval, db_buf_initval, 0, 0, 0 };
 
 /* The 4 cmplt_* routines cannot run at the same time, so
  * declare some control information to be static and initialize
@@ -129,7 +129,7 @@ static int update_prompts(const char *np) {
 
 /* Entry point for filename completion
  */
-static db_strdef(dirmark);
+static db_bufdef(dirmark);
 #include <libgen.h>
 static void cmplt_file(db *name) {
     int allents = 0;
@@ -187,7 +187,7 @@ static void cmplt_file(db *name) {
 
 /* Canonicalize what we have. */
 
-    db_strdef(lookat);
+    db_bufdef(lookat);
     db_set(lookat, fixup_fname(dbp_val(name)));
 
 /* Did the user say this was a directory?
@@ -330,7 +330,7 @@ static void cmplt_name_or_var(db *name, enum cmplt_type ctype) {
     }
 
     int (*nvar_get)(int);
-    db_strdef(vn);      /* We have to prepend $ or % for update_prompts() */
+    db_bufdef(vn);      /* We have to prepend $ or % for update_prompts() */
 
 /* The environment variable and function names are sorted by index, so
  * we can use a binary chop to find out where to start for the linear
@@ -659,7 +659,7 @@ int mlreply(const char *prompt, db *buf, enum cmplt_type ctype) {
 struct name_bind *getname(const char *prompt, int new_command) {
     struct name_bind *nbp = NULL;
 
-    db_strdef(buf);
+    db_bufdef(buf);
 
 /* First get the name... */
     if (clexec == FALSE) {
@@ -886,7 +886,7 @@ void evaluate_cmdb(const char *input, db *result) {
     db_set(nexecstr, input);    /* Updateable copy */
     execstr = &nexecstr;;
     clexec = TRUE;
-    db_strdef(temp);
+    db_bufdef(temp);
     while(dbp_len(execstr) > 0) {
         (void)nextarg("", &temp, 0);
         dbp_append(result, sep);
@@ -915,8 +915,8 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     int savdoto;
     int prolen;
 
-    db_strdef(procopy);
-    db_strdef(tstring);
+    db_bufdef(procopy);
+    db_bufdef(tstring);
 
 /* We are about to enter the minibuffer, so all com_flags must
  * be turned off.

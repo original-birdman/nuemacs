@@ -32,7 +32,7 @@ static int macro_level = 0;
 static char *prev_line_seen = NULL;
 
 /* A static buffer for dyn_buf call wrapping. Freed in free_exec() */
-static db_strdef(abuf);
+static db_bufdef(abuf);
 
 #ifdef DO_FREE
 /* We only need these for valgrind testing */
@@ -170,7 +170,7 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
  * But we must allow for buffers containing NULs!
  * We CANNOT use abuf here!
  */
-    db_strdef(tbuf);
+    db_bufdef(tbuf);
     getval(buffer, &tbuf);
     dbp_setn(buffer, db_val(tbuf), db_len(tbuf));
     db_free(tbuf);
@@ -209,7 +209,7 @@ static int docmd(const char *cline) {
     int n;                  /* numeric repeat value */
     int status;             /* return status of function */
     int oldcle;             /* old contents of clexec flag */
-    db_strdef(tkn);         /* next token off of command line */
+    db_bufdef(tkn);         /* next token off of command line */
 
 /* If we are scanning and not executing..go back here */
     if (execlevel) return TRUE;
@@ -400,7 +400,7 @@ int namedcmd(int f, int n) {
 
 /* Buffer name for reexecute - shared by all command-callers */
 
-static db_strdef(prev_cmd);
+static db_bufdef(prev_cmd);
 
 /* execcmd:
  *      Execute a command line command to be typed in
@@ -411,7 +411,7 @@ static db_strdef(prev_cmd);
 int execcmd(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
-    db_strdef(thecmd);      /* string holding command to execute */
+    db_bufdef(thecmd);      /* string holding command to execute */
 
 /* Re-use last obtained command? */
     if (inreex && (db_charat(prev_cmd, 0) != '\0') && RXARG(execcmd))
@@ -522,8 +522,8 @@ static int ptt_compile(struct buffer *bp) {
     const char *ml_display_code;
 
     db_upstrdef(lbuf);
-    db_strdef(tok);
-    db_strdef(from_string);
+    db_bufdef(tok);
+    db_bufdef(from_string);
 
 /* Free up any previously-compiled table and get a default display code */
 
@@ -679,8 +679,8 @@ struct func_opts null_func_opts = { 0, 0, 0, 0, 0, 0 };
 int storeproc(int f, int n) {
     struct buffer *bp;      /* pointer to macro buffer */
     int status;             /* return status */
-    db_strdef(bufn);        /* name of buffer to use */
-    db_strdef(pbufn);       /* name of proc buf to use */
+    db_bufdef(bufn);        /* name of buffer to use */
+    db_bufdef(pbufn);       /* name of proc buf to use */
 
 #ifdef NUMBERED_MACROS
 /* A numeric argument means its a numbered macro */
@@ -707,7 +707,7 @@ int storeproc(int f, int n) {
 /* Add any options */
 
     bp->btp_opt = null_func_opts;
-    db_strdef(optstr);
+    db_bufdef(optstr);
     while (1) {
         mlreply("opts: ", &optstr, CMPLT_BUF);
         if (db_charat(optstr, 0) == '\0') break;
@@ -769,8 +769,8 @@ int set_pttable(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
     struct buffer *bp;
-    db_strdef(pttbuf);
-    db_strdef(pbufn);
+    db_bufdef(pttbuf);
+    db_bufdef(pbufn);
 
 /* As soon as a table is defined ptt gets set, so if it isn't
  * we know that there are no translation tables.
@@ -1066,8 +1066,8 @@ int dobuf(struct buffer *bp) {
     int return_stat = TRUE;  /* What we expect to do */
     int orig_pause_key_index_update;    /* State on entry - to be restored */
 
-    db_strdef(tkn);         /* buffer to evaluate an expresion in */
-    db_strdef(golabel);
+    db_bufdef(tkn);         /* buffer to evaluate an expresion in */
+    db_bufdef(golabel);
 
 /* GGR - Only allow recursion up to a certain level... */
 
@@ -1241,7 +1241,7 @@ nxtscan:                /* On to the next line */
  *      This is used by the ones which set macbug and clear //Debug.
  */
         if (macbug && !macbug_off) {    /* More likely failure first */
-            db_strdef(outline);
+            db_bufdef(outline);
             db_sprintf(outline, "<%s:%s:%s>", bp->b_bname,
                 ue_itoa(execlevel), eline);
 
@@ -1552,7 +1552,7 @@ single_exit:
 int run_user_proc(const char *procname, int forced, int rpts) {
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
-    db_strdef(bufn);
+    db_bufdef(bufn);
 
 /* Construct the buffer name */
     db_set(bufn, "/");
@@ -1697,7 +1697,7 @@ int switch_with_pin(int f, int n) {
 
 /* Buffer name for reexecute - shared by all buffer-callers */
 
-static db_strdef(prev_bufn);
+static db_bufdef(prev_bufn);
 
 /* execproc:
  *      Execute a procedure
@@ -1706,7 +1706,7 @@ static db_strdef(prev_bufn);
  */
 int execproc(int f, int n) {
     UNUSED(f);
-    db_strdef(bufn);    /* name of buffer to execute */
+    db_bufdef(bufn);    /* name of buffer to execute */
     int status;         /* status return */
 
 /* Handle a reexecute */
@@ -1747,7 +1747,7 @@ int execbuf(int f, int n) {
     UNUSED(f);
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
-    db_strdef(bufn);           /* name of buffer to execute */
+    db_bufdef(bufn);           /* name of buffer to execute */
 
 /* Handle a reexecute */
 
@@ -1800,7 +1800,7 @@ int dofile(const char *fname) {
     struct buffer *cb;      /* temp to hold current buf while we read */
     int status;             /* results of various calls */
 
-    db_strdef(bufn);           /* name of buffer */
+    db_bufdef(bufn);           /* name of buffer */
 
     makename(&bufn, fname, TRUE);       /* derive unique name for buffer */
     bp = bfind(db_val(bufn), TRUE, 0);  /* get the needed buffer */
@@ -1833,7 +1833,7 @@ int dofile(const char *fname) {
 
 /* Filename for reexecute - shared by all file-callers */
 
-static db_strdef(prev_fname);
+static db_bufdef(prev_fname);
 
 /* execute a series of commands in a file
  * If given fname starts with "^", remove that character and don't
@@ -1849,7 +1849,7 @@ int execfile(int f, int n) {
     int fail_ok = 0;
     int fns = 0;
 
-    db_strdef(fname);       /* name of file to execute */
+    db_bufdef(fname);       /* name of file to execute */
 
 /* Re-use last obtained filename? */
     if (inreex && (db_len(prev_fname) > 0) && RXARG(execfile))

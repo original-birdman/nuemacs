@@ -349,7 +349,7 @@ int lins_dynbuf(dbp_dcl(instr)) {
     return status;
 }
 int linstr(char *instr) {
-    db_strdef(temp);
+    db_bufdef(temp);
     db_set(temp, instr);
     int stat = lins_dynbuf(&temp);
     db_free(temp);

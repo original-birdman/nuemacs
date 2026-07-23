@@ -540,8 +540,8 @@ static void dump_modified_buffers(void) {
  * We assume that we don't get multiple dumps in the same second to
  * the same user's HOME.
  */
-    db_strdef(tagged_name);
-    db_strdef(orig_name);
+    db_bufdef(tagged_name);
+    db_bufdef(orig_name);
 
 /* Scan the buffers */
 
@@ -636,8 +636,8 @@ static void dump_modified_buffers(void) {
  */
 void dumpdir_tidy(void) {
     int status;
-    db_strdef(info_message);
-    db_strdef(dd_name);
+    db_bufdef(info_message);
+    db_bufdef(dd_name);
 
     struct buffer *saved_bp = curbp;
     struct buffer *auto_bp = bfind(AutoClean_Buffer, TRUE, BFINVS);
@@ -1196,7 +1196,7 @@ static int fmatch(char ch) {
  */
 int macro_helper(int f, int n) {
     UNUSED(f);
-    db_strdef(tag);
+    db_bufdef(tag);
 /* This is a macro helper - no need to call mlreply, just
  * extract the next token. We expect only 1 char (+ trailing NUL).
  * Also prevents any processing of the arg.
@@ -1597,7 +1597,7 @@ int execute(int c, int f, int n) {
  * Start with the current buffer filename, and append "/", unless we
  * are actually at "/" (quick test).
  */
-            db_strdef(fname);
+            db_bufdef(fname);
             db_set(fname, curwp->w_bufp->b_rpname);
             if (db_charat(fname, 1) != '\0') db_append(fname, "/");
 /* Add in this entryname, then work out the full pathname length
@@ -1620,7 +1620,7 @@ int execute(int c, int f, int n) {
             getfile(curbp->b_rpname, FALSE, TRUE);
             break;
         case 'u':           /* Up to parent. Needs run_user_proc() */
-           {db_strdef(fname);
+           {db_bufdef(fname);
             db_set(fname, curwp->w_bufp->b_rpname);
             const char *upp = strrchr(db_val(fname), '/');
             if (upp == db_val(fname)) upp++;
@@ -2009,7 +2009,7 @@ int main(int argc, char **argv) {
 /* FIRST, set up the standard execute line buffer so that we know
  * it exists before anything tries to use it.
  */
-    db_strdef(bname);           /* Buffer name of file to read */
+    db_bufdef(bname);           /* Buffer name of file to read */
     execstr = &main_execstr;
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);

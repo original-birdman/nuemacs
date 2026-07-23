@@ -64,7 +64,7 @@ static int along_path(const char *fname, db *fspec) {
  * char *fname;         base file name to search for
  * int hflag;           Look in the HOME environment variable first?
  */
-static db_strdef(fspec);
+static db_bufdef(fspec);
 const char *flook(const char *fname, int hflag, int mode) {
     int i;                          /* index */
 
@@ -280,7 +280,7 @@ static unicode_t getckey(int mflag) {
 
 /* Check to see if we are executing a command line */
     if (clexec) {
-        db_strdef(tok); /* command incoming */
+        db_bufdef(tok); /* command incoming */
         macarg(&tok);   /* get the next token */
         int ck = stock(db_val(tok));
         db_free(tok);
@@ -550,7 +550,7 @@ int deskey(int f, int n) {
     mlwrite_one(cmdstr(c));
     mlwrite_one(" ");
 
-    db_strdef(op);
+    db_bufdef(op);
 /* Find the right function */
     struct key_tab *ktp = getbind(c);
     if (!ktp) {
@@ -735,8 +735,8 @@ int buffertokey(int f, int n) {
     struct buffer *bp;      /* ptr to buffer to execute */
     int status;             /* status return */
 
-    db_strdef(bname);       /* buffer name */
-    db_strdef(btry);
+    db_bufdef(bname);       /* buffer name */
+    db_bufdef(btry);
 
 /* Get the name of the buffer to invoke.
  * Note that we DO NOT SEND the leading '/'.
@@ -789,7 +789,7 @@ int switch_internal(int f, int n) {
     int bind_key;
     fn_t rpl_func;
 
-    db_strdef(btry);
+    db_bufdef(btry);
 
 /* Get char to change */
 
@@ -831,7 +831,7 @@ int switch_internal(int f, int n) {
         s = update_keybind(bind_key, n, TRUE, rpl_func, NULL);
     }
     else {
-        db_strdef(uproc);
+        db_bufdef(uproc);
         db_set(uproc, "/");
         db_append(uproc, db_val(btry));
         struct buffer *upb = bfind(db_val(uproc), FALSE, 0);
@@ -1135,7 +1135,7 @@ int apro(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;             /* status return */
 
-    db_strdef(mstring);     /* string to match cmd names to */
+    db_bufdef(mstring);     /* string to match cmd names to */
     status = mlreply("Apropos string: ", &mstring, CMPLT_NONE);
     if (status != TRUE) goto exit;
 
