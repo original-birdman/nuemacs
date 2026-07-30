@@ -8,10 +8,12 @@
 #include <stddef.h>
 
 /* Define a Dynamic Buffer, and how to access its members
- * The enum values are specifically set, as it reflects the additional
- * buffer size required beyond the valid stored bytes.
+ * The flags are:
+ *  DB_UPS      Allow the asp to walk alongthe string (tokenizer)
+ *  DB_FXD      Do not allow any changes to the value
  */
 #define DB_UPS 0x01
+#define DB_FXD 0x02
 
 typedef struct {
     char *buf;      /* The (NUL-terminated) string/buffer */
@@ -56,9 +58,15 @@ typedef struct {
  * asp field is set equal to the buf field.
  */
 void db_init(void);
+
+void _dbp_flagset(db *, int);
+void _dbp_flagon(db *, int);
+void _dbp_flagoff(db *, int);
+
 const char *_dbp_val_nc(db *);                              /* asp */
 void _dbp_setn(db *, const void *, int);                    /* buf */
 void _dbp_set(db *, const char *);                          /* buf */
+void _dbp_copy(db *, db *);                                 /* buf+asp */
 void _dbp_replicatech_at(db *, char, int, int);             /* asp */
 void _dbp_insertn_at(db *, const void *, int, int);         /* asp */
 void _dbp_deleten_at(db *, int, int);                       /* asp */
@@ -70,6 +78,7 @@ void _dbp_truncate(db *, int);                              /* asp */
 void _dbp_uctruncate(db *, int);                            /* asp */
 void _dbp_appendn(db *, const char *, int);                 /* asp */
 void _dbp_append(db *, const char *);                       /* asp */
+void _dbp_append_dbp(db *, db *);                           /* asp */
 void _dbp_addch(db *, const char);                          /* asp */
 char _dbp_charat(db *, int);                                /* asp */
 void _dbp_setcharat(db *, int, char c);                     /* asp */
@@ -82,11 +91,19 @@ void _dbp_free(db *);                                       /* buf */
 #define _dbp_cmpn(ds, str, n) strncmp((ds)->asp, str, (size_t)(n))
 #define _dbp_casecmp(ds, str) strcasecmp((ds)->asp, str)
 #define _dbp_casecmpn(ds, str, n) strncasecmp((ds)->asp, str, (size_t)(n))
+#define _dbp_memchr(ds, c) memchr((ds)->asp, c, (size_t)(ds)->alen)
 
 /* Defines for actual use in user code
  * The db_* calls are for "local" usage whereas
  * the dbp_* calls are for values arriving as function parameters.
  */
+#define db_flagset(ds, f) _dbp_flagset(&(ds), f)
+#define dbp_flagset(ds, f) _dbp_flagset(ds, f)
+#define db_flagon(ds, f) _dbp_flagon(&(ds), f)
+#define dbp_flagon(ds, f) _dbp_flagon(ds, f)
+#define db_flagsoff(ds, f) _dbp_flagoff(&(ds), f)
+#define dbp_flagoff(ds, f) _dbp_flagoff(ds, f)
+
 #define db_val_nc(val) _dbp_val_nc(&(val))
 #define dbp_val_nc(val) _dbp_val_nc(val)
 
@@ -95,6 +112,9 @@ void _dbp_free(db *);                                       /* buf */
 
 #define db_set(to_ds, from_str) _dbp_set(&(to_ds), from_str)
 #define dbp_set(to_ds, from_str) _dbp_set((to_ds), from_str)
+
+#define db_copy(to_ds, from_dsp) _dbp_copy(&(to_ds), from_dsp)
+#define dbp_copy(to_ds, from_dsp) _dbp_copy((to_ds), from_dsp)
 
 #define db_replicatech_at(to_ds, ch, flen, w) \
      _dbp_replicatech_at(&(to_ds), ch, flen, w)
@@ -134,6 +154,9 @@ void _dbp_free(db *);                                       /* buf */
 #define db_append(to_ds, add) _dbp_append(&(to_ds), add)
 #define dbp_append(to_ds, add) _dbp_append((to_ds), add)
 
+#define db_append_dbp(to_ds, from_dsp) _dbp_append_dbp(&(to_ds), from_dsp)
+#define dbp_append_dbp(to_ds, from_dsp) _dbp_append_dbp((to_ds), from_dsp)
+
 #define db_addch(to_ds, c) _dbp_addch(&(to_ds), c)
 #define dbp_addch(to_ds, c) _dbp_addch((to_ds), c)
 
@@ -154,6 +177,9 @@ void _dbp_free(db *);                                       /* buf */
 
 #define db_casecmpn(ds, s, n) _dbp_casecmpn(&(ds), s, n)
 #define dbp_casecmpn(ds, s, n) _dbp_casecmpn((ds), s, n)
+
+#define db_memchr(ds, c) _dbp_memchr(&(ds), c)
+#define dbp_memchr(ds, c) _dbp_memchr((ds), c)
 
 #define db_sprintf(ds, ...) _dbp_sprintf(&(ds), __VA_ARGS__)
 #define dbp_sprintf(ds, ...) _dbp_sprintf((ds), __VA_ARGS__)

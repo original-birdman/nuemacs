@@ -9999,3 +9999,11 @@ tools/remove-lowlevel-bits.
 
 display.c
     Add a %B option to the mlwrite*() formatters to print a dyn_buf.
+
+dyn_buf.c
+dyn_buf.h
+    Add a DB_FXD flag to disallow any changes.
+    Add db(p_flagset/flagon/flagoff routines.
+    Add a db(p)_copy() routine to take a copy one dyn_buf to another.
+    Add db(p)_append_dbp, to append one dyn_buf to another.
+    Add db(p)_memchar #define to look for a byte in a dyn_buf.

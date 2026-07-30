@@ -26,6 +26,12 @@ static void illegal_dbaction(const char *why) {
     exit(127);  /* Just in case... */
 }
 
+static void illegal_fixed_change(const char *who) {
+    char mesg[128];     /* Sufficient for our callers */
+    snprintf(mesg, sizeof(mesg), "Attempt to change FIXED db by %s", who);
+    illegal_dbaction(mesg);
+}
+
 /* DYN_INCR MUST be a power of 2
  * This must update both ds->buf and ds->asp
  */
@@ -42,6 +48,18 @@ static void _dbp_realloc(db *ds, size_t need) {
     return;
 }
 
+/* Routines to set/unset flags */
+
+void _dbp_flagset(db *ds, int flags) {
+    ds->flags = flags;
+}
+void _dbp_flagon(db *ds, int flags) {
+    ds->flags |= flags;
+}
+void _dbp_flagoff(db *ds, int flags) {
+    ds->flags &= ~flags;
+}
+
 /* Return the value, but check for NULL and return "" for that
  * Intended for string use.
  */
@@ -55,6 +73,7 @@ const char *_dbp_val_nc(db *ds) {
  * Sets asp == buf.
  */
 void _dbp_setn(db *ds, const void *mp, int n) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("setn");
     if (!mp && (n == 0)) mp = "";
     size_t need = (size_t)n + 1;    /* Always append a NUL */
     if (need > ds->alloc) _dbp_realloc(ds, need);
@@ -72,6 +91,19 @@ void _dbp_set(db *ds, const char *str) {
     return;
 }
 
+/* Make a copy of a dyn_buf. Assumes target is initialized (poss to NULL)
+ * Only copies alen from asp.
+ */
+void _dbp_copy(db *ds, db *fds) {
+    size_t need = (size_t)fds->alen + 1;
+    if (need > ds->alloc) _dbp_realloc(ds, need);
+    memcpy(ds->buf, fds->asp, need);    /* Will copy the trailing NUL */
+    ds->asp = ds->buf;  /* Equate these */
+    ds->alen = fds->alen;
+    ds->flags = fds->flags;
+    return;
+}
+
 /* _dbp_replicatech_at() and _dbp_insertn_at() only differ in how they
  * fill the created gap, so route through common code.
  * Acts on the asp value.
@@ -79,6 +111,7 @@ void _dbp_set(db *ds, const char *str) {
 enum repins_call_t { DBP_REPLICATE, DBP_INSERTN };
 static void _dbp_ri_at(db *ds, const char *cp, int n, int offs,
      enum repins_call_t method) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("ri_at");
     int movers = ds->alen - offs;
     if ((movers < 0) || (offs < 0))
          illegal_dbaction("Illegal db replicatech/insertn");
@@ -114,6 +147,7 @@ void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
  * Acts on the asp value.
  */
 void _dbp_deleten_at(db *ds, int n, int offs) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("deleten_at");
     if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db deleten");
 /* Since we are deleting we must already have enough space
  * But we mustn't delete from before the "actual start pointer"
@@ -137,6 +171,7 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
  * Acts on the asp value.
  */
 void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("insertn_at");
     if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db overwriten");
     if (n == 0) return;     /* Nothing to do */
 /* We mustn't change anything beyond the current end of data */
@@ -154,6 +189,7 @@ void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
  * Acts on the asp value.
  */
 void _dbp_retailstr_at(db *ds, const char *ntail, int offs) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("retailstr_at");
 
     size_t tlen = strlen(ntail);
     size_t need = tlen + (size_t)offs + 1;
@@ -170,6 +206,7 @@ void _dbp_retailstr_at(db *ds, const char *ntail, int offs) {
  */
 
 void _dbp_bufset(db *ds, const char ch, int n) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("bufset");
     size_t need = (size_t)n + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     ds->asp = ds->buf;
@@ -184,6 +221,7 @@ void _dbp_bufset(db *ds, const char ch, int n) {
  * Sets asp == buf.
  */
 void _dbp_clear(db *ds) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("bufset");
     ds->alen = 0;
     ds->asp = ds->buf;
     if (ds->buf) *(ds->asp) = '\0';
@@ -195,6 +233,7 @@ void _dbp_clear(db *ds) {
  * Acts on the asp value.
  */
 void _dbp_truncate(db *ds, int n) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("truncate");
     if ((n < 0) || (n > ds->alen)) illegal_dbaction("Illegal db truncate");
     ds->alen = n;
     *(ds->asp+ds->alen) = '\0';
@@ -206,6 +245,7 @@ void _dbp_truncate(db *ds, int n) {
  * Acts on the asp value.
  */
 void _dbp_uctruncate(db *ds, int n) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("uctruncate");
 
     int bpos = 0;;
     while (n--) {
@@ -223,6 +263,7 @@ void _dbp_uctruncate(db *ds, int n) {
  * Acts on the asp value.
  */
 void _dbp_appendn(db *ds, const char *str, int n) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("appendn");
     if (!str && (n == 0)) str = "";
     size_t need = (size_t)(ds->alen + n) + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
@@ -244,10 +285,25 @@ void _dbp_append(db *ds, const char *str) {
     return;
 }
 
+/* Append a dyn_buf to another */
+
+void _dbp_append_dbp(db *ds, db *fds) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("append_dbp");
+
+/* What do we need. Allow for any asp offest */
+    size_t need = (size_t)(ds->alen + (ds->asp - ds->buf) + fds->alen + 1);
+    if (need > ds->alloc) _dbp_realloc(ds, need);
+    memcpy(ds->asp + ds->alen, fds->asp, (size_t)fds->alen);
+    ds->alen += fds->alen;
+    *(ds->asp+ds->alen) = '\0';
+    return;
+}
+
 /* Append a character
  * Acts on the asp value.
  */
 void _dbp_addch(db *ds, const char ch) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("addch");
     size_t need = (size_t)(ds->alen + 2);   /* 2 for new char + NUL */
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
@@ -274,6 +330,7 @@ char _dbp_charat(db *ds, int w) {
  * Acts on the asp value.
  */
 void _dbp_setcharat(db *ds, int w, char c) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("setcharat");
 /* We can only overwrite data that is already there */
     if ((w < 0) || (w >= ds->alen)) illegal_dbaction("Illegal db setcharat");
     *(ds->asp + w) = c;
@@ -288,6 +345,7 @@ void _dbp_setcharat(db *ds, int w, char c) {
  * Acts on the asp value.
  */
 void _dbp_upval(db *ds, const char *np) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("upval");
     if (!(ds->flags & DB_UPS) || (np < ds->buf) || (np > ds->asp + ds->alen)) {
         illegal_dbaction("Illegal db upval");
     }
@@ -301,6 +359,7 @@ void _dbp_upval(db *ds, const char *np) {
  * Sets asp == buf.
  */
 void _dbp_sprintf(db *ds, const char *fmt, ...) {
+    if (ds->flags & DB_FXD) illegal_fixed_change("sprintf");
     va_list ap;
     va_start(ap, fmt);
     int needed = vsnprintf(ds->buf, ds->alloc, fmt, ap);
