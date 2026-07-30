@@ -9996,3 +9996,6 @@ dyn_buf.h
 
 tools/remove-lowlevel-bits.
     Remove the vg_replace_malloc remover, as that removes everything.
+
+display.c
+    Add a %B option to the mlwrite*() formatters to print a dyn_buf.

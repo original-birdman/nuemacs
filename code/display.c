@@ -1709,7 +1709,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = istrlen(fmt);
     while (bytes_togo > 0) {
-/* If we are about to go into the last column, put a $ there and stop,
+/* Limit output to not go beyond the last column by using TTput_1uc_lim()
  * otherwise we get wrap-around and the display messes up.
  */
         int used = utf8_to_unicode(fmt, 0, bytes_togo, &c);
@@ -1729,21 +1729,34 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             case 'x':   mlputi(va_arg(ap.ap, int), 16);     break;
             case 'D':   mlputli(va_arg(ap.ap, ue64I_t), 10); break;
             case 'f':   mlputf(va_arg(ap.ap, int));         break;
-            case 'c':   TTput_1uc(va_arg(ap.ap, int));      break;
-            case 's':
-               {const char *tp = va_arg(ap.ap, char *);
+            case 'c':   TTput_1uc_lim(va_arg(ap.ap, int));  break;
+            case 's': {
+                const char *tp = va_arg(ap.ap, char *);
                 if (tp == NULL) tp = "(nil)";
                 mlwrite_one(tp);        /* Recurse */
                 break;
-               }
+            }
+            case 'B': { /* A dyn_buf */
+                db *tp = va_arg(ap.ap, db *);
+                int blen = dbp_len(tp);
+                const char *bp = dbp_val(tp);
+                int offs = 0;
+                unicode_t uc;
+                while (offs < blen) {
+                    int used = utf8_to_unicode(bp, offs, blen, &uc);
+                    offs += used;
+                    TTput_1uc_lim(uc);
+                }
+                break;
+            }
             default:
                 TTput_1uc_lim(c);
             }
         }
     }
-    TTflush();
     mpresf = TRUE;  /* Even if it is empty */
     mlw_level--;    /* Remember we've left */
+    if (mlw_level == 0) TTflush();
 }
 
 void mlwrite(const char *fmt, ...) {
