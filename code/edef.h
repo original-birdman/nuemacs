@@ -371,6 +371,10 @@ extern struct bc_info key_info;     /* Lookup key bind(s) for a function */
 
 extern struct sigdefer sigwin_dfr;
 
+/* A dyn_buf containing an empty string. */
+
+extern db empty_db;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

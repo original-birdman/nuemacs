@@ -10007,3 +10007,8 @@ dyn_buf.h
     Add a db(p)_copy() routine to take a copy one dyn_buf to another.
     Add db(p)_append_dbp, to append one dyn_buf to another.
     Add db(p)_memchar #define to look for a byte in a dyn_buf.
+
+globals.c
+main.c
+edef.h
+    Add a global empty_db dyn_buf set to "" and then non-modifiable.
