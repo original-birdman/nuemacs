@@ -10020,3 +10020,6 @@ eval.c
 search.c
 efunc.h
     Change group_match() to return a pointer to a dyn_buf.
+
+search.c
+    Add get_next_nbytes() for common usage by group_match() and delins().

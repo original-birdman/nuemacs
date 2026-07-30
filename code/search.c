@@ -2859,6 +2859,29 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
     return FALSE;
 }
 
+static void get_next_nbytes(db *dbp_res, struct line *clp, int coff, int togo) {
+    dbp_clear(dbp_res);
+    while(togo > 0) {
+        int on_cline = lused(clp) - coff;
+        if (on_cline > togo) on_cline = togo;
+/* Only copy if there is something to copy */
+        if (on_cline > 0) {
+            dbp_appendn(dbp_res, ltext(clp)+coff, (size_t)on_cline);
+        }
+        togo -= on_cline;
+
+/* Add in the newline, if needed, and switch to next line */
+
+        if (togo > 0) {
+            dbp_addch(dbp_res, '\n');
+            togo--;
+            clp = lforw(clp);
+            coff = 0;
+        }
+    }
+    return;
+}
+
 /* nextbyte -- retrieve the next/previous byte (character) in the buffer,
  *      and advance/retreat the point.
  *      The order in which this is done is significant, and depends
@@ -3058,27 +3081,8 @@ db *group_match(int grp) {
 
 /* Create the match text for this group... */
 
-        int togo = match_grp_info[grp].len;
-        struct line *cline = match_grp_info[grp].mline;
-        int coff = match_grp_info[grp].start;
-        while(togo > 0) {
-            int on_cline = lused(cline) - coff;
-            if (on_cline > togo) on_cline = togo;
-/* Only copy if there is something to copy */
-            if (on_cline > 0) {
-                dbp_appendn(grp_text[grp], ltext(cline)+coff, (size_t)on_cline);
-            }
-            togo -= on_cline;
-
-/* Add in the newline, if needed, and switch to next line */
-
-            if (togo > 0) {
-                dbp_addch(grp_text[grp], '\n');
-                togo--;
-                cline = lforw(cline);
-                coff = 0;
-            }
-        }
+        get_next_nbytes(grp_text[grp], match_grp_info[grp].mline,
+             match_grp_info[grp].start, match_grp_info[grp].len);
     }
     return grp_text[grp];
 }
@@ -3539,13 +3543,11 @@ static int delins(db *repstr) {
  * NOTE1: The match may be over multiple lines so we need a byte-by-byte
  * copy.
  * NOTE2: We cannot save mline until the end, as it might change!
+ *
+ * This does NOT change the current dotp and doto!
  */
-/* This does NOT change the current dotp and doto! */
-    struct line *sline = curwp->w.dotp;
-    int soff = curwp->w.doto;
-    db_clear(last_match.match);
-    for (int j = 0; j < match_grp_info[0].len; j++)
-        db_addch(last_match.match, nextbyte(&sline, &soff, FORWARD));
+    get_next_nbytes(&last_match.match, curwp->w.dotp, curwp->w.doto,
+         match_grp_info[0].len);
 
 /* Now that the text of a line is reallocated without reallocating the
  * line structure itself, we can save the line pointer here.
