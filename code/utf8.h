@@ -60,6 +60,8 @@ struct mstr {
 #define uclen_utf8(str) utf8_to_uclen(str, FALSE, -1)
 #define glyphcount_utf8(str) utf8_to_uclen(str, TRUE, -1)
 #define glyphcount_utf8_array(str, max) utf8_to_uclen(str, TRUE, max)
+#define glyphcount_utf8_db(db) utf8_to_uclen(db_val(db), TRUE, db_len(db))
+#define glyphcount_utf8_dbp(dbp) utf8_to_uclen(dbp_val(dbp), TRUE, dbp_len(dbp))
 
 #ifndef UTF8_C
 

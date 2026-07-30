@@ -10012,3 +10012,6 @@ globals.c
 main.c
 edef.h
     Add a global empty_db dyn_buf set to "" and then non-modifiable.
+
+utf8.h
+    Add glyphcount_utf8_db(p) defines for use by dyn_bufs.
