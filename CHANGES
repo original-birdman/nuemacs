@@ -9993,3 +9993,6 @@ dyn_buf.h
     caller's actual usage of the data.
     Change _dbp_setcharat() to write any char (byte) without changing
     the length, even if it is a NUL. [dyn_buf.c]
+
+tools/remove-lowlevel-bits.
+    Remove the vg_replace_malloc remover, as that removes everything.

@@ -40,10 +40,9 @@ while(<>) {
         next;
     }
 
-# Remove tcap and valgrind bits that are nothing to do with uemacs
+# Remove tcap bits that are nothing to do with uemacs
 #
     $lowlevel = 1 if (/by 0x[0-9A-F]+: tcap(?:open|move)/);
-    $lowlevel = 1 if (/at 0x[0-9A-F]+: (?:malloc|realloc) \(vg_replace_malloc/);
     push @this_block, $_;
 }
 
