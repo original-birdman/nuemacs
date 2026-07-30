@@ -10015,3 +10015,8 @@ edef.h
 
 utf8.h
     Add glyphcount_utf8_db(p) defines for use by dyn_bufs.
+
+eval.c
+search.c
+efunc.h
+    Change group_match() to return a pointer to a dyn_buf.

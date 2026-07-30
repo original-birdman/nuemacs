@@ -1071,8 +1071,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
         retval = xlat(db_val(arg1), db_val(arg2), db_val(arg3));
         goto exit;
     case UFGRPTEXT:
-        retval = group_match(ue_atoi(db_val(arg1)));
-        goto exit;
+        dbp_copy(res, group_match(ue_atoi(db_val(arg1))));
+        goto set_exit;
     case UFPRINTF:
         dbp_uesprintf(res, &arg1);
         goto set_exit;
@@ -1277,7 +1277,9 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVREPLACE:
         dbp_setn(res, db_val(rpat), db_len(rpat));
         return;
-    case EVMATCH:           setval(group_match(0));
+    case EVMATCH:
+        dbp_copy(res, group_match(0));
+        return;
     case EVKILL:
         getkill(res);
         return;
@@ -1416,12 +1418,16 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
     if (dbp_len(token) == 0) return;
 
 /* For most of these we want to look at the text from the second
- * character, so make a local copy of token in this state. */
+ * character, so make a local copy of token in this state.
+ * This "copy" uses the original buffer - so we make sure that it
+ * can't be inadvertently changed.
+  */
 
     db_dcl(tok1);
     tok1 = *token;
-    tok1.flags |= DB_UPS;   /* Make the val ptr updateable */
+    db_flagon(tok1, DB_UPS);    /* Make the val ptr updateable */
     db_upval(tok1, db_val(tok1)+1);
+    db_flagon(tok1, DB_FXD);    /* Ensure nothing we do modifies token! */
 
     switch (gettyp(dbp_val(token))) {   /* First char won't be NUL */
     case TKNUL:

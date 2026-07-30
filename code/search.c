@@ -286,7 +286,7 @@ struct match_group_info {       /* String match info - reset on failures */
 static int max_grp = 0;
 static struct control_group_info *cntl_grp_info = NULL;
 static struct match_group_info *match_grp_info = NULL;
-static char **grp_text = NULL;
+static db **grp_text = NULL;
 
 /* A value with which to reset */
 static const struct match_group_info null_match_grp_info = { NULL, 0, 0, 0 };
@@ -352,7 +352,7 @@ static int increase_group_info(void) {
          max_grp, sizeof(struct control_group_info));
     match_grp_info = Xreallocarray(match_grp_info,
          max_grp, sizeof(struct match_group_info));
-    grp_text = Xreallocarray(grp_text, max_grp, sizeof(char *));
+    grp_text = Xreallocarray(grp_text, max_grp, sizeof(db *));
     for (int gi = 0; gi < max_grp; gi++) grp_text[gi] = NULL;
     return TRUE;
 }
@@ -2684,9 +2684,11 @@ static void init_dyn_group_status(void) {
 /* If we allocated any result strings, free them now... */
     for (int gi = 0; gi < max_grp; gi++) {
         if (grp_text[gi]) {
+            dbp_free(grp_text[gi]);
             Xfree_setnull(grp_text[gi]);
         }
     }
+
 /* ...and also initialize dynamic group matching info */
     for (int gi = 0; gi <= group_cntr; gi++) {
         match_grp_info[gi] = null_match_grp_info;
@@ -2771,7 +2773,6 @@ static int step_scanner(struct magic *mcpatrn, int direct, int beg_or_end) {
             curwp->w_flag |= WFMOVE;        /* flag that we've moved */
             magic_search.start_line = NULL;
             group_match_buffer = curwp->w_bufp;
-
             return TRUE;
         }
 
@@ -3028,34 +3029,35 @@ fail:;                                  /* continue to search */
     return FALSE;                       /* We could not find a match */
 }
 
-/* Return a malloc()ed copy of the text for the given group in
- * the last match.
- * If a group doesn't exist or has no match then an empty string is
- * returned.
+/* Return a ptr to a dyn_buf text for the given group in the last match.
+ * If a group doesn't exist or has no match then an immutable empty string
+ * is returned.
  * We only allocate each group text on demand for each search.
  * Any allocated space is freed by the reset for a new search.
  */
-const char *group_match(int grp) {
+db *group_match(int grp) {
 
 /* Is the group-match data valid?? */
 
-    if (!group_match_buffer) return "";
+    if (!group_match_buffer) return &empty_db;
 
-/* Is there a match to return? */
+/* Is there a match to return for this group? */
 
-    if ((grp < 0) || (grp > group_cntr)) return "";
-    if (!match_grp_info[grp].mline) return "";
+    if ((grp < 0) || (grp > group_cntr)) return &empty_db;
+    if (!match_grp_info[grp].mline) return &empty_db;
 
 /* Have we already sorted out this match for this search?
  * If not, set one up.
+ * These are all reset at the start of a new search.
  */
     if (!grp_text[grp]) {
 
-        grp_text[grp] = Xmalloc((size_t)(match_grp_info[grp].len + 1));
+        grp_text[grp] = Xmalloc(sizeof(db));
+        *grp_text[grp] = (db) db_buf_initval;
+        dbp_set(grp_text[grp], "");     /* In case we have an empty match */
 
 /* Create the match text for this group... */
 
-        char *dp = grp_text[grp];
         int togo = match_grp_info[grp].len;
         struct line *cline = match_grp_info[grp].mline;
         int coff = match_grp_info[grp].start;
@@ -3063,20 +3065,20 @@ const char *group_match(int grp) {
             int on_cline = lused(cline) - coff;
             if (on_cline > togo) on_cline = togo;
 /* Only copy if there is something to copy */
-            if (on_cline > 0) memcpy(dp, ltext(cline)+coff, (size_t)on_cline);
-            dp += on_cline;
+            if (on_cline > 0) {
+                dbp_appendn(grp_text[grp], ltext(cline)+coff, (size_t)on_cline);
+            }
             togo -= on_cline;
 
 /* Add in the newline, if needed, and switch to next line */
 
             if (togo > 0) {
-                *dp++ = '\n';
+                dbp_addch(grp_text[grp], '\n');
                 togo--;
                 cline = lforw(cline);
                 coff = 0;
             }
         }
-        terminate_str(dp);
     }
     return grp_text[grp];
 }
@@ -3092,15 +3094,14 @@ const char *group_match(int grp) {
 static int do_preskip = 0;
 
 static void report_match(void) {
-    const char *fullm = group_match(0);
-    const char *rpt_text;
-    if (strchr(fullm, '\n') == NULL) {
-        rpt_text = fullm;
+    db_bufdef(fullm);
+    db_copy(fullm, group_match(0));
+    int len = glyphcount_utf8_db(fullm);
+    if (db_memchr(fullm, '\n') != NULL) {
+        db_set(fullm, "<<multiline>>");
     }
-    else {
-        rpt_text = "<<multiline>>";
-    }
-    mlwrite("match: len: %d, %s", glyphcount_utf8(fullm), rpt_text);
+    mlwrite("match: len: %d, %B", len, &fullm);
+    db_free(fullm);
     return;
 }
 
@@ -3144,8 +3145,9 @@ int forwhunt(int f, int n) {
     do {
         olp = curwp->w.dotp;
         obyte_offset = curwp->w.doto;
+
 /* This must precede group clean-out */
-        if (do_preskip) back_grapheme(glyphcount_utf8(group_match(0)) - 1);
+        if (do_preskip) back_grapheme(glyphcount_utf8_dbp(group_match(0)) - 1);
 
 /* We are going forwards so check for eob as otherwise the rest
  * of this code (magical and ordinary) loops us round to the start
@@ -3255,7 +3257,8 @@ int backhunt(int f, int n) {
         olp = curwp->w.dotp;
         obyte_offset = curwp->w.doto;
         if (!slow_scan) {           /* Must precede group clean-out */
-            if (do_preskip) forw_grapheme(glyphcount_utf8(group_match(0)) - 1);
+            if (do_preskip)
+                 forw_grapheme(glyphcount_utf8_dbp(group_match(0)) - 1);
         }
 
 /* Search for the pattern for as long as n is positive (n == 0 will go
@@ -3350,7 +3353,7 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
  */
     int prev_match_len;
     if (!next_match || !extend_match)
-        prev_match_len = glyphcount_utf8(group_match(0));
+        prev_match_len = glyphcount_utf8_dbp(group_match(0));
     else
         prev_match_len = 0;
 
@@ -3427,7 +3430,7 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
  */
 static db_bufdef(repl);
 
-static const char *getrepl(void) {
+static db *getrepl(void) {
 
 /* Process rmcpat .... */
     db_clear(repl);     /* Start afresh */
@@ -3463,7 +3466,7 @@ static const char *getrepl(void) {
             break;
         }
         case REPL_GRP: {
-            db_append(repl, group_match(rmcptr->mc.group_num));
+            db_append_dbp(repl, group_match(rmcptr->mc.group_num));
             break;
         }
         case REPL_CNT: {
@@ -3480,7 +3483,7 @@ static const char *getrepl(void) {
                     db_append(fnc_buf, fcp->val.ltext);
                     break;
                 case REPL_GRP:
-                    db_append(fnc_buf, group_match(fcp->val.group_num));
+                    db_append_dbp(fnc_buf, group_match(fcp->val.group_num));
                     break;
                 case REPL_CNT: {
                     insert_counter(&fnc_buf, &(fcp->val.x));
@@ -3505,7 +3508,7 @@ static const char *getrepl(void) {
         }
     rmcptr++;
     }
-    return db_val_nc(repl);
+    return &repl;
 }
 
 /* last_match info -- this is used to get the last match in a query replace
@@ -3515,50 +3518,34 @@ static const char *getrepl(void) {
  * match and replace are never freed, just overwritten and realloc()ed
  */
 static struct {
-    char *match;            /* Text of the match */
-    char *replace;          /* Text of the replacing string */
+    db match;               /* Text of the match */
+    db replace;             /* Text of the replacing string */
     struct line *mline;     /* Line it is on */
     int moff;               /* Start offset on mline */
-    int mlen;               /* Length of match */
-    int rlen;               /* Length of the replacement */
-    int m_alloc;            /* Allocated size of match */
-    int r_alloc;            /* Allocated size of replace */
-} last_match = { NULL, NULL, NULL, 0, 0, 0, 0, 0 };
+} last_match = { (db) db_buf_initval, (db) db_buf_initval, NULL, 0 };
 
 /* delins -- delete the match and insert the replacement
  * We need to end up at the end of the replacement string.
  * The replacement string is the actual text to insert - our caller
  * will have done any replacement magic already.
  */
-static int delins(const char *repstr) {
+static int delins(db *repstr) {
 
 /* Remember what the replacement was */
 
-    last_match.rlen = istrlen(repstr);
-    int needed = last_match.rlen + 1;
-    if (needed > last_match.r_alloc) {
-        last_match.replace = Xrealloc(last_match.replace, (size_t)needed);
-        last_match.r_alloc = needed;
-    }
-    strcpy(last_match.replace, repstr);
+    db_copy(last_match.replace, repstr);
 
 /* Save the matched string in last_match (only allow 1 level of undo).
  * NOTE1: The match may be over multiple lines so we need a byte-by-byte
  * copy.
  * NOTE2: We cannot save mline until the end, as it might change!
  */
-    needed = match_grp_info[0].len + 1;
-    if (needed > last_match.m_alloc) {
-        last_match.match = Xrealloc(last_match.match, (size_t)needed);
-        last_match.m_alloc = needed;
-    }
 /* This does NOT change the current dotp and doto! */
     struct line *sline = curwp->w.dotp;
     int soff = curwp->w.doto;
-    char *mptr = last_match.match;
+    db_clear(last_match.match);
     for (int j = 0; j < match_grp_info[0].len; j++)
-        *mptr++ = nextbyte(&sline, &soff, FORWARD);
-    terminate_str(mptr);
+        db_addch(last_match.match, nextbyte(&sline, &soff, FORWARD));
 
 /* Now that the text of a line is reallocated without reallocating the
  * line structure itself, we can save the line pointer here.
@@ -3566,7 +3553,6 @@ static int delins(const char *repstr) {
  * then save the forward line from the one we had saved.
  */
     last_match.moff = curwp->w.doto;
-    last_match.mlen = match_grp_info[0].len;
     last_match.mline = curwp->w.dotp;
 
 /* We end up positioned at the *start* of a match, so we can just delete
@@ -3578,8 +3564,7 @@ static int delins(const char *repstr) {
  * is where we wish to be.
  */
     if (status) {
-        status = linstr(repstr);
-        last_match.rlen = istrlen(repstr);
+        status = lins_dynbuf(repstr);
     }
     return status;
 }
@@ -3657,7 +3642,7 @@ static int replaces(int query, int f, int n) {
     while ((f == FALSE || n > nummatch) &&
            (nlflag == FALSE || nlrepl == FALSE)) {
 
-        const char *match_p, *repl_p;
+        db *match_p, *repl_p;
 
 /* Search for the pattern. The true length of the matched string ends up
  * in match_grp_info[0].len
@@ -3678,7 +3663,7 @@ static int replaces(int query, int f, int n) {
 
         match_p = group_match(0);
         if (rmagical) repl_p = getrepl();
-        else          repl_p = db_val(rpat);
+        else          repl_p = &rpat;
 
 /* Check for query mode. */
 
@@ -3693,22 +3678,19 @@ pprompt:
  */
             if (undone) {
                 undone = 0;
-                match_p = last_match.match;
-                if (rmagical) repl_p = last_match.replace;
-                else          repl_p = db_val(rpat);
+                match_p = &last_match.match;
+                if (rmagical) repl_p = &last_match.replace;
+                else          repl_p = &rpat;
             }
 
 /* We need to take a copy of one expandp() result, as it uses
  * a static buffer for its results.
  */
             db_bufdef(tp);
-            db_set(tp, match_p);
-            dbp_dcl(ep) = expandp(&tp);
-            char *rt = strdupa(dbp_val(ep));
-            db_set(tp, repl_p);
-            ep = expandp(&tp);
+            db_copy(tp, expandp(match_p));
+            dbp_dcl(ep) = expandp(repl_p);
+            mlwrite("Replace '%s' with '%s'? ", db_val(tp), dbp_val(ep));
             db_free(tp);
-            mlwrite("Replace '%s' with '%s'? ", rt, dbp_val(ep));
 
 qprompt:
             update(TRUE);   /* show the proposed place to change */
@@ -3765,8 +3747,8 @@ qprompt:
  * start, so go there. We use prev-line and forw(prev-line) as that
  * works even in the current line gets reallocated from the insert.
  */
-                ldelete(last_match.rlen, FALSE);
-                linstr(last_match.match);
+                ldelete(db_len(last_match.replace), FALSE);
+                lins_dynbuf(&last_match.match);
                 curwp->w.dotp = lforw(pline);
                 curwp->w.doto = last_match.moff;
 
@@ -3852,9 +3834,14 @@ int qreplace(int f, int n) {
  * valgrind usage.
  */
 void free_search(void) {
-    Xfree(last_match.match);
-    Xfree(last_match.replace);
-    for (int gi = 0; gi < max_grp; gi++) Xfree(grp_text[gi]);
+    db_free(last_match.match);
+    db_free(last_match.replace);
+    for (int gi = 0; gi < max_grp; gi++) {
+         if (grp_text[gi]) {
+            dbp_free(grp_text[gi]);
+            Xfree(grp_text[gi]);
+         }
+    }
     Xfree(cntl_grp_info);
     Xfree(match_grp_info);
     Xfree(grp_text);

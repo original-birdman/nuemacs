@@ -367,7 +367,7 @@ extern void rotate_sstr(int);
 extern void select_sstr(void);
 extern void rvstrcpy(db *, db *);
 extern void setpattern(db *, db *);
-extern const char *group_match(int);
+extern db *group_match(int);
 extern int forwhunt(int, int);
 extern int forwsearch(int, int);
 extern int backhunt(int, int);
