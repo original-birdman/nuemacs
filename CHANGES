@@ -10023,3 +10023,11 @@ efunc.h
 
 search.c
     Add get_next_nbytes() for common usage by group_match() and delins().
+
+globals.c
+input.c
+main.c
+random.c
+edef.h
+efunc.h
+    Disable NUL char input for results which must not contain one.

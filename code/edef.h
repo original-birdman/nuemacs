@@ -375,6 +375,10 @@ extern struct sigdefer sigwin_dfr;
 
 extern db empty_db;
 
+/* A flag set when we don't want a NUL */
+
+extern int no_quoted_NUL;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

@@ -293,6 +293,7 @@ int quote(int f, int n) {
         c = last_qchar;
     else {
         c = tgetc();
+        if ((c == 0) && no_quoted_NUL) return no_null_here();
         last_qchar = c;
     }
     if (n < 0) return FALSE;
@@ -312,7 +313,7 @@ int quote(int f, int n) {
             }
         }
     }
-/* linsert_uc kows how ot handle '\n' (insert a newline)
+/* linsert_uc knows how to handle '\n' (insert a newline)
  * NOTE that you get \n' by quoting ctl-J
  * quoting a <return> gives you a ctl-M
  */

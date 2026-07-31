@@ -597,7 +597,7 @@ unicode_t tgetc(void) {
 }
 
 /* get1key: Get one keystroke.
- *          The only prefixes legal here are SPEC and CONTROL.
+ *          Maps control chars (< SPACE) to CONTROL|char
  */
 unicode_t get1key(void) {
     unicode_t c;
@@ -1028,6 +1028,20 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     sigact.sa_flags = SA_RESTART;
     sigaction(SIGWINCH, &sigact, &oldact);
 
+/* Are we going to allow NULs into the response?
+ * This is based on the ctype, so look at it now.
+ */
+    switch(ctype) {
+    case CMPLT_FILE:
+    case CMPLT_BUF:
+    case CMPLT_PROC:
+    case CMPLT_PHON:
+    case CMPLT_NAME:
+    case CMPLT_VAR:
+        no_quoted_NUL = TRUE;
+    default:    /* OK */
+    }
+
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
  *
@@ -1092,9 +1106,22 @@ loop:
 
     remap_c_on_intr = 1;
     c = getcmd();
-/* We get UEM_NOCHAR back on a SIGWINCH signal. */
+/* We deliberateky get UEM_NOCHAR back on a SIGWINCH signal.
+ * This is so that we can go back to loop: to get the minibuffer redrawn
+ * in its current state, which the repaint after the SIGWINCH will have lost.
+ */
     remap_c_on_intr = 0;
     if (c == UEM_NOCHAR) goto loop;
+
+    if (c == (CONTROL|'@')) {   /* get1key() maps NUL to thisq */
+        if (no_quoted_NUL) {
+/* OK if its bound to a function, but not raw */
+            if (!getbind(c)) {
+                no_null_here();
+                goto loop;
+            }
+        }
+    }
 
 /* Check for any numeric prefix
  * This looks for Esc<n> prefixes and returns c/f/n in carg.
@@ -1187,6 +1214,7 @@ loop:
  * so that we don't have to wait on things like Esc2a (== "aa").
  */
     mpresf = FALSE;
+
     execute(carg->c, carg->f, carg->n);
 post_exec:
     if (mpresf) {
@@ -1302,6 +1330,7 @@ rewinch_and_exit:
  * NOTE that the actual handler is unchanged.
  */
     sigaction(SIGWINCH, &oldact, NULL);
+    no_quoted_NUL = FALSE;  /* We're leaving */
 
     return status;
 }

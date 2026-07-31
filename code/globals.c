@@ -274,6 +274,10 @@ struct sigdefer sigwin_dfr = {TRUE, FALSE};
 
 db_bufdef(empty_db);
 
+/* A flag set when we don't want a NUL */
+
+int no_quoted_NUL = FALSE;
+
 /* Ignored prefixes  - need to limit assignment... */
 
 const char *path_pfx_map = NULL;

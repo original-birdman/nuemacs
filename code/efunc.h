@@ -275,6 +275,7 @@ extern int execute(int c, int, int);
 extern int reexecute(int, int);
 extern int ctrlg(int, int);
 extern int rdonly(void);
+extern int no_null_here(void);
 extern int resterr(void);
 extern int metafn(int, int);
 extern int cex(int, int);

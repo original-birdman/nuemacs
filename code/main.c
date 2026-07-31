@@ -1814,6 +1814,18 @@ int rdonly(void) {
         mlwrite_one(MLbkt("Key illegal in VIEW mode"));
     return FALSE;
 }
+/* ======================================================================
+ * Tell the user that NUL chars are not allowed at this point.
+ */
+int no_null_here(void) {
+    TTbeep();
+    mlwrite_one("NUL characters are not allowed here");
+    sleep(1);
+    return FALSE;
+}
+/* ======================================================================
+ * Tell the user that this command is restricted.
+ */
 int resterr(void) {
     TTbeep();
     mlwrite_one(MLbkt("That command is RESTRICTED"));
