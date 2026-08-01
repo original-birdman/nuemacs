@@ -10031,3 +10031,6 @@ random.c
 edef.h
 efunc.h
     Disable NUL char input for results which must not contain one.
+
+tools/dump_mc.debug
+    Add const to header declaration.

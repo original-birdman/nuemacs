@@ -24,7 +24,8 @@ where ptr is a *pointer* to the data structure.
 
 union magicp { struct magic *mmp; struct magic_replacement *rmp; };
 enum d_type { MATCHER, REPLACER };  /* So pointer advance can work */
-static void dump_mc(union magicp mp, enum d_type type, char *header, int line) {
+static void dump_mc(union magicp mp, enum d_type type,
+     const char *header, int line) {
     int depth = 0;
     char ucbuf[8];
     int uclen;
