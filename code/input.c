@@ -676,10 +676,10 @@ struct name_bind *getname(const char *prompt, int new_command) {
 
     nbp = name_info(db_val(buf));
     if (nbp) {
-        if (kbdmode == RECORD) addto_kbdmacro(db_val(buf), new_command, 0);
+        if (kbdmode == RECORD) dbpto_kbdmacro(&buf, new_command, 0);
     }
     else {
-        mlwrite("No such function: %s", db_val(buf));
+        mlwrite("No such function: %B", &buf);
     }
 exit:
     db_free(buf);
@@ -1259,8 +1259,8 @@ submit:     /* Tidy up */
  * and only if we have some text.
  */
     if ((dbp_len(buf) > 0) && (kbdmode == RECORD) &&
-        (mb_info.mbdepth == 1) && !no_macrobuf_record)
-         addto_kbdmacro(dbp_val(buf), 0, !do_evaluate);
+         (mb_info.mbdepth == 1) && !no_macrobuf_record)
+        dbpto_kbdmacro(buf, 0, !do_evaluate);
 
 /* If we have to evaluate, do it now.
  * Note that this is *AFTER* we've done any logging to the macro.

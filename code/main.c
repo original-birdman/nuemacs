@@ -269,9 +269,9 @@ static void set_narg_kbdmacro(int n) {
 }
 
 /* ======================================================================
- * Add a string to the keyboard macro buffer.
+ * Add a dyn_buf to the keyboard macro buffer.
  */
-int addto_kbdmacro(const char *text, int new_command, int do_quote) {
+int dbpto_kbdmacro(db *dbtext, int new_command, int do_quote) {
     if (!kbdmac_bp) {
         mlwrite_one("addto: no keyboard macro buffer!");
         return FALSE;
@@ -289,13 +289,14 @@ int addto_kbdmacro(const char *text, int new_command, int do_quote) {
         }
     }
     else linsert_byte(1, ' ');
-    if (!do_quote) linstr(text);
+    if (!do_quote) lins_dynbuf(dbtext);
     else {
         int qreq = 0;
 /* We need to quote if the first char is an "active" character
  * or if the text contain any spaces or "s.
  */
-        const char *tp = text;
+        const char *tp = dbp_val(dbtext);
+        const char *tp_max = tp + dbp_len(dbtext);
         switch(*tp) {
         case '"':
         case '!':
@@ -307,7 +308,7 @@ int addto_kbdmacro(const char *text, int new_command, int do_quote) {
         case '.':
             qreq = 1;
         }
-        if (!qreq) while (*tp) {
+        if (!qreq) while (tp < tp_max) {
             if ((*tp == ' ') || (*tp == '"')) {
                 qreq = 1;
                 break;
@@ -315,7 +316,7 @@ int addto_kbdmacro(const char *text, int new_command, int do_quote) {
             tp++;
         }
         if (qreq) linsert_byte(1, '"');
-        for (const char *tp = text; *tp; tp++) {
+        for (const char *tp = dbp_val(dbtext); tp < tp_max; tp++) {
             char cc = *tp & (char)0xff;
             char xc = 0;
             switch(cc) {
@@ -337,6 +338,16 @@ int addto_kbdmacro(const char *text, int new_command, int do_quote) {
         if (qreq) linsert_byte(1, '"');
     }
     return kbdmac_buffer_toggle(OutOf_KBDM, "addto");
+}
+
+/* ======================================================================
+ * Add a NUL-terminated string to the keyboard macro buffer.
+ */
+static db_bufdef(tmp_kbd);  /* Avoid constant malloc/free */
+int addto_kbdmacro(const char *text, int new_command, int do_quote) {
+    db_set(tmp_kbd, text);
+    int res = dbpto_kbdmacro(&tmp_kbd, new_command, do_quote);
+    return res;
 }
 
 /* ======================================================================
@@ -1919,6 +1930,7 @@ int quit(int f, int n) {
             db_free(glb_db);
             db_free(main_execstr);
             db_free(empty_db);
+            db_free(tmp_kbd);
         }
 #endif
 

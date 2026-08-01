@@ -261,6 +261,7 @@ extern int lockrel(void);
 /* main.c */
 #ifndef MAIN_C
 extern void addchar_kbdmacro(char);
+extern int dbpto_kbdmacro(db *, int, int);
 extern int addto_kbdmacro(const char *, int, int);
 extern void dumpdir_tidy(void);
 extern com_arg *multiplier_check(int);
