@@ -10039,3 +10039,8 @@ main.c
 input.c
 efunc.h
     Add dbpto_kbdmacro() and make addto_kbdmacro() a front-end to it.
+
+search.c
+    Modify search (mcstr(), rmcstr(), fast_scanner()) to limit search by
+    the length of pat, etc., not just up to the first NUL, to allow 
+    for NULs in search strings.

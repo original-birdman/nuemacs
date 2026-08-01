@@ -440,7 +440,7 @@ static void update_ring(dbp_dcl(str)) {
         txt[ix] = txt[ix-1];
     }
     txt[0] = tmp;
-    dbp_setn(txt, dbp_val(str), dbp_len(str));
+    dbp_copy(txt, str);
 
     return;
 }
@@ -599,7 +599,7 @@ static char *clearbits(void) {
  * must use this before calling here again.
  */
 static db_bufdef(btbuf);
-static db *brace_text(char *fp) {
+static db *brace_text(const char *fp) {
     int escaping = 0;
     int level = 0;
 
@@ -649,12 +649,13 @@ static void setbit(int bc, char *cclmap) {
  * Assumes that pptr arrives set to one beyond the error point AND
  * that this is a pointer into pat!
  */
-static void parse_error(char *pptr, const char *message) {
-    char byte_saved = *pptr;
-    terminate_str(pptr);    /* Temporarily fudge in end-of-string */
+static void parse_error(const char *pptr, const char *message) {
+    char *tp = (char *)pptr;
+    char byte_saved = *tp;
+    terminate_str(tp);  /* Temporarily fudge in end-of-string */
     mlwrite("%s<-: %s!", db_val(pat), message);
     sleep(2);
-    *pptr = byte_saved;
+    *tp = byte_saved;
     return;
 }
 
@@ -681,11 +682,12 @@ static struct xccl *add2_xt_cclmap(struct magic *mp, int type) {
  *      - indicates a range, but it is literal if the first or last character
  *      ] is literal if the first character (so you can't have an empty class!)
  *      [ is literal anywhere
+ * YOU CANNOT put a NUL in here!
  */
 static struct grapheme null_gc = { UEM_NOCHAR, 0, NULL };
-static int cclmake(char **ppatptr, struct magic *mcptr) {
+static int cclmake(const char **ppatptr, struct magic *mcptr) {
     char *bmap;
-    char *patptr;
+    const char *patptr;
     dbp_dcl(btext);
 
 /* We *always* set up the bitmap structure, so mc_alloc must be set */
@@ -1023,8 +1025,9 @@ static int biteq(int bc, char *cclmap) {
 /* set_lims - get the low/high values for a repeating range.
  * Recurses (once at most).
  */
-static char *set_lims(char *patp, struct magic *mcp, int first_call) {
-    char *rptr = patp + 1;      /* Remember where we start */
+static const char *set_lims(const char *patp, struct magic *mcp,
+     int first_call) {
+    const char *rptr = patp + 1;    /* Remember where we start */
     char rchr;
     while ( (rchr = *(++patp)) != '\0' ) {
         if (rchr < '0' || rchr > '9') break;    /* End of numbers */
@@ -1145,7 +1148,8 @@ static void rmcclear(void) {
 static int group_cntr;  /* Number of possible groups in search pattern */
 static int mcstr(void) {
     struct magic *mcptr = mcpat;
-    char *patptr = strdupa(db_val(pat));
+    const char *patptr = db_val(pat);
+    const char *patptr_max = patptr + db_len(pat);
     int mj;
     char pchr;
     int status = TRUE;
@@ -1175,7 +1179,8 @@ static int mcstr(void) {
 
     slow_scan = FALSE;      /* Assume not, until something needs it */
 
-    WHILE_BLOCK((pchr = *patptr) && status)
+    WHILE_BLOCK((patptr < patptr_max) && status)
+    pchr = *patptr;
     int can_repeat = TRUE;  /* Will be switched off as required */
     int possible_slow_scan = FALSE;     /* Not yet */
     mcptr->mc = null_mg;    /* Initialize fields */
@@ -1485,7 +1490,7 @@ static int mcstr(void) {
             case 'S': {
                 static char SETTER[] = "[\\X]";
                 SETTER[2] = (pchr | DIFCASE);   /* Quick lowercase ASCII */
-                char *dpatptr = SETTER;
+                const char *dpatptr = SETTER;
                 (void)cclmake(&dpatptr, mcptr);
                 mcptr->mc.negate_test = !(pchr & (char)DIFCASE); /* If UPPER */
                 goto pchr_done;
@@ -1706,7 +1711,8 @@ static void insert_counter(db *bp, struct magic_counter *mcp) {
 static int rmcstr(void) {
     int rmj = 0;        /* Entry counter */
     struct magic_replacement *rmcptr = rmcpat;
-    char *patptr = strdupa(db_val(rpat));
+    const char *patptr = db_val(rpat);
+    const char *patptr_max = patptr + db_len(rpat);
     dbp_dcl(btext);
 
 /* If we had metacharacters in the struct magic_replacement array previously,
@@ -1717,7 +1723,7 @@ static int rmcstr(void) {
     if (rmagical) rmcclear();
     rmagical = FALSE;
 
-    while (*patptr) {
+    while (patptr < patptr_max) {
         rmcptr->mc = null_mg;       /* Initialize fields */
 
 /* Is the next character non-ASCII?
@@ -2189,13 +2195,13 @@ static int readpattern(const char *prompt, db *apat, int srch) {
     if (status == FALSE) {              /* Empty response */
         if (our_rt == Search) {
             if (db_len(pat) > 0) {      /* Have a default to use? */
-                db_set(tpat, db_val(pat));
+                db_copy(tpat, &pat);
                 do_update_ring = 0;     /* Don't save this */
                 status = TRUE;          /* So we do the next section... */
             }
         }
         else {                          /* Must be a Replace */
-            db_set(tpat, db_val(rpat));
+            db_copy(tpat, &rpat);
             if (db_len(repl_txt[0]) == 0) /* If current top is also empty... */
                 do_update_ring = 0;     /* ...don't save ths one */
             status = TRUE;              /* So we do the next section... */
@@ -2205,10 +2211,10 @@ static int readpattern(const char *prompt, db *apat, int srch) {
  * mini-buffer).
  */
         if (kbdmode == RECORD && mb_info.mbdepth == 0)
-             addto_kbdmacro(db_val(tpat), 0, 1);
+             dbpto_kbdmacro(&tpat, 0, 1);
     }
     if (status == TRUE) {
-        dbp_set(apat, db_val(tpat));
+        dbp_copy(apat, &tpat);
 /* Save this latest string in the search buffer ring? */
         if (do_update_ring) update_ring(&tpat);
 
@@ -2931,7 +2937,7 @@ static char nextbyte(struct line **pcurline, int *pcuroff, int dir) {
  * table for each direction.
  * It stores match information in the entry for group 0.
  */
-static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
+static int fast_scanner(db *patrn, int direct, int beg_or_end) {
     char c;                         /* character at current position */
     const char *patptr;             /* pointer into pattern */
     struct line *curline;           /* current line during scan */
@@ -2969,10 +2975,11 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 /* Setup scanning pointers. */
         scanline = curline;
         scanoff = curoff;
-        patptr = patrn;
+        patptr = dbp_val(patrn);
+        const char *patptr_max = patptr + srch_patlen;
 
 /* Scan through the pattern for a match. */
-        while (*patptr != '\0') {
+        while (patptr < patptr_max) {
             c = nextbyte(&scanline, &scanoff, direct);
 
 #if 0
@@ -3001,7 +3008,7 @@ static int fast_scanner(const char *patrn, int direct, int beg_or_end) {
 /* We know where we matched, and we know the byte length of the pattern
  * we matched, so advance that number of bytes to find the test char.
  */
-            int togo = istrlen(patrn);
+            int togo = srch_patlen;
             while(togo > 0) {
                 int on_tline = lused(tline) - toff;
                 if (on_tline > togo) on_tline = togo;
@@ -3163,7 +3170,7 @@ int forwhunt(int f, int n) {
             break;
         }
         status = (slow_scan)? step_scanner(mcpat, FORWARD, PTEND)
-                            : fast_scanner(db_val(pat), FORWARD, PTEND);
+                            : fast_scanner(&pat, FORWARD, PTEND);
 /* We now have a valid group_match, or have failed */
         if (ggr_opts&GGR_SRCHOLAP) do_preskip = 1;
     } while ((--n > 0) && status);
@@ -3280,7 +3287,7 @@ int backhunt(int f, int n) {
             barrier_active = 0;
         }
         else {
-            status = fast_scanner(db_val(tap), REVERSE, PTBEG);
+            status = fast_scanner(&tap, REVERSE, PTBEG);
         }
 /* We now have a valid group_match, or have failed */
         if (ggr_opts&GGR_SRCHOLAP) do_preskip = 1;
@@ -3409,11 +3416,11 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
  * the scan *is* done in reverse from "here".
  */
             if (extend_match) forw_grapheme(prev_match_len + 1);
-            sts = fast_scanner(db_val(tap), REVERSE, PTBEG);
+            sts = fast_scanner(&tap, REVERSE, PTBEG);
         }
         else {              /* Nope. Go forward (with possible preskip) */
             if (extend_match) back_grapheme(prev_match_len);
-            sts = fast_scanner(dbp_val(patrn), FORWARD, PTEND);
+            sts = fast_scanner(patrn, FORWARD, PTEND);
         }
     }
     curwp->w_bufp->b_mode = real_mode;
@@ -3653,7 +3660,7 @@ static int replaces(int query, int f, int n) {
             if (!step_scanner(mcpat, FORWARD, PTBEG)) break;
         }
         else {              /* All done? */
-            if (!fast_scanner(db_val(pat), FORWARD, PTBEG)) break;
+            if (!fast_scanner(&pat, FORWARD, PTBEG)) break;
         }
         ++nummatch;     /* Increment # of matches */
 
