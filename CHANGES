@@ -10070,3 +10070,6 @@ efunc.h
     Allow evaluate_cmdb() to expand the input into its output. [input.c]
     Modify the REPL_FNC code to use one buffer for evaluate_cmdb().
     [search.c]
+
+tools/read-speed.sh
+    Change 1 exit-emacs to 0 exit-emacs, to exit with a 0 status.
