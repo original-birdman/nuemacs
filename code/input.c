@@ -160,7 +160,7 @@ static void cmplt_file(db *name) {
         endpwent();
         if (errno) {
             db_sprintf(res.choices, "passwd lookup: %s", strerror(errno));
-            db_set(res.match, dbp_val(name));
+            db_copy(res.match, name);
             res.found = -1;
             return;
         }
@@ -284,7 +284,7 @@ static void cmplt_buffer(db *name, enum cmplt_type mtype) {
         if (update_prompts(np) < 0) break;
     }
     if (res.found == 0) db_set(res.choices, NOMATCH);
-    else                db_set(res.match, db_val(res.mprefix));
+    else                db_copy(res.match, &(res.mprefix));
     return;
 }
 
@@ -383,7 +383,7 @@ next_index:
         vidx = nvar_get(vidx);
     }
     if (res.found == 0) db_set(res.choices, NOMATCH);
-    else                db_set(res.match, db_val(res.mprefix));
+    else                db_copy(res.match, &(res.mprefix));
     return;
 }
 
@@ -882,7 +882,7 @@ void evaluate_cmdb(const char *input, db *result) {
 /* We take a copy of the input, so that we don't overwrite
  * the user input.
  */
-    db_upstrdef(nexecstr);
+    db_bufdef(nexecstr);
     db_set(nexecstr, input);    /* Updateable copy */
     execstr = &nexecstr;;
     clexec = TRUE;
@@ -1064,7 +1064,7 @@ loop:
 /* Have we been asked to update the prompt? */
 
     if (prmpt_buf.update) {
-        db_set(procopy, db_val(prmpt_buf.prompt));
+        db_copy(procopy, &(prmpt_buf.prompt));
         prolen = db_len(procopy);
         prmpt_buf.update = 0;
     }
@@ -1321,7 +1321,7 @@ abort:
  */
     if (ctype == CMPLT_FILE) {
         db_set(glb_db, fixup_fname(dbp_val(buf)));
-        dbp_set(buf, db_val(glb_db));
+        dbp_copy(buf, &glb_db);
     }
 
 rewinch_and_exit:

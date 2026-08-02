@@ -28,9 +28,7 @@ typedef struct {
  * files.
  */
 #define db_buf_initval { NULL, NULL, 0, 0, 0 }
-#define db_upstr_initval { NULL, NULL, 0, 0, DB_UPS }
 #define db_bufdef(a) db (a) = db_buf_initval
-#define db_upstrdef(a) db (a) = db_upstr_initval
 #define db_dcl(a) db (a)
 #define dbp_dcl(a) db (*a)
 
@@ -101,7 +99,7 @@ void _dbp_free(db *);                                       /* buf */
 #define dbp_flagset(ds, f) _dbp_flagset(ds, f)
 #define db_flagon(ds, f) _dbp_flagon(&(ds), f)
 #define dbp_flagon(ds, f) _dbp_flagon(ds, f)
-#define db_flagsoff(ds, f) _dbp_flagoff(&(ds), f)
+#define db_flagoff(ds, f) _dbp_flagoff(&(ds), f)
 #define dbp_flagoff(ds, f) _dbp_flagoff(ds, f)
 
 #define db_val_nc(val) _dbp_val_nc(&(val))

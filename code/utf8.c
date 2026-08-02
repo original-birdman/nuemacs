@@ -322,7 +322,7 @@ int char_replace(int f, int n) {
     UNUSED(f); UNUSED(n);
 
     int status;
-    db_upstrdef(buf);
+    db_bufdef(buf);
     db_bufdef(tok);
 
     status = mlreply("reset | repchar [U+]xxxx | [U+]xxxx[-[U+]xxxx] ",

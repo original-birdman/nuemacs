@@ -1067,7 +1067,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
         else                      prompt = "Tokens/unicode chars: ";
         status = mlreply(prompt, &tstring, CMPLT_NONE);
         if (status != TRUE) goto exit;
-        dbp_setn(execstr, db_val(tstring), db_len(tstring));
+        dbp_copy(execstr, &tstring);
     }
 
 /* For COOKED_STR we have to process the rest of the line token-by-token.
@@ -1297,7 +1297,7 @@ int re_args_exec(int f, int n) {
     UNUSED(f); UNUSED(n);
     int status;
 
-    db_upstrdef(buf);
+    db_bufdef(buf);
     db_bufdef(tok);
 
     status = mlreply("exec set: ", &buf, CMPLT_NONE);

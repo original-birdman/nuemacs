@@ -74,7 +74,7 @@
 static void emergencyexit(int);
 
 /* Define the main exec command ine buffer */
-static db_upstrdef(main_execstr);
+static db_bufdef(main_execstr);
 
 /* ======================================================================
  * GGR - list all options actually available!

@@ -100,7 +100,7 @@ void _dbp_copy(db *ds, db *fds) {
     memcpy(ds->buf, fds->asp, need);    /* Will copy the trailing NUL */
     ds->asp = ds->buf;  /* Equate these */
     ds->alen = fds->alen;
-    ds->flags = fds->flags;
+    ds->flags = 0;
     return;
 }
 
@@ -347,6 +347,7 @@ void _dbp_setcharat(db *ds, int w, char c) {
 void _dbp_upval(db *ds, const char *np) {
     if (ds->flags & DB_FXD) illegal_fixed_change("upval");
     if (!(ds->flags & DB_UPS) || (np < ds->buf) || (np > ds->asp + ds->alen)) {
+fprintf(stderr, "db; buf: %s, asp: %s\n", ds->buf, ds->asp);
         illegal_dbaction("Illegal db upval");
     }
     ds->alen -= (int)(np - ds->asp);    /* Decrease by how much ptr moves */

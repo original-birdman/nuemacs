@@ -136,12 +136,12 @@ int bktoshell(int f, int n) {   /* Suspend MicroEMACS and wait to wake up */
 static db_bufdef(prev_spawn_cmd);
 static int next_spawn_cmd(int rxtest, const char *prompt, db *line) {
     if (inreex && (db_len(prev_spawn_cmd) > 0) && rxtest) {
-        dbp_set(line, db_val(prev_spawn_cmd));
+        dbp_copy(line, &prev_spawn_cmd);
     }
     else {
         int s;
         if ((s = mlreply(prompt, line, CMPLT_NONE)) != TRUE) return s;
-        db_set(prev_spawn_cmd, dbp_val(line));
+        db_copy(prev_spawn_cmd, line);
     }
     return TRUE;
 }

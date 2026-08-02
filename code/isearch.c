@@ -242,7 +242,7 @@ static void activate_cmd(void) {
     if (!ii->pdg[0].uproc) return;  /* Run first on list - if there */
 
     dbp_dcl(oldestr) = execstr;
-    db_upstrdef(nexecstr);
+    db_bufdef(nexecstr);
     db_set(nexecstr, ii->pdg[0].uproc);     /* Updateable copy */
     execstr = &nexecstr;
     int prev_inreex = inreex;
@@ -429,7 +429,7 @@ start_over:
     c = get_char();         /* Get the first character    */
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
 /* Reuse old search string?   */
-        db_set(pat, db_val(pat_save));  /* Restore old search str */
+        db_copy(pat, &pat_save);    /* Restore old search str */
 /* Yup, find the grapheme length and re-echo the string. */
         cpos = 0;
         int plen = db_len(pat);
@@ -501,14 +501,14 @@ start_over:
                 status = TRUE;      /* No, just exit        */
                 goto end_isearch;
             }
-            --cmd_offset;           /* Back up over Rubout  */
+            --cmd_offset;               /* Back up over Rubout  */
             terminate_str(cmd_buff + --cmd_offset); /* Yes, delete last char */
             curwp->w.dotp = curline;    /* Reset the line pointer */
-            curwp->w.doto = curoff; /*  and the offset       */
-            n = init_direction;     /* Reset search direction */
-            db_set(pat, db_val(pat_save));  /* Restore old search str */
-            cmd_reexecute = 0;      /* Start the whole mess over  */
-            goto start_over;        /* Let it take care of itself */
+            curwp->w.doto = curoff;     /*  and the offset       */
+            n = init_direction;         /* Reset search direction */
+            db_copy(pat, &pat_save);    /* Restore old search str */
+            cmd_reexecute = 0;          /* Start the whole mess over  */
+            goto start_over;            /* Let it take care of itself */
 
 /* Presumably a quasi-normal character comes here.
  * This can include control-chars not explicitly handled.

@@ -143,7 +143,10 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
 /* Skip any trailing space */
     while (*src == ' ' || *src == '\t') ++src;
 /* Update the lbuf values - THIS FUNCTION can do this */
+    dbp_flagon(lbuf, DB_UPS);   /* Make the val ptr updateable */
     dbp_upval(lbuf, src);
+    dbp_flagoff(lbuf, DB_UPS);  /* Make the val ptr non-updateable */
+
     return;
 }
 
@@ -172,7 +175,7 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
  */
     db_bufdef(tbuf);
     getval(buffer, &tbuf);
-    dbp_setn(buffer, db_val(tbuf), db_len(tbuf));
+    dbp_copy(buffer, &tbuf);
     db_free(tbuf);
     return TRUE;
 }
@@ -215,7 +218,7 @@ static int docmd(const char *cline) {
     if (execlevel) return TRUE;
 
     dbp_dcl(oldestr) = execstr;
-    db_upstrdef(nexecstr);
+    db_bufdef(nexecstr);
     db_set(nexecstr, cline);    /* Updateable copy */
     execstr = &nexecstr;        /* and set this one as current */
 
@@ -247,7 +250,7 @@ static int docmd(const char *cline) {
     case TKFUN:
     case TKBVR:
         getval(&tkn, &abuf);
-        db_set(tkn, db_val(abuf));
+        db_copy(tkn, &abuf);
         ttype = gettyp(db_val(tkn));    /* What we have in tkn now... */
     };
 
@@ -415,7 +418,7 @@ int execcmd(int f, int n) {
 
 /* Re-use last obtained command? */
     if (inreex && (db_charat(prev_cmd, 0) != '\0') && RXARG(execcmd))
-        db_set(thecmd, db_val(prev_cmd));
+        db_copy(thecmd, &prev_cmd);
     else {
 /* Get the line wanted */
         if ((status =
@@ -424,7 +427,7 @@ int execcmd(int f, int n) {
     }
     execlevel = 0;
     status = docmd(db_val(thecmd));
-    db_set(prev_cmd, db_val(thecmd));   /* Now we remember this... */
+    db_copy(prev_cmd, &thecmd);     /* Now we remember this... */
 
 exit:
     db_free(thecmd);
@@ -521,7 +524,7 @@ static const char* get_display_code(const char *buf) {
 static int ptt_compile(struct buffer *bp) {
     const char *ml_display_code;
 
-    db_upstrdef(lbuf);
+    db_bufdef(lbuf);
     db_bufdef(tok);
     db_bufdef(from_string);
 
@@ -1368,7 +1371,7 @@ nxtscan:                /* On to the next line */
                     token(execstr, &golabel);
 /* Via temp copy, to avoid overwrite of own value */
                     getval(&golabel, &abuf);
-                    db_set(golabel, db_val(abuf));
+                    db_copy(golabel, &abuf);
                     linlen = db_len(golabel);
                     for (glp = hlp->l_fp; glp != hlp; glp = glp->l_fp) {
 /* We need at least 2 chars on the line for a label... */
@@ -1713,7 +1716,7 @@ int execproc(int f, int n) {
 
 /* Re-use last obtained buffer? */
     if (inreex && (db_len(prev_bufn) > 0) && RXARG(execproc))
-        db_set(bufn, db_val(prev_bufn));
+        db_copy(bufn, &prev_bufn);
     else {
         if (input_waiting != NULL) {
             db_set(bufn, input_waiting);
@@ -1731,7 +1734,7 @@ int execproc(int f, int n) {
 /* dobuf() could contain commands that change prev_bufn, so reinstate
  * it here to allow for recursion.
  */
-    if (status == TRUE) db_set(prev_bufn, db_val(bufn));
+    if (status == TRUE) db_copy(prev_bufn, &bufn);
 
 exit:
     db_free(bufn);
@@ -1753,7 +1756,7 @@ int execbuf(int f, int n) {
 
 /* Re-use last obtained buffer? */
     if (inreex && (db_len(prev_bufn) > 0) && RXARG(execbuf))
-        db_set(bufn, db_val(prev_bufn));
+        db_copy(bufn, &prev_bufn);
     else {
 /* Find out what buffer the user wants to execute */
         if ((status = mlreply("Execute buffer: ", &bufn,
@@ -1782,7 +1785,7 @@ int execbuf(int f, int n) {
 /* dobuf() could contain commands that change prev_bufn, so reinstate
  * it here to allow for recursion.
  */
-    db_set(prev_bufn, db_val(bufn));
+    db_copy(prev_bufn, &bufn);
 
 exit:
     db_free(bufn);
@@ -1853,7 +1856,7 @@ int execfile(int f, int n) {
 
 /* Re-use last obtained filename? */
     if (inreex && (db_len(prev_fname) > 0) && RXARG(execfile))
-        db_setn(fname, db_val(prev_fname), db_len(prev_fname));
+        db_copy(fname, &prev_fname);
     else {
         if ((status =
           mlreply("File to execute: ", &fname, CMPLT_FILE)) != TRUE)
@@ -1897,7 +1900,7 @@ int execfile(int f, int n) {
 /* dofile() could contain commands that change prev_fname, so reinstate
  * it here to allow for recursion.
  */
-    db_set(prev_fname, db_val(fname));
+    db_copy(prev_fname, &fname);
 
 exit:
     db_free(fname);

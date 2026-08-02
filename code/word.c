@@ -763,7 +763,7 @@ int eos_chars(int f, int n) {
             eos_list[n_eos++] = c;
         }
         eos_list[n_eos] = UEM_NOCHAR;
-        db_set(eos_str, db_val(buf));
+        db_copy(eos_str, &buf);
     }
 /* Do nothing on anything else - allows you to abort once you've started. */
     db_free(prompt);

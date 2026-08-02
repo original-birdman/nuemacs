@@ -450,7 +450,7 @@ void addline_to_anyb(dbp_dcl(dbtext), struct buffer *bp) {
     struct line *lp;
 
     lp = lalloc();
-    db_setn(ldb(lp), dbp_val(dbtext), dbp_len(dbtext));
+    db_copy(ldb(lp), dbtext);
     bp->b_linep->l_bp->l_fp = lp;       /* Hook onto the end    */
     lp->l_bp = bp->b_linep->l_bp;
     bp->b_linep->l_bp = lp;

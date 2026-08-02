@@ -10044,3 +10044,21 @@ search.c
     Modify search (mcstr(), rmcstr(), fast_scanner()) to limit search by
     the length of pat, etc., not just up to the first NUL, to allow 
     for NULs in search strings.
+
+buffer.c
+dyn_buf.c
+eval.c
+exec.c
+input.c
+isearch.c
+main.c
+random.c
+search.c
+spawn.c
+utf8.c
+word.c
+dyn_buf.h
+    Change db(p)_set(n)(a, db_val(b)...) calls to db_copy().
+    Only set DB_UPS around db_upval() calls.
+    Remove db_upstr_initval and db_upstrdef()
+    Change db_copy() to clear flags.

@@ -552,7 +552,7 @@ static const char *ptt_expand(db *str) {
 /* If there is no active PTT, return the given text */
 
     if (!(curbp->b_mode & MDPHON)) {
-        db_set(pttres, dbp_val(str));
+        db_copy(pttres, str);
         return db_val(pttres);
     }
 
@@ -870,7 +870,7 @@ static void gtfun(dbp_dcl(res), const char *fname) {
 
 /* String functions */
     case UFCAT:
-        dbp_setn(res, db_val(arg1), db_len(arg1));
+        dbp_copy(res, &arg1);
         dbp_appendn(res, db_val(arg2), db_len(arg2));
         goto set_exit;
 
@@ -996,8 +996,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
 /* Miscellaneous functions */
     case UFIND: {   /* Evaluate the next arg via temporary execstr */
         dbp_dcl(oldestr) = execstr;
-        db_upstrdef(nexecstr);
-        db_setn(nexecstr, db_val(arg1), db_len(arg1));  /* Updateable copy */
+        db_bufdef(nexecstr);
+        db_copy(nexecstr, &arg1);   /* Updateable copy */
         execstr = &nexecstr;
         macarg(res);
         execstr = oldestr;
@@ -1168,7 +1168,7 @@ static void gtusr(dbp_dcl(res), const char *vname) {
  */
         if ((strcmp(vname, uv[vnum].name) == 0)) {
             if (db_val(uv[vnum].value))  {
-                dbp_setn(res, db_val(uv[vnum].value), db_len(uv[vnum].value));
+                dbp_copy(res, &(uv[vnum].value));
             }
             else {
                 dbp_set(res, errorm);
@@ -1199,7 +1199,7 @@ static void gtbvr(dbp_dcl(res), const char *vname) {
     for (vnum = 0; vnum < BVALLOC; vnum++, tp++) {  /* Only BVALLOC used */
         if ((strcmp(vname, tp->name) == 0)) {
             if (db_val(tp->value))  {
-                dbp_setn(res, db_val(tp->value), db_len(tp->value));
+                dbp_copy(res, &(tp->value));
             }
             else {
                 dbp_set(res, errorm);
@@ -1272,10 +1272,10 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVCWLINE:          setval(ue_itoa(getwpos()));
     case EVTARGET:          setval(ue_itoa(curgoal));
     case EVSEARCH:
-        dbp_setn(res, db_val(pat), db_len(pat));
+        dbp_copy(res, &pat);
         return;
     case EVREPLACE:
-        dbp_setn(res, db_val(rpat), db_len(rpat));
+        dbp_copy(res, &rpat);
         return;
     case EVMATCH:
         dbp_copy(res, group_match(0));
@@ -1427,6 +1427,7 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
     tok1 = *token;
     db_flagon(tok1, DB_UPS);    /* Make the val ptr updateable */
     db_upval(tok1, db_val(tok1)+1);
+    db_flagoff(tok1, DB_UPS);   /* Make the val ptr non-updateable */
     db_flagon(tok1, DB_FXD);    /* Ensure nothing we do modifies token! */
 
     switch (gettyp(dbp_val(token))) {   /* First char won't be NUL */
@@ -1510,13 +1511,13 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
     case TKLBL:
         goto have_error;
     case TKLIT:
-        dbp_setn(res, dbp_val(token), dbp_len(token));
+        dbp_copy(res, token);
         return;
     case TKSTR:
-        dbp_setn(res, db_val(tok1), db_len(tok1));
+        dbp_copy(res, &tok1);
         return;
     case TKCMD:
-        dbp_set(res, dbp_val(token));
+        dbp_copy(res, token);
         return;
     }
 have_error:
@@ -1640,11 +1641,11 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
     status = TRUE;
     switch (vtype) {
     case TKVAR:             /* set a user variable */
-        db_setn(uv[vnum].value, dbp_val(val), dbp_len(val));
+        db_copy(uv[vnum].value, val);
         break;
 
     case TKBVR:             /* set a buffer variable - findvar check BTPROC */
-        db_setn(execbp->bv[vnum].value, dbp_val(val), dbp_len(val));
+        db_copy(execbp->bv[vnum].value, val);
         break;
 
     case TKENV:             /* set an environment variable */
