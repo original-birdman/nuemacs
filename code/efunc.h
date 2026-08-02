@@ -238,7 +238,7 @@ extern int mlreply(const char *, db *, enum cmplt_type);
 extern struct name_bind *getname(const char *, int);
 extern unicode_t getcmd(void);
 extern void sigwinch_handler(int);
-extern void evaluate_cmdb(const char *, db *);
+extern void evaluate_cmdb(db *, db *);
 extern int getstring(const char *, db *, enum cmplt_type);
 #endif
 

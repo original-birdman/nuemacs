@@ -10062,3 +10062,11 @@ dyn_buf.h
     Only set DB_UPS around db_upval() calls.
     Remove db_upstr_initval and db_upstrdef()
     Change db_copy() to clear flags.
+
+input.c
+search.c
+efunc.h
+    Change evaluate_cmdb() to use a dyn_buf for arg1. [input.c, efunc.h]
+    Allow evaluate_cmdb() to expand the input into its output. [input.c]
+    Modify the REPL_FNC code to use one buffer for evaluate_cmdb().
+    [search.c]

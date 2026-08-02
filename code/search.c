@@ -3485,19 +3485,19 @@ static db *getrepl(void) {
             break;
         }
         case REPL_FNC: {
-            db_bufdef(fnc_buf);
-            db_set(fnc_buf, "");   /* Start with nothing */
+            db_bufdef(result);
+            db_set(result, "");     /* Start with nothing */
             for (struct func_call *fcp = rmcptr->val.fc; fcp->type != EOL;
                     fcp = fcp->next) {
                 switch (fcp->type) {
                 case LITCHAR:
-                    db_append(fnc_buf, fcp->val.ltext);
+                    db_append(result, fcp->val.ltext);
                     break;
                 case REPL_GRP:
-                    db_append_dbp(fnc_buf, group_match(fcp->val.group_num));
+                    db_append_dbp(result, group_match(fcp->val.group_num));
                     break;
                 case REPL_CNT: {
-                    insert_counter(&fnc_buf, &(fcp->val.x));
+                    insert_counter(&result, &(fcp->val.x));
                     break;
                 }
                 default:
@@ -3508,9 +3508,7 @@ static db *getrepl(void) {
  * command-line text and return the resulting string
  * We have a function to do that...
  */
-            db_bufdef(result);
-            evaluate_cmdb(db_val(fnc_buf), &result);
-            db_free(fnc_buf);
+            evaluate_cmdb(&result, &result);
             db_append(repl, db_val(result));
             db_free(result);
             break;

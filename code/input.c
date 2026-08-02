@@ -873,22 +873,24 @@ unicode_t getcmd(void) {
  * we have then running token() before replacing things.
  * We (now) loop over all of the command string.
  */
-void evaluate_cmdb(const char *input, db *result) {
-    dbp_set(result, "");                /* Empty it */
+void evaluate_cmdb(db *input, db *result) {
     dbp_dcl(orig_execstr) = execstr;
     int orig_clexec = clexec;
     const char *sep = "";
 
 /* We take a copy of the input, so that we don't overwrite
  * the user input.
+ * Although the code is run so that evaluate_cmdb(buf, buf) works, i.e.
+ * you can expand the buffer over itself.
  */
     db_bufdef(nexecstr);
-    db_set(nexecstr, input);    /* Updateable copy */
-    execstr = &nexecstr;;
+    db_copy(nexecstr, input);    /* Updateable copy */
+    execstr = &nexecstr;
     clexec = TRUE;
     db_bufdef(temp);
+    dbp_set(result, "");                /* Empty it */
     while(dbp_len(execstr) > 0) {
-        (void)nextarg("", &temp, 0);
+        (void)nextarg("", &temp, 0);    /* Grabs tokens - dbp_len decreases */
         dbp_append(result, sep);
         sep = " ";
         dbp_append(result, db_val(temp));
@@ -1266,7 +1268,7 @@ submit:     /* Tidy up */
  * Note that this is *AFTER* we've done any logging to the macro.
  * We have to fudge buf into execstr for function evaluating to work.
  */
-    if (do_evaluate) evaluate_cmdb(dbp_val(buf), buf);
+    if (do_evaluate) evaluate_cmdb(buf, buf);
 
 abort:
 
