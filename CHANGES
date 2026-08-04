@@ -10077,3 +10077,6 @@ tools/read-speed.sh
 autotest/search-magic-replaces.sh
 autotest/check-line.rc
     Move check-line procedure into a separate file.
+
+random.c
+    Change writemsg() to work with NUL-contining dbs.

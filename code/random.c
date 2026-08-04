@@ -1039,7 +1039,7 @@ int writemsg(int f, int n) {
 /* Write the message out */
     if (n == 2) fwrite(db_val(buf), 1, (size_t)db_len(buf), stderr);
     else {
-        mlforce_one(db_val(buf));
+        mlforce("%B", &buf);
         if (kbdmode == PLAY) mline_persist = TRUE;
     }
 exit:
