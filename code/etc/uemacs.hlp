@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.200 Help Index     (18 Jul 2026)
+=>                   nuEmacs GGR4.201 Help Index     (04 Aug 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -640,7 +640,7 @@ Unless noted as (read-only), these may be set as well as read.
     $target ............... target for line moves
     $search ............... search pattern (read-only)
     $replace .............. replacement pattern
-    $match ................ last matched magic pattern (read-only)
+    $match ................ last match by a search (read-only)
     $kill ................. kill buffer (read only)
     $cmode ................ mode of current buffer
     $gmode ................ global modes

@@ -10083,3 +10083,6 @@ random.c
 
 efunc.h
     Change mlreply to be a #define for nextarg.
+
+etc/uemacs.hlp
+    Update the description of $match to remove mention of magic.
