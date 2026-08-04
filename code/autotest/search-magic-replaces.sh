@@ -44,6 +44,7 @@ cat >uetest.rc <<'EOD'
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
 execute-file autotest/report-status.rc
+execute-file autotest/check-line.rc
 
 set %test_name &env TNAME
 
@@ -52,26 +53,6 @@ insert-string &cat %test_name " started"
 newline
 set %fail 0
 set %ok 0
-
-; The check routine
-;
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-store-procedure check-line
-;   Expects these to have been set, since this tests them all.
-; %expline      the expected text of the current line
-;
-  !if &seq $line %expline
-    set %test-report &cat %curtest &cat " - line OK: " $curline
-    set %ok &add %ok 1
-  !else
-    set %test-report &cat %curtest &cat " - WRONG line, got: " $line
-    set %test-report &cat %test-report &cat " - expected: " %expline
-    set %fail &add %fail 1
-  !endif
-  run report-status
-
-!endm
-
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!

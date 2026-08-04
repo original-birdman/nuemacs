@@ -10073,3 +10073,7 @@ efunc.h
 
 tools/read-speed.sh
     Change 1 exit-emacs to 0 exit-emacs, to exit with a 0 status.
+
+autotest/search-magic-replaces.sh
+autotest/check-line.rc
+    Move check-line procedure into a separate file.
