@@ -92,12 +92,16 @@ void _dbp_set(db *ds, const char *str) {
 }
 
 /* Make a copy of a dyn_buf. Assumes target is initialized (poss to NULL)
+ * A copy of a "bare" db_buf_initval creates an allocated "".
  * Only copies alen from asp.
  */
 void _dbp_copy(db *ds, db *fds) {
     size_t need = (size_t)fds->alen + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
-    memcpy(ds->buf, fds->asp, need);    /* Will copy the trailing NUL */
+    if (fds->asp)                           /* From db_buf_initval */
+        memcpy(ds->buf, fds->asp, need);    /* Will copy the trailing NUL */
+    else
+        *(ds->buf) = '\0';                  /* Create a null string */
     ds->asp = ds->buf;  /* Equate these */
     ds->alen = fds->alen;
     ds->flags = 0;
@@ -347,12 +351,29 @@ void _dbp_setcharat(db *ds, int w, char c) {
 void _dbp_upval(db *ds, const char *np) {
     if (ds->flags & DB_FXD) illegal_fixed_change("upval");
     if (!(ds->flags & DB_UPS) || (np < ds->buf) || (np > ds->asp + ds->alen)) {
-fprintf(stderr, "db; buf: %s, asp: %s\n", ds->buf, ds->asp);
         illegal_dbaction("Illegal db upval");
     }
     ds->alen -= (int)(np - ds->asp);    /* Decrease by how much ptr moves */
     ds->asp = (char *)np;
     return;
+}
+
+/* Compare 2 dyn_bufs.
+ * Need to conside the lengths....
+ */
+int _dbp_dbp_cmp(db *ds, db *ods) {
+    int cc = ds->alen;
+    int memres = 1;
+    if (cc > ods->alen) {
+        cc = ods->alen;
+        memres = -1;
+    }
+    else if (cc == ods->alen) {
+        memres = 0;
+    }
+    int res = memcmp(ds->asp, ods->asp, (size_t)cc);
+    if (res == 0) res = memres;
+    return res;
 }
 
 /* sprintf-style call to format a db.

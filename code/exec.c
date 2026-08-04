@@ -87,8 +87,10 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
 
 /* First scan past any whitespace in the source string.
  */
-    char *src = (char *)dbp_val(lbuf);
-    while (*src == ' ' || *src == '\t') ++src;
+    const char *src = dbp_val(lbuf);
+    int togo = dbp_len(lbuf);
+
+    while (*src == ' ' || *src == '\t') {++src; --togo;};
 
 /* Scan through the source string.
  * DO record a " IFF the first character
@@ -103,13 +105,14 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
     if (*src == '"') {
         quotef = TRUE;
         src++;
+        togo--;
         dbp_addch(tok, '"');
     }
     else quotef = FALSE;
-    while (*src) {      /* process special characters */
+    while (togo > 0) {      /* process special characters */
         if (*src == '~') {
-            src++;
-            if (*src == 0) break;
+            src++; togo--;
+            if (togo == 0) break;
             switch (*src++) {
             case 'r':   c = 13; break;
             case 'n':   c = 10; break;
@@ -119,9 +122,11 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
             case '0':   c = 0;  break;
             default:    c = *(src - 1);
             }
+            togo--;
         }
         else {      /* check for the end of the token */
             c = *src++;
+            togo--;
             if (quotef) {
                 if (c == '"') break;
             }
@@ -141,7 +146,7 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
     }
 
 /* Skip any trailing space */
-    while (*src == ' ' || *src == '\t') ++src;
+    if (togo > 0) while (*src == ' ' || *src == '\t') ++src;
 /* Update the lbuf values - THIS FUNCTION can do this */
     dbp_flagon(lbuf, DB_UPS);   /* Make the val ptr updateable */
     dbp_upval(lbuf, src);
@@ -594,7 +599,7 @@ static int ptt_compile(struct buffer *bp) {
         db_clear(glb_db);
         while(db_len(lbuf) > 0) {
             token(&lbuf, &tok);
-            if (db_charat(tok, 0) == '\0') break;
+            if (db_len(tok) == 0) break;
             if (!strncmp(db_val(tok), "0x", 2)) {
                 long add = strtol(db_val(tok)+2, NULL, 16);
 /* This is only for a single byte */
@@ -612,7 +617,7 @@ static int ptt_compile(struct buffer *bp) {
                 db_appendn(glb_db, abuf, incr);
             }
             else {
-                db_append(glb_db, db_val(tok));
+                db_appendn(glb_db, db_val(tok), db_len(tok));
             }
         }
         if (db_len(glb_db) == 0) continue;

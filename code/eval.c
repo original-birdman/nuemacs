@@ -1460,7 +1460,7 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
             if (status == ABORT) goto have_error;
         }
         if (do_fixup) dbp_set(res, fixup_full(db_val_nc(valres)));
-        else dbp_set(res, db_val_nc(valres));
+        else dbp_copy(res, &valres);
         return;
     }
     case TKBUF:                 /* buffer contents fetch */

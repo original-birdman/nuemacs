@@ -466,7 +466,7 @@ static db *expandp(db *newstr) {
         if (c == '\n') {    /* It's a newline */
             db_append(expbuf, "<NL>");
         }
-        else if ((c > 0 && c < 0x20) || c == 0x7f) { /* Control character */
+        else if ((c >= 0 && c < 0x20) || c == 0x7f) {   /* Control character */
             db_addch(expbuf, '^');
             db_addch(expbuf, c ^ 0x40);
         }
@@ -721,10 +721,12 @@ static int cclmake(const char **ppatptr, struct magic *mcptr) {
  * Seeing NUL is an error!!!
  * We always get graphemes...
  * patptr will be pointing to the next unread char through the loop.
+ * We have to allow for NULs being there (we stop on ]) so send in
+ * a value for arg3 that will let it get the next grapheme...
  */
     WHILE_BLOCK(*patptr)
     struct grapheme gc;
-    patptr += build_next_grapheme(patptr, 0, -1, &gc, 0);
+    patptr += build_next_grapheme(patptr, 0, INT_MAX, &gc, 0);
 
 /* Check for a range character.
  * But it will be taken literally if it is the first character or the
@@ -737,7 +739,7 @@ static int cclmake(const char **ppatptr, struct magic *mcptr) {
  * We overwrite gc here, but we know it was MC_RCCL, so can not have
  * alloc()ed any ex part.
  */
-    patptr += build_next_grapheme(patptr, 0, -1, &gc, 0);
+    patptr += build_next_grapheme(patptr, 0, INT_MAX, &gc, 0);
     if (gc.uc == MC_ECCL && gc.cdm == 0) {  /* - was at end -> literal */
         setbit(MC_RCCL, bmap);  /* ...so mark it */
         goto handle_prev;       /* to handle previous char and exit loop */
@@ -983,7 +985,7 @@ handle_prev:
  * For it to have done so, gc.ex cannot be set.
  */
 invalidate_current:
-    patptr += build_next_grapheme(patptr, 0, -1, &gc, 0);
+    patptr += build_next_grapheme(patptr, 0, INT_MAX, &gc, 0);
 
 switch_current_to_prev:
     if (gc.uc == MC_ECCL) {     /* We've hit the end! */
@@ -1187,7 +1189,7 @@ static int mcstr(void) {
     mcptr->mc.group_num = (unsigned char)curr_group;
 /* Is the next character non-ASCII? */
     struct grapheme gc;
-    int bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
+    int bc = build_next_grapheme(patptr, 0, (int)(patptr_max - patptr), &gc, 0);
     if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
 
 /* We won't have called mcstr() for Exact + non-Magic, so if we
@@ -1732,7 +1734,7 @@ static int rmcstr(void) {
  */
         struct grapheme gc;
         int bc;
-        bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
+        bc = build_next_grapheme(patptr, 0, (int)(patptr_max - patptr), &gc, 0);
         if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
             patptr += bc;
             if (!gc.cdm) {  /* No combining marks */
@@ -1843,7 +1845,8 @@ static int rmcstr(void) {
             rmagical = TRUE;    /* Can't do literal now... */
 	    /* Fall through - to handle next char... */
         default:                /* Need to test for ASCII again after MC_ESC */
-            bc = build_next_grapheme(patptr, 0, -1, &gc, 0);
+            bc = build_next_grapheme(patptr, 0, (int)(patptr_max - patptr),
+                 &gc, 0);
             if (gc.uc > 0x7f || gc.cdm) {   /* not-ASCII */
                 patptr += bc;
                 if (!gc.cdm) {  /* No combining marks so just UCLITL */
@@ -2083,14 +2086,16 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
  */
 void rvstrcpy(db *rvstr, db *str) {
 
-/* Get a copy of the original */
+/* Get a working copy of the original */
 
-    char *wp = strdupa(dbp_val(str));
+    db_bufdef(tds);
+    db_copy(tds, str);
+    char *wp = (char *)db_val(tds);
 
 /* Now reverse this copy */
 
     char *bp = wp;
-    char *ep = wp + dbp_len(str) - 1;
+    char *ep = wp + db_len(tds) - 1;
     while (bp <= ep) {
         char a = *bp;   /* Original begin */
         *bp++ = *ep;    /* Copy end to begin */
@@ -2098,7 +2103,8 @@ void rvstrcpy(db *rvstr, db *str) {
     };
 
 /* Now set the result */
-    dbp_set(rvstr, wp);
+    dbp_copy(rvstr, &tds);
+    db_free(tds);
     return;
 }
 
@@ -3211,12 +3217,12 @@ int forwsearch(int f, int n) {
  */
         db_bufdef(opat);
         int could_hunt = srch_can_hunt;
-        db_set(opat, db_val_nc(pat));
+        db_copy(opat, &pat);
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
             srch_can_hunt = 1;
 /* A search with the same string should be the same as a reexec */
             if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
-                 db_cmp(opat, db_val(pat))) {
+                 db_db_cmp(opat, pat)) {
                 do_preskip = 0;
             }
             else {
@@ -3328,12 +3334,12 @@ int backsearch(int f, int n) {
  */
         db_bufdef(opat);
         int could_hunt = srch_can_hunt;
-        db_set(opat, db_val_nc(pat));
+        db_copy(opat, &pat);
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
             srch_can_hunt = -1;
 /* A search with the same string should be the same as a reexec */
             if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
-                 db_cmp(opat, db_val(pat))) {
+                 db_db_cmp(opat, pat)) {
                 do_preskip = 0;
             }
             else {
@@ -3509,7 +3515,7 @@ static db *getrepl(void) {
  * We have a function to do that...
  */
             evaluate_cmdb(&result, &result);
-            db_append(repl, db_val(result));
+            db_appendn(repl, db_val(result), db_len(result));
             db_free(result);
             break;
         }

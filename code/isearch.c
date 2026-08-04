@@ -405,7 +405,7 @@ static int isearch(int f, int n) {
     curoff = curwp->w.doto;     /* Save the current offset            */
     init_direction = n;         /* Save the initial search direction  */
 
-    db_set(pat_save, db_val_nc(pat)); /* Save the old pattern string */
+    db_copy(pat_save, &pat);    /* Save the old pattern string */
     db_set(pat, "");            /* Start with nothing */
 
 /* Check for in "incremental-debug" mode? */

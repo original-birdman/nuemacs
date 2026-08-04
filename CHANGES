@@ -10086,3 +10086,22 @@ efunc.h
 
 etc/uemacs.hlp
     Update the description of $match to remove mention of magic.
+
+dyn_buf.c
+eval.c
+exec.c
+input.c
+isearch.c
+search.c
+dyn_buf.h
+    Enable search/replace with NULs.
+    Add _dbp_dbp_cmp(). [dyn_buf.c]
+    Fix _dbp_copy() to handle incoming NULL buf. [dyn_buf.c, dyn_buf.h]
+    Change db_set(...,db_val() to db_copy() [eval.c, isearch.c, search.c]
+    Change token() to run for data length, not end on NUL [exec.c]
+    Change dbp_append() to dbp_appendn(). [input.c, search.c]
+    Change expandp() to handle NULL as a control character. [search.c]
+    In mcstr(), rmcstr(), run for data length, not end on NUL. [search.c]
+    Change some build_next_grapheme() calls to work on actual data
+    length left (or a "dummy" INT_MAX) rather than stop on NUL. [search.c]
+    Change rvstrcpy() to use dyn_buf to handle NULs. [search.c]

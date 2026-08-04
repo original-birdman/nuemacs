@@ -81,6 +81,7 @@ void _dbp_addch(db *, const char);                          /* asp */
 char _dbp_charat(db *, int);                                /* asp */
 void _dbp_setcharat(db *, int, char c);                     /* asp */
 void _dbp_upval(db *, const char *);                        /* asp */
+int _dbp_dbp_cmp(db *, db *);                               /* asp */
 void _dbp_sprintf(db *ds, const char *fmt, ...);            /* buf */
 void _dbp_free(db *);                                       /* buf */
 
@@ -89,6 +90,7 @@ void _dbp_free(db *);                                       /* buf */
 #define _dbp_cmpn(ds, str, n) strncmp((ds)->asp, str, (size_t)(n))
 #define _dbp_casecmp(ds, str) strcasecmp((ds)->asp, str)
 #define _dbp_casecmpn(ds, str, n) strncasecmp((ds)->asp, str, (size_t)(n))
+
 #define _dbp_memchr(ds, c) memchr((ds)->asp, c, (size_t)(ds)->alen)
 
 /* Defines for actual use in user code
@@ -175,6 +177,11 @@ void _dbp_free(db *);                                       /* buf */
 
 #define db_casecmpn(ds, s, n) _dbp_casecmpn(&(ds), s, n)
 #define dbp_casecmpn(ds, s, n) _dbp_casecmpn((ds), s, n)
+
+#define db_db_cmp(ds, ods) _dbp_dbp_cmp(&(ds), &(ods))
+#define dbp_db_cmp(ds, ods) _dbp_dbp_cmp(ds, &(ods))
+#define db_dbp_cmp(ds, ods) _dbp_dbp_cmp(&(ds), ods)
+#define dbp_dbp_cmp(ds, ods) _dbp_dbp_cmp(ds, ods)
 
 #define db_memchr(ds, c) _dbp_memchr(&(ds), c)
 #define dbp_memchr(ds, c) _dbp_memchr((ds), c)

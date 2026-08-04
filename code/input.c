@@ -648,9 +648,12 @@ int mlyesno(const char *prompt) {
  * So macro-file args need to be quoted...
  * We pass on any expansion-type requested (for, eventually, getstring()).
  */
+#if 0
+/* This is now just a #define to nextarg in efunc.h */
 int mlreply(const char *prompt, db *buf, enum cmplt_type ctype) {
     return nextarg(prompt, buf, ctype);
 }
+#endif
 
 /* get a command name from the command line. Command completion means
  * that pressing a <TAB> will attempt to complete an unfinished command
@@ -893,7 +896,7 @@ void evaluate_cmdb(db *input, db *result) {
         (void)nextarg("", &temp, 0);    /* Grabs tokens - dbp_len decreases */
         dbp_append(result, sep);
         sep = " ";
-        dbp_append(result, db_val(temp));
+        dbp_appendn(result, db_val(temp), db_len(temp));
     }
     db_free(temp);
     db_free(nexecstr);
