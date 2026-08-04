@@ -10080,3 +10080,6 @@ autotest/check-line.rc
 
 random.c
     Change writemsg() to work with NUL-contining dbs.
+
+efunc.h
+    Change mlreply to be a #define for nextarg.

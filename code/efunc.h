@@ -230,11 +230,14 @@ extern int fexist(const char *);
 #endif
 
 /* input.c */
+
+/* Was a separate function, but no longer */
+#define mlreply nextarg
+
 #ifndef INPUT_C
 extern unicode_t tgetc(void);
 extern unicode_t get1key(void);
 extern int mlyesno(const char *);
-extern int mlreply(const char *, db *, enum cmplt_type);
 extern struct name_bind *getname(const char *, int);
 extern unicode_t getcmd(void);
 extern void sigwinch_handler(int);
