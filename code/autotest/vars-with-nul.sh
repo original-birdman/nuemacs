@@ -6,30 +6,50 @@ export TNAME
 
 rm -f FAIL-$TNAME
 
-# Simple test that we can match at the start of file in
-# Magic and non-Magic mode.
-# And that the matched string is correct...
+# Test values of environment variables including NULs
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
 if type perl >/dev/null 2>&1; then
-    prog='next if (/^--/); chomp; print substr($_, 3);'
-    cmd="perl -lne"
+    : OK
 else
-    prog='$1 != "--" {print substr($0, 4);}'
-    cmd=awk
+    echo "This test REQUIRES perl"
+    exit 1
 fi
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
+# It's written directly in Perl, as trying to get a NUL in using
+# here-documents or awk hasn't worked.
 #
-$cmd "$prog" > autotest.tfile <<EOD
+
+cat - > autotest.pl <<'EOD'
+open my $ofh, ">", "autotest.tfile" or die;
+local $\ = "\n";
+while (<DATA>) {
+    next if (/^--/);
+    chomp;
+    s/\Q^@/chr(0)/eg;  # Replace ^@ with actual NUL
+    print $ofh substr($_, 3);
+}
+close $ofh;
+exit;
+__DATA__
 -- 123456789012345678901234567890123456789012345678901234567890123456789
-01 match - ]xyzzy[
-02 EOF
+01 AAA
+02 abc^@def^@ghi
+03 ZZZ
+04 AAA
+05 abc^@def^@ghi
+06 ZZZ
 EOD
+
+perl autotest.pl
+status=$?
+rm -f autotest.pl
+[ $status -ne 0 ] && exit $status
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the uemacs start-up file, that will run the tests
@@ -40,11 +60,28 @@ cat >uetest.rc <<'EOD'
 ; ...and switch to that buffer at the end.
 
 ; After a search I need to check that $curcol, $curline $curchar and
-; $match  are what I expect them to be.
+; $matchlen are what I expect them to be.
 ;
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
 execute-file autotest/report-status.rc
+
+store-procedure check-var
+;   This expected value must be set, since this tests it.
+; %var            the var to test
+; %expmatch         what it expects to see
+;
+  !if &seq %expmatch &ind %var
+    set %test-report &ptf "%s: var %s OK" %curtest %var
+    set %ok &add %ok 1
+  !else
+    set %test-report &ptf "%s: var %s WRONG! got: %s%" %curtest %var &ind %var
+    set %test-report &cat %test-report &cat " - expected: " %expmatch
+    set %fail &add %fail 1
+  !endif
+  run report-status
+!endm
+
 
 set %test_name &env TNAME
 
@@ -56,60 +93,47 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position.rc
-
-execute-file autotest/check-group.rc
+execute-file autotest/check-line.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
-find-file autotest.tfile
-add-mode Exact
-
-set %test-report "START: Various Character Class tests"
-run report-status
-
-; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-set %test-report "   reverse search to start of file"
-run report-status
-end-of-file
-; ====
-search-reverse match
-  set %curtest Search1-non-Magic
-  set %expline 1
-  set %expcol 1
-  set %expchar &asc m
-  set %expmatch match
-run check-position
-
-end-of-file
-add-mode Magic
-; ====
-search-reverse match
-  set %curtest Search1-Magic
-  set %expline 1
-  set %expcol 1
-  set %expchar &asc m
-  set %expmatch match
-run check-position
-
-end-of-file
-; ====
-search-reverse (\X*)(match)
-  set %curtest Search2-Magic-0+prechar
-  set %expline 1
-  set %expcol 1
-  set %expchar &asc m
-  set %expmatch match
-run check-position
-
-  set %grpno 1
-  set %expmatch ""
-run check-group
-  set %grpno 2
-  set %expmatch match
-run check-group
-
 ;
+find-file autotest.tfile
+
+set %test-report "START: Variables with NUL"
+run report-status
+
+2 goto-line
+  set %curtest "Checking $line"
+  set %var "$line"
+  set %expmatch "abc~0def~0ghi"
+  run check-var
+
+3 forward-character
+  set %curtest "Checking $curchar"
+  set %var "$curchar"
+  set %expmatch "0"
+  run check-var
+
+beginning-of-file
+  search-forward "f~0g"
+  set %curtest "Checking $match in search"
+  set %var "$match"
+  set %expmatch "f~0g"
+  run check-var
+  set %curtest "Checking $search"
+  set %var "$search"
+  set %expmatch "f~0g"
+  run check-var
+
+beginning-of-file
+  1 replace-string "f~0g" xy~0~0y
+  set %curtest "Checking $replace"
+  set %var "$replace"
+  set %expmatch "xy~0~0y"
+  run check-var
+  
+
 select-buffer test-reports
 newline
 insert-string &ptf "END: ok: %s fail: %s~n%s ended" %ok %fail %test_name

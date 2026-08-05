@@ -6,30 +6,50 @@ export TNAME
 
 rm -f FAIL-$TNAME
 
-# Simple test that we can match at the start of file in
-# Magic and non-Magic mode.
-# And that the matched string is correct...
+# Test replaces with strings including NULs
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
 if type perl >/dev/null 2>&1; then
-    prog='next if (/^--/); chomp; print substr($_, 3);'
-    cmd="perl -lne"
+    : OK
 else
-    prog='$1 != "--" {print substr($0, 4);}'
-    cmd=awk
+    echo "This test REQUIRES perl"
+    exit 1
 fi
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
+# It's written directly in Perl, as trying to get a NUL in using
+# here-documents or awk hasn't worked.
 #
-$cmd "$prog" > autotest.tfile <<EOD
+
+cat - > autotest.pl <<'EOD'
+open my $ofh, ">", "autotest.tfile" or die;
+local $\ = "\n";
+while (<DATA>) {
+    next if (/^--/);
+    chomp;
+    s/\Q^@/chr(0)/eg;  # Replace ^@ with actual NUL
+    print $ofh substr($_, 3);
+}
+close $ofh;
+exit;
+__DATA__
 -- 123456789012345678901234567890123456789012345678901234567890123456789
-01 match - ]xyzzy[
-02 EOF
+01 AAA
+02 abc^@def^@ghi
+03 ZZZ
+04 AAA
+05 abc^@def^@ghi
+06 ZZZ
 EOD
+
+perl autotest.pl
+status=$?
+rm -f autotest.pl
+[ $status -ne 0 ] && exit $status
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the uemacs start-up file, that will run the tests
@@ -40,7 +60,7 @@ cat >uetest.rc <<'EOD'
 ; ...and switch to that buffer at the end.
 
 ; After a search I need to check that $curcol, $curline $curchar and
-; $match  are what I expect them to be.
+; $matchlen are what I expect them to be.
 ;
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
@@ -56,58 +76,57 @@ set %ok 0
 
 ; Load the check routine
 ;
-execute-file autotest/check-position.rc
-
-execute-file autotest/check-group.rc
+execute-file autotest/check-line.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
+;
 find-file autotest.tfile
-add-mode Exact
 
-set %test-report "START: Various Character Class tests"
+set %test-report "START: Replaces with NUL"
 run report-status
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-set %test-report "   reverse search to start of file"
-run report-status
-end-of-file
-; ====
-search-reverse match
-  set %curtest Search1-non-Magic
-  set %expline 1
-  set %expcol 1
-  set %expchar &asc m
-  set %expmatch match
-run check-position
+; Forward replaces
+;
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+;
+add-mode Exact
+beginning-of-file
+replace-string "c~0d" "~0cd~0"
+  set %curtest "Replace NUL string"
+  2 goto-line
+  set %expline "ab~0cd~0ef~0ghi"
+  run check-line
+  5 goto-line
+  set %expline "ab~0cd~0ef~0ghi"
+  run check-line
 
-end-of-file
+unmark-buffer
+read-file autotest.tfile
 add-mode Magic
-; ====
-search-reverse match
-  set %curtest Search1-Magic
-  set %expline 1
-  set %expcol 1
-  set %expchar &asc m
-  set %expmatch match
-run check-position
+beginning-of-file
+replace-string "(.)(~0)(.)" "${0} ${1} ${2} ${3}"
+  set %curtest "Replace NUL string magically"
+  2 goto-line
+  set %expline "abc~0d c ~0 d ef~0g f ~0 g hi"
+  run check-line
+  5 goto-line
+  set %expline "abc~0d c ~0 d ef~0g f ~0 g hi"
+  run check-line
 
-end-of-file
-; ====
-search-reverse (\X*)(match)
-  set %curtest Search2-Magic-0+prechar
-  set %expline 1
-  set %expcol 1
-  set %expchar &asc m
-  set %expmatch match
-run check-position
-
-  set %grpno 1
-  set %expmatch ""
-run check-group
-  set %grpno 2
-  set %expmatch match
-run check-group
+unmark-buffer
+read-file autotest.tfile
+add-mode Magic
+beginning-of-file
+replace-string "(.)(~0)(.)" "${&ptf ~" match2 was >>${2}<< ~"}"
+  set %curtest "Replace NUL string magically with ptf call"
+  2 goto-line
+  set %expline "ab match2 was >>~0<< e match2 was >>~0<< hi"
+  run check-line
+  5 goto-line
+  set %expline "ab match2 was >>~0<< e match2 was >>~0<< hi"
+  run check-line
 
 ;
 select-buffer test-reports

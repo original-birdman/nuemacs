@@ -6,30 +6,50 @@ export TNAME
 
 rm -f FAIL-$TNAME
 
-# Simple testing repeating a zero-length match in Magic mode
+# Test matches for strings including NULs
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the testfile
 #
 if type perl >/dev/null 2>&1; then
-    prog='next if (/^--/); chomp; print substr($_, 3);'
-    cmd="perl -lne"
+    : OK
 else
-    prog='$1 != "--" {print substr($0, 4);}'
-    cmd=awk
+    echo "This test REQUIRES perl"
+    exit 1
 fi
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the test input file
 # It's written here with row and column markers.
+# It's written directly in Perl, as trying to get a NUL in using
+# here-documents or awk hasn't worked.
 #
-$cmd "$prog" > autotest.tfile <<EOD
+
+cat - > autotest.pl <<'EOD'
+open my $ofh, ">", "autotest.tfile" or die;
+local $\ = "\n";
+while (<DATA>) {
+    next if (/^--/);
+    chomp;
+    s/\Q^@/chr(0)/eg;  # Replace ^@ with actual NUL
+    print $ofh substr($_, 3);
+}
+close $ofh;
+exit;
+__DATA__
 -- 123456789012345678901234567890123456789012345678901234567890123456789
-01 Text for replacement text - query/interactive version
-02 Text should contain a few instances of "ext" and
-03 we'll change most, but not all, of them to !!!!.
-04 So we'll end up with 7!s here ext!!!.
+01 AAA
+02 abc^@def^@ghi
+03 ZZZ
+04 AAA
+05 abc^@def^@ghi
+06 ZZZ
 EOD
+
+perl autotest.pl
+status=$?
+rm -f autotest.pl
+[ $status -ne 0 ] && exit $status
 
 # -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 # Write out the uemacs start-up file, that will run the tests
@@ -44,7 +64,6 @@ cat >uetest.rc <<'EOD'
 ;
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
-
 execute-file autotest/report-status.rc
 
 set %test_name &env TNAME
@@ -58,103 +77,138 @@ set %ok 0
 ; Load the check routine
 ;
 execute-file autotest/check-position-matchlen.rc
+execute-file autotest/check-group.rc
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; START running the code!
 ;
 find-file autotest.tfile
 
-set %test-report "START: Query replace testing"
+set %test-report "START: Search for NUL"
 run report-status
 
-beginning-of-file
 add-mode Exact
 
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-; Forward query-replace (there *IS* no reverse one).
+; Forward search
 ;
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-; We need to set up individual checking functions for each test
-; as we don't get to change expected values anywhere else;
 ;
-store-procedure check1
-  set %test-report "  replace 1"
+beginning-of-file
+search-forward "c~0d"
+  set %test-report "search for c~0d"
   run report-status
-  set %curtest Replace-Yes
-  set %expline 1
-  set %expcol 2
-  set %expchar &asc "e"
-  set %expmatchlen 3
-  run check-position-matchlen
-!endm
-store-procedure check2
-  set %test-report "  replace 2"
-  run report-status
-  set %curtest Replace-No
-  set %expline 1
-  set %expcol 24
-  set %expchar &asc "e"
-  set %expmatchlen 3
-  run check-position-matchlen
-!endm
-store-procedure check3
-  set %test-report "  replace 3"
-  run report-status
-  set %curtest replace-Yes
+  set %curtest Search-NUL
   set %expline 2
-  set %expcol 2
+  set %expcol 7
   set %expchar &asc "e"
   set %expmatchlen 3
   run check-position-matchlen
-!endm
-store-procedure check4
-  set %test-report "  replace 4"
+
+beginning-of-file
+search-forward "c~0d"
+reexecute
+  set %test-report "searchX2 for c~0d"
   run report-status
-  set %curtest Replace-No
+  set %curtest Search-NUL
+  set %expline 5
+  set %expcol 7
+  set %expchar &asc "e"
+  set %expmatchlen 3
+  run check-position-matchlen
+
+end-of-file
+search-reverse "c~0d"
+  set %test-report "reverse search for c~0d"
+  run report-status
+  set %curtest Search-NUL
+  set %expline 5
+  set %expcol 3
+  set %expchar &asc "c"
+  set %expmatchlen 3
+  run check-position-matchlen
+
+end-of-file
+search-reverse "c~0d"
+reexecute
+  set %test-report "reverse searchX2 for c~0d"
+  run report-status
+  set %curtest Search-NUL
   set %expline 2
-  set %expcol 42
+  set %expcol 3
+  set %expchar &asc "c"
+  set %expmatchlen 3
+  run check-position-matchlen
+
+add-mode Magic
+
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+; Forward Magic search
+;
+; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+;
+beginning-of-file
+search-forward "(.)~0(.)"
+  set %test-report "search for (.)~0(.)"
+  run report-status
+  set %curtest Magic-Search-NUL
+  set %expline 2
+  set %expcol 7
   set %expchar &asc "e"
   set %expmatchlen 3
   run check-position-matchlen
-!endm
-store-procedure check5
-  set %test-report "  replace 5"
+  set %grpno 1
+  set %expmatch "c"
+  run check-group
+  set %grpno 2
+  set %expmatch "d"
+  run check-group
+
+search-forward "c(.)d"
+  set %test-report "search for c(.)d"
   run report-status
-  set %curtest Replace-ALL
-  set %expline 4
-  set %expcol 31
+  set %curtest Magic-Search-NUL
+  set %expline 5
+  set %expcol 7
   set %expchar &asc "e"
   set %expmatchlen 3
   run check-position-matchlen
-!endm
-; After it completes we will be after the last replaced string
-; but the match will be invalidated.
-store-procedure check6
-  set %test-report "  replace 6"
+  set %grpno 1
+  set %expmatch "~0"
+  run check-group
+
+; NOTE that this find f^@g, not c^@g
+;
+end-of-file
+search-reverse "(.)~0(.)"
+  set %test-report "reverse search for (.)~0(.)"
   run report-status
-  set %curtest Replace-ALL
-  set %expline 4
-  set %expcol 35
-  set %expchar &asc "!"
-  set %expmatchlen 0
+  set %curtest Magic-Search-NUL
+  set %expline 5
+  set %expcol 8
+  set %expchar &asc "f"
+  set %expmatchlen 3
   run check-position-matchlen
-!endm
+  set %grpno 1
+  set %expmatch "f"
+  run check-group
+  set %grpno 2
+  set %expmatch "g"
+  run check-group
 
-; Now set-up the control buffer
-;
-simulate-incr "Y" "check1"
-simulate-incr "N" "check2"
-simulate-incr "Y" "check3"
-simulate-incr "N" "check4"
-simulate-incr "!" "check5"
+search-reverse "c(.)d" 
+  set %test-report "reverse search for c(.)d" 
+  run report-status 
+  set %curtest Magic-Search-NUL 
+  set %expline 5 
+  set %expcol 3 
+  set %expchar &asc "c" 
+  set %expmatchlen 3 
+  run check-position-matchlen 
+  set %grpno 1 
+  set %expmatch "~0"
+  run check-group 
 
-; Now run the search, which will produce the report.
-; Not we replace with a longer string
-;
-query-replace-string "ext" "!!!!"
-; Run the final test - query replace has exited....
-run check6
-unmark-buffer
 ;
 select-buffer test-reports
 newline

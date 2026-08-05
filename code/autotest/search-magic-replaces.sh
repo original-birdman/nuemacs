@@ -264,9 +264,8 @@ unmark-buffer
 
 select-buffer test-reports
 newline
-insert-string &cat &cat "END: ok: " %ok &cat " fail: " %fail
-newline
-insert-string &cat %test_name " ended"
+insert-string &ptf "END: ok: %s fail: %s~n%s ended" %ok %fail %test_name
+
 EOD
 
 # If running them all, leave - but first write out the buffer if there

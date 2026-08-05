@@ -10105,3 +10105,11 @@ dyn_buf.h
     Change some build_next_grapheme() calls to work on actual data
     length left (or a "dummy" INT_MAX) rather than stop on NUL. [search.c]
     Change rvstrcpy() to use dyn_buf to handle NULs. [search.c]
+
+autotest/replaces-with-nul.sh
+autotest/search-with-nul.sh
+autotest/vars-with-nul.sh
+autotest/*.sh
+    Add some tests to check for NULs in search, replace and environment
+    variables.
+    Modify the final status line of all tests to use &ptf.
