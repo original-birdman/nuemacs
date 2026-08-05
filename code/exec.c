@@ -176,10 +176,10 @@ int nextarg(const char *prompt, db *buffer, enum cmplt_type ctype) {
  * We CANNOT use abuf here!
  */
     db_bufdef(tbuf);
-    getval(buffer, &tbuf);
+    int status = getval(buffer, &tbuf);
     dbp_copy(buffer, &tbuf);
     db_free(tbuf);
-    return TRUE;
+    return status;
 }
 
 /* get a macro line argument
@@ -246,6 +246,10 @@ static int docmd(const char *cline) {
  */
     int ttype = gettyp(db_val(tkn));
     switch(ttype) {
+    case TKCMT: {           /* Starts with a comment! */
+        status = TRUE;      /* Not an error */
+        goto final_exit;
+    }
     case TKARG:
     case TKENV:
     case TKVAR:

@@ -197,6 +197,7 @@ enum cmplt_type {   /* What is looked up and complete */
 #define TKSTR   9               /* quoted string literal        */
 #define TKCMD   10              /* command name                 */
 #define TKBVR   11              /* A buffer variable            */
+#define TKCMT   12              /* A comment                    */
 
 /*      Internal defined functions                                      */
 

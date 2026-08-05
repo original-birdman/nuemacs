@@ -10136,3 +10136,14 @@ utf8.c
 
 search.c
     Updates to message output for replaces.
+
+eval.c
+exec.c
+efunc.h
+estruct.h
+    Add a new token type for a comment TKCMT.
+    This stops line-parsing at the start of any in-line comment.
+    Change getval() to return a TRUE/FALSE value, and return FALSE for
+    a NULL or Comment token. [eval.c, efunc.h]
+    Change nextarg() to return the value from getval(), rather than
+    always being TRUE for non-interactive running. [exec.c]

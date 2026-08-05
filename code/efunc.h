@@ -125,7 +125,7 @@ extern struct bc_res *start_item(const char *, const struct bc_info *);
 extern int start_func_item(fn_t, const struct bc_info *);
 extern int stol(const char *);
 extern int gettyp(const char *);
-extern void getval(db *, db *);
+extern int getval(db *, db *);
 extern int setvar(int, int);
 extern int delvar(int, int);
 #endif

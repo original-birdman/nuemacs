@@ -1399,6 +1399,7 @@ int gettyp(const char *token) {
     case '&':   return TKFUN;
     case '*':   return TKLBL;
     case '.':   return TKBVR;
+    case ';':   return TKCMT;
     }
     return TKCMD;
 }
@@ -1411,12 +1412,12 @@ static db_bufdef(valres);       /* static temporary val */
 
 /* Incoming token is a dyn_buf, so that strings may contan NULs */
 
-void getval(dbp_dcl(token), dbp_dcl(res)) {
+int getval(dbp_dcl(token), dbp_dcl(res)) {
     struct buffer *bp;          /* temp buffer pointer */
 
     dbp_set(res, "");           /* So we know what we start with */
 
-    if (dbp_len(token) == 0) return;
+    if (dbp_len(token) == 0) return TRUE;
 
 /* For most of these we want to look at the text from the second
  * character, so make a local copy of token in this state.
@@ -1434,7 +1435,8 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
 
     switch (gettyp(dbp_val(token))) {   /* First char won't be NUL */
     case TKNUL:
-        return;
+    case TKCMT:
+        return FALSE;
 
     case TKARG: {               /* interactive argument */
 
@@ -1463,7 +1465,7 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
         }
         if (do_fixup) dbp_set(res, fixup_full(db_val_nc(valres)));
         else dbp_copy(res, &valres);
-        return;
+        return TRUE;
     }
     case TKBUF:                 /* buffer contents fetch */
 /* Grab the right buffer */
@@ -1495,36 +1497,36 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
         }
 
 /* And return the spoils */
-        return;
+        return TRUE;
 
     case TKVAR:
         gtusr(res, db_val(tok1));
-        return;
+        return TRUE;
     case TKBVR:
         gtbvr(res, db_val(tok1));
-        return;
+        return TRUE;
     case TKENV:
         gtenv(res, db_val(tok1));
-        return;
+        return TRUE;
     case TKFUN:
         gtfun(res, db_val(tok1));
-        return;
+        return TRUE;
     case TKDIR:
     case TKLBL:
         goto have_error;
     case TKLIT:
         dbp_copy(res, token);
-        return;
+        return TRUE;
     case TKSTR:
         dbp_copy(res, &tok1);
-        return;
+        return TRUE;
     case TKCMD:
         dbp_copy(res, token);
-        return;
+        return TRUE;
     }
 have_error:
     dbp_set(res, errorm);
-    return;
+    return FALSE;
 }
 
 /* Find a variables type and name.
