@@ -997,7 +997,8 @@ static void gtfun(dbp_dcl(res), const char *fname) {
     case UFIND: {   /* Evaluate the next arg via temporary execstr */
         dbp_dcl(oldestr) = execstr;
         db_bufdef(nexecstr);
-        db_copy(nexecstr, &arg1);   /* Updateable copy */
+        db_copy(nexecstr, &arg1);       /* Updateable copy */
+        db_flagon(nexecstr, DB_UPS);    /* Updateable ptr */
         execstr = &nexecstr;
         macarg(res);
         execstr = oldestr;
@@ -1421,6 +1422,7 @@ void getval(dbp_dcl(token), dbp_dcl(res)) {
  * character, so make a local copy of token in this state.
  * This "copy" uses the original buffer - so we make sure that it
  * can't be inadvertently changed.
+ * But we CAN update asp/alen in our copy of the meta-data.
   */
 
     db_dcl(tok1);

@@ -1068,6 +1068,7 @@ static int string_getter(int f, int n, enum istr_type call_type) {
         status = mlreply(prompt, &tstring, CMPLT_NONE);
         if (status != TRUE) goto exit;
         dbp_copy(execstr, &tstring);
+        dbp_flagon(execstr, DB_UPS);
     }
 
 /* For COOKED_STR we have to process the rest of the line token-by-token.
@@ -1298,6 +1299,7 @@ int re_args_exec(int f, int n) {
     int status;
 
     db_bufdef(buf);
+    db_flagon(buf, DB_UPS);
     db_bufdef(tok);
 
     status = mlreply("exec set: ", &buf, CMPLT_NONE);

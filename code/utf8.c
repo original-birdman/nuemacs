@@ -329,6 +329,7 @@ int char_replace(int f, int n) {
           &buf, CMPLT_NONE);
     if (status != TRUE) goto exit;  /* Only act on +ve response */
 
+    db_flagon(buf, DB_UPS);
     while(db_len(buf) > 0) {
         token(&buf, &tok);
         if (db_len(tok) == 0) break;

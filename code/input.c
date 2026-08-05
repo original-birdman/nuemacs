@@ -887,7 +887,8 @@ void evaluate_cmdb(db *input, db *result) {
  * you can expand the buffer over itself.
  */
     db_bufdef(nexecstr);
-    db_copy(nexecstr, input);    /* Updateable copy */
+    db_copy(nexecstr, input);       /* Updateable copy */
+    db_flagon(nexecstr, DB_UPS);    /* Updateable ptr */
     execstr = &nexecstr;
     clexec = TRUE;
     db_bufdef(temp);

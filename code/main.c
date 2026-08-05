@@ -2041,6 +2041,7 @@ int main(int argc, char **argv) {
  */
     db_bufdef(bname);           /* Buffer name of file to read */
     execstr = &main_execstr;
+    dbp_flagon(execstr, DB_UPS);    /* Make the val ptr updateable */
     struct sigaction sigact;
     sigemptyset(&sigact.sa_mask);
 

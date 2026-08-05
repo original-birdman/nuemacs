@@ -147,10 +147,7 @@ void token(dbp_dcl(lbuf), dbp_dcl(tok)) {
 
 /* Skip any trailing space */
     if (togo > 0) while (*src == ' ' || *src == '\t') ++src;
-/* Update the lbuf values - THIS FUNCTION can do this */
-    dbp_flagon(lbuf, DB_UPS);   /* Make the val ptr updateable */
     dbp_upval(lbuf, src);
-    dbp_flagoff(lbuf, DB_UPS);  /* Make the val ptr non-updateable */
 
     return;
 }
@@ -225,10 +222,10 @@ static int docmd(const char *cline) {
     dbp_dcl(oldestr) = execstr;
     db_bufdef(nexecstr);
     db_set(nexecstr, cline);    /* Updateable copy */
+    db_flagon(nexecstr, DB_UPS);
     execstr = &nexecstr;        /* and set this one as current */
 
 /* We need to take a copy of the current command line now.
- * The token parsing writes NULs into the buffer as it goes...
  * This means we need a single point of exit, to ensure that
  * this gets freed correctly.
  */
@@ -530,6 +527,7 @@ static int ptt_compile(struct buffer *bp) {
     const char *ml_display_code;
 
     db_bufdef(lbuf);
+    db_flagon(lbuf, DB_UPS);    /* Make the val ptr updateable */
     db_bufdef(tok);
     db_bufdef(from_string);
 
@@ -1075,6 +1073,7 @@ int dobuf(struct buffer *bp) {
     int orig_pause_key_index_update;    /* State on entry - to be restored */
 
     db_bufdef(tkn);         /* buffer to evaluate an expresion in */
+    db_flagon(tkn, DB_UPS);
     db_bufdef(golabel);
 
 /* GGR - Only allow recursion up to a certain level... */

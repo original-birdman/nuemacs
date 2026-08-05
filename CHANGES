@@ -10120,3 +10120,16 @@ etc/uemacs.hlp
 
 dyn_buf.c
     Only unset the DB_FXD flag for a db_copy().
+
+eval.c
+exec.c
+input.c
+isearch.c
+main.c
+random.c
+utf8.c
+    Revert to setting DB_UPS on the buffers that need it.
+    Remove set DB_UPS around db_upval() calls in token() [exec.c]
+    Set the DB_UPS flag on nexecstr/lbuf/tkn/execstr/buf after a
+    db_copy() to it.  [eval.c, exec.c, input.c, isearch.c, main.c,
+    random.c, utf8.c]

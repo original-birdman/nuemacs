@@ -244,6 +244,7 @@ static void activate_cmd(void) {
     dbp_dcl(oldestr) = execstr;
     db_bufdef(nexecstr);
     db_set(nexecstr, ii->pdg[0].uproc);     /* Updateable copy */
+    db_flagon(nexecstr, DB_UPS);
     execstr = &nexecstr;
     int prev_inreex = inreex;
     inreex = FALSE;
