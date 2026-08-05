@@ -10133,3 +10133,6 @@ utf8.c
     Set the DB_UPS flag on nexecstr/lbuf/tkn/execstr/buf after a
     db_copy() to it.  [eval.c, exec.c, input.c, isearch.c, main.c,
     random.c, utf8.c]
+
+search.c
+    Updates to message output for replaces.

@@ -3702,7 +3702,7 @@ pprompt:
             db_bufdef(tp);
             db_copy(tp, expandp(match_p));
             dbp_dcl(ep) = expandp(repl_p);
-            mlwrite("Replace '%s' with '%s'? ", db_val(tp), dbp_val(ep));
+            mlwrite("Replace '%B' with '%B'? ", &tp, ep);
             db_free(tp);
 
 qprompt:
@@ -3811,12 +3811,18 @@ qprompt:
     }
 
 /* And report the results. */
-    mlwrite("%d substitutions", numsub);
-
-/* Invalidate the group matches when we leave */
+    if (numsub != nummatch)
+        mlwrite("%d substitutions for %d matches", numsub, nummatch);
+    else
+        mlwrite("%d substitutions", numsub);
 
 end_replaces:
-    init_dyn_group_status();
+
+/* Invalidate the group matches when we leave.
+ * Replaces (can) do multiple consecutive matches, so the concept of
+ * testing groups or the match is somewhat random.
+ */
+    init_dyn_group_status();    /* Remove any previous group info */
     if (using_incremental_debug) incremental_debug_cleanup();
     return TRUE;
 }
