@@ -10113,3 +10113,7 @@ autotest/*.sh
     Add some tests to check for NULs in search, replace and environment
     variables.
     Modify the final status line of all tests to use &ptf.
+
+etc/uemacs.hlp
+    Add detail to the description of $match and $curchar.
+    Add a brief description of NULs being OK.

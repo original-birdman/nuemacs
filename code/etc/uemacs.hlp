@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.201 Help Index     (04 Aug 2026)
+=>                   nuEmacs GGR4.201 Help Index     (05 Aug 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -38,6 +38,15 @@ A BUFFER is a named area containing a FILE being edited. Many buffers may
 be active at once. Many WINDOWS may be active at once on the screen. All
 windows may show different parts of the same buffer, or each may display a
 different one.
+
+You can use NUL characters within uemacs for entry, searching, replacing
+etc.
+The keboard entry for a NUL is ctl-SPACE, although you'll need to quote
+this (ctl-Q ctl-SPACE) as that is usually bound to set-mark.
+To enter a NUL in scripts, use ~0 within a quoted string.
+
+NULs are not allowed in some places, such as when prompting for a file
+or buffer name.
 
 -------------------------------------------------------------------------------
 =>                      CURSOR MOVEMENT
@@ -629,7 +638,7 @@ Unless noted as (read-only), these may be set as well as read.
     $asave ................ # of chars between auto-saves
     $acount ............... # of chars until next auto-save
     $lastkey .............. last keyboard char struck
-    $curchar .............. current character under the cursor
+    $curchar .............. decimal code, in ASCII, of character at cursor
     $discmd ............... display commands on command line
     $version .............. current version number (read-only)
     $progname ............. returns current prog name - "nuEmacs" (read-only)
@@ -641,6 +650,7 @@ Unless noted as (read-only), these may be set as well as read.
     $search ............... search pattern (read-only)
     $replace .............. replacement pattern
     $match ................ last match by a search (read-only)
+                            (not set for replaces)
     $kill ................. kill buffer (read only)
     $cmode ................ mode of current buffer
     $gmode ................ global modes
