@@ -94,6 +94,7 @@ void _dbp_set(db *ds, const char *str) {
 /* Make a copy of a dyn_buf. Assumes target is initialized (poss to NULL)
  * A copy of a "bare" db_buf_initval creates an allocated "".
  * Only copies alen from asp.
+ * Unsets DB_FXD.
  */
 void _dbp_copy(db *ds, db *fds) {
     size_t need = (size_t)fds->alen + 1;
@@ -104,7 +105,7 @@ void _dbp_copy(db *ds, db *fds) {
         *(ds->buf) = '\0';                  /* Create a null string */
     ds->asp = ds->buf;  /* Equate these */
     ds->alen = fds->alen;
-    ds->flags = 0;
+    ds->flags = fds->flags & ~DB_FXD;
     return;
 }
 

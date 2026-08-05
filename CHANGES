@@ -10117,3 +10117,6 @@ autotest/*.sh
 etc/uemacs.hlp
     Add detail to the description of $match and $curchar.
     Add a brief description of NULs being OK.
+
+dyn_buf.c
+    Only unset the DB_FXD flag for a db_copy().
