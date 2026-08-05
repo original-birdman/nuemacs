@@ -466,7 +466,8 @@ static db *expandp(db *newstr) {
         if (c == '\n') {    /* It's a newline */
             db_append(expbuf, "<NL>");
         }
-        else if ((c >= 0 && c < 0x20) || c == 0x7f) {   /* Control character */
+/* Control character. The 0x80 work for signed or unsigned char */
+        else if ((!(c & 0x80) && c < 0x20) || c == 0x7f) {
             db_addch(expbuf, '^');
             db_addch(expbuf, c ^ 0x40);
         }

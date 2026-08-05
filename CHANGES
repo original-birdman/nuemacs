@@ -10147,3 +10147,6 @@ estruct.h
     a NULL or Comment token. [eval.c, efunc.h]
     Change nextarg() to return the value from getval(), rather than
     always being TRUE for non-interactive running. [exec.c]
+
+search.c
+    Check for (c & 0x80) to cater for signed/unsigned chars.
