@@ -146,7 +146,7 @@ void myencrypt(char *bptr, int len) {
  * We now read/write in a block, so can en/decrypt any byte.
  */
     while (len--) {
-        cc = ch_as_uc(*bptr);   /* Get the next char - unsigned */
+        cc = *bptr;     /* Get the next char - unsigned */
         if (!printing_only || ((cc >= ' ') && (cc <= '~'))) {
 
 /* Feed the upper few bits of the key back into itself.
@@ -185,7 +185,7 @@ void myencrypt(char *bptr, int len) {
 /* Our autokey (a special case of the running key) is being generated
  * by a weighted checksum of cipher text, (unsigned) clear text and salt.
  */
-            key = key + key + (cc ^ ch_as_uc(*bptr)) + salt;
+            key = key + key + (cc ^ *bptr) + salt;
         }
         *bptr++ = (char)cc;     /* put character back into buffer */
     }

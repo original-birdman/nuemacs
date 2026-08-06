@@ -915,11 +915,11 @@ handle_prev:
  */
             xp = add2_xt_cclmap(mcptr, UCLITL);
             xp->xc.negate_test = wa.negate_it;      /* We have a new xp */
-            xp->xval.uchar = ch_as_uc('_');
+            xp->xval.uchar = '_';
             xp = add2_xt_cclmap(mcptr, CCL);
             xp->xc.negate_test = wa.negate_it;      /* We have a new xp */
-            xp->xval.cl_lim.low = ch_as_uc('0');
-            xp->xval.cl_lim.high = ch_as_uc('9');
+            xp->xval.cl_lim.low = '0';
+            xp->xval.cl_lim.high = '9';
             goto invalidate_current;
         }
         case 's':               /* \s is Whitespace */
@@ -2109,6 +2109,9 @@ void rvstrcpy(db *rvstr, db *str) {
     return;
 }
 
+/* To avoid lots of warnings about using a char as an index */
+#define idbp_charat(b, i) (int)(dbp_charat(b, i))
+
 /*      Setting up search jump tables.
  *      the default for any character to jump
  *      is the pattern length
@@ -2129,26 +2132,26 @@ void setpattern(db *apat, db *tap) {
  */
     int nocase = !(curwp->w_bufp->b_mode & MDEXACT);
     for (i = 0; i < patlenadd; i++) {
-        deltaf[ch_as_uc(dbp_charat(apat, i))] = patlenadd - i;
-        if (nocase && isalpha(ch_as_uc(dbp_charat(apat, i))))
-            deltaf[ch_as_uc(dbp_charat(apat, i) ^ (char)DIFCASE)] = patlenadd - i;
-        deltab[ch_as_uc(dbp_charat(tap, i))] = patlenadd - i;
-        if (nocase && isalpha(ch_as_uc(dbp_charat(tap, i))))
-            deltab[ch_as_uc(dbp_charat(tap, i) ^ (char)DIFCASE)] = patlenadd - i;
+        deltaf[idbp_charat(apat, i)] = patlenadd - i;
+        if (nocase && isalpha(idbp_charat(apat, i)))
+            deltaf[CHCASE(idbp_charat(apat, i))] = patlenadd - i;
+        deltab[idbp_charat(tap, i)] = patlenadd - i;
+        if (nocase && isalpha(idbp_charat(tap, i)))
+            deltab[CHCASE(idbp_charat(tap, i))] = patlenadd - i;
     }
 
 /* The last character will have the pattern length unless there are
  * duplicates of it. Get the number to jump from the arrays delta, and
  * overwrite with zeros in delta duplicating the CASE.
  */
-    lastchfjump = patlenadd + deltaf[ch_as_uc(dbp_charat(apat, patlenadd))];
-    deltaf[ch_as_uc(dbp_charat(apat, patlenadd))] = 0;
-    if (nocase && isalpha(ch_as_uc(dbp_charat(apat, patlenadd))))
-        deltaf[ch_as_uc(dbp_charat(apat, patlenadd) ^ (char)DIFCASE)] = 0;
-    lastchbjump = patlenadd + deltab[ch_as_uc(dbp_charat(apat, 0))];
-    deltab[ch_as_uc(dbp_charat(apat, 0))] = 0;
-    if (nocase && isalpha(ch_as_uc(dbp_charat(apat, 0))))
-        deltab[ch_as_uc(dbp_charat(apat, 0) ^ (char)DIFCASE)] = 0;
+    lastchfjump = patlenadd + deltaf[idbp_charat(apat, patlenadd)];
+    deltaf[idbp_charat(apat, patlenadd)] = 0;
+    if (nocase && isalpha(idbp_charat(apat, patlenadd)))
+        deltaf[CHCASE(idbp_charat(apat, patlenadd))] = 0;
+    lastchbjump = patlenadd + deltab[idbp_charat(apat, 0)];
+    deltab[idbp_charat(apat, 0)] = 0;
+    if (nocase && isalpha(idbp_charat(apat, 0)))
+        deltab[CHCASE(idbp_charat(apat, 0))] = 0;
 }
 
 /* readpattern -- Read a pattern.  Stash it in apat.
@@ -2825,10 +2828,10 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
                 spare = curoff - lused(curline);
             }
             if (spare == 0) {
-                jump = deltaf[ch_as_uc('\n')];
+                jump = deltaf[(int)'\n'];
             }
             else {
-                jump = deltaf[ch_as_uc(lgetc(curline, curoff))];
+                jump = deltaf[(int)lgetc(curline, curoff)];
             }
         }
 /* the last character matches, so back up to start of possible match */
@@ -2850,13 +2853,13 @@ static int fbound(int jump, struct line **pcurline, int *pcuroff, int dir) {
                     return TRUE;    /* hit end of buffer */
             }
             if (curoff == lused(curline)) {
-                jump = deltab[ch_as_uc('\n')];
+                jump = deltab[(int)'\n'];
             }
             else {
-                jump = deltab[ch_as_uc(lgetc(curline, curoff))];
+                jump = deltab[(int)lgetc(curline, curoff)];
             }
         }
-/* the last character matches, so back up to start of possible match */
+/* The last character matches, so back up to start of possible match */
 
         curoff += srch_patlen;
         spare = curoff - lused(curline);

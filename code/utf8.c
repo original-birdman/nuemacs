@@ -225,7 +225,7 @@ int prev_utf8_offset(const char *buf, int offset, int grapheme_start) {
  * NOTE that the test needs marker as an unsigned char, to stop sign
  * extension in the test.
  */
-                if ((c & ~valmask) == ch_as_uc(marker)) {
+                if ((c & ~valmask) == (unsigned char)marker) {
                     addin = (c & valmask);
                     bits_sofar += 6;
                     addin <<= bits_sofar;

@@ -10155,3 +10155,18 @@ input.c
 line.c
 search.c
     Minor fixes and comment updates.
+
+Makefile
+bind.c
+crypt.c
+display.c
+posix.c
+search.c
+utf8.c
+estruct.h
+    Compile everything with -funsigned-char for consistency across
+    architectures.
+    Add -funsigned-char to CFLAGS. [Makefile]
+    Remove ch_as_uc macro and usage [bind.c, crypt.c, display.c,
+    posix.c, search.c, utf8.c, estruct.h]
+    Add idbp_charat macro to avoid "char as index" warnings. [search.c]

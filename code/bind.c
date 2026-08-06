@@ -246,7 +246,7 @@ static unicode_t stock(const char *given_keyname) {
     }
 
 /* Make sure we are not lower case with only Control or Meta */
-    if (ch_as_uc(*keyname) >= 'a' && ch_as_uc(*keyname) <= 'z' &&
+    if ((*keyname >= 'a') && (*keyname <= 'z') &&
          !(noupper))                /* GGR */
         *keyname &= (char)0xdf;     /* Switch off "lowercase bit" */
 
@@ -254,7 +254,7 @@ static unicode_t stock(const char *given_keyname) {
  * by bindtokey() and buffertokey().
  * If the user can type it they may well wish to use it.
  */
-    if (ch_as_uc(*keyname) >= 0x80) {   /* We have a utf-8 string... */
+    if (*keyname >= 0x80) {         /* We have a utf-8 string... */
         unicode_t uc;
         int kn_left = (int)(kn_end - keyname);
         keyname += utf8_to_unicode(keyname, 0, kn_left, &uc);

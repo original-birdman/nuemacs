@@ -306,7 +306,8 @@ WARNINGS += -Wconversion -Wsign-conversion -Wwrite-strings
 # GML??? += -Wtraditional-conversion
 
 CFLAGS = $(DBG_OPTS) $(X_OPTS) $(INT_OPTS) $(TRACE_OPTS) $(WARNINGS) \
-    -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL) -fno-inline-functions
+    -std=gnu99 -DGGR_MODE $(UTF8INCL) $(BCKTINCL) -fno-inline-functions \
+    -funsigned-char
 
 # If we want a random start to random numbers?
 CFLAGS += -DRANDOM_SEED=1

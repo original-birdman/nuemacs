@@ -16,12 +16,9 @@
 #include "dyn_buf.h"
 
 /* Various bits of code use chars as indices.
- * Ensure these are treated as unsigned.
- * Could use a compile option (-funsigned-char for gcc) but
- * that puts the logic into the build files rather than the actual code.
- * So use this macro to cast it when you want it as an int (0-255).
+ * We now compile with -funsigned-char.
  */
-#define ch_as_uc(bc) ((unsigned char)(bc))
+/* #define ch_as_uc(bc) ((unsigned char)(bc)) */
 
 /* We have lots of strlen() calls wheer we want an int result */
 #define istrlen(a) ((int)strlen(a))

@@ -1020,7 +1020,7 @@ static int cline_display_overlong(void) {
     unsigned char *cp = (unsigned char *)ltext(curwp->w.dotp);
     int max_offs = lused(curwp->w.dotp);
     while (offs < max_offs) {
-        unsigned char cc = ch_as_uc(*(cp+offs));
+        unsigned char cc = *(cp+offs);
         if (cc <= 0xa0) {
             if (cc == '\t') { dcol |= tabmask; dcol++; }    /* Round up */  \
             else if (cc < 0x20 || cc == 0x7f) dcol += 2;    /* ^X */        \

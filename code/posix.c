@@ -171,7 +171,7 @@ int ttgetc(void) {
         pending = count;
     }
 
-    c = ch_as_uc(buffer[0]);
+    c = buffer[0];
     if (c < 0xc0 && !(c == 0x1b))   /* ASCII or Latin-1(??) - Not Esc */
         goto done;
 
