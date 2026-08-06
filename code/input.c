@@ -871,7 +871,7 @@ unicode_t getcmd(void) {
  * loop: label.
  */
 
-/* Evaluate a string as a command.
+/* Evaluate a string - expanding functions (&...) and variables ($/%/.)
  * Done by saving the current command buffer, replacing it with what
  * we have then running token() before replacing things.
  * We (now) loop over all of the command string.
@@ -1045,7 +1045,8 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     case CMPLT_NAME:
     case CMPLT_VAR:
         no_quoted_NUL = TRUE;
-    default:    /* OK */
+        break;
+    default: ;  /* OK */
     }
 
 /* A copy of the main.c command loop from 3.9e, but things are a
@@ -1277,7 +1278,7 @@ submit:     /* Tidy up */
 abort:
 
 /* If we get here "normally" SIGWINCH will still be handled by deferring it,
- * as the only async handling that actuall runs is in get1key.
+ * as the only async handling that actually runs is in get1key.
  */
     if (!swbuffer(bp, 0)) { /* Make sure we're still in our minibuffer */
         status = FALSE;

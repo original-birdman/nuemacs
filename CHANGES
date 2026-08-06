@@ -10150,3 +10150,8 @@ estruct.h
 
 search.c
     Check for (c & 0x80) to cater for signed/unsigned chars.
+
+input.c
+line.c
+search.c
+    Minor fixes and comment updates.

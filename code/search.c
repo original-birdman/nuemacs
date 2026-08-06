@@ -2879,7 +2879,7 @@ static void get_next_nbytes(db *dbp_res, struct line *clp, int coff, int togo) {
         if (on_cline > togo) on_cline = togo;
 /* Only copy if there is something to copy */
         if (on_cline > 0) {
-            dbp_appendn(dbp_res, ltext(clp)+coff, (size_t)on_cline);
+            dbp_appendn(dbp_res, ltext(clp)+coff, on_cline);
         }
         togo -= on_cline;
 
@@ -3538,7 +3538,7 @@ static struct {
     db replace;             /* Text of the replacing string */
     struct line *mline;     /* Line it is on */
     int moff;               /* Start offset on mline */
-} last_match = { (db) db_buf_initval, (db) db_buf_initval, NULL, 0 };
+} last_match = { db_buf_initval, db_buf_initval, NULL, 0 };
 
 /* delins -- delete the match and insert the replacement
  * We need to end up at the end of the replacement string.
