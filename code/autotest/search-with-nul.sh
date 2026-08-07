@@ -31,7 +31,7 @@ local $\ = "\n";
 while (<DATA>) {
     next if (/^--/);
     chomp;
-    s/\Q^@/chr(0)/eg;  # Replace ^@ with actual NUL
+    s/\Q^@/chr(0)/eg;   # Replace ^@ with actual NUL
     print $ofh substr($_, 3);
 }
 close $ofh;
@@ -68,6 +68,11 @@ execute-file autotest/report-status.rc
 
 set %test_name &env TNAME
 
+; We do not run the standard start-up file, so ggr_opts is left
+; as unset.
+; This means that we run with the original ^@ display for NUL
+; and this needs to be used for column matching.
+
 select-buffer test-reports
 insert-string &cat %test_name " started"
 newline
@@ -89,6 +94,14 @@ run report-status
 
 add-mode Exact
 
+; We'll run the tests twice.
+; The first time with Ctlgph unset and then again with ti set
+;
+set $ggr_opts &ban $ggr_opts &bno 0x20
+set .ctl_add 1
+
+*start-tests
+
 ; -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 ; Forward search
 ;
@@ -100,7 +113,7 @@ search-forward "c~0d"
   run report-status
   set %curtest Search-NUL
   set %expline 2
-  set %expcol 7
+  set %expcol &add 6 .ctl_add
   set %expchar &asc "e"
   set %expmatchlen 3
   run check-position-matchlen
@@ -112,7 +125,7 @@ reexecute
   run report-status
   set %curtest Search-NUL
   set %expline 5
-  set %expcol 7
+  set %expcol &add 6 .ctl_add
   set %expchar &asc "e"
   set %expmatchlen 3
   run check-position-matchlen
@@ -153,7 +166,7 @@ search-forward "(.)~0(.)"
   run report-status
   set %curtest Magic-Search-NUL
   set %expline 2
-  set %expcol 7
+  set %expcol &add 6 .ctl_add
   set %expchar &asc "e"
   set %expmatchlen 3
   run check-position-matchlen
@@ -169,7 +182,7 @@ search-forward "c(.)d"
   run report-status
   set %curtest Magic-Search-NUL
   set %expline 5
-  set %expcol 7
+  set %expcol &add 6 .ctl_add
   set %expchar &asc "e"
   set %expmatchlen 3
   run check-position-matchlen
@@ -185,7 +198,7 @@ search-reverse "(.)~0(.)"
   run report-status
   set %curtest Magic-Search-NUL
   set %expline 5
-  set %expcol 8
+  set %expcol &add 7 .ctl_add
   set %expchar &asc "f"
   set %expmatchlen 3
   run check-position-matchlen
@@ -196,18 +209,26 @@ search-reverse "(.)~0(.)"
   set %expmatch "g"
   run check-group
 
-search-reverse "c(.)d" 
-  set %test-report "reverse search for c(.)d" 
-  run report-status 
-  set %curtest Magic-Search-NUL 
-  set %expline 5 
-  set %expcol 3 
-  set %expchar &asc "c" 
-  set %expmatchlen 3 
-  run check-position-matchlen 
-  set %grpno 1 
+search-reverse "c(.)d"
+  set %test-report "reverse search for c(.)d"
+  run report-status
+  set %curtest Magic-Search-NUL
+  set %expline 5
+  set %expcol 3
+  set %expchar &asc "c"
+  set %expmatchlen 3
+  run check-position-matchlen
+  set %grpno 1
   set %expmatch "~0"
-  run check-group 
+  run check-group
+
+!if &not &ban $ggr_opts 0x20
+  set $ggr_opts &bor $ggr_opts 0x20
+  set .ctl_add 0
+  set %test-report "Repeat all tests with Ctlgph on"
+  run report-status
+  !goto start-tests
+!endif
 
 ;
 select-buffer test-reports
@@ -239,7 +260,7 @@ fi
 
 # Do it...set the default uemacs if caller hasn't set one.
 [ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
-$UE2RUN -x ./uetest.rc
+$UE2RUN -c ./uetest.rc
 
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then

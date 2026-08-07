@@ -10170,3 +10170,24 @@ estruct.h
     Remove ch_as_uc macro and usage [bind.c, crypt.c, display.c,
     posix.c, search.c, utf8.c, estruct.h]
     Add idbp_charat macro to avoid "char as index" warnings. [search.c]
+
+display.c
+estruct.h
+line.h
+autotest/search-with-nul.sh
+etc/uemacs.rc
+    Added a ggr_opts flag to display control characters using the
+    Unicode glyphs, rather than the 2-byte ^X.  If this is unset it
+    reverts to the original ^X display, i.e.  the default with the
+    standard start=up file is to use the Unicode glyphs.  This means
+    that you will need your font to have the correct glyphs, or unset
+    the bit.
+    #define GGR_CTLGPH [estruct.h]
+    Check the flag in vtputc() and act accordingly [display.c]
+    Add a check for GGR_CTLGPH in the update_screenpos_for_char()
+    define. [line.h]
+    Change the test code to run twice, once with Ctlgph unset then again
+    with it set.  Changed the column matching info accordingly.
+    [autotest/search-with-nul.sh]
+    Added a Ctlgph option to change-ggr-opts (and removed several
+    unneeded delete-var lines). [etc/uemacs.rc]

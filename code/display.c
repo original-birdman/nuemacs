@@ -402,8 +402,13 @@ static void vtputc(unicode_t c) {
  *  U+2400 to U+241F (so 2400+c)
  */
     if (c < 0x20) {
-        vtputc('^');
-        vtputc(c ^ 0x40);
+        if (ggr_opts & GGR_CTLGPH) {
+            vtputc(0x2400 + c);
+        }
+        else {
+            vtputc('^');
+            vtputc(c ^ 0x40);
+        }
         return;
     }
 
@@ -411,8 +416,13 @@ static void vtputc(unicode_t c) {
  *  U+2421
  */
     if (c == 0x7f) {
-        vtputc('^');
-        vtputc('?');
+        if (ggr_opts & GGR_CTLGPH) {
+            vtputc(0x2421);
+        }
+        else {
+            vtputc('^');
+            vtputc('?');
+        }
         return;
     }
 

@@ -79,9 +79,10 @@ extern int yankmb(int f, int n);
  * zero width for, e.g., control chars but we need to use 2 for them.
  */
 #define update_screenpos_for_char(scol, uc) \
-    if (uc == '\t') { scol |= tabmask; scol++; }    /* Round up */  \
-    else if (uc < 0x20 || uc == 0x7f)  scol += 2;   /* ^X */        \
-    else if (uc >= 0x80 && uc <= 0xa0) scol += 3;   /* \nn */       \
+    if (uc == '\t') { scol |= tabmask; scol++; }    /* Round up  */ \
+    else if (uc < 0x20 || uc == 0x7f)               /* ^X        */ \
+       scol += (ggr_opts & GGR_CTLGPH)? 1: 2;       /* or U+24xx */ \
+    else if (uc >= 0x80 && uc <= 0xa0) scol += 3;   /* \nn       */ \
     else if ((scol == 0) && combining_type(uc)) scol = 1;           \
     else scol += utf8char_width(uc);                /* Allow my overrides */
 

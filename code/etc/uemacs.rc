@@ -26,6 +26,12 @@ set $overlap 2          ; What it used to be
 ; is 14 characters.
 ;
 
+; NOTE!!!
+; Buffer variables (.varname) exist in the buffer of the executed
+; procedure so they don't really need to be deleted unless you
+; use too many of them within a single procedure. They will
+; be re-used on the next run of the same procedure.
+
 ; Procedure run when a new file is opened
 ;
 store-procedure file-hooks
@@ -42,16 +48,13 @@ store-procedure file-hooks
         !else
             set .pthtmp &tai $cfname .pthidx
         !endif
-        delete-var .pthidx
         set .rctmp &rin .pthtmp "."
         !if &equ .rctmp 0
-            delete-var .pthtmp
             !goto fh_exit
         !endif
 ; Pick up everything after the last .
 ;
         set .rctmp &tai .pthtmp &add .rctmp 1
-        delete-var .pthtmp
     !endif
 
 ; Make the suffix check case insensitive
@@ -70,7 +73,6 @@ store-procedure file-hooks
         !endif
     !endif
 *fh_exit
-delete-var .rctmp
 !endm
 ;
 ; Centre the current text within $fillcol columns
@@ -310,10 +312,6 @@ store-procedure _mytoggle-mode
     !endif
     .mfunc .what
 *report
-    delete-var %test-mode
-    delete-var %type-mode
-    delete-var %add-func
-    delete-var %del-func
     write-message &cat .report .how
 !endm
 
@@ -394,15 +392,14 @@ store-procedure change-ggr-opts one_pass
       set .action "Toggle"
       set .how "-toggle"
     !endif
-    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap, Height):" .action
-    delete-var .action
+    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap, Height, Ctlgph):" .action
     set .report " "
     set .optsel &upper &gtkey
     !if &or &seq .optsel &chr 0x07 &seq .optsel "~n"
         write-message "[Aborted]"
         !finish
     !endif
-    !if &eq 0 &sin "TFWOH" .optsel
+    !if &eq 0 &sin "TFWOHC" .optsel
         write-message "Unknown mode"
         !finish
     !endif
@@ -427,6 +424,10 @@ store-procedure change-ggr-opts one_pass
     set .bit 0x10
     set .what "Height"
     !goto &cat doit .how
+*changeC
+    set .bit 0x20
+    set .what "Ctlgph"
+    !goto &cat doit .how
 ;
 *doit-on
     set .report &ptf "GGR %s mode turned on" .what
@@ -449,11 +450,6 @@ store-procedure change-ggr-opts one_pass
 ;
 *report
     write-message .report
-    delete-var .report
-    delete-var .what
-    delete-var .bit
-    delete-var .how
-    delete-var .optsel
 !endm
 
 ;
@@ -887,8 +883,6 @@ store-procedure make-descr not_mb one_pass
   !if &equ .remove_xs 1         ; Change xs to what was there originally
     %old-wspcols delete-next-character
     insert-string %old-wsptext
-    delete-var %old-wspcols
-    delete-var %old-wsptext
   !endif
 !endm
 
