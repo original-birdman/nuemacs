@@ -44,11 +44,22 @@
 #define IS_QUIT         (CTLCHAR('['))  /* Exit the search */
 #define IS_RUBOUT       (0x7F)          /* Delete previous character */
 
-/* A couple more "own" variables for the command string */
+/* A couple more "own" variables for the command string.
+ * NOTE: that the keys are obtained as unicode chars, so we cannot
+ * use dyn_bufs here.
+ * Also note that we use 4-bytes per entry, so we allocate with
+ * Xreallocarray().
+ */
+#define CMD_BUFF_INCR 256
+static int *cmd_buff;               /* Save the command args here */
+static int cmd_buff_alloc;          /* Current allocated size */
+static int cmd_offset;              /* Current offset into command buff */
+static int cmd_reexecute = -1;      /* > 0 if re-executing command */
 
-static int cmd_buff[CMDBUFLEN]; /* Save the command args here */
-static int cmd_offset;                  /* Current offset into command buff */
-static int cmd_reexecute = -1;          /* > 0 if re-executing command */
+void init_isearch(void) {
+    cmd_buff_alloc = CMD_BUFF_INCR;
+    cmd_buff = Xreallocarray(NULL, cmd_buff_alloc, sizeof(*cmd_buff));
+}
 
 /* Routine to prompt for I-Search string.
  */
@@ -90,10 +101,22 @@ static int echo_str(const char *str) {
     return cw;
 }
 
-static int echo_char(int c, int col) {
+static unicode_t echo_char(unicode_t c, int col) {
     movecursor(term.t_mbline, col); /* Position the cursor         */
     int cw;
-    if ((c < ' ') || (c == 0x7F)) { /* Control character?          */
+
+/* Are we using glyphs for control characters? If so, map them. */
+    if (ggr_opts & GGR_CTLGPH) {
+        if (c < ' ') {         /* Normal control character */
+            c = 0x2400 + c;
+        }
+        else if (c == 0x7f) {   /* Delete */
+            c = 0x2421;
+        }
+    }
+
+/* Control character without glyph display? */
+    if ((c < ' ') || (c == 0x7F)) {
         switch (c) {                /* Yes, dispatch special cases */
         case '\n':                  /* Newline                     */
             cw = echo_str("<NL>");
@@ -131,30 +154,29 @@ static int echo_char(int c, int col) {
  * Otherwise, we must be re-executing the command string, so just return the
  * next character.
  */
-static int get_char(void) {
-    int c;                      /* A place to get a character */
+static unicode_t get_char(void) {
+    unicode_t c;                /* A place to get a character */
 
 /* See if we're re-executing:
  * If so we want to play out all of the characters again, in order,
  * so that we replay the whole thing.
  */
-
     if (cmd_reexecute >= 0)     /* Is there an offset? */
-        if ((c = cmd_buff[cmd_reexecute++]) != 0)
-            return c;           /* Yes, return any character */
-
+        if ((c = cmd_buff[cmd_reexecute++]) != UEM_NOCHAR) {
+            return c;           /* Yes, return any Unicode character */
+        }
 /* We're not re-executing (or aren't any more).  Try for a real char */
 
     cmd_reexecute = -1;     /* Say we're in real mode again */
     update(FALSE);          /* Pretty up the screen */
-/* If we're getting too big ...  Complain loudly and bitterly */
-    if (cmd_offset >= CMDBUFLEN - 1) {
-        mlwrite_one("? command too long");
-        return metac;       /* And force a quit */
+/* If we willtoo big ... expand! */
+    if (cmd_offset >= cmd_buff_alloc) {
+        cmd_buff_alloc += CMD_BUFF_INCR;
+        cmd_buff = Xreallocarray(cmd_buff, cmd_buff_alloc, sizeof(*cmd_buff));
     }
     c = tgetc();            /* Get the next literal character */
     cmd_buff[cmd_offset++] = c; /* Save the char for next time */
-    terminate_str(cmd_buff + cmd_offset);
+    cmd_buff[cmd_offset] = UEM_NOCHAR;
     return c;               /* Return the character */
 }
 
@@ -338,6 +360,17 @@ void incremental_debug_cleanup(void) {
  */
 static void hilite(int c, int col) {
     int cw;
+
+/* Are we using glyphs for control characters? If so, map them. */
+    if (ggr_opts & GGR_CTLGPH) {
+        if (c < ' ') {         /* Normal control character */
+            c = 0x2400 + c;
+        }
+        else if (c == 0x7f) {   /* Delete */
+            c = 0x2421;
+        }
+    }
+
     if ((c < ' ') || (c == 0x7F)) { /* Control character? */
         switch (c) {                /* Dispatch special cases */
         case '\n':
@@ -401,7 +434,7 @@ static int isearch(int f, int n) {
 
     cmd_reexecute = -1;         /* We're not re-executing (yet?)      */
     cmd_offset = 0;             /* Start at the beginning of the buff */
-    terminate_str(cmd_buff);    /* Init the command buffer            */
+    cmd_buff[0] = UEM_NOCHAR;   /* Init the command buffer            */
     curline = curwp->w.dotp;    /* Save the current line pointer      */
     curoff = curwp->w.doto;     /* Save the current offset            */
     init_direction = n;         /* Save the initial search direction  */
@@ -502,8 +535,12 @@ start_over:
                 status = TRUE;      /* No, just exit        */
                 goto end_isearch;
             }
-            --cmd_offset;               /* Back up over Rubout  */
-            terminate_str(cmd_buff + --cmd_offset); /* Yes, delete last char */
+            cmd_offset -= 2;            /* Back up over Rubout and CHAR */
+/* If the previous CHAR was quoted, we have to remove that too */
+            if ((cmd_offset > 0) && (cmd_buff[cmd_offset-1] == IS_QUOTE)) {
+                --cmd_offset;
+            }
+            cmd_buff[cmd_offset] = UEM_NOCHAR; /* Re-mark the end */
             curwp->w.dotp = curline;    /* Reset the line pointer */
             curwp->w.doto = curoff;     /*  and the offset       */
             n = init_direction;         /* Reset search direction */
@@ -583,3 +620,12 @@ int fisearch(int f, int n) {
 int risearch(int f, int n) {        /* Same as fisearch in reverse */
     return fisearch(f, -n);
 }
+
+#ifdef DO_FREE
+/* Add a call to allow free() of normally-unfreed items here for, e.g,
+ * valgrind usage.
+ */
+void free_isearch(void) {
+    Xfree(cmd_buff);
+}
+#endif

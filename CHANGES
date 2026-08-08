@@ -10191,3 +10191,14 @@ etc/uemacs.rc
     [autotest/search-with-nul.sh]
     Added a Ctlgph option to change-ggr-opts (and removed several
     unneeded delete-var lines). [etc/uemacs.rc]
+
+isearch.c
+main.c
+search.c
+efunc.h
+    Added NUL handling and Unicode glyphs for control characters to
+    incremental search. [isearch.c]
+    Dynamically allocate the incrementa search buffer. [isearch.c]
+    Added init_isearch() and free_isearch(). [isearch.c, main.c, efunc.h]
+    Update expandp to handle Unicode glyphs for control characters in
+    search prompts [search.c]

@@ -463,13 +463,25 @@ static db *expandp(db *newstr) {
     int ci = 0;
     while (ci < cc) {
         c = dbp_charat(newstr, ci++);
-        if (c == '\n') {    /* It's a newline */
+        if (c == '\n' && !(ggr_opts & GGR_CTLGPH)) {    /* Non-glyph newline */
             db_append(expbuf, "<NL>");
         }
-/* Control character. The 0x80 work for signed or unsigned char */
-        else if ((!(c & 0x80) && c < 0x20) || c == 0x7f) {
-            db_addch(expbuf, '^');
-            db_addch(expbuf, c ^ 0x40);
+/* Control character. We now have unsigned chars */
+        else if ((c < 0x20) || c == 0x7f) {
+            if (ggr_opts & GGR_CTLGPH) {    /* Displaying glyphs */
+                unicode_t uc;
+                if (c < ' ') {      /* Normal control character */
+                    uc = 0x2400 + c;
+                }
+                else uc = 0x2421;    /* Delete */
+                char utf8[6];
+                int nb = unicode_to_utf8(uc, utf8);
+                db_appendn(expbuf, utf8, nb);
+            }
+            else {
+                db_addch(expbuf, '^');
+                db_addch(expbuf, c ^ 0x40);
+            }
         }
         else {              /* Any other character */
             db_addch(expbuf, c);

@@ -1902,6 +1902,7 @@ int quit(int f, int n) {
             free_line();
             free_names();
             free_search();
+            free_isearch();
             free_spawn();
             free_utf8();
             free_word();
@@ -2106,6 +2107,7 @@ int main(int argc, char **argv) {
 /* Set up the search ring buffers and environment variable sort index */
 
     init_search_ringbuffers();
+    init_isearch();
     init_envvar_index();
 
 /* If we are building a standalone version, set the config/help directory
