@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.201 Help Index     (05 Aug 2026)
+=>                   nuEmacs GGR4.201 Help Index     (09 Aug 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -28,6 +28,7 @@
 .. GGR style
 .. Crypt mode
 .. Start-up file
+.. Command scripts
 
 -------------------------------------------------------------------------------
 =>                      THE VERY BASICS
@@ -45,8 +46,8 @@ The keboard entry for a NUL is ctl-SPACE, although you'll need to quote
 this (ctl-Q ctl-SPACE) as that is usually bound to set-mark.
 To enter a NUL in scripts, use ~0 within a quoted string.
 
-NULs are not allowed in some places, such as when prompting for a file
-or buffer name.
+NULs are not allowed in some places, such as in file, buffer or variable
+names. (They are allowed in the contents/values of these).
 
 -------------------------------------------------------------------------------
 =>                      CURSOR MOVEMENT
@@ -245,10 +246,10 @@ Copy region ........... Meta  W     ::  the mark and the current position.
         Esc<n> Esc-Y rotates the kill-buffers by <n> before doing the
         replace.
 
-    If kill-region is given and arg of 2, the killed region is not
+    If kill-region is given an arg of 2, the killed region is not
     placed on the kill ring.
 
-Yank last minibuffer .. Meta ^Y  (10 in a ring, numeric arg allowed)
+Yank last minibuffer .. Meta ^Y  (last 10 saved in a ring, numeric arg allowed)
 
 -------------------------------------------------------------------------------
 =>                      MARKS AND PINS
@@ -272,6 +273,7 @@ The commands to set and use a pin are:
     drop-pin
     back-to-pin                 Keeps pin the same
     switch-with-pin             Updates pin with current location
+                                and goes to what was the pin location.
 
 One use of pins is to allow user functions to preserve any original user
 mark even if they need to define a region.
@@ -668,8 +670,8 @@ Unless noted as (read-only), these may be set as well as read.
     $hscroll .............. horizontal scrolling flag
     $yankmode ............. mode for yank (old/gnu)
     $autoclean ............ Age (days) at which dumped files are removed
-    $regionlist_text ...... makelist_region() indent
-    $regionlist_number .... numberlist_region() indent
+    $regionlist_text ...... makelist_region() indent (max length 15 chars)
+    $regionlist_number .... numberlist_region() indent (max length 15 chars)
     $autodos .............. Check for DOS on read-in?
     $showdir_tokskip ...... Tokens to skip in showdir
     $uproc_opts ............Flags when processing &arg
@@ -885,7 +887,6 @@ store-procedure <proc-name> [flags]
     cmd2
 !endm
     Store a user-defined set of macro commands with the given name
-    (which can be a maximum of 14 characters in length).
     You may then call this proc-name within a macro in the same way as
     you call any builtin function, but preceding it with:
         execute-procedure (or run)
@@ -1236,11 +1237,11 @@ The values that can be set for $crypt_mode are the addition of:
 Use global encryption key   0x4000
 Only encrypt print chars:   0x2000          # Not recommended
 Use Mod95:                  0x1000
-No key catenating:               1
-Catenate to 63+chars:            2
+No key catenating:          0x0001
+Catenate to 63+chars:       0x0002
 
 NOTE!
-One of the last two values must be set.
+One (and only one) of the last two values MUST be set.
 
 -------------------------------------------------------------------------------
 => Start-up file.
@@ -1266,3 +1267,13 @@ to include the standard additions too then your own file should include:
 
 You can add commands after this inclusion to remove/override anything in
 the system file.
+
+-------------------------------------------------------------------------------
+=> Command scripts.
+
+Command scripts are a series of uemacs macro commands that can be
+executed by execute-buffer or execute-file. Such as the Start-up file.
+
+Comments are allowed in these scripts, and these start with a ";"
+Any text after a ";" that is not in a quoted string means the rest of
+that line will be treated as a comment (i.e. ignored).

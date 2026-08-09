@@ -10202,3 +10202,14 @@ efunc.h
     Added init_isearch() and free_isearch(). [isearch.c, main.c, efunc.h]
     Update expandp to handle Unicode glyphs for control characters in
     search prompts [search.c]
+
+display.c
+etc/uemacs.hlp
+etc/uemacs.rc
+line.h
+version.h
+    Comment updates [display.c, line.h, uemacs.rc]
+    Various updates to the help file [uemacs.hlp]
+    Update to GGR4.201
+
+==========

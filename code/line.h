@@ -83,7 +83,7 @@ extern int yankmb(int f, int n);
     else if (uc < 0x20 || uc == 0x7f)               /* ^X        */ \
        scol += (ggr_opts & GGR_CTLGPH)? 1: 2;       /* or U+24xx */ \
     else if (uc >= 0x80 && uc <= 0xa0) scol += 3;   /* \nn       */ \
-    else if ((scol == 0) && combining_type(uc)) scol = 1;           \
+    else if ((scol == 0) && combining_type(uc)) scol = 1; /* See vtputc() */ \
     else scol += utf8char_width(uc);                /* Allow my overrides */
 
 #endif  /* LINE_H_ */

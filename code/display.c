@@ -440,7 +440,7 @@ static void vtputc(unicode_t c) {
     int cw = utf8char_width(c);
     if (vtcol >= 0) {
         update_grapheme(&(vp->v_text[vtcol]), c);
-/* This code assumes that a NUL byte will not be displayed */
+/* This code assumes that a real NUL byte will not be displayed */
         int pvcol = vtcol;
         for (int nulpad = cw - 1; nulpad > 0; nulpad--) {
             pvcol++;
