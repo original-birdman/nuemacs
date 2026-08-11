@@ -10242,3 +10242,6 @@ Makefile
 
 main.c
     Fix display of "lonely -" in multiplier_check().
+
+input.c
+    Restore incoming value of no_quoted_NUL when leaving getstring().

@@ -1036,7 +1036,10 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
 
 /* Are we going to allow NULs into the response?
  * This is based on the ctype, so look at it now.
+ * Save the incoming value so we can restore it on exit.
+ * no_quoted_NUL is a global variable!
  */
+    int no_quoted_NUL_saved = no_quoted_NUL;
     switch(ctype) {
     case CMPLT_FILE:
     case CMPLT_BUF:
@@ -1337,7 +1340,7 @@ rewinch_and_exit:
  * NOTE that the actual handler is unchanged.
  */
     sigaction(SIGWINCH, &oldact, NULL);
-    no_quoted_NUL = FALSE;  /* We're leaving */
+    no_quoted_NUL = no_quoted_NUL_saved;    /* We're leaving */
 
     return status;
 }
