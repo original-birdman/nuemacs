@@ -55,8 +55,6 @@ typedef struct {
  * For the buf ones, the entire buffer is reinitialized, and the
  * asp field is set equal to the buf field.
  */
-void db_init(void);
-
 void _dbp_flagset(db *, int);
 void _dbp_flagon(db *, int);
 void _dbp_flagoff(db *, int);

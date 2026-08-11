@@ -10254,3 +10254,6 @@ main.c
 efunc.h
     Fix cmd_buf allocation, and start it when needed [isearch.c]
     Remove init_isearch(). [main.c, efunc.h]
+
+dyn_buf.h
+    Remove db_init() declaration. It no longer exists.
