@@ -4,7 +4,9 @@
 TNAME=`basename $0 .sh`
 export TNAME
 
-rm -f FAIL-$TNAME
+cat > FAIL-$TNAME <<EOD
+Test not completed, for some reason.
+EOD
 
 # Check that searching works if Magic modeis used, then it is switched
 # off.
@@ -122,10 +124,11 @@ EOD
 #
 if [ "$1" = FULL-RUN ]; then
     cat >>uetest.rc <<'EOD'
-!if &not &equ %fail 0
     set $cfname &cat "FAIL-" %test_name
-    save-file
-!else
+    !if &not &equ %fail 0
+        save-file
+    !else
+        shell-command &ptf "rm -f %s" $cfname
     unmark-buffer
 !endif
 0 exit-emacs
@@ -134,6 +137,8 @@ EOD
 else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
+shell-command &ptf "rm -f FAIL-%s" %test_name
+set $cfname %test_name
 -2 redraw-display
 EOD
 fi

@@ -4,7 +4,9 @@
 TNAME=`basename $0 .sh`
 export TNAME
 
-rm -f FAIL-$TNAME
+cat > FAIL-$TNAME <<EOD
+Test not completed, for some reason.
+EOD
 
 # The original input file
 #
@@ -99,6 +101,7 @@ cat > uetest.rc <<'EOD'
 execute-file autotest/report-status.rc
 
 set %test_name &env TNAME
+set %wtest_name %test_name
 
 select-buffer test-reports
 insert-string &cat %test_name " started"
@@ -159,12 +162,12 @@ store-procedure compare-buffers
 !endm
 
 store-procedure check-encrypt
-  shell-command &ptf "%s %s" &env "SCR_NAME" %test_name
+  shell-command &ptf "%s %s" &env "SCR_NAME" %wtest_name
   !if &equ $rval 0
-      set %test-report &cat %test_name ": OK"
+      set %test-report &cat %wtest_name ": OK"
       set %ok &add %ok 1
   !else
-      set %test-report &cat %test_name ": FAILED"
+      set %test-report &cat %wtest_name ": FAILED"
       set %fail &add %fail 1
   !endif
   run report-status
@@ -175,14 +178,14 @@ select-buffer ORIG
 read-file Encrypt-IN
 ;
 ; Write this out using nUmeacs crypt mode
-set %test_name Encrypt-nUemacs
+set %wtest_name Encrypt-nUemacs
 set $crypt_mode 0x3001
 add-mode Crypt
 set-encryption-key ATestEncryptionString
-write-file &cat %test_name "-NOW"
+write-file &cat %wtest_name "-NOW"
 ; Run a filter to compare what we wrote vs what we expext
 run check-encrypt
-!force kill-buffer %test_name
+!force kill-buffer %wtest_name
 
 ; Now Encrypt-pre-GGR4.120
 ;
@@ -190,30 +193,30 @@ run check-encrypt
 ; This will test re-encrypting the key under the new mode.
 ; We have to remove the previous contents of TEST first
 ;
-set %test_name Encrypt-pre-GGR4.120
+set %wtest_name Encrypt-pre-GGR4.120
 select-buffer ORIG
 set $crypt_mode 0x3002
-write-file &cat %test_name "-NOW"
+write-file &cat %wtest_name "-NOW"
 run check-encrypt
-!force kill-buffer %test_name
+!force kill-buffer %wtest_name
 
 ; Read this one from a new buffer, giving the encryption
 ; key as part of the read-file command
 ;
-set %test_name Encrypt-GGR4.120
+set %wtest_name Encrypt-GGR4.120
 select-buffer NOT-ORIG
 delete-buffer ORIG
 select-buffer ORIG
 read-file Encrypt-IN
 set $crypt_mode 0x2
 add-mode Crypt
-write-file &cat %test_name "-NOW" ATestEncryptionString
+write-file &cat %wtest_name "-NOW" ATestEncryptionString
 run check-encrypt
-!force kill-buffer %test_name
+!force kill-buffer %wtest_name
 
 ; For this one we'll set the encryption key separately
 ;
-set %test_name Encrypt-GGR4.121
+set %wtest_name Encrypt-GGR4.121
 select-buffer NOT-ORIG
 delete-buffer ORIG
 select-buffer ORIG
@@ -221,9 +224,9 @@ read-file Encrypt-IN
 set $crypt_mode 0x1
 add-mode Crypt
 set-encryption-key ATestEncryptionString
-write-file &cat %test_name "-NOW"
+write-file &cat %wtest_name "-NOW"
 run check-encrypt
-!force kill-buffer %test_name
+!force kill-buffer %wtest_name
 
 select-buffer test-reports
 insert-string &ptf "END: ok: %s fail: %s~n%s ended" %ok %fail %test_name
@@ -234,11 +237,12 @@ EOD
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then
-    cat >>uetest.rc <<EOD           # Allow var expansion here!
-!if &not &equ %fail 0
-    set \$cfname "FAIL-$TNAME"
-    save-file
-!else
+    cat >>uetest.rc <<'EOD'
+    set $cfname &cat "FAIL-" %test_name
+    !if &not &equ %fail 0
+        save-file
+    !else
+        shell-command &ptf "rm -f %s" $cfname
     unmark-buffer
 !endif
 0 exit-emacs
@@ -247,6 +251,8 @@ EOD
 else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
+shell-command &ptf "rm -f FAIL-%s" %test_name
+set $cfname %test_name
 -2 redraw-display
 EOD
 fi

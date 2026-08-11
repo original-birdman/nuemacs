@@ -4,7 +4,9 @@
 TNAME=`basename $0 .sh`
 export TNAME
 
-rm -f FAIL-$TNAME
+cat > FAIL-$TNAME <<EOD
+Test not completed, for some reason.
+EOD
 
 # The original input file - so what we expect when we decrypt.
 #
@@ -77,6 +79,7 @@ cat > uetest.rc <<'EOD'
 execute-file autotest/report-status.rc
 
 set %test_name &env TNAME
+set %wtest_name %test_name
 
 select-buffer test-reports
 insert-string &cat %test_name " started"
@@ -139,11 +142,11 @@ store-procedure compare-buffers
 store-procedure check-decrypt
   !force run compare-buffers
   !if &seq PASSED $force_status
-    set %test-report &cat %test_name ": OK"
+    set %test-report &cat %wtest_name ": OK"
     set %ok &add %ok 1
-    shell-command &cat "rm -f " %test_name
+    shell-command &cat "rm -f " %wtest_name
   !else
-    set %test-report &cat %test_name ": FAILED"
+    set %test-report &cat %wtest_name ": FAILED"
     set %fail &add %fail 1
   !endif
   run report-status
@@ -155,12 +158,12 @@ set %tbuf1 Expected-Decrypt
 
 ; Read in the first test, setting a global encryption key
 ;
-set %test_name Decrypt-nUemacs
+set %wtest_name Decrypt-nUemacs
 select-buffer TEST
 set $crypt_mode 0x7001
 add-mode Crypt
 set-encryption-key ATestEncryptionString
-read-file %test_name
+read-file %wtest_name
 set %tbuf2 TEST
 select-buffer test-reports
 run check-decrypt
@@ -169,12 +172,12 @@ run check-decrypt
 ; This will test the global encryption key under the new mode.
 ; We have to remove the previous TEST buffer first
 ;
-set %test_name Decrypt-pre-GGR4.120
+set %wtest_name Decrypt-pre-GGR4.120
 delete-buffer TEST
 select-buffer TEST
 set $crypt_mode 0x7002
 add-mode Crypt
-read-file %test_name
+read-file %wtest_name
 set %tbuf2 TEST
 select-buffer test-reports
 run check-decrypt
@@ -182,25 +185,25 @@ run check-decrypt
 ; Read this one into its own new buffer, with crypt_mode set to use a
 ; per-buffer key, but giving that as part of the read-file command
 ;
-set %test_name Decrypt-GGR4.120
-select-buffer %test_name
+set %wtest_name Decrypt-GGR4.120
+select-buffer %wtest_name
 set $crypt_mode 0x2
 add-mode Crypt
-read-file %test_name SecondTestEncryptionString
-set %tbuf2 %test_name
+read-file %wtest_name SecondTestEncryptionString
+set %tbuf2 %wtest_name
 select-buffer test-reports
 run check-decrypt
 
 ; For this one we'll set the (per-buffer) encryption key separately
 ; before reading in the file.
 ;
-set %test_name Decrypt-GGR4.121
-select-buffer %test_name
+set %wtest_name Decrypt-GGR4.121
+select-buffer %wtest_name
 set $crypt_mode 0x1
 add-mode Crypt
 set-encryption-key ThirdTestEncryptionString
-read-file %test_name
-set %tbuf2 %test_name
+read-file %wtest_name
+set %tbuf2 %wtest_name
 select-buffer test-reports
 run check-decrypt
 ;
@@ -214,11 +217,12 @@ EOD
 # were any failures.
 #
 if [ "$1" = FULL-RUN ]; then
-    cat >>uetest.rc <<EOD           # Allow var expansion here!
-!if &not &equ %fail 0
-    set \$cfname "FAIL-$TNAME"
-    save-file
-!else
+    cat >>uetest.rc <<'EOD'
+    set $cfname &cat "FAIL-" %test_name
+    !if &not &equ %fail 0
+        save-file
+    !else
+        shell-command &ptf "rm -f %s" $cfname
     unmark-buffer
 !endif
 0 exit-emacs
@@ -227,6 +231,8 @@ EOD
 else
     cat >>uetest.rc <<'EOD'
 unmark-buffer
+shell-command &ptf "rm -f FAIL-%s" %test_name
+set $cfname %test_name
 -2 redraw-display
 EOD
 fi

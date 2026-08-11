@@ -10219,3 +10219,6 @@ From Claude comments
 
 etc/uemacs.rc
     Remove the fh_exit label from file-hooks.
+
+autotest/*.sh
+    Ensure that the FAIL*.log file is present if the test fails to run.
