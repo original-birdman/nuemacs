@@ -10245,3 +10245,6 @@ main.c
 
 input.c
     Restore incoming value of no_quoted_NUL when leaving getstring().
+
+search.c
+    Return status, not TRUE, when leaving replaces.

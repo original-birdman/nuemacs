@@ -3840,7 +3840,7 @@ end_replaces:
  */
     init_dyn_group_status();    /* Remove any previous group info */
     if (using_incremental_debug) incremental_debug_cleanup();
-    return TRUE;
+    return status;
 }
 
 /* sreplace -- Search and replace.
