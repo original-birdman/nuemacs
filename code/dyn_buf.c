@@ -94,9 +94,14 @@ void _dbp_set(db *ds, const char *str) {
 /* Make a copy of a dyn_buf. Assumes target is initialized (poss to NULL)
  * A copy of a "bare" db_buf_initval creates an allocated "".
  * Only copies alen from asp.
- * Unsets DB_FXD.
+ * Unsets DB_FXD from the copy. The target must not be DB_FXD to start with.
  */
 void _dbp_copy(db *ds, db *fds) {
+/* If this is a copy to self, do nothing as memcpy() is undefined for that.
+ * And it already has the required value.
+ */
+    if (ds == fds) return;
+    if (ds->flags & DB_FXD) illegal_fixed_change("copy");
     size_t need = (size_t)fds->alen + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     if (fds->asp)                           /* From db_buf_initval */
@@ -149,11 +154,13 @@ void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
 /* Delete n chars from buffer
  * If n chars takes you past the end of the buffer, just delete
  * to end of buffer (i.e. truncate at n).
+ * But offs must be valid.
  * Acts on the asp value.
  */
 void _dbp_deleten_at(db *ds, int n, int offs) {
     if (ds->flags & DB_FXD) illegal_fixed_change("deleten_at");
-    if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db deleten");
+    if ((n < 0) || (offs < 0) || (offs > ds->alen))
+         illegal_dbaction("Illegal db deleten");
 /* Since we are deleting we must already have enough space
  * But we mustn't delete from before the "actual start pointer"
  */
@@ -176,7 +183,7 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
  * Acts on the asp value.
  */
 void _dbp_overwriten_at(db *ds, const void *mp, int n, int offs) {
-    if (ds->flags & DB_FXD) illegal_fixed_change("insertn_at");
+    if (ds->flags & DB_FXD) illegal_fixed_change("overwriten");
     if ((n < 0) || (offs < 0)) illegal_dbaction("Illegal db overwriten");
     if (n == 0) return;     /* Nothing to do */
 /* We mustn't change anything beyond the current end of data */
@@ -197,7 +204,7 @@ void _dbp_retailstr_at(db *ds, const char *ntail, int offs) {
     if (ds->flags & DB_FXD) illegal_fixed_change("retailstr_at");
 
     size_t tlen = strlen(ntail);
-    size_t need = tlen + (size_t)offs + 1;
+    size_t need = tlen + (size_t)(offs + (ds->asp - ds->buf) + 1);
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
     memmove(ds->asp+offs, ntail, tlen);
@@ -226,7 +233,7 @@ void _dbp_bufset(db *ds, const char ch, int n) {
  * Sets asp == buf.
  */
 void _dbp_clear(db *ds) {
-    if (ds->flags & DB_FXD) illegal_fixed_change("bufset");
+    if (ds->flags & DB_FXD) illegal_fixed_change("clear");
     ds->alen = 0;
     ds->asp = ds->buf;
     if (ds->buf) *(ds->asp) = '\0';
@@ -236,9 +243,12 @@ void _dbp_clear(db *ds) {
 /* Truncate a value, appending a NUL.
  * We do not need any more space for this.
  * Acts on the asp value.
+ * The (ds->alen == n) caters for a bare db_bufdef value being truncated
+ * to zero (when ds->asp == NULL) which can happen for empty lines.
  */
 void _dbp_truncate(db *ds, int n) {
     if (ds->flags & DB_FXD) illegal_fixed_change("truncate");
+    if (ds->alen == n) return;  /* Nothing to do */
     if ((n < 0) || (n > ds->alen)) illegal_dbaction("Illegal db truncate");
     ds->alen = n;
     *(ds->asp+ds->alen) = '\0';
@@ -252,7 +262,7 @@ void _dbp_truncate(db *ds, int n) {
 void _dbp_uctruncate(db *ds, int n) {
     if (ds->flags & DB_FXD) illegal_fixed_change("uctruncate");
 
-    int bpos = 0;;
+    int bpos = 0;
     while (n--) {
         bpos = next_utf8_offset(ds->asp, bpos, ds->alen, TRUE);
         if (bpos < 0) illegal_dbaction("Illegal db Unicode truncate");
@@ -270,7 +280,7 @@ void _dbp_uctruncate(db *ds, int n) {
 void _dbp_appendn(db *ds, const char *str, int n) {
     if (ds->flags & DB_FXD) illegal_fixed_change("appendn");
     if (!str && (n == 0)) str = "";
-    size_t need = (size_t)(ds->alen + n) + 1;
+    size_t need = (size_t)(ds->alen + n + (ds->asp - ds->buf) + 1);
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* Append n chars, set length and terminate if needed */
@@ -309,7 +319,8 @@ void _dbp_append_dbp(db *ds, db *fds) {
  */
 void _dbp_addch(db *ds, const char ch) {
     if (ds->flags & DB_FXD) illegal_fixed_change("addch");
-    size_t need = (size_t)(ds->alen + 2);   /* 2 for new char + NUL */
+/* + 2 for new char + NUL */
+    size_t need = (size_t)(ds->alen + (ds->asp - ds->buf) + 2);
     if (need > ds->alloc) _dbp_realloc(ds, need);
 
 /* We know the destination length, so just drop the new char at the end. */
@@ -360,16 +371,18 @@ void _dbp_upval(db *ds, const char *np) {
 }
 
 /* Compare 2 dyn_bufs.
- * Need to conside the lengths....
+ * Need to consider the lengths....
+ * For differing lengths when all of the shorter one matches the start
+ * of the longer one the result will be +1 or -1.
  */
 int _dbp_dbp_cmp(db *ds, db *ods) {
-    int cc = ds->alen;
+    int cc = ods->alen;
     int memres = 1;
-    if (cc > ods->alen) {
-        cc = ods->alen;
+    if (cc > ds->alen) {
+        cc = ds->alen;
         memres = -1;
     }
-    else if (cc == ods->alen) {
+    else if (cc == ds->alen) {
         memres = 0;
     }
     int res = memcmp(ds->asp, ods->asp, (size_t)cc);

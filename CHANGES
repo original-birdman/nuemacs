@@ -9732,7 +9732,7 @@ main.c
 main.c
     In multiplier_check() use the __builtin_*_overflow() functions to
     check for overflow, if possible.
-    On overflow, reset the multipler to (-)1.
+    On overflow, reset the multiplier to (-)1.
 
 eval.c
     Remove redundant code in UFTAIL handling.
@@ -10042,7 +10042,7 @@ efunc.h
 
 search.c
     Modify search (mcstr(), rmcstr(), fast_scanner()) to limit search by
-    the length of pat, etc., not just up to the first NUL, to allow 
+    the length of pat, etc., not just up to the first NUL, to allow
     for NULs in search strings.
 
 buffer.c
@@ -10079,7 +10079,7 @@ autotest/check-line.rc
     Move check-line procedure into a separate file.
 
 random.c
-    Change writemsg() to work with NUL-contining dbs.
+    Change writemsg() to work with NUL-containing dbs.
 
 efunc.h
     Change mlreply to be a #define for nextarg.
@@ -10198,7 +10198,7 @@ search.c
 efunc.h
     Added NUL handling and Unicode glyphs for control characters to
     incremental search. [isearch.c]
-    Dynamically allocate the incrementa search buffer. [isearch.c]
+    Dynamically allocate the incremental search buffer. [isearch.c]
     Added init_isearch() and free_isearch(). [isearch.c, main.c, efunc.h]
     Update expandp to handle Unicode glyphs for control characters in
     search prompts [search.c]
@@ -10236,7 +10236,7 @@ unsigned.h
 Makefile
     Added file to check for unsigned char usage at compile time.
     [unsigned.h]
-    Include this into estruct.h (catres for most *.c), idxsorter.c,
+    Include this into estruct.h (caters for most *.c), idxsorter.c,
     version.c and wrapper.c.
     Regenerate the Makefile depends.
 
@@ -10257,3 +10257,14 @@ efunc.h
 
 dyn_buf.h
     Remove db_init() declaration. It no longer exists.
+
+dyn_buf.c
+    Do nothing if _dbp_copy() if source and target are the same.
+    Check that the offset given to _dbp_deleten_at() is valid.
+    Allow for asp offset from buf when calculating need in
+    _dbp_retailstr_at(), _dbp_uctruncate() and _dbp_addch()
+    Do nothing if _dbp_truncate() is asked to truncate to the current
+    length.
+    Fix some incorrect function names in error messages.
+    Correct the inverted sign logic for different length buffers in
+    _dbp_dbp_cmp().
