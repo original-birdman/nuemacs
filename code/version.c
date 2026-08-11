@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "utf8proc.h"
+#include "unsigned.h"
 
 void version(void) {
     printf("%s version %s\n", PROGRAM_NAME_LONG, VERSION);

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "idxsorter.h"
+#include "unsigned.h"
 
 /**********************************************************************
  * idxsort_fields

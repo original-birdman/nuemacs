@@ -20,6 +20,8 @@
  */
 /* #define ch_as_uc(bc) ((unsigned char)(bc)) */
 
+#include "unsigned.h"
+
 /* We have lots of strlen() calls wheer we want an int result */
 #define istrlen(a) ((int)strlen(a))
 
@@ -75,10 +77,9 @@
 #define GGR_NEWHEIGHT   0x0010
 /* Use 2-byte expansion for control chars and Delete
  * Done this way round so that with the default start-up file (which
- * sets all bits on) we use 2 ASCII chars.
- * If you unset this bit then the Control Pictures for U+2400 to U+241F,
- * and U+2421 for Del, will be used. This means your chosen display
- * font must have glyphs for them!
+ * sets all bits on) we use glyphs (the Control Pictures for U+2400 to U+241F)
+ * so your display font must have glyphs for them!
+ * If you unset this bit then the old 2-char ^X display in used.
  */
 #define GGR_CTLGPH      0x0020
 

@@ -10227,3 +10227,15 @@ display.c
 line.h
     Add GGR_CTLGPH handling to vtputc(). [display.c]
     Add comment about this in update_screenpos_for_char define [line.h]
+
+idxsorter.c
+version.c
+wrapper.c
+estruct.h
+unsigned.h
+Makefile
+    Added file to check for unsigned char usage at compile time.
+    [unsigned.h]
+    Include this into estruct.h (catres for most *.c), idxsorter.c,
+    version.c and wrapper.c.
+    Regenerate the Makefile depends.
