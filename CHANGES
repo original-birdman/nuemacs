@@ -10268,3 +10268,13 @@ dyn_buf.c
     Fix some incorrect function names in error messages.
     Correct the inverted sign logic for different length buffers in
     _dbp_dbp_cmp().
+
+dyn_buf.c
+eval.c
+dyn_buf.h
+    Change db_buf_initval to use a pointer to a static NUL byte rather
+    than NULL, which means its buf, asp and alen values makes sense.
+    [dyn_buf.c, dyn_buf.h]
+    Change _dbp_realloc() and _dbp_free() to cater for this. [dyn_buf.c]
+    Remove the db(p)_val_nc() defines and routine [dyn_buf.c, dyn_buf.h]
+    Change db_val_nc() calls to db_val() [eval.c]

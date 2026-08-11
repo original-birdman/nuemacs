@@ -535,7 +535,7 @@ static const char *xlat(const char *source, const char *lookup,
     }
 free_and_exit:
     Xfree(mtp);
-    return db_val_nc(xlres);
+    return db_val(xlres);
 }
 
 /* ptt_expand
@@ -1459,11 +1459,11 @@ int getval(dbp_dcl(token), dbp_dcl(res)) {
  */
             int distmp = discmd;    /* Remember initial state */
             discmd = TRUE;
-            int status = getstring(db_val_nc(tok1), &valres, CMPLT_NONE);
+            int status = getstring(db_val(tok1), &valres, CMPLT_NONE);
             discmd = distmp;
             if (status == ABORT) goto have_error;
         }
-        if (do_fixup) dbp_set(res, fixup_full(db_val_nc(valres)));
+        if (do_fixup) dbp_set(res, fixup_full(db_val(valres)));
         else dbp_copy(res, &valres);
         return TRUE;
     }

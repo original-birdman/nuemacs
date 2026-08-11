@@ -27,7 +27,14 @@ typedef struct {
  * So we also need to be able to declare the global ones in other
  * files.
  */
-#define db_buf_initval { NULL, NULL, 0, 0, 0 }
+/* The static NUL char is defined in dyn_buf.c
+ * This db_buf_initval setting means that the buf and asp pointers
+ * are pointing at an empty string.
+ * _dbp_realloc() and _dbp_free() need to know about this.
+ */
+extern char nul_ch;
+#define db_buf_initval { &nul_ch, &nul_ch, 0, 0, 0 }
+
 #define db_bufdef(a) db (a) = db_buf_initval
 #define db_dcl(a) db (a)
 #define dbp_dcl(a) db (*a)
@@ -59,7 +66,6 @@ void _dbp_flagset(db *, int);
 void _dbp_flagon(db *, int);
 void _dbp_flagoff(db *, int);
 
-const char *_dbp_val_nc(db *);                              /* asp */
 void _dbp_setn(db *, const void *, int);                    /* buf */
 void _dbp_set(db *, const char *);                          /* buf */
 void _dbp_copy(db *, db *);                                 /* buf+asp */
@@ -101,9 +107,6 @@ void _dbp_free(db *);                                       /* buf */
 #define dbp_flagon(ds, f) _dbp_flagon(ds, f)
 #define db_flagoff(ds, f) _dbp_flagoff(&(ds), f)
 #define dbp_flagoff(ds, f) _dbp_flagoff(ds, f)
-
-#define db_val_nc(val) _dbp_val_nc(&(val))
-#define dbp_val_nc(val) _dbp_val_nc(val)
 
 #define db_setn(to_ds, from_buf, flen) _dbp_setn(&(to_ds), from_buf, flen)
 #define dbp_setn(to_ds, from_buf, flen) _dbp_setn((to_ds), from_buf, flen)

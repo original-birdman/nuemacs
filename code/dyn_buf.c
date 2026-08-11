@@ -15,6 +15,8 @@
 #include "dyn_buf.h"
 #include "efunc.h"
 
+char nul_ch = '\0';
+
 /* An internal routine to rasie a signal if we try to set a value
  * at an illegal offset etc.
  * Will set a message to be shown.
@@ -34,6 +36,8 @@ static void illegal_fixed_change(const char *who) {
 
 /* DYN_INCR MUST be a power of 2
  * This must update both ds->buf and ds->asp
+ * Also, we never try to make the buffer smaller, so ds->alloc
+ * can only be 0 if nothing has yet been allocated.
  */
 #define DYN_INCR (size_t)64
 static void _dbp_realloc(db *ds, size_t need) {
@@ -41,8 +45,17 @@ static void _dbp_realloc(db *ds, size_t need) {
     if (want > INT_MAX) {
         illegal_dbaction("Attempt to allocate too long a buffer");
     }
-    size_t offset = (size_t)(ds->asp - ds->buf);
-    ds->buf = Xrealloc(ds->buf, want);
+    size_t offset;
+    char *cbp;
+    if (ds->alloc == 0) {
+        cbp = NULL;
+        offset = 0;
+    }
+    else {
+        cbp = ds->buf;
+        offset = (size_t)(ds->asp - ds->buf);
+    }
+    ds->buf = Xrealloc(cbp, want);
     ds->asp = ds->buf + offset;
     ds->alloc = want;
     return;
@@ -58,14 +71,6 @@ void _dbp_flagon(db *ds, int flags) {
 }
 void _dbp_flagoff(db *ds, int flags) {
     ds->flags &= ~flags;
-}
-
-/* Return the value, but check for NULL and return "" for that
- * Intended for string use.
- */
-
-const char *_dbp_val_nc(db *ds) {
-    return ds->asp? ds->asp: "";
 }
 
 /* Set the buffer to the n bytes. Never more than an int for n.
@@ -424,9 +429,8 @@ void _dbp_sprintf(db *ds, const char *fmt, ...) {
 /* Free (reset) a Dynamic String */
 
 void _dbp_free(db *ds) {
+    if (ds->buf == &nul_ch) return; /* Never assigned */
     Xfree_setnull(ds->buf);
-    ds->asp = NULL;
-    ds->alloc = 0;
-    ds->alen = 0;
+    *ds = (db) db_buf_initval;
     return;
 }
