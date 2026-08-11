@@ -2107,7 +2107,6 @@ int main(int argc, char **argv) {
 /* Set up the search ring buffers and environment variable sort index */
 
     init_search_ringbuffers();
-    init_isearch();
     init_envvar_index();
 
 /* If we are building a standalone version, set the config/help directory

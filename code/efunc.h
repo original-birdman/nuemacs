@@ -247,7 +247,6 @@ extern int getstring(const char *, db *, enum cmplt_type);
 
 /* isearch.c */
 #ifndef ISEARCH_C
-extern void init_isearch(void);
 extern int simulate_incr(int, int);
 extern int incremental_debug_check(int);
 extern void incremental_debug_cleanup(void);

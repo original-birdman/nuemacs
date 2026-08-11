@@ -10248,3 +10248,9 @@ input.c
 
 search.c
     Return status, not TRUE, when leaving replaces.
+
+isearch.c
+main.c
+efunc.h
+    Fix cmd_buf allocation, and start it when needed [isearch.c]
+    Remove init_isearch(). [main.c, efunc.h]

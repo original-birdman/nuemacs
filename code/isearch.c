@@ -50,16 +50,11 @@
  * Also note that we use 4-bytes per entry, so we allocate with
  * Xreallocarray().
  */
-#define CMD_BUFF_INCR 256
-static int *cmd_buff;               /* Save the command args here */
-static int cmd_buff_alloc;          /* Current allocated size */
+#define CMD_BUFF_INCR 64
+static int *cmd_buff = NULL;        /* Save the command args here */
+static int cmd_buff_alloc = 0;      /* Current allocated size */
 static int cmd_offset;              /* Current offset into command buff */
 static int cmd_reexecute = -1;      /* > 0 if re-executing command */
-
-void init_isearch(void) {
-    cmd_buff_alloc = CMD_BUFF_INCR;
-    cmd_buff = Xreallocarray(NULL, cmd_buff_alloc, sizeof(*cmd_buff));
-}
 
 /* Routine to prompt for I-Search string.
  */
@@ -160,6 +155,7 @@ static unicode_t get_char(void) {
 /* See if we're re-executing:
  * If so we want to play out all of the characters again, in order,
  * so that we replay the whole thing.
+ * If cmd_reexecute is >= 0 then cmd_buff will have been allocated.
  */
     if (cmd_reexecute >= 0)     /* Is there an offset? */
         if ((c = cmd_buff[cmd_reexecute++]) != UEM_NOCHAR) {
@@ -169,8 +165,10 @@ static unicode_t get_char(void) {
 
     cmd_reexecute = -1;     /* Say we're in real mode again */
     update(FALSE);          /* Pretty up the screen */
-/* If we willtoo big ... expand! */
-    if (cmd_offset >= cmd_buff_alloc) {
+/* If we will be too big ... expand!
+ * We will allocate on the first pass.
+ */
+    if (cmd_offset >= (cmd_buff_alloc - 1)) {
         cmd_buff_alloc += CMD_BUFF_INCR;
         cmd_buff = Xreallocarray(cmd_buff, cmd_buff_alloc, sizeof(*cmd_buff));
     }
@@ -371,7 +369,7 @@ static void hilite(int c, int col) {
         }
     }
 
-    if ((c < ' ') || (c == 0x7F)) { /* Control character? */
+    if ((c < ' ') || (c == 0x7F)) { /* (Still?) Control character? */
         switch (c) {                /* Dispatch special cases */
         case '\n':
         case '\r':  cw = 4; break;  /* <NL>, <CR> */
@@ -434,7 +432,6 @@ static int isearch(int f, int n) {
 
     cmd_reexecute = -1;         /* We're not re-executing (yet?)      */
     cmd_offset = 0;             /* Start at the beginning of the buff */
-    cmd_buff[0] = UEM_NOCHAR;   /* Init the command buffer            */
     curline = curwp->w.dotp;    /* Save the current line pointer      */
     curoff = curwp->w.doto;     /* Save the current offset            */
     init_direction = n;         /* Save the initial search direction  */
