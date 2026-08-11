@@ -10212,4 +10212,10 @@ version.h
     Various updates to the help file [uemacs.hlp]
     Update to GGR4.201
 
-==========
+========== GGR4.202
+
+----------
+From Claude comments
+
+etc/uemacs.rc
+    Remove the fh_exit label from file-hooks.

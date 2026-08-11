@@ -49,7 +49,7 @@ store-procedure file-hooks
         !endif
         set .rctmp &rin .pthtmp "."
         !if &equ .rctmp 0
-            !goto fh_exit
+            !return
         !endif
 ; Pick up everything after the last .
 ;
@@ -71,7 +71,6 @@ store-procedure file-hooks
             !endif
         !endif
     !endif
-*fh_exit
 !endm
 ;
 ; Centre the current text within $fillcol columns
