@@ -1032,8 +1032,12 @@ static int cline_display_overlong(void) {
     while (offs < max_offs) {
         unsigned char cc = *(cp+offs);
         if (cc <= 0xa0) {
+/* This is a cut-down version of update_screenpos_for_char() from line.h
+ * (as we just have a char, not a unicode char).
+ */
             if (cc == '\t') { dcol |= tabmask; dcol++; }    /* Round up */  \
-            else if (cc < 0x20 || cc == 0x7f) dcol += 2;    /* ^X */        \
+            else if (cc < 0x20 || cc == 0x7f)               /* ^X */        \
+               dcol += (ggr_opts & GGR_CTLGPH)? 1: 2;       /* or U+24xx */ \
             else if (cc >= 0x80 && cc <= 0xa0) dcol += 3;   /* \nn */       \
             else dcol++;
             offs++;

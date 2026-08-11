@@ -10222,3 +10222,8 @@ etc/uemacs.rc
 
 autotest/*.sh
     Ensure that the FAIL*.log file is present if the test fails to run.
+
+display.c
+line.h
+    Add GGR_CTLGPH handling to vtputc(). [display.c]
+    Add comment about this in update_screenpos_for_char define [line.h]

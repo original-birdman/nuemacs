@@ -77,6 +77,8 @@ extern int yankmb(int f, int n);
  * These need to have a common view of this.
  * NOTE that we can't just rely on utf8proc_charwidth() here as it gives a
  * zero width for, e.g., control chars but we need to use 2 for them.
+ *
+ * There is a cut-down version of this in cline_display_overlong().
  */
 #define update_screenpos_for_char(scol, uc) \
     if (uc == '\t') { scol |= tabmask; scol++; }    /* Round up  */ \
