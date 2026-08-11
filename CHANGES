@@ -10239,3 +10239,6 @@ Makefile
     Include this into estruct.h (catres for most *.c), idxsorter.c,
     version.c and wrapper.c.
     Regenerate the Makefile depends.
+
+main.c
+    Fix display of "lonely -" in multiplier_check().

@@ -886,7 +886,7 @@ com_arg *multiplier_check(int c) {
 #endif
             }
             if ((ca.n == 0) && (mflag == -1))  /* lonely - */
-                mlwrite("Arg: %s", (mflag == -1)? " -": "");
+                mlwrite_one("Arg: -");
             else
                 mlwrite("Arg: %d", ca.n * mflag);
 
