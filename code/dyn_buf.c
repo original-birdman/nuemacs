@@ -431,7 +431,7 @@ void _dbp_sprintf(db *ds, const char *fmt, ...) {
 
 void _dbp_free(db *ds) {
     if (ds->buf == &nul_ch) return; /* Never assigned */
-    Xfree_setnull(ds->buf);
+    Xfree(ds->buf);
     *ds = (db) db_buf_initval;
     return;
 }

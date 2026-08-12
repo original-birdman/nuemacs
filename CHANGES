@@ -10291,3 +10291,6 @@ edef.h
     Defined an empty_db to be initialized at compile time. [dyn_buf.c,
     dyn_buf.h]
     Removed old empty_db set up. [globals.c, main.c, edef.h]
+
+dyn_buf.c
+    Change Xfree_setnull() to just Xfree() in _dbp_free().
