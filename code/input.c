@@ -24,7 +24,6 @@
 
 #include <signal.h>
 #include "line.h"
-static int remap_c_on_intr = 0;
 
 /* A set of functions (cmplt_*) to do with filename/buffer/name completions.
  * Part of the GGR additions (but now using loops, not recursion).

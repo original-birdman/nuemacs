@@ -375,6 +375,10 @@ extern struct sigdefer sigwin_dfr;
 
 extern int no_quoted_NUL;
 
+/* Whether to remap NUL to UEM_NOCHAR in tgetc */
+
+extern int remap_c_on_intr;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

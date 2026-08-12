@@ -272,6 +272,10 @@ struct sigdefer sigwin_dfr = {TRUE, FALSE};
 
 int no_quoted_NUL = FALSE;
 
+/* Whether to remap NUL to UEM_NOCHAR in tgetc */
+
+int remap_c_on_intr = 0;
+
 /* Ignored prefixes  - need to limit assignment... */
 
 const char *path_pfx_map = NULL;

@@ -10294,3 +10294,13 @@ edef.h
 
 dyn_buf.c
     Change Xfree_setnull() to just Xfree() in _dbp_free().
+
+globals.c
+input.c
+isearch.c
+edef.h
+    Add SIGWINCH handling to incremenmtal search.
+    Make remap_c_on_intr global [globals.c, input.c, edef.h]
+    Set remap_c_on_intr around tgetc() call in get_char() and, if
+    UEM_NOCHAR comes back, set up a rexecute of everything. [isearch.c]
+    Hardwire the prompt into promptpattern(). [isearch.c]

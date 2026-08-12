@@ -58,15 +58,15 @@ static int cmd_reexecute = -1;      /* > 0 if re-executing command */
 
 /* Routine to prompt for I-Search string.
  */
-static int promptpattern(const char *prompt) {
+static int promptpattern(void) {
     db_bufdef(tpat);
 
 /* check to see whether we are executing a command line */
 
     if (clexec) return 0;
 
-    db_set(tpat, prompt);    /* copy prompt to output string */
-    db_append(tpat, MLbkt("<Meta>") " ");
+/* Put prompt into output string */
+    db_set(tpat, "ISearch: " MLbkt("<Meta>") " ");
     mlwrite_one(db_val(tpat));
 
 /* This now needs the grapheme length of the byte array... */
@@ -159,6 +159,7 @@ static unicode_t get_char(void) {
  */
     if (cmd_reexecute >= 0) {   /* Is there an offset? */
         if ((c = cmd_buff[cmd_reexecute++]) != UEM_NOCHAR) {
+fprintf(stderr, "rexec for 0x%04x\n", c);
             return c;           /* Yes, return any Unicode character */
         }
     }
@@ -174,7 +175,19 @@ static unicode_t get_char(void) {
         cmd_buff_alloc += CMD_BUFF_INCR;
         cmd_buff = Xreallocarray(cmd_buff, cmd_buff_alloc, sizeof(*cmd_buff));
     }
+
+/* Ask tgetc() to return UEM_NOCHAR if a SIGWINCH arrives.
+ * Then, if it does we return it and our caller must "goto start_over:",
+ * so that the prompt is redrawn with the correct input so far.
+ */
+    remap_c_on_intr = 1;
     c = tgetc();            /* Get the next literal character */
+    remap_c_on_intr = 0;
+    if (c == UEM_NOCHAR) {  /* Redo everything */
+        cmd_reexecute = 0;
+        return c;
+    }
+
     cmd_buff[cmd_offset++] = c; /* Save the char for next time */
     cmd_buff[cmd_offset] = UEM_NOCHAR;
     return c;               /* Return the character */
@@ -448,7 +461,7 @@ static int isearch(int dir) {
 start_over:
 
 /* Ask the user for the text of a pattern */
-    col = promptpattern("ISearch:");    /* Prompt, remember the col */
+    col = promptpattern();  /* Prompt, remember the col */
 
     cpos = 0;               /* Start afresh               */
     status = TRUE;          /* Assume everything's cool   */
@@ -459,6 +472,7 @@ start_over:
  * Otherwise set an empty pattern and start looking.
  */
     c = get_char();         /* Get the first character    */
+    if (c == UEM_NOCHAR) goto start_over;
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
 /* Reuse old search string?   */
         db_copy(pat, &pat_save);    /* Restore old search str */
@@ -485,6 +499,7 @@ start_over:
         status = scanmore(&pat, dir, FALSE, FALSE);
         if (!status) hilite(final_char, col);
         c = get_char();             /* Get another character */
+        if (c == UEM_NOCHAR) goto start_over;
     }
     else {
         db_set(pat, "");            /* Start with nothing */
@@ -518,10 +533,12 @@ start_over:
             status = scanmore(&pat, dir, TRUE, FALSE);  /* Restart */
             if (!status) hilite('!', col+1);            /* No further match */
             c = get_char(); /* Get next char */
+            if (c == UEM_NOCHAR) goto start_over;
             continue;       /* Continue the search */
 
         case IS_QUOTE:      /* Quote next character       */
             c = get_char(); /* Get the next char - might be a control */
+            if (c == UEM_NOCHAR) goto start_over;
             break;
 
 /* The cmd_buff collects *all* chars, including the IS_FORWARD and
@@ -579,8 +596,7 @@ start_over:
 
         if (!status) hilite(c, col);
         c = get_char();             /* Get the next char        */
-/* Exit if we run out of input.... */
-        if (c == UEM_NOCHAR) break;
+        if (c == UEM_NOCHAR) goto start_over;
     }
 end_isearch:
     (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
