@@ -157,10 +157,12 @@ static unicode_t get_char(void) {
  * so that we replay the whole thing.
  * If cmd_reexecute is >= 0 then cmd_buff will have been allocated.
  */
-    if (cmd_reexecute >= 0)     /* Is there an offset? */
+    if (cmd_reexecute >= 0) {   /* Is there an offset? */
         if ((c = cmd_buff[cmd_reexecute++]) != UEM_NOCHAR) {
             return c;           /* Yes, return any Unicode character */
         }
+    }
+
 /* We're not re-executing (or aren't any more).  Try for a real char */
 
     cmd_reexecute = -1;     /* Say we're in real mode again */
@@ -415,8 +417,7 @@ static void hilite(int c, int col) {
  * exists (or until the search is aborted).
  * Leave via a common exit so that group info can be invalidated.
  */
-static int isearch(int f, int n) {
-    UNUSED(f);
+static int isearch(int dir) {
     int status;     /* Search status */
     int col;        /* prompt column */
     int cpos;       /* character number in search string  */
@@ -434,10 +435,9 @@ static int isearch(int f, int n) {
     cmd_offset = 0;             /* Start at the beginning of the buff */
     curline = curwp->w.dotp;    /* Save the current line pointer      */
     curoff = curwp->w.doto;     /* Save the current offset            */
-    init_direction = n;         /* Save the initial search direction  */
+    init_direction = dir;       /* Save the initial search direction  */
 
     db_copy(pat_save, &pat);    /* Save the old pattern string */
-    db_set(pat, "");            /* Start with nothing */
 
 /* Check for in "incremental-debug" mode? */
 
@@ -456,6 +456,7 @@ start_over:
 /* Get the first character in the pattern.  If we get an initial
  * Control-S or Control-R, re-use the old search string and find
  * the first occurrence
+ * Otherwise set an empty pattern and start looking.
  */
     c = get_char();         /* Get the first character    */
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
@@ -473,17 +474,20 @@ start_over:
 	}
 
         if (c == IS_REVERSE) {      /* forward search?        */
-            n = -1;                 /* No, search in reverse  */
+            dir = -1;               /* No, search in reverse  */
             if (curwp->w.dotp == curbp->b_linep ) {
                 back_grapheme(1);   /* Be defensive about EOB */
             }
         }
         else
-            n = 1;                  /* Yes, search forward    */
+            dir = 1;                /* Yes, search forward    */
                                     /* Do the search */
-        status = scanmore(&pat, n, FALSE, FALSE);
+        status = scanmore(&pat, dir, FALSE, FALSE);
         if (!status) hilite(final_char, col);
         c = get_char();             /* Get another character */
+    }
+    else {
+        db_set(pat, "");            /* Start with nothing */
     }
 
 /* Top of the per character loop, although only IS_REVERSE and
@@ -505,14 +509,14 @@ start_over:
         case IS_REVERSE:    /* If backward search         */
         case IS_FORWARD:    /* If forward search          */
             if (c == IS_REVERSE)    /* If reverse search  */
-                n = -1;             /* Set the reverse direction  */
+                dir = -1;           /* Set the reverse direction  */
             else                    /* Otherwise,         */
-                n = 1;              /*  go forward        */
-/* This calls asks for the *next* match, not a continuation of the
+                dir = 1;            /*  go forward        */
+/* This call asks for the *next* match, not a continuation of the
  * current one.
  */
-            status = scanmore(&pat, n, TRUE, FALSE);    /* Restart */
-            if (!status) hilite('!', col+1);        /* No further match */
+            status = scanmore(&pat, dir, TRUE, FALSE);  /* Restart */
+            if (!status) hilite('!', col+1);            /* No further match */
             c = get_char(); /* Get next char */
             continue;       /* Continue the search */
 
@@ -540,8 +544,7 @@ start_over:
             cmd_buff[cmd_offset] = UEM_NOCHAR; /* Re-mark the end */
             curwp->w.dotp = curline;    /* Reset the line pointer */
             curwp->w.doto = curoff;     /*  and the offset       */
-            n = init_direction;         /* Reset search direction */
-            db_copy(pat, &pat_save);    /* Restore old search str */
+            dir = init_direction;       /* Reset search direction */
             cmd_reexecute = 0;          /* Start the whole mess over  */
             goto start_over;            /* Let it take care of itself */
 
@@ -572,7 +575,7 @@ start_over:
         }
         else                        /* Otherwise, we must have won */
                                     /* find next match */
-             status = scanmore(&pat, n, FALSE, TRUE);
+             status = scanmore(&pat, dir, FALSE, TRUE);
 
         if (!status) hilite(c, col);
         c = get_char();             /* Get the next char        */
@@ -589,6 +592,7 @@ end_isearch:
 /* Incremental search entry - forward direction
  */
 int fisearch(int f, int n) {
+    UNUSED(f);
     struct line *curline;           /* Current line on entry    */
     int curoff;                     /* Current offset on entry  */
 
@@ -600,7 +604,7 @@ int fisearch(int f, int n) {
 
 /* Do the search */
 
-    if (!(isearch(f, n))) {         /* Call ISearch forwards  */
+    if (!(isearch(n))) {            /* Call ISearch forwards  */
                                     /* If error in search:    */
         curwp->w.dotp = curline;    /* Reset line pointer and */
         curwp->w.doto = curoff;     /* offset to orig value   */

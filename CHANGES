@@ -10278,3 +10278,7 @@ dyn_buf.h
     Change _dbp_realloc() and _dbp_free() to cater for this. [dyn_buf.c]
     Remove the db(p)_val_nc() defines and routine [dyn_buf.c, dyn_buf.h]
     Change db_val_nc() calls to db_val() [eval.c]
+
+isearch.c
+    Set pat to empty at start_over:, not to pat_save.
+    Remove unused f ag from isearch() and rename n to dir.
