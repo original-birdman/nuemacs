@@ -16,6 +16,7 @@
 #include "efunc.h"
 
 char nul_ch = '\0';
+db_dcl(empty_db) = db_buf_fixed;
 
 /* An internal routine to rasie a signal if we try to set a value
  * at an illegal offset etc.

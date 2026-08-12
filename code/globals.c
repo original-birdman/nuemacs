@@ -268,12 +268,6 @@ udir_t udir;
 
 struct sigdefer sigwin_dfr = {TRUE, FALSE};
 
-/* A dyn_buf containing an empty string.
- * Initialize to "" in main.c
- */
-
-db_bufdef(empty_db);
-
 /* A flag set when we don't want a NUL */
 
 int no_quoted_NUL = FALSE;

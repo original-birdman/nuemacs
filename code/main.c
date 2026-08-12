@@ -1930,7 +1930,6 @@ int quit(int f, int n) {
             db_free(readin_mesg);
             db_free(glb_db);
             db_free(main_execstr);
-            db_free(empty_db);
             db_free(tmp_kbd);
         }
 #endif
@@ -2031,11 +2030,6 @@ int main(int argc, char **argv) {
     int gline = 0;          /* if so, what line? */
     char ekey[NKEY];        /* startup encryption key */
     unsigned int rcnum = 0; /* GGR number of extra files to process */
-
-/* Initialize this early. */
-
-    db_set(empty_db, "");
-    db_flagon(empty_db, DB_FXD);
 
 /* FIRST, set up the standard execute line buffer so that we know
  * it exists before anything tries to use it.

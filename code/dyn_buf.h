@@ -31,9 +31,14 @@ typedef struct {
  * This db_buf_initval setting means that the buf and asp pointers
  * are pointing at an empty string.
  * _dbp_realloc() and _dbp_free() need to know about this.
+ * empty_db is also defined in dyn_buf.c
  */
 extern char nul_ch;
+extern db empty_db;
+
 #define db_buf_initval { &nul_ch, &nul_ch, 0, 0, 0 }
+#define db_buf_fixed { &nul_ch, &nul_ch, 0, 0, DB_FXD }
+
 
 #define db_bufdef(a) db (a) = db_buf_initval
 #define db_dcl(a) db (a)
