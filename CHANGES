@@ -10338,3 +10338,24 @@ efunc.h
     Add mlrewrite()
 
 -----
+Change incremental search to use the new SIGWINCH handling.
+
+isearch.c:
+    Change the prompt from "ISearch:" to "ISearch>" or "ISearch<"
+    according to the current direction.
+    Set ret_nochar around the tgetc() call in get_char() and if
+    UEM_NOCHAR is returned, pass it back to the caller so that they can
+    goto start_over:.
+    Change scanmore() calls to the 3-arg version.
+
+search.c
+    Changed scanmore() to combine the next_match and extend_match args
+    into one search-type arg.
+    Fixed some inverted logic, that was working by accident.
+    Ensure we revert to the original position on any search failure.
+
+estruct.h
+    Add enum isearch_t.
+
+efunc.h
+    Modify scanmore().

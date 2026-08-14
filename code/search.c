@@ -80,8 +80,8 @@
  * A search for "iss" would find two matches
  * A search for "issi" would find only one UNLESS it was a reverse search
  * in Magic mode, when it would find two again.
- * This is a result of how matches are (now) done.
- * The non-Magic code uses jump tables (in either direction) and hence only
+ * This is a result of how matches were ("now") done.
+ * The non-Magic fast code uses jump tables (in either direction) and hence only
  * finds matches beyond any previous match in the direction of the search.
  * The Magic code *always* matches in a forward direction - just that for
  * a reverse search it moves backwards from the current location to test
@@ -3371,10 +3371,10 @@ int backsearch(int f, int n) {
 /* Entry point for isearch.
  * This needs to set-up the patterns for the search to work.
  */
-static struct line *sm_line = NULL;
-static int sm_off = 0;
-int scanmore(db *patrn, int dir, int next_match, int extend_match) {
+int scanmore(db *patrn, int dir, enum isearch_t stype) {
     int sts;                /* search status */
+    struct line *sm_line = NULL;
+    int sm_off;
 
 /* If called with a NULL pattern, just remove group info. */
     if (!patrn) {
@@ -3382,50 +3382,61 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
         return TRUE;
     }
 
-/* In terms of matches we are only interested in the length.
+/* In terms of any previous matches we are only interested in the length
+ * so that we can adjust our starting position.
  */
     int prev_match_len;
-    if (!next_match || !extend_match)
+    switch(stype) {
+    case NEXT_MATCH:
+    case EXTEND_MATCH:
         prev_match_len = glyphcount_utf8_dbp(group_match(0));
-    else
+        break;
+    default:
         prev_match_len = 0;
+    }
 
 /* If we aren't in Exact mode we need to run mcstr to determine
  * which scanner to use.
- * There is no MAGIC mode here, so force it off whilst we run.
  */
-    int real_mode = curwp->w_bufp->b_mode;
-    curwp->w_bufp->b_mode &= ~MDMAGIC;
     if (curwp->w_bufp->b_mode & MDEXACT) slow_scan = FALSE;
     else mcstr();   /* Let this decide */
 
-/* If this then fails, we have to restore where we were... */
-    if (next_match) {
-        sm_line = curwp->w.dotp;    /* Save the current line pointer */
-        sm_off = curwp->w.doto;     /* Save the current offset       */
+/* There is no MAGIC mode here, so force it off whilst we run.
+ */
+    int real_mode = curwp->w_bufp->b_mode;
+    curwp->w_bufp->b_mode &= ~MDMAGIC;
+
 /* If we want to find overlapping matches we need to set point to the
- * other end of the match to that which we highlight.
- * Since next_match is TRUE, we've already worked out the glyphcount
+ * other end (less 1) of the match to that which we highlight.
+ * Since this is a NEXT_MATCH, we've already worked out the glyphcount
  * to move above.
  */
-        if (ggr_opts&GGR_SRCHOLAP) {
-            if (dir > 0) back_grapheme(prev_match_len - 1);
-            else         forw_grapheme(prev_match_len - 1);
-        }
+    if ((stype == NEXT_MATCH) && (ggr_opts&GGR_SRCHOLAP)) {
+        sm_line = curwp->w.dotp;    /* Save the current line pointer */
+        sm_off = curwp->w.doto;     /* Save the current offset       */
+        if (dir > 0) back_grapheme(prev_match_len - 1);
+        else         forw_grapheme(prev_match_len - 1);
     }
 
 /* If we've been asked to extend the previous match we step
  * back(forward) to the *start* of the previous match before running.
- * This is so that t t e finds a match in ...ttte... rather than missing
- * it by having matched the first "tt" and only trying from the end of
- * that when the e comes along.
+ * This is so that the group_match data gets set for the entire match,
+ * as we will actually be matching the entire string, even if only the
+ * "next char" is actuallyy a match.
+ * This also means that t t e finds a match in ...ttte... rather than
+ * missing it by having matched the first "tt" and only trying from the
+ * end of that when the e comes along.
  */
     if (slow_scan) {
         if (dir < 0) {      /* reverse search? (no preskip needed AT ALL!) */
             sts = step_scanner(mcpat, REVERSE_NOSKIP, PTBEG);
         }
         else {              /* Nope. Go forward (with possible preskip) */
-            if (extend_match) back_grapheme(prev_match_len);
+            if (stype == EXTEND_MATCH) {
+                sm_line = curwp->w.dotp;    /* For possible restore */
+                sm_off = curwp->w.doto;
+                back_grapheme(prev_match_len);
+            }
             sts = step_scanner(mcpat, FORWARD, PTEND);
         }
     }
@@ -3433,15 +3444,19 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
         rvstrcpy(&tap, patrn);  /* Put reversed string in tap */
         srch_patlen = dbp_len(patrn);
         setpattern(patrn, &tap);
+        if (stype == EXTEND_MATCH) {
+            sm_line = curwp->w.dotp;    /* For possible restore */
+            sm_off = curwp->w.doto;
+        }
         if (dir < 0) {      /* reverse search? (with possible preskip) */
 /* The +1 is to allow the new character to be found since in fast mode
  * the scan *is* done in reverse from "here".
  */
-            if (extend_match) forw_grapheme(prev_match_len + 1);
+            if (stype == EXTEND_MATCH) forw_grapheme(prev_match_len + 1);
             sts = fast_scanner(&tap, REVERSE, PTBEG);
         }
         else {              /* Nope. Go forward (with possible preskip) */
-            if (extend_match) back_grapheme(prev_match_len);
+            if (stype == EXTEND_MATCH) back_grapheme(prev_match_len);
             sts = fast_scanner(patrn, FORWARD, PTEND);
         }
     }
@@ -3450,7 +3465,7 @@ int scanmore(db *patrn, int dir, int next_match, int extend_match) {
     if (!sts) {
         TTputc(BELL);   /* Feep if search fails       */
         TTflush();      /* see that the feep feeps    */
-        if (next_match) {
+        if (sm_line) {  /* We saved a location */
             curwp->w.dotp = sm_line;
             curwp->w.doto = sm_off;
         }

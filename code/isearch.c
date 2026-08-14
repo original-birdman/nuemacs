@@ -65,8 +65,10 @@ static int promptpattern(void) {
 
     if (clexec) return 0;
 
-/* Put prompt into output string */
-    db_set(tpat, "ISearch: " MLbkt("<Meta>") " ");
+/* Put prompt into output string.
+ * The > at col 7 is swet to the direction */
+
+    db_set(tpat, "ISearch> " MLbkt("<Meta>") " ");
     mlwrite_one(db_val(tpat));
 
 /* This now needs the grapheme length of the byte array... */
@@ -138,8 +140,9 @@ static unicode_t echo_char(unicode_t c, int col) {
     }
     else {
         cw = utf8char_width(c);
-        TTputc(c);                  /* Otherwise, output raw char */
+        TTputc(c);
     }
+
     TTflush();                      /* Flush the output           */
     return col + cw;                /* return the new column no   */
 }
@@ -159,7 +162,6 @@ static unicode_t get_char(void) {
  */
     if (cmd_reexecute >= 0) {   /* Is there an offset? */
         if ((c = cmd_buff[cmd_reexecute++]) != UEM_NOCHAR) {
-fprintf(stderr, "rexec for 0x%04x\n", c);
             return c;           /* Yes, return any Unicode character */
         }
     }
@@ -176,18 +178,13 @@ fprintf(stderr, "rexec for 0x%04x\n", c);
         cmd_buff = Xreallocarray(cmd_buff, cmd_buff_alloc, sizeof(*cmd_buff));
     }
 
-/* Ask tgetc() to return UEM_NOCHAR if a SIGWINCH arrives.
- * Then, if it does we return it and our caller must "goto start_over:",
- * so that the prompt is redrawn with the correct input so far.
- */
-    remap_c_on_intr = 1;
+    ret_nochar = 1;
     c = tgetc();            /* Get the next literal character */
-    remap_c_on_intr = 0;
-    if (c == UEM_NOCHAR) {  /* Redo everything */
-        cmd_reexecute = 0;
+    ret_nochar = 0;
+    if (c == UEM_NOCHAR) {
+        cmd_reexecute = 0;          /* Start the whole mess over  */
         return c;
     }
-
     cmd_buff[cmd_offset++] = c; /* Save the char for next time */
     cmd_buff[cmd_offset] = UEM_NOCHAR;
     return c;               /* Return the character */
@@ -412,12 +409,11 @@ static void hilite(int c, int col) {
  *
  * While searching forward, each successive character will leave the cursor
  * at the end of the entire matched string.  Typing a Control-S  will cause
- * the next occurrence of the string to be searched for (where the next
- * occurrence does NOT overlap the current occurrence).  A Control-R will
+ * the next occurrence of the string to be searched for (based on the
+ * GGR_SRCHOLAP setting for overlapping matches).  A Control-R will
  * change to a backwards search, META will terminate the search and Control-G
  * will abort the search.  Backspace or Delete  will back up to the previous
- * match of the string, or if the starting point is reached first, it will
- * delete the last character from the search string.
+ * match of the string and remove the last character from the search string.
  *
  * While searching backward, each successive character will leave the cursor
  * at the beginning of the matched string.  Typing a Control-R will search
@@ -428,8 +424,13 @@ static void hilite(int c, int col) {
  * In all cases, if the search fails, the user will be feeped, and the search
  * will stall until the pattern string is edited back into something that
  * exists (or until the search is aborted).
+ *
  * Leave via a common exit so that group info can be invalidated.
  */
+#define next_nochar() \
+    c = get_char();     /* Get the first character    */ \
+    if (c == UEM_NOCHAR) goto start_over
+
 static int isearch(int dir) {
     int status;     /* Search status */
     int col;        /* prompt column */
@@ -471,8 +472,7 @@ start_over:
  * the first occurrence
  * Otherwise set an empty pattern and start looking.
  */
-    c = get_char();         /* Get the first character    */
-    if (c == UEM_NOCHAR) goto start_over;
+    next_nochar();
     if ((c == IS_FORWARD) || (c == IS_REVERSE)) {
 /* Reuse old search string?   */
         db_copy(pat, &pat_save);    /* Restore old search str */
@@ -488,6 +488,7 @@ start_over:
 	}
 
         if (c == IS_REVERSE) {      /* forward search?        */
+            (void)echo_char('<', 7);    /* Indicate direction */
             dir = -1;               /* No, search in reverse  */
             if (curwp->w.dotp == curbp->b_linep ) {
                 back_grapheme(1);   /* Be defensive about EOB */
@@ -496,10 +497,9 @@ start_over:
         else
             dir = 1;                /* Yes, search forward    */
                                     /* Do the search */
-        status = scanmore(&pat, dir, FALSE, FALSE);
+        status = scanmore(&pat, dir, NEW_MATCH);
         if (!status) hilite(final_char, col);
-        c = get_char();             /* Get another character */
-        if (c == UEM_NOCHAR) goto start_over;
+        next_nochar();
     }
     else {
         db_set(pat, "");            /* Start with nothing */
@@ -523,22 +523,24 @@ start_over:
 
         case IS_REVERSE:    /* If backward search         */
         case IS_FORWARD:    /* If forward search          */
-            if (c == IS_REVERSE)    /* If reverse search  */
+            if (c == IS_REVERSE) {  /* If reverse search  */
+                (void)echo_char('<', 7);    /* Indicate direction */
                 dir = -1;           /* Set the reverse direction  */
-            else                    /* Otherwise,         */
+            }
+            else {                  /* Otherwise,         */
+                (void)echo_char('>', 7);    /* Indicate direction */
                 dir = 1;            /*  go forward        */
+            }
 /* This call asks for the *next* match, not a continuation of the
  * current one.
  */
-            status = scanmore(&pat, dir, TRUE, FALSE);  /* Restart */
+            status = scanmore(&pat, dir, NEXT_MATCH);   /* Restart */
             if (!status) hilite('!', col+1);            /* No further match */
-            c = get_char(); /* Get next char */
-            if (c == UEM_NOCHAR) goto start_over;
+            next_nochar();
             continue;       /* Continue the search */
 
         case IS_QUOTE:      /* Quote next character       */
-            c = get_char(); /* Get the next char - might be a control */
-            if (c == UEM_NOCHAR) goto start_over;
+            next_nochar();
             break;
 
 /* The cmd_buff collects *all* chars, including the IS_FORWARD and
@@ -592,14 +594,13 @@ start_over:
         }
         else                        /* Otherwise, we must have won */
                                     /* find next match */
-             status = scanmore(&pat, dir, FALSE, TRUE);
+             status = scanmore(&pat, dir, EXTEND_MATCH);
 
         if (!status) hilite(c, col);
-        c = get_char();             /* Get the next char        */
-        if (c == UEM_NOCHAR) goto start_over;
+        next_nochar();
     }
 end_isearch:
-    (void)scanmore(NULL, 0, 0, 0);  /* Invalidate group matches */
+    (void)scanmore(NULL, 0, 0);     /* Invalidate group matches */
     if (using_incremental_debug) incremental_debug_cleanup();
     db_free(pat_save);
     return status;

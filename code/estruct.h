@@ -151,6 +151,14 @@ enum cmplt_type {   /* What is looked up and complete */
 
 #define NUMDIRS        11       /* GGR */
 
+/* Types of incremental search for scanmore() */
+
+enum isearch_t {
+    NEW_MATCH,      /* New search from current location */
+    NEXT_MATCH,     /* Next match after current location */
+    EXTEND_MATCH,   /* Does the next char match too? */
+};
+
 /*
  * PTBEG, PTEND, FORWARD, and REVERSE are all toggle-able values for
  * the scan routines.

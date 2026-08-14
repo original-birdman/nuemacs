@@ -379,7 +379,7 @@ extern int forwhunt(int, int);
 extern int forwsearch(int, int);
 extern int backhunt(int, int);
 extern int backsearch(int, int);
-extern int scanmore(db *, int, int, int);
+extern int scanmore(db *, int, enum isearch_t);
 extern int sreplace(int, int);
 extern int qreplace(int, int);
 #endif
