@@ -90,31 +90,6 @@ void force_movecursor(int row, int col) {
     movecursor(row, col);
 }
 
-/* Erase the message line. This is a special routine because the message line
- * is not considered to be part of the virtual screen. It always works
- * immediately; the terminal buffer is flushed via a call to the flusher.
- */
-void mlerase(void) {
-    int i;
-
-    movecursor(term.t_mbline, 0);
-    if (discmd == FALSE) return;
-
-#if COLOR
-/* GGR - use configured colors, not 7 and 0 */
-    TTforg(gfcolor);
-    TTbacg(gbcolor);
-#endif
-    if (eolexist == TRUE) TTeeol();
-    else {
-        for (i = 0; i < term.t_ncol - 1; i++)
-            TTputc(' ');                /* No need to update ttcol */
-        force_movecursor(term.t_mbline, 0);
-    }
-    TTflush();
-    mpresf = FALSE;
-}
-
 /* Set the entry to an Unicode character.
  * Checks for previous extended cdm usage and frees any such found
  * (no longer has a "no_free" flag, as no such callers remain).
@@ -202,7 +177,36 @@ static int TTput_1uc(unicode_t uc) {
     return status;
 }
 
-/* Routine callable from other modules to access the TTput* handlers */
+/* Routine for use by mlwrite*+mlput* routines so that nothing
+ * is printed beyond the last column, to prevent the message line
+ * wrapping and messing up the display.
+ * It also keeps a record of what is there, so it can be re-written
+ * (by mlrewrite()) after a SIGWINCH.
+ * NOTE that it takes a unicode_t arg, but calling it with a normal
+ * ASCII char will work, as that gets promoted to an int (and we have
+ * unsigned chars).
+ * This routine MUST be used for all message line output (because of
+ * the rwrite-on-SIGWINCH ability).
+ */
+#define ML_TEXT_INCR 128
+static int *ml_text = NULL;     /* Save the message line contents here */
+static int ml_text_alloc = 0;   /* Current allocated size */
+static int ml_text_offset = 0;  /* Current offset into ml_text */
+static int ml_rewriting = 0;    /* 1 when re-writing the buffer */
+
+static int mlout_uc(unicode_t uc) {
+    if (!ml_rewriting) {        /* No recording on a rewrite */
+        if (ml_text_offset >= ml_text_alloc) {
+            ml_text_alloc += ML_TEXT_INCR;
+            ml_text = Xreallocarray(ml_text, ml_text_alloc, sizeof(*ml_text));
+        }
+        ml_text[ml_text_offset++] = uc;
+    }
+    if (ttcol < term.t_ncol) return TTput_1uc(uc);
+    return TRUE;
+}
+
+/* Routines callable from other modules to access the TTput* handlers */
 int ttput1c(char c) {
     return TTput_1uc((unicode_t)c);
 }
@@ -321,14 +325,42 @@ void vtinit(void) {
     return;
 }
 
+/* Erase the message line. This is a special routine because the message line
+ * is not considered to be part of the virtual screen. It always works
+ * immediately; the terminal buffer is flushed via a call to the flusher.
+ */
+void mlerase(void) {
+    int i;
+
+/* Reset current ml_text */
+
+    ml_text_offset = 0;
+
+    movecursor(term.t_mbline, 0);
+    if (discmd == FALSE) return;
+
+#if COLOR
+/* GGR - use configured colors, not 7 and 0 */
+    TTforg(gfcolor);
+    TTbacg(gbcolor);
+#endif
+    if (eolexist == TRUE) TTeeol();
+    else {
+        for (i = 0; i < term.t_ncol - 1; i++)
+            TTputc(' ');                /* No need to update ttcol */
+        force_movecursor(term.t_mbline, 0);
+    }
+    TTflush();
+    mpresf = FALSE;
+}
+
 /* Clean up the virtual terminal system, in anticipation for a return to the
  * operating system. Move down to the last line and clear it out (the next
  * system prompt will be written in the line). Shut down the channel to the
  * terminal.
  */
 void vttidy(void) {
-    mlerase();
-    movecursor(term.t_mbline, 0);
+    mlerase();      /* Moves cursor to (term.t_mbline, 0) */
     TTflush();
     TTclose();
     TTkclose();
@@ -1611,6 +1643,14 @@ void update(int force) {
     return;
 }
 
+void mlrewrite(void) {
+    mlerase();
+    ml_rewriting = 1;
+    for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
+    ml_rewriting = 0;
+    update(FALSE);
+}
+
 /* Write a message into the message line. Keep track of the physical cursor
  * position.
  * A small class of printf like format items is handled by mlwrite() and
@@ -1632,12 +1672,6 @@ typedef union {
     va_list ap;
 } npva;
 
-/* #define for use by mlwrite*+mlput* routines so that nothing
- * is printed beyond the last column, to prevent mini-buffer wrapping
- * messing up the display.
- */
-#define TTput_1uc_lim(uc) ((ttcol < term.t_ncol)? TTput_1uc(uc): FALSE)
-
 /* Write out a 8-byte integer, in the specified radix (8, 10, 16).
  * We'll be running with ue64I_t as 8-bytes, and need a "ll" formatter.
  * Update the physical cursor position.
@@ -1653,7 +1687,7 @@ static void mlputli(ue64I_t l, int r) {
     }
     sprintf(tbuf, fmt, l);
     char *op = tbuf;
-    while (*op) TTput_1uc_lim(*op++);
+    while (*op) mlout_uc(*op++);
     return;
 }
 
@@ -1676,9 +1710,9 @@ static void mlputf(int s) {
 
 /* Send out the integer portion */
     mlputi(i, 10);
-    TTput_1uc_lim('.');
-    TTput_1uc_lim((f / 10) + '0');
-    TTput_1uc_lim((f % 10) + '0');
+    mlout_uc('.');
+    mlout_uc((f / 10) + '0');
+    mlout_uc((f % 10) + '0');
 }
 
 /* NOTE: that the argument templates here are NOT printf ones.
@@ -1718,19 +1752,23 @@ static void mlwrite_ap(const char *fmt, npva ap) {
  * Trying to remove this may (will?) just introduce the possibility of
  * something worse.
  */
-    if (mlw_level == 1) mlerase();  /* Leaves us at col0 of mbline */
+    if (mlw_level == 1) {
+//        ml_text_leave = 1;
+        mlerase();  /* Leaves us at col0 of messageline */
+//        ml_text_leave = 0;
+    }
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = istrlen(fmt);
     while (bytes_togo > 0) {
-/* Limit output to not go beyond the last column by using TTput_1uc_lim()
+/* Limit output to not go beyond the last column by using mlout_uc()
  * otherwise we get wrap-around and the display messes up.
  */
         int used = utf8_to_unicode(fmt, 0, bytes_togo, &c);
         bytes_togo -= used;
         fmt += used;
         if ((ap.p == NULL) || (c != '%')) {
-            TTput_1uc_lim(c);
+            mlout_uc(c);
         } else {
             if (bytes_togo <= 0) continue;
             int used = utf8_to_unicode(fmt, 0, bytes_togo, &c);
@@ -1743,7 +1781,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             case 'x':   mlputi(va_arg(ap.ap, int), 16);     break;
             case 'D':   mlputli(va_arg(ap.ap, ue64I_t), 10); break;
             case 'f':   mlputf(va_arg(ap.ap, int));         break;
-            case 'c':   TTput_1uc_lim(va_arg(ap.ap, int));  break;
+            case 'c':   mlout_uc(va_arg(ap.ap, int));  break;
             case 's': {
                 const char *tp = va_arg(ap.ap, char *);
                 if (tp == NULL) tp = "(nil)";
@@ -1759,12 +1797,12 @@ static void mlwrite_ap(const char *fmt, npva ap) {
                 while (offs < blen) {
                     int used = utf8_to_unicode(bp, offs, blen, &uc);
                     offs += used;
-                    TTput_1uc_lim(uc);
+                    mlout_uc(uc);
                 }
                 break;
             }
             default:
-                TTput_1uc_lim(c);
+                mlout_uc(c);
             }
         }
     }
@@ -1910,6 +1948,7 @@ void free_display(void) {
     Xfree(vscreen);
     Xfree(pscreen);
     Xfree(vdata);
+    Xfree(ml_text);
 
     db_free(last_bname);
     db_free(last_display);

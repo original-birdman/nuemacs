@@ -95,15 +95,16 @@ extern int set_encryption_key(int, int);
 #ifndef DISPLAY_C
 extern void movecursor(int, int);
 extern void force_movecursor(int, int);
-extern void mlerase(void);
 extern int ttput1c(char);
 extern void vtinit(void);
+extern void mlerase(void);
 extern void vttidy(void);
 extern int upscreen(int, int);
 extern void upmode(struct buffer *);
 extern void set_scrarray_size(int, int);
 extern int newscreensize(int, int, int);
 extern void update(int);
+extern void mlrewrite(void);
 extern void mlwrite(const char *, ...);
 extern void mlforce(const char *, ...);
 extern void mlwrite_one(const char *);

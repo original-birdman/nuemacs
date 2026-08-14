@@ -274,7 +274,7 @@ int no_quoted_NUL = FALSE;
 
 /* Whether to remap NUL to UEM_NOCHAR in tgetc */
 
-int remap_c_on_intr = 0;
+int ret_nochar = 0;
 
 /* Ignored prefixes  - need to limit assignment... */
 

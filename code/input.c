@@ -511,20 +511,6 @@ unicode_t tgetc(void) {
         }
     }
 
-/* Fetch a character from the terminal driver
- * We turn off RESTARTs across the character get
- * So we can get errno == EINTR and send back UEM_NOCHAR (see below)
- * which indicates a SIGWINCH occurred and we need a redraw of any
- * minibuffer.
- */
-    struct sigaction sigact;
-    if (remap_c_on_intr) {
-        sigaction(SIGWINCH, NULL, &sigact);
-        sigact.sa_flags = 0;
-        sigaction(SIGWINCH, &sigact, NULL);
-        errno = 0;
-    }
-
 /* We wish to allow any SIGWINCH signal to actually run whilst waiting
  * for input, so we set do_defer FALSE here.
  * And we also want to check for any deferred signal waiting before we
@@ -559,27 +545,40 @@ unicode_t tgetc(void) {
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
     }
 
-/* Now we can wait on the character arriving.
- * Any SIGWINCH will be handled immediately.
+/* Fetch a character from the terminal driver
+ * We turn off RESTARTs across the character get
+ * So we can get errno == EINTR and send back UEM_NOCHAR (see below)
+ * which indicates a SIGWINCH occurred and we need a redraw of any
+ * minibuffer or re-run of incremental search data, or we can redraw
+ * the mesage line and go back to get another real character.
  */
-    c = TTgetc();
-    sigwin_dfr.do_defer = TRUE;
-    if (remap_c_on_intr) {
-        sigaction(SIGWINCH, NULL, &sigact);
-        sigact.sa_flags = SA_RESTART;
-        sigaction(SIGWINCH, &sigact, NULL);
-    }
-/* Record it for $lastkey
- * We won't worry about potential overflow on count, as it should only
- * be checked for equality ("has the user entered anything more").
- */
-    inkey.last = c;
-    inkey.count++;
+    struct sigaction sigact;
+    sigaction(SIGWINCH, NULL, &sigact);
+    sigact.sa_flags = 0;
+    sigaction(SIGWINCH, &sigact, NULL);
 
-    if (c == 0 && errno == EINTR && remap_c_on_intr)
-        c = UEM_NOCHAR;         /* Note illegal char */
-    else
-/* Save it if we need to */
+    while (1) {
+        errno = 0;
+        c = TTgetc();
+        if (errno != EINTR) break;  /* No SIGWINCH seen */
+        if (ret_nochar) {
+            c = UEM_NOCHAR;         /* Note illegal char */
+            break;                  /* end exit loop */
+        }
+        mlrewrite();                /* and go again for a char */
+    }
+
+/* We have to re-enable SA_RESTART before going on to any other system
+ * calls!
+ */
+    sigwin_dfr.do_defer = TRUE;
+    sigaction(SIGWINCH, NULL, &sigact);
+    sigact.sa_flags = SA_RESTART;
+    sigaction(SIGWINCH, &sigact, NULL);
+
+/* Save it if we need to and it is valid */
+
+    if (c != UEM_NOCHAR) {          /* No recording of this */
         if (kbdmode == RECORD) {
             *kbdptr++ = c;
             if (kbdptr == &kbdm[n_kbdm - 1]) {  /* Don't overrun buffer */
@@ -590,6 +589,13 @@ unicode_t tgetc(void) {
             }
             kbdend = kbdptr;
         }
+/* Record it for $lastkey
+ * We won't worry about potential overflow on count, as it should only
+ * be checked for equality ("has the user entered anything more").
+ */
+        inkey.last = c;
+        inkey.count++;
+    }
 
 /* And finally give the char back */
     return c;
@@ -1003,6 +1009,7 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
         mb_info.main_wp = curwp;    /* Used to position modeline */
         mb_info.wheadp = wheadp;    /* ??? */
         inmb = TRUE;
+        ret_nochar = TRUE;
     }
     else {                          /* Save this minibuffer for recursion */
         wsave = *curwp;             /* Structure copy... */
@@ -1113,13 +1120,11 @@ loop:
 
 /* Get the next command (character) from the keyboard */
 
-    remap_c_on_intr = 1;
     c = getcmd();
-/* We deliberateky get UEM_NOCHAR back on a SIGWINCH signal.
+/* We deliberately get UEM_NOCHAR back on a SIGWINCH signal.
  * This is so that we can go back to loop: to get the minibuffer redrawn
  * in its current state, which the repaint after the SIGWINCH will have lost.
  */
-    remap_c_on_intr = 0;
     if (c == UEM_NOCHAR) goto loop;
 
     if (c == (CONTROL|'@')) {   /* get1key() maps NUL to thisq */
@@ -1303,6 +1308,7 @@ abort:
         curwp = mb_info.main_wp;    /* Reset window info ptr */
         wheadp = mb_info.wheadp;    /* Reset window list */
         inmb = FALSE;               /* Note we have left mb */
+        ret_nochar = FALSE;
     }
     curwp->w_flag |= WFMODE;        /* Forces modeline redraw */
     zotbuf(bp);                     /* Remove this minibuffer */

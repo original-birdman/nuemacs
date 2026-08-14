@@ -10308,3 +10308,33 @@ edef.h
 dyn_buf.c:
     Change _dbp_clear() to check alloc before setting value not buf (as
     that will now be set).
+
+
+-----
+Modifications to SIGWINCH handling to get it working for message line
+text aas well as the minibuffer.
+
+display.c:
+    Make TTput_1uc_lim a function, and use it to keep a buffer of the
+    current message line contents. Rename it to mlout_uc.
+    Change mlerase() to reset the message line buffer.
+    Add mlrewrite() to rewrite the current message line.
+
+globals.c:
+edef.h:
+    Rename remap_c_on_intr to ret_nochar.
+
+input.c:
+    Unconditionally unset SA_RESTART for SIGWINCH around the TTgetc()
+    call in tgetc.
+    If we do get EINTR the return UEM_NOCHAR if ret_nochar is set,
+    otherwise call mlrewrite() and loop to get the next (real) char.
+    Remove the remap_c_on_intr setting around the getcmd() call in
+    getstring().  Instead ,set ret_nochar on arrival into first
+    minibuffer and unset it on exit from it
+
+efunc.h
+    Reorder some DISPLAY_C definitions.
+    Add mlrewrite()
+
+-----

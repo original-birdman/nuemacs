@@ -377,7 +377,7 @@ extern int no_quoted_NUL;
 
 /* Whether to remap NUL to UEM_NOCHAR in tgetc */
 
-extern int remap_c_on_intr;
+extern int ret_nochar;
 
 /* Crypt bits */
 
