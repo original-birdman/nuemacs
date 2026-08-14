@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.201 Help Index     (09 Aug 2026)
+=>                   nuEmacs GGR4.202 Help Index     (14 Aug 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -542,7 +542,7 @@ The hard-wired key-bindings for it are:
     Esc
         Stop the search and remain at the current location.
 
-After each match you will be at the left of what has so far matched.  If
+After each match you will be at the end of what has so far matched.  If
 the next incremental character does not find a match it will be
 highlighted (reverse video) in the prompt.  The $ggr_opts overlap bit
 determines whether overlapping matches will be found.

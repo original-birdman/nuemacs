@@ -10364,3 +10364,15 @@ efunc.h
 
 unsigned.h
     Change to check __CHAR_UNSIGNED__, as that works on older systems.
+
+search.c
+window.c
+etc/uemacs.hlp
+etc/uemacs.rc
+version.h
+    Avoid incorrect "may be use uninitialized" [search.c]
+    Comment updates [window.c]
+    Various updates to the help file [uemacs.hlp]
+    Update to GGR4.202
+
+==========

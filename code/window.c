@@ -591,7 +591,7 @@ static void new_sizer(int to_add) {
 
 /* If the direction has changed, or the user has typed more input then
  * has changed we reset skip. Otherwise we remember the current skip
- * to work with and set skip to 1 (ie.e non-zero).
+ * to work with and set skip to 1 (ie. non-zero).
  * Then, at the end of each while (wp != NULL) pass through the windows we
  * update skip to this_skip if both are non-zero
  * This means we end up with skip set to this_skip%n_of_windows

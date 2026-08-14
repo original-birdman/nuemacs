@@ -3374,7 +3374,7 @@ int backsearch(int f, int n) {
 int scanmore(db *patrn, int dir, enum isearch_t stype) {
     int sts;                /* search status */
     struct line *sm_line = NULL;
-    int sm_off;
+    int sm_off = sm_off;
 
 /* If called with a NULL pattern, just remove group info. */
     if (!patrn) {
