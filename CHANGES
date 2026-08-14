@@ -10359,3 +10359,8 @@ estruct.h
 
 efunc.h
     Modify scanmore().
+
+-----
+
+unsigned.h
+    Change to check __CHAR_UNSIGNED__, as that works on older systems.
