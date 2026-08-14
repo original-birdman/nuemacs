@@ -10259,7 +10259,7 @@ dyn_buf.h
     Remove db_init() declaration. It no longer exists.
 
 dyn_buf.c
-    Do nothing if _dbp_copy() if source and target are the same.
+    Do nothing in _dbp_copy() if source and target are the same.
     Check that the offset given to _dbp_deleten_at() is valid.
     Allow for asp offset from buf when calculating need in
     _dbp_retailstr_at(), _dbp_uctruncate() and _dbp_addch()
@@ -10304,3 +10304,7 @@ edef.h
     Set remap_c_on_intr around tgetc() call in get_char() and, if
     UEM_NOCHAR comes back, set up a rexecute of everything. [isearch.c]
     Hardwire the prompt into promptpattern(). [isearch.c]
+
+dyn_buf.c:
+    Change _dbp_clear() to check alloc before setting value not buf (as
+    that will now be set).

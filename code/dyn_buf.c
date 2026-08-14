@@ -242,7 +242,7 @@ void _dbp_clear(db *ds) {
     if (ds->flags & DB_FXD) illegal_fixed_change("clear");
     ds->alen = 0;
     ds->asp = ds->buf;
-    if (ds->buf) *(ds->asp) = '\0';
+    if (ds->alloc) *(ds->asp) = '\0';
     return;
 }
 
