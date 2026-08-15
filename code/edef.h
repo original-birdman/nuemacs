@@ -369,7 +369,7 @@ extern struct bc_info key_info;     /* Lookup key bind(s) for a function */
 
 /* Info for deferred SIGWINCH handling */
 
-extern struct sigdefer sigwin_dfr;
+extern volatile struct sigdefer sigwin_dfr;
 
 /* A flag set when we don't want a NUL */
 
@@ -378,6 +378,10 @@ extern int no_quoted_NUL;
 /* Whether to remap NUL to UEM_NOCHAR in tgetc */
 
 extern int ret_nochar;
+
+/* Set when we are handling SIGWINCH */
+
+extern volatile int handling_sigwinch;
 
 /* Crypt bits */
 

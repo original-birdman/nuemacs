@@ -10262,12 +10262,14 @@ dyn_buf.c
     Do nothing in _dbp_copy() if source and target are the same.
     Check that the offset given to _dbp_deleten_at() is valid.
     Allow for asp offset from buf when calculating need in
-    _dbp_retailstr_at(), _dbp_uctruncate() and _dbp_addch()
+    _dbp_retailstr_at(), _dbp_appendn() and _dbp_addch()
     Do nothing if _dbp_truncate() is asked to truncate to the current
     length.
     Fix some incorrect function names in error messages.
     Correct the inverted sign logic for different length buffers in
     _dbp_dbp_cmp().
+
+-----
 
 dyn_buf.c
 eval.c
@@ -10312,7 +10314,7 @@ dyn_buf.c:
 
 -----
 Modifications to SIGWINCH handling to get it working for message line
-text aas well as the minibuffer.
+text as well as the minibuffer.
 
 display.c:
     Make TTput_1uc_lim a function, and use it to keep a buffer of the
@@ -10375,4 +10377,16 @@ version.h
     Various updates to the help file [uemacs.hlp]
     Update to GGR4.202
 
-==========
+========== GGR4.203
+
+display.c
+globals.c
+input.c
+edef.h
+    Only mlerase() at first-level call in mlwrite_ap()
+    In mlerase() don't clear buffer when in SIGWINCH handler or
+    mlrewrite() [display.c]
+    Add handling_sigwinch. Mark it and sigwin_dfr as volatile
+    [globals.c, edef.h]
+    Set handling_sigwinch aroudn teh real sigwinch hanlding code.
+    [input.c]

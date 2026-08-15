@@ -469,6 +469,11 @@ static void main_sigwinch(void) {
     }
 }
 
+/* The actual SIGWINCH handler.
+ * We set handling_sigwinch whilst this is running, so that mlerase()
+ * knows not to reset the ml_text array, so that mlrewrite can redraw
+ * the contents.
+ */
 void sigwinch_handler(int signr) {
 
 /* If this is being called as a signal handler then signr will be
@@ -483,9 +488,13 @@ void sigwinch_handler(int signr) {
     sigwin_dfr.is_deferred = FALSE; /* We're handling it now */
 
     int old_errno = errno;  /* We might overwrite this for an async call */
+    int old_handling_sigwinch = handling_sigwinch;
+    handling_sigwinch = TRUE;
+
     if (inmb)   inmb_sigwinch();
     else        main_sigwinch();
 
+    handling_sigwinch = old_handling_sigwinch;
     errno = old_errno;
     return;
 }
@@ -550,7 +559,7 @@ unicode_t tgetc(void) {
  * So we can get errno == EINTR and send back UEM_NOCHAR (see below)
  * which indicates a SIGWINCH occurred and we need a redraw of any
  * minibuffer or re-run of incremental search data, or we can redraw
- * the mesage line and go back to get another real character.
+ * the message line and go back to get another real character.
  */
     struct sigaction sigact;
     sigaction(SIGWINCH, NULL, &sigact);

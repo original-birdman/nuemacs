@@ -266,7 +266,7 @@ udir_t udir;
 
 /* Info for deferred SIGWINCH handling */
 
-struct sigdefer sigwin_dfr = {TRUE, FALSE};
+volatile struct sigdefer sigwin_dfr = {TRUE, FALSE};
 
 /* A flag set when we don't want a NUL */
 
@@ -275,6 +275,10 @@ int no_quoted_NUL = FALSE;
 /* Whether to remap NUL to UEM_NOCHAR in tgetc */
 
 int ret_nochar = 0;
+
+/* Set when we are handling SIGWINCH */
+
+volatile int handling_sigwinch = 0;
 
 /* Ignored prefixes  - need to limit assignment... */
 

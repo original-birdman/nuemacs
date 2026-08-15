@@ -328,13 +328,17 @@ void vtinit(void) {
 /* Erase the message line. This is a special routine because the message line
  * is not considered to be part of the virtual screen. It always works
  * immediately; the terminal buffer is flushed via a call to the flusher.
+ * The ml_text buffer is cleared unless we are currently handling
+ * SIGWINCH (when updates will call mlerase(), but we want to reshow it)
+ * and when rewriting itself (when we call mlerase() to start with an
+ * empty message line on the display).
  */
 void mlerase(void) {
     int i;
 
-/* Reset current ml_text */
+/* Reset current ml_text? */
 
-    ml_text_offset = 0;
+    if (!handling_sigwinch && !ml_rewriting) ml_text_offset = 0;
 
     movecursor(term.t_mbline, 0);
     if (discmd == FALSE) return;
@@ -1644,8 +1648,8 @@ void update(int force) {
 }
 
 void mlrewrite(void) {
-    mlerase();
     ml_rewriting = 1;
+    mlerase();
     for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
     ml_rewriting = 0;
     update(FALSE);
@@ -1752,11 +1756,7 @@ static void mlwrite_ap(const char *fmt, npva ap) {
  * Trying to remove this may (will?) just introduce the possibility of
  * something worse.
  */
-    if (mlw_level == 1) {
-//        ml_text_leave = 1;
-        mlerase();  /* Leaves us at col0 of messageline */
-//        ml_text_leave = 0;
-    }
+    if (mlw_level == 1) mlerase();  /* Leaves us at col0 of messageline */
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = istrlen(fmt);
