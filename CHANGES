@@ -10409,3 +10409,8 @@ input.c
 
 isearch.c
     Changed the next_nochar macro to be one line.
+
+spawn.c
+    Added a TTstate() function to run OPEN/CLOSE terminal functions.
+    Use db_sprintf() to contruct line.
+    Remove the ttput1c('\n') line.

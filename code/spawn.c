@@ -42,6 +42,22 @@ static void check_for_resize(void) {
     return;
 }
 
+/* We run these several times, so centralize it. */
+
+enum TTway { OPEN, CLOSE };
+static void TTstate(enum TTway w) {
+    if (w == OPEN) {
+        TTopen();
+        TTkopen();
+        TTflush();
+    }
+    else {
+        TTflush();
+        TTclose();      /* stty to old modes    */
+        TTkclose();     /* Close "keyboard" */
+    }
+}
+
 /* Create a subjob with a copy of the command interpreter in it. When the
  * command interpreter exits, mark the screen as garbage so that you do a full
  * repaint. Bound to "^X C".
@@ -60,9 +76,7 @@ int spawncli(int f, int n) {
     get_orig_size();
 
     movecursor(term.t_mbline, 0);   /* Seek to last line.   */
-    TTflush();
-    TTclose();                      /* stty to old settings */
-    TTkclose();                     /* Close "keyboard" */
+    TTstate(CLOSE);
     if ((cp = getenv("SHELL")) != NULL && *cp != '\0') {
 /* SHELL should be a simple command with no args.
  * So run it within ''.
@@ -83,9 +97,7 @@ int spawncli(int f, int n) {
     }
     sgarbf = TRUE;
     sleep(2);
-    TTopen();
-    TTkopen();
-
+    TTstate(OPEN);
     check_for_resize();
 
     return TRUE;
@@ -155,9 +167,7 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
     get_orig_size();
 
     if ((s = next_spawn_cmd(rxcopy, prompt, &line)) != TRUE) goto exit;
-    TTflush();
-    TTclose();              /* stty to old modes    */
-    TTkclose();
+    TTstate(CLOSE);
     rval = system(db_val(line));
     fflush(stdout);         /* to be sure P.K.      */
     TTopen();
@@ -209,10 +219,11 @@ int pipecmd(int f, int n) {
     get_orig_size();
 
     db_bufdef(line);        /* command line sent to shell */
+    db_bufdef(cmd);         /* command from user */
     db_bufdef(comfile);
 
 /* Get the command to pipe in */
-    if ((s = next_spawn_cmd(RXARG(pipecmd), "@", &line)) != TRUE) goto exit;
+    if ((s = next_spawn_cmd(RXARG(pipecmd), "@", &cmd)) != TRUE) goto exit;
 
 /* Find/create the PIPEBUF buffer, switch to it and ensure it is empty. */
     if ( ((bp = bfind(PIPEBUF, TRUE, 0)) == NULL) ||
@@ -241,20 +252,14 @@ int pipecmd(int f, int n) {
     }
     close(fd);
 
-    TTflush();
-    TTclose();              /* stty to old modes    */
-    TTkclose();
+    TTstate(CLOSE);
 /* We put the outfile filename into '', to prevent any active chars
  * being introduced via HOME setting.
  * Does mean that you can't have a ' in HOME.
  */
-    db_append(line, ">'");
-    db_append(line, db_val(comfile));
-    db_addch(line, '\'');
+    db_sprintf(line, "%s >'%s'", db_val(cmd), db_val(comfile));
     rval = system(db_val(line));
-    TTopen();
-    TTkopen();
-    TTflush();
+    TTstate(OPEN);
     sgarbf = TRUE;
 
     check_for_resize();
@@ -285,10 +290,11 @@ exit:
     if (db_len(comfile) > 0) unlink(db_val(comfile));
     db_free(comfile);
     db_free(line);
+    db_free(cmd);
     return s;
 }
 
-/* Filter a buffer through an external DOS program
+/* Filter a buffer through an external OS program
  * Bound to ^X #
  */
 int filter_buffer(int f, int n) {
@@ -304,13 +310,14 @@ int filter_buffer(int f, int n) {
 
     get_orig_size();
 
-    db_bufdef(line);         /* command line send to shell */
-    db_bufdef(tmpnam);       /* place to store real file name */
+    db_bufdef(line);        /* command line send to shell */
+    db_bufdef(cmd);         /* command from user */
+    db_bufdef(tmpnam);      /* place to store real file name */
     db_bufdef(fltin);
     db_bufdef(fltout);
 
 /* Get the filter name and its args */
-    if ((s = next_spawn_cmd(RXARG(filter_buffer), "#", &line)) != TRUE)
+    if ((s = next_spawn_cmd(RXARG(filter_buffer), "#", &cmd)) != TRUE)
          goto exit;
 
 /* Setup the proper file names */
@@ -357,23 +364,15 @@ int filter_buffer(int f, int n) {
         s = FALSE;
         goto reset_bufname_exit;
     }
-    ttput1c('\n');          /* Already have '\r'    */
-    TTflush();
-    TTclose();              /* stty to old modes    */
-    TTkclose();
+    TTstate(CLOSE);
 /* We put the infile and outfile filenames into '', to prevent any
  * active chars being introduced via HOME setting.
  * Does mean that you can't have a ' in HOME.
   */
-    db_append(line, "<'");
-    db_append(line, db_val(fltin));
-    db_append(line, "' > '");
-    db_append(line, db_val(fltout));
-    db_addch(line, '\'');
+    db_sprintf(line, "%s <'%s' >'%s'", db_val(cmd), db_val(fltin),
+         db_val(fltout));
     rval = system(db_val(line));
-    TTopen();
-    TTkopen();
-    TTflush();
+    TTstate(OPEN);
     sgarbf = TRUE;
 
     check_for_resize();
@@ -409,6 +408,7 @@ exit:
     db_free(fltin);
     db_free(tmpnam);
     db_free(line);
+    db_free(cmd);
     return s;
 }
 
