@@ -10393,3 +10393,6 @@ edef.h
 
 isearch.c
     Terminate search buffer after UEM_NOCHAR seen.
+
+isearch.c
+    Cater for IS_QUOTE char being quoted.

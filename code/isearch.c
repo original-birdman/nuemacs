@@ -403,6 +403,24 @@ static void hilite(int c, int col) {
     return;
 }
 
+/* Is the item at cmd_buff[idx] an unquoted IS_QUOTE char? */
+static int is_IS_QUOTE(int idx) {
+
+/* The simple case */
+    if ((idx < 0) || (cmd_buff[idx] != IS_QUOTE)) return FALSE;
+
+/* It is an IS_QUOTE char, but is it actually quoted? */
+
+    int is_quote = TRUE;
+    for (int i = 0; i <= idx; i++) {
+        if (cmd_buff[i] == IS_QUOTE) {
+            i++;                            /* Check the next char */
+            if (i == idx) is_quote = FALSE; /* It's a quoted is_quote */
+        }
+    }
+    return is_quote;
+}
+
 /* Subroutine to do an incremental search.  In general, this works similarly
  * to the older micro-emacs search function, except that the search happens
  * as each character is typed, with the screen and cursor updated with each
@@ -557,10 +575,12 @@ start_over:
                 goto end_isearch;
             }
             cmd_offset -= 2;            /* Back up over Rubout and CHAR */
-/* If the previous CHAR was quoted, we have to remove that too */
-            if ((cmd_offset > 0) && (cmd_buff[cmd_offset-1] == IS_QUOTE)) {
-                --cmd_offset;
-            }
+/* If the removed CHAR was quoted, we have to remove the IS_QUOTE too.
+ * We can only determine this by scannng the entire buffer from the
+ * beginning, as an IS_QUOTE char may itself actually be quoted (and
+ * hence not actually an IS_QUOTE).
+ */
+            if (is_IS_QUOTE(cmd_offset-1)) --cmd_offset;
             cmd_buff[cmd_offset] = UEM_NOCHAR; /* Re-mark the end */
             curwp->w.dotp = curline;    /* Reset the line pointer */
             curwp->w.doto = curoff;     /*  and the offset       */
