@@ -10388,7 +10388,7 @@ edef.h
     mlrewrite() [display.c]
     Add handling_sigwinch. Mark it and sigwin_dfr as volatile
     [globals.c, edef.h]
-    Set handling_sigwinch aroudn teh real sigwinch hanlding code.
+    Set handling_sigwinch around the real sigwinch handling code.
     [input.c]
 
 isearch.c
@@ -10396,3 +10396,10 @@ isearch.c
 
 isearch.c
     Cater for IS_QUOTE char being quoted.
+
+isearch.c
+    Add direction arg to promptpattern() so that it can indicate the
+    direction for both forward and reverse searching.
+    Remove the "back 1 at EOB" code for a reverse search.
+    Only call scanmore() in the IS_REVERSE/IS_FORWARD blocks if there
+    is a pattern to look for.

@@ -58,7 +58,7 @@ static int cmd_reexecute = -1;      /* > 0 if re-executing command */
 
 /* Routine to prompt for I-Search string.
  */
-static int promptpattern(void) {
+static int promptpattern(int dir) {
     db_bufdef(tpat);
 
 /* check to see whether we are executing a command line */
@@ -66,9 +66,9 @@ static int promptpattern(void) {
     if (clexec) return 0;
 
 /* Put prompt into output string.
- * The > at col 7 is set to the direction.
+ * The >/< at col 7 is set to the direction and updated on changes
  */
-    db_set(tpat, "ISearch> " MLbkt("<Meta>") " ");
+    db_sprintf(tpat, "ISearch%c " MLbkt("<Meta>") " ", (dir > 0)? '>': '<');
     mlwrite_one(db_val(tpat));
 
 /* This now needs the grapheme length of the byte array... */
@@ -481,14 +481,14 @@ static int isearch(int dir) {
 start_over:
 
 /* Ask the user for the text of a pattern */
-    col = promptpattern();  /* Prompt, remember the col */
+    col = promptpattern(dir);   /* Prompt, remember the col */
 
-    cpos = 0;               /* Start afresh               */
-    status = TRUE;          /* Assume everything's cool   */
+    cpos = 0;                   /* Start afresh               */
+    status = TRUE;              /* Assume everything's cool   */
 
 /* Get the first character in the pattern.  If we get an initial
  * Control-S or Control-R, re-use the old search string and find
- * the first occurrence
+ * the first occurrence if there was one.
  * Otherwise set an empty pattern and start looking.
  */
     next_nochar();
@@ -506,18 +506,21 @@ start_over:
             final_char = uc;
 	}
 
-        if (c == IS_REVERSE) {      /* forward search?        */
+        if (c == IS_REVERSE) {          /* reverse search?        */
             (void)echo_char('<', 7);    /* Indicate direction */
-            dir = -1;               /* No, search in reverse  */
-            if (curwp->w.dotp == curbp->b_linep ) {
-                back_grapheme(1);   /* Be defensive about EOB */
-            }
+            dir = -1;                   /* set reverse  */
         }
-        else
-            dir = 1;                /* Yes, search forward    */
-                                    /* Do the search */
-        status = scanmore(&pat, dir, NEW_MATCH);
-        if (!status) hilite(final_char, col);
+        else {
+            (void)echo_char('>', 7);    /* Indicate direction */
+            dir = 1;                    /* set forward    */
+        }                               /* Do the search */
+
+/* Only do the search if we actually have a previous pattern */
+
+        if (plen > 0) {
+            status = scanmore(&pat, dir, NEW_MATCH);
+            if (!status) hilite(final_char, col);
+        }
         next_nochar();
     }
     else {
@@ -552,9 +555,13 @@ start_over:
             }
 /* This call asks for the *next* match, not a continuation of the
  * current one.
+ * But again, we only do this is we've actually got a pattern, which we
+ * might not yet have. (repeated ^S/^R at start of search).
  */
-            status = scanmore(&pat, dir, NEXT_MATCH);   /* Restart */
-            if (!status) hilite('!', col+1);            /* No further match */
+            if (db_len(pat) > 0) {
+                status = scanmore(&pat, dir, NEXT_MATCH);   /* Restart */
+                if (!status) hilite('!', col+1);    /* No further match */
+            }
             next_nochar();
             continue;       /* Continue the search */
 
@@ -636,13 +643,13 @@ int fisearch(int f, int n) {
 
 /* Remember the initial . on entry: */
 
-    int saved_discmd = discmd;      /* Save this in ase we change it. */
+    int saved_discmd = discmd;      /* Save this in case we change it. */
     curline = curwp->w.dotp;        /* Save the current line pointer */
     curoff = curwp->w.doto;         /* Save the current offset       */
 
 /* Do the search */
 
-    if (!(isearch(n))) {            /* Call ISearch forwards  */
+    if (!(isearch(n))) {            /* Call ISearch with direction */
                                     /* If error in search:    */
         curwp->w.dotp = curline;    /* Reset line pointer and */
         curwp->w.doto = curoff;     /* offset to orig value   */
