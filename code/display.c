@@ -206,11 +206,6 @@ static int mlout_uc(unicode_t uc) {
     return TRUE;
 }
 
-/* Routines callable from other modules to access the TTput* handlers */
-int ttput1c(char c) {
-    return TTput_1uc((unicode_t)c);
-}
-
 /* Initialize the data structures used by the display code. The edge vectors
  * used to access the screens are set up. The operating system's terminal I/O
  * channel is set up. All the other things get initialized at compile time.

@@ -95,7 +95,6 @@ extern int set_encryption_key(int, int);
 #ifndef DISPLAY_C
 extern void movecursor(int, int);
 extern void force_movecursor(int, int);
-extern int ttput1c(char);
 extern void vtinit(void);
 extern void mlerase(void);
 extern void vttidy(void);

@@ -10414,3 +10414,7 @@ spawn.c
     Added a TTstate() function to run OPEN/CLOSE terminal functions.
     Use db_sprintf() to contruct line.
     Remove the ttput1c('\n') line.
+
+display.c
+efunc.h
+    Remove ttput1c(). No longer needed.
