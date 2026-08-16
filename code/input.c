@@ -554,6 +554,8 @@ unicode_t tgetc(void) {
         sigprocmask(SIG_SETMASK, &incoming_set, NULL);
     }
 
+    while (1) {
+
 /* Fetch a character from the terminal driver
  * We turn off RESTARTs across the character get
  * So we can get errno == EINTR and send back UEM_NOCHAR (see below)
@@ -561,14 +563,21 @@ unicode_t tgetc(void) {
  * minibuffer or re-run of incremental search data, or we can redraw
  * the message line and go back to get another real character.
  */
-    struct sigaction sigact;
-    sigaction(SIGWINCH, NULL, &sigact);
-    sigact.sa_flags = 0;
-    sigaction(SIGWINCH, &sigact, NULL);
+        struct sigaction sigact;
+        sigaction(SIGWINCH, NULL, &sigact);
+        sigact.sa_flags = 0;
+        sigaction(SIGWINCH, &sigact, NULL);
 
-    while (1) {
         errno = 0;
         c = TTgetc();
+
+/* We have to re-enable SA_RESTART before going on to any other system
+ * calls! That includes the mlrewrite() if we need it!
+ */
+        sigaction(SIGWINCH, NULL, &sigact);
+        sigact.sa_flags = SA_RESTART;
+        sigaction(SIGWINCH, &sigact, NULL);
+
         if (errno != EINTR) break;  /* No SIGWINCH seen */
         if (ret_nochar) {
             c = UEM_NOCHAR;         /* Note illegal char */
@@ -576,14 +585,7 @@ unicode_t tgetc(void) {
         }
         mlrewrite();                /* and go again for a char */
     }
-
-/* We have to re-enable SA_RESTART before going on to any other system
- * calls!
- */
     sigwin_dfr.do_defer = TRUE;
-    sigaction(SIGWINCH, NULL, &sigact);
-    sigact.sa_flags = SA_RESTART;
-    sigaction(SIGWINCH, &sigact, NULL);
 
 /* Save it if we need to and it is valid */
 

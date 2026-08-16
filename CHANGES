@@ -10403,3 +10403,6 @@ isearch.c
     Remove the "back 1 at EOB" code for a reverse search.
     Only call scanmore() in the IS_REVERSE/IS_FORWARD blocks if there
     is a pattern to look for.
+
+input.c
+    Moved the SA_RESTART stop/start to be within the loop over TTgetc().
