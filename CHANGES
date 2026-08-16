@@ -10406,3 +10406,6 @@ isearch.c
 
 input.c
     Moved the SA_RESTART stop/start to be within the loop over TTgetc().
+
+isearch.c
+    Changed the next_nochar macro to be one line.

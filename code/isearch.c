@@ -446,9 +446,11 @@ static int is_IS_QUOTE(int idx) {
  *
  * Leave via a common exit so that group info can be invalidated.
  */
-#define next_nochar() \
-    c = get_char();     /* Get the first character    */ \
-    if (c == UEM_NOCHAR) goto start_over
+
+/* Define this macro to check for and handle UEM_NOCHAR on all
+ * get_char calls.
+ */
+#define next_nochar() if ((c = get_char()) == UEM_NOCHAR) goto start_over
 
 static int isearch(int dir) {
     int status;     /* Search status */
