@@ -10390,3 +10390,6 @@ edef.h
     [globals.c, edef.h]
     Set handling_sigwinch aroudn teh real sigwinch hanlding code.
     [input.c]
+
+isearch.c
+    Terminate search buffer after UEM_NOCHAR seen.

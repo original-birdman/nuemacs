@@ -66,8 +66,8 @@ static int promptpattern(void) {
     if (clexec) return 0;
 
 /* Put prompt into output string.
- * The > at col 7 is swet to the direction */
-
+ * The > at col 7 is set to the direction.
+ */
     db_set(tpat, "ISearch> " MLbkt("<Meta>") " ");
     mlwrite_one(db_val(tpat));
 
@@ -181,12 +181,13 @@ static unicode_t get_char(void) {
     ret_nochar = 1;
     c = tgetc();            /* Get the next literal character */
     ret_nochar = 0;
-    if (c == UEM_NOCHAR) {
-        cmd_reexecute = 0;          /* Start the whole mess over  */
-        return c;
+    if (c == UEM_NOCHAR) {          /* Ignore this and....  */
+        cmd_reexecute = 0;          /* ...start over again. */
     }
-    cmd_buff[cmd_offset++] = c; /* Save the char for next time */
-    cmd_buff[cmd_offset] = UEM_NOCHAR;
+    else {
+        cmd_buff[cmd_offset++] = c; /* Save the char for next time */
+    }
+    cmd_buff[cmd_offset] = UEM_NOCHAR;  /* Add terminator */
     return c;               /* Return the character */
 }
 
