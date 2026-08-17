@@ -10418,3 +10418,7 @@ spawn.c
 display.c
 efunc.h
     Remove ttput1c(). No longer needed.
+
+file.c
+    Use a copy of the filename in readin() to avoid possibly having it
+    reallocated from under our feet.

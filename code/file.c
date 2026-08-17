@@ -605,15 +605,15 @@ static void handle_filehooks(const char *fname) {
  * The command bound to M-FNR (Meta+Spec+R) is called after the buffer
  * is set up and before it is read.
  *
- * char fname[];        name of file to read
+ * char infname[];      name of file to read
  * int lockfl;          check for file locks?
  */
-int readin(const char *fname, int lockfl) {
+int readin(const char *infname, int lockfl) {
     struct window *wp;
     struct buffer *bp;
     int s;
 
-    if (filock && lockfl && lockchk(fname) == ABORT) {
+    if (filock && lockfl && lockchk(infname) == ABORT) {
         s = FIOFNF;
         bp = curbp;
         terminate_str(bp->b_dfname);    /* Makes it empty */
@@ -621,6 +621,13 @@ int readin(const char *fname, int lockfl) {
         goto out;
     }
 
+/* There are potential problems as we pass on the filename below in
+ * that it is possible that some of the calls might actually change
+ * the value of that incoming infname (by realloc() it, and hence
+ * potentially making the pointer value we have invalid).
+ * So we'll take a copy of it and run with that.
+ */
+    const char *fname = strdupa(infname);
     bp = curbp;                             /* Cheap.        */
     if ((s = bclear(bp)) != TRUE) return s; /* Might be old. */
     bp->b_flag &= ~(BFINVS | BFCHG);
