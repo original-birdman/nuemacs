@@ -257,7 +257,7 @@ void init_namelookup(void) {
     fcn_info.ip = Xmalloc((size_t)(fcn_info.nelem+1)*sizeof(int));
     fcn_info.esize = sizeof(struct name_bind);
     fcn_info.offs = offsetof(struct name_bind, n_func);
-    idxsort_fields((unsigned char *)names, fcn_info.ip,
+    idxsort_fields((char *)names, fcn_info.ip,
           sizeof(struct name_bind), fcn_info.nelem, 1, &fdef);
 
 /* Index to lookup function info given a function */
@@ -273,7 +273,7 @@ void init_namelookup(void) {
     nfc_info.ip = Xmalloc((size_t)(nfc_info.nelem+1)*sizeof(int));
     nfc_info.esize = sizeof(struct name_bind);
     nfc_info.offs = offsetof(struct name_bind, n_name);
-    idxsort_fields((unsigned char *)names, nfc_info.ip,
+    idxsort_fields((char *)names, nfc_info.ip,
           sizeof(struct name_bind), nfc_info.nelem, 1, &fdef);
 
 /* We want to step through this one, so need a next index too */

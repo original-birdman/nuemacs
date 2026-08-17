@@ -71,11 +71,11 @@
  *  for an integer (has to handle endianness issues) and for a signed
  *  integer we need to map INTxx_MIN...INTxx_MAX => 0...UINTxx_MAX
  */
-static inline unsigned char get_ibyte(
-     unsigned char *records, int reclen, int link, int *cstr_done,
+static inline char get_ibyte(
+     char *records, int reclen, int link, int *cstr_done,
      unsigned int offset, unsigned int start, unsigned int width, char type) {
 
-    unsigned char *ip = records + reclen*(link-1) + start;
+    char *ip = records + reclen*(link-1) + start;
     if (type == 'C' || type == 'S') width = 1;
 
 /* The code to handle multi-byte integers is generic; derivable from the
@@ -86,7 +86,7 @@ static inline unsigned char get_ibyte(
         memcpy(&ivar, ip, sizeof(ivar));    /* To ensure alignment */ \
         if (type == 'I') ivar -= imin;      /* Convert to unsigned! */ \
         ivar >>= 8*(sizeof(ivar) - 1 - offset); \
-        return (unsigned char)(ivar & 0xff)
+        return (char)(ivar & 0xff)
 
     switch(width) {
     uint64_t size8;
@@ -104,7 +104,7 @@ static inline unsigned char get_ibyte(
             }
 /* If we return a "real" character we need to reset the loop terminator */
             *cstr_done = 0;
-            return (unsigned char)*(fp+offset);
+            return *(fp+offset);
         }
         return *(ip+offset);    /* Index into char array */
     default:
@@ -120,7 +120,7 @@ static inline unsigned char get_ibyte(
 
 /* The ACTUAL FUNCTION!! */
 
-int idxsort_fields(unsigned char *records, int index[],
+int idxsort_fields(char *records, int index[],
      int rec_length, int rec_count, int field_count, struct fields *fields) {
 
     int done;           /* A binary flag */

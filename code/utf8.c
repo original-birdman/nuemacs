@@ -32,9 +32,9 @@ int utf8_to_unicode(const char *line, int index, int len,
         return 0;
     }
 
-    unsigned value;
-    unsigned char c = (unsigned char)line[index];
-    unsigned mask;
+    unsigned int value;
+    char c = line[index];
+    unsigned int mask;
     int i, bytes;
 
     *res = c;
@@ -63,7 +63,7 @@ int utf8_to_unicode(const char *line, int index, int len,
 
 /* OK, do the bytes */
     for (i = 1; i < bytes; i++) {
-        c = (unsigned char)line[i];
+        c = line[i];
         if ((c & 0xc0) != 0x80) return 1;
         value = (value << 6) | (c & 0x3f);
     }
@@ -198,7 +198,7 @@ int prev_utf8_offset(const char *buf, int offset, int grapheme_start) {
     unicode_t res = 0;
     int offs = offset;
     do {
-        unsigned char c = (unsigned char)buf[--offs];
+        char c = buf[--offs];
         res = c;
         unicode_t poss;
         int got_utf8 = 0;
@@ -206,12 +206,12 @@ int prev_utf8_offset(const char *buf, int offset, int grapheme_start) {
             int trypos = offs;
             int tryb = MAX_UTF8_LEN;
             signed char marker = (signed char)0xc0; /* Extend sign-bit here */
-            unsigned char valmask = 0x1f;
+            char valmask = 0x1f;
             int bits_sofar = 0;
             int addin;
             poss = c & 0x3f;                /* 6-bits */
             while ((--trypos >= 0) && (--tryb >= 0)) {
-                c = (unsigned char)buf[trypos];
+                c = buf[trypos];
                 if ((c & 0xc0) == 0x80) {   /* Ext byte */
                     marker >>= 1;           /* Shift right..*/
                     valmask >>= 1;          /* Fewer... */
@@ -222,8 +222,9 @@ int prev_utf8_offset(const char *buf, int offset, int grapheme_start) {
                     continue;
                 }
 /* Have we found a valid start code?
- * NOTE that the test needs marker as an unsigned char, to stop sign
- * extension in the test.
+ * NOTE that the test needs marker (which is defined as signed, for sign
+ * extension when shifting right) to be an unsigned char, to allow the
+ * correct compariosn with (unsigned) c & ~valmask.
  */
                 if ((c & ~valmask) == (unsigned char)marker) {
                     addin = (c & valmask);

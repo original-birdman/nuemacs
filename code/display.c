@@ -1058,10 +1058,10 @@ static int cline_display_overlong(void) {
     int dcol = 0;       /* Display column */
     int offs = 0;       /* Offset into line buffer */
 /* cp is only used if we have text on the line, so ltext() is OK. */
-    unsigned char *cp = (unsigned char *)ltext(curwp->w.dotp);
+    const char *cp = ltext(curwp->w.dotp);
     int max_offs = lused(curwp->w.dotp);
     while (offs < max_offs) {
-        unsigned char cc = *(cp+offs);
+        char cc = *(cp+offs);
         if (cc <= 0xa0) {
 /* This is a cut-down version of update_screenpos_for_char() from line.h
  * (as we just have a char, not a unicode char).

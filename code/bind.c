@@ -396,7 +396,7 @@ static void index_bindings(void) {
     int ki = key_index_allocated - 3;
     while (ki >= 0 && keytab[ki].k_type == ENDL_KMAP) ki--;
     kt_ents = ki + 1;
-    idxsort_fields((unsigned char *)keytab, key_index,
+    idxsort_fields((char *)keytab, key_index,
          sizeof(struct key_tab), kt_ents, 1, &fdef);
     key_index_valid = 1;    /* This index is now usable... */
     keystr_index_valid = 0; /* ... But the other one isn't */
@@ -427,7 +427,7 @@ static void index_keystr(void) {
     key_info.ip = Xreallocarray(key_info.ip, kt_ents, sizeof(int));
     key_info.esize = sizeof(struct key_tab);
     key_info.offs = offsetof(struct key_tab, hndlr.k_fp);
-    idxsort_fields((unsigned char *)keytab, key_info.ip,
+    idxsort_fields((char *)keytab, key_info.ip,
              sizeof(struct key_tab), kt_ents, 1, &fdef);
 
 /* Having the index lets you find a matching entry. But we also want to

@@ -140,7 +140,7 @@ void init_envvar_index(void) {
     evl_info.ip = Xmalloc((size_t)(evl_info.nelem+1)*sizeof(int));
     evl_info.esize = sizeof(struct evlist);
     evl_info.offs = offsetof(struct evlist, var);
-    idxsort_fields((unsigned char *)evl, evl_info.ip,
+    idxsort_fields((char *)evl, evl_info.ip,
           sizeof(struct evlist), evl_info.nelem, 1, &fdef);
 
 /* We want to step through this one, so need a next index too */
@@ -158,7 +158,7 @@ void init_envvar_index(void) {
     ufc_info.ip = Xmalloc((size_t)(ufc_info.nelem+1)*sizeof(int));
     ufc_info.esize = sizeof(struct user_function);
     ufc_info.offs = offsetof(struct user_function, f_name);
-    idxsort_fields((unsigned char *)funcs, ufc_info.ip,
+    idxsort_fields((char *)funcs, ufc_info.ip,
           sizeof(struct user_function), ufc_info.nelem, 1, &fdef);
 
     return;

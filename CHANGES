@@ -10429,3 +10429,13 @@ isearch.c
 posix.c
     Return 0 when any system call returns a -ve result.
     Ensure any read characters are counted correctly and kept in buffer.
+
+bind.c
+display.c
+eval.c
+idxsorter.c
+names.c
+utf8.c
+idxsorter.h
+    Changed 'unsigned char' to char, or remove casting. Where appropriate.
+    Now that we compile with -funsigned-char.
