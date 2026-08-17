@@ -540,7 +540,6 @@ start_over:
         case IS_QUIT:           /* Want to quit searching?    */
             status = TRUE;
             goto end_isearch;   /* Quit searching now         */
-        case UEM_NOCHAR:        /* Run out of input?          */
         case IS_ABORT:          /* If abort search request    */
             status = FALSE;
             goto end_isearch;   /* Quit searching again       */
