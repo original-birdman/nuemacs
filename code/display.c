@@ -343,7 +343,10 @@ void mlerase(void) {
     TTforg(gfcolor);
     TTbacg(gbcolor);
 #endif
-    if (eolexist == TRUE) TTeeol();
+    if (eolexist == TRUE) {
+        TTeeol();
+        ttcol = 0;
+    }
     else {
         for (i = 0; i < term.t_ncol - 1; i++)
             TTputc(' ');                /* No need to update ttcol */
@@ -1647,7 +1650,8 @@ void mlrewrite(void) {
     mlerase();
     for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
     ml_rewriting = 0;
-    update(FALSE);
+    mpresf = TRUE;
+    TTflush();
 }
 
 /* Write a message into the message line. Keep track of the physical cursor
@@ -1751,7 +1755,10 @@ static void mlwrite_ap(const char *fmt, npva ap) {
  * Trying to remove this may (will?) just introduce the possibility of
  * something worse.
  */
-    if (mlw_level == 1) mlerase();  /* Leaves us at col0 of messageline */
+    if (mlw_level == 1) {
+        mlerase();  /* Leaves us at col0 of messageline */
+        ml_text_offset = 0; /* In case mlerase() found handling_sigwinch set */
+    }
 
 /* GGR - loop through the bytes getting any utf8 sequence as unicode */
     int bytes_togo = istrlen(fmt);

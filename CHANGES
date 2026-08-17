@@ -10439,3 +10439,12 @@ utf8.c
 idxsorter.h
     Changed 'unsigned char' to char, or remove casting. Where appropriate.
     Now that we compile with -funsigned-char.
+
+display.c
+window.c
+    Ensure ttcol is set to 0 in mlerase() if eolexist. [display.c]
+    Force ml_text_offset to 0 for level 1 mlwrite_ap() calls.
+    Set mpresf and call TTflush(), not update() in mlrewrite().
+    [display.c]
+    Shorten the warning message when a screen is made too narrow.
+    [window.c]

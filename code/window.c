@@ -777,9 +777,12 @@ int newheight(int n) {
 int newwidth(int n) {
     struct window *wp;
 
-/* Make sure it's in reasonable */
+/* Make sure it's reasonable.
+ * We can't actually stop the user dragging the window smaller.
+ * But we can warn, with a sufficiently short message
+ */
     if (n < 10) {
-        mlwrite_one("Screen width too small");
+        mlwrite_one("TOO SMALL");
         return FALSE;
     }
 
