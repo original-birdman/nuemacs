@@ -10425,3 +10425,7 @@ file.c
 
 isearch.c
     Remove the now redundant "case UEM_NOCHAR" from a switch.
+
+posix.c
+    Return 0 when any system call returns a -ve result.
+    Ensure any read characters are counted correctly and kept in buffer.

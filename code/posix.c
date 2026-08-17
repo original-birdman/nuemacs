@@ -155,38 +155,48 @@ void ttflush(void) {
  * arriving for processing into one unicode character.
  */
 #include <poll.h>
-static struct pollfd ue_wait = { 0, POLLIN, 0 };
+static struct pollfd ue_wait = { STDIN_FILENO, POLLIN, 0 };
 
 int ttgetc(void) {
     static char buffer[32];
     static int pending = 0;
 
     unicode_t c;
-    int count, bytes = 1, expected;
+    int count, bytes, expected;
 
     count = pending;    /* So we don't update pending on error */
-    if (!count) {
-        count = (int)read(0, buffer, sizeof(buffer));
-        if (count <= 0) return 0;
+    if (!count) {       /* so count is 0 */
+        count = (int)read(STDIN_FILENO, buffer, sizeof(buffer));
+        if (count <= 0) return 0;   /* SIGWINCH and EINTR */
         pending = count;
     }
 
+/* If we get here then we have something.
+ * BUT, if any system calls return -ve value we assume that SIGWINCH
+ * has been seen and errno == EINTR. At that point we just return
+ * 0. Our caller might then map that to EUM_NOCHAR by checking errno.
+ */
+
     c = buffer[0];
+    bytes = 1;
     if (c < 0xc0 && !(c == 0x1b))   /* ASCII or Latin-1(??) - Not Esc */
         goto done;
 
 /* Work out how many bytes we expect in total for this unicode char */
-    if (c == 0x1b)     expected = 2;
-    else if (c < 0xe0) expected = 2;
+
+    if (c < 0xe0)      expected = 2;    /* Caters for 0x1b as well */
     else if (c < 0xf0) expected = 3;
     else               expected = 4;
 
 /* Special character - try to fill buffer */
     while (pending < expected) {
         int chars_waiting = poll(&ue_wait, 1, 100);
-        if (chars_waiting <= 0) break;
-        pending += (int)read(0, buffer + pending,
-             sizeof(buffer) - (size_t)pending);
+        if (chars_waiting < 0) return 0;    /* SIGWINCH and EINTR */
+        if (chars_waiting == 0) break;      /* Timed out. Nothing arrived */
+        int nr = (int)read(STDIN_FILENO, buffer + pending,
+            sizeof(buffer) - (size_t)pending);
+        if (nr <= 0) return 0;              /* SIGWINCH and EINTR */
+        pending += nr;
     }
     if (pending > 1) {
         char second = buffer[1];
@@ -196,6 +206,9 @@ int ttgetc(void) {
             goto done;
         }
     }
+/* Note that if we have an "incomplete" byte sequence (e.g. 3 when 4
+ * was expected) this will just take and return the 1st byte.
+ */
     bytes = utf8_to_unicode(buffer, 0, pending, &c);
 
 done:
