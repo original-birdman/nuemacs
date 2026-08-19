@@ -746,7 +746,8 @@ unicode_t getcmd(void) {
         }
         if (c == CSI) break;    /* Drop out to CSI handling */
         if (c == (CONTROL|'X')) {
-/* Trap Esc-^x and ^x-^x */
+/* Trap ^x-Esc-^x, Esc-^x and ^x-^x */
+            if (meta && ctlx) return CTLX|META|CONTROL|'X';
             if (meta) return META|CONTROL|'X';
             if (ctlx) return CTLX|CONTROL|'X';
             ctlx = TRUE;
@@ -763,7 +764,8 @@ unicode_t getcmd(void) {
         }
         if (meta) cmask |= META;
         if (ctlx) cmask |= CTLX;
-        if (cmask || (c&(CONTROL|META|CTLX))) c = ensure_uppercase(c);
+/* Bindings are case-insensitive for Control, Escape and CtlX */
+        if (cmask || (c & CONTROL)) c = ensure_uppercase(c);
         return c | cmask;
     }
 
