@@ -159,6 +159,10 @@ static struct pollfd ue_wait = { STDIN_FILENO, POLLIN, 0 };
 
 static char buffer[32];
 static int pending = 0;
+
+enum pfx_seen { NOPFX, ESCPFX, CTLXPFX };
+static enum pfx_seen pfx_state = NOPFX;
+
 int ttgetc(void) {
 
     unicode_t c;
@@ -181,12 +185,37 @@ int ttgetc(void) {
     c = buffer[0];
     bytes = 1;
 
-/* Display CtlX or Esc if there are no other pending chars */
-
-    if (pending <= 1) {
+/* Display CtlX or Esc if there are no other pending chars?
+ * NOTE that the state of GGR_MLPFX cannot change between a Ctlx and Esc
+ * being typed consecutively.
+ */
+    if ((pending <= 1) && (ggr_opts & GGR_MLPFX)) {
         switch (c) {
-        case 0x1b: mlwrite_one("Esc"); break;
-        case 0x18: mlwrite_one("Ctlx"); break;
+        case 0x18:          /* Ctlx */
+            switch(pfx_state) {
+            case NOPFX:
+                mlwrite_one("Ctlx");
+                pfx_state = CTLXPFX;
+                break;
+            default:        /* No other state */
+                pfx_state = NOPFX;
+            }
+            break;
+        case 0x1b:          /* Esc */
+            switch(pfx_state) {
+            case NOPFX:
+                mlwrite_one("Esc");
+                pfx_state = ESCPFX;
+                break;
+            case CTLXPFX:   /* No state beyond this */
+                mlwrite_one("CtlxEsc");
+                /* Falls through */
+            default:        /* No other state */
+                pfx_state = NOPFX;
+            }
+            break;
+        default:
+            pfx_state = NOPFX;
         }
     }
 

@@ -10460,3 +10460,14 @@ posix.c
     Remove the code looking for [ after Esc. (getcmd() handles this)
     Display Esc or Ctlx in the message line when seen.
     Fix typahead() to check the pending buffer as well.
+
+posix.c
+estruct.h
+etc/uemacs.rc
+    Add GGR_MLPFX flag to ggr_opts to enable Esc/Ctlx/CtlxEsc display
+    while typing. [estruct.h]
+    Add mlPfx option to change-ggr-opts [uemacs.rc]
+    Add code to display Esc/Ctlx/CtlxEsc prefix on the message line if
+    GGR_MLPFX is set in ggr_opts. [posix.c]
+    Add also-abort so that you can abort Esc, Ctlx and CtlxEsc prefixes.
+    [uemacs.rc]

@@ -390,14 +390,14 @@ store-procedure change-ggr-opts one_pass
       set .action "Toggle"
       set .how "-toggle"
     !endif
-    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap, Height, Ctlgph):" .action
+    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap, Height, Ctlgph, mlPfx):" .action
     set .report " "
     set .optsel &upper &gtkey
     !if &or &seq .optsel &chr 0x07 &seq .optsel "~n"
         write-message "[Aborted]"
         !finish
     !endif
-    !if &eq 0 &sin "TFWOHC" .optsel
+    !if &eq 0 &sin "TFWOHCP" .optsel
         write-message "Unknown mode"
         !finish
     !endif
@@ -425,6 +425,10 @@ store-procedure change-ggr-opts one_pass
 *changeC
     set .bit 0x20
     set .what "Ctlgph"
+    !goto &cat doit .how
+*changeP
+    set .bit 0x40
+    set .what "MLPfx"
     !goto &cat doit .how
 ;
 *doit-on
@@ -547,6 +551,16 @@ bind-to-key yank-minibuffer             FNh     ; F8
 bind-to-key makelist-region             FNi     ; F9
 bind-to-key numberlist-region           FNj     : F10
 2 bind-to-key count-words               FNl     ; F12
+
+; We can only have one key-binding to abort-command.
+; So define this to get out of an Esc or Ctlx prefix.
+;
+store-procedure also-abort one_pass
+    abort-command
+!endm
+buffer-to-key also-abort M-^G
+buffer-to-key also-abort ^X^G
+buffer-to-key also-abort ^XM-^G
 
 ;
 ; End key mappings

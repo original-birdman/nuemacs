@@ -75,13 +75,16 @@
 #define GGR_SRCHOLAP    0x0008
 /* Use the new method for resizing windows on screen height change */
 #define GGR_NEWHEIGHT   0x0010
-/* Use 2-byte expansion for control chars and Delete
+/* Use glyphs for control chars and Delete.
  * Done this way round so that with the default start-up file (which
  * sets all bits on) we use glyphs (the Control Pictures for U+2400 to U+241F)
  * so your display font must have glyphs for them!
  * If you unset this bit then the old 2-char ^X display in used.
  */
 #define GGR_CTLGPH      0x0020
+/* Do we want to see Esc/Ctlx/CtlxEsc displayed while typing? */
+#define GGR_MLPFX       0x0040
+
 
 /* Internal constants. */
 
