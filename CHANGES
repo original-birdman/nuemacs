@@ -569,3 +569,7 @@ etc/uemacs.rc
 CHANGES_101-199
 CHANGES
     Split off changes for versions up to GGR4.199.
+
+input.c
+    Unset ret_nochar around the multiplier_check() call in getstring().
+    Various comment updates.

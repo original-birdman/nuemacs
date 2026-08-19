@@ -609,6 +609,7 @@ unicode_t tgetc(void) {
     }
 
 /* And finally give the char back */
+
     return c;
 }
 
@@ -781,10 +782,10 @@ unicode_t getcmd(void) {
     if (ctlx) cmask |= CTLX;
     c = get1key();
 
-/* If the next key is '[', just get the next key and return
+/* If this key is '[', just get the next key and return
  * FNa for A, etc....
  * "Linux console" for KDE sends Esc[[A... for F1-F5. Only known instance.
- * Use a quick lowercase...
+ * Use a quick lowercase...so these end up as FNa, FNb, etc...
  */
     if (c == '[') return (cmask | DIFCASE | get1key());
 
@@ -803,7 +804,9 @@ unicode_t getcmd(void) {
  * longer needs to be within it.
  */
 
-/* If this char is from A to z, just return it */
+/* If this char is from A to z, just return it.
+ * Esc[ A-z -> SPEC(A-z)
+ */
 
     if (c >= 'A' && c <= 'z') return cmask | c;
 
@@ -812,9 +815,9 @@ unicode_t getcmd(void) {
     int d = get1key();          /* ESC [ n ~   P.K. */
     if (d == '~') return cmask | c;
 
-/* If we have 2 digits, all is OK(-ish). If the second is not a digit, but K,
- * return FNk.
- * This handles Shift F2 in Konsole Xfree mode sending CSI2Q,etc..
+/* If we now have c and d as 2 digits, all is OK(-ish).
+ * If the second is not a digit, but K, return FNk (SPEC(k))
+ * This handles Shift F2 in Konsole Xfree mode sending CSI 2Q,etc..
  */
     if ((d < '0') || (d > '9')) return cmask | d;
 
@@ -845,7 +848,7 @@ unicode_t getcmd(void) {
  * By mapping them to FNx (x == lowercase) we avoid clashes with the
  * cursor keys (EscO or Esc[ A/B/C/D) and Insert/Home/PgUp (Esc[n~ n == 1-6).
  *
- * KDE Konsole with Xfree4 and macOS settings send EscOP/Q/R/S for F1/2/3/4
+ * KDE Konsole with Xfree4 and macOS settings sends EscOP/Q/R/S for F1/2/3/4
  * which will map to FNP/Q/R/S. gnome-terminal does the same.
  */
     int num = (c-'0')*10 + (d-'0');
@@ -1153,7 +1156,9 @@ loop:
  * The "c" arg may be the start of a numeric prefix (e.g.Esc2) so
  * from here on it's carg->c that needs to be checked.
  */
+    ret_nochar = FALSE;
     com_arg *carg = multiplier_check(c);
+    ret_nochar = TRUE;
 
 /* Some "hard-wired" key-bindings - aka minibuffer specials. */
 
@@ -1296,7 +1301,7 @@ submit:     /* Tidy up */
 abort:
 
 /* If we get here "normally" SIGWINCH will still be handled by deferring it,
- * as the only async handling that actually runs is in get1key.
+ * as the only async handling that actually runs is in tgetc().
  */
     if (!swbuffer(bp, 0)) { /* Make sure we're still in our minibuffer */
         status = FALSE;
