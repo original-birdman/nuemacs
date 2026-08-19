@@ -66,7 +66,7 @@ void lfree(struct line *lp) {
         }
     }
 /* The only calls to lfree() are from ldelnewline(), which works on the
- * curwp (so this buffer must be in a window and hance b_nwnd is not 0)
+ * curwp (so this buffer must be in a window and hence b_nwnd is not 0)
  * and bclear() (which will set dot and mark to be on line1, char 1)
  * So it is not needed here.
  */

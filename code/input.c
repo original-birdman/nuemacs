@@ -1143,7 +1143,7 @@ loop:
  */
     if (c == UEM_NOCHAR) goto loop;
 
-    if (c == (CONTROL|'@')) {   /* get1key() maps NUL to thisq */
+    if (c == (CONTROL|'@')) {   /* get1key() maps NUL to this */
         if (no_quoted_NUL) {
 /* OK if its bound to a function, but not raw */
             if (!getbind(c)) {

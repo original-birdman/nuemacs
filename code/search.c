@@ -3371,12 +3371,30 @@ int backsearch(int f, int n) {
 /* Entry point for isearch.
  * This needs to set-up the patterns for the search to work.
  */
+/* Some gcc versions will report "may be used initialized" for sm_off
+ * (which is wrong).
+ * Since we aren't using -Winit-self we can initialize it to itself
+ * and the optimizer will optimize it away (!?!).
+ * From Flexo's answer at:
+ *   https://stackoverflow.com/questions/5080848/disable-gcc-may-be-used-uninitialized-on-a-particular-variable
+ */
 int scanmore(db *patrn, int dir, enum isearch_t stype) {
     int sts;                /* search status */
+
+/* Current position.
+ * Only need to save these if we do some movement prior to the actual search,
+ * so that the may be restorted on failure.
+ * They are only restored if the search fails and sm_line is no longer NULL.
+ */
     struct line *sm_line = NULL;
     int sm_off = sm_off;
 
-/* If called with a NULL pattern, just remove group info. */
+/* If called with a NULL pattern, just remove group info.
+ * This routine is never called with an empty pattern. If it were then
+ * a test for it should be included here too, as otherwise some of the
+ * pre-positioning, followed by an instance match of nothing would produce
+ * odd movements.
+ */
     if (!patrn) {
         init_dyn_group_status();
         return TRUE;

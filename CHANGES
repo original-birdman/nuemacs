@@ -622,3 +622,15 @@ etc/uemacs.rc
 
 autotest/search-with-nul.sh
     Change -c to -x when running uemacs (as other tests use).
+
+version.h  
+etc/uemacs.hlp
+(input.c)
+(line.c)
+(search.c)
+(unsigned.h)
+    Comment updates and typo fixes. [input.c, line.c, search.c,
+    unsigned.h] 
+    Update to GGR4.203
+
+==========

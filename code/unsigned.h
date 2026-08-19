@@ -1,4 +1,4 @@
-/* unsinged.h
+/* unsigned.h
  * 
  * Ensure that the compilation is using unsigned chars.
  */
