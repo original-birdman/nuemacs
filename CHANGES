@@ -587,3 +587,8 @@ edef.h
     Remove some mlerase() calls. [buffer.c, input.c, random.c]
     Remove an update(FALSE) [main.c]
     Remove some TTflush()s [bind.c]
+
+display.c
+    Change update() to rewrite message line if updgar() is called.
+    Change mberase() to blank the virtual screen's message line buffer,
+    rather than just blanking the screen line.
