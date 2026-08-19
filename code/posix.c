@@ -157,13 +157,14 @@ void ttflush(void) {
 #include <poll.h>
 static struct pollfd ue_wait = { STDIN_FILENO, POLLIN, 0 };
 
+static char buffer[32];
+static int pending = 0;
 int ttgetc(void) {
-    static char buffer[32];
-    static int pending = 0;
 
     unicode_t c;
     int count, bytes, expected;
 
+    errno = 0;
     count = pending;    /* So we don't update pending on error */
     if (!count) {       /* so count is 0 */
         count = (int)read(STDIN_FILENO, buffer, sizeof(buffer));
@@ -179,7 +180,17 @@ int ttgetc(void) {
 
     c = buffer[0];
     bytes = 1;
-    if (c < 0xc0 && !(c == 0x1b))   /* ASCII or Latin-1(??) - Not Esc */
+
+/* Display CtlX or Esc if there are no other pending chars */
+
+    if (pending <= 1) {
+        switch (c) {
+        case 0x1b: mlwrite_one("Esc"); break;
+        case 0x18: mlwrite_one("Ctlx"); break;
+        }
+    }
+
+    if (c < 0xc0)   /* ASCII or Latin-1(??) */
         goto done;
 
 /* Work out how many bytes we expect in total for this unicode char */
@@ -188,7 +199,11 @@ int ttgetc(void) {
     else if (c < 0xf0) expected = 3;
     else               expected = 4;
 
-/* Special character - try to fill buffer */
+/* Unicode character  - try to fill buffer.
+ * In practice all chras seem to arrive at once and so will have been
+ * retrieved by the read() call above.
+ * So this is just belt and braces.
+ */
     while (pending < expected) {
         int chars_waiting = poll(&ue_wait, 1, 100);
         if (chars_waiting < 0) return 0;    /* SIGWINCH and EINTR */
@@ -198,14 +213,7 @@ int ttgetc(void) {
         if (nr <= 0) return 0;              /* SIGWINCH and EINTR */
         pending += nr;
     }
-    if (pending > 1) {
-        char second = buffer[1];
-        if (c == 0x1b && second == '[') { /* Turn ESC+'[' into CSI */
-            bytes = 2;
-            c = 0x9b;
-            goto done;
-        }
-    }
+
 /* Note that if we have an "incomplete" byte sequence (e.g. 3 when 4
  * was expected) this will just take and return the 1st byte.
  */
@@ -214,7 +222,7 @@ int ttgetc(void) {
 done:
     pending -= bytes;
 
-/* We need to shufle down any still-pending bytes.
+/* We need to shuffle down any still-pending bytes.
  * Will not be many - so just use simple loop.
  */
     if (pending > 0) {
@@ -233,10 +241,10 @@ done:
 int typahead(void) {
     int x;                  /* holds # of pending chars */
 
+    x = (pending > 0);
 #ifdef FIONREAD
-    if (ioctl(0, FIONREAD, &x) < 0) x = 0;
-#else
-    x = 0;
+    if (x == 0)
+        if (ioctl(0, FIONREAD, &x) < 0) x = 0;
 #endif
     return x;
 }
