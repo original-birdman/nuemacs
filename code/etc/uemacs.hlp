@@ -1119,13 +1119,14 @@ function (bound to F2 in the standard bindings).
 => Internal Key bindings
 
 Four keybindings are used internally to run the command bound to them
-when particular events occur.
+when particular events occur. A fifth is also used internally.
 
     META|SPEC|'C'   Just before the next command is obtained.
     META|SPEC|'R'   Just before reading in a file.
     META|SPEC|'W'   When word-wrapping should occur.
     META|SPEC|'X'   After switching to a new window, a new buffer or
                     after reading in a file (even if already in).
+    META|SPEC|'*'   Is immutably bound to nullproc.
 
 By default the W entry is bound to wrapword, while the other three are
 bound to nullproc.

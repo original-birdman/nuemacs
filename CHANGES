@@ -597,6 +597,18 @@ bind.c
     Change stock() to return UEM_NOCHAR on failure, as 0 is actually a
     valid, bindable character!
     Change getckey() callers to check for UEM_NOCHAR.
-
+z
 input.c
     Fix to getcmd() to allow ^X-Esc-^X to work.
+
+bind.c
+main.c
+ebind.h
+etc/uemacs.hlp
+    Allow CtlG to just stop numeric arg collecting, rather than abort
+    command (and any macro gathering)
+    Added '*' to switch in switch_internal to note it is immutable.
+    [bind.c]
+    Added SPEC|META|'*' binding. [ebind.h]
+    On exit remap CtlG to noop if number processing started. [main.c]
+    Document SPEC|META|'*' in help. [uemacs.hlp]

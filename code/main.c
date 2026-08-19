@@ -844,6 +844,10 @@ com_arg *multiplier_check(int c) {
     ca.f = FALSE;       /* ...these... */
     ca.n = 1;           /* ...3 now */
 
+/* We need this if we back-out of a numeric arg during macro gathering */
+
+    unicode_t *orig_kbdptr = kbdptr;
+
 /* Do META-# processing if needed */
 
     basec = ca.c & ~META;       /* strip meta char off if there */
@@ -955,6 +959,23 @@ com_arg *multiplier_check(int c) {
             if (ca.n == 0) ca.n++;
             ca.n = -ca.n;
         }
+    }
+/* Did we start collecting a number ((ca.c != c) but then abort
+ * ca.c == (CONTROL|'G').
+ * If so we remap to nullproc and wipe out any macro recording
+ * NOTE that if we did arrive for numeric handling we will have
+ * done so with an Esc and N (or -) in the buffer, so we have
+ * to step back over those 2 as well.
+ */
+    if ((ca.c != c) && ca.c == (CONTROL|'G')) {
+        ca.c = META|SPEC|'*';   /* Dummy nop */
+        ca.f = FALSE;
+        ca.n = 1;
+/* The pointers know how large they are, so -2 is correct. -2 items  */
+        if (kbdmode == RECORD) kbdptr = orig_kbdptr - 2;
+        mlwrite_one("Cancelled");
+        sleep(1);
+        mlerase();
     }
     return &ca;             /* Give back the result */
 }

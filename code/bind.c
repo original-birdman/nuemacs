@@ -809,6 +809,10 @@ int switch_internal(int f, int n) {
     case 'W':       /* When we need a word-wrap (main()/insert_newline()). */
     case 'X':       /* From cknewwindow(). Called when window switches. */
         break;
+    case '*':       /* Immutably bound to nullproc (for multiplier_check) */
+        mlwrite_one("* is immutable");
+        s = FALSE;
+        goto exit;
     default:
         mlwrite("Invalid choice: %c", set_char);
         s = FALSE;

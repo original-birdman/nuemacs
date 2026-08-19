@@ -168,6 +168,8 @@ struct key_tab_init init_keytab[] = {
     {SPEC|META|'C',     nullproc        }, /*  every command input */
     {SPEC|META|'R',     nullproc        }, /*  on file read */
     {SPEC|META|'X',     nullproc        }, /*  on window change P.K. */
+    {SPEC|META|'*',     nullproc        }, /* For remap to nullproc */
+
 };
 
 #endif  /* EBIND_H_ */
