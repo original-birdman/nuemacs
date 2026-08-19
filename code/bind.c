@@ -178,7 +178,8 @@ int help(int f, int n) {
 
 /* stock:
  *      String key name TO Command Key
- *      We need to be careful about signedness in comparisons!!
+ *      We needed to be careful about signedness in comparisons!!
+ *      But nwo we compile with unsigned characters.
  *
  * char *keyname;       name of key to translate to Command key from
  */
@@ -199,6 +200,10 @@ static unicode_t stock(const char *given_keyname) {
 
 /* Parse it up */
     c = 0;
+
+/* The order here is significant.
+ * It means that Ctlx Esc is a valid prefix, but Esc Ctlx is not.
+ */
 
 /* First, the CtlX prefix */
     if (*keyname == '^' && *(keyname + 1) == 'X') {
@@ -225,7 +230,7 @@ static unicode_t stock(const char *given_keyname) {
  * Allow ^ on its own (by not marking CONTROL or stepping over it).
  * Don't allow trying to set a Control < @.
  */
-    if (*keyname == '^' && *(keyname + 1) != 0) {
+    if (*keyname == '^' && (*(keyname + 1) != '\0')) {
         ++keyname;                  /* Step to the controlled char... */
         if (*(keyname) == '?')      /* Special case ^? for Delete */
             special = 0x7f;         /* Don't add the Control */
@@ -237,7 +242,7 @@ static unicode_t stock(const char *given_keyname) {
 
 /* If we have nothing more, return nothing - we should be at a bind char... */
 
-    if (!*keyname) return 0;
+    if (*keyname == '\0') return UEM_NOCHAR;
 
 /* GGR - allow SP for space by putting it there... */
     if (*keyname == 'S' && *(keyname + 1) == 'P') {
@@ -268,7 +273,7 @@ static unicode_t stock(const char *given_keyname) {
     }
 
 /* If we aren't at end-of string something is wrong */
-    if (*keyname != '\0') return 0;
+    if (*keyname != '\0') return UEM_NOCHAR;
     return c;
 }
 
@@ -543,7 +548,7 @@ int deskey(int f, int n) {
  * Change it to something we can print as well and dump it out.
  */
     c = getckey(FALSE);
-    if (c == 0) {
+    if (c == UEM_NOCHAR) {
         mlwrite_one("Can't parse key string!");
         return FALSE;
     }
@@ -760,7 +765,7 @@ int buffertokey(int f, int n) {
 /* get the command sequence to bind */
 
     c = getckey(FALSE);
-    if (c == 0) {
+    if (c == UEM_NOCHAR) {
         mlwrite("Can't parse key for: %s: ", db_val(bname));
         status = FALSE;
     }
@@ -879,7 +884,7 @@ int bindtokey(int f, int n) {
     mflag = ((kfunc == metafn) || (kfunc == cex) ||
              (kfunc == unarg)  || (kfunc == ctrlg));
     c = getckey(mflag);
-    if (c == 0) {
+    if (c == UEM_NOCHAR) {
         mlwrite("Can't parse key for: %s: ", nm_info->n_name);
         return FALSE;
     }
@@ -923,7 +928,7 @@ int unbindkey(int f, int n) {
 
 /* Get the command sequence to unbind */
     c = getckey(FALSE);     /* get a command sequence */
-    if (c == 0) {
+    if (c == UEM_NOCHAR) {
         mlwrite_one("Can't parse key string!");
         return FALSE;
     }

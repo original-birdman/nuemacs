@@ -592,3 +592,8 @@ display.c
     Change update() to rewrite message line if updgar() is called.
     Change mberase() to blank the virtual screen's message line buffer,
     rather than just blanking the screen line.
+
+bind.c
+    Change stock() to return UEM_NOCHAR on failure, as 0 is actually a
+    valid, bindable character!
+    Change getckey() callers to check for UEM_NOCHAR.
