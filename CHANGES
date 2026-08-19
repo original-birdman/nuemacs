@@ -612,3 +612,6 @@ etc/uemacs.hlp
     Added SPEC|META|'*' binding. [ebind.h]
     On exit remap CtlG to noop if number processing started. [main.c]
     Document SPEC|META|'*' in help. [uemacs.hlp]
+
+random.c
+    Change mlforce("") to mlerase() in clrmes().

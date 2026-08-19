@@ -1010,7 +1010,7 @@ int delgmode(int f, int n) {
  */
 int clrmes(int f, int n) {
     UNUSED(f); UNUSED(n);
-    mlforce("");
+    mlerase();
     return TRUE;
 }
 
