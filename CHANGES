@@ -10448,3 +10448,10 @@ window.c
     [display.c]
     Shorten the warning message when a screen is made too narrow.
     [window.c]
+
+dyn_buf.c
+dyn_buf.h
+    Add const to nul_ch declaration. [dyn_buf.c, dyn_buf.h]
+    Avoidf writing terminating NUL on unallocated dyn_bufs in
+    _dbp_deleten_at() and _dbp_uctruncate(). [dyn_buf.c]
+    Return early in _dbp_ri_at() if nothing to do (n == 0) [dyn_buf.c]

@@ -32,12 +32,16 @@ typedef struct {
  * are pointing at an empty string.
  * _dbp_realloc() and _dbp_free() need to know about this.
  * empty_db is also defined in dyn_buf.c
+ * nul_ch is declared as const, so that it gets put into a read-only
+ * date section.
+ * This means that the dyn_buf.c code needs to know to only write the
+ * trailing NUL if something has been allocated.
  */
-extern char nul_ch;
+extern const char nul_ch;
 extern db empty_db;
 
-#define db_buf_initval { &nul_ch, &nul_ch, 0, 0, 0 }
-#define db_buf_fixed { &nul_ch, &nul_ch, 0, 0, DB_FXD }
+#define db_buf_initval { (char *)&nul_ch, (char *)&nul_ch, 0, 0, 0 }
+#define db_buf_fixed { (char *)&nul_ch, (char *)&nul_ch, 0, 0, DB_FXD }
 
 
 #define db_bufdef(a) db (a) = db_buf_initval

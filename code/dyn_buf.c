@@ -15,10 +15,10 @@
 #include "dyn_buf.h"
 #include "efunc.h"
 
-char nul_ch = '\0';
+const char nul_ch = '\0';
 db_dcl(empty_db) = db_buf_fixed;
 
-/* An internal routine to rasie a signal if we try to set a value
+/* An internal routine to raise a signal if we try to set a value
  * at an illegal offset etc.
  * Will set a message to be shown.
  */
@@ -128,6 +128,7 @@ enum repins_call_t { DBP_REPLICATE, DBP_INSERTN };
 static void _dbp_ri_at(db *ds, const char *cp, int n, int offs,
      enum repins_call_t method) {
     if (ds->flags & DB_FXD) illegal_fixed_change("ri_at");
+    if (n == 0) return;         /* Nothing to do */
     int movers = ds->alen - offs;
     if ((movers < 0) || (offs < 0))
          illegal_dbaction("Illegal db replicatech/insertn");
@@ -159,7 +160,7 @@ void _dbp_insertn_at(db *ds, const void *mp, int n, int offs) {
 
 /* Delete n chars from buffer
  * If n chars takes you past the end of the buffer, just delete
- * to end of buffer (i.e. truncate at n).
+ * to end of buffer (i.e. truncate at offs).
  * But offs must be valid.
  * Acts on the asp value.
  */
@@ -167,11 +168,12 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
     if (ds->flags & DB_FXD) illegal_fixed_change("deleten_at");
     if ((n < 0) || (offs < 0) || (offs > ds->alen))
          illegal_dbaction("Illegal db deleten");
+    if (n == 0) return;         /* Nothing to do */
 /* Since we are deleting we must already have enough space
  * But we mustn't delete from before the "actual start pointer"
  */
     int end = n + offs;
-    if (end == 0) return;   /* n and offs are both 0 - a no-op */
+    if (end == 0) return;       /* n and offs are both 0 - a no-op */
     if (end < 0) illegal_dbaction("end overflow in deleten");
     if (end > ds->alen)  {
         n = ds->alen - offs;    /* Nothing to move - just a truncate */
@@ -267,7 +269,7 @@ void _dbp_truncate(db *ds, int n) {
  */
 void _dbp_uctruncate(db *ds, int n) {
     if (ds->flags & DB_FXD) illegal_fixed_change("uctruncate");
-
+    if ((ds->alloc == 0) && (n == 0)) return; /* Trunc unalloc'd at 0: OK */
     int bpos = 0;
     while (n--) {
         bpos = next_utf8_offset(ds->asp, bpos, ds->alen, TRUE);
