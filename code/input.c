@@ -1034,7 +1034,7 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
 
 /* Clear the bottom line... */
 
-    if (mpresf) mlerase();
+    ml_text_offset = 0; /* Quick clear of possible text */
     mberase();
 
     if (!swbuffer(bp, 0)) {
@@ -1210,7 +1210,7 @@ loop:
  */
             if ((db_len(res.choices) > 0) && (kbdmode != PLAY)) {
                 mlwrite_one(db_val(res.choices));
-/* We're about to goto post_exec, which will pause as mpresf will
+/* We're about to goto post_exec, which will pause as ml_text_offset will
  * be set, Add an extra pause if we're over a certain length.
  */
                 if (db_len(res.choices) >= 42) sleep(1);
@@ -1243,13 +1243,11 @@ loop:
  * However, we do need to unset the flag saying there is something there
  * so that we don't have to wait on things like Esc2a (== "aa").
  */
-    mpresf = FALSE;
-
     execute(carg->c, carg->f, carg->n);
 post_exec:
-    if (mpresf) {
+    if (ml_text_offset > 0) {
         sleep(1);
-        mlerase();
+        ml_text_offset = 0;
         mberase();
     }
 

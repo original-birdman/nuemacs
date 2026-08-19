@@ -14,6 +14,7 @@ const char *mode2name[] = {     /* Display name of modes        */
         "Wrap",  "Cmode", "Phon",  "Exact", "View", "Over",
         "Magic", "Crypt", "Asave", "eQuiv", "Dos", "Report"
 };
+int ml_text_offset = 0;         /* n chars in message line buffer */
 char modecode[] = "WCPEVOMYAQDR";   /* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int force_mode_on = 0;          /* modes forced on              */
@@ -23,7 +24,6 @@ int gbcolor = 0;                /* global backgrnd color (black) */
 int gasave = 256;               /* global ASAVE size            */
 int gacount = 256;              /* count until next ASAVE       */
 int sgarbf = TRUE;              /* TRUE if screen is garbage    */
-int mpresf = FALSE;             /* TRUE if message in last line */
 int clexec = FALSE;             /* command line execution flag  */
 int discmd = TRUE;              /* display command flag         */
 int disinp = TRUE;              /* display input characters     */

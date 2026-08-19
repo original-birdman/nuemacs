@@ -131,6 +131,7 @@ extern linked_items *macro_pin_headp;
 
 /* Initialized global external declarations. */
 
+extern int ml_text_offset;      /* n chars in message line buffer */
 extern int fillcol;             /* Fill column                  */
 extern int *kbdm;               /* Holds keyboard macro data    */
 extern int n_kbdm;              /* Allocated size of kbdm       */
@@ -151,7 +152,6 @@ extern int gbcolor;             /* global backgrnd color (black) */
 extern int gasave;              /* global ASAVE size            */
 extern int gacount;             /* count until next ASAVE       */
 extern int sgarbf;              /* State of screen unknown      */
-extern int mpresf;              /* Stuff in message line        */
 extern int clexec;              /* command line execution flag  */
 extern int discmd;              /* display command flag         */
 extern int disinp;              /* display input characters     */

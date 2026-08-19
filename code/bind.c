@@ -573,8 +573,6 @@ int deskey(int f, int n) {
 /* Output the function name */
     mlwrite_one(db_val(op));
     db_free(op);
-    if (inmb) TTflush();    /* Need this if we are in the minibuffer */
-    mpresf = TRUE;          /* GGR */
     return TRUE;
 }
 
@@ -705,8 +703,6 @@ static int update_keybind(int c, int ntimes, int internal_OK,
         destp->hndlr.k_fp = kfunc;  /* and the function pointer */
         destp->fi = func_info(kfunc);
     }
-    mpresf = TRUE;                  /* GGR */
-    TTflush();
 
     key_index_valid = 0;    /* Rebuild index before using it. */
     return TRUE;
@@ -923,10 +919,7 @@ int unbindkey(int f, int n) {
     int c;                  /* command key to unbind */
 
 /* Prompt the user to type in a key to unbind */
-    if (!clexec) {
-        mlwrite_one(": unbind-key ");
-        mpresf = TRUE;      /* GGR */
-    }
+    if (!clexec) mlwrite_one(": unbind-key ");
 
 /* Get the command sequence to unbind */
     c = getckey(FALSE);     /* get a command sequence */
@@ -941,7 +934,6 @@ int unbindkey(int f, int n) {
 /* If it isn't bound, bitch */
     if (unbindchar(c) == FALSE) {
         mlwrite_one(MLbkt("Key not bound"));
-        mpresf = TRUE;      /* GGR */
         return FALSE;
     }
     TTflush();              /* GGR */

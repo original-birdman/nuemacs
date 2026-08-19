@@ -2446,10 +2446,7 @@ loop:
 
 /* If there is something on the command line, clear it */
 
-    if (!mline_persist && (mpresf != FALSE)) {
-        mlerase();
-        update(FALSE);
-    }
+    if (!mline_persist && (ml_text_offset > 0)) mlerase();
 
 /* Check for any numeric prefix */
 

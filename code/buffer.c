@@ -426,12 +426,12 @@ ask:
     if (!set_buffer_name(db_val(bufn))) {
         mlforce("%s already exists!", db_val(bufn));
         sleep(1);
+        mlerase();
         goto ask;       /* Try again */
     }
 
     update_val(curbp->b_bname, db_val(bufn));   /* Copy name to structure */
     curwp->w_flag |= WFMODE;                    /* Make mode line replot */
-    mlerase();
     status = TRUE;
 
 exit:

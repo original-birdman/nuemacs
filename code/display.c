@@ -187,11 +187,14 @@ static int TTput_1uc(unicode_t uc) {
  * unsigned chars).
  * This routine MUST be used for all message line output (because of
  * the rwrite-on-SIGWINCH ability).
+ *
+ * The count of valid chars in ml_text (ml_text_offset) is a global,
+ * so that it can be checked for whether there is any text available
+ * (which will be redrawn on a SIGWINCH, even if not currently displayed).
  */
 #define ML_TEXT_INCR 128
 static int *ml_text = NULL;     /* Save the message line contents here */
 static int ml_text_alloc = 0;   /* Current allocated size */
-static int ml_text_offset = 0;  /* Current offset into ml_text */
 static int ml_rewriting = 0;    /* 1 when re-writing the buffer */
 
 static int mlout_uc(unicode_t uc) {
@@ -353,7 +356,6 @@ void mlerase(void) {
         force_movecursor(term.t_mbline, 0);
     }
     TTflush();
-    mpresf = FALSE;
 }
 
 /* Clean up the virtual terminal system, in anticipation for a return to the
@@ -546,9 +548,10 @@ static void updgar(void) {
     movecursor(0, 0);       /* Erase the screen. */
     (*term.t_eeop) ();
     sgarbf = FALSE;         /* Erase-page clears */
-    mpresf = FALSE;         /* the message area. */
 #if COLOR
-    mlerase();              /* needs to be cleared if colored */
+    ml_rewriting = 1;       /* So we only wipe screen, not buffer */
+    mlerase();              /* Ensure it is cleared */
+    ml_rewriting = 0;
 #endif
 }
 
@@ -863,7 +866,7 @@ static int scrolls(int inserts) {   /* returns true if it does something */
 
 /* Update a single line. This does not know how to use insert or delete
  * character sequences; we are using VT52 functionality. Update the physical
- * row and column variables. It does try an exploit erase to end of line.
+ * row and column variables. It does try to exploit erase to end of line.
  *
  * updateline()
  *
@@ -1557,6 +1560,14 @@ int newscreensize(int h, int w, int no_update_needed) {
     return TRUE;
 }
 
+void mlrewrite(void) {
+    ml_rewriting = 1;
+    mlerase();
+    for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
+    ml_rewriting = 0;
+    TTflush();
+}
+
 /* Make sure that the display is right. This is a three part process. First,
  * scan through all of the windows looking for dirty ones. Check the framing,
  * and refresh the screen. Second, make sure that "currow" and "curcol" are
@@ -1629,10 +1640,15 @@ void update(int force) {
     upddex();
 
 /* If screen is garbage, re-plot it */
-    if (sgarbf != FALSE) updgar();
+    int need_rewrite = 0;
+    if (sgarbf != FALSE) {
+        need_rewrite = (ml_text_offset > 0);
+        updgar();
+    }
 
 /* Update the virtual screen to the physical screen */
     updupd();
+    if (need_rewrite) mlrewrite();
 
 /* Update the cursor and flush the buffers */
     movecursor(currow, curcol - lbound);
@@ -1643,15 +1659,6 @@ void update(int force) {
     if (chg_width || chg_height) newscreensize(chg_height, chg_width, 0);
 
     return;
-}
-
-void mlrewrite(void) {
-    ml_rewriting = 1;
-    mlerase();
-    for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
-    ml_rewriting = 0;
-    mpresf = TRUE;
-    TTflush();
 }
 
 /* Write a message into the message line. Keep track of the physical cursor
@@ -1808,7 +1815,6 @@ static void mlwrite_ap(const char *fmt, npva ap) {
             }
         }
     }
-    mpresf = TRUE;  /* Even if it is empty */
     mlw_level--;    /* Remember we've left */
     if (mlw_level == 0) TTflush();
 }

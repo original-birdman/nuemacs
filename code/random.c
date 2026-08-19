@@ -930,7 +930,6 @@ static int adjustmode(int kind, int global) {
             }
             curwp->w_flag |= WFCOLR;
 #endif
-            mlerase();
             status = TRUE;
             goto exit;
         }
@@ -956,7 +955,6 @@ static int adjustmode(int kind, int global) {
             }
 /* Display new mode line */
             if (global == 0) upmode(NULL);
-            mlerase();      /* erase the junk */
             status = TRUE;
             goto exit;
         }

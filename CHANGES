@@ -573,3 +573,17 @@ CHANGES
 input.c
     Unset ret_nochar around the multiplier_check() call in getstring().
     Various comment updates.
+
+bind.c
+buffer.c
+display.c
+globals.c
+input.c
+main.c
+random.c
+edef.h
+    Remove mpresf. make ml_text_offset global. [globals.c, edef.h]
+    Check ml_text_offset not set and check mpresf.
+    Remove some mlerase() calls. [buffer.c, input.c, random.c]
+    Remove an update(FALSE) [main.c]
+    Remove some TTflush()s [bind.c]
