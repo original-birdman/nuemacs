@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.202 (requires GGR4.198+)
-;                       Last Update: 14 Aug 2026
+;                       Version - GGR4.203 (requires GGR4.198+)
+;                       Last Update: 19 Aug 2026
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -936,3 +936,4 @@ buffer-to-key   make-descr      ^XM-A
 
 ;
 set $discmd TRUE
+write-message "[Setup...done]"
