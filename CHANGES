@@ -619,3 +619,6 @@ random.c
 etc/uemacs.rc
     Write [Setup...done] at the end, as it is no longer erased at
     start-up.
+
+autotest/search-with-nul.sh
+    Change -c to -x when running uemacs (as other tests use).

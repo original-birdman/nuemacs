@@ -265,7 +265,7 @@ fi
 
 # Do it...set the default uemacs if caller hasn't set one.
 [ -z "$UE2RUN" ] && UE2RUN="./uemacs -d etc"
-$UE2RUN -c ./uetest.rc
+$UE2RUN -x ./uetest.rc
 
 if [ "$1" = FULL-RUN ]; then
     if [ -f FAIL-$TNAME ]; then
