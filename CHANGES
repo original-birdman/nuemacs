@@ -506,7 +506,7 @@ isearch.c
 
 spawn.c
     Added a TTstate() function to run OPEN/CLOSE terminal functions.
-    Use db_sprintf() to contruct line.
+    Use db_sprintf() to construct line.
     Remove the ttput1c('\n') line.
 
 display.c
@@ -546,7 +546,7 @@ window.c
 dyn_buf.c
 dyn_buf.h
     Add const to nul_ch declaration. [dyn_buf.c, dyn_buf.h]
-    Avoidf writing terminating NUL on unallocated dyn_bufs in
+    Avoid writing terminating NUL on unallocated dyn_bufs in
     _dbp_deleten_at() and _dbp_uctruncate(). [dyn_buf.c]
     Return early in _dbp_ri_at() if nothing to do (n == 0) [dyn_buf.c]
 
@@ -583,13 +583,13 @@ main.c
 random.c
 edef.h
     Remove mpresf. make ml_text_offset global. [globals.c, edef.h]
-    Check ml_text_offset not set and check mpresf.
+    Check ml_text_offset not zero instead of mpresf set.
     Remove some mlerase() calls. [buffer.c, input.c, random.c]
     Remove an update(FALSE) [main.c]
     Remove some TTflush()s [bind.c]
 
 display.c
-    Change update() to rewrite message line if updgar() is called.
+    Change update() not to(?) rewrite message line if updgar() is called.
     Change mberase() to blank the virtual screen's message line buffer,
     rather than just blanking the screen line.
 
@@ -597,7 +597,7 @@ bind.c
     Change stock() to return UEM_NOCHAR on failure, as 0 is actually a
     valid, bindable character!
     Change getckey() callers to check for UEM_NOCHAR.
-z
+
 input.c
     Fix to getcmd() to allow ^X-Esc-^X to work.
 
@@ -623,14 +623,17 @@ etc/uemacs.rc
 autotest/search-with-nul.sh
     Change -c to -x when running uemacs (as other tests use).
 
-version.h  
+version.h
 etc/uemacs.hlp
 (input.c)
 (line.c)
 (search.c)
 (unsigned.h)
     Comment updates and typo fixes. [input.c, line.c, search.c,
-    unsigned.h] 
+    unsigned.h]
     Update to GGR4.203
 
-==========
+========== GGR4.204
+
+main.c
+    Fix macro collection reset for ^U case in multiplier_check().

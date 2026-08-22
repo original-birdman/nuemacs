@@ -846,12 +846,13 @@ com_arg *multiplier_check(int c) {
 
 /* We need this if we back-out of a numeric arg during macro gathering */
 
-    unicode_t *orig_kbdptr = kbdptr;
+    unicode_t *reset_kbdptr = NULL;     /* No reset yet */
 
 /* Do META-# processing if needed */
 
     basec = ca.c & ~META;       /* strip meta char off if there */
     if ((ca.c & META) && ((basec >= '0' && basec <= '9') || basec == '-')) {
+        reset_kbdptr = kbdptr - 2;  /* Remove Esc -/n on abort */
         ca.f = TRUE;            /* there is a # arg */
         ca.n = 0;               /* start with a zero default */
         mflag = 1;              /* current minus flag */
@@ -902,6 +903,8 @@ com_arg *multiplier_check(int c) {
 /* Do ^U repeat argument processing */
 
     if (ca.c == reptc) {    /* ^U, start argument   */
+/* We can get a ^U after a stream of Escnnn, so only set this if not set */
+        if (!reset_kbdptr) reset_kbdptr = kbdptr - 1;   /* Remove ^U */
         ca.f = TRUE;
         ca.n = 4;           /* with argument of 4 */
         mflag = 0;          /* that can be discarded. */
@@ -967,12 +970,12 @@ com_arg *multiplier_check(int c) {
  * done so with an Esc and N (or -) in the buffer, so we have
  * to step back over those 2 as well.
  */
-    if ((ca.c != c) && ca.c == (CONTROL|'G')) {
+    if (reset_kbdptr && ca.c == (CONTROL|'G')) {
         ca.c = META|SPEC|'*';   /* Dummy nop */
         ca.f = FALSE;
         ca.n = 1;
 /* The pointers know how large they are, so -2 is correct. -2 items  */
-        if (kbdmode == RECORD) kbdptr = orig_kbdptr - 2;
+        if (kbdmode == RECORD) kbdptr = reset_kbdptr;
         mlwrite_one("Cancelled");
         sleep(1);
         mlerase();
