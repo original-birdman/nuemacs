@@ -128,10 +128,10 @@ enum repins_call_t { DBP_REPLICATE, DBP_INSERTN };
 static void _dbp_ri_at(db *ds, const char *cp, int n, int offs,
      enum repins_call_t method) {
     if (ds->flags & DB_FXD) illegal_fixed_change("ri_at");
-    if (n == 0) return;         /* Nothing to do */
     int movers = ds->alen - offs;
     if ((movers < 0) || (offs < 0))
          illegal_dbaction("Illegal db replicatech/insertn");
+    if (n == 0) return;         /* Nothing to do */
     size_t need = (size_t)((ds->asp - ds->buf) + ds->alen + n) + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
     memmove(ds->asp+offs+n, ds->asp+offs, (size_t)movers);
@@ -173,7 +173,6 @@ void _dbp_deleten_at(db *ds, int n, int offs) {
  * But we mustn't delete from before the "actual start pointer"
  */
     int end = n + offs;
-    if (end == 0) return;       /* n and offs are both 0 - a no-op */
     if (end < 0) illegal_dbaction("end overflow in deleten");
     if (end > ds->alen)  {
         n = ds->alen - offs;    /* Nothing to move - just a truncate */

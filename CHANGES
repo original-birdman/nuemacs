@@ -645,3 +645,6 @@ display.c
     Revert the previous (incorrect) change to mberase() and added a
     comment to explain what is happening.
     Remove an unneeded ttcol = 0 from mlerase().
+
+dyn_buf.c
+    Arg check changes in _dbp_ri_at() and _dbp_deleten_at().
