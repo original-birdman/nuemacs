@@ -637,3 +637,6 @@ etc/uemacs.hlp
 
 main.c
     Fix macro collection reset for ^U case in multiplier_check().
+
+display.c
+    Fixes for message lines persisting over updates.

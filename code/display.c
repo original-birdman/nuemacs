@@ -548,7 +548,9 @@ static void updgar(void) {
     movecursor(0, 0);       /* Erase the screen. */
     (*term.t_eeop) ();
     sgarbf = FALSE;         /* Erase-page clears */
+    ml_rewriting = 1;       /* So we only wipe screen, not buffer */
     mlerase();              /* Ensure it is cleared */
+    ml_rewriting = 0;
 }
 
 static int scrflags = 0;
@@ -1556,6 +1558,14 @@ int newscreensize(int h, int w, int no_update_needed) {
     return TRUE;
 }
 
+void mlrewrite(void) {
+    ml_rewriting = 1;
+    mlerase();
+    for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
+    ml_rewriting = 0;
+    TTflush();
+}
+
 /* Make sure that the display is right. This is a three part process. First,
  * scan through all of the windows looking for dirty ones. Check the framing,
  * and refresh the screen. Second, make sure that "currow" and "curcol" are
@@ -1628,10 +1638,17 @@ void update(int force) {
     upddex();
 
 /* If screen is garbage, re-plot it */
-    if (sgarbf != FALSE) updgar();
+
+    int need_rewrite = 0;
+    if (sgarbf != FALSE) {
+        need_rewrite = (ml_text_offset > 0);
+        updgar();
+    }
 
 /* Update the virtual screen to the physical screen */
+
     updupd();
+    if (need_rewrite) mlrewrite();
 
 /* Update the cursor and flush the buffers */
     movecursor(currow, curcol - lbound);
@@ -1642,14 +1659,6 @@ void update(int force) {
     if (chg_width || chg_height) newscreensize(chg_height, chg_width, 0);
 
     return;
-}
-
-void mlrewrite(void) {
-    ml_rewriting = 1;
-    mlerase();
-    for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
-    ml_rewriting = 0;
-    TTflush();
 }
 
 /* Write a message into the message line. Keep track of the physical cursor
