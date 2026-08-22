@@ -134,7 +134,7 @@ void ttflush(void) {
 
     do {
         status = fflush(stdout);
-        if ((status < 0) && (errno == EAGAIN)) {
+        if ((status < 0) && ((errno == EAGAIN) || (errno == EINTR))) {
             sleep(1);
             continue;
         }
@@ -224,7 +224,7 @@ int ttgetc(void) {
 
 /* Work out how many bytes we expect in total for this unicode char */
 
-    if (c < 0xe0)      expected = 2;    /* Caters for 0x1b as well */
+    if (c < 0xe0)      expected = 2;
     else if (c < 0xf0) expected = 3;
     else               expected = 4;
 

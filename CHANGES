@@ -660,3 +660,6 @@ main.c
 efunc.h
     Make cmdstr() a global function then get unbindkey() and execute()
     to display the key description when reporting "not bound".
+
+posix.c
+    Check for EINTR after fflush() in ttflush().
