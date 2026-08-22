@@ -648,3 +648,6 @@ display.c
 
 dyn_buf.c
     Arg check changes in _dbp_ri_at() and _dbp_deleten_at().
+
+input.c
+    Fix getcmd() to return UEM_NOCHAR, not 0, on error.
