@@ -640,3 +640,8 @@ main.c
 
 display.c
     Fixes for message lines persisting over updates.
+
+display.c
+    Revert the previous (incorrect) change to mberase() and added a
+    comment to explain what is happening.
+    Remove an unneeded ttcol = 0 from mlerase().

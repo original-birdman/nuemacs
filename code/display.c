@@ -347,8 +347,7 @@ void mlerase(void) {
     TTbacg(gbcolor);
 #endif
     if (eolexist == TRUE) {
-        TTeeol();
-        ttcol = 0;
+        TTeeol();   /* ttcol is already 0 from movecursor call */
     }
     else {
         for (i = 0; i < term.t_ncol - 1; i++)
@@ -1919,8 +1918,9 @@ void getscreensize(int *widthp, int *heightp, int zero_ok) {
 void mberase(void) {
     struct video *vp1;
 
+    vtmove(term.t_mbline, 0);
+    vteeol();   /* Replace the rest (== all) of the line with ' ' */
     vp1 = vscreen[term.t_mbline];
-    for (int i = 0; i < term.t_mcol; i++) vp1->v_text[i] = blank_gph;
 #if COLOR
     vp1->v_fcolor = gfcolor;
     vp1->v_bcolor = gbcolor;
