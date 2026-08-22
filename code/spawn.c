@@ -364,6 +364,7 @@ int filter_buffer(int f, int n) {
         s = FALSE;
         goto reset_bufname_exit;
     }
+    mlwrite_one("\r\n");    /* Get to col1 */
     TTstate(CLOSE);
 /* We put the infile and outfile filenames into '', to prevent any
  * active chars being introduced via HOME setting.

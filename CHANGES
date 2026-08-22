@@ -651,3 +651,6 @@ dyn_buf.c
 
 input.c
     Fix getcmd() to return UEM_NOCHAR, not 0, on error.
+
+spawn.c
+    Add mlwrite_one() call in filter_buffer() to clear to column 1.
