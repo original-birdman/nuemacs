@@ -663,3 +663,7 @@ efunc.h
 
 posix.c
     Check for EINTR after fflush() in ttflush().
+
+etc/uemacs.hlp
+    Document recent additions to ggr_opts.
+    Height redraw, Control display and Show prefix.

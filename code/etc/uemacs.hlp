@@ -1184,6 +1184,7 @@ work according to the setting of $ggr_opts flags.
 These used to be set by the ggr-style command, an arg of 2 or more turned
 them on, otherwise they were turned off. They may now be switched on
 and off individually (but ggr-style still turns them all on or off).
+The standard start-up file turns them all on.
 
 Flag    Controls    How
 0x01    twiddle     When ON, twiddles the two preceding chars
@@ -1198,6 +1199,17 @@ Flag    Controls    How
 0x08    search      When ON, a repeat search will start from the
         overlap     beginning of the previous match, so searching for
                     "issi" in "mississippi" will find it twice.
+0x10    height      When ON and the display height is changed, spread
+        redraw      the change over all windows.
+                    When OFF all the change is done in the bottom window
+                    until it is rmeoved and then the new bottom window
+                    shrinks.
+0x20    Control     When ON use single-column glyphs (U+2400...) to
+        display     display control characters.
+                    When OFF use a 2-character ^X display.
+0x40    Show prefix When ON echo Esc, Ctlx, CtlxEsc in the message line
+                    as you type the prefix.
+                    When OFF, do nothing for these prefixes.
 
 The change-ggr-opts user procedure defined in the standard start-up file
 allows you to change the setting of each. It is bound to ^XG.
