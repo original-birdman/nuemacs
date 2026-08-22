@@ -1785,7 +1785,7 @@ int execute(int c, int f, int n) {
         return status;
     }
     TTbeep();
-    mlwrite_one(MLbkt("Key not bound"));    /* Complain */
+    mlwrite(MLbkt("Key %s not bound"), cmdstr(c));  /* Complain */
     return FALSE;
 }
 

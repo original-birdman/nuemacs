@@ -305,7 +305,7 @@ static unicode_t getckey(int mflag) {
  * int c;               sequence to translate
  * char *seq;           destination string for sequence
  */
-static char *cmdstr(int c) {
+const char *cmdstr(int c) {
     static char result[16];
     char *ptr;          /* pointer into current position in sequence */
 
@@ -648,7 +648,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
  * order, regardless of character ranges, we now allow non-ASCII
  * characters to be bound.
  */
-        char *cstr = cmdstr(c);
+        const char *cstr = cmdstr(c);
         switch(c) {
         case META|SPEC|'C':
         case META|SPEC|'R':
@@ -942,7 +942,7 @@ int unbindkey(int f, int n) {
 
 /* If it isn't bound, bitch */
     if (unbindchar(c) == FALSE) {
-        mlwrite_one(MLbkt("Key not bound"));
+        mlwrite(MLbkt("Key %s not bound"), cmdstr(c));  /* Complain */
         return FALSE;
     }
     TTflush();              /* GGR */

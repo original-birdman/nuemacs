@@ -45,6 +45,7 @@ extern int swapmark(int, int);
 #ifndef BIND_C
 extern const char *flook(const char *, int, int);
 extern int help(int, int);
+extern const char *cmdstr(int);
 extern int not_in_mb_error(int, int);
 extern struct key_tab *getbyfnc(fn_t);
 extern struct key_tab *getbind(int);
@@ -102,8 +103,8 @@ extern int upscreen(int, int);
 extern void upmode(struct buffer *);
 extern void set_scrarray_size(int, int);
 extern int newscreensize(int, int, int);
-extern void update(int);
 extern void mlrewrite(void);
+extern void update(int);
 extern void mlwrite(const char *, ...);
 extern void mlforce(const char *, ...);
 extern void mlwrite_one(const char *);
