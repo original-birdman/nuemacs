@@ -280,6 +280,10 @@ int ret_nochar = 0;
 
 volatile int handling_sigwinch = 0;
 
+/* Pending (unprocessed) chars in the read input buffer */
+
+int pending_rch = 0;
+
 /* Ignored prefixes  - need to limit assignment... */
 
 const char *path_pfx_map = NULL;

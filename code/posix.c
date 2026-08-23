@@ -157,11 +157,8 @@ void ttflush(void) {
 #include <poll.h>
 static struct pollfd ue_wait = { STDIN_FILENO, POLLIN, 0 };
 
+/* The valid count for this buffer, pending_rch, is a global */
 static char buffer[32];
-static int pending = 0;
-
-enum pfx_seen { NOPFX, ESCPFX, CTLXPFX };
-static enum pfx_seen pfx_state = NOPFX;
 
 int ttgetc(void) {
 
@@ -169,11 +166,11 @@ int ttgetc(void) {
     int count, bytes, expected;
 
     errno = 0;
-    count = pending;    /* So we don't update pending on error */
+    count = pending_rch;    /* So we don't update pending_rch on error */
     if (!count) {       /* so count is 0 */
         count = (int)read(STDIN_FILENO, buffer, sizeof(buffer));
         if (count <= 0) return 0;   /* SIGWINCH and EINTR */
-        pending = count;
+        pending_rch = count;
     }
 
 /* If we get here then we have something.
@@ -184,41 +181,6 @@ int ttgetc(void) {
 
     c = buffer[0];
     bytes = 1;
-
-/* Display CtlX or Esc if there are no other pending chars?
- * NOTE that the state of GGR_MLPFX cannot change between a Ctlx and Esc
- * being typed consecutively.
- */
-    if ((pending <= 1) && (ggr_opts & GGR_MLPFX)) {
-        switch (c) {
-        case 0x18:          /* Ctlx */
-            switch(pfx_state) {
-            case NOPFX:
-                mlwrite_one("Ctlx");
-                pfx_state = CTLXPFX;
-                break;
-            default:        /* No other state */
-                pfx_state = NOPFX;
-            }
-            break;
-        case 0x1b:          /* Esc */
-            switch(pfx_state) {
-            case NOPFX:
-                mlwrite_one("Esc");
-                pfx_state = ESCPFX;
-                break;
-            case CTLXPFX:   /* No state beyond this */
-                mlwrite_one("CtlxEsc");
-                /* Falls through */
-            default:        /* No other state */
-                pfx_state = NOPFX;
-            }
-            break;
-        default:
-            pfx_state = NOPFX;
-        }
-    }
-
     if (c < 0xc0)   /* ASCII or Latin-1(??) */
         goto done;
 
@@ -233,31 +195,31 @@ int ttgetc(void) {
  * retrieved by the read() call above.
  * So this is just belt and braces.
  */
-    while (pending < expected) {
+    while (pending_rch < expected) {
         int chars_waiting = poll(&ue_wait, 1, 100);
         if (chars_waiting < 0) return 0;    /* SIGWINCH and EINTR */
         if (chars_waiting == 0) break;      /* Timed out. Nothing arrived */
-        int nr = (int)read(STDIN_FILENO, buffer + pending,
-            sizeof(buffer) - (size_t)pending);
+        int nr = (int)read(STDIN_FILENO, buffer + pending_rch,
+            sizeof(buffer) - (size_t)pending_rch);
         if (nr <= 0) return 0;              /* SIGWINCH and EINTR */
-        pending += nr;
+        pending_rch += nr;
     }
 
 /* Note that if we have an "incomplete" byte sequence (e.g. 3 when 4
  * was expected) this will just take and return the 1st byte.
  */
-    bytes = utf8_to_unicode(buffer, 0, pending, &c);
+    bytes = utf8_to_unicode(buffer, 0, pending_rch, &c);
 
 done:
-    pending -= bytes;
+    pending_rch -= bytes;
 
 /* We need to shuffle down any still-pending bytes.
  * Will not be many - so just use simple loop.
  */
-    if (pending > 0) {
+    if (pending_rch > 0) {
         char *fp = buffer+bytes;
         char *tp = buffer;
-        count = pending;    /* So we don't update pending!!! */
+        count = pending_rch;    /* So we don't update pending_rch!!! */
         while(count--) *tp++ = *fp++;
     }
     return c;
@@ -268,9 +230,9 @@ done:
  */
 
 int typahead(void) {
-    int x;                  /* holds # of pending chars */
+    int x;      /* Total of known-waiting chars */
 
-    x = (pending > 0);
+    x = (pending_rch > 0);
 #ifdef FIONREAD
     if (x == 0)
         if (ioctl(0, FIONREAD, &x) < 0) x = 0;

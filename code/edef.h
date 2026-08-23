@@ -383,6 +383,10 @@ extern int ret_nochar;
 
 extern volatile int handling_sigwinch;
 
+/* Pending (unprocessed) chars in the read input buffer */
+
+extern int pending_rch;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

@@ -667,3 +667,16 @@ posix.c
 etc/uemacs.hlp
     Document recent additions to ggr_opts.
     Height redraw, Control display and Show prefix.
+
+globals.c
+input.c
+posix.c
+edef.h
+    Move display Esc/Ctlx/CtlxEsc prefix from tgetc() to getcmd().
+    This means it only applies to things looking for a command, and
+    hence incremental search and quote do not get this (and they should
+    not).
+    Rename pending to pending_rch and make it global. [globals.c,
+    edef.h]
+    Remove the prefix display code from tgetc(). [posix.c]
+    Add the prefix display code to getcmd(). [input.c]

@@ -735,6 +735,19 @@ unicode_t getcmd(void) {
 /* Keep going until we return something */
 
     while ((c = get1key())) {   /* Extra ()s for gcc warniing */
+
+/* Optionally echo the prefix we have seen so far */
+        if ((pending_rch <= 1) && (ggr_opts & GGR_MLPFX)) {
+            switch (c) {
+            case (CONTROL|'X'):     /* CtlX */
+                if (!meta & !ctlx) mlwrite_one("Ctlx");
+                break;
+            case (CONTROL|'['):     /* Esc */
+                if (ctlx) mlwrite_one("CtlxEsc");
+                else if (!meta) mlwrite_one("Esc");
+            }
+        }
+
 /* Esc-O is really SS3, but cursor keys often send Esc-O A|B|C|D so it
  * helps to add to in here and treat it as CSI.
  * This does mean that if you bind a function to Esc-O you have to use
