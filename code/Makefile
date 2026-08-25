@@ -362,7 +362,7 @@ $(PROGRAM): $(OBJ)
 .PHONY: clean test-clean check vgcheck vgstrip
 clean: test-clean
 	$(E) "  CLEAN"
-	$(Q) rm -f $(PROGRAM) core lintout makeout tags makefile.bak *.o
+	$(Q) rm -f $(PROGRAM) etc.tar core lintout makeout tags makefile.bak *.o
 
 test-clean:
 	$(Q) rm -f *.tfile uetest.rc FAIL-*

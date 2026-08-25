@@ -680,3 +680,6 @@ edef.h
     edef.h]
     Remove the prefix display code from tgetc(). [posix.c]
     Add the prefix display code to getcmd(). [input.c]
+
+Makefile
+    Remove etc.tar during "make clean".
