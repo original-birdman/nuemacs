@@ -319,6 +319,8 @@ static int mc_alloc = FALSE;                    /* Initial state */
 
 static int slow_scan = FALSE;
 
+static const char *pr_dir;          /* < or > for direction */
+
 /* Define an End of List struct mg_info type, with null flags */
 static struct mg_info null_mg = { EGRP, 0, 0, 0, 0 };
 
@@ -2191,7 +2193,8 @@ static int readpattern(const char *prompt, db *apat, int srch) {
     strcpy(saved_base, current_base);
     strcpy(current_base, prompt);
     dbp_dcl(ep) = expandp(apat);
-    db_sprintf(tpat, "%s " MLpre "%s" MLpost ": ", prompt, dbp_val(ep));
+    const char* dtag = (srch == TRUE)? pr_dir: "";
+    db_sprintf(tpat, "%s%s" MLpre "%s" MLpost ": ", prompt, dtag, dbp_val(ep));
 
 /* Read a pattern.  Either we get one or we just get an empty result
  * and use the previous pattern.
@@ -3237,6 +3240,7 @@ int forwsearch(int f, int n) {
         db_bufdef(opat);
         int could_hunt = srch_can_hunt;
         db_copy(opat, &pat);
+        pr_dir = ">";
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
             srch_can_hunt = 1;
 /* A search with the same string should be the same as a reexec */
@@ -3354,6 +3358,7 @@ int backsearch(int f, int n) {
         db_bufdef(opat);
         int could_hunt = srch_can_hunt;
         db_copy(opat, &pat);
+        pr_dir = "<";
         if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
             srch_can_hunt = -1;
 /* A search with the same string should be the same as a reexec */
@@ -3680,6 +3685,7 @@ static int replaces(int query, int f, int n) {
 
 /* Ask the user for the text of a pattern. */
 
+    pr_dir = ">";
     if ((status = readpattern((query? "Query replace": "Replace"),
          &pat, TRUE)) != TRUE)
         goto end_replaces;

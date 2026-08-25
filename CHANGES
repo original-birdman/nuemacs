@@ -715,3 +715,6 @@ efunc.h
 search.c
     Update the related prompt whenever the search or replace ring is
     updated. (Reqired some reordering of functions).
+
+search.c
+    Mark the search direction in the search prompt with > or <.
