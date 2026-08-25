@@ -683,3 +683,6 @@ edef.h
 
 Makefile
     Remove etc.tar during "make clean".
+
+dyn_buf.c
+    Simplify _dbp_copy() now that the asp pointer is always valid.

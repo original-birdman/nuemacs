@@ -110,10 +110,7 @@ void _dbp_copy(db *ds, db *fds) {
     if (ds->flags & DB_FXD) illegal_fixed_change("copy");
     size_t need = (size_t)fds->alen + 1;
     if (need > ds->alloc) _dbp_realloc(ds, need);
-    if (fds->asp)                           /* From db_buf_initval */
-        memcpy(ds->buf, fds->asp, need);    /* Will copy the trailing NUL */
-    else
-        *(ds->buf) = '\0';                  /* Create a null string */
+    memcpy(ds->buf, fds->asp, need);    /* Will copy the trailing NUL */
     ds->asp = ds->buf;  /* Equate these */
     ds->alen = fds->alen;
     ds->flags = fds->flags & ~DB_FXD;
