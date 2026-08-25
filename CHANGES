@@ -686,3 +686,7 @@ Makefile
 
 dyn_buf.c
     Simplify _dbp_copy() now that the asp pointer is always valid.
+
+globals.c
+edef.h
+    Change element order in prmpt_buf_st.
