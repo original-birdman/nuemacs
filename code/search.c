@@ -587,7 +587,8 @@ void rotate_sstr(int n) {
  * Here as it needs to test this_rt.
  */
 void select_sstr(void) {
-    prmpt_buf.preload = (this_rt == Search)? srch_txt[0]: repl_txt[0];
+    db_copy(prmpt_buf.preload,
+         (this_rt == Search)? &srch_txt[0]: &repl_txt[0]);
     return;
 }
 

@@ -690,3 +690,7 @@ dyn_buf.c
 globals.c
 edef.h
     Change element order in prmpt_buf_st.
+
+search.c
+    Take copy of the search text in select_sstr() (not a copy of the
+    pointers to it).
