@@ -711,3 +711,7 @@ efunc.h
     [input.c]
     Add a pushback() function to put data back into the start of the
     input buffer for re-fetching. [posix.c, efunc.h]
+
+search.c
+    Update the related prompt whenever the search or replace ring is
+    updated. (Reqired some reordering of functions).

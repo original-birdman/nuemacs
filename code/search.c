@@ -405,46 +405,6 @@ void init_search_ringbuffers(void) {
     return;
 }
 
-/* The new string goes in place at the top, pushing the others down
- * and dropping the last one.
- * Actually done by rotating the bottom to the top then updating the top.
- * However - we don't want to push anything out if there is an empty entry.
- */
-int nring_free = RING_SIZE;
-static void update_ring(dbp_dcl(str)) {
-    dbp_dcl(txt);
-    if (this_rt == Search) txt = &srch_txt[0];
-    else                   txt = &repl_txt[0];
-
-/* Although for Search strings we do count down to 0 as items are added:
- * if there is a free one we don't know where it is, so have to look.
- * If there is an empty entry, move it to the bottom.
- * Empty entries are fine for Replace.
- * We should be able to run this RING_SIZE times - no more.
- */
-    if (this_rt == Search && nring_free > 0) {
-        for (int ix = 0; ix < RING_SIZE-1; ix++) { /* Can't move last one */
-            if (dbp_len(txt+ix) == 0) {
-                db_dcl(tmp) = txt[ix];
-                for (int jx = ix; jx < RING_SIZE-1; jx++) {
-                    txt[jx] = txt[jx+1];
-                }
-                txt[RING_SIZE-1] = tmp;
-                break;
-            }
-        }
-        nring_free--;
-    }
-    db_dcl(tmp) = txt[RING_SIZE-1];
-    for (int ix = RING_SIZE-1; ix ; ix--) {
-        txt[ix] = txt[ix-1];
-    }
-    txt[0] = tmp;
-    dbp_copy(txt, str);
-
-    return;
-}
-
 /* expandp -- Expand control key sequences for output.
  *            Assumes caller has sent a large enough buffer.
  *
@@ -490,6 +450,59 @@ static db *expandp(db *newstr) {
     return &expbuf;
 }
 
+/* A function to regenerate the prompt string with the given
+ * text as the default.
+ * Also called from svar() if it sets $replace or $search
+ */
+void new_prompt(db *new) {
+    dbp_dcl(ep) = expandp(new);
+    db_sprintf(prmpt_buf.prompt, "%s " MLpre "%.*s" MLpost ": ",
+         current_base, (int)dbp_len(ep), dbp_val(ep));
+    prmpt_buf.update = 1;
+    return;
+}
+
+/* The new string goes in place at the top, pushing the others down
+ * and dropping the last one.
+ * Actually done by rotating the bottom to the top then updating the top.
+ * However - we don't want to push anything out if there is an empty entry.
+ */
+int nring_free = RING_SIZE;
+static void update_ring(dbp_dcl(str)) {
+    dbp_dcl(txt);
+    if (this_rt == Search) txt = &srch_txt[0];
+    else                   txt = &repl_txt[0];
+    new_prompt(txt);
+
+/* Although for Search strings we do count down to 0 as items are added:
+ * if there is a free one we don't know where it is, so have to look.
+ * If there is an empty entry, move it to the bottom.
+ * Empty entries are fine for Replace.
+ * We should be able to run this RING_SIZE times - no more.
+ */
+    if (this_rt == Search && nring_free > 0) {
+        for (int ix = 0; ix < RING_SIZE-1; ix++) { /* Can't move last one */
+            if (dbp_len(txt+ix) == 0) {
+                db_dcl(tmp) = txt[ix];
+                for (int jx = ix; jx < RING_SIZE-1; jx++) {
+                    txt[jx] = txt[jx+1];
+                }
+                txt[RING_SIZE-1] = tmp;
+                break;
+            }
+        }
+        nring_free--;
+    }
+    db_dcl(tmp) = txt[RING_SIZE-1];
+    for (int ix = RING_SIZE-1; ix ; ix--) {
+        txt[ix] = txt[ix-1];
+    }
+    txt[0] = tmp;
+    dbp_copy(txt, str);
+
+    return;
+}
+
 /* boundry -- Return information depending on whether we may search no
  *      further.  Beginning of file and end of file are the obvious
  *      cases, but we may want to add further optional boundary restrictions
@@ -525,18 +538,6 @@ static int boundry(struct line *curline, int curoff, int dir) {
 	}
     }
     return border;
-}
-
-/* A function to regenerate the prompt string with the given
- * text as the default.
- * Also called from svar() if it sets $replace or $search
- */
-void new_prompt(db *new) {
-    dbp_dcl(ep) = expandp(new);
-    db_sprintf(prmpt_buf.prompt, "%s " MLpre "%.*s" MLpost ": ",
-         current_base, (int)dbp_len(ep), dbp_val(ep));
-    prmpt_buf.update = 1;
-    return;
 }
 
 /* Here are the two callable search/replace string manipulating functions.
@@ -585,6 +586,7 @@ void rotate_sstr(int n) {
  * at the start of its next get-character loop.
  * It will be inserted into any current search string at the current point.
  * Here as it needs to test this_rt.
+ * We take a copy of the relevant search or replace text.
  */
 void select_sstr(void) {
     db_copy(prmpt_buf.preload,
