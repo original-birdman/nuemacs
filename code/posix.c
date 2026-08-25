@@ -157,8 +157,13 @@ void ttflush(void) {
 #include <poll.h>
 static struct pollfd ue_wait = { STDIN_FILENO, POLLIN, 0 };
 
-/* The valid count for this buffer, pending_rch, is a global */
-static char buffer[32];
+/* The valid count for this buffer, pending_rch, is a global.
+ * We set the size to 64, but only tell read about 32 of them. so we
+ * can have space to push thinsg back.
+ */
+#define BSIZE 64
+#define BSIZE4READ 32
+static char ibuffer[BSIZE];
 
 int ttgetc(void) {
 
@@ -168,7 +173,7 @@ int ttgetc(void) {
     errno = 0;
     count = pending_rch;    /* So we don't update pending_rch on error */
     if (!count) {       /* so count is 0 */
-        count = (int)read(STDIN_FILENO, buffer, sizeof(buffer));
+        count = (int)read(STDIN_FILENO, ibuffer, BSIZE4READ);
         if (count <= 0) return 0;   /* SIGWINCH and EINTR */
         pending_rch = count;
     }
@@ -179,7 +184,7 @@ int ttgetc(void) {
  * 0. Our caller might then map that to EUM_NOCHAR by checking errno.
  */
 
-    c = buffer[0];
+    c = ibuffer[0];
     bytes = 1;
     if (c < 0xc0)   /* ASCII or Latin-1(??) */
         goto done;
@@ -199,8 +204,8 @@ int ttgetc(void) {
         int chars_waiting = poll(&ue_wait, 1, 100);
         if (chars_waiting < 0) return 0;    /* SIGWINCH and EINTR */
         if (chars_waiting == 0) break;      /* Timed out. Nothing arrived */
-        int nr = (int)read(STDIN_FILENO, buffer + pending_rch,
-            sizeof(buffer) - (size_t)pending_rch);
+        int nr = (int)read(STDIN_FILENO, ibuffer + pending_rch,
+            sizeof(ibuffer) - (size_t)pending_rch);
         if (nr <= 0) return 0;              /* SIGWINCH and EINTR */
         pending_rch += nr;
     }
@@ -208,7 +213,7 @@ int ttgetc(void) {
 /* Note that if we have an "incomplete" byte sequence (e.g. 3 when 4
  * was expected) this will just take and return the 1st byte.
  */
-    bytes = utf8_to_unicode(buffer, 0, pending_rch, &c);
+    bytes = utf8_to_unicode(ibuffer, 0, pending_rch, &c);
 
 done:
     pending_rch -= bytes;
@@ -217,8 +222,8 @@ done:
  * Will not be many - so just use simple loop.
  */
     if (pending_rch > 0) {
-        char *fp = buffer+bytes;
-        char *tp = buffer;
+        char *fp = ibuffer+bytes;
+        char *tp = ibuffer;
         count = pending_rch;    /* So we don't update pending_rch!!! */
         while(count--) *tp++ = *fp++;
     }
@@ -238,4 +243,18 @@ int typahead(void) {
         if (ioctl(0, FIONREAD, &x) < 0) x = 0;
 #endif
     return x;
+}
+
+/* Assumes there is space.... */
+
+void pushback(unicode_t c) {
+    char temp[8];
+    int blen = unicode_to_utf8(c, temp);    /* How many bytes to add? */
+    int mi = blen;
+    while(mi--) {           /* Shuffle any current ones out of the way */
+        ibuffer[pending_rch+1] = ibuffer[pending_rch];
+        pending_rch++;
+    }
+    while(blen--) ibuffer[blen] = temp[blen];
+    return;
 }

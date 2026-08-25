@@ -694,3 +694,20 @@ edef.h
 search.c
     Take copy of the search text in select_sstr() (not a copy of the
     pointers to it).
+
+input.c
+posix.c
+efunc.h
+    Modify get1key() and getcmd() so that characters received but not
+    yet handled are pushed back to the input buffer when a SIGWINCH
+    occurs (UEM_NOCHAR seen).
+    get1key() logs incoming Unicode chars for getcmd(), and
+    if it sees UEM_NOCHAR it sets a flag. [input.c]
+    getcmd() has a single exit point, and if UEM_NOCHAR has been seen
+    it pushes back all chars seen so far durign this call and if
+    it is collecting a keyboard macro, removes them for that buffer.
+    [input.c]
+    At the loop: label, run mlerase() and mberase(), not mbupdate()
+    [input.c]
+    Add a pushback() function to put data back into the start of the
+    input buffer for re-fetching. [posix.c, efunc.h]

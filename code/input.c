@@ -613,13 +613,37 @@ unicode_t tgetc(void) {
     return c;
 }
 
+/* get1key and getcmd work together.
+ * get1key get the key.
+ *  If it has been called by getcmd it remembers it.
+ *  If it has been called by getcmd and gets UEM_NOCHAR it remembers that.
+ * In getcmd, we have a common point of exit.
+ *  On entry to getcmd we clear any remembered chars and info in get1key
+ *  At the exit, if UEM_NOCHAR has been seen (in get1key) then we
+ *  return UEM_NOCHAR (as out caller must have asked to see it) and
+ *  put any remembered chars back into the input buffer (which is in
+ *  posix.c) so that they can be re-fetched once the windows changes (which
+ *  UEM_NOCHAR signifies need ot happen) have been done.
+ */
 /* get1key: Get one keystroke.
  *          Maps control chars (< SPACE) to CONTROL|char
  */
+
+static struct {
+    int in_getcmd;
+    int nochar_seen;
+    int nuc;
+    unicode_t c[16];    /* More than enough for max pending length in getcmd */
+} cmdb = { FALSE, FALSE, 0, {0}};
+
 unicode_t get1key(void) {
     unicode_t c;
 
-    c = tgetc();                    /* get a keystroke */
+    c = tgetc();                    /* Get a keystroke */
+    if (cmdb.in_getcmd) {
+        if (c == UEM_NOCHAR) cmdb.nochar_seen = TRUE;
+        else cmdb.c[cmdb.nuc++] = c;     /* Remember this char */
+    }
     if (c >= 0x00 && c <= 0x1F)     /* C0 control -> C-     */
         c = CONTROL | (c + '@');
     return c;
@@ -732,6 +756,10 @@ unicode_t getcmd(void) {
     int meta = FALSE;
     int cmask = 0;
 
+    cmdb.in_getcmd = TRUE;
+    cmdb.nochar_seen = FALSE;
+    cmdb.nuc = 0;
+
 /* Keep going until we return something */
 
     while ((c = get1key())) {   /* Extra ()s for gcc warniing */
@@ -760,17 +788,32 @@ unicode_t getcmd(void) {
         if (c == CSI) break;    /* Drop out to CSI handling */
         if (c == (CONTROL|'X')) {
 /* Trap ^x-Esc-^x, Esc-^x and ^x-^x */
-            if (meta && ctlx) return CTLX|META|CONTROL|'X';
-            if (meta) return META|CONTROL|'X';
-            if (ctlx) return CTLX|CONTROL|'X';
+            if (meta && ctlx) {
+                c = CTLX|META|CONTROL|'X';
+                goto give_result;
+            }
+            if (meta) {
+                c = META|CONTROL|'X';
+                goto give_result;
+            }
+            if (ctlx) {
+                c = CTLX|CONTROL|'X';
+                goto give_result;
+            }
             ctlx = TRUE;
             continue;
         }
         if (c == (CONTROL|'[')) {
 /* Trap Esc-Esc. Add in Ctlx prefix, if set */
             if (meta) {
-                if (ctlx) return CTLX|META|CONTROL|'[';
-                else      return META|CONTROL|'[';
+                if (ctlx) {
+                    c = CTLX|META|CONTROL|'[';
+                    goto give_result;
+                }
+                else {
+                    c = META|CONTROL|'[';
+                    goto give_result;
+                }
             }
             meta = TRUE;
             continue;
@@ -779,30 +822,39 @@ unicode_t getcmd(void) {
         if (ctlx) cmask |= CTLX;
 /* Bindings are case-insensitive for Control, Escape and CtlX */
         if (cmask || (c & CONTROL)) c = ensure_uppercase(c);
-        return c | cmask;
+        c |= cmask;
+        goto give_result;
     }
 
 /* Process the Vt220 Control Sequence Introducer (CSI) from here on.
  * Once we get here the control mask is already known, so
  * set it now.
- * NOTE that if META is set we return with UEM_NOCHAR.
+ * NOTE that if META is set we return with UEM_NOCHAR *without* rewinding
+ * any buffer.
  * This is because a lot of CSI will start with Esc[ (unless it sends
  * the 8-bit 0x9b) and we trap Esc-Esc.
  * stock() ALSO prevents it.
  * Thus META|SPEC can never be set by the user, and the internal handlers
  * are safe from being overwritten by a key binding.
  */
-    if (meta) return UEM_NOCHAR;
+    if (meta) {
+        cmdb.in_getcmd = FALSE;
+        return UEM_NOCHAR;
+    }
     cmask = SPEC;
     if (ctlx) cmask |= CTLX;
     c = get1key();
+    if (c == UEM_NOCHAR) goto give_result;
 
 /* If this key is '[', just get the next key and return
  * FNa for A, etc....
  * "Linux console" for KDE sends Esc[[A... for F1-F5. Only known instance.
  * Use a quick lowercase...so these end up as FNa, FNb, etc...
  */
-    if (c == '[') return (cmask | DIFCASE | get1key());
+    if (c == '[') {
+        c = (cmask | DIFCASE | get1key());
+        goto give_result;
+    }
 
 /* uEmacs/PK 4.0 (4.015) from Petri H. Kutvonen, University of Helsinki,
  * which was an "enhanced version of MicroEMACS 3.9e" contained special
@@ -822,19 +874,31 @@ unicode_t getcmd(void) {
 /* If this char is from A to z, just return it.
  * Esc[ A-z -> SPEC(A-z)
  */
-
-    if (c >= 'A' && c <= 'z') return cmask | c;
+    if (c >= 'A' && c <= 'z') {
+        c |= cmask;
+        goto give_result;
+    }
 
 /* Get the next char. If it is ~, return that prev char */
 
     int d = get1key();          /* ESC [ n ~   P.K. */
-    if (d == '~') return cmask | c;
+    if (d == UEM_NOCHAR) {
+        c = UEM_NOCHAR;
+        goto give_result;
+    }
+    if (d == '~') {
+        c |= cmask;
+        goto give_result;
+    }
 
 /* If we now have c and d as 2 digits, all is OK(-ish).
  * If the second is not a digit, but K, return FNk (SPEC(k))
  * This handles Shift F2 in Konsole Xfree mode sending CSI 2Q,etc..
  */
-    if ((d < '0') || (d > '9')) return cmask | d;
+    if ((d < '0') || (d > '9')) {
+        c = cmask | d;
+        goto give_result;
+    }
 
 /* We should now have a tilde to finish after this second. So get to it
  * - with a limit...
@@ -846,7 +910,12 @@ unicode_t getcmd(void) {
  * to what is useful.
  */
     for (int sc = 4; sc > 0; sc--) {
-        if (get1key() == '~') break;
+        d = get1key();
+        if (d == UEM_NOCHAR) {
+            c = UEM_NOCHAR;
+            goto give_result;
+        }
+        if (d == '~') break;
     }
 
 /* Might as well return SPEC a-t for what the function keys send.
@@ -895,7 +964,19 @@ unicode_t getcmd(void) {
     case 34: c = 't'; break;
     default: c = '?'; break;
     }
-    return cmask | c;
+    c |= cmask;
+
+give_result:
+    if (cmdb.nochar_seen) {
+/* Push back the unicode chars in reverse order. */
+        while(cmdb.nuc--) {
+            pushback(cmdb.c[cmdb.nuc]);
+            if (kbdmode == RECORD) kbdptr--;    /* Forget this one */
+        }
+        c = UEM_NOCHAR;
+    }
+    cmdb.in_getcmd = FALSE;
+    return c;
 }
 
 /* GGR
@@ -1090,11 +1171,12 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
 /* A copy of the main.c command loop from 3.9e, but things are a
  *  *little* different here..
  *
- * We start by ensuring that the minibuffer display is refreshed,
- * in case it has been overwritten by a message.
+ * We start by ensuring that the minibuffer and messgae line display
+ * is erased so that the later update redraws it all.
  */
 loop:
-    mbupdate();
+    mlerase();
+    mberase();
 
 /* Execute the "command" macro...normally null
  * Don't start the handler when it is already running as that might
@@ -1106,15 +1188,17 @@ loop:
         meta_spec_active.C = 0;
     }
 
-/* Have we been asked to update the prompt? */
-
+/* Have we been asked to update the prompt?
+ * Has to be inside the loop: "loop" as we can change the default
+ * search string (and hence the search prompt) inside the minibuffer.
+ */
     if (prmpt_buf.update) {
         db_copy(procopy, &(prmpt_buf.prompt));
         prolen = db_len(procopy);
         prmpt_buf.update = 0;
     }
 
-/* Have we been asked to load a (search/replace) string?.
+/* Have we been asked to insert a (search/replace) string?.
  * If so, insert it into our buffer (which is the result buffer) now,
  * which inserts it at the "current location".
  */
@@ -1142,6 +1226,7 @@ loop:
 
 /* Remove the prompt from the beginning of the buffer for the visible line.
  * This is so that the buffer contents at the end contain just the response.
+ * But do NOT run a screen update! We don't wish to display this!
  */
     curwp->w.doto = 0;
     ldelete((ue64I_t)prolen, FALSE);
@@ -1150,6 +1235,7 @@ loop:
 /* Get the next command (character) from the keyboard */
 
     c = getcmd();
+
 /* We deliberately get UEM_NOCHAR back on a SIGWINCH signal.
  * This is so that we can go back to loop: to get the minibuffer redrawn
  * in its current state, which the repaint after the SIGWINCH will have lost.
