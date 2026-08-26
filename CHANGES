@@ -766,3 +766,24 @@ estruct.h
     o Add enum cmplt_type arg to update_ring(), rotate_sstr(),
       select_sstr() and setpattern()
     o Replace boolean srch with enum cmplt_type in readpattern() args.
+
+eval.c
+globals.c
+input.c
+search.c
+edef.h
+efunc.h
+    Ensure that the prompt reflects the current default search/replace
+    pattern, even when recursing.
+    Change new_prompt() to set_new_prompt() and get it to use text based
+    on the enum cmplt_type ctype passed in then output to the passed
+    in buffer. [input.c, search.c, efunc.h]
+    If (r)pat is changed, set prmpt_buf.update. [eval.c, input.c,
+    search.c]
+    Remove prompt from struct prmpt_buf_st, as it is no longer used.
+    [edef.h, globals.c, input.c]
+    Rename select_sstr() to preload_sstr(). [input.c, efunc.h]
+    Remove update from struct prmpt_buf_st and add srch_lvl and repl_lvl
+    instead, as they may change separately. Also, make thme reflect the
+    minibuffer level at which they were changed.  [edef.h, globals.c,
+    eval.c, input.c, search.c]

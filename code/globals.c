@@ -161,7 +161,7 @@ const char *not_interactive_fname = NULL;
 int pause_key_index_update = 0;
 
 /* Contains a db string struct */
-prmpt_buf_st prmpt_buf = { db_buf_initval, db_buf_initval, 0 };
+prmpt_buf_st prmpt_buf = { db_buf_initval, 0, 0 };
 
 enum yank_type last_yank = None;
 

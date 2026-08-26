@@ -53,8 +53,8 @@ typedef struct {
 
 typedef struct {
     db_dcl(preload);            /* text to preload into getstring() result */
-    db_dcl(prompt);             /* The new prompt to use */
-    int update;                 /* Set to make getstring() update its prompt */
+    int srch_lvl;               /* Level at which search was updated */
+    int repl_lvl;               /* Level at which repl was updated */
 } prmpt_buf_st;
 
 typedef struct {

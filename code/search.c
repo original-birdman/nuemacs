@@ -451,13 +451,26 @@ static db *expandp(db *newstr) {
 
 /* A function to regenerate the prompt string with the given
  * text as the default.
- * Also called from svar() if it sets $replace or $search
+ * Anything that changes pat or rpat needs to set the related
+ * prmpt_buf.*_lvl to the current mini buffer level
+ * and the loop: in getstring() will work out a new prompt
+ * with that default showing by calling here.
+ * The flag is then set to the level that just requested the setting.
  */
-void new_prompt(db *new) {
+void set_new_prompt(db *ds, enum cmplt_type ctype) {
+    dbp_dcl(new);
+    if (ctype == CMPLT_SRCH) {
+        new = &pat;
+        prmpt_buf.srch_lvl = mb_info.mbdepth;
+    }
+    else {
+        new = &rpat;
+        prmpt_buf.repl_lvl = mb_info.mbdepth;
+    }
     dbp_dcl(ep) = expandp(new);
-    db_sprintf(prmpt_buf.prompt, "%s " MLpre "%.*s" MLpost ": ",
-         current_base, (int)dbp_len(ep), dbp_val(ep));
-    prmpt_buf.update = 1;
+    const char* dtag = (ctype == CMPLT_SRCH)? pr_dir: "";
+    dbp_sprintf(ds, "%s%s" MLpre "%.*s" MLpost ": ",
+         current_base, dtag, (int)dbp_len(ep), dbp_val(ep));
     return;
 }
 
@@ -573,20 +586,23 @@ void rotate_sstr(int n, enum cmplt_type ctype) {
     dbp_copy(t_db, &(txt[0]));              /* Update (r)pat */
 
 /* We need to make getstring() show this new value in its prompt.
- * So we create what we want in prmpt_buf.prompt then set prmpt_buf.update
- * to tell getstring() to use it.
+ * So we to tell getstring() to get a new one by setting the level at
+ * which it was set.
  */
-    new_prompt(t_db);
+    if (ctype == CMPLT_SRCH) prmpt_buf.srch_lvl = mb_info.mbdepth;
+    else                     prmpt_buf.repl_lvl = mb_info.mbdepth;
+
     return;
 }
 
-/* Setting prmpt_buf.preload makes getstring() add it into the result buffer
+/* Put the relevant search/replace string into the given buffer
+ * Setting prmpt_buf.preload makes getstring() add it into the result buffer
  * at the start of its next get-character loop.
  * It will be inserted into any current search string at the current point.
  * Here as it needs to test this_rt.
  * We take a copy of the relevant search or replace text.
  */
-void select_sstr(enum cmplt_type ctype) {
+void preload_sstr(enum cmplt_type ctype) {
     db_copy(prmpt_buf.preload,
          (ctype == CMPLT_SRCH)? &srch_txt[0]: &repl_txt[0]);
     return;
@@ -2270,6 +2286,13 @@ static int readpattern(const char *prompt, db *apat, enum cmplt_type ctype) {
 
     }
     strcpy(current_base, saved_base);   /* Revert any change */
+
+/* We need to make getstring() show this new value in its prompt.
+ * So we to tell getstring() to get a new one by setting the level at
+ * which it was set.
+ */
+    if (ctype == CMPLT_SRCH) prmpt_buf.srch_lvl = mb_info.mbdepth;
+    else                     prmpt_buf.repl_lvl = mb_info.mbdepth;
 
     db_free(tpat);
     return status;

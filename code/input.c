@@ -1086,7 +1086,7 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
 
     update(FALSE);
 
-/* Set-up the (incoming) prompt string and clear any prompt update flag,
+/* Set-up the (incoming) prompt string and clear any prompt update flags,
  * as it should only get set during loop.
  * This means we can *now* initialize an empty return buffer
  * GGR NOTE!!
@@ -1094,7 +1094,8 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
  */
     db_set(procopy, prompt);
     prolen = db_len(procopy);
-    prmpt_buf.update = 0;
+    prmpt_buf.srch_lvl = 0;
+    prmpt_buf.repl_lvl = 0;
     dbp_set(buf, "");           /* Ensure we never return garbage */
 
     if ((bp = bfind(mbname, TRUE, BFINVS)) == NULL) {
@@ -1188,23 +1189,33 @@ loop:
         meta_spec_active.C = 0;
     }
 
-/* Have we been asked to update the prompt?
- * Has to be inside the loop: "loop" as we can change the default
- * search string (and hence the search prompt) inside the minibuffer.
- */
-    if (prmpt_buf.update) {
-        db_copy(procopy, &(prmpt_buf.prompt));
-        prolen = db_len(procopy);
-        prmpt_buf.update = 0;
-    }
+/* Some features are only relevant for search/replace. */
 
-/* Have we been asked to insert a (search/replace) string?.
+    if ((ctype == CMPLT_SRCH) || (ctype == CMPLT_REPL)) {
+
+/* Has the default value for search or replace been updated at a higher
+ * level? If so, we need to update our prompt to reflect this.
+ */
+        if ((prmpt_buf.srch_lvl >= mb_info.mbdepth) ||
+            (prmpt_buf.repl_lvl >= mb_info.mbdepth)) {
+
+/* We do need to update the prompt.
+ * Has to be inside the loop: "loop" as we can change the default
+ * search string (and hence the search prompt) while "looping" inside
+ * the minibuffer.
+ */
+            set_new_prompt(&procopy, ctype);
+            prolen = db_len(procopy);
+        }
+
+/* Have we been asked to insert a (search/replace) string?. (^X^I)
  * If so, insert it into our buffer (which is the result buffer) now,
  * which inserts it at the "current location".
  */
-    if (db_len(prmpt_buf.preload)) {
-        lins_dynbuf(&prmpt_buf.preload);
-        db_clear(prmpt_buf.preload);    /* One-time usage */
+        if (db_len(prmpt_buf.preload)) {
+            lins_dynbuf(&prmpt_buf.preload);
+            db_clear(prmpt_buf.preload);    /* One-time usage */
+        }
     }
 
 /* Prepend the prompt to the beginning of the visible line (i.e.
@@ -1326,7 +1337,7 @@ loop:
         goto post_exec;
     case CTLX|CONTROL|'I':      /* Only act for CMPLT_SRCH/REPL */
         if ((ctype == CMPLT_SRCH) || (ctype == CMPLT_REPL))
-             select_sstr(ctype);
+             preload_sstr(ctype);
         goto post_exec;
     case CTLX|CONTROL|'M':      /* Evaluate before return */
         do_evaluate = TRUE;
@@ -1472,8 +1483,6 @@ rewinch_and_exit:
  */
 void free_input(void) {
     Xfree(mb_winp);
-
-    db_free(prmpt_buf.prompt);
 
     db_free(res.match);
     db_free(res.choices);
