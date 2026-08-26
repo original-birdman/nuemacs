@@ -1195,7 +1195,6 @@ loop:
     if (prmpt_buf.update) {
         db_copy(procopy, &(prmpt_buf.prompt));
         prolen = db_len(procopy);
-fprintf(stderr, "mb: %d   pr: %s\n", mb_info.mbdepth, db_val(procopy));
         prmpt_buf.update = 0;
     }
 
@@ -1267,8 +1266,8 @@ fprintf(stderr, "mb: %d   pr: %s\n", mb_info.mbdepth, db_val(procopy));
     do_evaluate = FALSE;
     switch(carg->c) {           /* The default is to do nothing here */
     case CONTROL|'I': {
-        if (ctype == CMPLT_SRCH) {
-            rotate_sstr(carg->n);
+        if ((ctype == CMPLT_SRCH) || (ctype == CMPLT_REPL)) {
+            rotate_sstr(carg->n, ctype);
             goto post_exec;
         }
 /* Various completion code options
@@ -1321,11 +1320,13 @@ fprintf(stderr, "mb: %d   pr: %s\n", mb_info.mbdepth, db_val(procopy));
         else TTbeep();
         goto post_exec;
     }
-    case META|CONTROL|'I':      /* Only act for CMPLT_SRCH */
-        if (ctype == CMPLT_SRCH) rotate_sstr(-(carg->n));
+    case META|CONTROL|'I':      /* Only act for CMPLT_SRCH/REPL */
+        if ((ctype == CMPLT_SRCH) || (ctype == CMPLT_REPL))
+             rotate_sstr(-(carg->n), ctype);
         goto post_exec;
-    case CTLX|CONTROL|'I':      /* Only act for CMPLT_SRCH */
-        if (ctype == CMPLT_SRCH) select_sstr();
+    case CTLX|CONTROL|'I':      /* Only act for CMPLT_SRCH/REPL */
+        if ((ctype == CMPLT_SRCH) || (ctype == CMPLT_REPL))
+             select_sstr(ctype);
         goto post_exec;
     case CTLX|CONTROL|'M':      /* Evaluate before return */
         do_evaluate = TRUE;

@@ -136,6 +136,7 @@ enum cmplt_type {   /* What is looked up and complete */
     CMPLT_NAME,     /* Function names */
     CMPLT_VAR,      /* Variables (system $, user %, buffer .) */
     CMPLT_SRCH,     /* Nothing. Instead rotates search ring on <tab> */
+    CMPLT_REPL,     /* Nothing. Instead rotates replace ring on <tab> */
 };
 
 /*      Directive definitions   */
@@ -441,8 +442,8 @@ struct terminal {
     int t_mrow;                 /* max rows (allocated)          */
     int t_nrow;                 /* current number of rows used   */
 /* Next two are derived from t_nrow (-1, -2 resp), but it makes
- * things easier to read/process if we calcutae them one.
- * USE the SET_t_nrow to set t_nrow - it sets the others too.
+ * things easier to read/process if we calculate them once.
+ * Use the SET_t_nrow to set t_nrow - it sets the others too.
  */
     int t_mbline;               /* 0-based minibuffer-line index */
     int t_vscreen;              /* 0-based vscreen max index     */

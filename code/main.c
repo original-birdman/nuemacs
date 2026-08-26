@@ -2437,7 +2437,7 @@ int main(int argc, char **argv) {
             mlwrite_one(MLbkt("Bogus goto argument"));
         }
     } else if (searchflag) {
-        setpattern(&pat, &tap); /* Need a valid curwp for this */
+        setpattern(&pat, &tap, CMPLT_SRCH); /* Need a valid curwp for this */
         srch_can_hunt = 1;
         if (forwhunt(FALSE, 0) == FALSE) update(FALSE);
     }

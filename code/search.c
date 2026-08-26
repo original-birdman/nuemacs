@@ -338,9 +338,6 @@ static db_dcl(repl_txt[RING_SIZE]);
 #define MAX_PROMPT 16
 char current_base[MAX_PROMPT] = "";
 
-enum call_type {Search, Replace};  /* So we know the current call type */
-static enum call_type this_rt;
-
 /* Function to increase allocated sizes for group control info
  * The group counter is an 8-bit field - so max is 255
  */
@@ -470,11 +467,10 @@ void new_prompt(db *new) {
  * However - we don't want to push anything out if there is an empty entry.
  */
 int nring_free = RING_SIZE;
-static void update_ring(dbp_dcl(str)) {
+static void update_ring(dbp_dcl(str), enum cmplt_type ctype) {
     dbp_dcl(txt);
-    if (this_rt == Search) txt = &srch_txt[0];
-    else                   txt = &repl_txt[0];
-    new_prompt(txt);
+    if (ctype == CMPLT_SRCH) txt = &srch_txt[0];
+    else                     txt = &repl_txt[0];
 
 /* Although for Search strings we do count down to 0 as items are added:
  * if there is a free one we don't know where it is, so have to look.
@@ -482,7 +478,7 @@ static void update_ring(dbp_dcl(str)) {
  * Empty entries are fine for Replace.
  * We should be able to run this RING_SIZE times - no more.
  */
-    if (this_rt == Search && nring_free > 0) {
+    if ((ctype == CMPLT_SRCH) && (nring_free > 0)) {
         for (int ix = 0; ix < RING_SIZE-1; ix++) { /* Can't move last one */
             if (dbp_len(txt+ix) == 0) {
                 db_dcl(tmp) = txt[ix];
@@ -548,7 +544,7 @@ static int boundry(struct line *curline, int curoff, int dir) {
  * For rotate_sstr the "natural" thing to do is to go back to the previous
  * string so +ve args go backwards in the array.
  */
-void rotate_sstr(int n) {
+void rotate_sstr(int n, enum cmplt_type ctype) {
 
     while (n < 0) n += RING_SIZE;       /* Make it +ve... */
     int rotator = n % RING_SIZE;        /* ...so this is not -ve */
@@ -560,7 +556,7 @@ void rotate_sstr(int n) {
     db_dcl(tmp_txt[RING_SIZE]);
     dbp_dcl(txt);
     db *t_db;
-    if (this_rt == Search) {
+    if (ctype == CMPLT_SRCH) {
         txt = srch_txt;
         t_db = &pat;
     }
@@ -590,9 +586,9 @@ void rotate_sstr(int n) {
  * Here as it needs to test this_rt.
  * We take a copy of the relevant search or replace text.
  */
-void select_sstr(void) {
+void select_sstr(enum cmplt_type ctype) {
     db_copy(prmpt_buf.preload,
-         (this_rt == Search)? &srch_txt[0]: &repl_txt[0]);
+         (ctype == CMPLT_SRCH)? &srch_txt[0]: &repl_txt[0]);
     return;
 }
 
@@ -2131,11 +2127,11 @@ void rvstrcpy(db *rvstr, db *str) {
  *      the default for any character to jump
  *      is the pattern length
  */
-void setpattern(db *apat, db *tap) {
+void setpattern(db *apat, db *tap, enum cmplt_type ctype) {
     int i;
 
 /* Add pattern to search run if called during command line processing */
-    if (comline_processing) update_ring(apat);
+    if (comline_processing) update_ring(apat, ctype);
 
     patlenadd = srch_patlen - 1;
     for (i = 0; i < HICHAR; i++) {
@@ -2178,7 +2174,7 @@ void setpattern(db *apat, db *tap) {
  * Display the old pattern, in the style of Jeff Lomicka.
  * There is some do-it-yourself control expansion.
  */
-static int readpattern(const char *prompt, db *apat, int srch) {
+static int readpattern(const char *prompt, db *apat, enum cmplt_type ctype) {
     int status;
     db_bufdef(tpat);
 
@@ -2191,7 +2187,7 @@ static int readpattern(const char *prompt, db *apat, int srch) {
     strcpy(saved_base, current_base);
     strcpy(current_base, prompt);
     dbp_dcl(ep) = expandp(apat);
-    const char* dtag = (srch == TRUE)? pr_dir: "";
+    const char* dtag = (ctype == CMPLT_SRCH)? pr_dir: "";
     db_sprintf(tpat, "%s%s" MLpre "%s" MLpost ": ", prompt, dtag, dbp_val(ep));
 
 /* Read a pattern.  Either we get one or we just get an empty result
@@ -2200,10 +2196,7 @@ static int readpattern(const char *prompt, db *apat, int srch) {
  * *Then*, make the meta-pattern, if we are defined that way.
  * We set this_rt before and after the mlreply() call.
  */
-    enum call_type our_rt = (srch == TRUE)? Search: Replace;
-    this_rt = our_rt;           /* Set our call type for nextin_ring() */
-    status = mlreply(db_val(tpat), &tpat, CMPLT_SRCH);
-    this_rt = our_rt;           /* Set our call type for update_ring() */
+    status = mlreply(db_val(tpat), &tpat, ctype);
     int do_update_ring = 1;
 
 /* status values from mlreply (-> getstring()) are
@@ -2219,7 +2212,7 @@ static int readpattern(const char *prompt, db *apat, int srch) {
  * We'll always update Replace strings, as an empty Replace is valid.
  */
     if (status == FALSE) {              /* Empty response */
-        if (our_rt == Search) {
+        if (ctype == CMPLT_SRCH) {
             if (db_len(pat) > 0) {      /* Have a default to use? */
                 db_copy(tpat, &pat);
                 do_update_ring = 0;     /* Don't save this */
@@ -2242,11 +2235,11 @@ static int readpattern(const char *prompt, db *apat, int srch) {
     if (status == TRUE) {
         dbp_copy(apat, &tpat);
 /* Save this latest string in the search buffer ring? */
-        if (do_update_ring) update_ring(&tpat);
+        if (do_update_ring) update_ring(&tpat, ctype);
 
 /* Note that we always rebuild any meta-pattern from scratch even if
  * we used the default pattern (which is reasonable, since it might not
- * be the last one, now we have a search ring!).
+ * be the same as last time, now we have a search ring!).
  * If we are NOT in Magic mode then if Exact mode is on we will never
  * use the meta-pattern, so there is no point in setting it up.
  * If that is not the case then we call mcstr/rmcstr, getting *them* to
@@ -2260,19 +2253,19 @@ static int readpattern(const char *prompt, db *apat, int srch) {
  */
 
         if ((curwp->w_bufp->b_mode & MDMAGIC) ||
-            (!(curwp->w_bufp->b_mode & MDEXACT) && srch)) {
-            status = srch ? mcstr() : rmcstr();
+            (!(curwp->w_bufp->b_mode & MDEXACT) && ctype == CMPLT_SRCH)) {
+            status = (ctype == CMPLT_SRCH)? mcstr() : rmcstr();
         }
         else
-            if (srch) slow_scan = 0;
+            if (ctype == CMPLT_SRCH) slow_scan = 0;
 
 /* If we are doing the search string remember the length for substitution
  * purposes and reverse string copy. For fast scans, set jump tables.
  */
-        if (srch) {
+        if (ctype == CMPLT_SRCH) {
             srch_patlen = dbp_len(apat);
             rvstrcpy(&tap, apat);
-            if (!slow_scan) setpattern(apat, &tap);
+            if (!slow_scan) setpattern(apat, &tap, ctype);
         }
 
     }
@@ -3239,7 +3232,7 @@ int forwsearch(int f, int n) {
         int could_hunt = srch_can_hunt;
         db_copy(opat, &pat);
         pr_dir = ">";
-        if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
+        if ((status = readpattern("Search", &pat, CMPLT_SRCH)) == TRUE) {
             srch_can_hunt = 1;
 /* A search with the same string should be the same as a reexec */
             if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
@@ -3357,7 +3350,7 @@ int backsearch(int f, int n) {
         int could_hunt = srch_can_hunt;
         db_copy(opat, &pat);
         pr_dir = "<";
-        if ((status = readpattern("Search", &pat, TRUE)) == TRUE) {
+        if ((status = readpattern("Search", &pat, CMPLT_SRCH)) == TRUE) {
             srch_can_hunt = -1;
 /* A search with the same string should be the same as a reexec */
             if (!(ggr_opts&GGR_SRCHOLAP) || !could_hunt ||
@@ -3467,7 +3460,7 @@ int scanmore(db *patrn, int dir, enum isearch_t stype) {
     else {
         rvstrcpy(&tap, patrn);  /* Put reversed string in tap */
         srch_patlen = dbp_len(patrn);
-        setpattern(patrn, &tap);
+        setpattern(patrn, &tap, CMPLT_SRCH);
         if (stype == EXTEND_MATCH) {
             sm_line = curwp->w.dotp;    /* For possible restore */
             sm_off = curwp->w.doto;
@@ -3685,12 +3678,12 @@ static int replaces(int query, int f, int n) {
 
     pr_dir = ">";
     if ((status = readpattern((query? "Query replace": "Replace"),
-         &pat, TRUE)) != TRUE)
+         &pat, CMPLT_SRCH)) != TRUE)
         goto end_replaces;
 
 /* Ask for the replacement string. */
 
-    if ((status = readpattern("with", &rpat, FALSE)) == ABORT)
+    if ((status = readpattern("with", &rpat, CMPLT_REPL)) == ABORT)
         goto end_replaces;
 
 /* Set up flags so we can make sure not to do a recursive replace on

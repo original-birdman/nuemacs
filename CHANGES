@@ -377,7 +377,7 @@ dyn_buf.h
 
 isearch.c
     Set pat to empty at start_over:, not to pat_save.
-    Remove unused f ag from isearch() and rename n to dir.
+    Remove unused f arg from isearch() and rename n to dir.
 
 dyn_buf.c
 globals.c
@@ -395,10 +395,10 @@ globals.c
 input.c
 isearch.c
 edef.h
-    Add SIGWINCH handling to incremenmtal search.
+    Add SIGWINCH handling to incremental search.
     Make remap_c_on_intr global [globals.c, input.c, edef.h]
     Set remap_c_on_intr around tgetc() call in get_char() and, if
-    UEM_NOCHAR comes back, set up a rexecute of everything. [isearch.c]
+    UEM_NOCHAR comes back, set up a reexecute of everything. [isearch.c]
     Hardwire the prompt into promptpattern(). [isearch.c]
 
 dyn_buf.c:
@@ -704,7 +704,7 @@ efunc.h
     get1key() logs incoming Unicode chars for getcmd(), and
     if it sees UEM_NOCHAR it sets a flag. [input.c]
     getcmd() has a single exit point, and if UEM_NOCHAR has been seen
-    it pushes back all chars seen so far durign this call and if
+    it pushes back all chars seen so far during this call and if
     it is collecting a keyboard macro, removes them for that buffer.
     [input.c]
     At the loop: label, run mlerase() and mberase(), not mbupdate()
@@ -736,10 +736,33 @@ efunc.h
     Make message line writers responsible for their own waiting.
     Change mlforce[_one]() to take a wait parameter. [display.c, efunc.h]
     Remove the sleep(1) after execute in getstring() [input.c]
-    Change all callers to add 0 as first arg, unless they were folowed
+    Change all callers to add 0 as first arg, unless they were followed
     by a sleep(), in which case use that value and remove the sleep()
     call. Change any mlwrite() calls followed by a sleep() to mlforce
     ones.
 
 file.c
     Modifications to the logic on errors in readin().
+
+input.c
+main.c
+search.c
+efunc.h
+estruct.h
+    For search/replace ring updates, pass the type around as a
+    parameter, rather than set a global variable.
+    Change prototypes.  [efunc.h]
+    Add the relevant call type arg to Add CMPLT_REPL to enum cmplt_type.
+    [estruct.h]
+    Check for CMPLT_REPL as well as CMPLT_SRCH in getstring() and pass
+    these to rotate_sstr(). [input.c]
+    Add CMPLT_SRCH to setpattern() call. [main.c]
+    Change enum call_type tests to use the enum cmplt_type arg instead
+    and add/change args for the new input.c API. [search.c]
+    Remove the recently-added new_prompt() call in update_ring()< as it
+    is wrong., [search.c]
+    Changes to input.c API.
+    o Remove enum call_type (enum cmplt_type no handles it)
+    o Add enum cmplt_type arg to update_ring(), rotate_sstr(),
+      select_sstr() and setpattern()
+    o Replace boolean srch with enum cmplt_type in readpattern() args.

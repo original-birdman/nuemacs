@@ -371,10 +371,10 @@ extern int widen(int, int);
 #ifndef SEARCH_C
 extern void init_search_ringbuffers(void);
 extern void new_prompt(db *);
-extern void rotate_sstr(int);
-extern void select_sstr(void);
+extern void rotate_sstr(int, enum cmplt_type);
+extern void select_sstr(enum cmplt_type);
 extern void rvstrcpy(db *, db *);
-extern void setpattern(db *, db *);
+extern void setpattern(db *, db *, enum cmplt_type);
 extern db *group_match(int);
 extern int forwhunt(int, int);
 extern int forwsearch(int, int);
