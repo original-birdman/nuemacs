@@ -740,3 +740,6 @@ efunc.h
     by a sleep(), in which case use that value and remove the sleep()
     call. Change any mlwrite() calls followed by a sleep() to mlforce
     ones.
+
+file.c
+    Modifications to the logic on errors in readin().

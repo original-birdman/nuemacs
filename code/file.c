@@ -612,12 +612,14 @@ int readin(const char *infname, int lockfl) {
     struct window *wp;
     struct buffer *bp;
     int s;
+    int wait = 0;
 
     if (filock && lockfl && lockchk(infname) == ABORT) {
         s = FIOFNF;
         bp = curbp;
         terminate_str(bp->b_dfname);    /* Makes it empty */
         terminate_str(bp->b_rpname);    /* Makes it empty */
+        db_set(readin_mesg, MLbkt("Can't lock!"));
         goto out;
     }
 
@@ -649,7 +651,7 @@ int readin(const char *infname, int lockfl) {
  * (Even though set_buffer_filenames() will have just made this call)
  * If it return the input buffer as its result, then it will have
  * failed, e.g. trying to open a new file in a non-existant directory.
- * So we can post a warnign message.
+ * So we can post a warning message.
  */
     if (get_uniqpath(fname) == fname) { /* Unable to get real path */
         mlforce_one(1, "Parent directory absent for new file");
@@ -679,46 +681,43 @@ int readin(const char *infname, int lockfl) {
     s = ffropen(bp->b_rpname);
     if (s == FIOERR) {          /* Hard open failure. */
         db_set(readin_mesg, MLbkt("Can't open!"));
-        goto out;
     }
-    if (s == FIOFNF) {          /* File not found. */
+    else if (s == FIOFNF) {          /* File not found. */
         db_set(readin_mesg, MLbkt("New file"));
-        goto out;
     }
-
+    else {
 /* Read the file in */
-    if (!silent) mlwrite_one(MLbkt("Reading file"));  /* GGR */
-    s = file2buf(curbp->b_linep, "Reading", FALSE, autodos);
-    if (dos_file) curbp->b_mode |= MDDOSLE;
-    else          curbp->b_mode &= ~MDDOSLE;
-    const char *emg = "";
-    if (s == FIOERR) {
-        emg = "I/O ERROR, ";
-        curbp->b_flag |= BFTRUNC;
-    }
-    if (!silent) {                      /* GGR */
-        const char *dmg = "";
-        if (dos_file) dmg = " - from DOS file!";
-        db_sprintf(readin_mesg, MLbkt("%sRead %d line%s%s"), emg, nlines,
-             (nlines > 1)? "s": "", dmg);
-        mlwrite_one(db_val(readin_mesg));
-        if (s == FIOERR) sleep(1);   /* Let it be seen */
-    }
-
-out:
-    for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
-        if (wp->w_bufp == curbp) {
-            wp->w_linep = lforw(curbp->b_linep);
-            wp->w.dotp = lforw(curbp->b_linep);
-            wp->w.doto = 0;
-            wp->w.markp = NULL;
-            wp->w.marko = 0;
-            wp->w_flag |= WFMODE | WFHARD;
+        if (!silent) mlwrite_one(MLbkt("Reading file"));  /* GGR */
+        s = file2buf(curbp->b_linep, "Reading", FALSE, autodos);
+        if (dos_file) curbp->b_mode |= MDDOSLE;
+        else          curbp->b_mode &= ~MDDOSLE;
+        const char *emg = "";
+        if (s == FIOERR) {
+            emg = "I/O ERROR, ";
+            curbp->b_flag |= BFTRUNC;
+        }
+        if (!silent) {                      /* GGR */
+            const char *dmg = "";
+            if (dos_file) dmg = " - from DOS file!";
+            db_sprintf(readin_mesg, MLbkt("%sRead %d line%s%s"), emg, nlines,
+                 (nlines > 1)? "s": "", dmg);
+            if (s == FIOERR) wait = 1;  /* Let it be seen? */
+        }
+        for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+            if (wp->w_bufp == curbp) {
+                wp->w_linep = lforw(curbp->b_linep);
+                wp->w.dotp = lforw(curbp->b_linep);
+                wp->w.doto = 0;
+                wp->w.markp = NULL;
+                wp->w.marko = 0;
+                wp->w_flag |= WFMODE | WFHARD;
+            }
         }
     }
+out:
     if (s == FIOERR || s == FIOFNF) {
-        mlwrite_one(db_val(readin_mesg));   /* Has been set... */
-        return FALSE;                       /* False if error. */
+        mlforce_one(wait, db_val(readin_mesg)); /* Has been set... */
+        return FALSE;                           /* False if error. */
     }
     return TRUE;
 }
@@ -930,9 +929,8 @@ void makename(db *bname, const char *fname, int ensure_unique) {
             return;
         }
     }
-    mlforce("Unable to generate a unique buffer name for %s - exiting",
+    mlforce(2, "Unable to generate a unique buffer name for %s - exiting",
         dbp_val(bname));
-    sleep(2);
     quickexit(FALSE, 0);
 }
 
