@@ -262,9 +262,9 @@ int ffputline(const char *buf, int nbuf) {
  * No sleep — a blocking pause per save just to let the user read an
  * informational line is a UX trap (saving a file with 195 of these
  * once cost two minutes before the empty-line bug was fixed).
+ * "Wrote <n> lines" will overwrite minibuffer - so add a pause.
  */
-            mlforce("Removed \"added\" trailing newline for %s file", reason);
-            sleep(1);   /* "Wrote <n> lines" will overwrite minibuffer */
+            mlforce(1, "Removed \"added\" trailing newline for %s file", reason);
         }
         else {
             if (cache.rst != 0 && !doing_newline) {
@@ -390,7 +390,7 @@ int ffgetline(void) {
  * See the matching note in ffputline; no blocking sleep just to let
  * the user read an informational line.
  */
-                    mlforce("Newline absent at end of file. Added....");
+                    mlforce(1, "Newline absent at end of file. Added....");
                 }
                 return lused(fline)? FIOSUC: FIOEOF;
             }

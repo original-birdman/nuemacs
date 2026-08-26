@@ -1829,10 +1829,10 @@ void mlwrite(const char *fmt, ...) {
 /* Force a string out to the message line regardless of the
  * current $discmd setting. This is needed when $debug is TRUE
  * and for the write-message and clear-message-line commands
- *
- * char *s;             string to force out
+ * Now takes a parameter to indicate an optional pause after display.
+ * So each call is responsible for its own wait.
  */
-void mlforce(const char *fmt, ...) {
+void mlforce(int wait, const char *fmt, ...) {
     int oldcmd;     /* original command display flag */
 
     npva ap;
@@ -1843,6 +1843,12 @@ void mlforce(const char *fmt, ...) {
     mlwrite_ap(fmt, ap);    /* write the string out */
     va_end(ap.ap);
     discmd = oldcmd;        /* and restore the original setting */
+/* Was there a wait request? */
+    if (wait < 0) {    /* Wait based on output length, so work it out */
+        int wu = (ml_text_offset / 42) + 1;
+        wait *= -wu;
+    }
+    if (wait > 0) sleep((unsigned)wait);
     return;
 }
 
@@ -1855,12 +1861,18 @@ void mlwrite_one(const char *fmt) {
     mlwrite_ap(fmt, nullva);
     return;
 }
-void mlforce_one(const char *fmt) {
+void mlforce_one(int wait, const char *fmt) {
     int oldcmd;             /* original command display flag */
     oldcmd = discmd;        /* save the discmd value */
     discmd = TRUE;          /* and turn display on */
     mlwrite_ap(fmt, nullva);    /* write the string out */
     discmd = oldcmd;        /* and restore the original setting */
+/* Was there a wait request? */
+    if (wait < 0) {    /* Wait based on output length, so work it out */
+        int wu = (ml_text_offset / 42) + 1;
+        wait *= -wu;
+    }
+    if (wait > 0) sleep((unsigned)wait);
     return;
 }
 

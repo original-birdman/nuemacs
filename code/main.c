@@ -164,7 +164,7 @@ static int kbdmac_buffer_toggle(enum KBDM_direction mode, const char *who) {
         return TRUE;
     }
 out_of_phase:                   /* Can only get here on error */
-    mlforce("Keyboard macro collection out of phase - aborted.");
+    mlforce(0, "Keyboard macro collection out of phase - aborted.");
     do_savnam = 1;
     kbdmode = STOP;
     ctlxe_togo = 0;             /* Just in case... */
@@ -769,7 +769,7 @@ void dumpdir_tidy(void) {
 
 revert_to_start_fd:
     status = fchdir(start_fd);
-    if (status < 0) mlforce("Stuck in dump dir!!!");
+    if (status < 0) mlforce(0, "Stuck in dump dir!!!");
 close_start_fd:
     close(start_fd);
 revert_buffer:
@@ -974,7 +974,7 @@ com_arg *multiplier_check(int c) {
         ca.c = META|SPEC|'*';   /* Dummy nop */
         ca.f = FALSE;
         ca.n = 1;
-/* The pointers know how large they are, so -2 is correct. -2 items  */
+/* Reset the pointer to "forget" the cancelled number input */
         if (kbdmode == RECORD) kbdptr = reset_kbdptr;
         mlwrite_one("Cancelled");
         sleep(1);

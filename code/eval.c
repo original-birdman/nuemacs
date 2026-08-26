@@ -493,7 +493,7 @@ static const char *xlat(const char *source, const char *lookup,
 
 /* Out of lookup - check that trans has run out too... */
     if (*tp) {
-        mlforce("Translation table longer than lookup table.");
+        mlforce(0, "Translation table longer than lookup table.");
         db_set(xlres, "ERROR");
         goto free_and_exit;
     }
@@ -1819,7 +1819,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         case EVREGLTEXT:    /* These two are... */
         case EVREGLNUM:     /* ...very similar */
             if (strlen(value) >= MAX_REGL_LEN) {
-                mlforce("String too long - max %d", MAX_REGL_LEN - 1);
+                mlforce(0, "String too long - max %d", MAX_REGL_LEN - 1);
                 status = FALSE;
                 break;
             }
@@ -1890,7 +1890,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
                 }
             } while(0);     /* 1-pass block */
             if (fail) {
-               mlforce("0x%x is an invalid $crypt-mode setting", new_mode);
+               mlforce(0, "0x%x is an invalid $crypt-mode setting", new_mode);
                status = FALSE;
             }
             else {
@@ -2036,12 +2036,12 @@ int setvar(int f, int n) {
         }
 /* Write out the debug line to the message line? */
         if (macbug & 0x1) {
-            mlforce_one(db_val(glb_db));
+            mlforce_one(0, db_val(glb_db));
             update(TRUE);
 
 /* And get the keystroke */
             if (get1key() == abortc) {
-                mlforce_one(MLbkt("Macro aborted"));
+                mlforce_one(0, MLbkt("Macro aborted"));
                 status = FALSE;
             }
         }

@@ -206,7 +206,7 @@ int set_encryption_key(int f, int n) {
 /* Is it enabled at all? */
 
     if (crypt_mode == 0) {
-        mlforce("Crypt is not enabled. Set $crypt_mode");
+        mlforce(0, "Crypt is not enabled. Set $crypt_mode");
         return FALSE;
     }
 

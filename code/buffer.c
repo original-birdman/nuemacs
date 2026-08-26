@@ -195,8 +195,7 @@ int swbuffer(struct buffer *bp, int macro_OK) {
  */
     if (kbdmode == RECORD && !macro_OK &&
           strcmp(bp->b_bname, kbdmacro_buffer) == 0) {
-        mlwrite("Can't switch to %s when collecting macro", kbdmacro_buffer);
-        sleep(2);
+        mlforce(2, "Can't switch to %s when collecting macro", kbdmacro_buffer);
         return FALSE;
     }
 
@@ -424,8 +423,7 @@ ask:
 
 /* And check for duplicates */
     if (!set_buffer_name(db_val(bufn))) {
-        mlforce("%s already exists!", db_val(bufn));
-        sleep(1);
+        mlforce(1, "%s already exists!", db_val(bufn));
         mlerase();
         goto ask;       /* Try again */
     }
@@ -759,7 +757,7 @@ int setforcemode(int f, int n) {
     if (status != TRUE) goto exit;
     char errch = do_force_mode(db_val(cbuf));
     if (errch) {
-        mlforce("Invalid force mode: %c", errch);
+        mlforce(0, "Invalid force mode: %c", errch);
         status = FALSE;
     }
 exit:

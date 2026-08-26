@@ -652,8 +652,7 @@ int readin(const char *infname, int lockfl) {
  * So we can post a warnign message.
  */
     if (get_uniqpath(fname) == fname) { /* Unable to get real path */
-        mlwrite_one("Parent directory absent for new file");
-        sleep(1);
+        mlforce_one(1, "Parent directory absent for new file");
     }
 
 /* GGR - run filehooks on this iff the caller sets the flag */

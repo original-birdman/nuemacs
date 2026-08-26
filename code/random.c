@@ -942,7 +942,8 @@ static int adjustmode(int kind, int global) {
 /* Finding a match, we process it */
             if (kind == TRUE) {
                 if (!ptt && (modecode[i] == 'P')) {
-                    mlforce("No phonetic translation tables are yet defined!");
+                    mlforce(0,
+                        "No phonetic translation tables are yet defined!");
                     status = FALSE;
                     goto exit;
                 }
@@ -960,7 +961,7 @@ static int adjustmode(int kind, int global) {
         }
     }
     status = FALSE;
-    mlwrite_one("No such mode!");
+    mlforce_one(0, "No such mode!");
 
 exit:
     db_free(cbuf);
@@ -1037,7 +1038,7 @@ int writemsg(int f, int n) {
 /* Write the message out */
     if (n == 2) fwrite(db_val(buf), 1, (size_t)db_len(buf), stderr);
     else {
-        mlforce("%B", &buf);
+        mlforce(0, "%B", &buf);
         if (kbdmode == PLAY) mline_persist = TRUE;
     }
 exit:
@@ -1357,14 +1358,14 @@ int open_parent(int f, int n) {
     UNUSED(f); UNUSED(n);
 
     if (*(curbp->b_rpname) == '\0') {
-        mlforce("This buffer has no filename");
+        mlforce(0, "This buffer has no filename");
         return FALSE;
     }
     char *bpath = Xstrdup(curbp->b_rpname);
     char *parent_path = dirname(bpath);
     int status = TRUE;
     if (!showdir_handled(parent_path)) {
-        mlforce("Failed to open parent");
+        mlforce(0, "Failed to open parent");
         status = FALSE;
     }
     Xfree(bpath);

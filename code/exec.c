@@ -787,7 +787,7 @@ int set_pttable(int f, int n) {
  */
 
     if (!ptt) {
-        mlforce("No phonetic translation tables are yet defined!");
+        mlforce(0, "No phonetic translation tables are yet defined!");
         return FALSE;
     }
 
@@ -799,7 +799,7 @@ int set_pttable(int f, int n) {
     db_set(pbufn, "/");
     db_appendn(pbufn, db_val(pttbuf), db_len(pttbuf));
     if ((bp = bfind(db_val(pbufn), FALSE, BFINVS)) == NULL) {
-        mlforce("Table %s was not found", db_val(pbufn));
+        mlforce(0, "Table %s was not found", db_val(pbufn));
         status = FALSE;
         goto exit;
     }
@@ -807,8 +807,7 @@ int set_pttable(int f, int n) {
 /* Check that it is a translation buffer */
 
     if (bp->b_type != BTPHON) {
-        mlforce("Buffer %s is not a translation buffer.", pbufn);
-        sleep(1);
+        mlforce(1, "Buffer %s is not a translation buffer.", pbufn);
         status = TRUE;  /* Don't abort start-up file */
         goto exit;
     }
@@ -849,7 +848,7 @@ int next_pttable(int f, int n) {
  */
 int toggle_ptmode(int f, int n) {
     if (!ptt) {
-        mlforce("No phonetic translation tables are yet defined!");
+        mlforce(0, "No phonetic translation tables are yet defined!");
         return FALSE;
     }
 
@@ -1143,7 +1142,7 @@ int dobuf(struct buffer *bp) {
  */
         if (!strncmp(eline, "store-", 6)) {
             if (in_store_mode) {
-                mlforce("Nested store-* commands are not supported");
+                mlforce(0, "Nested store-* commands are not supported");
                 goto failexit2;
             }
             in_store_mode = TRUE;
@@ -1262,12 +1261,12 @@ nxtscan:                /* On to the next line */
             }
 /* Write out the debug line to the message line? */
             if (macbug & 0x1) {
-                mlforce_one(db_val(outline));
+                mlforce_one(0, db_val(outline));
                 update(TRUE);
 
 /* And get the keystroke */
                 if ((c = get1key()) == abortc) {
-                    mlforce_one(MLbkt("Macro aborted"));
+                    mlforce_one(0, MLbkt("Macro aborted"));
                     goto failexit3;
                 }
                 if (c == metac) macbug = 0;
@@ -1579,8 +1578,7 @@ int run_user_proc(const char *procname, int forced, int rpts) {
 /* Check that it is a procedure buffer */
 
     if (bp->b_type != BTPROC) {
-        mlforce("Buffer %s is not a procedure buffer.", db_val(bufn));
-        sleep(1);
+        mlforce(1, "Buffer %s is not a procedure buffer.", db_val(bufn));
         status = TRUE;  /* Don't abort start-up file */
         goto exit;
     }

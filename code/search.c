@@ -1700,8 +1700,7 @@ static int handle_counter(struct magic_counter *mcp, db *tp) {
             }
             else if (0 == strncmp("fmt=", ntp, 4)) {
                 if (!is_safe_counter(ntp+4)) {
-                    mlforce_one("Invalid ${@..} counter");
-                    sleep(2);
+                    mlforce_one(2, "Invalid ${@..} counter");
                     return FALSE;
                 }
                 Xfree(mcp->fmt);
@@ -2085,8 +2084,7 @@ static int mgpheq(struct grapheme *gc, struct magic *mt) {
         break;
     }
     default:    /* Should never get here... */
-        mlforce("mgpheq: what is %d?", mt->mc.type);
-        sleep(2);
+        mlforce(2, "mgpheq: what is %d?", mt->mc.type);
         res = FALSE;
     }
 

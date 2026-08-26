@@ -1195,6 +1195,7 @@ loop:
     if (prmpt_buf.update) {
         db_copy(procopy, &(prmpt_buf.prompt));
         prolen = db_len(procopy);
+fprintf(stderr, "mb: %d   pr: %s\n", mb_info.mbdepth, db_val(procopy));
         prmpt_buf.update = 0;
     }
 
@@ -1347,7 +1348,6 @@ loop:
     execute(carg->c, carg->f, carg->n);
 post_exec:
     if (ml_text_offset > 0) {
-        sleep(1);
         ml_text_offset = 0;
         mberase();
     }

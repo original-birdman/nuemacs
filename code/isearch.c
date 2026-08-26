@@ -352,7 +352,7 @@ int incremental_debug_check(int type) {
 void incremental_debug_cleanup(void) {
 
     if ((ii->np != 0) || (ii->ci < ii->pdg[0].ilen)) {
-        mlforce_one("Unused incremental debug!");
+        mlforce_one(0, "Unused incremental debug!");
         for (int i = 1; i < ii->mp; i++) {
             Xfree(ii->pdg[i].input);
             Xfree(ii->pdg[i].uproc);

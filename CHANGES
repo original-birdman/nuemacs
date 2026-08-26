@@ -714,7 +714,29 @@ efunc.h
 
 search.c
     Update the related prompt whenever the search or replace ring is
-    updated. (Reqired some reordering of functions).
+    updated. (Required some reordering of functions).
 
 search.c
     Mark the search direction in the search prompt with > or <.
+
+bind.c
+buffer.c
+crypt.c
+display.c
+eval.c
+exec.c
+file.c
+fileio.c
+input.c
+isearch.c
+main.c
+random.c
+search.c
+efunc.h
+    Make message line writers responsible for their own waiting.
+    Change mlforce[_one]() to take a wait parameter. [display.c, efunc.h]
+    Remove the sleep(1) after execute in getstring() [input.c]
+    Change all callers to add 0 as first arg, unless they were folowed
+    by a sleep(), in which case use that value and remove the sleep()
+    call. Change any mlwrite() calls followed by a sleep() to mlforce
+    ones.

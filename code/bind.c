@@ -716,8 +716,7 @@ static int update_keybind(int c, int ntimes, int internal_OK,
 /* Check for a procedure buffer and complain if not */
 static int check_procbuf(struct buffer *cbp, const char *bufn) {
     if (cbp->b_type != BTPROC) {
-        mlforce("Buffer %s is not a procedure buffer.", bufn);
-        sleep(1);
+        mlforce(1, "Buffer %s is not a procedure buffer.", bufn);
         return FALSE;
     }
     return TRUE;
