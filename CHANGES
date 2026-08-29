@@ -787,3 +787,11 @@ efunc.h
     instead, as they may change separately. Also, make thme reflect the
     minibuffer level at which they were changed.  [edef.h, globals.c,
     eval.c, input.c, search.c]
+
+tcap.c
+    Tidy up the code.
+    o Remove the unused USE_BROKEN_OPTIMIZATION and termdef defines.
+    o Define the struct terminal at the end, then reorder functiosn so
+      that no pre-declarations are needed.
+    o Move the putp(TE) from tcapclose() to tcapkclose()
+    o Remove MARGIN and SCRSIZ.

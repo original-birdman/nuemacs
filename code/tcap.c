@@ -5,14 +5,6 @@
  *      modified by Petri Kutvonen
  */
 
-/*
- * Defining this to 1 breaks tcapopen() - it doesn't check if the
- * screen size has changed.
- *      -lbt
- */
-#define USE_BROKEN_OPTIMIZATION 0
-#define termdef 1 /* Don't define "term" external. */
-
 #include <stdio.h>
 #include <signal.h>
 
@@ -52,72 +44,55 @@ extern int putp(const char *);
 #include "edef.h"
 #include "efunc.h"
 
-#define MARGIN  8
-#define SCRSIZ  64
-#define BEL     0x07
-#define ESC     0x1B
+static const char *UP, *PC, *CM, *CE, *CL, *SO, *SE, *TI, *TE,
+     *_CS, *DL, *AL, *SF, *SR;
 
-static void tcapkopen(void);
-static void tcapkclose(void);
-static void tcapmove(int, int);
-static void tcapeeol(void);
-static void tcapeeop(void);
-static void tcapbeep(void);
-static void tcaprev(int);
-static int tcapcres(char *);
-static void tcapscrollregion(int top, int bot);
+/* Define the functions that will be put into the struct terminal */
 
-static void tcapopen(void);
-static void tcapclose(void);
+static void tcapmove(int row, int col) {
+    putp(tgoto(CM, col, row));
+}
 
-#if COLOR
-static void tcapfcol(int);
-static void tcapbcol(int);
-#endif
-static void tcapscroll_reg(int from, int to, int linestoscroll);
-static void tcapscroll_delins(int from, int to, int linestoscroll);
+/* CS is set up just like CM, so we use tgoto... */
+static void tcapscrollregion(int top, int bot) {
+    ttputc(*PC);
+    putp(tgoto(_CS, bot, top));
+}
 
-static const char *UP, *PC, *CM, *CE, *CL, *SO, *SE;
+/* Move howmanylines lines starting at from to to - if CS is dedined */
+static void tcapscroll_reg(int from, int to, int howmanylines) {
+    int i;
+    if (to == from) return;
+    if (to < from) {
+        tcapscrollregion(to, from + howmanylines - 1);
+        tcapmove(from + howmanylines - 1, 0);
+        for (i = from - to; i > 0; i--) putp(SF);
+    }
+    else {  /* from < to */
+        tcapscrollregion(from, to + howmanylines - 1);
+        tcapmove(from, 0);
+        for (i = to - from; i > 0; i--) putp(SR);
+    }
+    tcapscrollregion(0, term.t_mbline);
+}
 
-static char *TI, *TE;
-#if USE_BROKEN_OPTIMIZATION
-static int term_init_ok = 0;
-#endif
-
-static const char *_CS, *DL, *AL, *SF, *SR;
-
-struct terminal term = {
-/* Functions */
-    tcapopen,
-    tcapclose,
-    tcapkopen,
-    tcapkclose,
-    ttgetc,
-    ttputc,
-    ttflush,
-    tcapmove,
-    tcapeeol,
-    tcapeeop,
-    tcapbeep,
-    tcaprev,
-    tcapcres,
-#if COLOR
-    tcapfcol,
-    tcapbcol,
-#endif
-    NULL,               /* Set dynamically at open time */
-/* "Constants" (== variables that are set)
- * The first eight values are set dynamically at open/resize time.
- */
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    MARGIN,
-    SCRSIZ,
-};
+/* Move howmanylines lines starting at from to to - if CS is not defined */
+static void tcapscroll_delins(int from, int to, int howmanylines) {
+    int i;
+    if (to == from) return;
+    if (to < from) {
+        tcapmove(to, 0);
+        for (i = from - to; i > 0; i--) putp(DL);
+        tcapmove(to + howmanylines, 0);
+        for (i = from - to; i > 0; i--) putp(AL);
+    }
+    else {
+        tcapmove(from + howmanylines, 0);
+        for (i = to - from; i > 0; i--) putp(DL);
+        tcapmove(from, 0);
+        for (i = to - from; i > 0; i--) putp(AL);
+    }
+}
 
 static void tcapopen(void) {
     char *t;
@@ -126,9 +101,6 @@ static void tcapopen(void) {
     char err_str[72];
     int int_col, int_row;
 
-#if USE_BROKEN_OPTIMIZATION
-    if (!term_init_ok) {
-#endif
     if ((tv_stype = getenv("TERM")) == NULL) {
         puts("Environment variable TERM not defined!");
         exit(1);
@@ -203,17 +175,11 @@ static void tcapopen(void) {
     else {
         term.t_scroll = NULL;
     }
-
-#if USE_BROKEN_OPTIMIZATION
-    term_init_ok = 1;
-    }
-#endif
     ttopen();
 }
 
 static void tcapclose(void) {
     putp(tgoto(CM, 0, term.t_mbline));
-    putp(TE);
     ttflush();
     ttclose();
 }
@@ -233,16 +199,11 @@ static void tcapkclose(void) {
  * this clears the *current* screen, and sending it twice means
  * that the original screen gets cleared (as you've switched to it before
  * the second clear arrives).
- * Actually, don't need to do anything for any valid system now.
+ * Done by removing the putp(TE) from tcapclose(), as it seems logical
+ * to have it here.
  */
-#if 0
     putp(TE);
     ttflush();
-#endif
-}
-
-static void tcapmove(int row, int col) {
-    putp(tgoto(CM, col, row));
 }
 
 static void tcapeeol(void) {
@@ -270,47 +231,6 @@ static int tcapcres(char *res) {
     return TRUE;
 }
 
-/* move howmanylines lines starting at from to to */
-static void tcapscroll_reg(int from, int to, int howmanylines) {
-    int i;
-    if (to == from) return;
-    if (to < from) {
-        tcapscrollregion(to, from + howmanylines - 1);
-        tcapmove(from + howmanylines - 1, 0);
-        for (i = from - to; i > 0; i--) putp(SF);
-    }
-    else {  /* from < to */
-        tcapscrollregion(from, to + howmanylines - 1);
-        tcapmove(from, 0);
-        for (i = to - from; i > 0; i--) putp(SR);
-    }
-    tcapscrollregion(0, term.t_mbline);
-}
-
-/* move howmanylines lines starting at from to to */
-static void tcapscroll_delins(int from, int to, int howmanylines) {
-    int i;
-    if (to == from) return;
-    if (to < from) {
-        tcapmove(to, 0);
-        for (i = from - to; i > 0; i--) putp(DL);
-        tcapmove(to + howmanylines, 0);
-        for (i = from - to; i > 0; i--) putp(AL);
-    }
-    else {
-        tcapmove(from + howmanylines, 0);
-        for (i = to - from; i > 0; i--) putp(DL);
-        tcapmove(from, 0);
-        for (i = to - from; i > 0; i--) putp(AL);
-    }
-}
-
-/* cs is set up just like cm, so we use tgoto... */
-static void tcapscrollregion(int top, int bot) {
-    ttputc(*PC);
-    putp(tgoto(_CS, bot, top));
-}
-
 #if COLOR
 /* No colors here, ignore this. */
 static void tcapfcol(int color) {
@@ -322,6 +242,42 @@ static void tcapbcol(int color) {
 }
 #endif
 
+#define BEL     0x07
 static void tcapbeep(void) {
         ttputc(BEL);
 }
+
+/* Declare this now that we've decalred all of the functions. */
+
+struct terminal term = {
+/* Functions */
+    tcapopen,
+    tcapclose,
+    tcapkopen,
+    tcapkclose,
+    ttgetc,
+    ttputc,
+    ttflush,
+    tcapmove,
+    tcapeeol,
+    tcapeeop,
+    tcapbeep,
+    tcaprev,
+    tcapcres,
+#if COLOR
+    tcapfcol,
+    tcapbcol,
+#endif
+    NULL,               /* Set dynamically at open time */
+/* "Constants" (== variables that are set)
+ * The next eight values are set dynamically at open/resize time.
+ */
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
