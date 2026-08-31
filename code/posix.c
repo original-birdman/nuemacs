@@ -159,13 +159,13 @@ static struct pollfd ue_wait = { STDIN_FILENO, POLLIN, 0 };
 
 /* The valid count for this buffer, pending_rch, is a global.
  * We set the size to 64, but only tell read about 32 of them. so we
- * can have space to push thinsg back.
+ * can have space to push things back.
  */
 #define BSIZE 64
 #define BSIZE4READ 32
 static char ibuffer[BSIZE];
 
-int ttgetc(void) {
+unicode_t ttgetc(void) {
 
     unicode_t c;
     int count, bytes, expected;
@@ -230,24 +230,10 @@ done:
     return c;
 }
 
-/* typahead:    Check to see if any characters are already in the
- *                keyboard buffer
+/* Assumes there is space....
+ * Since ttgetc only tells read() about half of the buffer.
  */
-
-int typahead(void) {
-    int x;      /* Total of known-waiting chars */
-
-    x = (pending_rch > 0);
-#ifdef FIONREAD
-    if (x == 0)
-        if (ioctl(0, FIONREAD, &x) < 0) x = 0;
-#endif
-    return x;
-}
-
-/* Assumes there is space.... */
-
-void pushback(unicode_t c) {
+void ttungetc(unicode_t c) {
     char temp[8];
     int blen = unicode_to_utf8(c, temp);    /* How many bytes to add? */
     int mi = blen;
@@ -257,4 +243,18 @@ void pushback(unicode_t c) {
     }
     while(blen--) ibuffer[blen] = temp[blen];
     return;
+}
+
+/* typahead:    Check to see if any characters are already in the
+ *                keyboard buffer
+ */
+int typahead(void) {
+    int x;      /* Total of known-waiting chars */
+
+    x = (pending_rch > 0);
+#ifdef FIONREAD
+    if (x == 0)
+        if (ioctl(0, FIONREAD, &x) < 0) x = 0;
+#endif
+    return x;
 }

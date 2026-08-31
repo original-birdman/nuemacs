@@ -970,7 +970,7 @@ give_result:
     if (cmdb.nochar_seen) {
 /* Push back the unicode chars in reverse order. */
         while(cmdb.nuc--) {
-            pushback(cmdb.c[cmdb.nuc]);
+            TTungetc(cmdb.c[cmdb.nuc]);
             if (kbdmode == RECORD) kbdptr--;    /* Forget this one */
         }
         c = UEM_NOCHAR;

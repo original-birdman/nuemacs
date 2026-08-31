@@ -313,7 +313,7 @@ extern int ttputc(int c);
 extern void ttflush(void);
 extern int ttgetc(void);
 extern int typahead(void);
-extern void pushback(unicode_t);
+extern void ttungetc(unicode_t);
 #endif
 
 /* random.c */

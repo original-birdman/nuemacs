@@ -425,7 +425,8 @@ struct terminal {
     void (*t_close)(void);      /* Close terminal at end.        */
     void (*t_kopen)(void);      /* Open keyboard                 */
     void (*t_kclose)(void);     /* close keyboard                */
-    int (*t_getchar)(void);     /* Get character from keyboard.  */
+    unicode_t (*t_getchar)(void);   /* Get character from keyboard.  */
+    void (*t_ungetchar)(unicode_t); /* Put character back to buffer  */
     int (*t_putchar)(int);      /* Put character to display.     */
     void (*t_flush) (void);     /* Flush output buffers.         */
     void (*t_move)(int, int);   /* Move the cursor, origin 0.    */
@@ -461,6 +462,7 @@ struct terminal {
 #define TTkopen     (*term.t_kopen)
 #define TTkclose    (*term.t_kclose)
 #define TTgetc      (*term.t_getchar)
+#define TTungetc    (*term.t_ungetchar)
 #define TTputc      (*term.t_putchar)
 #define TTflush     (*term.t_flush)
 #define TTmove      (*term.t_move)

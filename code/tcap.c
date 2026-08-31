@@ -256,6 +256,7 @@ struct terminal term = {
     tcapkopen,
     tcapkclose,
     ttgetc,
+    ttungetc,
     ttputc,
     ttflush,
     tcapmove,
