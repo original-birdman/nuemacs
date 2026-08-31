@@ -147,8 +147,8 @@ extern struct name_bind names[];/* name to function table */
 extern int gmode;               /* global editor mode           */
 extern int force_mode_on;       /* modes forced to be on        */
 extern int force_mode_off;      /* modes forced to be off       */
-extern int gfcolor;             /* global forgrnd color (white) */
-extern int gbcolor;             /* global backgrnd color (black) */
+extern color_info gfcolor;      /* global forgrnd color (white) */
+extern color_info gbcolor;      /* global backgrnd color (black) */
 extern int gasave;              /* global ASAVE size            */
 extern int gacount;             /* count until next ASAVE       */
 extern int sgarbf;              /* State of screen unknown      */

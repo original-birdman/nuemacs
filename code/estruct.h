@@ -226,6 +226,25 @@ enum isearch_t {
 */
 #define DIFCASE         0x20
 
+/* How to define a colour
+ * BASIC_COLOR is the original 8 colours
+ * VGA_COLOR is a 256 color palette
+ * FULL_COLOR is a full rgb setting (0..255 for each)
+ */
+#define BASIC_COLOR 1
+#define VGA_COLOR   2
+#define FULL_COLOR  3
+
+struct color_info {
+    unsigned int active :1;
+    unsigned int mode :2;
+    unsigned int unused :5;
+    unsigned int red :8;
+    unsigned int green :8;
+    unsigned int blue :8;
+};
+typedef struct color_info color_info;
+
 /* Some data is kept on a per-window view when a file is displayed in a
  * window, and this is copied back to the file's buffer structure when
  * the window is closed.
@@ -258,8 +277,8 @@ struct window {
     int w_force;            /* If NZ, forcing row.          */
     int w_flag;             /* Flags.                       */
 #if COLOR
-    int w_fcolor;           /* current forground color      */
-    int w_bcolor;           /* current background color     */
+    color_info w_fcolor;    /* current forground color      */
+    color_info w_bcolor;    /* current background color     */
 #endif
 };
 
@@ -434,8 +453,8 @@ struct terminal {
     void (*t_rev)(int);         /* set reverse video state       */
     int (*t_rez)(char *);       /* change screen resolution      */
 #if COLOR
-    void (*t_setfor) (int);     /* set foreground color          */
-    void (*t_setback) (int);    /* set background color          */
+    void (*t_setfor) (color_info);  /* set foreground color          */
+    void (*t_setback) (color_info); /* set background color          */
 #endif
     void (*t_scroll)(int, int,int); /* scroll a region of the screen */
     int t_mrow;                 /* max rows (allocated)          */

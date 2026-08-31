@@ -43,12 +43,12 @@ static int vtrow = 0;                  /* Row location of SW cursor */
 static int vtcol = 0;                  /* Column location of SW cursor */
 
 struct video {
-    int v_flag;             /* Flags */
+    int v_flag;                 /* Flags */
 #if     COLOR
-    int v_fcolor;           /* current forground color      */
-    int v_bcolor;           /* current background color     */
-    int v_rfcolor;          /* requested forground color    */
-    int v_rbcolor;          /* requested background color   */
+    color_info v_fcolor;        /* current forground color      */
+    color_info v_bcolor;        /* current background color     */
+    color_info v_rfcolor;       /* requested forground color    */
+    color_info v_rbcolor;       /* requested background color   */
 #endif
     struct grapheme v_text[0];  /* Screen data - dynamic    */
 };
@@ -897,8 +897,8 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
     rev = (vp1->v_flag & VFREV) == VFREV;
     if ((rev != req)
 #if COLOR
-          || (vp1->v_fcolor != vp1->v_rfcolor)
-          || (vp1->v_bcolor != vp1->v_rbcolor)
+          || memcmp(&(vp1->v_fcolor), &(vp1->v_rfcolor), sizeof(color_info))
+          || memcmp(&(vp1->v_bcolor), &(vp1->v_rbcolor), sizeof(color_info))
 #endif
           ) {
         movecursor(row, 0);     /* Go to start of line. */

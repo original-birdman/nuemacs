@@ -233,11 +233,11 @@ static int tcapcres(char *res) {
 
 #if COLOR
 /* No colors here, ignore this. */
-static void tcapfcol(int color) {
+static void tcapfcol(color_info color) {
     UNUSED(color);
 }
 /* No colors here, ignore this. */
-static void tcapbcol(int color) {
+static void tcapbcol(color_info color) {
     UNUSED(color);
 }
 #endif

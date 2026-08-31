@@ -895,8 +895,10 @@ int killtext(int f, int n) {
 static int adjustmode(int kind, int global) {
     int i;          /* loop index */
     int status;     /* error return on input */
+#ifdef OLD_COLOR_CODE
 #if COLOR
     int uflag;      /* was modename uppercase?      */
+#endif
 #endif
     char prompt[50];    /* string to prompt user with */
     db_bufdef(cbuf);    /* buffer to recieve mode name into */
@@ -910,6 +912,7 @@ static int adjustmode(int kind, int global) {
     status = mlreply(prompt, &cbuf, CMPLT_NONE);
     if (status != TRUE) goto exit;
 
+#ifdef OLD_COLOR_CODE
 /* Check for 1st char being uppercase */
 #if COLOR
     uflag = (db_charat(cbuf, 0) >= 'A' && db_charat(cbuf, 0) <= 'Z');
@@ -934,6 +937,7 @@ static int adjustmode(int kind, int global) {
             goto exit;
         }
     }
+#endif
 
 /* Test it against the modes we know */
 

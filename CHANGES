@@ -814,3 +814,14 @@ estruct.h
 
 etc/uemacs.rc
     Delete some user vars after usage.
+
+display.c
+globals.c
+random.c
+tcap.c
+edef.h
+estruct.h
+    Define a color_info type for colours. [estruct.h]
+    Change all int colour usage to use color_info. [display.c,
+    globals.c, tcap.c, edef.h]
+    Comment out colour settinsg in adjustmode() [random.c]
