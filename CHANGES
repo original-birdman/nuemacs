@@ -811,3 +811,6 @@ estruct.h
 display.c
 estruct.h
     Remove REVSTA define and usage. It is always true (1).
+
+etc/uemacs.rc
+    Delete some user vars after usage.

@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.203 (requires GGR4.198+)
-;                       Last Update: 19 Aug 2026
+;                       Version - GGR4.204 (requires GGR4.198+)
+;                       Last Update: 31 Aug 2026
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -137,16 +137,15 @@ store-procedure spell-check not_mb one_pass
 !endm
 ;
 
+; left-and-right-justify text within a $fillcol width
+; Not one_pass as a numeric arg repeats for n paras.
+; We only prompt for .left and .right on pass1.
+;
 ; We remember these across calls...
 ;
 set %lindef 0
 set %rindef 0
 
-;
-; left-and-right-justify text within a $fillcol width
-; Not one_pass as a numeric arg repeats for n paras.
-; We only prompt for .left and .right on pass1.
-;
 store-procedure lr-justify not_mb   ; Left and right justify paragraph
   set .oldfill $fillcol
 ; Only ask for the margins on the first pass on multiple loops
@@ -319,6 +318,10 @@ store-procedure toggle-lmode one_pass   ; toggle local mode
     set %add-func add-mode
     set %del-func delete-mode
     run _mytoggle-mode
+    delete-var %test-mode
+    delete-var %type-mode
+    delete-var %add-func
+    delete-var %del-func
 !endm
 
 store-procedure toggle-gmode one_pass   ; toggle global mode
@@ -327,6 +330,10 @@ store-procedure toggle-gmode one_pass   ; toggle global mode
     set %add-func add-global-mode
     set %del-func delete-global-mode
     run _mytoggle-mode
+    delete-var %test-mode
+    delete-var %type-mode
+    delete-var %add-func
+    delete-var %del-func
 !endm
 ;
 ; delete spaces right until next non-space char
