@@ -807,3 +807,7 @@ estruct.h
     Set t_ungetchar to be ttungetc [posix.c]
     Define t_ungetchar as TTungetc [estruct.h]
     Change pushback() call to be TTungetc() [input.c]
+
+display.c
+estruct.h
+    Remove REVSTA define and usage. It is always true (1).

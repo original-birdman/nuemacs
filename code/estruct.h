@@ -49,8 +49,6 @@
 
 /*      Configuration options   */
 
-#define REVSTA  1  /* Status line appears in reverse video         */
-
 #define COLOR   1
 
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */

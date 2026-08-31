@@ -529,9 +529,7 @@ static void updgar(void) {
     int lrow = inmb? term.t_mbline: term.t_vscreen;
     for (i = 0; i <= lrow; ++i) {
         vscreen[i]->v_flag |= VFCHG;
-#if REVSTA
         vscreen[i]->v_flag &= ~VFREV;
-#endif
 #if COLOR
         vscreen[i]->v_fcolor = gfcolor;
         vscreen[i]->v_bcolor = gbcolor;
@@ -891,7 +889,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
 #endif
 
     req = (vp1->v_flag & VFREQ) == VFREQ;
-#if REVSTA | COLOR
+#if COLOR
 /* If we need to change the reverse video status of the
  * current line, we need to re-write the entire line.
  */
@@ -971,9 +969,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
     }
 
     movecursor(row, (int)(cp1 - &vp1->v_text[0]));  /* Go to start of line. */
-#if REVSTA
     TTrev(rev);
-#endif
 
     while (cp1 != cp5) {    /* Ordinary. */
         TTputgrapheme(cp1);
@@ -985,9 +981,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
         while (cp1 != cp3)
             clone_grapheme(cp2++, cp1++);
     }
-#if REVSTA
     TTrev(FALSE);
-#endif
     vp1->v_flag &= ~VFCHG;  /* Flag this line as updated */
     return;
 }
@@ -1293,13 +1287,10 @@ static void modeline(struct window *wp) {
     vtmove(n, 0);           /* Seek to right line. */
     if (wp == curwp)        /* mark the current buffer */
         lchar = '=';
-    else
-#if REVSTA
-        if (revexist)
-            lchar = ' ';
-        else
-#endif
-        lchar = '-';
+    else {
+        if (revexist)   lchar = ' ';
+        else            lchar = '-';
+    }
 
 /* For the minibuffer, wp->w_bufp is the minibuffer.
  * No point in showing its changed state, etc., but there is
