@@ -657,7 +657,7 @@ int mlyesno(const char *prompt) {
     int c;              /* input character - tgetc() returns unicode */
     int res = -1;       /* NOT ABORT, TRUE or FALSE */
     while(res == -1) {
-        mlwrite("%s%s", prompt, " " MLbkt("y/n") "? ");
+        mlprompt("%s%s", prompt, " " MLbkt("y/n") "? ");
 
         c = get1key();  /* get the response */
         switch(c) {

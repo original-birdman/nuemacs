@@ -825,3 +825,15 @@ estruct.h
     Change all int colour usage to use color_info. [display.c,
     globals.c, tcap.c, edef.h]
     Comment out colour settinsg in adjustmode() [random.c]
+
+display.c
+input.c
+main.c
+search.c
+efunc.h
+    Change mlrewrite() and mlwrite_ap() to save the cursor position on
+    entry and restore it on exit if ml_prompt is not set [display.c]
+    Added mlprompt() and mlprompt_one() as calls to remain in the
+    message line after display. [display.c, efunc.h]
+    Change relevant calls to use mlprompt()/mlprompt_one() [input.c,
+    main.c, search.c]

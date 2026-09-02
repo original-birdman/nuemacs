@@ -891,9 +891,9 @@ com_arg *multiplier_check(int c) {
 #endif
             }
             if ((ca.n == 0) && (mflag == -1))  /* lonely - */
-                mlwrite_one("Arg: -");
+                mlprompt_one("Arg: -");
             else
-                mlwrite("Arg: %d", ca.n * mflag);
+                mlprompt("Arg: %d", ca.n * mflag);
 
             ca.c = getcmd();    /* get the next key */
         }
@@ -908,7 +908,7 @@ com_arg *multiplier_check(int c) {
         ca.f = TRUE;
         ca.n = 4;           /* with argument of 4 */
         mflag = 0;          /* that can be discarded. */
-        mlwrite_one("Arg: 4");
+        mlprompt_one("Arg: 4");
         while (((ca.c = getcmd()) >= '0' && ca.c <= '9') ||
                  ca.c == reptc || ca.c == '-') {
             if (ca.c == reptc) {
@@ -953,7 +953,7 @@ com_arg *multiplier_check(int c) {
                 }
                 ca.n = 10 * ca.n + ca.c - '0';
             }
-            mlwrite("Arg: %d", (mflag >= 0) ? ca.n : (ca.n ? -ca.n : -1));
+            mlprompt("Arg: %d", (mflag >= 0) ? ca.n : (ca.n ? -ca.n : -1));
         }
 /* Make arguments preceded by a minus sign negative and change
  * the special argument "^U -" to an effective "^U -1".
@@ -2458,12 +2458,9 @@ loop:
     if (!typahead())  update(FALSE);
     if (display_readin_msg ||   /* First one gets removed by update() */
           mbuf_mess) {          /* Specific user message */
-        int scol = curcol;
-        int srow = currow;
         mlwrite_one(mbuf_mess? mbuf_mess: db_val(readin_mesg));
         display_readin_msg = 0;
         mbuf_mess = NULL;
-        movecursor(srow, scol); /* Send the cursor back to where it was */
         TTflush();
     }
     c = getcmd();

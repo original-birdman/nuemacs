@@ -196,6 +196,7 @@ static int TTput_1uc(unicode_t uc) {
 static int *ml_text = NULL;     /* Save the message line contents here */
 static int ml_text_alloc = 0;   /* Current allocated size */
 static int ml_rewriting = 0;    /* 1 when re-writing the buffer */
+static int ml_prompt = 0;       /* 1 for a query (stay in message line) */
 
 static int mlout_uc(unicode_t uc) {
     if (!ml_rewriting) {        /* No recording on a rewrite */
@@ -1549,10 +1550,14 @@ int newscreensize(int h, int w, int no_update_needed) {
 }
 
 void mlrewrite(void) {
+    if (ml_text_offset == 0) return;    /* Do NOTHING if there is no text */
+    int scol = curcol;
+    int srow = currow;
     ml_rewriting = 1;
     mlerase();
     for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
     ml_rewriting = 0;
+    if (!ml_prompt) movecursor(srow, scol); /* Send the cursor back? */
     TTflush();
 }
 
@@ -1752,7 +1757,10 @@ static void mlwrite_ap(const char *fmt, npva ap) {
  * Trying to remove this may (will?) just introduce the possibility of
  * something worse.
  */
+    int scol=0, srow=0;
     if (mlw_level == 1) {
+        scol = curcol;
+        srow = currow;
         mlerase();  /* Leaves us at col0 of messageline */
         ml_text_offset = 0; /* In case mlerase() found handling_sigwinch set */
     }
@@ -1806,10 +1814,24 @@ static void mlwrite_ap(const char *fmt, npva ap) {
         }
     }
     mlw_level--;    /* Remember we've left */
-    if (mlw_level == 0) TTflush();
+    if (mlw_level == 0) {
+        if (!ml_prompt) movecursor(srow, scol); /* Send the cursor back? */
+        TTflush();
+    }
 }
 
 void mlwrite(const char *fmt, ...) {
+    ml_prompt = 0;
+    npva ap;
+    va_start(ap.ap, fmt);
+    mlwrite_ap(fmt, ap);
+    va_end(ap.ap);
+    return;
+}
+
+/* This one leaves the cursor in the message line */
+void mlprompt(const char *fmt, ...) {
+    ml_prompt = 1;
     npva ap;
     va_start(ap.ap, fmt);
     mlwrite_ap(fmt, ap);
@@ -1824,6 +1846,7 @@ void mlwrite(const char *fmt, ...) {
  * So each call is responsible for its own wait.
  */
 void mlforce(int wait, const char *fmt, ...) {
+    ml_prompt = 0;
     int oldcmd;     /* original command display flag */
 
     npva ap;
@@ -1849,10 +1872,19 @@ void mlforce(int wait, const char *fmt, ...) {
 static npva nullva = { NULL };  /* Initialized to type of first member */
 
 void mlwrite_one(const char *fmt) {
+    ml_prompt = 0;
     mlwrite_ap(fmt, nullva);
     return;
 }
+/* This one leaves the cursor in the message line */
+void mlprompt_one(const char *fmt, ...) {
+    ml_prompt = 1;
+    mlwrite_ap(fmt, nullva);
+    return;
+}
+
 void mlforce_one(int wait, const char *fmt) {
+    ml_prompt = 0;
     int oldcmd;             /* original command display flag */
     oldcmd = discmd;        /* save the discmd value */
     discmd = TRUE;          /* and turn display on */

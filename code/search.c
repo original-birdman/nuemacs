@@ -3774,7 +3774,7 @@ pprompt:
             db_bufdef(tp);
             db_copy(tp, expandp(match_p));
             dbp_dcl(ep) = expandp(repl_p);
-            mlwrite("Replace '%B' with '%B'? ", &tp, ep);
+            mlprompt("Replace '%B' with '%B'? ", &tp, ep);
             db_free(tp);
 
 qprompt:
