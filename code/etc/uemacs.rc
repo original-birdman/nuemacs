@@ -1,8 +1,8 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.204 (requires GGR4.198+)
-;                       Last Update: 31 Aug 2026
+;                       Version - GGR4.204 (requires GGR4.204)
+;                       Last Update: 09 Sep 2026
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -128,7 +128,7 @@ store-procedure spell-check not_mb one_pass
 ; Then go back to our original line number
         2 insert-file .tempname
         .savecurline goto-line
-        write-message "~n[Tidying up temporary files..]"
+        write-message "[Tidying up temporary files..]"
     !endif
     set $discmd FALSE
     shell-command &cat "rm -f " .tempname

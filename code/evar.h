@@ -81,6 +81,7 @@ struct evlist evl[] = {
  { "crypt_mode", EVCRYPT },     /* Crypt mode to use (default NONE) */
  { "brkt_ms", EVBRKTMS },       /* Pause time (ms) for bracket matching */
  { "path_pfx_map", EVPPFXMAP }, /* Prefices to ignore in pathname */
+ { "term", EVTERM },            /* Value of TERM (read only) */
 };
 
 /* The tags for user functions - used in struct evlist */

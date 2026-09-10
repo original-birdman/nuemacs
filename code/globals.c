@@ -19,8 +19,9 @@ char modecode[] = "WCPEVOMYAQDR";   /* letters to represent modes   */
 int gmode = 0;                  /* global editor mode           */
 int force_mode_on = 0;          /* modes forced on              */
 int force_mode_off = 0;         /* modes forced off             */
-color_info gfcolor = {1, BASIC_COLOR, 0, 0, 0, 7 }; /* global forgrnd color (white) */
-color_info gbcolor = {1, BASIC_COLOR, 0, 0, 0, 0 }; /* global backgrnd color (black) */
+db_dcl(glfcolor);               /* global foreground            */
+db_dcl(hifcolor);               /* highlight foreground         */
+db_dcl(hibcolor);               /* highlight background         */
 int gasave = 256;               /* global ASAVE size            */
 int gacount = 256;              /* count until next ASAVE       */
 int sgarbf = TRUE;              /* TRUE if screen is garbage    */

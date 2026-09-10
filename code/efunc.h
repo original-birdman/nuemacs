@@ -345,6 +345,7 @@ extern int delmode(int, int);
 extern int setgmode(int, int);
 extern int delgmode(int, int);
 extern int clrmes(int, int);
+extern int setcolor(int, int);
 extern int writemsg(int, int);
 extern int itokens(int, int);
 extern int istring(int, int);

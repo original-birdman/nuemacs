@@ -1065,11 +1065,6 @@ int getstring(const char *prompt, db *buf, enum cmplt_type ctype) {
     if (!mb_winp) {
         mb_winp = (struct window *)Xmalloc(sizeof(struct window));
         mb_winp->w_wndp = NULL;     /* Initialize window */
-#if COLOR
-/* initialize colors to global defaults */
-        mb_winp->w_fcolor = gfcolor;
-        mb_winp->w_bcolor = gbcolor;
-#endif
         mb_winp->w_toprow = term.t_mbline;
         mb_winp->w_ntrows = 1;
         mb_winp->w.fcol = 0;

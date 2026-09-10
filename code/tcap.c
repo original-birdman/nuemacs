@@ -94,86 +94,89 @@ static void tcapscroll_delins(int from, int to, int howmanylines) {
     }
 }
 
+/* The TERM vqalue, and associated termcap entries, are not going to
+ * change, so only get them once.
+ */
+char *termval = NULL;
 static void tcapopen(void) {
     char *t;
     char tcbuf[1024];
-    char *tv_stype;
     char err_str[72];
     int int_col, int_row;
 
-    if ((tv_stype = getenv("TERM")) == NULL) {
-        puts("Environment variable TERM not defined!");
-        exit(1);
-    }
+    if (!termval) {     /* We only do the termcp setup once */
+        if ((termval = getenv("TERM")) == NULL) {
+            puts("Environment variable TERM not defined!");
+            exit(1);
+        }
 
-    if ((tgetent(tcbuf, tv_stype)) != 1) {
+        if ((tgetent(tcbuf, termval)) != 1) {
 /* Handle overlong TERM settings. Only print the first 40 chars */
-        const char *xtra = "";
-        if (strlen(tv_stype) > 40) xtra = "...";
-        sprintf(err_str, "Unknown terminal type: %.40s%s!", tv_stype, xtra);
-        puts(err_str);
-        exit(1);
-    }
+            const char *xtra = "";
+            if (strlen(termval) > 40) xtra = "...";
+            sprintf(err_str, "Unknown terminal type: %.40s%s!", termval, xtra);
+            puts(err_str);
+            exit(1);
+        }
 
 /* Get screen size from system, or else from termcap.  */
-    getscreensize(&int_col, &int_row, TRUE);
-    term.t_ncol = int_col;
-    SET_t_nrow(int_row);
 
-    if ((term.t_nrow <= 0) && (term.t_nrow = (short)tgetnum("li")) == -1) {
-        puts("termcap entry incomplete (lines)");
-        exit(1);
-    }
+        getscreensize(&int_col, &int_row, TRUE);
+        if ((int_col <= 0) && (int_col = (short)tgetnum("co")) == -1) {
+            puts("Termcap entry incomplete (columns)");
+            exit(1);
+        }
+        if ((int_row <= 0) && (int_row = (short)tgetnum("li")) == -1) {
+            puts("termcap entry incomplete (lines)");
+            exit(1);
+        }
+        term.t_ncol = int_col;
+        SET_t_nrow(int_row);
+        set_scrarray_size(term.t_nrow, term.t_ncol);
 
-    if ((term.t_ncol <= 0) && (term.t_ncol = (short)tgetnum("co")) == -1) {
-        puts("Termcap entry incomplete (columns)");
-        exit(1);
-    }
+        t = tgetstr("pc", NULL);
+        if (t) PC = t;
+        else   PC = "";             /* So *PC is NUL */
 
-    set_scrarray_size(term.t_nrow, term.t_ncol);
+        CL = tgetstr("cl", NULL);
+        CM = tgetstr("cm", NULL);
+        CE = tgetstr("ce", NULL);
+        UP = tgetstr("up", NULL);
+        SE = tgetstr("se", NULL);
+        SO = tgetstr("so", NULL);
+        revexist = (SO != NULL);
+        if (tgetnum("sg") > 0) {    /* Can reverse be used? P.K. */
+            revexist = FALSE;
+            SE = NULL;
+            SO = NULL;
+        }
+        TI = tgetstr("ti", NULL);     /* terminal init and exit */
+        TE = tgetstr("te", NULL);
 
-    t = tgetstr("pc", NULL);
-    if (t) PC = t;
-    else   PC = "";             /* So *PC is NUL */
-
-    CL = tgetstr("cl", NULL);
-    CM = tgetstr("cm", NULL);
-    CE = tgetstr("ce", NULL);
-    UP = tgetstr("up", NULL);
-    SE = tgetstr("se", NULL);
-    SO = tgetstr("so", NULL);
-    revexist = (SO != NULL);
-    if (tgetnum("sg") > 0) {    /* Can reverse be used? P.K. */
-        revexist = FALSE;
-        SE = NULL;
-        SO = NULL;
-    }
-    TI = tgetstr("ti", NULL);     /* terminal init and exit */
-    TE = tgetstr("te", NULL);
-
-    if (CL == NULL || CM == NULL || UP == NULL) {
-        puts("Incomplete termcap entry\n");
-        exit(1);
-    }
+        if (CL == NULL || CM == NULL || UP == NULL) {
+            puts("Incomplete termcap entry\n");
+            exit(1);
+        }
 
 /* will we be able to use clear to EOL? */
-    eolexist = (CE != NULL);
-    _CS = tgetstr("cs", NULL);
-    SF = tgetstr("sf", NULL);
-    SR = tgetstr("sr", NULL);
-    DL = tgetstr("dl", NULL);
-    AL = tgetstr("al", NULL);
+        eolexist = (CE != NULL);
+        _CS = tgetstr("cs", NULL);
+        SF = tgetstr("sf", NULL);
+        SR = tgetstr("sr", NULL);
+        DL = tgetstr("dl", NULL);
+        AL = tgetstr("al", NULL);
 
-    if (_CS && SR) {
-        if (SF == NULL) /* assume '\n' scrolls forward */
-            SF = "\n";
-        term.t_scroll = tcapscroll_reg;
-    }
-    else if (DL && AL) {
-        term.t_scroll = tcapscroll_delins;
-    }
-    else {
-        term.t_scroll = NULL;
+        if (_CS && SR) {
+            if (SF == NULL) /* assume '\n' scrolls forward */
+                SF = "\n";
+            term.t_scroll = tcapscroll_reg;
+        }
+        else if (DL && AL) {
+            term.t_scroll = tcapscroll_delins;
+        }
+        else {
+            term.t_scroll = NULL;
+        }
     }
     ttopen();
 }
@@ -214,15 +217,42 @@ static void tcapeeop(void) {
     putp(CL);
 }
 
+#define ESC "\x1b"
+
 /* Change reverse video status
  *
  * @state: FALSE = normal video, TRUE = reverse video.
  */
 static void tcaprev(int state) {
-    if (state) {
-        if (SO != NULL) putp(SO);
+
+    if ((db_len(hifcolor) == 0) && (db_len(hibcolor) == 0)) {
+        if (state) {
+            if (SO != NULL) putp(SO);
+        }
+        else if (SE != NULL) putp(SE);
     }
-    else if (SE != NULL) putp(SE);
+    else {
+
+/* Code to set the highlight colour.
+ * Sets both in the same escape sequence.
+ */
+        char obuf[64];
+        if (state) {
+            const char *sep;
+            if ((db_len(hifcolor) > 0) && (db_len(hibcolor) > 0))
+                sep = ";";
+            else
+                sep = "";
+            snprintf(obuf, 64, ESC "[%s%s%sm",
+                 db_val(hifcolor), sep, db_val(hibcolor));
+        }
+        else {
+            const char *fg = (db_len(glfcolor) > 0)? db_val(glfcolor): "39";
+            snprintf(obuf, 64, ESC "[%s;49m", fg);
+
+        }
+        putp(obuf);
+    }
 }
 
 /* Change screen resolution. */
@@ -231,16 +261,25 @@ static int tcapcres(char *res) {
     return TRUE;
 }
 
-#if COLOR
-/* No colors here, ignore this. */
-static void tcapfcol(color_info color) {
-    UNUSED(color);
+/* Code to set the foreground colour
+ * Should only be called when the colour is changed, or the screen state
+ * is unknown.
+ * If called with an empty colour string it unsets colours.
+ */
+static void tcapfgrnd(int set) {
+    char obuf[64];
+    const char *esq;
+/* Esc[39;49m can reset colors for linux/xterm*, but Esc[0m works
+ * on all tested systems.
+ */
+    if (!set || (db_len(glfcolor) == 0)) esq = "0";
+    else esq = db_val(glfcolor);
+    snprintf(obuf, 64, ESC "[%sm", esq);
+    putp(obuf);
+    if (set) {  /* Don't do this if we're not actually setting. */
+        sgarbf = TRUE;
+    }
 }
-/* No colors here, ignore this. */
-static void tcapbcol(color_info color) {
-    UNUSED(color);
-}
-#endif
 
 #define BEL     0x07
 static void tcapbeep(void) {
@@ -265,10 +304,7 @@ struct terminal term = {
     tcapbeep,
     tcaprev,
     tcapcres,
-#if COLOR
-    tcapfcol,
-    tcapbcol,
-#endif
+    tcapfgrnd,
     NULL,               /* Set dynamically at open time */
 /* "Constants" (== variables that are set)
  * The next eight values are set dynamically at open/resize time.

@@ -1365,6 +1365,7 @@ static void gtenv(dbp_dcl(res), const char *vname) {
         }
         return;
     }
+    case EVTERM:            setval(termval);
     default:    setval(errorm); /* Shouldn't happen */
     }
     dbp_set(res, tmpres);
@@ -1673,6 +1674,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         case EVSYSTYPE:
         case EVFORCEMODEON:
         case EVFORCEMODEOFF:
+        case EVTERM:
             status = FALSE;
             break;
 
@@ -1938,9 +1940,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
 /* The format of this variable is:
  *  found_prefix1~0replace_prefix1~0found_prefix2~0replace_prefix2...
  *  where ~0 is a NUL character.
- * Except that doesn't (yet) work, so use & in place if ~0 and
- * convert to NULs here.
- * We store the orifinal string and work with a copy.
+ * We store the original string and work with a copy.
  */
             path_pfx_map = Xrealloc((char *)path_pfx_map,
                  (size_t)(dbp_len(val)+1));

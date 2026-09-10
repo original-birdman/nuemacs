@@ -49,8 +49,6 @@
 
 /*      Configuration options   */
 
-#define COLOR   1
-
 #define XONXOFF 0  /* don't disable XON-XOFF flow control P.K.     */
 
 /* GGR - whether we want PATH to be searched before table lookup */
@@ -226,25 +224,6 @@ enum isearch_t {
 */
 #define DIFCASE         0x20
 
-/* How to define a colour
- * BASIC_COLOR is the original 8 colours
- * VGA_COLOR is a 256 color palette
- * FULL_COLOR is a full rgb setting (0..255 for each)
- */
-#define BASIC_COLOR 1
-#define VGA_COLOR   2
-#define FULL_COLOR  3
-
-struct color_info {
-    unsigned int active :1;
-    unsigned int mode :2;
-    unsigned int unused :5;
-    unsigned int red :8;
-    unsigned int green :8;
-    unsigned int blue :8;
-};
-typedef struct color_info color_info;
-
 /* Some data is kept on a per-window view when a file is displayed in a
  * window, and this is copied back to the file's buffer structure when
  * the window is closed.
@@ -276,10 +255,6 @@ struct window {
     int w_ntrows;           /* # of rows of text in window  */
     int w_force;            /* If NZ, forcing row.          */
     int w_flag;             /* Flags.                       */
-#if COLOR
-    color_info w_fcolor;    /* current forground color      */
-    color_info w_bcolor;    /* current background color     */
-#endif
 };
 
 #define WFFORCE 0x01            /* Window needs forced reframe  */
@@ -452,10 +427,7 @@ struct terminal {
     void (*t_beep)(void);       /* Beep.                         */
     void (*t_rev)(int);         /* set reverse video state       */
     int (*t_rez)(char *);       /* change screen resolution      */
-#if COLOR
-    void (*t_setfor) (color_info);  /* set foreground color          */
-    void (*t_setback) (color_info); /* set background color          */
-#endif
+    void (*t_setfgrnd) (int);   /* set foreground color */
     void (*t_scroll)(int, int,int); /* scroll a region of the screen */
     int t_mrow;                 /* max rows (allocated)          */
     int t_nrow;                 /* current number of rows used   */
@@ -488,10 +460,7 @@ struct terminal {
 #define TTbeep      (*term.t_beep)
 #define TTrev       (*term.t_rev)
 #define TTrez       (*term.t_rez)
-#if COLOR
-#define TTforg      (*term.t_setfor)
-#define TTbacg      (*term.t_setback)
-#endif
+#define TTforg      (*term.t_setfgrnd)
 
 /* Structures for the table of initial key bindings.
  * NOTE: pbp buffer names are allocated in buffertokey()
@@ -608,7 +577,7 @@ enum ev_val {
     EVSRCHCANHUNT,  EVULPCOUNT, EVULPTOTAL, EVULPFORCED,
     EVSDOPTS,   EVGGROPTS,      EVSYSTYPE,  EVPROCTYPE,
     EVFORCEMODEON,  EVFORCEMODEOFF,         EVPTTMODE,  EVVISMAC,
-    EVFILOCK,   EVCRYPT,    EVBRKTMS,   EVPPFXMAP,
+    EVFILOCK,   EVCRYPT,    EVBRKTMS,   EVPPFXMAP,      EVTERM,
 };
 
 struct evlist {

@@ -784,14 +784,14 @@ efunc.h
     [edef.h, globals.c, input.c]
     Rename select_sstr() to preload_sstr(). [input.c, efunc.h]
     Remove update from struct prmpt_buf_st and add srch_lvl and repl_lvl
-    instead, as they may change separately. Also, make thme reflect the
+    instead, as they may change separately. Also, make them reflect the
     minibuffer level at which they were changed.  [edef.h, globals.c,
     eval.c, input.c, search.c]
 
 tcap.c
     Tidy up the code.
     o Remove the unused USE_BROKEN_OPTIMIZATION and termdef defines.
-    o Define the struct terminal at the end, then reorder functiosn so
+    o Define the struct terminal at the end, then reorder functions so
       that no pre-declarations are needed.
     o Move the putp(TE) from tcapclose() to tcapkclose()
     o Remove MARGIN and SCRSIZ.
@@ -824,7 +824,7 @@ estruct.h
     Define a color_info type for colours. [estruct.h]
     Change all int colour usage to use color_info. [display.c,
     globals.c, tcap.c, edef.h]
-    Comment out colour settinsg in adjustmode() [random.c]
+    Comment out colour settings in adjustmode() [random.c]
 
 display.c
 input.c
@@ -837,3 +837,55 @@ efunc.h
     message line after display. [display.c, efunc.h]
     Change relevant calls to use mlprompt()/mlprompt_one() [input.c,
     main.c, search.c]
+
+-----
+Changes to allow colour settings to work (i.e. actually send the
+relevant escape sequences).
+
+    Removed all code and declarations covered by #if COLOR [display.c,
+    input.c, main.c, random.c, tcap.c, window.c, estruct.h]
+
+    Remove VFCOL (as colour and reverse are now combined in highlight)
+    [display.c]
+
+    Added $term (read-only) and set it from the TERM environment
+    variable. [eval.c, tcap.c, edef.h, estruct.h, evar.h]
+
+    Remove the color_info code and just save colours as the (partial)
+    escape sequences to set them). [globals.c, main.c, edef.h,
+    estruct.h]
+
+    Unset any colour as we exit . [main.c]
+
+    Add a set-color command to set the foreground colour and the message
+    line fore/background colour. [names.c, random.c, efunc.h]
+
+    Remove colour name handling from the mode setting commands
+    [random.c]
+
+    Unset foreground colour when spawning commands and reset it on
+    return.
+    In run_one_liner() use standard Linux commands for the prompt
+    and only reopen the terminal after that
+    Check for screen size change in bktoshell. [spawn.c]
+
+    Only get TERM and collect the terminfo sequences once, not on every
+    tcapopen() call.
+    Change tcaprev() to use the new message line fore/background colours
+    if they are set. Revert to reverse video if they are not set.
+    Add tcapfgrnd() to send the ANSI escape sequence for any set
+    foreground colour. Add it to struct terminal as tcapfgrnd.
+    [tcap.c]
+
+    Remove a newline at the start of the message displayed in
+    spell-check. [etc/uemacs.rc]
+
+Some unrelated changes also made whilst doing this.
+
+    In mlwrite_ap(), don't return the cursor to its original position if
+    it started n the message line. [display.c]
+
+    Undo much of the change to readin() as the window pointer loop at
+    the end is needed at all out: exits. [file.c]
+
+-----

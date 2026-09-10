@@ -14,6 +14,7 @@
 #include "edef.h"
 #include "efunc.h"
 #include "line.h"
+#include "util.h"
 #include "charset.h"
 #include "utf8proc.h"
 
@@ -895,11 +896,7 @@ int killtext(int f, int n) {
 static int adjustmode(int kind, int global) {
     int i;          /* loop index */
     int status;     /* error return on input */
-#ifdef OLD_COLOR_CODE
-#if COLOR
-    int uflag;      /* was modename uppercase?      */
-#endif
-#endif
+
     char prompt[50];    /* string to prompt user with */
     db_bufdef(cbuf);    /* buffer to recieve mode name into */
 
@@ -911,33 +908,6 @@ static int adjustmode(int kind, int global) {
 
     status = mlreply(prompt, &cbuf, CMPLT_NONE);
     if (status != TRUE) goto exit;
-
-#ifdef OLD_COLOR_CODE
-/* Check for 1st char being uppercase */
-#if COLOR
-    uflag = (db_charat(cbuf, 0) >= 'A' && db_charat(cbuf, 0) <= 'Z');
-#endif
-
-/* Test it first against the colors we know */
-    for (i = 0; i < NCOLORS; i++) {
-        if (db_casecmp(cbuf, cname[i]) == 0) {
-/* Finding the match, we set the color */
-#if COLOR
-            if (uflag) {
-                if (global) gfcolor = i;
-                curwp->w_fcolor = i;
-            }
-            else {
-                if (global) gbcolor = i;
-                curwp->w_bcolor = i;
-            }
-            curwp->w_flag |= WFCOLR;
-#endif
-            status = TRUE;
-            goto exit;
-        }
-    }
-#endif
 
 /* Test it against the modes we know */
 
@@ -1017,6 +987,173 @@ int clrmes(int f, int n) {
     UNUSED(f); UNUSED(n);
     mlerase();
     return TRUE;
+}
+
+/* Change the editor colour
+ *  The colour spec format is:
+ *      fg=fgspec
+ *      ml=fgspec/bgspec
+ *
+ *  where = global or hilite
+ *  fg/bgspec = simple-color, nnn or #rrggbb
+ *      simple-color is one of Black Red, Green, Yellow, Blue, Magenta,
+ *               Cyan or White
+ *      nnn is a decimal number from 0 to 255 (or -ve to disable the
+ *          colour)
+ *      #rrggbb is a 24-but RGB colour
+ *  a blank spec leaves the current setting unchanged.
+ *  a -ve value unsets the setting
+ * fg/bg denote the foreground and background colour.
+ *
+ * See:
+ *  https://en.wikipedia.org/wiki/ANSI_escape_code
+ * for the colours in the nnn palette.
+ */
+
+/* Helper routine to convert a cspec into a colour index (where an rgb
+ * value is a 24-bit int).
+ */
+static int color_val(const char *cspec) {
+    int clr;
+    if (cspec[0] == '\0') return INT32_MAX;     /* Blank */
+    if (cspec[0] == '#') return (int)strtol(cspec+1, NULL, 16);
+    char *ep = NULL;
+    clr = (int)strtol(cspec, &ep, 10);  /* -ve arrives here */
+    if (*ep != '\0') {  /* Might be a named colour? */
+        int found = -1;
+        for (int i = 0; i < NCOLORS; i++) {
+            if (strcasecmp(cspec, cname[i]) == 0) {
+                found = i;
+                break;
+            }
+        }
+        if (found < 0) {
+            clr = INT32_MIN;        /* Error */
+        }
+        else {
+            int ucase = (cspec[0] >= 'A') && (cspec[0] <= 'Z');
+            if (ucase) clr = found + 8;
+            else       clr = found;
+        }
+    }
+    return clr;
+}
+/* Make the relevant partial escape sequence from a colour index */
+static int make_escape(dbp_dcl(escseq), int clr, const char *cspec, int fg)  {
+    int res = TRUE;
+    if (cspec[0] == '\0') return res;   /* Leave unchanged */
+    if (clr < 0) {
+        dbp_set(escseq, "");
+    }
+    else if (cspec[0] == '#') {   /* Convert to an escape sequence. */
+        int cb = (uint8_t)(clr %256);
+        clr >>= 8;
+        int cg = (uint8_t)(clr %256);
+        clr >>= 8;
+        int cr = (uint8_t)(clr %256);
+        dbp_sprintf(escseq, "%d;2;%u;%u;%u", (fg? 38: 48), cr, cg, cb);
+    }
+    else {
+        if (clr <= 7) dbp_sprintf(escseq, "%u", clr + (fg? 30: 40));
+        else if (clr <= 15) dbp_sprintf(escseq, "%u", clr + (fg? 82: 92));
+        else if (clr <= 255) dbp_sprintf(escseq, "%d;5;%u", (fg? 38: 48), clr);
+        else res = FALSE;
+    }
+    return res;
+}
+
+/* The set-color command */
+int setcolor(int f, int n) {
+    UNUSED(f); UNUSED(n);
+
+    db_bufdef(cbuf);    /* buffer to receive the colour spec */
+    const char *emess = NULL;   /* non-NULL at exit on parsing error */
+
+/* Prompt the user and get an answer */
+
+    int status = mlreply("Colour setting: ", &cbuf, CMPLT_NONE);
+    if (status != TRUE) goto exit;
+
+/* Parse the answer.
+ * sscanf() doesn't work with empty fields, so we plod through.
+ */
+    char *tp = strdupa(db_val(cbuf));  /* To preserve cbuf */
+    char **dbp = &tp;
+    char *loc = strsep(dbp, "=");
+
+/* Check which we have */
+
+    int where;
+    if (strcasecmp(loc, "fg") == 0) where = 0;
+    else if (strcasecmp(loc, "ml") == 0) where = 1;
+    else {
+        emess = "location";
+        goto exit;
+    }
+
+    char *fgcspec = strsep(dbp, "/");
+    if ((where == 0) && *dbp) {   /* Shouldn't be anything left for fg */
+        emess = "set of background";
+        goto exit;
+    }
+    char *bgcspec = *dbp;
+
+/* Check that bgspec is not NULL for ml (if it is the parsing failed) */
+
+    if ((where == 1) && !bgcspec) {
+        emess = "colours";
+        goto exit;
+    }
+
+/* Get the colour setting for the foreground */
+
+    int fg_clr = color_val(fgcspec);
+    if (fg_clr == INT32_MIN) {      /* Error */
+        emess = "foreground";
+        goto exit;
+    }
+
+/* Convert this to an escape sequence */
+    dbp_dcl(escbuf);
+    if (where == 0) escbuf = &glfcolor;
+    else            escbuf = &hifcolor;
+
+    if (((fg_clr == INT32_MAX) && (where == 0))     /* fg must have a value */
+        || !make_escape(escbuf, fg_clr, fgcspec, TRUE)) {
+        emess = "foreground";
+        goto exit;
+    }
+
+/* We now have all we need for the foreground colour */
+    if (where == 0) {
+        TTforg(TRUE);
+        goto exit;
+    }
+
+/* Get the colour setting for the background */
+
+    int bg_clr = color_val(bgcspec);
+    if (fg_clr == INT32_MIN) {      /* Error */
+        emess = "background";
+        goto exit;
+    }
+
+/* Convert this to an escape sequence for the highlight background.
+ */
+    if (!make_escape(&hibcolor, bg_clr, bgcspec, FALSE)) {
+        emess = "background";
+        goto exit;
+    }
+    sgarbf = TRUE;
+    update(TRUE);   /* Ensure all modelines get the new colour */
+
+exit:
+    db_free(cbuf);
+    if (emess) {
+        mlforce(1, "Invalid %s: %s", emess, db_val(cbuf));
+        status = FALSE;
+    }
+    return status;
 }
 
 /* This function writes a string on the message line

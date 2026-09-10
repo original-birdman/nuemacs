@@ -44,12 +44,6 @@ static int vtcol = 0;                  /* Column location of SW cursor */
 
 struct video {
     int v_flag;                 /* Flags */
-#if     COLOR
-    color_info v_fcolor;        /* current forground color      */
-    color_info v_bcolor;        /* current background color     */
-    color_info v_rfcolor;       /* requested forground color    */
-    color_info v_rbcolor;       /* requested background color   */
-#endif
     struct grapheme v_text[0];  /* Screen data - dynamic    */
 };
 
@@ -282,13 +276,6 @@ void vtinit(void) {
  */
     vp = new_vscreen[0];
     vp->v_flag = 0;
-#if COLOR
-/* GGR - use defined colors */
-    vp->v_fcolor = gfcolor;
-    vp->v_rfcolor = gfcolor;
-    vp->v_bcolor = gbcolor;
-    vp->v_rbcolor = gbcolor;
-#endif
     for (i = 0; i < term.t_mcol; i++) vp->v_text[i] = blank_gph;
     for (i = 1; i < term.t_mrow; i++) {
         memcpy(new_vscreen[i], vp, row_size);
@@ -342,11 +329,6 @@ void mlerase(void) {
     movecursor(term.t_mbline, 0);
     if (discmd == FALSE) return;
 
-#if COLOR
-/* GGR - use configured colors, not 7 and 0 */
-    TTforg(gfcolor);
-    TTbacg(gbcolor);
-#endif
     if (eolexist == TRUE) {
         TTeeol();   /* ttcol is already 0 from movecursor call */
     }
@@ -531,10 +513,7 @@ static void updgar(void) {
     for (i = 0; i <= lrow; ++i) {
         vscreen[i]->v_flag |= VFCHG;
         vscreen[i]->v_flag &= ~VFREV;
-#if COLOR
-        vscreen[i]->v_fcolor = gfcolor;
-        vscreen[i]->v_bcolor = gbcolor;
-#endif
+
 /* We only ever free the extended parts from the virtual screen info, not the
  * physical one.
  * This is a pscreen, no need to worry about freeing any ex field.
@@ -675,10 +654,6 @@ static void updone(struct window *wp) {
     taboff = wp->w.fcol;
     vtmove(sline, -taboff);
     show_line(lp);
-#if COLOR
-    vscreen[sline]->v_rfcolor = wp->w_fcolor;
-    vscreen[sline]->v_rbcolor = wp->w_bcolor;
-#endif
     vteeol();
     taboff = 0;
 }
@@ -707,13 +682,9 @@ static void updall(struct window *wp) {
             lp = lforw(lp);
         }
 
-/* On to the next one */
-#if COLOR
-        vscreen[sline]->v_rfcolor = wp->w_fcolor;
-        vscreen[sline]->v_rbcolor = wp->w_bcolor;
-#endif
-
-/* vteeol() makes sure we are on the screen */
+/* On to the next one
+ * vteeol() makes sure we are on the screen
+ */
         vteeol();
         ++sline;
     }
@@ -884,27 +855,16 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
     cp1 = &vp1->v_text[0];
     cp2 = &vp2->v_text[0];
 
-#if COLOR
-    TTforg(vp1->v_rfcolor);
-    TTbacg(vp1->v_rbcolor);
-#endif
-
     req = (vp1->v_flag & VFREQ) == VFREQ;
-#if COLOR
+
 /* If we need to change the reverse video status of the
  * current line, we need to re-write the entire line.
  */
     int rev;                /* reverse video flag */
     rev = (vp1->v_flag & VFREV) == VFREV;
-    if ((rev != req)
-#if COLOR
-          || memcmp(&(vp1->v_fcolor), &(vp1->v_rfcolor), sizeof(color_info))
-          || memcmp(&(vp1->v_bcolor), &(vp1->v_rbcolor), sizeof(color_info))
-#endif
-          ) {
+    if (rev != req) {
         movecursor(row, 0);     /* Go to start of line. */
-        if (rev != req)         /* set rev video if needed */
-            (*term.t_rev) (req);
+        TTrev(req);
 
 /* Scan through the line and dump it to the screen and
  * the virtual screen array
@@ -915,19 +875,14 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
             clone_grapheme(cp2++, cp1++);
         }
         if (rev != req)     /* turn rev video off */
-            (*term.t_rev) (FALSE);
+            TTrev(FALSE);
 
 /* Update the needed flags */
         vp1->v_flag &= ~VFCHG;
         if (req) vp1->v_flag |= VFREV;
         else     vp1->v_flag &= ~VFREV;
-#if COLOR
-        vp1->v_fcolor = vp1->v_rfcolor;
-        vp1->v_bcolor = vp1->v_rbcolor;
-#endif
         return;
     }
-#endif
 
 /* Advance past any common chars at the left */
     while (cp1 != &vp1->v_text[term.t_ncol] && same_grapheme(cp1, cp2, 0)) {
@@ -943,7 +898,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
  */
 /* If both lines are the same, no update needs to be done */
     if (cp1 == &vp1->v_text[term.t_ncol]) {
-        vp1->v_flag &= ~VFCHG;      /* Flag this line is changed */
+        vp1->v_flag &= ~VFCHG;      /* Flag this line is not changed */
         return;
     }
 
@@ -1278,13 +1233,8 @@ static void modeline(struct window *wp) {
     int n;
     if (inmb) n = mb_info.main_wp->w_toprow + mb_info.main_wp->w_ntrows;
     else      n = wp->w_toprow + wp->w_ntrows;  /* Normal location. */
-    vscreen[n]->v_flag |= VFCHG | VFREQ | VFCOL;/* Redraw next time. */
+    vscreen[n]->v_flag |= VFCHG | VFREQ;        /* Redraw next time. */
 
-#if COLOR
-/* GGR - use configured colors, not 0 and 7 */
-    vscreen[n]->v_rfcolor = gbcolor;    /* chosen for on */
-    vscreen[n]->v_rbcolor = gfcolor;    /* chosen..... */
-#endif
     vtmove(n, 0);           /* Seek to right line. */
     if (wp == curwp)        /* mark the current buffer */
         lchar = '=';
@@ -1557,7 +1507,7 @@ void mlrewrite(void) {
     mlerase();
     for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
     ml_rewriting = 0;
-    if (!ml_prompt) movecursor(srow, scol); /* Send the cursor back? */
+    if (!ml_prompt) movecursor(srow, scol); /* Send the cursor back */
     TTflush();
 }
 
@@ -1742,13 +1692,6 @@ static void mlwrite_ap(const char *fmt, npva ap) {
 
     mlw_level++;            /* Remember we are here */
 
-#if COLOR
-/* Set up the proper colors for the command line */
-/* GGR - use configured colors, not 7 and 0 */
-    TTforg(gfcolor);
-    TTbacg(gbcolor);
-#endif
-
 /* Erase to end-of-line, quickly if we can. But only if we aren't
  * recursing...
  * If we're crashing out (saving files...) when the original terminal
@@ -1815,7 +1758,8 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     }
     mlw_level--;    /* Remember we've left */
     if (mlw_level == 0) {
-        if (!ml_prompt) movecursor(srow, scol); /* Send the cursor back? */
+/* Send the cursor back UNLESS it was originally in the message line */
+        if (!ml_prompt && (srow != term.t_mbline)) movecursor(srow, scol);
         TTflush();
     }
 }
@@ -1956,11 +1900,6 @@ void mberase(void) {
     vtmove(term.t_mbline, 0);
     vteeol();   /* Replace the rest (== all) of the line with ' ' */
     vp1 = vscreen[term.t_mbline];
-#if COLOR
-    vp1->v_fcolor = gfcolor;
-    vp1->v_bcolor = gbcolor;
-#endif
-
     updateline(term.t_mbline, vp1, pscreen[term.t_mbline]);
     return;
 }

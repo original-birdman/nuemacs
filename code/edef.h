@@ -147,8 +147,9 @@ extern struct name_bind names[];/* name to function table */
 extern int gmode;               /* global editor mode           */
 extern int force_mode_on;       /* modes forced to be on        */
 extern int force_mode_off;      /* modes forced to be off       */
-extern color_info gfcolor;      /* global forgrnd color (white) */
-extern color_info gbcolor;      /* global backgrnd color (black) */
+extern db_dcl(glfcolor);        /* global foreground colour     */
+extern db_dcl(hifcolor);        /* highlight foreground colour  */
+extern db_dcl(hibcolor);        /* highlight background colour  */
 extern int gasave;              /* global ASAVE size            */
 extern int gacount;             /* count until next ASAVE       */
 extern int sgarbf;              /* State of screen unknown      */
@@ -217,11 +218,12 @@ extern int srch_patlen;
 
 extern const char *dname[];     /* Directive name table.        */
 
-/* Terminal table defined only in term.c */
+/* Terminal table and TERM value (defined in tcap.c) */
 extern struct terminal term;
 /* Macros for setting t_nrow and derivatives */
 #define SET_t_nrow(h) \
     term.t_nrow = h; term.t_mbline = h-1; term.t_vscreen = h-2;
+extern char *termval;
 
 /* GGR - Additional declarations */
 extern int inreex;              /* Set when re-executing */

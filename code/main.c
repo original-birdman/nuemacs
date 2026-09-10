@@ -823,6 +823,8 @@ static void exit_via_signal(int signr) {
     if (stkdmp_fp) fclose(stkdmp_fp);
 #endif
     if (index_fp) fclose(index_fp);
+
+    TTforg(FALSE);  /* Just send the escape sequence as we go */
     exit(signr);
 }
 /* ===================== END OF BUFFER SAVING CODE ====================== */
@@ -1282,11 +1284,6 @@ static void edinit(const char *bname) {
     wp->w.markp = NULL;
     wp->w.marko = 0;
     wp->w_toprow = 0;
-#if COLOR
-/* initialize colors to global defaults */
-    wp->w_fcolor = gfcolor;
-    wp->w_bcolor = gbcolor;
-#endif
     wp->w.fcol = 0;
     wp->w_ntrows = term.t_vscreen;          /* Ignoring mode-line   */
     wp->w_force = 0;
@@ -1957,7 +1954,7 @@ int quit(int f, int n) {
             db_free(tmp_kbd);
         }
 #endif
-
+        TTforg(FALSE);  /* Just send the escape sequence as we go */
         if (f) exit(n);
         else   exit(0);
     }
@@ -2316,6 +2313,9 @@ int main(int argc, char **argv) {
  */
 {
     int w, h;
+    db_set(glfcolor, "");
+    db_set(hifcolor, "");
+    db_set(hibcolor, "");
     getscreensize(&w, &h, FALSE);
     newscreensize(h, w, 1);
 }

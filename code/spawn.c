@@ -49,12 +49,14 @@ static void TTstate(enum TTway w) {
     if (w == OPEN) {
         TTopen();
         TTkopen();
+        TTforg(TRUE);
         TTflush();
     }
     else {
+        TTforg(FALSE);  /* Just send the escape sequence */
         TTflush();
-        TTclose();      /* stty to old modes    */
         TTkclose();     /* Close "keyboard" */
+        TTclose();      /* stty to old modes    */
     }
 }
 
@@ -95,7 +97,6 @@ int spawncli(int f, int n) {
         rval = system("exec /bin/sh");
 #endif
     }
-    sgarbf = TRUE;
     sleep(2);
     TTstate(OPEN);
     check_for_resize();
@@ -105,19 +106,18 @@ int spawncli(int f, int n) {
 
 int bktoshell(int f, int n) {   /* Suspend MicroEMACS and wait to wake up */
     UNUSED(f); UNUSED(n);
-    vttidy();
-/******************************
-    int pid;
 
-    pid = getpid();
-    kill(pid,SIGTSTP);
-******************************/
+    get_orig_size();
+    TTstate(CLOSE);
+
     kill(0, SIGTSTP);
 
-/* fg seems to get us back to here... */
-    TTopen();
-    curwp->w_flag = WFHARD;
-    sgarbf = TRUE;
+/* fg seems to get us back to here...we need to get the modeline redrawn
+ * as otherwise it may contain the minibuffer info (from EscX suspend-emacs).
+ */
+    curwp->w_flag = WFHARD | WFMODE;
+    TTstate(OPEN);
+    check_for_resize();
 
     return TRUE;
 }
@@ -164,24 +164,27 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
-    get_orig_size();
-
     if ((s = next_spawn_cmd(rxcopy, prompt, &line)) != TRUE) goto exit;
+
+    get_orig_size();
     TTstate(CLOSE);
+
     rval = system(db_val(line));
     fflush(stdout);         /* to be sure P.K.      */
-    TTopen();
 
     if (wait) {
-        mlwrite_one(MLbkt("Press <return> to continue")); /* Pause */
-        TTflush();
-        while ((s = tgetc()) != '\r' && s != ' ');
-        mlwrite_one("\r\n");
+        fputs(MLbkt("Press <return> to continue"), stdout); /* Pause */
+        fflush(stdout);
+        while (1) {
+            s = fgetc(stdin);
+            if (s == '\n') break;
+            if (s == ' ') break;
+            if (s == '\r') break;
+        };
     }
-    TTkopen();
-    sgarbf = TRUE;
-
+    TTstate(OPEN);
     check_for_resize();
+    curwp->w_flag = WFHARD;
 
 exit:
     db_free(line);
@@ -259,9 +262,8 @@ int pipecmd(int f, int n) {
  */
     db_sprintf(line, "%s >'%s'", db_val(cmd), db_val(comfile));
     rval = system(db_val(line));
-    TTstate(OPEN);
-    sgarbf = TRUE;
 
+    TTstate(OPEN);
     check_for_resize();
 
 /* Split the current window to make room for the command output */
@@ -373,9 +375,8 @@ int filter_buffer(int f, int n) {
     db_sprintf(line, "%s <'%s' >'%s'", db_val(cmd), db_val(fltin),
          db_val(fltout));
     rval = system(db_val(line));
-    TTstate(OPEN);
-    sgarbf = TRUE;
 
+    TTstate(OPEN);
     check_for_resize();
 
 /* Unset this flag, otherwise readin() prompts for "Discard changes" if

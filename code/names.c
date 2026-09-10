@@ -188,6 +188,7 @@ struct name_bind names[] = {
     {"search-reverse", backsearch, {0, 0, 0, 1, 0, 0}, CFNONE},
     {"select-buffer", usebuffer, {0, 1, 0, 0, 0, 0}, CFNONE},
     {"set", setvar, {0, 0, 0, 1, 0, 0}, CFALL},
+    {"set-color", setcolor, {0, 1, 0, 1, 0, 0}, CFALL},
     {"set-encryption-key", set_encryption_key, {0, 1, 0, 0, 0, 0}, CFALL},
     {"set-fill-column", setfillcol, {0, 1, 0, 1, 0, 0}, CFALL},
     {"set-force-mode", setforcemode, {0, 1, 0, 1, 0, 0}, CFALL},
