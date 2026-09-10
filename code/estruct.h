@@ -425,7 +425,7 @@ struct terminal {
     void (*t_eeol)(void);       /* Erase to end of line.         */
     void (*t_eeop)(void);       /* Erase to end of page.         */
     void (*t_beep)(void);       /* Beep.                         */
-    void (*t_rev)(int);         /* set reverse video state       */
+    void (*t_hilite)(int);      /* Set highlight state           */
     int (*t_rez)(char *);       /* change screen resolution      */
     void (*t_setfgrnd) (int);   /* set foreground color */
     void (*t_scroll)(int, int,int); /* scroll a region of the screen */
@@ -458,7 +458,7 @@ struct terminal {
 #define TTeeol      (*term.t_eeol)
 #define TTeeop      (*term.t_eeop)
 #define TTbeep      (*term.t_beep)
-#define TTrev       (*term.t_rev)
+#define TThilite    (*term.t_hilite)
 #define TTrez       (*term.t_rez)
 #define TTforg      (*term.t_setfgrnd)
 

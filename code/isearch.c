@@ -397,9 +397,9 @@ static void hilite(int c, int col) {
 
 /* Need force_movecursor as movecursor thinks we haven't moved */
     force_movecursor(term.t_mbline, col);
-    TTrev(1);
+    TThilite(TRUE);
     (void)echo_char(c, col);    /* Character in REV video   */
-    TTrev(0);
+    TThilite(FALSE);
     return;
 }
 

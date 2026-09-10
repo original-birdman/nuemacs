@@ -889,3 +889,14 @@ Some unrelated changes also made whilst doing this.
     the end is needed at all out: exits. [file.c]
 
 -----
+
+display.c
+isearch.c
+tcap.c
+estruct.h
+    Name changes to reflect reverse video now being highlighting.
+    Change VFREV to VFHIL, VFREQ to VFHIQ, rev to hil and req to hiq
+    [display.c]
+    Change TTrev to TThilite. [display.c, isearch.c, estruct.h]
+    Change t_rev to t_hilite in struct terminal [estruct.h]
+    Change tcaprev() to tcaphilite() [tcap.c]

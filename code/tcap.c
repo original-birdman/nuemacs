@@ -219,11 +219,11 @@ static void tcapeeop(void) {
 
 #define ESC "\x1b"
 
-/* Change reverse video status
+/* Change highlight status
  *
- * @state: FALSE = normal video, TRUE = reverse video.
+ * @state: FALSE = normal video, TRUE = highlight video.
  */
-static void tcaprev(int state) {
+static void tcaphilite(int state) {
 
     if ((db_len(hifcolor) == 0) && (db_len(hibcolor) == 0)) {
         if (state) {
@@ -302,7 +302,7 @@ struct terminal term = {
     tcapeeol,
     tcapeeop,
     tcapbeep,
-    tcaprev,
+    tcaphilite,
     tcapcres,
     tcapfgrnd,
     NULL,               /* Set dynamically at open time */

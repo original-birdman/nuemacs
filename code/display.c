@@ -49,9 +49,8 @@ struct video {
 
 #define VFCHG   0x0001          /* Changed flag                 */
 #define VFEXT   0x0002          /* extended (beyond column 80)  */
-#define VFREV   0x0004          /* reverse video status         */
-#define VFREQ   0x0008          /* reverse video request        */
-#define VFCOL   0x0010          /* color change requested       */
+#define VFHIL   0x0004          /* highlight status             */
+#define VFHIQ   0x0008          /* highlight request            */
 
 static struct video **vscreen;          /* Virtual screen. */
 static struct video **pscreen;          /* Physical screen. */
@@ -223,7 +222,7 @@ void vtinit(void) {
     if (prev_mrow == 0) {
         TTopen();               /* open the screen */
         TTkopen();              /* open the keyboard */
-        TTrev(FALSE);
+        TThilite(FALSE);
     }
 
 /* Is this for a larger request? If not, nothing to do.
@@ -512,7 +511,7 @@ static void updgar(void) {
     int lrow = inmb? term.t_mbline: term.t_vscreen;
     for (i = 0; i <= lrow; ++i) {
         vscreen[i]->v_flag |= VFCHG;
-        vscreen[i]->v_flag &= ~VFREV;
+        vscreen[i]->v_flag &= ~VFHIL;
 
 /* We only ever free the extended parts from the virtual screen info, not the
  * physical one.
@@ -650,7 +649,7 @@ static void updone(struct window *wp) {
 
 /* And update the virtual line */
     vscreen[sline]->v_flag |= VFCHG;
-    vscreen[sline]->v_flag &= ~VFREQ;
+    vscreen[sline]->v_flag &= ~VFHIQ;
     taboff = wp->w.fcol;
     vtmove(sline, -taboff);
     show_line(lp);
@@ -675,7 +674,7 @@ static void updall(struct window *wp) {
 
 /* And update the virtual line */
         vscreen[sline]->v_flag |= VFCHG;
-        vscreen[sline]->v_flag &= ~VFREQ;
+        vscreen[sline]->v_flag &= ~VFHIQ;
         vtmove(sline, -taboff);
         if (lp != wp->w_bufp->b_linep) {    /* if we are not at the end */
             show_line(lp);
@@ -806,9 +805,8 @@ static int scrolls(int inserts) {   /* returns true if it does something */
             memcpy(vpp->v_text, vpv->v_text,
                  sizeof(struct grapheme)*(unsigned)cols);
             vpp->v_flag = vpv->v_flag;  /* XXX */
-            if (vpp->v_flag & VFREV) {
-                vpp->v_flag &= ~VFREV;
-                vpp->v_flag &= ~VFREQ;
+            if (vpp->v_flag & VFHIL) {
+                vpp->v_flag &= ~(VFHIL | VFHIQ);
             }
         }
         if (inserts) {
@@ -849,22 +847,22 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
     struct grapheme *cp4;
     struct grapheme *cp5;
     int nbflag;             /* non-blanks to the right flag? */
-    int req;                /* reverse video request flag */
+    int hiq;                /* highlight request flag */
 
 /* Set up pointers to virtual and physical lines */
     cp1 = &vp1->v_text[0];
     cp2 = &vp2->v_text[0];
 
-    req = (vp1->v_flag & VFREQ) == VFREQ;
+    hiq = (vp1->v_flag & VFHIQ) == VFHIQ;
 
 /* If we need to change the reverse video status of the
  * current line, we need to re-write the entire line.
  */
-    int rev;                /* reverse video flag */
-    rev = (vp1->v_flag & VFREV) == VFREV;
-    if (rev != req) {
+    int hil;                /* highlight video flag */
+    hil = (vp1->v_flag & VFHIL) == VFHIL;
+    if (hil != hiq) {
         movecursor(row, 0);     /* Go to start of line. */
-        TTrev(req);
+        TThilite(hiq);
 
 /* Scan through the line and dump it to the screen and
  * the virtual screen array
@@ -874,13 +872,13 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
             TTputgrapheme(cp1);
             clone_grapheme(cp2++, cp1++);
         }
-        if (rev != req)     /* turn rev video off */
-            TTrev(FALSE);
+        if (hil != hiq)     /* turn highlight off */
+            TThilite(FALSE);
 
 /* Update the needed flags */
         vp1->v_flag &= ~VFCHG;
-        if (req) vp1->v_flag |= VFREV;
-        else     vp1->v_flag &= ~VFREV;
+        if (hiq) vp1->v_flag |= VFHIL;
+        else     vp1->v_flag &= ~VFHIL;
         return;
     }
 
@@ -917,7 +915,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
     cp5 = cp3;
 
 /* Erase to EOL ? */
-    if (nbflag == FALSE && eolexist == TRUE && (req != TRUE)) {
+    if (nbflag == FALSE && eolexist == TRUE && (hiq != TRUE)) {
         while (cp5 != cp1 && is_space(&(cp5[-1]))) --cp5;
 
         if (cp3 - cp5 <= 3)         /* Use only if erase is */
@@ -925,7 +923,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
     }
 
     movecursor(row, (int)(cp1 - &vp1->v_text[0]));  /* Go to start of line. */
-    TTrev(rev);
+    TThilite(hil);
 
     while (cp1 != cp5) {    /* Ordinary. */
         TTputgrapheme(cp1);
@@ -937,7 +935,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
         while (cp1 != cp3)
             clone_grapheme(cp2++, cp1++);
     }
-    TTrev(FALSE);
+    TThilite(FALSE);
     vp1->v_flag &= ~VFCHG;  /* Flag this line as updated */
     return;
 }
@@ -1233,7 +1231,7 @@ static void modeline(struct window *wp) {
     int n;
     if (inmb) n = mb_info.main_wp->w_toprow + mb_info.main_wp->w_ntrows;
     else      n = wp->w_toprow + wp->w_ntrows;  /* Normal location. */
-    vscreen[n]->v_flag |= VFCHG | VFREQ;        /* Redraw next time. */
+    vscreen[n]->v_flag |= VFCHG | VFHIQ;        /* Redraw next time. */
 
     vtmove(n, 0);           /* Seek to right line. */
     if (wp == curwp)        /* mark the current buffer */
