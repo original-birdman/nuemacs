@@ -900,3 +900,6 @@ estruct.h
     Change TTrev to TThilite. [display.c, isearch.c, estruct.h]
     Change t_rev to t_hilite in struct terminal [estruct.h]
     Change tcaprev() to tcaphilite() [tcap.c]
+
+etc/uemacs.hlp
+    Add documentation for the set-color command.

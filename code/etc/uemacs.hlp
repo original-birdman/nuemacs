@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.203 Help Index     (17 Aug 2026)
+=>                   nuEmacs GGR4.204 Help Index     (09 Sep 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -28,6 +28,7 @@
 .. GGR style
 .. Crypt mode
 .. Start-up file
+.. Highlighting and colours
 .. Command scripts
 
 -------------------------------------------------------------------------------
@@ -544,8 +545,8 @@ The hard-wired key-bindings for it are:
 
 After each match you will be at the end of what has so far matched.  If
 the next incremental character does not find a match it will be
-highlighted (reverse video) in the prompt.  The $ggr_opts overlap bit
-determines whether overlapping matches will be found.
+highlighted in the prompt.  The $ggr_opts overlap bit determines whether
+overlapping matches will be found.
 
 NOTE: that this char-by-char incremental search does not work well with
 glyphs containing combining characters) as the matching is always done
@@ -1280,6 +1281,69 @@ to include the standard additions too then your own file should include:
 
 You can add commands after this inclusion to remove/override anything in
 the system file.
+
+-------------------------------------------------------------------------------
+=> Highlighting and colours
+
+The mode (status) line (and match failure in incremental searches) is
+highlighted.
+
+By default the highlight is done in reverse video, but you can set it to
+use colours instead.
+You can also set the foreground colour for other text (but not its
+background colour). For a terminal window it is usually better to
+configure this foreground in the emulator you are using (whch will also
+allow you to set the background) but if you are in a console window that
+will not be possible, so this gives you some confguring ability.
+
+The command to do this is:
+
+    set-color loc=cspec
+
+loc may either be fg (for the foreground option) or ml (for the
+modline).
+cspec is either a number from 0 to 255, or an RGB setting as "#xxxxxx"
+where xxxxxx is the RGB value in hex.
+For the modeline you can give a foreground and background value,
+separated by a /.
+An empty cspec leaves that setting unchanged (so can only be used for an
+ml= setting) and a negative one unsets it (so it reverts to the default
+setting).
+
+The vaklues for 0 to 7 can be given as names:
+    black = 0
+    red = 1
+    green = 2
+    yellow = 3
+    blue = 4
+    magenta = 5
+    cyan = 6
+    white = 7
+
+If these names start with a Capital letter then they correspond to 8 to 15
+instead.
+
+Values from 16 to 255 correspond to a colour pallete.
+See  https://en.wikipedia.org/wiki/ANSI_escape_code
+     https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+
+Not all terminal types handle all of the values.
+
+Linux console (TERM=linux)
+KDE console, GNOME terminal, GNOME console, xterm (TERM=xterm-256color)
+
+    Allows 0-7, 8-15, 256 color and RGB, although the actual displayed colour
+    intensity may vary.
+
+FreeBSD console (TERM=xterm)
+    Allows 0-7, 8-15, 256 color but NOT the RGB setting.
+
+Solaris console (TERM=sun-solaris)
+    Only understands 0-7.
+
+examples of usage:
+    set-color fg=blue
+    set-color ml=#FF0000/White
 
 -------------------------------------------------------------------------------
 => Command scripts.
