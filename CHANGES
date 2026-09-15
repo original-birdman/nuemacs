@@ -903,3 +903,7 @@ estruct.h
 
 etc/uemacs.hlp
     Add documentation for the set-color command.
+
+display.c
+    If GGR_CTLGPH is set in $ggr_opts, use ⋯ (0x22EF) in place of $ for
+    line overflow in windows.

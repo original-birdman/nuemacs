@@ -397,14 +397,16 @@ static void vtputc(unicode_t c) {
 /* We have to cater for a multi-width character at eol - so must step
  * back over any NUL graphemes (the padding we use for multi-width chars).
  */
+        unicode_t ovflw;
+        ovflw = (ggr_opts & GGR_CTLGPH)?  0x22EF: '$';
         for (int dcol = term.t_ncol - 1; dcol >= 0; dcol--) {
-            if (vp->v_text[dcol].uc == '$') break;  /* Quick repeat exit */
+            if (vp->v_text[dcol].uc == ovflw) break;    /* Quick repeat exit */
             if (vp->v_text[dcol].uc != 0) {
-                update_grapheme(&(vp->v_text[dcol]), '$');
+                update_grapheme(&(vp->v_text[dcol]), ovflw);
                 break;
             }
         }
-        update_grapheme(&(vp->v_text[term.t_ncol - 1]), '$');
+        update_grapheme(&(vp->v_text[term.t_ncol - 1]), ovflw);
         return;
     }
 
@@ -994,7 +996,9 @@ static void updext(void) {
  * need to change any following NULs to spaces
  */
     int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
-    update_grapheme(&(vscreen[currow]->v_text[0]), '$');
+    unicode_t ovflw;
+    ovflw = (ggr_opts & GGR_CTLGPH)?  0x22EF: '$';
+    update_grapheme(&(vscreen[currow]->v_text[0]), ovflw);
     for (int pcol = cw - 1; pcol > 0; pcol--) {
         update_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
     }
