@@ -47,9 +47,13 @@ static int kbdpoll;             /* in O_NDELAY mode             */
 static struct termios otermios; /* original terminal characteristics */
 static struct termios ntermios; /* charactoristics to use inside */
 
-#define TBUFSIZ 128
-static char tobuf[TBUFSIZ];     /* terminal output buffer */
+/* We only let read get up to RBUFSIZE bytes in one call.
+ * But we set the input buffer to twice this.
+ */
 
+#define RBUFSIZE 32
+#define INBUFSIZE 2*RBUFSIZE
+static char tibuf[INBUFSIZE];    /* terminal input buffer */
 
 /* This function is called once to set up the terminal device streams.
  */
@@ -83,10 +87,10 @@ void ttopen(void) {
     ntermios.c_cc[VTIME] = 0;
     tcsetattr(0, TCSADRAIN, &ntermios); /* and activate them */
 
-/* Provide a smaller terminal output buffer so that the type-ahead
+/* Provide a smaller terminal input buffer so that the type-ahead
  * detection works better (more often)
  */
-    setbuffer(stdout, tobuf, TBUFSIZ);
+    setbuffer(stdin, tibuf, INBUFSIZE);
 
     kbdflgs = fcntl(0, F_GETFL, 0);
     kbdpoll = FALSE;
@@ -158,12 +162,11 @@ void ttflush(void) {
 static struct pollfd ue_wait = { STDIN_FILENO, POLLIN, 0 };
 
 /* The valid count for this buffer, pending_rch, is a global.
- * We set the size to 64, but only tell read about 32 of them. so we
- * can have space to push things back.
+ * We set the size to INBUFSIZE (64), but only tell read about
+ * RBUFSIZE (32) of them. so we have space to push things every pending
+ * read.
  */
-#define BSIZE 64
-#define BSIZE4READ 32
-static char ibuffer[BSIZE];
+static char ibuffer[INBUFSIZE];
 
 unicode_t ttgetc(void) {
 
@@ -173,7 +176,7 @@ unicode_t ttgetc(void) {
     errno = 0;
     count = pending_rch;    /* So we don't update pending_rch on error */
     if (!count) {       /* so count is 0 */
-        count = (int)read(STDIN_FILENO, ibuffer, BSIZE4READ);
+        count = (int)read(STDIN_FILENO, ibuffer, RBUFSIZE);
         if (count <= 0) return 0;   /* SIGWINCH and EINTR */
         pending_rch = count;
     }

@@ -911,3 +911,6 @@ display.c
 display.c
     Ensure we have a full-width marker in the modeline if we have set a
     foreground colour but no background.
+
+posix.c
+    Restrict the input buffer size, not the output.
