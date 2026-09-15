@@ -907,3 +907,7 @@ etc/uemacs.hlp
 display.c
     If GGR_CTLGPH is set in $ggr_opts, use ⋯ (0x22EF) in place of $ for
     line overflow in windows.
+
+display.c
+    Ensure we have a full-width marker in the modeline if we have set a
+    foreground colour but no background.

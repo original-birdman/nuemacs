@@ -1241,8 +1241,14 @@ static void modeline(struct window *wp) {
     if (wp == curwp)        /* mark the current buffer */
         lchar = '=';
     else {
-        if (revexist)   lchar = ' ';
-        else            lchar = '-';
+        if (db_len(hibcolor) > 0) lchar = ' ';  /* We have a background */
+        else {  /* No background - make sure we have some full-width marker */
+            if (db_len(hifcolor) > 0) lchar = '_';
+            else {
+                if (revexist) lchar = ' ';  /* Reverse vide is OK */
+                else          lchar = '-';
+            }
+        }
     }
 
 /* For the minibuffer, wp->w_bufp is the minibuffer.
