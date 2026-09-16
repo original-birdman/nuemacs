@@ -392,21 +392,8 @@ static void vtputc(unicode_t c) {
         return;     /* Nothing else do do... */
     }
 
-    if (vtcol >= term.t_ncol) {
+    if (vtcol >= term.t_ncol) { /* Ignore anything off scrteen */
         ++vtcol;
-/* We have to cater for a multi-width character at eol - so must step
- * back over any NUL graphemes (the padding we use for multi-width chars).
- */
-        unicode_t ovflw;
-        ovflw = (ggr_opts & GGR_CTLGPH)?  0x22EF: '$';
-        for (int dcol = term.t_ncol - 1; dcol >= 0; dcol--) {
-            if (vp->v_text[dcol].uc == ovflw) break;    /* Quick repeat exit */
-            if (vp->v_text[dcol].uc != 0) {
-                update_grapheme(&(vp->v_text[dcol]), ovflw);
-                break;
-            }
-        }
-        update_grapheme(&(vp->v_text[term.t_ncol - 1]), ovflw);
         return;
     }
 
@@ -455,15 +442,28 @@ static void vtputc(unicode_t c) {
 
 /* Get the character width. If it's > 1 we'll need to put NUL-byte padding
  * in so that the next character goes into the correct column.
+ * If a multi-width char would extend beyond the current widht, we don't
+ * display it even though its start would be within range.
  */
     int cw = utf8char_width(c);
     if (vtcol >= 0) {
-        update_grapheme(&(vp->v_text[vtcol]), c);
+        if ((vtcol + cw) >= term.t_ncol) {  /* It won't fit - show overflow */
+            unicode_t ovflw = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+            update_grapheme(&(vp->v_text[vtcol]), ovflw);
+            if (cw > 1) {
+                int pvcol = vtcol;
+                while(++pvcol < term.t_ncol)    /* Space pad to EOL */
+                     update_grapheme(&(vp->v_text[pvcol]), ' ');
+            }
+        }
+        else {
+            update_grapheme(&(vp->v_text[vtcol]), c);
+            if (cw > 1) {
 /* This code assumes that a real NUL byte will not be displayed */
-        int pvcol = vtcol;
-        for (int nulpad = cw - 1; nulpad > 0; nulpad--) {
-            pvcol++;
-            update_grapheme(&(vp->v_text[pvcol]), 0);
+                int pvcol = vtcol;
+                int nulpad = cw - 1;
+                while(nulpad-- > 0) update_grapheme(&(vp->v_text[++pvcol]), 0);
+            }
         }
     }
 /* If vtcol is -ve, but will be +ve after the cw increment we need to space
@@ -996,8 +996,7 @@ static void updext(void) {
  * need to change any following NULs to spaces
  */
     int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
-    unicode_t ovflw;
-    ovflw = (ggr_opts & GGR_CTLGPH)?  0x22EF: '$';
+    unicode_t ovflw = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
     update_grapheme(&(vscreen[currow]->v_text[0]), ovflw);
     for (int pcol = cw - 1; pcol > 0; pcol--) {
         update_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');

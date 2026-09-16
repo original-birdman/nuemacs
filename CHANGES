@@ -914,3 +914,6 @@ display.c
 
 posix.c
     Restrict the input buffer size, not the output.
+
+display.c
+    Fix multi-width char display at EOL in vtputc() to prevent wrapping.
