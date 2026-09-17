@@ -163,23 +163,17 @@ static int TTputgrapheme(struct grapheme *gp) {
     ttcol++;
     return status;
 }
-/* Output a single character. mlwrite, mlput* may send Combining ones */
-static int TTput_1uc(unicode_t uc) {
-    int status = TTputc(display_for(uc));
-    if (!combining_type(uc)) ttcol += utf8char_width(uc);
-    return status;
-}
 
 /* Routine for use by mlwrite*+mlput* routines so that nothing
  * is printed beyond the last column, to prevent the message line
  * wrapping and messing up the display.
- * It also keeps a record of what is there, so it can be re-written
+ * It also keeps a full record of what is there, so it can be re-written
  * (by mlrewrite()) after a SIGWINCH.
  * NOTE that it takes a unicode_t arg, but calling it with a normal
  * ASCII char will work, as that gets promoted to an int (and we have
  * unsigned chars).
  * This routine MUST be used for all message line output (because of
- * the rwrite-on-SIGWINCH ability).
+ * the rewrite-on-SIGWINCH ability).
  *
  * The count of valid chars in ml_text (ml_text_offset) is a global,
  * so that it can be checked for whether there is any text available
@@ -191,7 +185,7 @@ static int ml_text_alloc = 0;   /* Current allocated size */
 static int ml_rewriting = 0;    /* 1 when re-writing the buffer */
 static int ml_prompt = 0;       /* 1 for a query (stay in message line) */
 
-static int mlout_uc(unicode_t uc) {
+static void mlout_uc(unicode_t uc) {
     if (!ml_rewriting) {        /* No recording on a rewrite */
         if (ml_text_offset >= ml_text_alloc) {
             ml_text_alloc += ML_TEXT_INCR;
@@ -199,8 +193,18 @@ static int mlout_uc(unicode_t uc) {
         }
         ml_text[ml_text_offset++] = uc;
     }
-    if (ttcol < term.t_ncol) return TTput_1uc(uc);
-    return TRUE;
+/* Do we need to replace this char for output? */
+    unicode_t act_uc = display_for(uc);
+    int cw = (combining_type(act_uc))? 0: utf8char_width(act_uc);
+/* Do we have space for this */
+    if (ttcol < term.t_ncol) {  /* No ouptut if > R/h column */
+        if ((ttcol + cw) >= term.t_ncol) {  /* No */
+            act_uc = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+            cw = 1;     /* Width of overflow char */
+        }
+        TTputc(act_uc);
+    }
+    ttcol += cw;
 }
 
 /* Initialize the data structures used by the display code. The edge vectors

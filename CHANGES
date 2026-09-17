@@ -920,3 +920,7 @@ display.c
 
 isearch.c
     Handle display of search prompts that reach the right-hand column.
+
+display.c
+    Display overflow char when message line overflows.
+    Move TTput_1uc() code into mlout_uc() (the only caller).
