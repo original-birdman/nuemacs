@@ -917,3 +917,6 @@ posix.c
 
 display.c
     Fix multi-width char display at EOL in vtputc() to prevent wrapping.
+
+isearch.c
+    Handle display of search prompts that reach the right-hand column.

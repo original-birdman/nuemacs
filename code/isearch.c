@@ -88,13 +88,23 @@ static int promptpattern(int dir) {
 
 /* routine to echo i-search characters
  * GGR - This is *NOT* a mini-buffer, and tracks its own column.
+ * So this, and echo_char, need to cater for reaching the right-hand column.
  *
  * int c;               character to be echoed
  * int col;             column to be echoed in
  */
+static int maxout;  /* Maximum we can add in echo_str */
+static char gen_ctl[3] = "^ ";
 static int echo_str(const char *str) {
     int cw = istrlen(str);
-    while(*str) TTputc(*str++);
+    int outc = cw;
+    unicode_t ovflw = 0;
+    if (outc > maxout) {
+        outc = maxout - 1;    /* Allow for the overflow char to be added */
+        ovflw = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+    }
+    while(outc--) TTputc(*str++);
+    if (ovflw != 0) TTputc(ovflw);
     return cw;
 }
 
@@ -114,33 +124,36 @@ static unicode_t echo_char(unicode_t c, int col) {
 
 /* Control character without glyph display? */
     if ((c < ' ') || (c == 0x7F)) {
+        maxout = term.t_ncol - col; /* 1-based - 0-based */
+        const char *txt = NULL;
         switch (c) {                /* Yes, dispatch special cases */
         case '\n':                  /* Newline                     */
-            cw = echo_str("<NL>");
+            txt = "<NL>";
             break;
-
         case '\r':                  /* Carriage return             */
-            cw = echo_str("<CR>");
+            txt = "<CR>";
             break;
-
         case '\t':                  /* Tab                         */
-            cw = echo_str("<TAB>");
+            txt = "<TAB>";
             break;
-
         case 0x7F:                  /* Rubout:                     */
-            cw = echo_str("^?");
+            txt = "^?";
             break;
-
-        default: {                  /* Vanilla control char        */
-            static char gen_ctl[3] = "^ ";
+        default:
             gen_ctl[1] = (char)c | 0x40;
-            cw = echo_str(gen_ctl);
+            txt = gen_ctl;
         }
-        }
+        if (maxout > 0) cw = echo_str(txt);
+        else cw = istrlen(txt); /* Remember length, but don't output */
     }
     else {
         cw = utf8char_width(c);
-        TTputc(c);
+        if (term.t_ncol > (col - 1)) {  /* Only output if we have space */
+            if ((col + cw) > term.t_ncol) {
+                c = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+            }
+            TTputc(c);
+        }
     }
 
     TTflush();                      /* Flush the output           */
@@ -393,7 +406,15 @@ static void hilite(int c, int col) {
     else {
         cw = utf8char_width(c); /* Set it back the correct amount */
     }
-    col -= cw;
+
+/* If we are beyond the rightmost column, just hilite the ovflw char
+ * which will be in that rightmost column.
+ */
+    if ((col+1) >= term.t_ncol) {   /* 0-based (col) va 1-based (t_ncol) */
+        col = term.t_ncol - 1;
+        c = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+    }
+    else col -= cw;
 
 /* Need force_movecursor as movecursor thinks we haven't moved */
     force_movecursor(term.t_mbline, col);
