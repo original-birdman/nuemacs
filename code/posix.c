@@ -109,13 +109,12 @@ void ttclose(void) {
 
 /* Write a character to the display.
  */
-int ttputc(int c) {
+void ttputc(unicode_t uc) {
     char utf8[6];
     int bytes;
 
-    bytes = unicode_to_utf8(c, utf8);
+    bytes = unicode_to_utf8(uc, utf8);
     fwrite(utf8, 1, (size_t)bytes, stdout);
-    return 0;
 }
 
 /* Flush terminal buffer. Does real work where the terminal output is buffered

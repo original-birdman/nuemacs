@@ -152,8 +152,8 @@ static int
 /* Output a grapheme - which is in one column.
  * Handle remapping on the main character.
  */
-static int TTputgrapheme(struct grapheme *gp) {
-    int status = TTputc(display_for(gp->uc));
+static void TTputgrapheme(struct grapheme *gp) {
+    TTputc(display_for(gp->uc));
     if (gp->cdm) TTputc(gp->cdm);   /* Might add display_for here too */
     if (gp->ex != NULL) {
         for(unicode_t *zw = gp->ex; *zw != UEM_NOCHAR; zw++) {
@@ -161,7 +161,6 @@ static int TTputgrapheme(struct grapheme *gp) {
         }
     }
     ttcol++;
-    return status;
 }
 
 /* Routine for use by mlwrite*+mlput* routines so that nothing

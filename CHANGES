@@ -924,3 +924,11 @@ isearch.c
 display.c
     Display overflow char when message line overflows.
     Move TTput_1uc() code into mlout_uc() (the only caller).
+
+display.c
+posix.c
+efunc.h
+estruct.h
+    Change TTputgrapheme() to return void. [display.c]
+    Change ttputc() to return void. [posix.c, efunc.h]
+    Change t_putchar() (== ttputc) to return void. [estruct.h]

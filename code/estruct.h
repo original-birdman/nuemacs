@@ -419,7 +419,7 @@ struct terminal {
     void (*t_kclose)(void);     /* close keyboard                */
     unicode_t (*t_getchar)(void);   /* Get character from keyboard.  */
     void (*t_ungetchar)(unicode_t); /* Put character back to buffer  */
-    int (*t_putchar)(int);      /* Put character to display.     */
+    void (*t_putchar)(int);     /* Put character to display.     */
     void (*t_flush) (void);     /* Flush output buffers.         */
     void (*t_move)(int, int);   /* Move the cursor, origin 0.    */
     void (*t_eeol)(void);       /* Erase to end of line.         */

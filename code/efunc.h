@@ -311,7 +311,7 @@ extern const char *undolock(const char *);
 #ifndef POSIX_C
 extern void ttopen(void);
 extern void ttclose(void);
-extern int ttputc(int c);
+extern void ttputc(unicode_t);
 extern void ttflush(void);
 extern int ttgetc(void);
 extern int typahead(void);
