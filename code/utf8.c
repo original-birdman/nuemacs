@@ -437,7 +437,7 @@ unicode_t display_for(unicode_t uc) {
 }
 
 /* Common code for some #define length macros (see utf8.h).
- * If -ve maxxlen assume we have a NUL-terminated string.
+ * If -ve maxlen assume we have a NUL-terminated string.
  */
 unsigned int utf8_to_uclen(const char *str, int count_graphemes,
      int maxlen) {

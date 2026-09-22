@@ -95,6 +95,8 @@ static int promptpattern(int dir) {
  */
 static int maxout;  /* Maximum we can add in echo_str */
 static char gen_ctl[3] = "^ ";
+
+/* NOTE that echo_str only outputs ASCII - never a multi-byte/width char */
 static int echo_str(const char *str) {
     int cw = istrlen(str);
     int outc = cw;
@@ -108,8 +110,14 @@ static int echo_str(const char *str) {
     return cw;
 }
 
+static int last_cw = 0; /* Width of last char actually output - NOT strlen! */
 static unicode_t echo_char(unicode_t c, int col) {
-    movecursor(term.t_mbline, col); /* Position the cursor         */
+
+/* If this would be at or beyond EOL, do nothing */
+
+    if (col > term.t_ncol) return col+1;
+
+    movecursor(term.t_mbline, col); /* Position the cursor */
     int cw;
 
 /* Are we using glyphs for control characters? If so, map them. */
@@ -143,17 +151,30 @@ static unicode_t echo_char(unicode_t c, int col) {
             gen_ctl[1] = (char)c | 0x40;
             txt = gen_ctl;
         }
-        if (maxout > 0) cw = echo_str(txt);
+        if (maxout > 0) {
+            cw = echo_str(txt);
+            last_cw = 1;            /* They are all just 1 */
+        }
         else cw = istrlen(txt); /* Remember length, but don't output */
     }
     else {
         cw = utf8char_width(c);
-        if (term.t_ncol > (col - 1)) {  /* Only output if we have space */
-            if ((col + cw) > term.t_ncol) {
-                c = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
-            }
-            TTputc(c);
+/* Here we have the same issue as with vtputc in display.c.
+ * But since all we are doing here is output (not filling arrays for later
+ * output) things can be handled more easily.
+ */
+        if ((col + cw) <= term.t_ncol) {    /* It fits */
+            last_cw = cw;
         }
+        else {
+/* We don't have any space for the overflow char, so back-up over last
+ * added char and remove it
+ */
+            force_movecursor(term.t_mbline, col - last_cw);
+            TTeeol();
+            c = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+        }
+        TTputc(c);
     }
 
     TTflush();                      /* Flush the output           */
@@ -213,8 +234,8 @@ static unicode_t get_char(void) {
  * when they exit.
  * I can see no other use for this beyond the autotests....
  */
-static int (*prev_idbg_func) (void);    /* Get character routine */
-static int call_time;                   /* 0 = delayed, 1 = instant */
+static unicode_t (*prev_idbg_func) (void);  /* Get character routine */
+static int call_time;                       /* 0 = delayed, 1 = instant */
 
 /* The structures to prime wwith the required input and check.
  * These are freed when the seacrh finishes.
@@ -333,8 +354,8 @@ int incremental_debug_check(int type) {
 
 /* Now set-up the function that gets the "next character" from it. */
 
-    prev_idbg_func = term.t_getchar;
-    term.t_getchar = idbg_nextchar;
+    prev_idbg_func = TTgetc;
+    TTgetc = idbg_nextchar;
 /* The call time type is:
  *
  *  0   Used by f/risearch(). Run the check proc *after* all of the
@@ -375,7 +396,7 @@ void incremental_debug_cleanup(void) {
     Xfree(ii->pdg[0].uproc);
     Xfree(ii);
     ii = NULL;
-    term.t_getchar = prev_idbg_func;
+    TTgetc = prev_idbg_func;
     return;
 }
 

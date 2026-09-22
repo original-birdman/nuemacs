@@ -883,7 +883,7 @@ relevant escape sequences).
 Some unrelated changes also made whilst doing this.
 
     In mlwrite_ap(), don't return the cursor to its original position if
-    it started n the message line. [display.c]
+    it started in the message line. [display.c]
 
     Undo much of the change to readin() as the window pointer loop at
     the end is needed at all out: exits. [file.c]
@@ -932,3 +932,79 @@ estruct.h
     Change TTputgrapheme() to return void. [display.c]
     Change ttputc() to return void. [posix.c, efunc.h]
     Change t_putchar() (== ttputc) to return void. [estruct.h]
+
+----------
+Major changes to:
+  o Remove the usage of termcap/terminfo
+  o Remove some redundant code paths (no term.t_scroll, eolexist FALSE)
+  o Fix setting the overflow character on over-long lines
+  o Add a fake narrowing of the terminal width for a sun-color TERM as
+    it has a hard-wired auto-wrap at the right hand column.  By setting
+    the number of uemacs columns to one less than the actual width we
+    can put a character in the right-hand uemacs column without it
+    wrapping and messing up the display.
+
+posix.c [removed]
+tcap.c [removed]
+ttdriver.c [added]
+    tcap.c and posix.c combined into ttdriver.c
+    Remove function variables from struct terminal and rename the
+    functions to their TT* names. Changed all callers to use the TT*
+    names.
+    Combine TTopen with TTkopen
+    Combine TTclose with TTkclose.
+    Add TTinit to get the TERM variable and set-up the screen arrays.
+    Remove all termcap/terminfo calls and hard-wired ANSi escape
+    sequences with overrides if TERM is a sun-* version.
+    Adapt TTmove() and scrollregion() to use the hard-wired sequences.
+    Added TTputstr()
+
+basic.c
+    Remove code for when term.t_scroll is undefined.
+
+display.c
+    Remove code for when eolexist is FALSE.
+    Remove TTkclose() calls.
+    Change vtputc() to do nothing if vtcol is already past the R/h
+    column.
+    Fix setting of the overflow character in vtputc().
+    Removed the zero_ok options from getscreensize().
+
+eval.c
+    Set EVSCROLL ($scroll) to be read-only and always TRUE.
+
+globals.c
+edef.h
+    Removed eolexist and revexist. Add fake_narrow.
+
+input.c
+    Removed the zero_ok option from getscreensize().
+
+isearch.c
+    Fix setting of the overflow character in echo_char().
+
+main.c
+    Call TTinit() (new function) at startup.
+    Turn off GGR_CTLGPH in ggr_opts for sun- TERMs.
+
+spawn.c
+    Removed the zero_ok option from getscreensize().
+
+window.c
+    Only run the *_sizer() in newheight() if we have windows (which we
+    do not when TTinit() runs).
+
+efunc.h
+    Remove posix.c entries and add ttdrivers.c ones.
+    Removed the zero_ok option from getscreensize().
+
+estruct.h
+    Remove all functions from struct terminal and all related TT*
+    defines.
+
+Makefile
+    Generate a new files section with the tcap and posix entries
+    replaced with ttdriver ones.
+    Remove -ltinfo from LIBS.
+    Remove -lncurses from LIBS and remove search for term.h.
+`   Change the depend node to use ${CC} ${CFLAGS}

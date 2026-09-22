@@ -1952,6 +1952,10 @@ int quit(int f, int n) {
             db_free(glb_db);
             db_free(main_execstr);
             db_free(tmp_kbd);
+            db_free(glfcolor);
+            db_free(hifcolor);
+            db_free(hibcolor);
+
         }
 #endif
         TTforg(FALSE);  /* Just send the escape sequence as we go */
@@ -2309,16 +2313,11 @@ int main(int argc, char **argv) {
     }
 
 /* Initialize the editor.
- * newscreensize() will call vtinit()
  */
-{
-    int w, h;
     db_set(glfcolor, "");
     db_set(hifcolor, "");
     db_set(hibcolor, "");
-    getscreensize(&w, &h, FALSE);
-    newscreensize(h, w, 1);
-}
+    TTinit();
     edinit("main"); /* Buffers, windows - must be after vtinit */
 
 /* Set this up before running init files */
@@ -2348,6 +2347,11 @@ int main(int argc, char **argv) {
  * may set $autoclean.
  */
     dumpdir_tidy();
+
+/* If this is a sun-color TERM, switch off GGR_CTLGPH, as there is
+ * no font support for it.
+ */
+    if (0 == strncmp(termval, "sun-", 4)) ggr_opts &= ~GGR_CTLGPH;
 
 /* Process rest of comline, which is a list of files to edit */
     while (argc--) {
@@ -2408,7 +2412,6 @@ int main(int argc, char **argv) {
 /* Done with processing command line */
 
     comline_processing = 0;
-    discmd = TRUE;          /* P.K. */
 
 /* If there are any files to read, read the first one! */
     int display_readin_msg = 0;
@@ -2455,7 +2458,7 @@ loop:
         meta_spec_active.C = 0;
     }
 
-    if (!typahead())  update(FALSE);
+    if (!TTtypahead()) update(FALSE);
     if (display_readin_msg ||   /* First one gets removed by update() */
           mbuf_mess) {          /* Specific user message */
         mlwrite_one(mbuf_mess? mbuf_mess: db_val(readin_mesg));

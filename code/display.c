@@ -224,7 +224,6 @@ void vtinit(void) {
 
     if (prev_mrow == 0) {
         TTopen();               /* open the screen */
-        TTkopen();              /* open the keyboard */
         TThilite(FALSE);
     }
 
@@ -322,7 +321,6 @@ void vtinit(void) {
  * empty message line on the display).
  */
 void mlerase(void) {
-    int i;
 
 /* Reset current ml_text? */
 
@@ -331,14 +329,7 @@ void mlerase(void) {
     movecursor(term.t_mbline, 0);
     if (discmd == FALSE) return;
 
-    if (eolexist == TRUE) {
-        TTeeol();   /* ttcol is already 0 from movecursor call */
-    }
-    else {
-        for (i = 0; i < term.t_ncol - 1; i++)
-            TTputc(' ');                /* No need to update ttcol */
-        force_movecursor(term.t_mbline, 0);
-    }
+    TTeeol();   /* ttcol is already 0 from movecursor call */
     TTflush();
 }
 
@@ -349,10 +340,8 @@ void mlerase(void) {
  */
 void vttidy(void) {
     mlerase();      /* Moves cursor to (term.t_mbline, 0) */
-    TTflush();
+    TTputc('\r');
     TTclose();
-    TTkclose();
-    ssize_t dnc __attribute__ ((unused)) = write(1, "\r", 1);
 }
 
 /* Set the virtual cursor to the specified row and column on the virtual
@@ -371,6 +360,10 @@ void vttidy(void) {
  */
 static void vtputc(unicode_t c) {
     struct video *vp;   /* ptr to line being updated */
+
+/* If we are already past the R/h edge then we don't care, so do nothing */
+
+    if (vtcol > term.t_ncol) return;
 
     if (c > MAX_UNICODE_CHAR) c = display_for(c);
 
@@ -392,12 +385,7 @@ static void vtputc(unicode_t c) {
             extend_grapheme(&(vp->v_text[0]), c);
             ++vtcol;
         }
-        return;     /* Nothing else do do... */
-    }
-
-    if (vtcol >= term.t_ncol) { /* Ignore anything off scrteen */
-        ++vtcol;
-        return;
+        return;     /* Nothing else do do... no vtcol update */
     }
 
     if (c == '\t') {
@@ -445,18 +433,50 @@ static void vtputc(unicode_t c) {
 
 /* Get the character width. If it's > 1 we'll need to put NUL-byte padding
  * in so that the next character goes into the correct column.
- * If a multi-width char would extend beyond the current widht, we don't
+ * If a multi-width char would extend beyond the current width, we don't
  * display it even though its start would be within range.
+ * We'll display to the R/h column, but if we would display beyond that
+ * not display this char, but instead update the preceding char to the
+ * overflow char. We will still update vtcol so this routine does no
+ * further work for any other chars on this line.
  */
     int cw = utf8char_width(c);
     if (vtcol >= 0) {
-        if ((vtcol + cw) >= term.t_ncol) {  /* It won't fit - show overflow */
+        if ((vtcol + cw) > term.t_ncol) { /* It won't fit - show overflow */
+
+/* There are a few scenarios here.
+ *  o we are adding simple 1-width chars beyond a 1-width char
+ *      set previous char to simple ovflw
+ *  o we are adding simple 1-width chars beyond a double-width chars
+ *      set previous double-char to double ovflw
+ *  o we are adding a double width char and have overflowed by 1
+ *      just add a simple ovflw (no previous ovflw edit required)
+ *  o we are adding a double-width char and have overflowed by 2
+ *      set whatever ovflw fits with last char added
+ */
             unicode_t ovflw = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
-            update_grapheme(&(vp->v_text[vtcol]), ovflw);
-            if (cw > 1) {
-                int pvcol = vtcol;
-                while(++pvcol < term.t_ncol)    /* Space pad to EOL */
-                     update_grapheme(&(vp->v_text[pvcol]), ' ');
+            if (cw == 1) {
+
+/* If the last-displayed char was a double width then it will have
+ * been given a NUL-pad char (and we can't have a NUL for any other reason).
+ * So then we put a double-width overflow char into the final 2 columns
+ */
+                if (vp->v_text[vtcol-1].uc == 0)
+                    update_grapheme(&(vp->v_text[vtcol-2]), 0x1801);
+                else
+                    update_grapheme(&(vp->v_text[vtcol-1]), ovflw);
+            }
+            else {  /* cw == 2 */
+                int ovc = (vtcol + cw) - term.t_ncol;   /* Overflow amount */
+                if (ovc == 1) {
+                    update_grapheme(&(vp->v_text[vtcol]), ovflw);
+                }
+                else {  /* ovc == 2 */
+                    if (vp->v_text[vtcol-1].uc == 0)
+                        update_grapheme(&(vp->v_text[vtcol-2]), 0x1801);
+                    else
+                        update_grapheme(&(vp->v_text[vtcol-1]), ovflw);
+                }
             }
         }
         else {
@@ -477,6 +497,7 @@ static void vtputc(unicode_t c) {
             update_grapheme(&(vp->v_text[pcol-1]), ' ');
         }
     }
+
     vtcol += cw;
 }
 
@@ -512,7 +533,7 @@ static void updgar(void) {
     struct grapheme *txt;
     int i, j;
 
-/* GGR - include the last row, so <=. */
+/* GGR - include the last row (for mini-buffer), so <=. */
     int lrow = inmb? term.t_mbline: term.t_vscreen;
     for (i = 0; i <= lrow; ++i) {
         vscreen[i]->v_flag |= VFCHG;
@@ -527,7 +548,7 @@ static void updgar(void) {
     }
 
     movecursor(0, 0);       /* Erase the screen. */
-    (*term.t_eeop) ();
+    TTeeop();
     sgarbf = FALSE;         /* Erase-page clears */
     ml_rewriting = 1;       /* So we only wipe screen, not buffer */
     mlerase();              /* Ensure it is cleared */
@@ -561,8 +582,6 @@ static int reframe(struct window *wp) {
             if (lp == wp->w.dotp) {
 /* If not _quite_ in, we'll reframe gently */
                 if (i < 0 || i == wp->w_ntrows) {
-/* If the terminal can't help, then we're simply outside */
-                    if (term.t_scroll == NULL) i = wp->w_force;
                     break;
                 }
                 return TRUE;
@@ -698,7 +717,7 @@ static void updall(struct window *wp) {
 /* Move the "count" lines starting at "from" to "to" */
 static void scrscroll(int from, int to, int count) {
     ttrow = ttcol = -1;
-    (*term.t_scroll) (from, to, count);
+    TTscroll(from, to, count);
 }
 
 /* return TRUE on text match
@@ -731,8 +750,6 @@ static int scrolls(int inserts) {   /* returns true if it does something */
     int first, match, count, target, end;
     int longmatch, longcount;
     int from, to;
-
-    if (!term.t_scroll) return FALSE;   /* No way to scroll */
 
     rows = term.t_mbline;           /* First line to ignore */
     cols = term.t_ncol;
@@ -920,7 +937,7 @@ static void updateline(int row, struct video *vp1, struct video *vp2) {
     cp5 = cp3;
 
 /* Erase to EOL ? */
-    if (nbflag == FALSE && eolexist == TRUE && (hiq != TRUE)) {
+    if (!nbflag && !hiq) {
         while (cp5 != cp1 && is_space(&(cp5[-1]))) --cp5;
 
         if (cp3 - cp5 <= 3)         /* Use only if erase is */
@@ -1246,10 +1263,7 @@ static void modeline(struct window *wp) {
         if (db_len(hibcolor) > 0) lchar = ' ';  /* We have a background */
         else {  /* No background - make sure we have some full-width marker */
             if (db_len(hifcolor) > 0) lchar = '_';
-            else {
-                if (revexist) lchar = ' ';  /* Reverse vide is OK */
-                else          lchar = '-';
-            }
+            else lchar = ' ';   /* The reverse video is a marker */
         }
     }
 
@@ -1859,7 +1873,7 @@ void mlforce_one(int wait, const char *fmt) {
  * exit unless the caller said zeroes are OK.
  */
 
-void getscreensize(int *widthp, int *heightp, int zero_ok) {
+void getscreensize(int *widthp, int *heightp) {
     struct winsize size;
     *widthp = 0;
     *heightp = 0;
@@ -1881,14 +1895,11 @@ void getscreensize(int *widthp, int *heightp, int zero_ok) {
  * if we got 0, but had previously got an answer, use that and hope,
  * which is done by returning with widthp and heightp set to the
  * values currently set in the term structure.
- * However, a call from tcapopen() in tcap.c uses termcap info
- * if it gets 0 back, so allow that too, via zero_ok.
  */
-        *widthp = size.ws_col;
+        *widthp = size.ws_col - fake_narrow;
         *heightp = size.ws_row;
         for (int tl = 0; tl < 2; tl++) {
             if ((*widthp > 0) && (*heightp > 0)) return;
-            if (zero_ok) return;
 /* If still here, fill in the current value and run the loop again */
             if (*widthp == 0) *widthp = term.t_ncol;
             if (*heightp == 0) *heightp = term.t_nrow;

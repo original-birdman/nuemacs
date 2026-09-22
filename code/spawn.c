@@ -28,11 +28,11 @@
  * Call this at the end of any function that calls system().
  */
 static int orig_width, orig_height;
-#define get_orig_size() (getscreensize(&orig_width, &orig_height, FALSE))
+#define get_orig_size() (getscreensize(&orig_width, &orig_height))
 
 static void check_for_resize(void) {
     int lwidth, lheight;
-    getscreensize(&lwidth, &lheight, FALSE);
+    getscreensize(&lwidth, &lheight);
     if ((lwidth != orig_width) || (lheight != orig_height)) {
         chg_width = lwidth;
         chg_height = lheight;
@@ -48,14 +48,11 @@ enum TTway { OPEN, CLOSE };
 static void TTstate(enum TTway w) {
     if (w == OPEN) {
         TTopen();
-        TTkopen();
         TTforg(TRUE);
         TTflush();
     }
     else {
         TTforg(FALSE);  /* Just send the escape sequence */
-        TTflush();
-        TTkclose();     /* Close "keyboard" */
         TTclose();      /* stty to old modes    */
     }
 }

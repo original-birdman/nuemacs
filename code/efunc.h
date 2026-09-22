@@ -111,7 +111,7 @@ extern void mlforce(int, const char *, ...);
 extern void mlwrite_one(const char *);
 extern void mlprompt_one(const char *);
 extern void mlforce_one(int, const char *);
-extern void getscreensize(int *, int *, int);
+extern void getscreensize(int *, int *);
 extern void mberase(void);
 extern void mbupdate(void);
 #endif
@@ -307,17 +307,6 @@ extern const char *dolock(const char *);
 extern const char *undolock(const char *);
 #endif
 
-/* posix.c */
-#ifndef POSIX_C
-extern void ttopen(void);
-extern void ttclose(void);
-extern void ttputc(unicode_t);
-extern void ttflush(void);
-extern int ttgetc(void);
-extern int typahead(void);
-extern void ttungetc(unicode_t);
-#endif
-
 /* random.c */
 #ifndef RANDOM_C
 extern int setfillcol(int, int);
@@ -396,6 +385,25 @@ extern int spawn(int, int);
 extern int execprg(int, int);
 extern int pipecmd(int, int);
 extern int filter_buffer(int, int);
+#endif
+
+/* ttdrivers.c */
+#ifndef TTDRIVER_C
+extern void (*TTscroll)(int, int, int);
+extern unicode_t (*TTgetc)(void);
+extern void TTputc(unicode_t);
+extern void TTflush(void);
+extern void TTungetc(unicode_t);
+extern int TTtypahead(void);
+extern void TTmove(int, int);
+extern void TTinit(void);
+extern void TTopen(void);
+extern void TTclose(void);
+extern void TTeeol(void);
+extern void TTeeop(void);
+extern void TThilite(int);
+extern void TTforg(int);
+extern void TTbeep(void);
 #endif
 
 /* window.c */

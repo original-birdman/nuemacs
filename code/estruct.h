@@ -413,22 +413,6 @@ struct inwbuf {
  * one terminal type.
  */
 struct terminal {
-    void (*t_open)(void);       /* Open terminal at the start.   */
-    void (*t_close)(void);      /* Close terminal at end.        */
-    void (*t_kopen)(void);      /* Open keyboard                 */
-    void (*t_kclose)(void);     /* close keyboard                */
-    unicode_t (*t_getchar)(void);   /* Get character from keyboard.  */
-    void (*t_ungetchar)(unicode_t); /* Put character back to buffer  */
-    void (*t_putchar)(int);     /* Put character to display.     */
-    void (*t_flush) (void);     /* Flush output buffers.         */
-    void (*t_move)(int, int);   /* Move the cursor, origin 0.    */
-    void (*t_eeol)(void);       /* Erase to end of line.         */
-    void (*t_eeop)(void);       /* Erase to end of page.         */
-    void (*t_beep)(void);       /* Beep.                         */
-    void (*t_hilite)(int);      /* Set highlight state           */
-    int (*t_rez)(char *);       /* change screen resolution      */
-    void (*t_setfgrnd) (int);   /* set foreground color */
-    void (*t_scroll)(int, int,int); /* scroll a region of the screen */
     int t_mrow;                 /* max rows (allocated)          */
     int t_nrow;                 /* current number of rows used   */
 /* Next two are derived from t_nrow (-1, -2 resp), but it makes
@@ -442,25 +426,6 @@ struct terminal {
     int t_margin;               /* min margin for extended lines */
     int t_scrsiz;               /* size of scroll region "       */
 };
-
-/* TEMPORARY macros for terminal I/O  (to be placed in a machine
-                                            dependant place later)      */
-
-#define TTopen      (*term.t_open)
-#define TTclose     (*term.t_close)
-#define TTkopen     (*term.t_kopen)
-#define TTkclose    (*term.t_kclose)
-#define TTgetc      (*term.t_getchar)
-#define TTungetc    (*term.t_ungetchar)
-#define TTputc      (*term.t_putchar)
-#define TTflush     (*term.t_flush)
-#define TTmove      (*term.t_move)
-#define TTeeol      (*term.t_eeol)
-#define TTeeop      (*term.t_eeop)
-#define TTbeep      (*term.t_beep)
-#define TThilite    (*term.t_hilite)
-#define TTrez       (*term.t_rez)
-#define TTforg      (*term.t_setfgrnd)
 
 /* Structures for the table of initial key bindings.
  * NOTE: pbp buffer names are allocated in buffertokey()

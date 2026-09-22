@@ -750,11 +750,15 @@ int newheight(int n) {
         set_scrarray_size(n, term.t_ncol);
         vtinit();       /* Sets WFHARD and WFMODE flags on windows */
     }
-    if (ggr_opts&GGR_NEWHEIGHT) {   /* NOTE the methods take different args */
-        new_sizer(to_add);
-    }
-    else {
-        old_sizer(n);
+
+    if (wheadp) {       /* Only if windows exist (so not at TTinit) */
+/* NOTE that the methods take different args */
+        if (ggr_opts&GGR_NEWHEIGHT) {
+            new_sizer(to_add);
+        }
+        else {
+            old_sizer(n);
+        }
     }
 
 /* Set term.t_nrow and all related vars now */

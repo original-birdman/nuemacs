@@ -416,7 +416,7 @@ static void inmb_sigwinch(void) {
 /* Do the bits from sizesignal() in display.c that do the work */
     int w, h;
 
-    getscreensize(&w, &h, FALSE);
+    getscreensize(&w, &h);
     if ((h != term.t_nrow) || (w != term.t_ncol)) {
 
 /* Any SIGWINCH arriving whilst we are working on this one in
@@ -453,7 +453,7 @@ static void inmb_sigwinch(void) {
 static void main_sigwinch(void) {
 
     int w, h;
-    getscreensize(&w, &h, FALSE);
+    getscreensize(&w, &h);
 
     if ((h != term.t_nrow) || (w != term.t_ncol)) {
 

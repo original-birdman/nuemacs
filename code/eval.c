@@ -1286,7 +1286,7 @@ static void gtenv(dbp_dcl(res), const char *vname) {
         return;
     case EVCMODE:           setval(ue_itoa(curbp->b_mode));
     case EVGMODE:           setval(ue_itoa(gmode));
-    case EVPENDING:         setval(ltos(typahead()));
+    case EVPENDING:         setval(ltos(TTtypahead()));
     case EVLWIDTH:          setval(ue_itoa(lused(curwp->w.dotp)));
     case EVLINE:
 /* ltext_chk() to cater for it being an empty line */
@@ -1296,7 +1296,7 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVTAB:             setval(ue_itoa(tabmask + 1));
     case EVOVERLAP:         setval(ue_itoa(overlap));
     case EVSCROLLJUMP:      setval(ue_itoa(scrolljump));
-    case EVSCROLL:          setval(ltos(term.t_scroll != NULL));
+    case EVSCROLL:          setval(ltos(1));    /* Always TRUE */
     case EVINMB:            setval(ue_itoa(inmb));
     case EVFCOL:            setval(ue_itoa(curwp->w.fcol) + 1);
     case EVHJUMP:           setval(ue_itoa(hjump));
@@ -1675,6 +1675,7 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         case EVFORCEMODEON:
         case EVFORCEMODEOFF:
         case EVTERM:
+        case EVSCROLL:
             status = FALSE;
             break;
 
@@ -1781,9 +1782,6 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
         case EVSCROLLJUMP:
             scrolljump = ue_atoi(value);
-            break;
-        case EVSCROLL:
-            if (!stol(value)) term.t_scroll = NULL;
             break;
         case EVFCOL:
             curwp->w.fcol = ue_atoi(value) - 1;

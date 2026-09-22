@@ -1,22 +1,19 @@
-# (GNU)Makefile for uemacs, updated Fri 29 Sep 15:42:05 BST 2023
+# (GNU)Makefile for uemacs, updated Fri 18 Sept 19:26:53 BST 2026
 
 PROGRAM=uemacs
 
-SRC=basic.c bind.c buffer.c crypt.c display.c eval.c exec.c file.c \
-	fileio.c globals.c idxsorter.c input.c isearch.c line.c lock.c \
-	main.c names.c pklock.c posix.c random.c region.c search.c \
-	spawn.c tcap.c utf8.c version.c window.c word.c wrapper.c \
-	dyn_buf.c
+SRC=basic.c bind.c buffer.c crypt.c display.c dyn_buf.c eval.c \
+ exec.c file.c fileio.c globals.c idxsorter.c input.c isearch.c line.c \
+ lock.c main.c names.c pklock.c random.c region.c search.c spawn.c \
+ ttdriver.c utf8.c version.c window.c word.c wrapper.c
 
-OBJ=basic.o bind.o buffer.o crypt.o display.o eval.o exec.o file.o \
-	fileio.o globals.o idxsorter.o input.o isearch.o line.o lock.o \
-	main.o names.o pklock.o posix.o random.o region.o search.o \
-	spawn.o tcap.o utf8.o version.o window.o word.o wrapper.o \
-	dyn_buf.o
+OBJ=basic.o bind.o buffer.o crypt.o display.o dyn_buf.o eval.o \
+ exec.o file.o fileio.o globals.o idxsorter.o input.o isearch.o line.o \
+ lock.o main.o names.o pklock.o random.o region.o search.o spawn.o \
+ ttdriver.o utf8.o version.o window.o word.o wrapper.o
 
-HDR=charset.h combi.h dyn_buf.h ebind.h edef.h efunc.h epath.h \
-	estruct.h evar.h idxsorter.h line.h unsigned.h utf8.h util.h \
-	version.h
+HDR=charset.h combi.h dyn_buf.h ebind.h edef.h efunc.h epath.h estruct.h \
+ evar.h idxsorter.h line.h unsigned.h utf8.h util.h version.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
 
@@ -85,7 +82,6 @@ ifneq ($(strip $(STANDALONE)),)
         else
             .DEFAULT_GOAL := not_a_STANDALONE_option
         endif
-        LIBS = -ltinfo
     endif
 endif
 
@@ -323,9 +319,8 @@ ifeq ($(APISZ), 32)
     CFLAGS += -D_LARGEFILE_SOURCE  -D_FILE_OFFSET_BITS=64
 endif
 
-# All systems now have ncurses (curses just links to it)
 #
-LIBS := $(LIBS) $(UTF8LIB) $(BCKTLIB) -lncurses
+LIBS := $(LIBS) $(UTF8LIB) $(BCKTLIB)
 
 # For a mostly-static build we need to edit all of the -l options
 # -lname => -l:libname.a
@@ -336,15 +331,6 @@ endif
 
 # We need this too
 LIBS += -lm
-
-# Let's try to find libcurses/libncurses etc.
-# Start by finding term.h (for Oleg's router distros)
-#
-tlist := /opt/include/ncurses/term.h
-tres := $(firstword $(foreach arg, $(tlist), $(call filex, $(arg) ) ) )
-ifeq ($(strip $(tres)),/opt/include/ncurses/term.h)
-   CFLAGS += -I/opt/include/ncurses
-endif
 
 # Add in any command-line changes to CFLAGS
 #
@@ -457,7 +443,7 @@ source:
 
 depend:
 	@for i in *.c; do\
-	    cc ${DEFINES} -MM $$i ; done >makedep
+	    ${CC} ${CFLAGS} ${DEFINES} -MM $$i ; done >makedep
 	@echo '/^# DO NOT DELETE THIS LINE/+2,$$d' >eddep
 	@echo '$$r ./makedep' >>eddep
 	@echo 'w' >>eddep
@@ -503,15 +489,15 @@ main.o: main.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
 names.o: names.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
  line.h util.h idxsorter.h
 pklock.o: pklock.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h
-posix.o: posix.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h
 random.o: random.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
- line.h charset.h
+ line.h util.h charset.h
 region.o: region.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
  line.h
 search.o: search.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
  line.h
 spawn.o: spawn.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h
-tcap.o: tcap.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h
+ttdriver.o: ttdriver.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h \
+ efunc.h
 utf8.o: utf8.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
  util.h combi.h
 version.o: version.c version.h unsigned.h

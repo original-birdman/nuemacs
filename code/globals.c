@@ -80,9 +80,6 @@ int *kbdm;                      /* Macro buffer                 */
 int n_kbdm;                     /* Allocated size of kbdm       */
 int *kbdend;                    /* ptr to end of the keyboard   */
 
-int eolexist;                   /* does clear to EOL exist      */
-int revexist;                   /* does reverse video exist?    */
-
 int currow;                     /* Cursor row                   */
 int curcol;                     /* Cursor column                */
 int com_flag;                   /* Command flags                */
@@ -284,6 +281,10 @@ volatile int handling_sigwinch = 0;
 /* Pending (unprocessed) chars in the read input buffer */
 
 int pending_rch = 0;
+
+/* Pretend screen is this much narrower, to avoid autowrap */
+
+int fake_narrow = 0;
 
 /* Ignored prefixes  - need to limit assignment... */
 

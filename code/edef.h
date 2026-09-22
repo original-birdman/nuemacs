@@ -136,8 +136,6 @@ extern int fillcol;             /* Fill column                  */
 extern int *kbdm;               /* Holds keyboard macro data    */
 extern int n_kbdm;              /* Allocated size of kbdm       */
 extern dbp_dcl(execstr);        /* string in dyn_buf to execute */
-extern int eolexist;            /* does clear to EOL exist?     */
-extern int revexist;            /* does reverse video exist?    */
 extern int flickcode;           /* do flicker supression?       */
 extern const char *mode2name[]; /* text names of modes          */
 extern char modecode[];         /* letters to represent modes   */
@@ -218,11 +216,11 @@ extern int srch_patlen;
 
 extern const char *dname[];     /* Directive name table.        */
 
-/* Terminal table and TERM value (defined in tcap.c) */
+/* Terminal table and TERM value (defined in ttdriver.c) */
 extern struct terminal term;
 /* Macros for setting t_nrow and derivatives */
 #define SET_t_nrow(h) \
-    term.t_nrow = h; term.t_mbline = h-1; term.t_vscreen = h-2;
+    term.t_nrow = h; term.t_mbline = h-1; term.t_vscreen = h-2
 extern char *termval;
 
 /* GGR - Additional declarations */
@@ -388,6 +386,10 @@ extern volatile int handling_sigwinch;
 /* Pending (unprocessed) chars in the read input buffer */
 
 extern int pending_rch;
+
+/* Pretend screen is this much narrower, to avoid autowrap */
+
+extern int fake_narrow;
 
 /* Crypt bits */
 
