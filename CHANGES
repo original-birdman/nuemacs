@@ -1046,3 +1046,8 @@ etc/uemacs.rc
     Remove the Ctlgph options from change-ggr-opts
     Set specific $ovflw and $nodisplay for sun-* TERM as the default
     settings do not work well for it.
+
+----------
+
+ttdriver.c
+    Set TI/TE sequences to be empty for linux (and sun-*).

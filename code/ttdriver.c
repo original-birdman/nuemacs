@@ -330,9 +330,13 @@ void TTinit(void) {
             TTscroll = scroll_delins;   /* can't scroll region */
             CL = "\x0C";
             SE = CSI "m";
-            TI = CSI "?7l";             /* No initialize */
-            TE = CSI "?7h";             /* No exit */
+            TI = "";                    /* No initialize */
+            TE = "";                    /* No exit */
             fake_narrow = 1;
+        }
+        else if (0 == strncmp(termval, "linux", 4)) {
+            TI = "";                    /* No initialize */
+            TE = "";                    /* No exit */
         }
         else {
             TTscroll = scroll_reg;
