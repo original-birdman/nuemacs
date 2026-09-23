@@ -1051,3 +1051,7 @@ etc/uemacs.rc
 
 ttdriver.c
     Set TI/TE sequences to be empty for linux (and sun-*).
+
+main.c
+globals.c
+    Initialize the *color dbs in globals.c rather than main.c

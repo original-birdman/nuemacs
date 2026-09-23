@@ -2314,9 +2314,6 @@ int main(int argc, char **argv) {
 
 /* Initialize the editor.
  */
-    db_set(glfcolor, "");
-    db_set(hifcolor, "");
-    db_set(hibcolor, "");
     TTinit();
     edinit("main"); /* Buffers, windows - must be after vtinit */
 
