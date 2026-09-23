@@ -1054,4 +1054,7 @@ ttdriver.c
 
 main.c
 globals.c
-    Initialize the *color dbs in globals.c rather than main.c
+    Initialize the *color dbs in globals.c (link time) rather than main.c
+
+tools/sequences.c
+    Add simple code to display the required escape sequences for a TERM.
