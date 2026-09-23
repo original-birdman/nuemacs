@@ -70,10 +70,9 @@ execute-file autotest/report-status.rc
 
 set %test_name &env TNAME
 
-; We do not run the standard start-up file, so ggr_opts is left
-; as unset.
-; This means that we run with the original ^@ display for NUL
-; and this needs to be used for column matching.
+; We do not run the standard start-up file, so nodisplay will be 0
+; So ensure that we have the correct value set to allow for ^x display
+; in column counting.
 
 select-buffer test-reports
 insert-string &cat %test_name " started"
@@ -97,10 +96,11 @@ run report-status
 add-mode Exact
 
 ; We'll run the tests twice.
-; The first time with Ctlgph unset and then again with ti set
+; The first time with nodisplay == -1 and then again with it == 0
 ;
-set $ggr_opts &ban $ggr_opts &bno 0x20
+set $nodisplay -1
 set .ctl_add 1
+set .pass 1
 
 *start-tests
 
@@ -192,7 +192,7 @@ search-forward "c(.)d"
   set %expmatch "~0"
   run check-group
 
-; NOTE that this find f^@g, not c^@g
+; NOTE that this finds f^@g, not c^@d
 ;
 end-of-file
 search-reverse "(.)~0(.)"
@@ -224,10 +224,11 @@ search-reverse "c(.)d"
   set %expmatch "~0"
   run check-group
 
-!if &not &ban $ggr_opts 0x20
-  set $ggr_opts &bor $ggr_opts 0x20
+!if &equ .pass 1
+  set .pass 2
+  set $nodisplay 0
   set .ctl_add 0
-  set %test-report "Repeat all tests with Ctlgph on"
+  set %test-report "Repeat all tests with Glyph display on"
   run report-status
   !goto start-tests
 !endif

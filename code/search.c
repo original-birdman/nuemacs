@@ -422,17 +422,21 @@ static db *expandp(db *newstr) {
     int ci = 0;
     while (ci < cc) {
         c = dbp_charat(newstr, ci++);
-        if (c == '\n' && !(ggr_opts & GGR_CTLGPH)) {    /* Non-glyph newline */
+        if (c == '\n' && (nodisplay == -1)) {   /* Non-glyph newline */
             db_append(expbuf, "<NL>");
         }
 /* Control character. We now have unsigned chars */
         else if ((c < 0x20) || c == 0x7f) {
-            if (ggr_opts & GGR_CTLGPH) {    /* Displaying glyphs */
+            if (nodisplay != -1) {  /* Displaying glyphs */
                 unicode_t uc;
                 if (c < ' ') {      /* Normal control character */
-                    uc = 0x2400 + c;
+                    if (nodisplay == 0) uc = 0x2400 + c;
+                    else uc = nodisplay;
                 }
-                else uc = 0x2421;    /* Delete */
+                else {              /* Delete */
+                    if (nodisplay == 0) uc = 0x2421;
+                    else uc = nodisplay;
+                }
                 char utf8[6];
                 int nb = unicode_to_utf8(uc, utf8);
                 db_appendn(expbuf, utf8, nb);

@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.204 Help Index     (09 Sep 2026)
+=>                   nuEmacs GGR4.204 Help Index     (23 Sep 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -704,6 +704,22 @@ Unless noted as (read-only), these may be set as well as read.
                             froms *and* tos should start and end with a /.
                             On retrieving this value you will get:
                                 "from1~0to1~0from2~0to2..."
+    $ovflw                  A character to display at the stat/emd of a
+                            line to indicate that the text has
+                            overflowed.
+                            Must be set to a Unicode character of width 1.
+                            The default is 0x22EF (an ellipsis).
+    $nodisplay              A character to display in place of any
+                            control character (which is non-displayable).
+                            Must be set to a Unicode character of width 1.
+                            If this is set to -1 then a 2-character
+                            sequence, e.g. ^A for CtlA, is output.
+                            If set to 0 then the displayable glyphs at
+                            0x2400 and above (0x2421 for Delete) are shown.
+                            The default setting is 0.
+                            Whereas xterm, konsole etc. will be able to
+                            use fonts that can display the default $ovflw
+                            and $nodisplay setting, consoles might not.
 
 -------------------------------------------------------------------------------
 =>                      FUNCTIONS
@@ -1205,9 +1221,7 @@ Flag    Controls    How
                     When OFF all the change is done in the bottom window
                     until it is rmeoved and then the new bottom window
                     shrinks.
-0x20    Control     When ON use single-column glyphs (U+2400...) to
-        display     display control characters.
-                    When OFF use a 2-character ^X display.
+0x20    Not used    Replaced by $ovflw and $nodisplay
 0x40    Show prefix When ON echo Esc, Ctlx, CtlxEsc in the message line
                     as you type the prefix.
                     When OFF, do nothing for these prefixes.

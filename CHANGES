@@ -885,10 +885,8 @@ Some unrelated changes also made whilst doing this.
     In mlwrite_ap(), don't return the cursor to its original position if
     it started in the message line. [display.c]
 
-    Undo much of the change to readin() as the window pointer loop at
-    the end is needed at all out: exits. [file.c]
-
------
+    Undo much of the recent change to readin() as the window pointer
+    loop at the end is needed at all out: exits. [file.c]
 
 display.c
 isearch.c
@@ -1008,3 +1006,43 @@ Makefile
     Remove -ltinfo from LIBS.
     Remove -lncurses from LIBS and remove search for term.h.
 `   Change the depend node to use ${CC} ${CFLAGS}
+
+----------
+Add $ovflw, to set the character used for overflowing lines and
+$nodisplay, to determine how to display control characters.
+The latter can either be a Unicode character to use for all control
+characters, 0 to use the 0x2400+ display glyphs or -1 to use the
+2-character ^x syntax.
+$nodisplay replaces the usage of GGR_CTLGPH in $ggr_opts.
+
+display.c
+isearch.c
+search.c
+autotest/search-with-nul.sh
+    Replace GGR_CTLGPH tests with ovflw or nodisplay usage.
+
+eval.c
+evar.h
+estruct.h
+    Added EVOVFLW (ovflk) and EVNDISPLAY (nodisplay) options.
+    Remove GGR_CTLGPH definition and add comment. [estruct.h]
+
+globals.c
+edef.h
+    Add ovflw and nodisplay.
+
+line.h
+    Update update_screenpos_for_char macro for GGR_CTLGPH change.
+
+main.c
+    Remove the code to switch off GGR_CTLGPH for sun-* TERMs.
+    (Related code is now in etc/uemacs.rc, so user-configurable).
+
+etc/uemacs.hlp
+    Document $ovflw and $nodisplay and note 0x20 in ggr_opts as Not
+    used.
+
+etc/uemacs.rc
+    Remove the Ctlgph options from change-ggr-opts
+    Set specific $ovflw and $nodisplay for sun-* TERM as the default
+    settings do not work well for it.

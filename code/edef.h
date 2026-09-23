@@ -391,6 +391,11 @@ extern int pending_rch;
 
 extern int fake_narrow;
 
+/* The overflow indicator and nodisplay method */
+
+extern unicode_t ovflw;
+extern unicode_t nodisplay;
+
 /* Crypt bits */
 
 extern int crypt_mode;          /* Type of crypt to use */

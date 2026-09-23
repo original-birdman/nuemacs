@@ -286,6 +286,11 @@ int pending_rch = 0;
 
 int fake_narrow = 0;
 
+/* The overflow indicator and nodisplay method */
+
+unicode_t ovflw = 0x22EF;   /* Ellipsis */
+unicode_t nodisplay = 0;    /* Display glyphs */
+
 /* Ignored prefixes  - need to limit assignment... */
 
 const char *path_pfx_map = NULL;

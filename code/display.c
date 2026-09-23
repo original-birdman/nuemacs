@@ -198,7 +198,7 @@ static void mlout_uc(unicode_t uc) {
 /* Do we have space for this */
     if (ttcol < term.t_ncol) {  /* No ouptut if > R/h column */
         if ((ttcol + cw) >= term.t_ncol) {  /* No */
-            act_uc = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+            act_uc = ovflw;
             cw = 1;     /* Width of overflow char */
         }
         TTputc(act_uc);
@@ -399,13 +399,14 @@ static void vtputc(unicode_t c) {
  *  U+2400 to U+241F (so 2400+c)
  */
     if (c < 0x20) {
-        if (ggr_opts & GGR_CTLGPH) {
+        if (nodisplay == 0) {
             vtputc(0x2400 + c);
         }
-        else {
+        else if (nodisplay == -1) {
             vtputc('^');
             vtputc(c ^ 0x40);
         }
+        else vtputc(nodisplay);
         return;
     }
 
@@ -413,13 +414,14 @@ static void vtputc(unicode_t c) {
  *  U+2421
  */
     if (c == 0x7f) {
-        if (ggr_opts & GGR_CTLGPH) {
+        if (nodisplay == 0) {
             vtputc(0x2421);
         }
-        else {
+        else if (nodisplay == -1) {
             vtputc('^');
             vtputc('?');
         }
+        else vtputc(nodisplay);
         return;
     }
 
@@ -454,7 +456,6 @@ static void vtputc(unicode_t c) {
  *  o we are adding a double-width char and have overflowed by 2
  *      set whatever ovflw fits with last char added
  */
-            unicode_t ovflw = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
             if (cw == 1) {
 
 /* If the last-displayed char was a double width then it will have
@@ -1016,7 +1017,6 @@ static void updext(void) {
  * need to change any following NULs to spaces
  */
     int cw = utf8char_width(vscreen[currow]->v_text[0].uc);
-    unicode_t ovflw = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
     update_grapheme(&(vscreen[currow]->v_text[0]), ovflw);
     for (int pcol = cw - 1; pcol > 0; pcol--) {
         update_grapheme(&(vscreen[currow]->v_text[pcol]), ' ');
@@ -1042,7 +1042,7 @@ static int cline_display_overlong(void) {
  */
             if (cc == '\t') { dcol |= tabmask; dcol++; }    /* Round up */  \
             else if (cc < 0x20 || cc == 0x7f)               /* ^X */        \
-               dcol += (ggr_opts & GGR_CTLGPH)? 1: 2;       /* or U+24xx */ \
+               dcol += (nodisplay == -1)? 2: 1;             /* or U+24xx */ \
             else if (cc >= 0x80 && cc <= 0xa0) dcol += 3;   /* \nn */       \
             else dcol++;
             offs++;

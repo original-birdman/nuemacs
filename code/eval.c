@@ -1366,6 +1366,8 @@ static void gtenv(dbp_dcl(res), const char *vname) {
         return;
     }
     case EVTERM:            setval(termval);
+    case EVOVFLW:           setval(ue_itoa(ovflw));
+    case EVNDISPLAY:        setval(ue_itoa(nodisplay));
     default:    setval(errorm); /* Shouldn't happen */
     }
     dbp_set(res, tmpres);
@@ -1968,6 +1970,25 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             }
             path_pfx_map_valid = pi_ind;
             udir_init();    /* Recalculate current, parent and home values */
+            break;
+        }
+        case EVOVFLW: {
+            unicode_t uc = ue_atoi(value);
+/* If this is 0 and value has length 1, assume we have been given an
+ * actual character.
+ */
+            if ((uc == 0) && (dbp_len(val) == 1)) uc = *value;
+            if (1 == utf8char_width(uc)) ovflw = uc;
+            else mlforce_one(1, "ovflw must be a 1 column width character");
+            break;
+        }
+        case EVNDISPLAY: {
+            unicode_t uc = ue_atoi(value);
+            if ((uc == 0) || (uc == -1) || (1 == utf8char_width(uc)))
+                 nodisplay = uc;
+            else
+                 mlforce_one(1,
+                     "nodisplay must be -1, 0 or a 1 column width character");
             break;
         }
         }

@@ -2,7 +2,7 @@
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
 ;                       Version - GGR4.204 (requires GGR4.204)
-;                       Last Update: 09 Sep 2026
+;                       Last Update: 23 Sep 2026
 ;
 write-message "[Setting up....]"
 set $discmd FALSE
@@ -19,6 +19,13 @@ set $discmd FALSE
 ;
 set $overlap 2          ; What it used to be
 ;
+
+; Set ovflw and nodisplay for consoles where the default does not work well
+;
+!if &seq "sun-" &lef $term 4
+    set $ovflw "$"
+    set $nodisplay -1
+!endif
 
 ; Define macro procedures. Has to be done before we can bind them to a key.
 ; NOTE: that the maximum length of any store-procedure/buffer-to-key name
@@ -397,14 +404,14 @@ store-procedure change-ggr-opts one_pass
       set .action "Toggle"
       set .how "-toggle"
     !endif
-    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap, Height, Ctlgph, mlPfx):" .action
+    write-message &ptf "%s ggr-opt (Twiddle, Forwword, fullWrap, srchOlap, Height, mlPfx):" .action
     set .report " "
     set .optsel &upper &gtkey
     !if &or &seq .optsel &chr 0x07 &seq .optsel "~n"
         write-message "[Aborted]"
         !finish
     !endif
-    !if &eq 0 &sin "TFWOHCP" .optsel
+    !if &eq 0 &sin "TFWOHP" .optsel
         write-message "Unknown mode"
         !finish
     !endif
@@ -428,10 +435,6 @@ store-procedure change-ggr-opts one_pass
 *changeH
     set .bit 0x10
     set .what "Height"
-    !goto &cat doit .how
-*changeC
-    set .bit 0x20
-    set .what "Ctlgph"
     !goto &cat doit .how
 *changeP
     set .bit 0x40

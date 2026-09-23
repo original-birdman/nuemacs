@@ -2348,11 +2348,6 @@ int main(int argc, char **argv) {
  */
     dumpdir_tidy();
 
-/* If this is a sun-color TERM, switch off GGR_CTLGPH, as there is
- * no font support for it.
- */
-    if (0 == strncmp(termval, "sun-", 4)) ggr_opts &= ~GGR_CTLGPH;
-
 /* Process rest of comline, which is a list of files to edit */
     while (argc--) {
 

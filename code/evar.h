@@ -82,6 +82,8 @@ struct evlist evl[] = {
  { "brkt_ms", EVBRKTMS },       /* Pause time (ms) for bracket matching */
  { "path_pfx_map", EVPPFXMAP }, /* Prefices to ignore in pathname */
  { "term", EVTERM },            /* Value of TERM (read only) */
+ { "ovflw", EVOVFLW },          /* How to display line overflow */
+ { "nodisplay", EVNDISPLAY },   /* How to display control characters */
 };
 
 /* The tags for user functions - used in struct evlist */

@@ -100,13 +100,13 @@ static char gen_ctl[3] = "^ ";
 static int echo_str(const char *str) {
     int cw = istrlen(str);
     int outc = cw;
-    unicode_t ovflw = 0;
+    int show_ovflw = FALSE;
     if (outc > maxout) {
         outc = maxout - 1;    /* Allow for the overflow char to be added */
-        ovflw = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+        show_ovflw = TRUE;
     }
     while(outc--) TTputc(*str++);
-    if (ovflw != 0) TTputc(ovflw);
+    if (show_ovflw) TTputc(ovflw);
     return cw;
 }
 
@@ -121,12 +121,14 @@ static unicode_t echo_char(unicode_t c, int col) {
     int cw;
 
 /* Are we using glyphs for control characters? If so, map them. */
-    if (ggr_opts & GGR_CTLGPH) {
+    if (nodisplay != -1) {
         if (c < ' ') {         /* Normal control character */
-            c = 0x2400 + c;
+            if (nodisplay == 0) c = 0x2400 + c;
+            else c = nodisplay;
         }
         else if (c == 0x7f) {   /* Delete */
-            c = 0x2421;
+            if (nodisplay == 0) c = 0x2421;
+            else c = nodisplay;
         }
     }
 
@@ -172,7 +174,7 @@ static unicode_t echo_char(unicode_t c, int col) {
  */
             force_movecursor(term.t_mbline, col - last_cw);
             TTeeol();
-            c = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+            c = ovflw;
         }
         TTputc(c);
     }
@@ -407,12 +409,14 @@ static void hilite(int c, int col) {
     int cw;
 
 /* Are we using glyphs for control characters? If so, map them. */
-    if (ggr_opts & GGR_CTLGPH) {
+    if (nodisplay != -1) {
         if (c < ' ') {         /* Normal control character */
-            c = 0x2400 + c;
+            if (nodisplay == 0) c = 0x2400 + c;
+            else c = nodisplay;
         }
         else if (c == 0x7f) {   /* Delete */
-            c = 0x2421;
+            if (nodisplay == 0) c = 0x2421;
+            else c = nodisplay;
         }
     }
 
@@ -433,7 +437,7 @@ static void hilite(int c, int col) {
  */
     if ((col+1) >= term.t_ncol) {   /* 0-based (col) va 1-based (t_ncol) */
         col = term.t_ncol - 1;
-        c = (ggr_opts & GGR_CTLGPH)? 0x22EF: '$';
+        c = ovflw;
     }
     else col -= cw;
 
