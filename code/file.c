@@ -418,10 +418,18 @@ void udir_init(void) {
     }
 #ifndef STANDALONE
     else {
+/* Use the version where we pass our own buffers, otherwise valgrind
+ * complains about still reachable blocks on FreeBSD and Solaris
+ * which makes the vgcheck logs appear to fail.
+ */
         struct passwd *pwptr;
-        if ((pwptr = getpwuid(geteuid())) != NULL) {
+        struct passwd pws;
+        char *pwdbuf = Xmalloc(2048);   /* More than enough */
+        if ((0 == getpwuid_r(geteuid(), &pws, pwdbuf, 2048, &pwptr))
+             && (pwptr)) {
             udir.home = Xstrdup(pwptr->pw_dir);
         }
+        Xfree(pwdbuf);
     }
 #endif
     if (udir.home) {

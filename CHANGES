@@ -1058,3 +1058,9 @@ globals.c
 
 tools/sequences.c
     Add simple code to display the required escape sequences for a TERM.
+
+file.c
+    Use the recursive version of getpwuid (getpwuid_r).
+    This allows us to allocate our own buffers and removes the vgcheck
+    warnings about "still reachable blocks" from valgrind on Solaris and
+    FreeBSD.
