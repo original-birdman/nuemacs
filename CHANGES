@@ -1064,3 +1064,8 @@ file.c
     This allows us to allocate our own buffers and removes the vgcheck
     warnings about "still reachable blocks" from valgrind on Solaris and
     FreeBSD.
+
+eval.c
+etc/uemacs.hlp
+    Make $pagelen and $curwidth read-only.
+    There is no useful result from being able to change them.

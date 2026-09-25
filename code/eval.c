@@ -17,6 +17,7 @@
 #if __sun
 #include <alloca.h>
 #endif
+#include <sys/ioctl.h>
 
 #define EVAL_C
 
@@ -1678,14 +1679,13 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         case EVFORCEMODEOFF:
         case EVTERM:
         case EVSCROLL:
+        case EVPAGELEN:
+        case EVCURWIDTH:
             status = FALSE;
             break;
 
         case EVFILLCOL:
             fillcol = ue_atoi(value);
-            break;
-        case EVPAGELEN:
-            status = newheight(ue_atoi(value));
             break;
         case EVCURCOL:
             srch_can_hunt = 0;
@@ -1694,9 +1694,6 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         case EVCURLINE:
             srch_can_hunt = 0;
             status = gotoline(TRUE, ue_atoi(value));
-            break;
-        case EVCURWIDTH:
-            status = newwidth(ue_atoi(value));
             break;
         case EVCBUFNAME:
             if (set_buffer_name(value))

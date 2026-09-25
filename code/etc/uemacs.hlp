@@ -625,10 +625,10 @@ Unless noted as (read-only), these may be set as well as read.
 
     $fillcol .............. the maximum column (1-based) to fill text to
                             when wrapping text
-    $pagelen .............. number of lines used by editor
+    $pagelen .............. number of lines used by editor (read only)
     $curcol ............... current column pos of cursor
     $curline .............. current line in file
-    $curwidth ............. current screen width
+    $curwidth ............. current screen width (read only)
     $cbufname ............. current buffer name
         (NOTE: It is an error to try to set a buffer name to an
                already existing buffer name).
@@ -644,7 +644,7 @@ Unless noted as (read-only), these may be set as well as read.
     $curchar .............. decimal code, in ASCII, of character at cursor
     $discmd ............... display commands on command line
     $version .............. current version number (read-only)
-    $progname ............. returns current prog name - "nuEmacs" (read-only)
+    $progname ............. current prog name - "nuEmacs" (read-only)
     $seed ................. current random number seed
     $disinp ............... display command line input characters
     $wline ................ # of lines in current window
