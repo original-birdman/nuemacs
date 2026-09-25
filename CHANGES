@@ -1069,3 +1069,6 @@ eval.c
 etc/uemacs.hlp
     Make $pagelen and $curwidth read-only.
     There is no useful result from being able to change them.
+
+buffer.c
+    Fix an old code typo.

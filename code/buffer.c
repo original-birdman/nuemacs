@@ -522,7 +522,7 @@ int makelist(int iflag) {
 
 /* Build line to report any mode settings forced on/off */
 
-    if (force_mode_on || force_mode_on) {
+    if (force_mode_on || force_mode_off) {
         db_set(line, "    ");
 
 /* Output the mode codes */
