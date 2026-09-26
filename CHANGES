@@ -1106,3 +1106,9 @@ efunc.h
     Remove newscreensize(), getscreensize(), newheight() and newwidth().
     Add checkscreensize(), old_sizer() and new_sizer().
 ----------
+
+version.h
+etc/uemacs.hlp
+    Update to GGR4.204
+
+==========
