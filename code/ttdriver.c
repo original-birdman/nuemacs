@@ -402,8 +402,8 @@ void TTopen(void) {
  * interpreter.
  */
 void TTclose(void) {
-    TTputstr(TE);
     TTmove(term.t_mbline, 0);
+    TTputstr(TE);
     TTflush();
     tcsetattr(0, TCSADRAIN, &otermios); /* restore terminal settings */
 }

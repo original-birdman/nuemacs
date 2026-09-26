@@ -1111,4 +1111,7 @@ version.h
 etc/uemacs.hlp
     Update to GGR4.204
 
-==========
+========== GGR4.205
+
+ttdriver.c
+    Move to bottom line before sending TE in TTclose(), not the reverse.
