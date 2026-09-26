@@ -1115,3 +1115,6 @@ etc/uemacs.hlp
 
 ttdriver.c
     Move to bottom line before sending TE in TTclose(), not the reverse.
+
+ttdriver.c
+    Make TTscrol definition be based on capabilities.

@@ -240,17 +240,17 @@ struct terminal term = {
 
 /* Standard ANSI used by xterm*, linux and sun-color */
 
-static const char *CM =  CSI "%d;%dH";
-static const char *CE =  CSI "K";
-static const char *SO =  CSI "7m";
-static const char *CS =  CSI "%d;%dr";
-static const char *SF =  "\x0A";
-static const char *SR =  ESC "M";
-static const char *DL =  CSI "M";
-static const char *AL =  CSI "L";
+static const char *CM = CSI "%d;%dH";
+static const char *CE = CSI "K";
+static const char *SO = CSI "7m";
+static const char *SF = "\x0A";
+static const char *DL = CSI "M";
+static const char *AL = CSI "L";
 
 /* These may be reset once we know TERM */
 
+static const char *CS = CSI "%d;%dr";
+static const char *SR = ESC "M";
 static const char *CL = CSI "H" CSI "2J";
 static const char *SE = CSI "27m";
 static const char *TI = CSI "?1049h" CSI "22;0;0t"; /* Alt screen, ?? */
@@ -276,7 +276,7 @@ static void scrollregion(int top, int bot) {    /* top and bot are 0-based */
     TTputstr(obuf);
 }
 
-/* Move howmanylines lines starting at from to to - if CS is dedined */
+/* Move howmanylines lines starting at from to to - if CS is defined */
 static void scroll_reg(int from, int to, int howmanylines) {
     int i;
     if (to == from) return;
@@ -330,14 +330,19 @@ void TTinit(void) {
             SE = CSI "m";
             TI = "";                    /* No initialize */
             TE = "";                    /* No exit */
+            CS = NULL;                  /* No region scrolling */
+            SR = NULL;                  /* No region scrolling */
             fake_narrow = 1;
         }
-        else if (0 == strncmp(termval, "linux", 4)) {
+        else if (0 == strncmp(termval, "linux", 5)) {
             TI = "";                    /* No initialize */
             TE = "";                    /* No exit */
         }
-        else {
+        if (CS && SR && SF) {           /* Need all 3 for scroll_reg */
             TTscroll = scroll_reg;
+        }
+        else {
+            TTscroll = scroll_delins;
         }
     }
 
