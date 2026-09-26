@@ -413,22 +413,12 @@ static void inmb_sigwinch(void) {
     wheadp = mb_info.wheadp;
     inmb = FALSE;
 
-/* Do the bits from sizesignal() in display.c that do the work */
-    int w, h;
+/* Check the screen size and handle any change */
 
-    getscreensize(&w, &h);
-    if ((h != term.t_nrow) || (w != term.t_ncol)) {
-
-/* Any SIGWINCH arriving whilst we are working on this one in
- * newscreensize() can be deferred by us setting do_defer
- * around it and restoring the previous setting afterwards.
- * Any other signal is OK, as it will cause uemacs to exit anyway.
- */
-        int orig_defer = sigwin_dfr.do_defer;
-        sigwin_dfr.do_defer = TRUE;
-        newscreensize(h, w, 0);
-        sigwin_dfr.do_defer = orig_defer;
-    }
+    int orig_defer = sigwin_dfr.do_defer;
+    sigwin_dfr.do_defer = TRUE;
+    checkscreensize(0);
+    sigwin_dfr.do_defer = orig_defer;
 
 /* Need to reget the mb_info data now */
 
@@ -452,21 +442,12 @@ static void inmb_sigwinch(void) {
 /* The "usual" sigwinch actual handler */
 static void main_sigwinch(void) {
 
-    int w, h;
-    getscreensize(&w, &h);
+/* Check the screen size and handle any change */
 
-    if ((h != term.t_nrow) || (w != term.t_ncol)) {
-
-/* Any SIGWINCH arriving whilst we are working on this one in
- * newscreensize() can be deferred by us setting do_defer
- * around it and restoring the previous setting afterwards.
- * Any other signal is OK, as it will cause uemacs to exit anyway.
- */
-        int orig_defer = sigwin_dfr.do_defer;
-        sigwin_dfr.do_defer = TRUE;
-        newscreensize(h, w, 0);
-        sigwin_dfr.do_defer = orig_defer;
-    }
+    int orig_defer = sigwin_dfr.do_defer;
+    sigwin_dfr.do_defer = TRUE;
+    checkscreensize(0);
+    sigwin_dfr.do_defer = orig_defer;
 }
 
 /* The actual SIGWINCH handler.

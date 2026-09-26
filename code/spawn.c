@@ -19,29 +19,6 @@
 #include "edef.h"
 #include "efunc.h"
 
-/* If the screen size has changed whilst we were away on the command line
- * force a redraw to the new size.
- * Requires setting the new values (lwidth and lheight) and restoring
- * the old ones (term.t_nrow and term.t_ncol). (Just setting the
- * originals to zero can lead to crashes in vtputc).
- * Need to restore t_mbline and t_vscreen too.
- * Call this at the end of any function that calls system().
- */
-static int orig_width, orig_height;
-#define get_orig_size() (getscreensize(&orig_width, &orig_height))
-
-static void check_for_resize(void) {
-    int lwidth, lheight;
-    getscreensize(&lwidth, &lheight);
-    if ((lwidth != orig_width) || (lheight != orig_height)) {
-        chg_width = lwidth;
-        chg_height = lheight;
-        SET_t_nrow(orig_height);
-        term.t_ncol = orig_width;
-    }
-    return;
-}
-
 /* We run these several times, so centralize it. */
 
 enum TTway { OPEN, CLOSE };
@@ -72,8 +49,6 @@ int spawncli(int f, int n) {
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
-    get_orig_size();
-
     movecursor(term.t_mbline, 0);   /* Seek to last line.   */
     TTstate(CLOSE);
     if ((cp = getenv("SHELL")) != NULL && *cp != '\0') {
@@ -96,7 +71,7 @@ int spawncli(int f, int n) {
     }
     sleep(2);
     TTstate(OPEN);
-    check_for_resize();
+    checkscreensize(0);
 
     return TRUE;
 }
@@ -104,7 +79,6 @@ int spawncli(int f, int n) {
 int bktoshell(int f, int n) {   /* Suspend MicroEMACS and wait to wake up */
     UNUSED(f); UNUSED(n);
 
-    get_orig_size();
     TTstate(CLOSE);
 
     kill(0, SIGTSTP);
@@ -114,7 +88,7 @@ int bktoshell(int f, int n) {   /* Suspend MicroEMACS and wait to wake up */
  */
     curwp->w_flag = WFHARD | WFMODE;
     TTstate(OPEN);
-    check_for_resize();
+    checkscreensize(0);
 
     return TRUE;
 }
@@ -163,7 +137,6 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
 
     if ((s = next_spawn_cmd(rxcopy, prompt, &line)) != TRUE) goto exit;
 
-    get_orig_size();
     TTstate(CLOSE);
 
     rval = system(db_val(line));
@@ -180,7 +153,7 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
         };
     }
     TTstate(OPEN);
-    check_for_resize();
+    checkscreensize(0);
     curwp->w_flag = WFHARD;
 
 exit:
@@ -215,8 +188,6 @@ int pipecmd(int f, int n) {
 
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
-
-    get_orig_size();
 
     db_bufdef(line);        /* command line sent to shell */
     db_bufdef(cmd);         /* command from user */
@@ -261,7 +232,7 @@ int pipecmd(int f, int n) {
     rval = system(db_val(line));
 
     TTstate(OPEN);
-    check_for_resize();
+    checkscreensize(0);
 
 /* Split the current window to make room for the command output */
     if (splitwind(FALSE, 1) == FALSE) { s = FALSE; goto exit; }
@@ -306,8 +277,6 @@ int filter_buffer(int f, int n) {
 
     if (curbp->b_mode & MDVIEW) /* don't allow this command if  */
         return rdonly();        /* we are in read only mode     */
-
-    get_orig_size();
 
     db_bufdef(line);        /* command line send to shell */
     db_bufdef(cmd);         /* command from user */
@@ -374,7 +343,7 @@ int filter_buffer(int f, int n) {
     rval = system(db_val(line));
 
     TTstate(OPEN);
-    check_for_resize();
+    checkscreensize(0);
 
 /* Unset this flag, otherwise readin() prompts for "Discard changes" if
  * the original buffer (which we've just written out...to edit) was marked

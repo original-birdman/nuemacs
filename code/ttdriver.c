@@ -316,8 +316,6 @@ static void scroll_delins(int from, int to, int howmanylines) {
  */
 char *termval = NULL;
 void TTinit(void) {
-    int int_col, int_row;
-
     if (!termval) {     /* We only do the term values setup once */
         if ((termval = getenv("TERM")) == NULL) {
             TTputstr("Environment variable TERM not defined!");
@@ -343,17 +341,10 @@ void TTinit(void) {
         }
     }
 
-/* Get screen size from system, or else from termcap.  */
+/* Check the screen size, which will have changed (from 0) and set thinsg up */
 
-    getscreensize(&int_col, &int_row);
-    if ((int_col <= 0) || (int_row <= 0)) {
-        TTputstr("Cannot determine screen size!");
-        exit(1);
-    }
-    newscreensize(int_row, int_col, 1);
-    term.t_ncol = int_col;
-    SET_t_nrow(int_row);
-    set_scrarray_size(term.t_nrow, term.t_ncol);
+    checkscreensize(1);
+
 }
 
 void TTopen(void) {

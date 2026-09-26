@@ -521,7 +521,7 @@ int restwnd(int f, int n) {
  * The old way, which modifies the bottom window(s) size for the change.
  * The new way, which spreads the change across all windows.
  */
-static void old_sizer(int n) {
+void old_sizer(int n) {
     struct window *wp;      /* current window being examined */
     struct window *nextwp;  /* next window to scan */
     struct window *lastwp;  /* last window scanned */
@@ -581,7 +581,7 @@ static void old_sizer(int n) {
 static int skip = 0;
 static int nsdir = 0;   /* Unknown */
 static int last_count = 0;
-static void new_sizer(int to_add) {
+void new_sizer(int to_add) {
     struct window *wp;      /* current window being examined */
 
 /* If the direction has changed, or the user has typed more input then
@@ -728,103 +728,6 @@ static void new_sizer(int to_add) {
         }
     }
     return;
-}
-
-/* The common entry point to old_sizer() and new_sizer() */
-
-int newheight(int n) {
-
-/* Make sure it's reasonable */
-    if (n < 3 ) {
-        mlwrite_one("Screen size too small");
-        return FALSE;
-    }
-
-    int to_add = n - term.t_nrow;
-    if (to_add == 0) return TRUE;   /* No change */
-
-/* If we're growing we need to ensure we have sufficient v/pscreen space.
- * vtinit needs term.t_mcol/term.t_mrow set first.
- */
-    if (n > term.t_mrow) {
-        set_scrarray_size(n, term.t_ncol);
-        vtinit();       /* Sets WFHARD and WFMODE flags on windows */
-    }
-
-    if (wheadp) {       /* Only if windows exist (so not at TTinit) */
-/* NOTE that the methods take different args */
-        if (ggr_opts&GGR_NEWHEIGHT) {
-            new_sizer(to_add);
-        }
-        else {
-            old_sizer(n);
-        }
-    }
-
-/* Set term.t_nrow and all related vars now */
-    SET_t_nrow(n);
-
-/* screen is garbage */
-    sgarbf = TRUE;
-    return TRUE;
-}
-
-/* Resize the screen width, re-writing the screen
- *
- * int n;           new width to set
- */
-int newwidth(int n) {
-    struct window *wp;
-
-/* Make sure it's reasonable.
- * We can't actually stop the user dragging the window smaller.
- * But we can warn, with a sufficiently short message
- */
-    if (n < 10) {
-        mlwrite_one("TOO SMALL");
-        return FALSE;
-    }
-
-/* Ensure we have sufficient v/pscreen space.
- * vtinit needs term.t_mcol/term.t_mrow set first.
- */
-    if (term.t_mcol < n) {
-        set_scrarray_size(term.t_nrow, n);
-        vtinit();
-    }
-
-/* Otherwise, just re-width it (no big deal).
- * t_margin is just a hueristic. Nothing special...
- */
-    term.t_ncol = n;
-    term.t_margin = 2 + n/40;
-    term.t_scrsiz = n - (2*term.t_margin);
-
-/* If the //List buffer is being shown, recalculate it for the new width */
-
-    int update_blistp = 0;
-    if (blistp && (blistp->b_nwnd > 0)) {
-        makelist(-1); /* -1 == use last iflag */
-        blistp->b_flag |= BFCHG;
-        update_blistp = 1;
-    }
-
-/* Force all windows to redraw. Update blistp when we hit it */
-    wp = wheadp;
-    while (wp) {
-        if (update_blistp && (wp->w_bufp == blistp)) {
-            wp->w_linep = lforw(blistp->b_linep);
-            wp->w.dotp = lforw(blistp->b_linep);
-            wp->w.doto = 0;
-            wp->w.markp = NULL;
-            wp->w.marko = 0;
-        }
-        wp->w_flag |= WFHARD | WFMOVE | WFMODE;
-        wp = wp->w_wndp;
-    }
-    sgarbf = TRUE;
-
-    return TRUE;
 }
 
 /* Get screen offset of current line in current window */

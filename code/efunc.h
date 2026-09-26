@@ -102,7 +102,7 @@ extern void vttidy(void);
 extern int upscreen(int, int);
 extern void upmode(struct buffer *);
 extern void set_scrarray_size(int, int);
-extern int newscreensize(int, int, int);
+extern int checkscreensize(int);
 extern void mlrewrite(void);
 extern void update(int);
 extern void mlwrite(const char *, ...);
@@ -111,7 +111,6 @@ extern void mlforce(int, const char *, ...);
 extern void mlwrite_one(const char *);
 extern void mlprompt_one(const char *);
 extern void mlforce_one(int, const char *);
-extern void getscreensize(int *, int *);
 extern void mberase(void);
 extern void mbupdate(void);
 #endif
@@ -426,8 +425,8 @@ extern int scrnextup(int, int);
 extern int scrnextdw(int, int);
 extern int savewnd(int, int);
 extern int restwnd(int, int);
-extern int newheight(int);
-extern int newwidth(int);
+extern void old_sizer(int);
+extern void new_sizer(int);
 extern int getwpos(void);
 #endif
 

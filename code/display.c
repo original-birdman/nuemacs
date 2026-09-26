@@ -59,6 +59,7 @@ static void *vdata;                     /* Where we've stored it all */
 static struct grapheme blank_gph = { ' ', 0, NULL };
 
 static int displaying = FALSE;
+static int delayed_update = FALSE;
 
 #include <signal.h>
 
@@ -1490,37 +1491,140 @@ void upmode(struct buffer *cbp) {   /* Update mode lines */
     }
 }
 
+/* checkscreensize checks teh current screen size and if it has changed
+ * from the previous setting (term/t_ncol/term.tnrow) it resets/recalculates
+ * things and thne runs a screen update (optionally).
+ */
+void mlwrite_one(const char *); /* Forward declaration */
+void checkscreensize(int no_update_needed) {
+    struct winsize size;
+    int width, height;
+
+/* If we can't get the size, we are stuffed (stdout redirected?).
+ * Unless the user has specified we set "dummy size" for testing.
+ */
+    if (pretend_size) {
+        width = 80;
+        height = 24;
+    }
+    else {
+/* If this call fails, just exit */
+        if (ioctl(1, TIOCGWINSZ, &size) < 0) {
+            if (prev_mrow == 0) exit(errno);    /* vtinit() not yet run */
+            else quickexit(ABORT, errno);       /* vtinit() has run */
+        }
+
+/* Claude/Fable reckons "transient" zeroes can arrive here, so
+ * if we got 0, but had previously got an answer, use that and hope.
+ */
+        if (size.ws_col == 0) width = term.t_ncol;
+        else                  width = size.ws_col - fake_narrow;
+        if (size.ws_row == 0) height = term.t_nrow;
+        else                  height = size.ws_row;
+
+/* If we still have a 0 we cannot continue. */
+
+        if ((width == 0) || (height == 0)) {
+            if (prev_mrow == 0) exit(ENXIO);
+            else quickexit(ABORT, ENXIO);
+        }
+    }
+
+/* Has the size actually changed? If not, we are done */
+
+    if ((width == term.t_ncol) && (height == term.t_nrow)) return;
+
+/* Make sure it's reasonable.
+ * If it isn't, we don't change anything. The display will mess up, but
+ * we won't have problems with crashes form areas being too small/-ve.
+ */
+    if (height < 3 ) {
+        mlwrite_one("Screen size too small");
+        return;
+    }
+    if (width < 10) {
+        mlwrite_one("TOO SMALL");
+        return;
+    }
+
+/* We have work to do */
+
+    if (displaying) {           /* do the change later */
+        delayed_update = TRUE;
+        return;
+    }
+    delayed_update = FALSE;
+
 /* Given a screen height and width, set t_mcol/t_mrow as a rounded-up
  * amount, with a minimum size (to avoid re-allocs on small changes).
  */
 #define MINCOL 240
 #define MINROW  70
-void set_scrarray_size(int h, int w) {
-    term.t_mcol = 50*(1 + (w + 30)/50);
+    term.t_mcol = 50*(1 + (width + 30)/50);
     if (term.t_mcol < MINCOL) term.t_mcol = MINCOL;
-    term.t_mrow = 30*(1 + (h + 20)/30);
+    term.t_mrow = 30*(1 + (height + 20)/30);
     if (term.t_mrow < MINROW) term.t_mrow = MINROW;
-    return;
-}
 
-int newscreensize(int h, int w, int no_update_needed) {
-    if (displaying) {           /* do the change later */
-        chg_width = w;
-        chg_height = h;
-        return FALSE;
-    }
-    int old_nrow = term.t_nrow;
-    int old_ncol = term.t_ncol;
-    chg_width = chg_height = 0;
-    set_scrarray_size(h, w);
     vtinit();
 
-    if (h != old_nrow) newheight(h);
-    if (w != old_ncol) newwidth(w);
+/* Things do do if we are changing the height */
 
+    int to_add = height - term.t_nrow;
+    if (to_add != 0) {  /* We have a change in height */
+
+        if (wheadp) {       /* Only if windows exist (so not at TTinit) */
+/* NOTE that the methods take different args */
+            if (ggr_opts&GGR_NEWHEIGHT) {
+                new_sizer(to_add);
+            }
+            else {
+                old_sizer(height);
+            }
+        }
+/* Set term.t_nrow and all related vars now */
+        SET_t_nrow(height);
+    }
+
+
+/* Things do do if we are changing the width */
+
+    if (width != term.t_ncol) {
+
+/* Otherwise, just re-width it (no big deal).
+ * t_margin is just a hueristic. Nothing special...
+ */
+        term.t_ncol = width;
+        term.t_margin = 2 + width/40;
+        term.t_scrsiz = width - (2*term.t_margin);
+
+/* If the //List buffer is being shown, recalculate it for the new width */
+
+        int update_blistp = 0;
+        if (blistp && (blistp->b_nwnd > 0)) {
+            makelist(-1); /* -1 == use last iflag */
+            blistp->b_flag |= BFCHG;
+            update_blistp = 1;
+        }
+
+/* Force all windows to redraw. Update blistp when we hit it */
+        struct window *wp = wheadp;
+        while (wp) {
+            if (update_blistp && (wp->w_bufp == blistp)) {
+                wp->w_linep = lforw(blistp->b_linep);
+                wp->w.dotp = lforw(blistp->b_linep);
+                wp->w.doto = 0;
+                wp->w.markp = NULL;
+                wp->w.marko = 0;
+            }
+            wp->w_flag |= WFHARD | WFMOVE | WFMODE;
+            wp = wp->w_wndp;
+        }
+    }
+
+/* screen is garbage */
+    sgarbf = TRUE;
     if (!no_update_needed) update(TRUE);
-
-    return TRUE;
+    return;
 }
 
 void mlrewrite(void) {
@@ -1557,7 +1661,7 @@ void update(int force) {
  * spawn.c forces a redraw using this on return from a command line, and
  * we need to ensure that term.t_ncol is set before doing any vtputc() calls.
  */
-    if (chg_width || chg_height) newscreensize(chg_height, chg_width, 1);
+    if (delayed_update) checkscreensize(1);
     int was_displaying = displaying;    /* So this can recurse.... */
     displaying = TRUE;
 
@@ -1625,8 +1729,7 @@ void update(int force) {
     TTflush();
     displaying = was_displaying;
 
-    if (chg_width || chg_height) newscreensize(chg_height, chg_width, 0);
-
+    if (delayed_update) checkscreensize(0);
     return;
 }
 
@@ -1707,7 +1810,6 @@ static void mlputf(int s) {
  */
 static int mlw_level = 0;
 
-void mlwrite_one(const char *); /* Forward declaration */
 static void mlwrite_ap(const char *fmt, npva ap) {
     unicode_t c;                /* current char in format string */
 
@@ -1864,50 +1966,6 @@ void mlforce_one(int wait, const char *fmt) {
         wait *= -wu;
     }
     if (wait > 0) sleep((unsigned)wait);
-    return;
-}
-
-/* Get terminal size from system.
- * Store number of lines into *heightp and width into *widthp.
- * If zero or a negative number is stored, the value is not valid, so
- * exit unless the caller said zeroes are OK.
- */
-
-void getscreensize(int *widthp, int *heightp) {
-    struct winsize size;
-    *widthp = 0;
-    *heightp = 0;
-/* If we can't get the size, we are stuffed (stdout redirected?).
- * Unless the user has specified we set "dummy size" for testing.
- */
-    if (pretend_size) {
-        *widthp = 80;
-        *heightp = 24;
-    }
-    else {
-/* If this call fails, just exit */
-        if (ioctl(1, TIOCGWINSZ, &size) < 0) {
-            if (prev_mrow == 0) exit(errno);    /* vtinit() not yet run */
-            else quickexit(ABORT, errno);       /* vtinit() has run */
-        }
-
-/* Claude/Fable reckons "transient" zeroes can arrive here, so
- * if we got 0, but had previously got an answer, use that and hope,
- * which is done by returning with widthp and heightp set to the
- * values currently set in the term structure.
- */
-        *widthp = size.ws_col - fake_narrow;
-        *heightp = size.ws_row;
-        for (int tl = 0; tl < 2; tl++) {
-            if ((*widthp > 0) && (*heightp > 0)) return;
-/* If still here, fill in the current value and run the loop again */
-            if (*widthp == 0) *widthp = term.t_ncol;
-            if (*heightp == 0) *heightp = term.t_nrow;
-        }
-/* If we exit the loop we have unwanted zero(es).  Exit */
-        if (prev_mrow == 0) exit(ENXIO);
-        else quickexit(ABORT, ENXIO);
-    }
     return;
 }
 

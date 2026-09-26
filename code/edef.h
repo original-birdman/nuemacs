@@ -235,9 +235,6 @@ extern int do_savnam;           /* Whether to save buffer name */
 
 extern int allow_current;       /* Look in current dir for startup? */
 
-extern int chg_width;           /* Changed width on SIGWINCH */
-extern int chg_height;          /* Changed height on SIGWINCH */
-
 extern char *input_waiting;     /* Input ready (for execproc) */
 
 extern int keytab_alloc_ents;   /* Allocated number of keytab entries */

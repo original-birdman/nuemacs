@@ -1072,3 +1072,37 @@ etc/uemacs.hlp
 
 buffer.c
     Fix an old code typo.
+
+----------
+Replace the confusing getscreensize. newscreensize, set_scrarray_size,
+newheight and newwidth with a single checkscreensize function which
+combines all of their code.
+
+display.c
+    Add the checkscreensize() code;
+    Replace chg_width/chg_height check with delayed_update.
+    Remove set_scrarray_size(), newscreensize() and getscreensize().
+
+globals.c
+edef.h
+    Remove chg_width and chg_height.
+
+input.c
+    Replace getscreensize()+newscreensize() calls with checkscreensize().
+
+spawn.c
+    Remove get_orig_size() and check_for_resize(). replacing the latter
+    with checkscreensize().
+
+ttdriver.c
+    Replace getscreensize()+newscreensize()+set_scrarray_size() with
+    checkscreensize().
+
+window.c
+    Make old_sizer() and new_sizer() non-static.
+    Remove newheight() and newwidth().
+
+efunc.h
+    Remove newscreensize(), getscreensize(), newheight() and newwidth().
+    Add checkscreensize(), old_sizer() and new_sizer().
+----------
