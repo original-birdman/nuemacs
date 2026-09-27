@@ -1129,3 +1129,6 @@ main.c
 display.c
     Allow for non-zero lbound for movercursor() in mlrewrite() and
     mlwrite_ap().
+
+combi.h
+    Generated an updated version (using tools/combi-class.c)
