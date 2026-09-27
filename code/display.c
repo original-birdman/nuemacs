@@ -1635,7 +1635,7 @@ void mlrewrite(void) {
     mlerase();
     for (int i = 0; i < ml_text_offset; i++) mlout_uc(ml_text[i]);
     ml_rewriting = 0;
-    if (!ml_prompt) movecursor(srow, scol); /* Send the cursor back */
+    if (!ml_prompt) movecursor(srow, scol - lbound);    /* Send cursor back */
     TTflush();
 }
 
@@ -1885,7 +1885,8 @@ static void mlwrite_ap(const char *fmt, npva ap) {
     mlw_level--;    /* Remember we've left */
     if (mlw_level == 0) {
 /* Send the cursor back UNLESS it was originally in the message line */
-        if (!ml_prompt && (srow != term.t_mbline)) movecursor(srow, scol);
+        if (!ml_prompt && (srow != term.t_mbline))
+             movecursor(srow, scol - lbound);
         TTflush();
     }
 }

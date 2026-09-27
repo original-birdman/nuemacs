@@ -1125,3 +1125,7 @@ ttdriver.c
 main.c
     Fix macro pointer reset in multiplier_check() to cater for any
     potential reallocation of kbdptr.
+
+display.c
+    Allow for non-zero lbound for movercursor() in mlrewrite() and
+    mlwrite_ap().
