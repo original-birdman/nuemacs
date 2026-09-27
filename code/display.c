@@ -154,11 +154,13 @@ static int
  * Handle remapping on the main character.
  */
 static void TTputgrapheme(struct grapheme *gp) {
-    TTputc(display_for(gp->uc));
-    if (gp->cdm) TTputc(gp->cdm);   /* Might add display_for here too */
-    if (gp->ex != NULL) {
-        for(unicode_t *zw = gp->ex; *zw != UEM_NOCHAR; zw++) {
-            TTputc(*zw);            /* Might add display_for here too */
+    if (gp->uc) {   /* NUL bytes indicate no output, but do increment ttcol */
+        TTputc(display_for(gp->uc));
+        if (gp->cdm) TTputc(gp->cdm);   /* Might add display_for here too */
+        if (gp->ex != NULL) {
+            for(unicode_t *zw = gp->ex; *zw != UEM_NOCHAR; zw++) {
+                TTputc(*zw);            /* Might add display_for here too */
+            }
         }
     }
     ttcol++;
@@ -451,33 +453,41 @@ static void vtputc(unicode_t c) {
  *  o we are adding simple 1-width chars beyond a 1-width char
  *      set previous char to simple ovflw
  *  o we are adding simple 1-width chars beyond a double-width chars
- *      set previous double-char to double ovflw
+ *      set previous 2 chars to space + ovflw.
  *  o we are adding a double width char and have overflowed by 1
  *      just add a simple ovflw (no previous ovflw edit required)
  *  o we are adding a double-width char and have overflowed by 2
- *      set whatever ovflw fits with last char added
+ *      we have to replace any preceding double width char with
+ *      a space, then put an ovflw in the last column.
  */
             if (cw == 1) {
 
 /* If the last-displayed char was a double width then it will have
  * been given a NUL-pad char (and we can't have a NUL for any other reason).
- * So then we put a double-width overflow char into the final 2 columns
+ * So then we put a space and oveflow into the final 2 columns.
  */
-                if (vp->v_text[vtcol-1].uc == 0)
-                    update_grapheme(&(vp->v_text[vtcol-2]), 0x1801);
-                else
-                    update_grapheme(&(vp->v_text[vtcol-1]), ovflw);
+                if (vp->v_text[vtcol-1].uc == 0) {
+                    update_grapheme(&(vp->v_text[vtcol-2]), ' ');
+                }
+                update_grapheme(&(vp->v_text[vtcol-1]), ovflw);
             }
             else {  /* cw == 2 */
                 int ovc = (vtcol + cw) - term.t_ncol;   /* Overflow amount */
+/* If we've overflowed by 1 then the final column is available for us
+ * to insert the overflow character.
+ */
                 if (ovc == 1) {
                     update_grapheme(&(vp->v_text[vtcol]), ovflw);
                 }
+/* If we've overflowed by 2 then if the last character was a single width
+ * one we can just replace it with the overflow character.
+ * BUT if it was a double width we have to replace that with a
+ * space + overflow
+ */
                 else {  /* ovc == 2 */
                     if (vp->v_text[vtcol-1].uc == 0)
-                        update_grapheme(&(vp->v_text[vtcol-2]), 0x1801);
-                    else
-                        update_grapheme(&(vp->v_text[vtcol-1]), ovflw);
+                        update_grapheme(&(vp->v_text[vtcol-2]), ' ');
+                    update_grapheme(&(vp->v_text[vtcol-1]), ovflw);
                 }
             }
         }

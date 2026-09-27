@@ -1132,3 +1132,7 @@ display.c
 
 combi.h
     Generated an updated version (using tools/combi-class.c)
+
+display.c
+    Reworked oveflow or double-width chars to use the standard overflow
+    character.
