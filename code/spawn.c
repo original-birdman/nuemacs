@@ -146,10 +146,10 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
         fputs(MLbkt("Press <return> to continue"), stdout); /* Pause */
         fflush(stdout);
         while (1) {
-            s = fgetc(stdin);
-            if (s == '\n') break;
-            if (s == ' ') break;
-            if (s == '\r') break;
+            int k = fgetc(stdin);
+            if (k == '\n') break;
+            if (k == '\r') break;
+            if (k == EOF) break;
         };
     }
     TTstate(OPEN);
@@ -158,7 +158,7 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
 
 exit:
     db_free(line);
-    return s;
+    return TRUE;
 }
 
 /* The two front-ends for run_one_liner */

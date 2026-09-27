@@ -123,7 +123,7 @@ store-procedure spell-check not_mb one_pass
       set .rptc 0
     !endif
     write-file .tempname
-    write-message "~n[Starting spelling checker..]  ~n~r"
+    write-message "[Starting spelling checker..]~n~r"
 ; Shell-escape $pttmode in case it contains some shell-active chars...
     set .evar &ptf "spell4ueLANG=%s spell4ueRPT=%s" &esc $pttmode .rptc
     !force execute-program &ptf "%s spell4ue %s %s" .evar .tempname .extras
@@ -138,7 +138,7 @@ store-procedure spell-check not_mb one_pass
         write-message "[Tidying up temporary files..]"
     !endif
     set $discmd FALSE
-    shell-command &cat "rm -f " .tempname
+    !force shell-command &cat "rm -f " .tempname
     set $discmd TRUE
     set $cfname .savefile
 !endm

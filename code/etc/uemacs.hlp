@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.204 Help Index     (26 Sep 2026)
+=>                   nuEmacs GGR4.205 Help Index     (27 Sep 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -661,6 +661,9 @@ Unless noted as (read-only), these may be set as well as read.
     $lwidth ............... width of current line (read-only)
     $line ................. text of current line
     $rval ................. child process return value (read-only)
+                           [NOTE that commands which produce child processes,
+                            such as shell-command, execute-program etc.
+                            do NOT return this value]
     $tab .................. tab (only 4 or 8 allowed)
     $overlap .............. Overlap on next/prev page
     $jump ................. Number of lines to jump on scroll

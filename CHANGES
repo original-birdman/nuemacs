@@ -1136,3 +1136,11 @@ combi.h
 display.c
     Reworked oveflow or double-width chars to use the standard overflow
     character.
+
+spawn.c
+etc/uemacs.hlp
+etc/uemacs.rc
+    Correct the return status from run_one_liner().
+    Document that the child process return status for such commands is
+    set in rval but is NOT reflected in the return status of the uemacs
+    command.
