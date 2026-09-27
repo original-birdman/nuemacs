@@ -1751,9 +1751,9 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             db_set(rpat, value);
 /* Let getstring() know, via the search code, so that it can update
  * the prompt if it needs to (it might not).
- * Set the level to 0, so that any level will see it.
+ * Set the current mb level, so that any level below will see it.
  */
-            prmpt_buf.repl_lvl = 0;;
+            prmpt_buf.repl_lvl = mb_info.mbdepth;
             break;
         case EVCMODE:
             srch_can_hunt = 0;

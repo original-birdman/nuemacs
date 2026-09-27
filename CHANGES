@@ -1144,3 +1144,6 @@ etc/uemacs.rc
     Document that the child process return status for such commands is
     set in rval but is NOT reflected in the return status of the uemacs
     command.
+
+eval.c
+    Fix the prmpt_buf.repl_lvl setting for EVREPLACE.
