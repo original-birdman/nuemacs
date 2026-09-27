@@ -1958,7 +1958,7 @@ void mlwrite_one(const char *fmt) {
     return;
 }
 /* This one leaves the cursor in the message line */
-void mlprompt_one(const char *fmt, ...) {
+void mlprompt_one(const char *fmt) {
     ml_prompt = 1;
     mlwrite_ap(fmt, nullva);
     return;

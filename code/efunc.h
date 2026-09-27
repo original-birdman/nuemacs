@@ -102,7 +102,7 @@ extern void vttidy(void);
 extern int upscreen(int, int);
 extern void upmode(struct buffer *);
 extern void set_scrarray_size(int, int);
-extern int checkscreensize(int);
+extern void checkscreensize(int);
 extern void mlrewrite(void);
 extern void update(int);
 extern void mlwrite(const char *, ...);

@@ -1151,3 +1151,7 @@ eval.c
 random.c
     Print cbuf before freeing it.
     Fix typo between fg_clr and bg_clr.
+
+display.c
+efunc.h
+    Corrected some function prototypes.
