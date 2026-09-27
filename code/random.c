@@ -1133,7 +1133,7 @@ int setcolor(int f, int n) {
 /* Get the colour setting for the background */
 
     int bg_clr = color_val(bgcspec);
-    if (fg_clr == INT32_MIN) {      /* Error */
+    if (bg_clr == INT32_MIN) {      /* Error */
         emess = "background";
         goto exit;
     }
@@ -1148,11 +1148,11 @@ int setcolor(int f, int n) {
     update(TRUE);   /* Ensure all modelines get the new colour */
 
 exit:
-    db_free(cbuf);
     if (emess) {
         mlforce(1, "Invalid %s: %s", emess, db_val(cbuf));
         status = FALSE;
     }
+    db_free(cbuf);
     return status;
 }
 

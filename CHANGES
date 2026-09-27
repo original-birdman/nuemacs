@@ -1147,3 +1147,7 @@ etc/uemacs.rc
 
 eval.c
     Fix the prmpt_buf.repl_lvl setting for EVREPLACE.
+
+random.c
+    Print cbuf before freeing it.
+    Fix typo between fg_clr and bg_clr.
