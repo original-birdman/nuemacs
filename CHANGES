@@ -1121,3 +1121,7 @@ ttdriver.c
 
 ttdriver.c
     Fix the copy loop in TTungetc().
+
+main.c
+    Fix macro pointer reset in multiplier_check() to cater for any
+    potential reallocation of kbdptr.

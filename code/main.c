@@ -848,13 +848,16 @@ com_arg *multiplier_check(int c) {
 
 /* We need this if we back-out of a numeric arg during macro gathering */
 
-    unicode_t *reset_kbdptr = NULL;     /* No reset yet */
+    int n_reset = 0;            /* Potential macro reset? */
+    ptrdiff_t kbdm_reset = 0;   /* No reset yet */
 
 /* Do META-# processing if needed */
 
     basec = ca.c & ~META;       /* strip meta char off if there */
     if ((ca.c & META) && ((basec >= '0' && basec <= '9') || basec == '-')) {
-        reset_kbdptr = kbdptr - 2;  /* Remove Esc -/n on abort */
+        n_reset = 1;
+/* So we can remove the macro's Esc -/n on abort */
+        if (kbdmode == RECORD) kbdm_reset = (kbdptr - kbdm) - 2;
         ca.f = TRUE;            /* there is a # arg */
         ca.n = 0;               /* start with a zero default */
         mflag = 1;              /* current minus flag */
@@ -905,8 +908,13 @@ com_arg *multiplier_check(int c) {
 /* Do ^U repeat argument processing */
 
     if (ca.c == reptc) {    /* ^U, start argument   */
-/* We can get a ^U after a stream of Escnnn, so only set this if not set */
-        if (!reset_kbdptr) reset_kbdptr = kbdptr - 1;   /* Remove ^U */
+/* We can get a ^U after a stream of Escnnn, so only set this if not set.
+ * Start by remembering where to remove it from any keyboard macro
+ */
+        if (n_reset == 0) {
+            n_reset = 1;
+            if (kbdmode == RECORD) kbdm_reset = (kbdptr - kbdm) - 1;
+        }
         ca.f = TRUE;
         ca.n = 4;           /* with argument of 4 */
         mflag = 0;          /* that can be discarded. */
@@ -965,19 +973,19 @@ com_arg *multiplier_check(int c) {
             ca.n = -ca.n;
         }
     }
-/* Did we start collecting a number ((ca.c != c) but then abort
+/* Did we start collecting a number (n_reset set) but then abort
  * ca.c == (CONTROL|'G').
  * If so we remap to nullproc and wipe out any macro recording
  * NOTE that if we did arrive for numeric handling we will have
  * done so with an Esc and N (or -) in the buffer, so we have
  * to step back over those 2 as well.
  */
-    if (reset_kbdptr && ca.c == (CONTROL|'G')) {
+    if ((n_reset == 1) && ca.c == (CONTROL|'G')) {
         ca.c = META|SPEC|'*';   /* Dummy nop */
         ca.f = FALSE;
         ca.n = 1;
 /* Reset the pointer to "forget" the cancelled number input */
-        if (kbdmode == RECORD) kbdptr = reset_kbdptr;
+        if (kbdmode == RECORD) kbdptr = kbdm + kbdm_reset;
         mlwrite_one("Cancelled");
         sleep(1);
         mlerase();
