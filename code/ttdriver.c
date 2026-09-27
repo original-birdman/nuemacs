@@ -196,12 +196,12 @@ done:
 void TTungetc(unicode_t c) {
     char temp[8];
     int blen = unicode_to_utf8(c, temp);    /* How many bytes to add? */
-    int mi = blen;
+    int mi = pending_rch;                   /* How many to move */
     while(mi--) {           /* Shuffle any current ones out of the way */
-        ibuffer[pending_rch+1] = ibuffer[pending_rch];
-        pending_rch++;
+        ibuffer[mi+blen] = ibuffer[mi];
     }
-    while(blen--) ibuffer[blen] = temp[blen];
+    pending_rch += blen;
+    while(blen--) ibuffer[blen] = temp[blen];   /* Add the new ones */
     return;
 }
 

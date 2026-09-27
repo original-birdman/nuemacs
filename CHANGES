@@ -1118,3 +1118,6 @@ ttdriver.c
 
 ttdriver.c
     Make TTscrol definition be based on capabilities.
+
+ttdriver.c
+    Fix the copy loop in TTungetc().
