@@ -752,15 +752,16 @@ estruct.h
     For search/replace ring updates, pass the type around as a
     parameter, rather than set a global variable.
     Change prototypes.  [efunc.h]
-    Add the relevant call type arg to Add CMPLT_REPL to enum cmplt_type.
-    [estruct.h]
+    Add the relevant call type arg to update_ring(), rotate_sstr(),
+    select_sstr(), setpattern(), readpattern(). [input.c, main.c, search.c]
+    Add CMPLT_REPL to enum cmplt_type. [estruct.h]
     Check for CMPLT_REPL as well as CMPLT_SRCH in getstring() and pass
     these to rotate_sstr(). [input.c]
     Add CMPLT_SRCH to setpattern() call. [main.c]
     Change enum call_type tests to use the enum cmplt_type arg instead
     and add/change args for the new input.c API. [search.c]
-    Remove the recently-added new_prompt() call in update_ring()< as it
-    is wrong., [search.c]
+    Remove the recently-added new_prompt() call in update_ring(), as it
+    is wrong. [search.c]
     Changes to input.c API.
     o Remove enum call_type (enum cmplt_type no handles it)
     o Add enum cmplt_type arg to update_ring(), rotate_sstr(),
@@ -952,7 +953,7 @@ ttdriver.c [added]
     Combine TTopen with TTkopen
     Combine TTclose with TTkclose.
     Add TTinit to get the TERM variable and set-up the screen arrays.
-    Remove all termcap/terminfo calls and hard-wired ANSi escape
+    Replace all termcap/terminfo calls with hard-wired ANSI escape
     sequences with overrides if TERM is a sun-* version.
     Adapt TTmove() and scrollregion() to use the hard-wired sequences.
     Added TTputstr()
@@ -1005,7 +1006,7 @@ Makefile
     replaced with ttdriver ones.
     Remove -ltinfo from LIBS.
     Remove -lncurses from LIBS and remove search for term.h.
-`   Change the depend node to use ${CC} ${CFLAGS}
+    Change the depend node to use ${CC} ${CFLAGS}
 
 ----------
 Add $ovflw, to set the character used for overflowing lines and
@@ -1024,7 +1025,7 @@ autotest/search-with-nul.sh
 eval.c
 evar.h
 estruct.h
-    Added EVOVFLW (ovflk) and EVNDISPLAY (nodisplay) options.
+    Added EVOVFLW (ovflw) and EVNDISPLAY (nodisplay) options.
     Remove GGR_CTLGPH definition and add comment. [estruct.h]
 
 globals.c
@@ -1165,3 +1166,12 @@ input.c
 main.c
 line.h
     Remove ltext_chk() as ltext() is now safe to use on empty lines.
+
+CHANGES
+display.c
+input.c
+random.c
+ttdriver.c
+etc/uemacs.hlp
+tools/sequences.c
+    Various corrections for typos in comments.

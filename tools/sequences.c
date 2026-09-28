@@ -3,6 +3,8 @@
  *  Compile by:
  *      gcc sequences.c -ltinfo -o sequences
  *
+ * Only uses ASCII, so signed/unsigned chars shouldn't matter.
+ *
  *  Usage:
  *      ./sequences term-name
  */
@@ -40,9 +42,8 @@ static char *unesc(const char *str) {
 /* Main program */
 
 int main(int argc, char *argv[]) {
-    char *tv_stype;
 
-    if (!argv[1]) {
+    if (argc != 2) {
         fprintf(stderr, "Usage: %s termnal-type\n", argv[0]);
         return 1;
     }
@@ -51,7 +52,7 @@ int main(int argc, char *argv[]) {
 /* Handle overlong TERM settings. Only print the first 40 chars */
         const char *xtra = "";
         if (strlen(argv[1]) > 40) xtra = "...";
-        fprintf(stderr, "Unknown terminal type: %.40s%s!", argv[1], xtra);
+        fprintf(stderr, "Unknown terminal type: %.40s%s!\n", argv[1], xtra);
         exit(1);
     }
 

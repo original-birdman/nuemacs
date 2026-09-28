@@ -199,7 +199,7 @@ static void mlout_uc(unicode_t uc) {
     unicode_t act_uc = display_for(uc);
     int cw = (combining_type(act_uc))? 0: utf8char_width(act_uc);
 /* Do we have space for this */
-    if (ttcol < term.t_ncol) {  /* No ouptut if > R/h column */
+    if (ttcol < term.t_ncol) {  /* No output if > R/h column */
         if ((ttcol + cw) >= term.t_ncol) {  /* No */
             act_uc = ovflw;
             cw = 1;     /* Width of overflow char */
@@ -249,13 +249,13 @@ void vtinit(void) {
     size_t row_size =
          sizeof(struct video) + (unsigned)term.t_mcol*sizeof(struct grapheme);
     new_vdata = Xmalloc(2 * (unsigned)term.t_mrow*row_size);
-    void *vdp = new_vdata;
-    void *pdp = new_vdata + ((unsigned)term.t_mrow*row_size);
+    char *vdp = new_vdata;
+    char *pdp = new_vdata + ((unsigned)term.t_mrow*row_size);
 
     for (i = 0; i < term.t_mrow; i++) {
-        new_vscreen[i] = vdp;
+        new_vscreen[i] = (void *)vdp;
         vdp += row_size;
-        new_pscreen[i] = pdp;
+        new_pscreen[i] = (void *)pdp;
         pdp += row_size;
     }
 
@@ -388,7 +388,7 @@ static void vtputc(unicode_t c) {
             extend_grapheme(&(vp->v_text[0]), c);
             ++vtcol;
         }
-        return;     /* Nothing else do do... no vtcol update */
+        return;     /* Nothing else to do... no vtcol update */
     }
 
     if (c == '\t') {
@@ -1501,9 +1501,9 @@ void upmode(struct buffer *cbp) {   /* Update mode lines */
     }
 }
 
-/* checkscreensize checks teh current screen size and if it has changed
+/* checkscreensize checks the current screen size and if it has changed
  * from the previous setting (term/t_ncol/term.tnrow) it resets/recalculates
- * things and thne runs a screen update (optionally).
+ * things and then runs a screen update (optionally).
  */
 void mlwrite_one(const char *); /* Forward declaration */
 void checkscreensize(int no_update_needed) {
@@ -1577,7 +1577,7 @@ void checkscreensize(int no_update_needed) {
 
     vtinit();
 
-/* Things do do if we are changing the height */
+/* Things to do if we are changing the height */
 
     int to_add = height - term.t_nrow;
     if (to_add != 0) {  /* We have a change in height */

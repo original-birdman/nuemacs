@@ -1000,7 +1000,7 @@ int clrmes(int f, int n) {
  *               Cyan or White
  *      nnn is a decimal number from 0 to 255 (or -ve to disable the
  *          colour)
- *      #rrggbb is a 24-but RGB colour
+ *      #rrggbb is a 24-bit RGB colour
  *  a blank spec leaves the current setting unchanged.
  *  a -ve value unsets the setting
  * fg/bg denote the foreground and background colour.

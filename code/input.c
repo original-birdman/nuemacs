@@ -743,7 +743,7 @@ unicode_t getcmd(void) {
 
 /* Keep going until we return something */
 
-    while ((c = get1key())) {   /* Extra ()s for gcc warniing */
+    while ((c = get1key())) {   /* Extra ()s for gcc warning */
 
 /* Optionally echo the prefix we have seen so far */
         if ((pending_rch <= 1) && (ggr_opts & GGR_MLPFX)) {

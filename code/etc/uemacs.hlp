@@ -707,7 +707,7 @@ Unless noted as (read-only), these may be set as well as read.
                             froms *and* tos should start and end with a /.
                             On retrieving this value you will get:
                                 "from1~0to1~0from2~0to2..."
-    $ovflw                  A character to display at the stat/emd of a
+    $ovflw                  A character to display at the stat/end of a
                             line to indicate that the text has
                             overflowed.
                             Must be set to a Unicode character of width 1.
@@ -1222,7 +1222,7 @@ Flag    Controls    How
 0x10    height      When ON and the display height is changed, spread
         redraw      the change over all windows.
                     When OFF all the change is done in the bottom window
-                    until it is rmeoved and then the new bottom window
+                    until it is removed and then the new bottom window
                     shrinks.
 0x20    Not used    Replaced by $ovflw and $nodisplay
 0x40    Show prefix When ON echo Esc, Ctlx, CtlxEsc in the message line

@@ -1,13 +1,13 @@
 /* ttdrivers.c
  *
- * The code to send relevant escpae sequence and set terminal characteristics.
- * Hard-wires the hamdling with ANSI escape sequences, as that handles
+ * The code to send relevant escape sequence and set terminal characteristics.
+ * Hard-wires the handling with ANSI escape sequences, as that handles
  * all "terminals" likely to be used, which are:
  *
  *  xterm
  *  KDE konsole
- *  gome-terminal
- *  gome-console
+ *  gnome-terminal
+ *  gnome-console
  *  kmscon
  *    The login console screens on
  *  linux
@@ -50,7 +50,7 @@ static int kbdflgs;             /* saved keyboard fd flags      */
 static int kbdpoll;             /* in O_NDELAY mode             */
 
 static struct termios otermios; /* original terminal characteristics */
-static struct termios ntermios; /* charactoristics to use inside */
+static struct termios ntermios; /* characteristics to use inside */
 
 /* We only let read get up to RBUFSIZE bytes in one call.
  * But we set the input buffer to twice this.
@@ -91,7 +91,7 @@ void TTflush(void) {
  *
  */
     int status;
-    int count = 60;     /* Arbitrary linit */
+    int count = 60;     /* Arbitrary limit */
 
     do {
         status = fflush(stdout);
@@ -101,7 +101,7 @@ void TTflush(void) {
         }
         else break;
     } while (count-- > 0);
-/* If we can't flush the termninal, there's no point in posting an
+/* If we can't flush the terminal, there's no point in posting an
  * error message!
  */
     if (status != 0) quit(1, ENOTTY);  /* Any better exit code? */
@@ -156,7 +156,7 @@ static unicode_t ttgetc(void) {
     else               expected = 4;
 
 /* Unicode character  - try to fill buffer.
- * In practice all chras seem to arrive at once and so will have been
+ * In practice all chars seem to arrive at once and so will have been
  * retrieved by the read() call above.
  * So this is just belt and braces.
  */
@@ -442,7 +442,7 @@ void TThilite(int state) {
                 sep = ";";
             else
                 sep = "";
-            snprintf(obuf, 64, ESC "[%s%s%sm",
+            snprintf(obuf, sizeof(obuf), ESC "[%s%s%sm",
                  db_val(hifcolor), sep, db_val(hibcolor));
         }
         else {
@@ -467,7 +467,7 @@ void TTforg(int set) {
  */
     if (!set || (db_len(glfcolor) == 0)) esq = "0";
     else esq = db_val(glfcolor);
-    snprintf(obuf, 64, CSI "%sm", esq);
+    snprintf(obuf, sizeof(obuf), CSI "%sm", esq);
     TTputstr(obuf);
     if (set) {  /* Don't do this if we're not actually setting. */
         sgarbf = TRUE;
