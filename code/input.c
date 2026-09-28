@@ -1358,8 +1358,7 @@ submit:     /* Tidy up */
     while (mblp != bp->b_linep) {
         if (first) first = 0;
         else       dbp_addch(buf, '\n');    /* Add NL if not first */
-/* ltext_chk() as it might ne empty */
-        dbp_appendn(buf, ltext_chk(mblp), lused(mblp));
+        dbp_appendn(buf, ltext(mblp), lused(mblp));
         mblp = lforw(mblp);
     }
 

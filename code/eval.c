@@ -1290,8 +1290,7 @@ static void gtenv(dbp_dcl(res), const char *vname) {
     case EVPENDING:         setval(ltos(TTtypahead()));
     case EVLWIDTH:          setval(ue_itoa(lused(curwp->w.dotp)));
     case EVLINE:
-/* ltext_chk() to cater for it being an empty line */
-        dbp_setn(res, ltext_chk(curwp->w.dotp), lused(curwp->w.dotp));
+        dbp_setn(res, ltext(curwp->w.dotp), lused(curwp->w.dotp));
         return;
     case EVRVAL:            setval(ue_itoa(rval));
     case EVTAB:             setval(ue_itoa(tabmask + 1));
@@ -1487,7 +1486,7 @@ int getval(dbp_dcl(token), dbp_dcl(res)) {
 
 /* Grab the line (which may be empty) as an argument - then */
         int blen = lused(bp->b.dotp) - bp->b.doto;
-        dbp_setn(res, ltext_chk(bp->b.dotp) + bp->b.doto, blen);
+        dbp_setn(res, ltext(bp->b.dotp) + bp->b.doto, blen);
 
 /* And step the buffer's line ptr ahead a line */
         bp->b.dotp = bp->b.dotp->l_fp;

@@ -1596,7 +1596,7 @@ int execute(int c, int f, int n) {
  * Then advance a space and take the rest of the line as the entry name
  * since we're only looking for space we can just use ASCII.
  */
-           {const char *lp = ltext_chk(curwp->w.dotp);  /* Allow for empty */
+           {const char *lp = ltext(curwp->w.dotp);
 /* Check that we can handle this type of entry.
  * The showdir command will have followed all symlinks, so
  * we're only interested in directories and files.

@@ -1159,3 +1159,9 @@ efunc.h
 eval.c
     Fix $nodisplay and $ovflw setting to handle using a character (utf8)
     rather than just a bit-pattern.
+
+eval.c
+input.c
+main.c
+line.h
+    Remove ltext_chk() as ltext() is now safe to use on empty lines.
