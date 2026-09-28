@@ -1155,3 +1155,7 @@ random.c
 display.c
 efunc.h
     Corrected some function prototypes.
+
+eval.c
+    Fix $nodisplay and $ovflw setting to handle using a character (utf8)
+    rather than just a bit-pattern.

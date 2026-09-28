@@ -1971,21 +1971,27 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         }
         case EVOVFLW: {
             unicode_t uc = ue_atoi(value);
-/* If this is 0 and value has length 1, assume we have been given an
- * actual character.
+/* If this is 0 assume we have a character, which might be utf8 rather
+ * than just ASCII
  */
-            if ((uc == 0) && (dbp_len(val) == 1)) uc = *value;
+            if (uc == 0) {
+                (void)utf8_to_unicode(value, 0, dbp_len(val), &uc);
+            }
             if (1 == utf8char_width(uc)) ovflw = uc;
             else mlforce_one(1, "ovflw must be a 1 column width character");
             break;
         }
         case EVNDISPLAY: {
             unicode_t uc = ue_atoi(value);
-            if ((uc == 0) || (uc == -1) || (1 == utf8char_width(uc)))
-                 nodisplay = uc;
-            else
-                 mlforce_one(1,
-                     "nodisplay must be -1, 0 or a 1 column width character");
+/* If this is 0 assume we have a character, which might be utf8 rather
+ * than just ASCII
+ */
+            if (uc == 0) {
+                (void)utf8_to_unicode(value, 0, dbp_len(val), &uc);
+            }
+            if ((uc == -1) || 1 == utf8char_width(uc)) nodisplay = uc;
+            else mlforce_one(1,
+                 "nodisplay must be -1, 0 or a 1 column width character");
             break;
         }
         }
