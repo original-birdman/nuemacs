@@ -1175,3 +1175,10 @@ ttdriver.c
 etc/uemacs.hlp
 tools/sequences.c
     Various corrections for typos in comments.
+
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Update to GGR4.205
+
+==========
