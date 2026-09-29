@@ -1207,3 +1207,6 @@ word.c
 
 input.c
     Reinstate a pause after dislaying completion options.
+
+eval.c
+    Refactor $ovflw and $nodisplay setting to use set_1col_unicode().

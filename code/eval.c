@@ -50,7 +50,7 @@ static int seed;
 
 /* This is an ASCII to INT function that checks that it was actually
  * given a number (and nothing else).
- * If it wasn't, or soem other error is found, the result is INT_MIN.
+ * If it wasn't, or some other error is found, the result is INT_MIN.
  */
 static int val_atoi(const char *ustr) {
     char *xs;
@@ -61,6 +61,44 @@ static int val_atoi(const char *ustr) {
     if (res < INT_MIN) res = INT_MIN;
     if (res > INT_MAX) res = INT_MIN;
     return (int)res;
+}
+
+/* set_1col_unicode()
+ * set a Unicode value (*var2set) from the text given in tdb
+ * The text can either be the literal character or a numeric representation
+ * of it, such as 0x22EF(⋯) or 36 ($).
+ * also_allow[] is an array of integer values which are also allowed
+ * (expected to be some small magnitude number, -1, 0 etc.).
+ * If it is NULL there are none.
+ * If it is not NULL then it must be an int array of those values terminated
+ * by INT_MIN.
+ */
+static int set_1col_unicode(db *tdb, int *var2set, int also_allow[]) {
+    int ok2set = FALSE;
+    unicode_t uc = val_atoi(dbp_val(tdb));
+/* If this was not a number, was it a single, 1 column width character? */
+    if (uc == INT_MIN) {                    /* Not a number */
+        int nb = utf8_to_unicode(dbp_val(tdb), 0, dbp_len(tdb), &uc);
+        if ((nb == dbp_len(tdb))            /* Single character */
+         && (1 == utf8char_width(uc))) {    /* width 1 */
+            ok2set = TRUE;
+         }
+    }
+    else {          /* Was a number - but was it valid? */
+        if (also_allow) {
+            for (int i = 0; also_allow[i] != INT_MIN; i++) {
+                if (uc == also_allow[i]) {
+                    ok2set = TRUE;
+                    break;
+                }
+            }
+        }
+        if (!ok2set && (uc > 0) && (1 == utf8char_width(uc))) {
+            ok2set = TRUE;
+        }
+    }
+    if (ok2set) *var2set = uc;
+    return ok2set;
 }
 
 /* ue_itoa:
@@ -1428,7 +1466,7 @@ int gettyp(const char *token) {
  */
 static db_bufdef(valres);       /* static temporary val */
 
-/* Incoming token is a dyn_buf, so that strings may contan NULs */
+/* Incoming token is a dyn_buf, so that strings may contain NULs */
 
 int getval(dbp_dcl(token), dbp_dcl(res)) {
     struct buffer *bp;          /* temp buffer pointer */
@@ -1983,50 +2021,16 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             udir_init();    /* Recalculate current, parent and home values */
             break;
         }
-        case EVOVFLW: {
-            int set_ok = 0;
-            unicode_t uc = val_atoi(value);
-/* If this was not a number, was it a single, 1 column width character? */
-            if (uc == INT_MIN) {                    /* Not a number */
-                int nb = utf8_to_unicode(value, 0, dbp_len(val), &uc);
-                if ((nb == dbp_len(val))            /* Single character */
-                 && (1 == utf8char_width(uc))) {    /* width 1 */
-                     ovflw = uc;
-                     set_ok = 1;
-                 }
-            }
-            else {          /* Was a number - but was it valid? */
-                if ((uc > 0) && (1 == utf8char_width(uc))) {
-                    ovflw = uc;
-                    set_ok = 1;
-                }
-            }
-            if (!set_ok)  mlforce_one(1,
-                 "ovflw must be a 1 column width character");
+        case EVOVFLW:
+            if (!set_1col_unicode(val, &ovflw, NULL))
+              mlforce_one(1, "ovflw must be a 1 column width character");
             break;
-        }
-        case EVNDISPLAY: {
-            int set_ok = 0;
-            unicode_t uc = val_atoi(value);
-/* If this was not a number, was it a single, 1 column width character? */
-            if (uc == INT_MIN) {                    /* Not a number */
-                int nb = utf8_to_unicode(value, 0, dbp_len(val), &uc);
-                if ((nb == dbp_len(val))            /* Single character */
-                 && (1 == utf8char_width(uc))) {    /* width 1 */
-                     nodisplay = uc;
-                     set_ok = 1;
-                 }
-            }
-            else {          /* Was a number - but was it valid? */
-                if ((uc == 0) || (uc == -1) || (1 == utf8char_width(uc))) {
-                    nodisplay = uc;
-                    set_ok = 1;
-                }
-            }
-            if (!set_ok)  mlforce_one(1,
-                 "nodisplay must be -1, 0 or a 1 column width character");
+        case EVNDISPLAY:
+/* Anonymous arrays are OK for C99, and we compile with --std=gnu99 */
+            if (!set_1col_unicode(val, &nodisplay, (int[]){-1, 0, INT_MIN}))
+              mlforce_one(1,
+                "nodisplay must be -1, 0 or a 1 column width character");
             break;
-        }
         }
         break;
     }
