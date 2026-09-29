@@ -325,7 +325,6 @@ void TTinit(void) {
 /* Set TERM-specific escape sequences and values */
 
         if (0 == strncmp(termval, "sun-", 4)) {
-            TTscroll = scroll_delins;   /* can't scroll region */
             CL = "\x0C";
             SE = CSI "m";
             TI = "";                    /* No initialize */
@@ -346,7 +345,7 @@ void TTinit(void) {
         }
     }
 
-/* Check the screen size, which will have changed (from 0) and set thinsg up */
+/* Check the screen size, which will have changed (from 0) and set things up */
 
     checkscreensize(1);
 
@@ -354,7 +353,7 @@ void TTinit(void) {
 
 void TTopen(void) {
 
-/* Set the terminal in/ouput as we want it */
+/* Set the terminal in/output as we want it */
 
     tcgetattr(0, &otermios);        /* save old settings */
 

@@ -1191,3 +1191,6 @@ etc/uemacs.hlp
     Fix up the rval setting in run_one_liner() and return status from
     next_spawn_cmd().
     Document what rval now returns.
+
+ttdriver.c
+    Remove a redundant TTscroll setting.
