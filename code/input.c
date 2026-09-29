@@ -745,7 +745,10 @@ unicode_t getcmd(void) {
 
     while ((c = get1key())) {   /* Extra ()s for gcc warning */
 
-/* Optionally echo the prefix we have seen so far */
+/* Optionally echo the prefix we have seen so far.
+ * If this is set it will display even in the minibuffer, *temporarily*
+ * overwriting any minibuffer contents with the prefix reminder.
+ */
         if ((pending_rch <= 1) && (ggr_opts & GGR_MLPFX)) {
             switch (c) {
             case (CONTROL|'X'):     /* CtlX */

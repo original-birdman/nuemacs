@@ -44,7 +44,7 @@ static char *unesc(const char *str) {
 int main(int argc, char *argv[]) {
 
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s termnal-type\n", argv[0]);
+        fprintf(stderr, "Usage: %s terminal-type\n", argv[0]);
         return 1;
     }
 

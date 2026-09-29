@@ -464,7 +464,7 @@ static void vtputc(unicode_t c) {
 
 /* If the last-displayed char was a double width then it will have
  * been given a NUL-pad char (and we can't have a NUL for any other reason).
- * So then we put a space and oveflow into the final 2 columns.
+ * So then we put a space and overflow into the final 2 columns.
  */
                 if (vp->v_text[vtcol-1].uc == 0) {
                     update_grapheme(&(vp->v_text[vtcol-2]), ' ');
@@ -1596,7 +1596,7 @@ void checkscreensize(int no_update_needed) {
     }
 
 
-/* Things do do if we are changing the width */
+/* Things to do if we are changing the width */
 
     if (width != term.t_ncol) {
 

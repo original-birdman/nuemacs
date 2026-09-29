@@ -1342,7 +1342,6 @@ int whitedelete(int f, int n) {
 
     const char *lp, *rp, *stp, *etp;
 
-/* This code works for an empty line (ltext() == NULL, lused() == 0) */
     stp = ltext(curwp->w.dotp);         /* Start of line text */
     etp = stp + lused(curwp->w.dotp);   /* End of line text */
     lp = rp = stp + curwp->w.doto;      /* Working pointers */

@@ -65,9 +65,7 @@ int class_check(struct inwbuf *inwp, const char *classes, int res_on_zwb) {
         }
     }
     else {
-/* Don't build any ex...
- * build_next_grapheme() will handle ltext() == NULL and lused() == 0
- */
+/* Don't build any ex... */
         myoffs =
              build_next_grapheme(ltext(mylp), myoffs, lused(mylp), &gc, 1);
         if (inwp) inwp->offs = myoffs;

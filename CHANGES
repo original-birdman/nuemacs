@@ -1194,3 +1194,13 @@ etc/uemacs.hlp
 
 ttdriver.c
     Remove a redundant TTscroll setting.
+
+display.c
+file.c
+input.c
+random.c
+search.c
+spawn.c
+word.c
+../tools/sequences.c
+    Various corrections for typos in comments, or remove redundant ones.

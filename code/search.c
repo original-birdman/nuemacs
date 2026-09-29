@@ -3069,9 +3069,7 @@ static int fast_scanner(db *patrn, int direct, int beg_or_end) {
             }
         }
         struct grapheme gct;
-/* Don't build any ex...
- * build_next_grapheme() will handle ltext() == NULL and lused() == 0
- */
+/* Don't build any ex... */
         (void)build_next_grapheme(ltext(tline), toff, lused(tline), &gct, 1);
         if (combining_type(gct.uc)) {
             jump = (direct == FORWARD)? lastchfjump: lastchbjump;
