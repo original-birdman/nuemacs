@@ -128,6 +128,11 @@ static int next_spawn_cmd(int rxtest, const char *prompt, db *line) {
     }
     return TRUE;
 }
+/* The return code from this function is the return code of the
+ * uemacs code ONLY.
+ * To get the exit status of the system comamnd, check $rval after
+ * the uemacs command completes.
+ */
 static int run_one_liner(int rxcopy, int wait, const char *prompt) {
     int s;
     db_bufdef(line);
@@ -140,7 +145,14 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
     TTstate(CLOSE);
 
     rval = system(db_val(line));
-    fflush(stdout);         /* to be sure P.K.      */
+    if (WIFEXITED(rval)) {          /* exit code */
+        rval = WEXITSTATUS(rval);
+    }
+    else if (WIFSIGNALED(rval)) {   /* exited on a signal */
+        rval = 256 + WTERMSIG(s);
+    }
+    else rval = INT_MIN;            /* Unknown */
+    fflush(stdout);                 /* to be sure P.K. */
 
     if (wait) {
         fputs(MLbkt("Press <return> to continue"), stdout); /* Pause */
@@ -155,10 +167,9 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
     TTstate(OPEN);
     checkscreensize(0);
     curwp->w_flag = WFHARD;
-
 exit:
     db_free(line);
-    return TRUE;
+    return s;
 }
 
 /* The two front-ends for run_one_liner */

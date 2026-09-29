@@ -664,6 +664,8 @@ Unless noted as (read-only), these may be set as well as read.
                            [NOTE that commands which produce child processes,
                             such as shell-command, execute-program etc.
                             do NOT return this value]
+                            If the process exited on a signal, this will
+                            be 256 + the signal number.
     $tab .................. tab (only 4 or 8 allowed)
     $overlap .............. Overlap on next/prev page
     $jump ................. Number of lines to jump on scroll
@@ -707,7 +709,7 @@ Unless noted as (read-only), these may be set as well as read.
                             froms *and* tos should start and end with a /.
                             On retrieving this value you will get:
                                 "from1~0to1~0from2~0to2..."
-    $ovflw                  A character to display at the stat/end of a
+    $ovflw                  A character to display at the start/end of a
                             line to indicate that the text has
                             overflowed.
                             Must be set to a Unicode character of width 1.

@@ -1185,3 +1185,9 @@ etc/uemacs.rc
 
 eval.c
     Add val_atoi() to better handle $ovflw and $nodisplay setting.
+
+spawn.c
+etc/uemacs.hlp
+    Fix up the rval setting in run_one_liner() and return status from
+    next_spawn_cmd().
+    Document what rval now returns.
