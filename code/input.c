@@ -64,7 +64,7 @@ static struct cmpl_info {
 
 /* The 4 cmplt_* routines cannot run at the same time, so
  * declare some control information to be static and initialize
- * it for each one, which saves passign this around and alloc/freeing
+ * it for each one, which saves passing this around and alloc/freeing
  * things.
  */
 static void init_cmplt(void) {
@@ -79,7 +79,6 @@ static void init_cmplt(void) {
  * matching prefix, and the choices prompt.
  */
 static int update_prompts(const char *np) {
-
     if (res.full < 0) return res.full;  /* In case caller forgot to check */
 
 /* Work out the maximum matching prefix with this one found */
@@ -115,7 +114,7 @@ static int update_prompts(const char *np) {
 
 /* Iff mprefix is now empty (no common prefix) AND the choices list
  * is full then there is no point in looking at any other entries,
- * as they can't change anything (excpet the res.found counter,
+ * as they can't change anything (except the res.found counter,
  * which really only has a 0, 1, many value.
  * So note this by returning -1.
  * NOTE that this means all callers MUST check for this.
@@ -1301,10 +1300,10 @@ loop:
  */
             if ((db_len(res.choices) > 0) && (kbdmode != PLAY)) {
                 mlwrite_one(db_val(res.choices));
-/* We're about to goto post_exec, which will pause as ml_text_offset will
- * be set, Add an extra pause if we're over a certain length.
+/* We're about to goto post_exec, which will erase what we write,
+ * so pause a while here to let it be read.
  */
-                if (db_len(res.choices) >= 42) sleep(1);
+                if (res.found > 1) sleep((db_len(res.choices) >= 42)? 2: 1);
             }
         }
         else TTbeep();

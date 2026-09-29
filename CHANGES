@@ -1204,3 +1204,6 @@ spawn.c
 word.c
 ../tools/sequences.c
     Various corrections for typos in comments, or remove redundant ones.
+
+input.c
+    Reinstate a pause after dislaying completion options.
