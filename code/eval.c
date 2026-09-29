@@ -48,6 +48,21 @@ static int seed;
 #define ue_atoi(ustr) ((int)strtol(ustr, NULL, 0))
 #define ue_atol(ustr) (strtol(ustr, NULL, 0))
 
+/* This is an ASCII to INT function that checks that it was actually
+ * given a number (and nothing else).
+ * If it wasn't, or soem other error is found, the result is INT_MIN.
+ */
+static int val_atoi(const char *ustr) {
+    char *xs;
+    errno = 0;
+    long res = strtol(ustr, &xs, 0);
+    if (errno == ERANGE) res = INT_MIN;
+    if (*xs) res = INT_MIN;
+    if (res < INT_MIN) res = INT_MIN;
+    if (res > INT_MAX) res = INT_MIN;
+    return (int)res;
+}
+
 /* ue_itoa:
  *      integer to ascii string.......... This is too
  *      inconsistent to use the system's
@@ -1969,27 +1984,46 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
         }
         case EVOVFLW: {
-            unicode_t uc = ue_atoi(value);
-/* If this is 0 assume we have a character, which might be utf8 rather
- * than just ASCII
- */
-            if (uc == 0) {
-                (void)utf8_to_unicode(value, 0, dbp_len(val), &uc);
+            int set_ok = 0;
+            unicode_t uc = val_atoi(value);
+/* If this was not a number, was it a single, 1 column width character? */
+            if (uc == INT_MIN) {                    /* Not a number */
+                int nb = utf8_to_unicode(value, 0, dbp_len(val), &uc);
+                if ((nb == dbp_len(val))            /* Single character */
+                 && (1 == utf8char_width(uc))) {    /* width 1 */
+                     ovflw = uc;
+                     set_ok = 1;
+                 }
             }
-            if (1 == utf8char_width(uc)) ovflw = uc;
-            else mlforce_one(1, "ovflw must be a 1 column width character");
+            else {          /* Was a number - but was it valid? */
+                if ((uc > 0) && (1 == utf8char_width(uc))) {
+                    ovflw = uc;
+                    set_ok = 1;
+                }
+            }
+            if (!set_ok)  mlforce_one(1,
+                 "ovflw must be a 1 column width character");
             break;
         }
         case EVNDISPLAY: {
-            unicode_t uc = ue_atoi(value);
-/* If this is 0 assume we have a character, which might be utf8 rather
- * than just ASCII
- */
-            if (uc == 0) {
-                (void)utf8_to_unicode(value, 0, dbp_len(val), &uc);
+            int set_ok = 0;
+            unicode_t uc = val_atoi(value);
+/* If this was not a number, was it a single, 1 column width character? */
+            if (uc == INT_MIN) {                    /* Not a number */
+                int nb = utf8_to_unicode(value, 0, dbp_len(val), &uc);
+                if ((nb == dbp_len(val))            /* Single character */
+                 && (1 == utf8char_width(uc))) {    /* width 1 */
+                     nodisplay = uc;
+                     set_ok = 1;
+                 }
             }
-            if ((uc == -1) || 1 == utf8char_width(uc)) nodisplay = uc;
-            else mlforce_one(1,
+            else {          /* Was a number - but was it valid? */
+                if ((uc == 0) || (uc == -1) || (1 == utf8char_width(uc))) {
+                    nodisplay = uc;
+                    set_ok = 1;
+                }
+            }
+            if (!set_ok)  mlforce_one(1,
                  "nodisplay must be -1, 0 or a 1 column width character");
             break;
         }

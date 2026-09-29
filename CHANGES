@@ -1181,4 +1181,7 @@ etc/uemacs.hlp
 etc/uemacs.rc
     Update to GGR4.205
 
-==========
+========== GGR4.206
+
+eval.c
+    Add val_atoi() to better handle $ovflw and $nodisplay setting.
