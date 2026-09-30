@@ -26,6 +26,7 @@
 #include "efunc.h"
 #include "evar.h"
 #include "line.h"
+#include "utf8.h"
 #include "util.h"
 #include "version.h"
 #include "idxsorter.h"
@@ -67,6 +68,10 @@ static int val_atoi(const char *ustr) {
  * set a Unicode value (*var2set) from the text given in tdb
  * The text can either be the literal character or a numeric representation
  * of it, such as 0x22EF(⋯) or 36 ($).
+ * Any numeric value must be >1 and <= MAX_UNICODE_CHAR (0 is not allowed
+ * as a value unless it is included in also_allow, as it is used to pad
+ * a double-width char and setting it here might by-pass or interfere with
+ * that or a remapping to the $nodisplay value).
  * also_allow[] is an array of integer values which are also allowed
  * (expected to be some small magnitude number, -1, 0 etc.).
  * If it is NULL there are none.
@@ -93,7 +98,8 @@ static int set_1col_unicode(db *tdb, int *var2set, int also_allow[]) {
                 }
             }
         }
-        if (!ok2set && (uc > 0) && (1 == utf8char_width(uc))) {
+        if (!ok2set && (uc >= 0) && (uc <= MAX_UNICODE_CHAR)
+             && (1 == utf8char_width(uc))) {
             ok2set = TRUE;
         }
     }
@@ -1528,7 +1534,7 @@ int getval(dbp_dcl(token), dbp_dcl(res)) {
  * next line.
  * So repeating the fetch gets the next line each time.
  */
-    case TKBUF:                 /* buffer contents fetch */
+    case TKBUF: {                /* buffer contents fetch */
 /* Grab the right buffer */
         bp = bfind(db_val(tok1), FALSE, 0);
         if (bp == NULL) goto have_error;
@@ -1548,8 +1554,9 @@ int getval(dbp_dcl(token), dbp_dcl(res)) {
                     if (bp == wp->w_bufp) {
                         awp = wp;       /* Found it */
                         break;
-
+                    }
                 }
+            }
             if (awp) {
                 bp->b.dotp = awp->w.dotp;
                 bp->b.doto = awp->w.doto;
@@ -1576,7 +1583,7 @@ int getval(dbp_dcl(token), dbp_dcl(res)) {
 
 /* And return the spoils */
         return TRUE;
-
+    }
     case TKVAR:
         gtusr(res, db_val(tok1));
         return TRUE;
@@ -1653,7 +1660,7 @@ fvar:
     case '.': {         /* A buffer variable - only for execbp! */
         if (!execbp) break;
 /* Need to create a set...free()d in bclear().
- * We need an extra 9empty) value at the end for the del-simple_var code.
+ * We need an extra (empty) value at the end for the del-simple_var code.
  */
         if (!execbp->bv) {
             execbp->bv = Xmalloc((BVALLOC+1)*sizeof(struct simple_variable));
@@ -1710,7 +1717,6 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
     int vnum;       /* ordinal number of var referenced */
     int vtype;      /* type of variable to set */
     int status;     /* status return */
-    int c;          /* translated character */
 
 /* For simplicity of things not expecting NULs */
     const char *value = dbp_val(val);
@@ -1794,13 +1800,19 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         case EVLASTKEY:
             inkey.last = ue_atoi(value);
             break;
-        case EVCURCHAR:
-            srch_can_hunt = 0;
-            ldelgrapheme(1, FALSE);     /* Delete 1 char-place */
-            c = ue_atoi(value);
-            linsert_uc(1, c);
-            back_grapheme(1);
+        case EVCURCHAR: {
+            unicode_t cc;
+            if (!set_1col_unicode(val, &cc, NULL)) {
+                mlforce_one(1, "$curchar must be a 1 column width character");
+            }
+            else {
+                srch_can_hunt = 0;
+                ldelgrapheme(1, FALSE); /* Delete 1 char-place */
+                linsert_uc(1, cc);
+                back_grapheme(1);
+            }
             break;
+        }
         case EVDISCMD:
             discmd = stol(value);
             break;

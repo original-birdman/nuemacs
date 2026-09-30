@@ -1214,3 +1214,7 @@ eval.c
 eval.c
     When getting a TKBUF value, do not assume that a displayed buffer is
     in the current window.
+
+eval.c
+    Change set_1col_unicode() to check the result is not beyond
+    MAX_UNICODE_CHAR and use the function for EVCURCHAR setting.
