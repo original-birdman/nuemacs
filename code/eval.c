@@ -68,7 +68,7 @@ static int val_atoi(const char *ustr) {
  * set a Unicode value (*var2set) from the text given in tdb
  * The text can either be the literal character or a numeric representation
  * of it, such as 0x22EF(⋯) or 36 ($).
- * Any numeric value must be >1 and <= MAX_UNICODE_CHAR (0 is not allowed
+ * Any numeric value must be >0 and <= MAX_UNICODE_CHAR (0 is not allowed
  * as a value unless it is included in also_allow, as it is used to pad
  * a double-width char and setting it here might by-pass or interfere with
  * that or a remapping to the $nodisplay value).
@@ -1800,9 +1800,9 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         case EVLASTKEY:
             inkey.last = ue_atoi(value);
             break;
-        case EVCURCHAR: {
+        case EVCURCHAR: {   /* 0 is a valid value to set here */
             unicode_t cc;
-            if (!set_1col_unicode(val, &cc, NULL)) {
+            if (!set_1col_unicode(val, &cc, (int[]){0, INT_MIN})) {
                 mlforce_one(1, "$curchar must be a 1 column width character");
             }
             else {

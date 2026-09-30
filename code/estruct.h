@@ -132,8 +132,9 @@ enum cmplt_type {   /* What is looked up and complete */
     CMPLT_REPL,     /* Nothing. Instead rotates replace ring on <tab> */
 };
 
-/*      Directive definitions   */
-
+/* Directive definitions
+ * These must correspond to the text values of dname in globals.c
+ */
 #define DIF             0
 #define DELSE           1
 #define DENDIF          2
@@ -144,9 +145,9 @@ enum cmplt_type {   /* What is looked up and complete */
 #define DENDWHILE       7
 #define DBREAK          8
 #define DFORCE          9
-#define DFINISH        10       /* GGR */
+#define DFINISH        10   /* GGR */
 
-#define NUMDIRS        11       /* GGR */
+#define NUMDIRS        11   /* GGR */
 
 /* Types of incremental search for scanmore() */
 

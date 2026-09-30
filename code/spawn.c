@@ -12,6 +12,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/wait.h>
 
 #define SPAWN_C
 

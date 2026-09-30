@@ -102,8 +102,9 @@ struct line *fline;             /* dynamic return line */
 int srch_patlen = 0;
 
 /* directive name table:
-        This holds the names of all the directives....  */
-
+ * This holds the names of all the directives....
+ * It MUST correspond to the Directive definitions defines in estruct.h
+ */
 const char *dname[] = {
         "if", "else", "endif",
         "goto", "return", "endm",

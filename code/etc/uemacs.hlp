@@ -1,4 +1,4 @@
-=>                   nuEmacs GGR4.205 Help Index     (28 Sep 2026)
+=>                   nuEmacs GGR4.206 Help Index     (30 Sep 2026)
 .. The very basics
 .. Cursor movement
 .. File commands
@@ -1357,7 +1357,7 @@ KDE console, GNOME terminal, GNOME console, xterm (TERM=xterm-256color)
 FreeBSD console (TERM=xterm)
     Allows 0-7, 8-15, 256 color but NOT the RGB setting.
 
-Solaris console (TERM=sun-solaris)
+Solaris console (TERM=sun-color)
     Only understands 0-7.
 
 examples of usage:

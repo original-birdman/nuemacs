@@ -1118,7 +1118,7 @@ ttdriver.c
     Move to bottom line before sending TE in TTclose(), not the reverse.
 
 ttdriver.c
-    Make TTscrol definition be based on capabilities.
+    Make TTscroll definition be based on capabilities.
 
 ttdriver.c
     Fix the copy loop in TTungetc().
@@ -1135,7 +1135,7 @@ combi.h
     Generated an updated version (using tools/combi-class.c)
 
 display.c
-    Reworked oveflow or double-width chars to use the standard overflow
+    Reworked overflow or double-width chars to use the standard overflow
     character.
 
 spawn.c
@@ -1206,7 +1206,7 @@ word.c
     Various corrections for typos in comments, or remove redundant ones.
 
 input.c
-    Reinstate a pause after dislaying completion options.
+    Reinstate a pause after displaying completion options.
 
 eval.c
     Refactor $ovflw and $nodisplay setting to use set_1col_unicode().
@@ -1224,3 +1224,17 @@ display.c
 random.c
 estruct.h
     Replace NUMMODES with an end-of-list marker.
+
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+eval.c
+spawn.c
+(estruct.h)
+(globals.c)
+    Allow 0 to be set for $curchar [eval.c]
+    Include sys/wait.h, as FreeBSD requires it for WIFEXITED. [spawn.c]
+    Comment updates [estruct.h, globals.c]
+    Update to GGR4.206
+
+==========

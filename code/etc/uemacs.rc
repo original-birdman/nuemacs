@@ -1,7 +1,7 @@
 ;
 ;       uemacs.rc:      Standard micro Startup program
 ;                       for MicroEMACS 4.1GGR and above
-;                       Version - GGR4.205 (requires GGR4.204)
+;                       Version - GGR4.206 (requires GGR4.204)
 ;                       Last Update: 23 Sep 2026
 ;
 write-message "[Setting up....]"
