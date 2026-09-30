@@ -1218,3 +1218,9 @@ eval.c
 eval.c
     Change set_1col_unicode() to check the result is not beyond
     MAX_UNICODE_CHAR and use the function for EVCURCHAR setting.
+
+buffer.c
+display.c
+random.c
+estruct.h
+    Replace NUMMODES with an end-of-list marker.

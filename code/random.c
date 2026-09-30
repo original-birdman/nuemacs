@@ -911,7 +911,8 @@ static int adjustmode(int kind, int global) {
 
 /* Test it against the modes we know */
 
-    for (i = 0; i < NUMMODES; i++) {
+    int mode_mask = 1;
+    for (i = 0; mode_mask != MDNOMOR; i++) {
         if (db_casecmp(cbuf, mode2name[i]) == 0) {
 /* Finding a match, we process it */
             if (kind == TRUE) {
@@ -921,18 +922,19 @@ static int adjustmode(int kind, int global) {
                     status = FALSE;
                     goto exit;
                 }
-                if (global) gmode |= (1 << i);
-                else        curbp->b_mode |= (1 << i);
+                if (global) gmode |= mode_mask;
+                else        curbp->b_mode |= mode_mask;
             }
             else {
-                if (global) gmode &= ~(1 << i);
-                else        curbp->b_mode &= ~(1 << i);
+                if (global) gmode &= ~mode_mask;
+                else        curbp->b_mode &= ~mode_mask;
             }
 /* Display new mode line */
             if (global == 0) upmode(NULL);
             status = TRUE;
             goto exit;
         }
+        mode_mask <<= 1;
     }
     status = FALSE;
     mlforce_one(0, "No such mode!");

@@ -512,7 +512,7 @@ int makelist(int iflag) {
 /* Output the mode codes */
 
     mcheck = 1;
-    for (i = 0; i < NUMMODES; i++) {
+    for (i = 0; mcheck != MDNOMOR; i++) {
         if (gmode & mcheck) db_addch(line, modecode[i]);
         else                db_addch(line, '.');
         mcheck <<= 1;
@@ -528,7 +528,7 @@ int makelist(int iflag) {
 /* Output the mode codes */
 
         mcheck = 1;
-        for (i = 0; i < NUMMODES; i++) {
+        for (i = 0; mcheck != MDNOMOR; i++) {
             char cset;
             if (force_mode_on & mcheck) cset = modecode[i];
             else if (force_mode_off & mcheck) cset = DIFCASE | modecode[i];
@@ -567,7 +567,7 @@ int makelist(int iflag) {
 
         mcheck = 1;
         char mc = '-';  /* Will stay as this for not-yet-active) */
-        for (i = 0; i < NUMMODES; i++) {
+        for (i = 0; mcheck != MDNOMOR; i++) {
             if (bp->b_active) {
                 if (bp->b_mode & mcheck) mc = modecode[i];
                 else                     mc = '.';

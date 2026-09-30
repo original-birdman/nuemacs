@@ -1310,7 +1310,7 @@ static void modeline(struct window *wp) {
         vtputc('{');
         int using_phon = 0;
         int mode_mask = 1;
-        for (int i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
+        for (int i = 0; mode_mask != MDNOMOR; i++) {    /* Add in mode flags */
             if (mbp->b_mode & mode_mask) {
                 switch(mode_mask) {
                 case MDEQUIV:           /* Never displayed alone */
@@ -1384,7 +1384,7 @@ static void modeline(struct window *wp) {
     if (inmb) mwp = mb_info.main_wp;
     else      mwp = wp;
     int mode_mask = 1;
-    for (i = 0; i < NUMMODES; i++) {    /* add in the mode flags */
+    for (i = 0; mode_mask != MDNOMOR; i++) {    /* Add in mode flags */
 /* MDEQUIV and MDRPTMG are never displayed alone */
         if (mode_mask & MD_EQVRPT) goto next_mode;
         if (mwp->w_bufp->b_mode & mode_mask) {
