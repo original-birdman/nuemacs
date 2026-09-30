@@ -1210,3 +1210,7 @@ input.c
 
 eval.c
     Refactor $ovflw and $nodisplay setting to use set_1col_unicode().
+
+eval.c
+    When getting a TKBUF value, do not assume that a displayed buffer is
+    in the current window.

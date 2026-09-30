@@ -1523,15 +1523,37 @@ int getval(dbp_dcl(token), dbp_dcl(res)) {
         else dbp_copy(res, &valres);
         return TRUE;
     }
+/* NOTE that using #buffer-name to get a buffer's content gets the
+ * current line and advances the buffer (and, possibly, window) to the
+ * next line.
+ * So repeating the fetch gets the next line each time.
+ */
     case TKBUF:                 /* buffer contents fetch */
 /* Grab the right buffer */
         bp = bfind(db_val(tok1), FALSE, 0);
         if (bp == NULL) goto have_error;
 
-/* If the buffer is displayed, get the window vars instead of the buffer vars */
+/* If the buffer is displayed, use the window vars instead of the buffer vars
+ * But it might not be the current window!
+ * If not we'll take the first matching entry in the window list
+ */
+        struct window *awp = NULL;
         if (bp->b_nwnd > 0) {
-            curbp->b.dotp = curwp->w.dotp;
-            curbp->b.doto = curwp->w.doto;
+            if (bp == curwp->w_bufp) {  /* It is the current window */
+                awp = curwp;
+            }
+            else {
+                struct window *wp;
+                for (wp = wheadp; wp != NULL; wp = wp->w_wndp) {
+                    if (bp == wp->w_bufp) {
+                        awp = wp;       /* Found it */
+                        break;
+
+                }
+            if (awp) {
+                bp->b.dotp = awp->w.dotp;
+                bp->b.doto = awp->w.doto;
+            }
         }
 
 /* Make sure we are not at the end */
@@ -1545,11 +1567,11 @@ int getval(dbp_dcl(token), dbp_dcl(res)) {
         bp->b.dotp = bp->b.dotp->l_fp;
         bp->b.doto = 0;
 
-/* If displayed buffer, reset window ptr vars */
-        if (bp->b_nwnd > 0) {
-            curwp->w.dotp = curbp->b.dotp;
-            curwp->w.doto = 0;
-            curwp->w_flag |= WFMOVE;
+/* If we found a displayed buffer, reset the window ptr vars */
+        if (awp) {
+            awp->w.dotp = bp->b.dotp;
+            awp->w.doto = 0;
+            awp->w_flag |= WFMOVE;
         }
 
 /* And return the spoils */
