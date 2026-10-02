@@ -16,6 +16,7 @@ const char *mode2name[] = {     /* Display name of modes        */
 };
 int ml_text_offset = 0;         /* n chars in message line buffer */
 char modecode[] = "WCPEVOMYAQDR";   /* letters to represent modes   */
+
 int gmode = 0;                  /* global editor mode           */
 int force_mode_on = 0;          /* modes forced on              */
 int force_mode_off = 0;         /* modes forced off             */
@@ -297,3 +298,23 @@ const char *path_pfx_map_to[MAX_PFX_MAP];
 int path_pfx_map_from_len[MAX_PFX_MAP];
 int path_pfx_map_to_len[MAX_PFX_MAP];
 int path_pfx_map_valid = 0;
+
+/* Only run _Static_assert where it will work
+ * Only one for me without this is an old Centos6 system with gcc 4.4.7
+ */
+#if defined(__STDC_VERSION__)
+#define V4SA __STDC_VERSION__
+#elif defined(__STDC_ISO_10646__)
+#define V4SA __STDC_ISO_10646__
+// #elif defined(...)
+// #define V4SA ...
+#endif
+
+/* gcc 4.9.2 on on Debian8 has this */
+#if V4SA >= 201103L
+_Static_assert(1<<(sizeof(mode2name)/(sizeof(char *))) == MDNOMOR,
+     "mode2name/MD* mismatch");
+_Static_assert(1<<(sizeof(modecode) - 1) == MDNOMOR, "modecode/MD* mismatch");
+_Static_assert(sizeof(dname)/(sizeof(char *)) == NUMDIRS,
+     "dname/NUMDIRS* mismatch");
+#endif

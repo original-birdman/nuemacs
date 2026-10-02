@@ -1242,3 +1242,6 @@ spawn.c
 eval.c
     Rename set_1col_unicode() to set_col_unicode() and pass in allowed
     widths. Do not allow an empty string here or in val_atoi().
+
+globals.c
+    Add _Static_assert() checks for some arrays and their size/end-markers.
