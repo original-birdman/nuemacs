@@ -1135,7 +1135,7 @@ combi.h
     Generated an updated version (using tools/combi-class.c)
 
 display.c
-    Reworked overflow or double-width chars to use the standard overflow
+    Reworked overflow for double-width chars to use the standard overflow
     character.
 
 spawn.c
@@ -1238,3 +1238,7 @@ spawn.c
     Update to GGR4.206
 
 ==========
+
+eval.c
+    Rename set_1col_unicode() to set_col_unicode() and pass in allowed
+    widths. Do not allow an empty string here or in val_atoi().

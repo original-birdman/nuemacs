@@ -54,6 +54,7 @@ static int seed;
  * If it wasn't, or some other error is found, the result is INT_MIN.
  */
 static int val_atoi(const char *ustr) {
+    if (*ustr == '\0') return INT_MIN;  /* No empty strings */
     char *xs;
     errno = 0;
     long res = strtol(ustr, &xs, 0);
@@ -64,7 +65,7 @@ static int val_atoi(const char *ustr) {
     return (int)res;
 }
 
-/* set_1col_unicode()
+/* set_col_unicode()
  * set a Unicode value (*var2set) from the text given in tdb
  * The text can either be the literal character or a numeric representation
  * of it, such as 0x22EF(⋯) or 36 ($).
@@ -72,37 +73,60 @@ static int val_atoi(const char *ustr) {
  * as a value unless it is included in also_allow, as it is used to pad
  * a double-width char and setting it here might by-pass or interfere with
  * that or a remapping to the $nodisplay value).
+ * check_width is an array to limit the character width of the Unicdde
+ * character. if it is NULL then any is allowed.
  * also_allow[] is an array of integer values which are also allowed
  * (expected to be some small magnitude number, -1, 0 etc.).
  * If it is NULL there are none.
  * If it is not NULL then it must be an int array of those values terminated
  * by INT_MIN.
+ * Both check_width and also_allow must have a INT_MIN at the end to
+ * indicate the end of the array.
  */
-static int set_1col_unicode(db *tdb, int *var2set, int also_allow[]) {
+static int set_col_unicode(db *tdb, int *var2set, int check_width[],
+     int also_allow[]) {
+/* Check for an empty string here too.
+ * val_atoi() would return INT_MIN, but then we'd look for a character
+ * instead, so would still need to test the length.
+ */
+    if (dbp_len(tdb) == 0) return FALSE;
     int ok2set = FALSE;
     unicode_t uc = val_atoi(dbp_val(tdb));
-/* If this was not a number, was it a single, 1 column width character? */
+/* If this was not a number, was it a single character? */
     if (uc == INT_MIN) {                    /* Not a number */
         int nb = utf8_to_unicode(dbp_val(tdb), 0, dbp_len(tdb), &uc);
-        if ((nb == dbp_len(tdb))            /* Single character */
-         && (1 == utf8char_width(uc))) {    /* width 1 */
+        if (nb == dbp_len(tdb)) {           /* Single character */
             ok2set = TRUE;
-         }
+        }
     }
     else {          /* Was a number - but was it valid? */
-        if (also_allow) {
-            for (int i = 0; also_allow[i] != INT_MIN; i++) {
-                if (uc == also_allow[i]) {
-                    ok2set = TRUE;
-                    break;
-                }
-            }
-        }
-        if (!ok2set && (uc >= 0) && (uc <= MAX_UNICODE_CHAR)
-             && (1 == utf8char_width(uc))) {
+        if ((uc >= 0) && (uc <= MAX_UNICODE_CHAR)) {
             ok2set = TRUE;
         }
     }
+
+/* If we do have a Unicode character, is it an allowed width? */
+    if (ok2set && check_width) {
+        int cw = utf8char_width(uc);
+        ok2set = FALSE;
+        for (int i = 0; check_width[i] != INT_MIN; i++) {
+            if (cw == check_width[i]) {
+                ok2set = TRUE;
+                break;
+            }
+        }
+    }
+
+/* Are we allowing some special cases? */
+    if (!ok2set && also_allow) {
+        for (int i = 0; also_allow[i] != INT_MIN; i++) {
+            if (uc == also_allow[i]) {
+                ok2set = TRUE;
+                break;
+            }
+        }
+    }
+
     if (ok2set) *var2set = uc;
     return ok2set;
 }
@@ -1737,7 +1761,6 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
         break;
 
     case TKENV:             /* set an environment variable */
-        status = TRUE;  /* by default */
         switch (vnum) {
 
 /* All of these are read-only */
@@ -1802,8 +1825,9 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
         case EVCURCHAR: {   /* 0 is a valid value to set here */
             unicode_t cc;
-            if (!set_1col_unicode(val, &cc, (int[]){0, INT_MIN})) {
-                mlforce_one(1, "$curchar must be a 1 column width character");
+            if (!set_col_unicode(val, &cc, NULL, (int[]){0, INT_MIN})) {
+                mlforce_one(1, "$curchar must be a single Unicode character");
+                status = FALSE;
             }
             else {
                 srch_can_hunt = 0;
@@ -2056,14 +2080,19 @@ static int svar(struct variable_description *var, dbp_dcl(val)) {
             break;
         }
         case EVOVFLW:
-            if (!set_1col_unicode(val, &ovflw, NULL))
-              mlforce_one(1, "ovflw must be a 1 column width character");
+            if (!set_col_unicode(val, &ovflw, (int[]){1, INT_MIN}, NULL)) {
+                mlforce_one(1, "ovflw must be a 1 column width character");
+                status = FALSE;
+            }
             break;
         case EVNDISPLAY:
 /* Anonymous arrays are OK for C99, and we compile with --std=gnu99 */
-            if (!set_1col_unicode(val, &nodisplay, (int[]){-1, 0, INT_MIN}))
-              mlforce_one(1,
-                "nodisplay must be -1, 0 or a 1 column width character");
+            if (!set_col_unicode(val, &nodisplay, (int[]){1, INT_MIN},
+                 (int[]){-1, 0, INT_MIN})) {
+                mlforce_one(1,
+                     "nodisplay must be -1, 0 or a 1 column width character");
+                status = FALSE;
+            }
             break;
         }
         break;
