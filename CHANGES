@@ -1245,3 +1245,6 @@ eval.c
 
 globals.c
     Add _Static_assert() checks for some arrays and their size/end-markers.
+
+spawn.c
+    Add decode_rval() and use it to decode all system() returns values.

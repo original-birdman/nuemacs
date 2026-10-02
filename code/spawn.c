@@ -35,6 +35,15 @@ static void TTstate(enum TTway w) {
     }
 }
 
+/* rval is meant to contain the exit code of the last child process,
+ * so use this to work it out.
+ */
+static int decode_rval(int ws) {
+    if (WIFEXITED(ws))   return WEXITSTATUS(ws);    /* exit code */
+    if (WIFSIGNALED(ws)) return 256 + WTERMSIG(ws); /* exited on signal */
+    return INT_MIN;                                 /* Unknown */
+}
+
 /* Create a subjob with a copy of the command interpreter in it. When the
  * command interpreter exits, mark the screen as garbage so that you do a full
  * repaint. Bound to "^X C".
@@ -70,6 +79,7 @@ int spawncli(int f, int n) {
         rval = system("exec /bin/sh");
 #endif
     }
+    rval = decode_rval(rval);
     sleep(2);
     TTstate(OPEN);
     checkscreensize(0);
@@ -131,7 +141,7 @@ static int next_spawn_cmd(int rxtest, const char *prompt, db *line) {
 }
 /* The return code from this function is the return code of the
  * uemacs code ONLY.
- * To get the exit status of the system comamnd, check $rval after
+ * To get the exit status of the system command, check $rval after
  * the uemacs command completes.
  */
 static int run_one_liner(int rxcopy, int wait, const char *prompt) {
@@ -146,13 +156,7 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
     TTstate(CLOSE);
 
     rval = system(db_val(line));
-    if (WIFEXITED(rval)) {          /* exit code */
-        rval = WEXITSTATUS(rval);
-    }
-    else if (WIFSIGNALED(rval)) {   /* exited on a signal */
-        rval = 256 + WTERMSIG(s);
-    }
-    else rval = INT_MIN;            /* Unknown */
+    rval = decode_rval(rval);
     fflush(stdout);                 /* to be sure P.K. */
 
     if (wait) {
@@ -242,6 +246,7 @@ int pipecmd(int f, int n) {
  */
     db_sprintf(line, "%s >'%s'", db_val(cmd), db_val(comfile));
     rval = system(db_val(line));
+    rval = decode_rval(rval);
 
     TTstate(OPEN);
     checkscreensize(0);
@@ -353,6 +358,7 @@ int filter_buffer(int f, int n) {
     db_sprintf(line, "%s <'%s' >'%s'", db_val(cmd), db_val(fltin),
          db_val(fltout));
     rval = system(db_val(line));
+    rval = decode_rval(rval);
 
     TTstate(OPEN);
     checkscreensize(0);
