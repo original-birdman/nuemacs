@@ -2368,7 +2368,6 @@ static struct grapheme *nextgph(struct line **pcurline, int *pcuroff,
     }
     else {
         if (pos_only) { /* Just get the position in the current line */
-/* next/prev_utf8_offset() handle NULL (check length first) so ltext() is OK. */
             if (dir == FORWARD)
                 nextoff = next_utf8_offset(ltext(curline), curoff,
                      lused(curline), TRUE);

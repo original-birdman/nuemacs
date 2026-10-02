@@ -75,7 +75,6 @@ void _dbp_flagoff(db *ds, int flags) {
 }
 
 /* Set the buffer to the n bytes. Never more than an int for n.
- * Cater for being called with mp == NULL and n == 0 (from ltext()?).
  * Sets asp == buf.
  */
 void _dbp_setn(db *ds, const void *mp, int n) {
@@ -278,7 +277,6 @@ void _dbp_uctruncate(db *ds, int n) {
 }
 
 /* Append n bytes
- * Cater for being called with mp == NULL and n == 0 (from ltext()?).
  * Acts on the asp value.
  */
 void _dbp_appendn(db *ds, const char *str, int n) {

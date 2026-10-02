@@ -1237,8 +1237,10 @@ spawn.c
     Comment updates [estruct.h, globals.c]
     Update to GGR4.206
 
-==========
+==========  GGR4.207
 
+Changes from Claude's comments on GGR4.206
+----------
 eval.c
     Rename set_1col_unicode() to set_col_unicode() and pass in allowed
     widths. Do not allow an empty string here or in val_atoi().
@@ -1248,3 +1250,11 @@ globals.c
 
 spawn.c
     Add decode_rval() and use it to decode all system() returns values.
+
+basic.c
+dyn_buf.c
+line.c
+search.c
+word.c
+    Remove redundant ltext() comments.
+----------
