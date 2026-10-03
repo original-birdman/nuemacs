@@ -243,22 +243,18 @@ struct terminal term = {
 static const char *CM = CSI "%d;%dH";
 static const char *CE = CSI "K";
 static const char *SO = CSI "7m";
-static const char *SF = "\x0A";
-static const char *DL = CSI "M";
-static const char *AL = CSI "L";
+static const char *DL = CSI "%dM";
+static const char *AL = CSI "%dL";
 
 /* These may be reset once we know TERM */
 
-static const char *CS = CSI "%d;%dr";
-static const char *SR = ESC "M";
 static const char *CL = CSI "H" CSI "2J";
 static const char *SE = CSI "27m";
 static const char *TI = CSI "?1049h" CSI "22;0;0t"; /* Alt screen, ?? */
 static const char *TE = CSI "?1049l" CSI "23;0;0t"; /* Main screen, ?? */
 
-/* Functions which can be (re)defined dynamically */
+/* Function(s) which can be (re)defined dynamically */
 
-void (*TTscroll)(int, int, int);
 unicode_t (*TTgetc)(void) = ttgetc;
 
 void TTmove(int row, int col) { /* row and col are 0-based */
@@ -268,47 +264,34 @@ void TTmove(int row, int col) { /* row and col are 0-based */
     TTputstr(obuf);
 }
 
-/* CS is set up just like CM */
-static void scrollregion(int top, int bot) {    /* top and bot are 0-based */
+/* Move howmanylines lines starting at from to to.
+ * Since all now-supported terminals can take a numeric arg to AL and DL
+ * this is just as efficient as using CS/SF/SR to scrollregions, and
+ * means we can just have one set of code.
+ * Also we can just name this TTscroll, without having to use an
+ * assignable function variable.
+ */
+void TTscroll(int from, int to, int howmanylines) {
     char obuf[32];  /* More than enough */
-
-    sprintf(obuf, CS, top+1, bot+1);
-    TTputstr(obuf);
-}
-
-/* Move howmanylines lines starting at from to to - if CS is defined */
-static void scroll_reg(int from, int to, int howmanylines) {
-    int i;
     if (to == from) return;
+    int scr_size;
+    int mv1, mv2;
     if (to < from) {
-        scrollregion(to, from + howmanylines - 1);
-        TTmove(from + howmanylines - 1, 0);
-        for (i = from - to; i > 0; i--) TTputstr(SF);
-    }
-    else {  /* from < to */
-        scrollregion(from, to + howmanylines - 1);
-        TTmove(from, 0);
-        for (i = to - from; i > 0; i--) TTputstr(SR);
-    }
-    scrollregion(0, term.t_mbline);
-}
-
-/* Move howmanylines lines starting at from to to - if CS is not defined */
-static void scroll_delins(int from, int to, int howmanylines) {
-    int i;
-    if (to == from) return;
-    if (to < from) {
-        TTmove(to, 0);
-        for (i = from - to; i > 0; i--) TTputstr(DL);
-        TTmove(to + howmanylines, 0);
-        for (i = from - to; i > 0; i--) TTputstr(AL);
+        mv1 = to;
+        scr_size = from - to;
+        mv2 = to + howmanylines;
     }
     else {
-        TTmove(from + howmanylines, 0);
-        for (i = to - from; i > 0; i--) TTputstr(DL);
-        TTmove(from, 0);
-        for (i = to - from; i > 0; i--) TTputstr(AL);
+        mv1 = from + howmanylines;
+        scr_size = to - from;
+        mv2 = from;
     }
+    TTmove(mv1, 0);
+    sprintf(obuf, DL, scr_size);
+    TTputstr(obuf);
+    TTmove(mv2, 0);
+    sprintf(obuf, AL, scr_size);
+    TTputstr(obuf);
 }
 
 /* The TERM value, and associated termcap entries, are not going to
@@ -329,19 +312,11 @@ void TTinit(void) {
             SE = CSI "m";
             TI = "";                    /* No initialize */
             TE = "";                    /* No exit */
-            CS = NULL;                  /* No region scrolling */
-            SR = NULL;                  /* No region scrolling */
-            fake_narrow = 1;
+            fake_narrow = 1;            /* To avoid R/h col */
         }
         else if (0 == strncmp(termval, "linux", 5)) {
             TI = "";                    /* No initialize */
             TE = "";                    /* No exit */
-        }
-        if (CS && SR && SF) {           /* Need all 3 for scroll_reg */
-            TTscroll = scroll_reg;
-        }
-        else {
-            TTscroll = scroll_delins;
         }
     }
 
@@ -473,7 +448,7 @@ void TTforg(int set) {
     }
 }
 
-#define BEL     0x07
+#define BEL 0x07
 void TTbeep(void) {
         TTputc(BEL);
 }

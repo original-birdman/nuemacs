@@ -388,7 +388,7 @@ extern int filter_buffer(int, int);
 
 /* ttdrivers.c */
 #ifndef TTDRIVER_C
-extern void (*TTscroll)(int, int, int);
+extern void TTscroll(int, int, int);
 extern unicode_t (*TTgetc)(void);
 extern void TTputc(unicode_t);
 extern void TTflush(void);

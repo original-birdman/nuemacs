@@ -1258,3 +1258,13 @@ search.c
 word.c
     Remove redundant ltext() comments.
 ----------
+
+ttdriver.c
+efunc.h
+    Change AL/DL sequences to take a count arg, and then use the
+    scroll_delins() code to scroll for all terminal types.
+    Refactor scroll_delins().
+    Remove the scroll_reg() code, and SF/CS/SR settings.
+    Rename scroll_delins to TTscroll and remove the TTscroll variable.
+    [ttdriver.c]
+    Redefine the TTscroll prototype. [efunc.h]
