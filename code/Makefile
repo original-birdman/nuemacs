@@ -12,7 +12,7 @@ OBJ=basic.o bind.o buffer.o crypt.o display.o dyn_buf.o eval.o \
  lock.o main.o names.o pklock.o random.o region.o search.o spawn.o \
  ttdriver.o utf8.o version.o window.o word.o wrapper.o
 
-HDR=charset.h combi.h dyn_buf.h ebind.h edef.h efunc.h epath.h estruct.h \
+HDR=charset.h dyn_buf.h ebind.h edef.h efunc.h epath.h estruct.h \
  evar.h idxsorter.h line.h unsigned.h utf8.h util.h version.h
 
 # DO NOT ADD OR MODIFY ANY LINES ABOVE THIS -- make source creates them
@@ -499,7 +499,7 @@ spawn.o: spawn.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h
 ttdriver.o: ttdriver.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h \
  efunc.h
 utf8.o: utf8.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
- util.h combi.h
+ util.h
 version.o: version.c version.h unsigned.h
 window.o: window.c estruct.h utf8.h dyn_buf.h unsigned.h edef.h efunc.h \
  line.h

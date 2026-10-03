@@ -1268,3 +1268,10 @@ efunc.h
     Rename scroll_delins to TTscroll and remove the TTscroll variable.
     [ttdriver.c]
     Redefine the TTscroll prototype. [efunc.h]
+
+utf8.c
+combi.h
+Makefile
+    Change combining_type() to use utf8proc function results rather
+    than use a combi.h list generated from one utf8proc release. [utf8.c]
+    Delete combi.h and remove it from dependencies. [combi.h, Makefile]

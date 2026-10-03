@@ -76,34 +76,23 @@ int utf8_to_unicode(const char *line, int index, int len,
 
 /* Check whether the character is a Combining Class one - needed for
  * grapheme handling in display.c
- * The combi_range array is largish for a check-per-character but
- * since most expected characters are below the first entry it
- * will actually be quick - provided we make the quick check first.
- * A better(?) test might just be to get the utf8proc_category_string()
- * for the character and see whether it starts with "M" (Mn, Mc, Me).
- * But still include a lower range check at least....
+ * We make a quick exit test for a char value less than the first combining
+ * one (U+0300), as that wil cover the vast majority of cases.
+ * The we check whether it has the combining_class property and if not
+ * we also check for a utf8proc_category_string() of Mn or Me.
+ * This means our decision as to whetehr we have a combining_type character
+ * is based on whichever version of libutf8proc we are using.
  */
-#include "combi.h"
-#define CR_MAX (ARRAY_SIZE(combi_range) - 1)
-
 int combining_type(unicode_t uc) {
+    if (uc < 0x0300) return FALSE;
 
-    if ((uc < combi_range[0].start) || (uc > combi_range[CR_MAX].end))
-        return FALSE;
-
-/* Binary chop version */
-    int first = 0;
-    int last = CR_MAX;
-
-    while (first <= last) {
-        int middle = (first + last)/2;
-        if (uc < combi_range[middle].start) {       /* look lower */
-            last = middle - 1;
-        } else if (uc > combi_range[middle].end) {  /* look higher */
-            first = middle + 1;
-        } else return TRUE;
+    int combining_class = utf8proc_get_property(uc)->combining_class;
+/* Might still be the case. Add all Me or Mn types too */
+    if (!combining_class) {
+        const char *cs = utf8proc_category_string(uc);
+        combining_class = (cs[0] == 'M' && ((cs[1] == 'n') || (cs[1] == 'e')));
     }
-    return FALSE;
+    return combining_class;
 }
 
 /* unicode_to_utf8()
