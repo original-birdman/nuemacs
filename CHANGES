@@ -1275,3 +1275,13 @@ Makefile
     Change combining_type() to use utf8proc function results rather
     than use a combi.h list generated from one utf8proc release. [utf8.c]
     Delete combi.h and remove it from dependencies. [combi.h, Makefile]
+
+display.c
+main.c
+spawn.c
+ttdriver.c
+efunc.h
+estruct.h
+    Merge TTopen()/TTclose() calls into TTstate(TTOPEN/TTCLOSE).
+    Move TTstate() into ttdriver.c. [spawn.c, ttdriver.c, efunc.h]
+    Update callers [display.c, main.c, spawn.c]

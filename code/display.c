@@ -226,8 +226,7 @@ void vtinit(void) {
     void *new_vdata;                /* Where we've stored it all */
 
     if (prev_mrow == 0) {
-        TTopen();               /* open the screen */
-        TThilite(FALSE);
+        TTstate(TTOPEN);            /* Open the screen */
     }
 
 /* Is this for a larger request? If not, nothing to do.
@@ -344,7 +343,7 @@ void mlerase(void) {
 void vttidy(void) {
     mlerase();      /* Moves cursor to (term.t_mbline, 0) */
     TTputc('\r');
-    TTclose();
+    TTstate(TTCLOSE);
 }
 
 /* Set the virtual cursor to the specified row and column on the virtual
@@ -1546,7 +1545,7 @@ void checkscreensize(int no_update_needed) {
 
 /* Make sure it's reasonable.
  * If it isn't, we don't change anything. The display will mess up, but
- * we won't have problems with crashes form areas being too small/-ve.
+ * we won't have problems with crashes from areas being too small/-ve.
  */
     if (height < 3 ) {
         mlwrite_one("Screen size too small");
@@ -1723,7 +1722,7 @@ void update(int force) {
 /* If screen is garbage, re-plot it */
 
     int need_rewrite = 0;
-    if (sgarbf != FALSE) {
+    if (sgarbf) {
         need_rewrite = (ml_text_offset > 0);
         updgar();
     }

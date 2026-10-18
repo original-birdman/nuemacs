@@ -258,7 +258,7 @@ struct window {
 #define WFFORCE 0x01            /* Window needs forced reframe  */
 #define WFMOVE  0x02            /* Movement from line to line   */
 #define WFEDIT  0x04            /* Editing within a line        */
-#define WFHARD  0x08            /* Better to a full display     */
+#define WFHARD  0x08            /* Better do a full display     */
 #define WFMODE  0x10            /* Update mode line.            */
 #define WFCOLR  0x20            /* Needs a color change         */
 #define WFKILLS 0x40            /* something was deleted        */
@@ -578,4 +578,7 @@ struct sigdefer{
     int is_deferred;
 };
 
+/* Values for calling TTstate in ttdrivers,c */
+
+enum TTway { TTOPEN, TTCLOSE };
 #endif

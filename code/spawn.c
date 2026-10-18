@@ -20,21 +20,6 @@
 #include "edef.h"
 #include "efunc.h"
 
-/* We run these several times, so centralize it. */
-
-enum TTway { OPEN, CLOSE };
-static void TTstate(enum TTway w) {
-    if (w == OPEN) {
-        TTopen();
-        TTforg(TRUE);
-        TTflush();
-    }
-    else {
-        TTforg(FALSE);  /* Just send the escape sequence */
-        TTclose();      /* stty to old modes    */
-    }
-}
-
 /* rval is meant to contain the exit code of the last child process,
  * so use this to work it out.
  */
@@ -59,8 +44,7 @@ int spawncli(int f, int n) {
 /* Don't allow this command if restricted */
     if (restflag) return resterr();
 
-    movecursor(term.t_mbline, 0);   /* Seek to last line.   */
-    TTstate(CLOSE);
+    TTstate(TTCLOSE);
     if ((cp = getenv("SHELL")) != NULL && *cp != '\0') {
 /* SHELL should be a simple command with no args.
  * So run it within ''.
@@ -81,7 +65,7 @@ int spawncli(int f, int n) {
     }
     rval = decode_rval(rval);
     sleep(2);
-    TTstate(OPEN);
+    TTstate(TTOPEN);
     checkscreensize(0);
 
     return TRUE;
@@ -90,15 +74,15 @@ int spawncli(int f, int n) {
 int bktoshell(int f, int n) {   /* Suspend MicroEMACS and wait to wake up */
     UNUSED(f); UNUSED(n);
 
-    TTstate(CLOSE);
+    TTstate(TTCLOSE);
 
     kill(0, SIGTSTP);
 
 /* fg seems to get us back to here...we need to get the modeline redrawn
  * as otherwise it may contain the minibuffer info (from EscX suspend-emacs).
  */
-    curwp->w_flag = WFHARD | WFMODE;
-    TTstate(OPEN);
+    curwp->w_flag = WFMODE;
+    TTstate(TTOPEN);
     checkscreensize(0);
 
     return TRUE;
@@ -153,7 +137,7 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
 
     if ((s = next_spawn_cmd(rxcopy, prompt, &line)) != TRUE) goto exit;
 
-    TTstate(CLOSE);
+    TTstate(TTCLOSE);
 
     rval = system(db_val(line));
     rval = decode_rval(rval);
@@ -169,9 +153,8 @@ static int run_one_liner(int rxcopy, int wait, const char *prompt) {
             if (k == EOF) break;
         };
     }
-    TTstate(OPEN);
+    TTstate(TTOPEN);
     checkscreensize(0);
-    curwp->w_flag = WFHARD;
 exit:
     db_free(line);
     return s;
@@ -239,7 +222,7 @@ int pipecmd(int f, int n) {
     }
     close(fd);
 
-    TTstate(CLOSE);
+    TTstate(TTCLOSE);
 /* We put the outfile filename into '', to prevent any active chars
  * being introduced via HOME setting.
  * Does mean that you can't have a ' in HOME.
@@ -248,7 +231,7 @@ int pipecmd(int f, int n) {
     rval = system(db_val(line));
     rval = decode_rval(rval);
 
-    TTstate(OPEN);
+    TTstate(TTOPEN);
     checkscreensize(0);
 
 /* Split the current window to make room for the command output */
@@ -350,7 +333,7 @@ int filter_buffer(int f, int n) {
         goto reset_bufname_exit;
     }
     mlwrite_one("\r\n");    /* Get to col1 */
-    TTstate(CLOSE);
+    TTstate(TTCLOSE);
 /* We put the infile and outfile filenames into '', to prevent any
  * active chars being introduced via HOME setting.
  * Does mean that you can't have a ' in HOME.
@@ -360,7 +343,7 @@ int filter_buffer(int f, int n) {
     rval = system(db_val(line));
     rval = decode_rval(rval);
 
-    TTstate(OPEN);
+    TTstate(TTOPEN);
     checkscreensize(0);
 
 /* Unset this flag, otherwise readin() prompts for "Discard changes" if

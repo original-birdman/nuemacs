@@ -795,9 +795,8 @@ static void exit_via_signal(int signr) {
  * it has been left running. There are newline prints after such calls to
  * switch to the next output line.
  */
-    TTclose();
-    fflush(stdout);
-    setvbuf(stdout, NULL, _IONBF, 0);
+    TTstate(TTCLOSE);
+    setvbuf(stdout, NULL, _IONBF, 0);       /* Unbuffer stdout */
 
 /* Let's go through the steps in order...various globals get set here... */
 

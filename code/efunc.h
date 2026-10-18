@@ -396,12 +396,11 @@ extern void TTungetc(unicode_t);
 extern int TTtypahead(void);
 extern void TTmove(int, int);
 extern void TTinit(void);
-extern void TTopen(void);
-extern void TTclose(void);
 extern void TTeeol(void);
 extern void TTeeop(void);
 extern void TThilite(int);
 extern void TTforg(int);
+extern void TTstate(enum TTway);
 extern void TTbeep(void);
 #endif
 

@@ -326,7 +326,10 @@ void TTinit(void) {
 
 }
 
-void TTopen(void) {
+/* Iff we use an alternate screen for uemacs (xterm*) then we do not
+ * need to flag the screen as garbled if we did a TTclose() previously.
+ */
+static void TTopen(void) {
 
 /* Set the terminal in/output as we want it */
 
@@ -364,23 +367,23 @@ void TTopen(void) {
     kbdflgs = fcntl(0, F_GETFL, 0);
     kbdpoll = FALSE;
 
-/* on all screens we are not sure of the initial position of the cursor */
-    ttrow = -1;
-    ttcol = -1;
-
 /* Initialize the screen */
 
     TTputstr(TI);
     TTflush();
+
+/* Not sure of teh contenst of the screen or the current position of the
+ * cursor either.
+ */
+    sgarbf = TRUE;
     ttrow = -1;
     ttcol = -1;
-    sgarbf = TRUE;
 }
 
 /* This function gets called just before we go back home to the command
  * interpreter.
  */
-void TTclose(void) {
+static void TTclose(void) {
     TTmove(term.t_mbline, 0);
     TTputstr(TE);
     TTflush();
@@ -401,6 +404,7 @@ void TTeeop(void) {
  */
 void TThilite(int state) {
 
+/* If there is no Highlight colour set then we just use reverse video */
     if ((db_len(hifcolor) == 0) && (db_len(hibcolor) == 0)) {
         TTputstr((state)? SO: SE);
     }
@@ -419,6 +423,9 @@ void TThilite(int state) {
             snprintf(obuf, sizeof(obuf), ESC "[%s%s%sm",
                  db_val(hifcolor), sep, db_val(hibcolor));
         }
+/* We don't actually switch the highlight colour off, but rather we
+ * switch on any foreground colour.
+ */
         else {
             const char *fg = (db_len(glfcolor) > 0)? db_val(glfcolor): "39";
             snprintf(obuf, 64, ESC "[%s;49m", fg);
@@ -443,8 +450,23 @@ void TTforg(int set) {
     else esq = db_val(glfcolor);
     snprintf(obuf, sizeof(obuf), CSI "%sm", esq);
     TTputstr(obuf);
-    if (set) {  /* Don't do this if we're not actually setting. */
-        sgarbf = TRUE;
+}
+
+/* We run these several times, so centralize it. */
+
+void TTstate(enum TTway w) {
+    if (w == TTOPEN) {
+        TTopen();
+        TTforg(TRUE);   /* Set colouring/highlighting to known state */
+        TThilite(FALSE);
+        TTflush();
+        sgarbf = TRUE;  /* Unknown screen state */
+    }
+    else {
+        TTclose();      /* stty to old modes    */
+/* Set colouring/highlighting off */
+        TTforg(FALSE);
+        TTflush();
     }
 }
 
