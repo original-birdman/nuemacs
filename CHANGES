@@ -1285,3 +1285,6 @@ estruct.h
     Merge TTopen()/TTclose() calls into TTstate(TTOPEN/TTCLOSE).
     Move TTstate() into ttdriver.c. [spawn.c, ttdriver.c, efunc.h]
     Update callers [display.c, main.c, spawn.c]
+
+random.c
+    Minor simplification to setcolor().

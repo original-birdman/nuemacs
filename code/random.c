@@ -1100,7 +1100,7 @@ int setcolor(int f, int n) {
     }
     char *bgcspec = *dbp;
 
-/* Check that bgspec is not NULL for ml (if it is the parsing failed) */
+/* Check that bgspec is not NULL for ml (if it is, the parsing failed) */
 
     if ((where == 1) && !bgcspec) {
         emess = "colours";
@@ -1126,13 +1126,13 @@ int setcolor(int f, int n) {
         goto exit;
     }
 
-/* We now have all we need for the foreground colour */
+/* We now have all we need for the main foreground colour */
     if (where == 0) {
-        TTforg(TRUE);
+        sgarbf = TRUE;  /* So new colour is used */
         goto exit;
     }
 
-/* Get the colour setting for the background */
+/* Get the colour setting for the highlight background */
 
     int bg_clr = color_val(bgcspec);
     if (bg_clr == INT32_MIN) {      /* Error */
@@ -1146,8 +1146,7 @@ int setcolor(int f, int n) {
         emess = "background";
         goto exit;
     }
-    sgarbf = TRUE;
-    update(TRUE);   /* Ensure all modelines get the new colour */
+    sgarbf = TRUE;  /* Ensure all modelines get the new colour */
 
 exit:
     if (emess) {
