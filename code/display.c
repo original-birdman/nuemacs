@@ -391,9 +391,9 @@ static void vtputc(unicode_t c) {
     }
 
     if (c == '\t') {
-        do {
-            vtputc(' ');
-        } while (((vtcol + taboff) & tabmask) != 0);
+/* Work out how many spaces need to be inserted */
+        int toadd = tabmask + 1 - ((vtcol + taboff)&tabmask);
+        while (toadd--) vtputc(' ');
         return;
     }
 

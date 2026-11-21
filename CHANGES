@@ -1288,3 +1288,7 @@ estruct.h
 
 random.c
     Minor simplification to setcolor().
+
+display.c
+    Change tab logic in vtputc() to prevent forever loop now that vtcol
+    is no longer updated when off-screen.
