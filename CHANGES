@@ -1292,3 +1292,11 @@ random.c
 display.c
     Change tab logic in vtputc() to prevent forever loop now that vtcol
     is no longer updated when off-screen.
+
+version.h
+etc/uemacs.hlp
+etc/uemacs.rc
+    Update to GGR4.207
+
+==========
+
